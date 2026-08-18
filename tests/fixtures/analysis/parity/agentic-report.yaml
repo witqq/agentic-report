@@ -1,0 +1,5 @@
+title: Manifest title
+description: Shared preparation parity fixture
+language: en
+output:
+  maxInlineBytes: 1000000

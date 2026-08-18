@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 250" role="img" aria-labelledby="title desc">
+  <title id="title">Portable page system boundary</title>
+  <desc id="desc">Local declarative source enters the compiler and leaves as a static browser artifact.</desc>
+  <rect width="820" height="250" rx="22" fill="#111827"/>
+  <g font-family="system-ui, sans-serif" font-size="18" text-anchor="middle">
+    <rect x="35" y="76" width="180" height="98" rx="14" fill="#312e81" stroke="#a5b4fc" stroke-width="3"/>
+    <text x="125" y="117" fill="#eef2ff">Declarative</text><text x="125" y="143" fill="#eef2ff">local source</text>
+    <rect x="315" y="45" width="190" height="160" rx="14" fill="#1f2937" stroke="#94a3b8" stroke-width="3"/>
+    <text x="410" y="105" fill="#f8fafc">Validated</text><text x="410" y="132" fill="#f8fafc">compiler</text><text x="410" y="166" fill="#94a3b8" font-size="14">trust boundary</text>
+    <rect x="605" y="76" width="180" height="98" rx="14" fill="#064e3b" stroke="#6ee7b7" stroke-width="3"/>
+    <text x="695" y="117" fill="#ecfdf5">Static browser</text><text x="695" y="143" fill="#ecfdf5">artifact</text>
+  </g>
+  <g stroke="#a5b4fc" stroke-width="4" fill="none"><path d="M215 125h94"/><path d="M505 125h94"/></g>
+  <g fill="#a5b4fc"><path d="M309 125l-14-9v18z"/><path d="M599 125l-14-9v18z"/></g>
+</svg>

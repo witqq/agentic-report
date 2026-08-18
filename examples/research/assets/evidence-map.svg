@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 280" role="img" aria-labelledby="title desc">
+  <title id="title">Research evidence map</title>
+  <desc id="desc">Method, observations, and constraints converge into a recommendation.</desc>
+  <rect width="760" height="280" rx="24" fill="#eef7f5"/>
+  <g fill="#ffffff" stroke="#0f766e" stroke-width="3">
+    <rect x="42" y="40" width="180" height="54" rx="12"/>
+    <rect x="42" y="113" width="180" height="54" rx="12"/>
+    <rect x="42" y="186" width="180" height="54" rx="12"/>
+    <rect x="490" y="100" width="225" height="80" rx="14" fill="#ccfbf1"/>
+  </g>
+  <g fill="#134e4a" font-family="system-ui, sans-serif" font-size="18" text-anchor="middle">
+    <text x="132" y="74">Method</text><text x="132" y="147">Observations</text>
+    <text x="132" y="220">Constraints</text><text x="602" y="146">Recommendation</text>
+  </g>
+  <g stroke="#0f766e" stroke-width="4" fill="none" marker-end="url(#arrow)">
+    <path d="M222 67 C340 67 360 120 490 130"/><path d="M222 140 H490"/>
+    <path d="M222 213 C340 213 360 160 490 150"/>
+  </g>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#0f766e"/></marker></defs>
+</svg>

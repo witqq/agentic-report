@@ -1,0 +1,214 @@
+{
+  "contractVersion": 1,
+  "showcaseContract": "showcase-contract.json",
+  "examples": [
+    {
+      "id": "basic",
+      "path": "basic",
+      "entry": "report.md",
+      "title": "Report starter",
+      "description": "Decision-ready report with findings, evidence, a local asset, a timeline, and bounded interaction.",
+      "classes": ["report", "work-report"],
+      "starter": { "default": true, "aliases": ["report"] },
+      "files": [
+        {
+          "path": "assets/architecture.svg",
+          "sha256": "f4a6eb5cacb8b48e0a5d79c15f0db202fd8a1257f42658420dcd4aeb5dee1fe0"
+        },
+        {
+          "path": "partials/findings.md",
+          "sha256": "ccaa12219d452c83fa74d911e53d9ace10193a831c8fdf935d22164eed569842"
+        },
+        {
+          "path": "report.md",
+          "sha256": "274049de4a9275ae4778b55e74771288e1aaf174f5d4abb8f3fd77be13b99ec2"
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "path": "research",
+      "entry": "report.md",
+      "title": "Research starter",
+      "description": "Research synthesis with a method partial, evidence map, comparison chart, tabs, and recommendation.",
+      "classes": ["research-report"],
+      "starter": { "default": false, "aliases": [] },
+      "files": [
+        {
+          "path": "assets/evidence-map.svg",
+          "sha256": "62c287de7fa134a45996cc07f4cdee0481d7509fe8ae36d9f33ce5271079d07e"
+        },
+        {
+          "path": "partials/method.md",
+          "sha256": "f715dab93934854c5d5108c6385d27dbb3b92e5aa2f487679da266569ebdb84c"
+        },
+        {
+          "path": "report.md",
+          "sha256": "df1eb52204251c5fee332ebabcc65f0ecf96996cb8bcd1c635a2964695e7d9aa"
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "path": "architecture",
+      "entry": "report.md",
+      "title": "Architecture starter",
+      "description": "Architecture decision packet with a local system map, alternatives, flow diagram, and rollout.",
+      "classes": ["architecture-report"],
+      "starter": { "default": false, "aliases": [] },
+      "files": [
+        {
+          "path": "assets/system-map.svg",
+          "sha256": "da896621314b348d4c445564ee1eca9ca1ba2f2e70e52c66d669c355aeec7128"
+        },
+        {
+          "path": "partials/decision.md",
+          "sha256": "c413e29ad76fc03410620816df4843e9f28bc9f4da0601af241ee736fc7a7287"
+        },
+        {
+          "path": "report.md",
+          "sha256": "01de47548a11960f2179190a2232fb4676b6e811379e3d14bb8a0e60f0eef7fc"
+        }
+      ]
+    },
+    {
+      "id": "tutorial",
+      "path": "tutorial",
+      "entry": "report.md",
+      "title": "Tutorial starter",
+      "description": "Step-by-step learning page with tabs, progressive detail, code, and a bounded practice control.",
+      "classes": ["tutorial-with-code-and-bounded-demo"],
+      "starter": { "default": false, "aliases": [] },
+      "files": [
+        {
+          "path": "report.md",
+          "sha256": "b473a206714a9cc0e4f0f4555578c30d2214c99d9923b86fb09035989333144c"
+        }
+      ]
+    },
+    {
+      "id": "dashboard",
+      "path": "dashboard",
+      "entry": "report.md",
+      "title": "Dashboard starter",
+      "description": "Operational dashboard with scan-friendly cards, charts, filtering, and optional detail.",
+      "classes": ["work-report"],
+      "starter": { "default": false, "aliases": [] },
+      "files": [
+        {
+          "path": "report.md",
+          "sha256": "22f6df96a10245040a31e576e69106bc0249c5db2c95d45310848611ce431eac"
+        }
+      ]
+    },
+    {
+      "id": "landing",
+      "path": "landing",
+      "entry": "report.md",
+      "title": "Landing page starter",
+      "description": "Focused product narrative with benefits, proof, delivery milestones, and contextual detail.",
+      "classes": ["landing-page"],
+      "starter": { "default": false, "aliases": [] },
+      "files": [
+        {
+          "path": "report.md",
+          "sha256": "35551771fe0093efed28ac1a91466807d22d4c7677497957d28da8f7d5ca7665"
+        }
+      ]
+    },
+    {
+      "id": "layout-document",
+      "path": "layout-document",
+      "entry": "report.md",
+      "title": "Document layout example",
+      "description": "Long-form report with persistent contents, decisions, table, code, and local media.",
+      "classes": ["architecture-report"],
+      "files": [
+        {
+          "path": "page-model.svg",
+          "sha256": "470f45453789ff09388ebb2e64929351679b5f606b9c49c0cce83e6f3df68375"
+        },
+        {
+          "path": "report.md",
+          "sha256": "f0c4ba4a8b2b582fbd33893662f2536a9ccbbedb19ee18ef4747aff49ef3f348"
+        }
+      ]
+    },
+    {
+      "id": "layout-dashboard",
+      "path": "layout-dashboard",
+      "entry": "report.md",
+      "title": "Dashboard layout example",
+      "description": "Wide operational summary using dense cards, callouts, a table, and compact navigation.",
+      "classes": ["work-report"],
+      "files": [
+        {
+          "path": "report.md",
+          "sha256": "63e3b209040df83414b38bc03d328e4ee12c678439d1a2ea5d79e1f05c60c90f"
+        }
+      ]
+    },
+    {
+      "id": "layout-landing",
+      "path": "layout-landing",
+      "entry": "report.md",
+      "title": "Landing layout example",
+      "description": "Focused product narrative with a spacious hero, benefits, proof, and next steps.",
+      "classes": ["landing-page"],
+      "files": [
+        {
+          "path": "report.md",
+          "sha256": "6fb291b176047597df466d3497f002efe275988e653dd8cf7146a9396e34a7fc"
+        }
+      ]
+    },
+    {
+      "id": "layout-mixed",
+      "path": "layout-mixed",
+      "entry": "report.md",
+      "title": "Mixed layout example",
+      "description": "Research brief combining long-form narrative with wide card and data sections.",
+      "classes": ["research-report"],
+      "files": [
+        {
+          "path": "layout-map.svg",
+          "sha256": "8ebf974f93b2e16c4a3421a751bed52e4f48fac507cd0c451b38b173888ad2c5"
+        },
+        {
+          "path": "report.md",
+          "sha256": "559db92a6a3705642920e3abed1d9068c0795db3c9dbae949af6eaf88ee1f589"
+        }
+      ]
+    },
+    {
+      "id": "interactive-catalog",
+      "path": "interactive-catalog",
+      "entry": "report.md",
+      "title": "Interactive component catalog",
+      "description": "Declarative glossary, disclosure, tabs, overlays, filtering, toggles, and a bounded demo.",
+      "classes": ["interactive-component-catalog"],
+      "files": [
+        {
+          "path": "report.md",
+          "sha256": "983d97f9abbcf68a5e852c31520312ae4ef8f1006609eda4d36a9d10158ed22b"
+        }
+      ]
+    },
+    {
+      "id": "visualization-catalog",
+      "path": "visualization-catalog",
+      "entry": "report.md",
+      "title": "Declarative visualization catalog",
+      "description": "Validated bar, line, and pie charts, a directed flow diagram, and a semantic timeline.",
+      "classes": ["data-visualization-catalog"],
+      "files": [
+        {
+          "path": "report.md",
+          "sha256": "a9bcf7735b0b2987cca84318549417f21fb760ac8c9cc33501956641b3d666d2"
+        }
+      ]
+    }
+  ],
+  "status": "complete",
+  "missingShowcaseClasses": []
+}

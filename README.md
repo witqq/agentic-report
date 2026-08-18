@@ -1,0 +1,189 @@
+# agentic-report
+
+`agentic-report` is a local interactive page builder for agents, distributed as an npm CLI and ESM API. It
+turns declarative Markdown into responsive browser pages: one
+self-contained HTML file by default, or a directory with content-addressed asset filenames. The public source
+stays free of JSX and author code so an agent can focus on content and structure rather than page layout.
+
+Choose it for agent-to-human research, architecture, tutorial, dashboard, landing, and work-report pages.
+Choose a notebook or live application for computation and per-user state, a documentation generator for
+a maintained multi-page site, a hosted document for simultaneous collaboration, or a bespoke web project
+when arbitrary layout control is the primary job.
+
+It is a local compiler, not a hosted or cloud service, and it does not start a server.
+
+## Document map
+
+| Document                                                             | Role                                                       |
+| -------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [`PRODUCT-REQUIREMENTS.md`](PRODUCT-REQUIREMENTS.md)                 | Normative product requirements                             |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)                       | Authoritative description of the runnable current compiler |
+| [`docs/product/source-contract.md`](docs/product/source-contract.md) | Exact current declarative authoring contract               |
+| [`docs/AGENT-REFERENCE.md`](docs/AGENT-REFERENCE.md)                 | Current copyable CLI and source reference for agents       |
+| [`docs/TESTING.md`](docs/TESTING.md)                                 | Current verification entry points and covered guarantees   |
+| [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)                         | Contributor setup and local quality commands               |
+
+## Source format
+
+A source is either a Markdown file or a directory containing `report.md` or `index.md`. A directory may
+also contain:
+
+- YAML frontmatter in the entry Markdown file;
+- `agentic-report.yaml`, `agentic-report.yml`, or `agentic-report.json`;
+- local images referenced by relative paths;
+- Markdown partials included as `{{include: partials/summary.md}}`;
+- semantic directives for content, interactions, compile-time charts/diagrams/timelines, safe built-in
+  demos, downloads, and fonts.
+
+Example:
+
+```markdown
+---
+title: Architecture options
+description: Decision report
+layout: document
+theme: system
+tokens:
+  font: serif
+  width: narrow
+  accent: indigo
+---
+
+# Architecture options
+
+{{include: partials/context.md}}
+
+![System boundary](assets/system.svg)
+
+:::callout{title="Key finding" kind="info"}
+The compiler owns responsive layout and navigation.
+:::
+```
+
+See [`docs/product/source-contract.md`](docs/product/source-contract.md) for the complete declarative
+source contract.
+
+Agents can retrieve the same closed contract through `getSourceContract()`,
+`getAuthoringSchema('manifest' | 'directives' | 'source')`, and `listExamples()` from the ESM API. Checked
+JSON projections live in [`docs/generated/`](docs/generated/), and
+[`examples/manifest.json`](examples/manifest.json) records packaged example identities and source hashes.
+The ESM `initProject({ destination, starter? })` operation copies the selected registry-owned starter from
+the installed package into an absent destination without overwriting or merging user content.
+The package includes report, research, architecture, tutorial, dashboard, and landing-page starters. The
+report starter is the default; its stable canonical ID is `basic`, and the clearer `report` alias is also
+accepted. The other IDs are `research`, `architecture`, `tutorial`, `dashboard`, and `landing`.
+`listExamples()` and `agentic-report examples --json` return starter eligibility, default selection, and
+aliases from the same registry metadata. The immediate parent must already be an ordinary directory. The starter is read completely
+before the destination is created exclusively; files use no-overwrite creation. A later failure is reported
+and may leave the new destination incomplete for explicit inspection and removal. The initializer never
+deletes or rolls back destination content.
+The ESM `validateReport({ input, format? })` and `inspectReport({ input, format? })` operations run the
+same production preparation as `buildReport()` without publishing an artifact. Validation returns the
+resolved project, entry, format, runtime placement, and warnings. Inspection additionally returns relative
+source-file inventory, observed directives and local-resource occurrence counts, and the registry-derived
+command/format/starter/capability catalog.
+
+The package owns four responsive page layouts: `document`, `dashboard`, `landing`, and `mixed`. Authors
+select one as metadata and may choose `system`, `light`, or `dark` plus compact token overrides for
+`density`, `font`, `accent`, `width`, and `radius`. These are closed validated values, not CSS or component
+code. Buildable examples under `examples/layout-*` demonstrate every layout and are listed by
+`agentic-report examples --json`; `examples/interactive-catalog` and `examples/visualization-catalog`
+demonstrate the package-owned interaction and data primitives.
+
+## Commands
+
+After a local build:
+
+```bash
+pnpm install
+pnpm build
+node dist/node/cli.js init ./my-report
+node dist/node/cli.js init ./research-brief --starter research
+node dist/node/cli.js validate ./my-report
+node dist/node/cli.js inspect ./my-report --json
+node dist/node/cli.js build examples/basic --output report.html
+node dist/node/cli.js build examples/basic --format directory --output report-dir
+node dist/node/cli.js describe --json
+node dist/node/cli.js schema
+node dist/node/cli.js schema --scope directives
+node dist/node/cli.js schema --scope source
+node dist/node/cli.js examples --json
+```
+
+To exercise the current installable artifact rather than repository-relative `dist`, create a tarball and
+install that exact file into a clean consumer:
+
+```bash
+pnpm install
+pnpm build
+PACK_DIR="$(mktemp -d)"
+CONSUMER_DIR="$(mktemp -d)"
+pnpm pack --pack-destination "$PACK_DIR"
+cd "$CONSUMER_DIR"
+npm init --yes
+npm install "$PACK_DIR"/agentic-report-*.tgz
+npx agentic-report init ./my-report --starter report
+printf '\nAgent-authored edit.\n' >> ./my-report/report.md
+printf '\n![Remote asset used to test diagnostics](https://local.invalid/image.png)\n' >> ./my-report/report.md
+! npx agentic-report validate ./my-report --json
+! npx agentic-report inspect ./my-report --json
+sed -i.bak '/Remote asset used to test diagnostics/d' ./my-report/report.md
+npx agentic-report validate ./my-report --json
+npx agentic-report inspect ./my-report --json
+npx agentic-report build ./my-report --output ./report.html --json
+```
+
+The two broken-source commands must return `REMOTE_ASSET_BLOCKED` without creating or replacing output.
+After the offending Markdown line is removed, validation and inspection succeed and the final command
+creates `report.html`. `scripts/check-package.ts` executes this same installed-package recovery route with
+credential-bearing diagnostics and output sentinels.
+
+Install and use the published package with:
+
+```bash
+npx agentic-report build ./report-source --output report.html
+npm install --global agentic-report
+agentic-report init ./my-report
+agentic-report validate ./my-report
+agentic-report inspect ./my-report --json
+agentic-report build ./report-source --output report.html
+```
+
+## Output formats
+
+| Format        | Result                                                        |
+| ------------- | ------------------------------------------------------------- |
+| `single-file` | One HTML file containing styles, runtime, and local resources |
+| `directory`   | `index.html` plus content-hashed package and source resources |
+
+Both formats contain the same package-owned interactive behavior. `single-file` embeds the runtime;
+`directory` writes it as a content-addressed local asset. Runtime placement is not a source or CLI option.
+Remote asset fetching and executable templates are not supported.
+
+Page layout is independent of output format: the same document/dashboard/landing/mixed source can be
+built as either one file or a directory artifact. Both paths preserve the selected page tokens, responsive
+navigation, local assets, CSP, and `file://` behavior.
+
+There is no public plugin or author-code execution API. Proposed declarative extensions are evaluated
+against the checked [`extension proposal schema`](docs/generated/extension-proposal.schema.json), which
+enforces the current no-code/no-network trust boundary and requires explicit portability, security,
+accessibility, performance, dependency, license, and compatibility evidence before implementation.
+
+The compiler rejects an output path that resolves to, or shares a filesystem identity with, the entry,
+manifest, partial, or local asset. Both formats are prepared before publication. A single file is written
+exclusively to a private sibling path, closed, and atomically renamed; a directory is assembled in a
+private sibling directory and published by rename. Injected write and rename failures preserve any
+previous authoritative output, remove compiler-owned staging paths, and allow an immediate retry.
+`output.maxInlineBytes` is a warning threshold over the exact serialized inline CSS, package runtime, and
+image/download data-URL occurrences. Font data URLs are counted once through the serialized stylesheet.
+
+For implementation boundaries and verification guarantees, see
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/TESTING.md`](docs/TESTING.md).
+
+## Development
+
+See the contributor, testing, and architecture entries in the document map above.
+
+## License
+
+MIT. See [`LICENSE`](LICENSE).

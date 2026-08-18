@@ -1,0 +1,107 @@
+{
+  "name": "agentic-report",
+  "version": "0.1.0",
+  "description": "Local declarative page builder for agent-authored interactive HTML artifacts.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/witqq/agentic-report.git"
+  },
+  "homepage": "https://github.com/witqq/agentic-report#readme",
+  "bugs": {
+    "url": "https://github.com/witqq/agentic-report/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=24.18.0"
+  },
+  "packageManager": "pnpm@11.21.0",
+  "types": "./dist/node/index.d.ts",
+  "bin": {
+    "agentic-report": "./dist/node/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "examples",
+    "docs/AGENT-REFERENCE.md",
+    "docs/generated",
+    "docs/product/source-contract.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && vite build --config vite.runtime.config.ts",
+    "generate:authoring": "pnpm build && node --experimental-strip-types scripts/generate-authoring.ts",
+    "check:authoring": "pnpm build && node --experimental-strip-types scripts/generate-authoring.ts --check",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint . --error-on-warnings",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "pretest": "pnpm build",
+    "test": "testfold unit e2e",
+    "pretest:unit": "pnpm build",
+    "test:unit": "testfold unit",
+    "pretest:e2e": "pnpm build",
+    "test:e2e": "testfold e2e",
+    "prepack:check": "pnpm check:authoring",
+    "pack:check": "node --experimental-strip-types scripts/check-package.ts",
+    "verify": "pnpm check:authoring && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm pack:check",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@shikijs/rehype": "4.4.3",
+    "commander": "15.0.0",
+    "gray-matter": "4.0.3",
+    "micromark-util-decode-string": "2.0.1",
+    "mime-types": "3.0.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "rehype-sanitize": "6.0.0",
+    "rehype-slug": "6.0.0",
+    "rehype-stringify": "10.0.1",
+    "remark-directive": "4.0.0",
+    "remark-gfm": "4.0.1",
+    "remark-parse": "11.0.0",
+    "remark-rehype": "11.1.2",
+    "unified": "11.0.5",
+    "unist-util-visit": "5.1.0",
+    "yaml": "2.9.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@babel/parser": "8.0.4",
+    "@biomejs/biome": "2.5.8",
+    "@playwright/test": "1.62.1",
+    "@types/hast": "3.0.5",
+    "@types/mdast": "4.0.4",
+    "@types/mime-types": "3.0.1",
+    "@types/node": "24.13.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@vitest/coverage-v8": "4.1.10",
+    "ajv": "8.20.0",
+    "husky": "9.1.7",
+    "lint-staged": "17.3.0",
+    "prettier": "3.9.6",
+    "testfold": "0.3.0",
+    "typescript": "7.0.2",
+    "vite": "8.2.1",
+    "vitest": "4.1.10"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "biome lint --error-on-warnings",
+      "prettier --check"
+    ],
+    "*.{json,md,css,yml,yaml}": "prettier --check"
+  }
+}

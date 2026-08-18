@@ -1,0 +1,21 @@
+node_modules/
+.pnpm-store/
+dist/
+coverage/
+test-results/
+playwright-report/
+*.log
+*.tgz
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# Local agent and product-program context; never publish.
+AGENTS.md
+docs/product/authoring-projection-ledger.md
+docs/product/global-plan.md
+docs/product/initial-idea.md
+docs/product/production-roadmap.md
+docs/product/requirement-traceability.md
+docs/research/

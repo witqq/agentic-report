@@ -1,0 +1,88 @@
+import {
+  initProject,
+  type InitProjectOptions,
+  type InitProjectResult,
+} from 'agentic-report';
+
+type Equal<Left, Right> =
+  (<Value>() => Value extends Left ? 1 : 2) extends
+  (<Value>() => Value extends Right ? 1 : 2)
+    ? true
+    : false;
+type Assert<Value extends true> = Value;
+type ParameterContract = Assert<
+  Equal<Parameters<typeof initProject>, [options: InitProjectOptions]>
+>;
+type ReturnContract = Assert<
+  Equal<Awaited<ReturnType<typeof initProject>>, InitProjectResult>
+>;
+type OptionsKeys = Assert<Equal<keyof InitProjectOptions, 'destination' | 'starter'>>;
+type ResultKeys = Assert<
+  Equal<
+    keyof InitProjectResult,
+    'starterId' | 'starterTitle' | 'projectPath' | 'entryPath' | 'files'
+  >
+>;
+
+const defaultStarter: InitProjectOptions = { destination: './project' };
+const namedStarter: InitProjectOptions = { destination: './project', starter: 'basic' };
+const completeResult: InitProjectResult = {
+  starterId: 'basic',
+  starterTitle: 'Basic starter',
+  projectPath: '/tmp/project',
+  entryPath: '/tmp/project/report.md',
+  files: ['report.md'],
+};
+
+// @ts-expect-error destination is required.
+const missingDestination: InitProjectOptions = {};
+// @ts-expect-error destination must be a string.
+const invalidDestination: InitProjectOptions = { destination: 1 };
+// @ts-expect-error starter must be a string when present.
+const invalidStarter: InitProjectOptions = { destination: './project', starter: 1 };
+// @ts-expect-error unknown option fields are not part of the public contract.
+const extraOption: InitProjectOptions = { destination: './project', overwrite: true };
+// @ts-expect-error unknown result fields are not part of the public contract.
+const extraResult: InitProjectResult = { ...completeResult, mode: 'unsafe' };
+// @ts-expect-error option members are readonly.
+defaultStarter.destination = './changed';
+// @ts-expect-error optional starter remains readonly when present.
+namedStarter.starter = 'changed';
+
+async function assertResult(): Promise<void> {
+  const result: InitProjectResult = await initProject(defaultStarter);
+  await initProject(namedStarter);
+  const starterId: string = result.starterId;
+  const starterTitle: string = result.starterTitle;
+  const projectPath: string = result.projectPath;
+  const entryPath: string = result.entryPath;
+  const files: readonly string[] = result.files;
+  // @ts-expect-error result identity members are readonly.
+  result.starterId = 'changed';
+  // @ts-expect-error result identity members are readonly.
+  result.starterTitle = 'changed';
+  // @ts-expect-error result identity members are readonly.
+  result.projectPath = './changed';
+  // @ts-expect-error result identity members are readonly.
+  result.entryPath = './changed';
+  // @ts-expect-error the file inventory property is readonly.
+  result.files = [];
+  // @ts-expect-error the public file inventory is readonly.
+  result.files.push('mutation');
+  // @ts-expect-error every result identity field is required.
+  const incomplete: InitProjectResult = { starterId, projectPath, entryPath, files };
+  void starterTitle;
+  void incomplete;
+}
+
+void missingDestination;
+void invalidDestination;
+void invalidStarter;
+void extraOption;
+void extraResult;
+void completeResult;
+void (null as unknown as ParameterContract);
+void (null as unknown as ReturnContract);
+void (null as unknown as OptionsKeys);
+void (null as unknown as ResultKeys);
+void assertResult;

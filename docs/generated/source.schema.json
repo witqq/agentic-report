@@ -1,0 +1,823 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agentic-report:schema:source:1",
+  "title": "Complete Agentic Report declarative source",
+  "x-agentic-report-contract": {
+    "currentMajor": 1,
+    "supportedReaderMajors": [1],
+    "legacySourceMajor": 1,
+    "evolution": {
+      "additiveWithinMajor": true,
+      "breakingChangeRequiresNewMajor": true,
+      "silentReinterpretationAllowed": false
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Authored source-contract major; omitted legacy source is interpreted as version 1.",
+          "default": 1
+        },
+        "title": {
+          "type": "string",
+          "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,}\\S))\\s*$",
+          "description": "Document title."
+        },
+        "description": {
+          "type": "string",
+          "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,}\\S))\\s*$",
+          "description": "Plain-text document description for metadata."
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^\\s*(?:(?=(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{2,8})*)(?<!\\s)\\s*$)\\S[\\s\\S]{0,}\\S)\\s*$",
+          "description": "Language tag using the supported 2-8 letter primary and optional 2-8 character alphanumeric subtags.",
+          "default": "und"
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["system", "light", "dark"],
+          "description": "Initial document color theme.",
+          "default": "system"
+        },
+        "layout": {
+          "type": "string",
+          "enum": ["document", "dashboard", "landing", "mixed"],
+          "description": "Responsive page composition selected from the package-owned layout catalog.",
+          "default": "document"
+        },
+        "tokens": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "density": {
+              "type": "string",
+              "enum": ["compact", "comfortable", "spacious"],
+              "description": "Controls the shared spacing rhythm and control padding.",
+              "default": "comfortable"
+            },
+            "font": {
+              "type": "string",
+              "enum": ["sans", "serif", "mono"],
+              "description": "Selects the package-owned typography stack.",
+              "default": "sans"
+            },
+            "accent": {
+              "type": "string",
+              "enum": ["indigo", "teal", "coral"],
+              "description": "Selects the accent and visible-focus color family.",
+              "default": "indigo"
+            },
+            "width": {
+              "type": "string",
+              "enum": ["narrow", "standard", "wide"],
+              "description": "Controls the maximum shell and reading width.",
+              "default": "standard"
+            },
+            "radius": {
+              "type": "string",
+              "enum": ["sharp", "soft", "round"],
+              "description": "Controls the shared corner treatment for surfaces and controls.",
+              "default": "soft"
+            }
+          },
+          "description": "Compact package-owned visual token overrides; arbitrary CSS is not accepted.",
+          "default": {
+            "density": "comfortable",
+            "font": "sans",
+            "accent": "indigo",
+            "width": "standard",
+            "radius": "soft"
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "format": {
+              "type": "string",
+              "enum": ["single-file", "directory"],
+              "description": "Static artifact layout; single-file is the portable default.",
+              "default": "single-file"
+            },
+            "maxInlineBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Warning threshold for bytes embedded into single-file output.",
+              "default": 5000000
+            }
+          },
+          "description": "Default output settings; command-line flags can override the format.",
+          "default": { "format": "single-file", "maxInlineBytes": 5000000 }
+        }
+      }
+    },
+    "markdown": { "type": "string", "minLength": 1 },
+    "partials": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "propertyNames": { "type": "string", "format": "relative-local-path" }
+    },
+    "directives": { "type": "array", "items": { "$ref": "#/$defs/directive" } },
+    "resources": { "type": "array", "items": { "type": "string", "format": "relative-local-path" } }
+  },
+  "required": ["manifest", "markdown"],
+  "$defs": {
+    "directive": {
+      "oneOf": [
+        { "$ref": "#/$defs/callout" },
+        { "$ref": "#/$defs/decision" },
+        { "$ref": "#/$defs/cards" },
+        { "$ref": "#/$defs/card" },
+        { "$ref": "#/$defs/steps" },
+        { "$ref": "#/$defs/glossary" },
+        { "$ref": "#/$defs/term" },
+        { "$ref": "#/$defs/disclosure" },
+        { "$ref": "#/$defs/tabs" },
+        { "$ref": "#/$defs/tab" },
+        { "$ref": "#/$defs/modal" },
+        { "$ref": "#/$defs/popover" },
+        { "$ref": "#/$defs/filter" },
+        { "$ref": "#/$defs/toggle" },
+        { "$ref": "#/$defs/chart" },
+        { "$ref": "#/$defs/series" },
+        { "$ref": "#/$defs/point" },
+        { "$ref": "#/$defs/diagram" },
+        { "$ref": "#/$defs/node" },
+        { "$ref": "#/$defs/edge" },
+        { "$ref": "#/$defs/timeline" },
+        { "$ref": "#/$defs/event" },
+        { "$ref": "#/$defs/demo" },
+        { "$ref": "#/$defs/asset" },
+        { "$ref": "#/$defs/font" }
+      ]
+    },
+    "callout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "callout" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "kind": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,31})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,30}\\S))\\s*$",
+              "description": "Lowercase presentation token.",
+              "default": "info"
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "decision" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "cards": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "cards" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "card": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "card" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "steps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "steps" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "glossary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "glossary" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Stable glossary definition key."
+            },
+            "term": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Canonical term text inserted at every reference."
+            }
+          },
+          "required": ["key", "term"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "term": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "term" },
+        "form": { "type": "string", "enum": ["leaf", "text"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Key of the glossary definition to reference."
+            }
+          },
+          "required": ["key"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "disclosure": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "disclosure" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "open": {
+              "type": "string",
+              "enum": ["false", "true"],
+              "description": "Initial disclosure state.",
+              "default": "false"
+            }
+          },
+          "required": ["title"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "tabs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "tabs" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "tab": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "tab" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Visible tab label."
+            }
+          },
+          "required": ["label"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "modal": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "modal" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "trigger": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Visible dialog trigger label.",
+              "default": "Open dialog"
+            }
+          },
+          "required": ["title"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "popover": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "popover" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "trigger": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Visible popover trigger label.",
+              "default": "Show details"
+            }
+          },
+          "required": ["title"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "filter": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "filter" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "placeholder": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Search-field placeholder.",
+              "default": "Filter items"
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "toggle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "toggle" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "label": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Visible switch label."
+            },
+            "default": {
+              "type": "string",
+              "enum": ["off", "on"],
+              "description": "Initial switch state.",
+              "default": "off"
+            }
+          },
+          "required": ["label"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "chart": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "chart" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "description": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,298}\\S))\\s*$",
+              "description": "Meaningful plain-text description for the visual."
+            },
+            "type": {
+              "type": "string",
+              "enum": ["bar", "line", "pie"],
+              "description": "Chart form.",
+              "default": "bar"
+            },
+            "x-label": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Horizontal-axis label."
+            },
+            "y-label": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Vertical-axis label."
+            }
+          },
+          "required": ["title", "description"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "series": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "series" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Legend label."
+            }
+          },
+          "required": ["label"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "point": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "point" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Category label."
+            },
+            "value": {
+              "type": "number",
+              "minimum": -999999999,
+              "maximum": 999999999,
+              "multipleOf": 0.0001,
+              "description": "Finite numeric value between -999999999 and 999999999."
+            }
+          },
+          "required": ["label", "value"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "diagram": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "diagram" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "description": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,298}\\S))\\s*$",
+              "description": "Meaningful plain-text description for the visual."
+            },
+            "direction": {
+              "type": "string",
+              "enum": ["right", "down"],
+              "description": "Flow direction.",
+              "default": "right"
+            }
+          },
+          "required": ["title", "description"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "node" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Unique node identity within the diagram."
+            },
+            "label": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Visible node label."
+            },
+            "kind": {
+              "type": "string",
+              "enum": ["neutral", "accent", "success", "warning"],
+              "description": "Package-owned node emphasis.",
+              "default": "neutral"
+            }
+          },
+          "required": ["id", "label"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "edge" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Source node identity."
+            },
+            "to": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Target node identity."
+            },
+            "label": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Optional connection label."
+            }
+          },
+          "required": ["from", "to"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "timeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "timeline" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "description": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,298}\\S))\\s*$",
+              "description": "Meaningful plain-text description for the visual."
+            }
+          },
+          "required": ["title", "description"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "event" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "date": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Visible date or phase label."
+            },
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "kind": {
+              "type": "string",
+              "enum": ["neutral", "accent", "success", "warning"],
+              "description": "Package-owned event emphasis.",
+              "default": "neutral"
+            }
+          },
+          "required": ["date", "title"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "demo": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "demo" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "start": {
+              "type": "integer",
+              "minimum": -999999,
+              "maximum": 999999,
+              "description": "Initial counter value.",
+              "default": 0
+            },
+            "step": {
+              "type": "integer",
+              "minimum": -999999,
+              "maximum": 999999,
+              "description": "Amount added per activation.",
+              "default": 1
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "asset" },
+        "form": { "type": "string", "enum": ["text", "leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "src": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "format": "relative-local-path",
+              "description": "Relative local resource path."
+            }
+          },
+          "required": ["src"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "font": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "font" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "src": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "format": "relative-local-path",
+              "description": "Relative local font path."
+            },
+            "family": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[\\p{L}\\p{N} _-]{1,80})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,78}\\S))\\s*$",
+              "description": "CSS font family using letters, numbers, spaces, underscores, or hyphens."
+            }
+          },
+          "required": ["src", "family"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    }
+  }
+}

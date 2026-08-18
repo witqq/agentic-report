@@ -1,0 +1,29 @@
+{
+  "contractVersion": 1,
+  "id": "replace-with-extension-id",
+  "summary": "Explain the bounded extension and the user problem it solves.",
+  "trustBoundary": {
+    "authorCode": "forbidden",
+    "callbacks": "forbidden",
+    "eval": "forbidden",
+    "dynamicImports": "forbidden",
+    "networkAccess": "forbidden",
+    "confinement": "source-root",
+    "offline": "required",
+    "deterministicSerialization": "required",
+    "cspCompatible": "required",
+    "packageOwnedRuntime": "required"
+  },
+  "evidence": {
+    "sourceGrammar": "Describe declarative syntax, validation, repair and discovery evidence.",
+    "executionCapabilities": "Prove the package-owned bounded behavior and capability disposition.",
+    "confinement": "Prove canonical source-root confinement and alias or race handling.",
+    "offlineBehavior": "Prove compilation and file URL reading require no network access.",
+    "deterministicSerialization": "Provide repeated artifact hashes and the supported environment.",
+    "cspAndRuntime": "Prove CSP compatibility and bounded package-owned runtime behavior.",
+    "accessibility": "Provide semantic, keyboard, touch and assistive technology evidence.",
+    "byteAndPerformanceBudgets": "Report measured artifact, runtime, build-time and memory consequences.",
+    "packageDependenciesAndLicenses": "List package, transitive dependency and license consequences.",
+    "compatibility": "Define source, API, CLI and artifact compatibility plus migration behavior."
+  }
+}

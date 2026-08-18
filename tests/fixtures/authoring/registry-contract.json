@@ -1,0 +1,1450 @@
+{
+  "contract": {
+    "major": 1,
+    "supportedReaderMajors": [1],
+    "legacySourceMajor": 1,
+    "schemaDialect": "https://json-schema.org/draft/2020-12/schema",
+    "schemaIds": {
+      "manifest": "urn:agentic-report:schema:manifest:1",
+      "directives": "urn:agentic-report:schema:directives:1",
+      "source": "urn:agentic-report:schema:source:1"
+    },
+    "evolution": {
+      "additiveWithinMajor": true,
+      "breakingChangeRequiresNewMajor": true,
+      "silentReinterpretationAllowed": false
+    }
+  },
+  "source": {
+    "entry": "Markdown file or directory containing report.md/index.md",
+    "metadata": ["YAML/JSON manifest", "YAML frontmatter"],
+    "partialSyntax": "{{include: relative/path.md}}",
+    "directiveSyntax": {
+      "container": ":::name{attributes}\nMarkdown children\n:::",
+      "nestedContainer": "Use a longer outer colon fence than nested directives.",
+      "leaf": "::name{attributes}",
+      "text": ":name[label]{attributes}"
+    },
+    "resources": ["local images", "downloadable local assets", "local fonts"]
+  },
+  "output": {
+    "default": "single-file",
+    "formats": ["single-file", "directory"],
+    "runtimePlacement": { "single-file": "inline", "directory": "external" }
+  },
+  "page": {
+    "defaultLayout": "document",
+    "layouts": ["document", "dashboard", "landing", "mixed"],
+    "defaultTheme": "system",
+    "themes": ["system", "light", "dark"],
+    "tokens": [
+      {
+        "name": "density",
+        "description": "Controls the shared spacing rhythm and control padding.",
+        "required": false,
+        "default": "comfortable",
+        "constraint": { "kind": "enum", "values": ["compact", "comfortable", "spacious"] }
+      },
+      {
+        "name": "font",
+        "description": "Selects the package-owned typography stack.",
+        "required": false,
+        "default": "sans",
+        "constraint": { "kind": "enum", "values": ["sans", "serif", "mono"] }
+      },
+      {
+        "name": "accent",
+        "description": "Selects the accent and visible-focus color family.",
+        "required": false,
+        "default": "indigo",
+        "constraint": { "kind": "enum", "values": ["indigo", "teal", "coral"] }
+      },
+      {
+        "name": "width",
+        "description": "Controls the maximum shell and reading width.",
+        "required": false,
+        "default": "standard",
+        "constraint": { "kind": "enum", "values": ["narrow", "standard", "wide"] }
+      },
+      {
+        "name": "radius",
+        "description": "Controls the shared corner treatment for surfaces and controls.",
+        "required": false,
+        "default": "soft",
+        "constraint": { "kind": "enum", "values": ["sharp", "soft", "round"] }
+      }
+    ]
+  },
+  "manifestFields": [
+    {
+      "name": "contractVersion",
+      "description": "Authored source-contract major; omitted legacy source is interpreted as version 1.",
+      "required": false,
+      "default": 1,
+      "constraint": { "kind": "integer", "minimum": 1 }
+    },
+    {
+      "name": "title",
+      "description": "Document title.",
+      "required": false,
+      "constraint": { "kind": "string", "normalization": "trim", "minLength": 1 }
+    },
+    {
+      "name": "description",
+      "description": "Plain-text document description for metadata.",
+      "required": false,
+      "constraint": { "kind": "string", "normalization": "trim", "minLength": 1 }
+    },
+    {
+      "name": "language",
+      "description": "Language tag using the supported 2-8 letter primary and optional 2-8 character alphanumeric subtags.",
+      "required": false,
+      "default": "und",
+      "constraint": {
+        "kind": "string",
+        "normalization": "trim",
+        "minLength": 2,
+        "pattern": "^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{2,8})*$"
+      }
+    },
+    {
+      "name": "theme",
+      "description": "Initial document color theme.",
+      "required": false,
+      "default": "system",
+      "constraint": { "kind": "enum", "values": ["system", "light", "dark"] }
+    },
+    {
+      "name": "layout",
+      "description": "Responsive page composition selected from the package-owned layout catalog.",
+      "required": false,
+      "default": "document",
+      "constraint": { "kind": "enum", "values": ["document", "dashboard", "landing", "mixed"] }
+    },
+    {
+      "name": "tokens",
+      "description": "Compact package-owned visual token overrides; arbitrary CSS is not accepted.",
+      "required": false,
+      "default": {
+        "density": "comfortable",
+        "font": "sans",
+        "accent": "indigo",
+        "width": "standard",
+        "radius": "soft"
+      },
+      "fields": [
+        {
+          "name": "density",
+          "description": "Controls the shared spacing rhythm and control padding.",
+          "required": false,
+          "default": "comfortable",
+          "constraint": { "kind": "enum", "values": ["compact", "comfortable", "spacious"] }
+        },
+        {
+          "name": "font",
+          "description": "Selects the package-owned typography stack.",
+          "required": false,
+          "default": "sans",
+          "constraint": { "kind": "enum", "values": ["sans", "serif", "mono"] }
+        },
+        {
+          "name": "accent",
+          "description": "Selects the accent and visible-focus color family.",
+          "required": false,
+          "default": "indigo",
+          "constraint": { "kind": "enum", "values": ["indigo", "teal", "coral"] }
+        },
+        {
+          "name": "width",
+          "description": "Controls the maximum shell and reading width.",
+          "required": false,
+          "default": "standard",
+          "constraint": { "kind": "enum", "values": ["narrow", "standard", "wide"] }
+        },
+        {
+          "name": "radius",
+          "description": "Controls the shared corner treatment for surfaces and controls.",
+          "required": false,
+          "default": "soft",
+          "constraint": { "kind": "enum", "values": ["sharp", "soft", "round"] }
+        }
+      ]
+    },
+    {
+      "name": "output",
+      "description": "Default output settings; command-line flags can override the format.",
+      "required": false,
+      "default": { "format": "single-file", "maxInlineBytes": 5000000 },
+      "fields": [
+        {
+          "name": "format",
+          "description": "Static artifact layout; single-file is the portable default.",
+          "required": false,
+          "default": "single-file",
+          "constraint": { "kind": "enum", "values": ["single-file", "directory"] }
+        },
+        {
+          "name": "maxInlineBytes",
+          "description": "Warning threshold for bytes embedded into single-file output.",
+          "required": false,
+          "default": 5000000,
+          "constraint": { "kind": "integer", "minimum": 1 }
+        }
+      ]
+    }
+  ],
+  "directives": [
+    {
+      "name": "callout",
+      "description": "Emphasized finding or notice containing Markdown.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "kind",
+          "description": "Lowercase presentation token.",
+          "required": false,
+          "default": "info",
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[a-z][a-z0-9-]{0,31}$"
+          },
+          "renderProperty": "dataKind",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown",
+      "placement": {},
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "aside",
+        "className": "semantic-callout",
+        "properties": ["dataSemantic", "dataDirectiveTitle", "dataKind"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "decision",
+      "description": "Decision or product-development branch containing Markdown.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown",
+      "placement": {},
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-decision",
+        "properties": ["dataSemantic", "dataDirectiveTitle"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "cards",
+      "description": "Responsive grid, normally containing card directives.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown-and-card-directives",
+      "placement": {},
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-cards",
+        "properties": ["dataSemantic", "dataDirectiveTitle"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "card",
+      "description": "One semantic card containing Markdown.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown",
+      "placement": { "requiredParent": "cards", "preferredParent": "cards" },
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "article",
+        "className": "semantic-card",
+        "properties": ["dataSemantic", "dataDirectiveTitle"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "steps",
+      "description": "Process or tutorial sequence containing Markdown, normally an ordered list.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown",
+      "placement": {},
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-steps",
+        "properties": ["dataSemantic", "dataDirectiveTitle"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "glossary",
+      "description": "Reusable glossary definition containing Markdown.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "key",
+          "description": "Stable glossary definition key.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "renderProperty": "dataKey",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "term",
+          "description": "Canonical term text inserted at every reference.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataTerm",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown",
+      "placement": {},
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-glossary",
+        "properties": ["dataSemantic", "dataKey", "dataTerm"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    {
+      "name": "term",
+      "description": "Inline or standalone reference that opens a registered glossary explanation.",
+      "forms": ["leaf", "text"],
+      "attributes": [
+        {
+          "name": "key",
+          "description": "Key of the glossary definition to reference.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "renderProperty": "dataKey",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "label-or-generated-label",
+      "placement": {},
+      "behavior": {
+        "renderer": "semantic-container",
+        "resource": "none",
+        "runtime": "glossary-reference"
+      },
+      "sanitizer": {
+        "tagName": "span",
+        "className": "semantic-term",
+        "properties": ["dataSemantic", "dataKey"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    {
+      "name": "disclosure",
+      "description": "Native disclosure with a visible summary.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "open",
+          "description": "Initial disclosure state.",
+          "required": false,
+          "default": "false",
+          "constraint": { "kind": "enum", "values": ["false", "true"] },
+          "renderProperty": "dataOpen",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown",
+      "placement": {},
+      "behavior": {
+        "renderer": "semantic-container",
+        "resource": "none",
+        "runtime": "native-disclosure"
+      },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-disclosure",
+        "properties": ["dataSemantic", "dataDirectiveTitle", "dataOpen"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    {
+      "name": "tabs",
+      "description": "Keyboard-operable group of tab panels.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown-and-tab-directives",
+      "placement": {},
+      "behavior": {
+        "renderer": "semantic-container",
+        "resource": "none",
+        "runtime": "package-owned-tabs"
+      },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-tabs",
+        "properties": ["dataSemantic", "dataDirectiveTitle"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    {
+      "name": "tab",
+      "description": "One labelled panel inside tabs.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "label",
+          "description": "Visible tab label.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataLabel",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown",
+      "placement": { "requiredParent": "tabs" },
+      "behavior": {
+        "renderer": "semantic-container",
+        "resource": "none",
+        "runtime": "package-owned-tabs"
+      },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-tab",
+        "properties": ["dataSemantic", "dataLabel"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    {
+      "name": "modal",
+      "description": "Modal dialog opened by a package-owned control.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "trigger",
+          "description": "Visible dialog trigger label.",
+          "required": false,
+          "default": "Open dialog",
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataTrigger",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown",
+      "placement": {},
+      "behavior": {
+        "renderer": "semantic-container",
+        "resource": "none",
+        "runtime": "package-owned-modal"
+      },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-modal",
+        "properties": ["dataSemantic", "dataDirectiveTitle", "dataTrigger"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    {
+      "name": "popover",
+      "description": "Non-modal contextual panel opened by a package-owned control.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "trigger",
+          "description": "Visible popover trigger label.",
+          "required": false,
+          "default": "Show details",
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataTrigger",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown",
+      "placement": {},
+      "behavior": {
+        "renderer": "semantic-container",
+        "resource": "none",
+        "runtime": "package-owned-popover"
+      },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-popover",
+        "properties": ["dataSemantic", "dataDirectiveTitle", "dataTrigger"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    {
+      "name": "filter",
+      "description": "Client-side text filter for authored list items.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "placeholder",
+          "description": "Search-field placeholder.",
+          "required": false,
+          "default": "Filter items",
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataPlaceholder",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown",
+      "placement": {},
+      "behavior": {
+        "renderer": "semantic-container",
+        "resource": "none",
+        "runtime": "package-owned-filter"
+      },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-filter",
+        "properties": ["dataSemantic", "dataDirectiveTitle", "dataPlaceholder"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    {
+      "name": "toggle",
+      "description": "Switch controlling visibility of declarative content.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "label",
+          "description": "Visible switch label.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataLabel",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "default",
+          "description": "Initial switch state.",
+          "required": false,
+          "default": "off",
+          "constraint": { "kind": "enum", "values": ["off", "on"] },
+          "renderProperty": "dataDefault",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown",
+      "placement": {},
+      "behavior": {
+        "renderer": "semantic-container",
+        "resource": "none",
+        "runtime": "package-owned-toggle"
+      },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-toggle",
+        "properties": ["dataSemantic", "dataDirectiveTitle", "dataLabel", "dataDefault"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    {
+      "name": "chart",
+      "description": "Responsive bar, line, or pie chart rendered at compile time.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "description",
+          "description": "Meaningful plain-text description for the visual.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "renderProperty": "dataDescription",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "type",
+          "description": "Chart form.",
+          "required": false,
+          "default": "bar",
+          "constraint": { "kind": "enum", "values": ["bar", "line", "pie"] },
+          "renderProperty": "dataType",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "x-label",
+          "description": "Horizontal-axis label.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataXLabel",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "y-label",
+          "description": "Vertical-axis label.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataYLabel",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "series-directives",
+      "placement": {},
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-chart",
+        "properties": [
+          "dataSemantic",
+          "dataDirectiveTitle",
+          "dataDescription",
+          "dataType",
+          "dataXLabel",
+          "dataYLabel"
+        ]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "series",
+      "description": "One named chart series containing data points.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "label",
+          "description": "Legend label.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataLabel",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "point-directives",
+      "placement": { "requiredParent": "chart" },
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-series",
+        "properties": ["dataSemantic", "dataLabel"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "point",
+      "description": "One labelled numeric value in a chart series.",
+      "forms": ["leaf"],
+      "attributes": [
+        {
+          "name": "label",
+          "description": "Category label.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataLabel",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "value",
+          "description": "Finite numeric value between -999999999 and 999999999.",
+          "required": true,
+          "constraint": {
+            "kind": "number",
+            "minimum": -999999999,
+            "maximum": 999999999,
+            "multipleOf": 0.0001,
+            "lexicalPattern": "^-?(?:0|[1-9]\\d{0,8})(?:\\.\\d{1,4})?$"
+          },
+          "renderProperty": "dataValue",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "none",
+      "placement": { "requiredParent": "series" },
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "span",
+        "className": "semantic-point",
+        "properties": ["dataSemantic", "dataLabel", "dataValue"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "diagram",
+      "description": "Directed flow diagram rendered as deterministic SVG.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "description",
+          "description": "Meaningful plain-text description for the visual.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "renderProperty": "dataDescription",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "direction",
+          "description": "Flow direction.",
+          "required": false,
+          "default": "right",
+          "constraint": { "kind": "enum", "values": ["right", "down"] },
+          "renderProperty": "dataDirection",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "node-and-edge-directives",
+      "placement": {},
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-diagram",
+        "properties": ["dataSemantic", "dataDirectiveTitle", "dataDescription", "dataDirection"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "node",
+      "description": "One labelled node in a flow diagram.",
+      "forms": ["leaf"],
+      "attributes": [
+        {
+          "name": "id",
+          "description": "Unique node identity within the diagram.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "renderProperty": "dataId",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "label",
+          "description": "Visible node label.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataLabel",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "kind",
+          "description": "Package-owned node emphasis.",
+          "required": false,
+          "default": "neutral",
+          "constraint": { "kind": "enum", "values": ["neutral", "accent", "success", "warning"] },
+          "renderProperty": "dataKind",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "none",
+      "placement": { "requiredParent": "diagram" },
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "span",
+        "className": "semantic-node",
+        "properties": ["dataSemantic", "dataId", "dataLabel", "dataKind"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "edge",
+      "description": "One directed connection between diagram nodes.",
+      "forms": ["leaf"],
+      "attributes": [
+        {
+          "name": "from",
+          "description": "Source node identity.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "renderProperty": "dataFrom",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "to",
+          "description": "Target node identity.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "renderProperty": "dataTo",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "label",
+          "description": "Optional connection label.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataLabel",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "none",
+      "placement": { "requiredParent": "diagram" },
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "span",
+        "className": "semantic-edge",
+        "properties": ["dataSemantic", "dataFrom", "dataTo", "dataLabel"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "timeline",
+      "description": "Semantic chronological sequence with bounded events.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "description",
+          "description": "Meaningful plain-text description for the visual.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "renderProperty": "dataDescription",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "event-directives",
+      "placement": {},
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-timeline",
+        "properties": ["dataSemantic", "dataDirectiveTitle", "dataDescription"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "event",
+      "description": "One dated timeline event with optional Markdown detail.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "date",
+          "description": "Visible date or phase label.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataDate",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "kind",
+          "description": "Package-owned event emphasis.",
+          "required": false,
+          "default": "neutral",
+          "constraint": { "kind": "enum", "values": ["neutral", "accent", "success", "warning"] },
+          "renderProperty": "dataKind",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown",
+      "placement": { "requiredParent": "timeline" },
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-event",
+        "properties": ["dataSemantic", "dataDate", "dataDirectiveTitle", "dataKind"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "demo",
+      "description": "Package-owned counter interaction; author code is never executed.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "start",
+          "description": "Initial counter value.",
+          "required": false,
+          "default": 0,
+          "constraint": {
+            "kind": "integer",
+            "minimum": -999999,
+            "maximum": 999999,
+            "lexicalPattern": "^-?\\d{1,6}$"
+          },
+          "renderProperty": "dataStart",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "step",
+          "description": "Amount added per activation.",
+          "required": false,
+          "default": 1,
+          "constraint": {
+            "kind": "integer",
+            "minimum": -999999,
+            "maximum": 999999,
+            "lexicalPattern": "^-?\\d{1,6}$"
+          },
+          "renderProperty": "dataStep",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown",
+      "placement": {},
+      "behavior": {
+        "renderer": "semantic-container",
+        "resource": "none",
+        "runtime": "package-owned-counter"
+      },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-demo",
+        "properties": [
+          "dataSemantic",
+          "dataDirectiveTitle",
+          "dataStart",
+          "dataStep",
+          "dataDemoCounter"
+        ]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    {
+      "name": "asset",
+      "description": "Download link to a confined local file.",
+      "forms": ["text", "leaf"],
+      "attributes": [
+        {
+          "name": "src",
+          "description": "Relative local resource path.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200,
+            "format": "relative-local-path"
+          },
+          "renderProperty": "dataLocalAsset",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_PATH"
+        }
+      ],
+      "children": "label-or-generated-label",
+      "placement": {},
+      "behavior": { "renderer": "download-asset", "resource": "download", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "a",
+        "className": "semantic-asset",
+        "properties": ["dataLocalAsset", "download"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": true },
+      "handoffs": ["resource-graph"]
+    },
+    {
+      "name": "font",
+      "description": "Register a confined local font; the first declaration becomes the document font.",
+      "forms": ["leaf"],
+      "attributes": [
+        {
+          "name": "src",
+          "description": "Relative local font path.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200,
+            "format": "relative-local-path"
+          },
+          "renderProperty": "dataFontSource",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_PATH"
+        },
+        {
+          "name": "family",
+          "description": "CSS font family using letters, numbers, spaces, underscores, or hyphens.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[\\p{L}\\p{N} _-]{1,80}$"
+          },
+          "renderProperty": "dataFontFamily",
+          "invalidDiagnostic": "INVALID_FONT_FAMILY"
+        }
+      ],
+      "children": "none",
+      "placement": {},
+      "behavior": { "renderer": "font-registration", "resource": "font", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "span",
+        "className": "semantic-font",
+        "properties": ["dataFontSource", "dataFontFamily", "hidden"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": true },
+      "handoffs": ["resource-graph"]
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "init",
+      "description": "Initialize a packaged declarative starter without overwriting user content."
+    },
+    {
+      "id": "validate",
+      "description": "Validate a project through the production preparation pipeline."
+    },
+    {
+      "id": "inspect",
+      "description": "Inspect a valid project through the production preparation pipeline."
+    }
+  ],
+  "commands": [
+    {
+      "id": "init",
+      "description": "Initialize a packaged declarative starter without overwriting user content."
+    },
+    { "id": "validate", "description": "Validate a project without writing an output artifact." },
+    {
+      "id": "inspect",
+      "description": "Inspect source usage and the available authoring catalog without writing output."
+    },
+    { "id": "build", "description": "Compile a source into a static artifact." },
+    { "id": "describe", "description": "Return the complete source contract." },
+    {
+      "id": "schema",
+      "description": "Return manifest, directive, or complete source JSON Schema."
+    },
+    { "id": "examples", "description": "List packaged buildable examples." }
+  ],
+  "examples": [
+    {
+      "id": "basic",
+      "path": "basic",
+      "entry": "report.md",
+      "title": "Report starter",
+      "description": "Decision-ready report with findings, evidence, a local asset, a timeline, and bounded interaction.",
+      "classes": ["report", "work-report"],
+      "starter": { "default": true, "aliases": ["report"] }
+    },
+    {
+      "id": "research",
+      "path": "research",
+      "entry": "report.md",
+      "title": "Research starter",
+      "description": "Research synthesis with a method partial, evidence map, comparison chart, tabs, and recommendation.",
+      "classes": ["research-report"],
+      "starter": { "default": false, "aliases": [] }
+    },
+    {
+      "id": "architecture",
+      "path": "architecture",
+      "entry": "report.md",
+      "title": "Architecture starter",
+      "description": "Architecture decision packet with a local system map, alternatives, flow diagram, and rollout.",
+      "classes": ["architecture-report"],
+      "starter": { "default": false, "aliases": [] }
+    },
+    {
+      "id": "tutorial",
+      "path": "tutorial",
+      "entry": "report.md",
+      "title": "Tutorial starter",
+      "description": "Step-by-step learning page with tabs, progressive detail, code, and a bounded practice control.",
+      "classes": ["tutorial-with-code-and-bounded-demo"],
+      "starter": { "default": false, "aliases": [] }
+    },
+    {
+      "id": "dashboard",
+      "path": "dashboard",
+      "entry": "report.md",
+      "title": "Dashboard starter",
+      "description": "Operational dashboard with scan-friendly cards, charts, filtering, and optional detail.",
+      "classes": ["work-report"],
+      "starter": { "default": false, "aliases": [] }
+    },
+    {
+      "id": "landing",
+      "path": "landing",
+      "entry": "report.md",
+      "title": "Landing page starter",
+      "description": "Focused product narrative with benefits, proof, delivery milestones, and contextual detail.",
+      "classes": ["landing-page"],
+      "starter": { "default": false, "aliases": [] }
+    },
+    {
+      "id": "layout-document",
+      "path": "layout-document",
+      "entry": "report.md",
+      "title": "Document layout example",
+      "description": "Long-form report with persistent contents, decisions, table, code, and local media.",
+      "classes": ["architecture-report"]
+    },
+    {
+      "id": "layout-dashboard",
+      "path": "layout-dashboard",
+      "entry": "report.md",
+      "title": "Dashboard layout example",
+      "description": "Wide operational summary using dense cards, callouts, a table, and compact navigation.",
+      "classes": ["work-report"]
+    },
+    {
+      "id": "layout-landing",
+      "path": "layout-landing",
+      "entry": "report.md",
+      "title": "Landing layout example",
+      "description": "Focused product narrative with a spacious hero, benefits, proof, and next steps.",
+      "classes": ["landing-page"]
+    },
+    {
+      "id": "layout-mixed",
+      "path": "layout-mixed",
+      "entry": "report.md",
+      "title": "Mixed layout example",
+      "description": "Research brief combining long-form narrative with wide card and data sections.",
+      "classes": ["research-report"]
+    },
+    {
+      "id": "interactive-catalog",
+      "path": "interactive-catalog",
+      "entry": "report.md",
+      "title": "Interactive component catalog",
+      "description": "Declarative glossary, disclosure, tabs, overlays, filtering, toggles, and a bounded demo.",
+      "classes": ["interactive-component-catalog"]
+    },
+    {
+      "id": "visualization-catalog",
+      "path": "visualization-catalog",
+      "entry": "report.md",
+      "title": "Declarative visualization catalog",
+      "description": "Validated bar, line, and pie charts, a directed flow diagram, and a semantic timeline.",
+      "classes": ["data-visualization-catalog"]
+    }
+  ]
+}

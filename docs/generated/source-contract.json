@@ -1,0 +1,795 @@
+{
+  "contractVersion": 1,
+  "source": {
+    "entry": "Markdown file or directory containing report.md/index.md",
+    "metadata": ["YAML/JSON manifest", "YAML frontmatter"],
+    "partialSyntax": "{{include: relative/path.md}}",
+    "directiveSyntax": {
+      "container": ":::name{attributes}\nMarkdown children\n:::",
+      "nestedContainer": "Use a longer outer colon fence than nested directives.",
+      "leaf": "::name{attributes}",
+      "text": ":name[label]{attributes}"
+    },
+    "resources": ["local images", "downloadable local assets", "local fonts"]
+  },
+  "directives": {
+    "callout": {
+      "description": "Emphasized finding or notice containing Markdown.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        },
+        "kind": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]{0,31}$",
+          "required": false,
+          "default": "info",
+          "description": "Lowercase presentation token."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "decision": {
+      "description": "Decision or product-development branch containing Markdown.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "cards": {
+      "description": "Responsive grid, normally containing card directives.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        }
+      },
+      "children": "markdown-and-card-directives",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "card": {
+      "description": "One semantic card containing Markdown.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        }
+      },
+      "children": "markdown",
+      "placement": { "requiredParent": "cards", "preferredParent": "cards" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "steps": {
+      "description": "Process or tutorial sequence containing Markdown, normally an ordered list.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "glossary": {
+      "description": "Reusable glossary definition containing Markdown.",
+      "forms": ["container"],
+      "attributes": {
+        "key": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Stable glossary definition key."
+        },
+        "term": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": true,
+          "description": "Canonical term text inserted at every reference."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "term": {
+      "description": "Inline or standalone reference that opens a registered glossary explanation.",
+      "forms": ["leaf", "text"],
+      "attributes": {
+        "key": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Key of the glossary definition to reference."
+        }
+      },
+      "children": "label-or-generated-label",
+      "placement": {},
+      "resource": "none",
+      "runtime": "glossary-reference",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "disclosure": {
+      "description": "Native disclosure with a visible summary.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": true,
+          "description": "Visible title."
+        },
+        "open": {
+          "kind": "enum",
+          "values": ["false", "true"],
+          "required": false,
+          "default": "false",
+          "description": "Initial disclosure state."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "native-disclosure",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "tabs": {
+      "description": "Keyboard-operable group of tab panels.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        }
+      },
+      "children": "markdown-and-tab-directives",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-tabs",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "tab": {
+      "description": "One labelled panel inside tabs.",
+      "forms": ["container"],
+      "attributes": {
+        "label": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": true,
+          "description": "Visible tab label."
+        }
+      },
+      "children": "markdown",
+      "placement": { "requiredParent": "tabs" },
+      "resource": "none",
+      "runtime": "package-owned-tabs",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "modal": {
+      "description": "Modal dialog opened by a package-owned control.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": true,
+          "description": "Visible title."
+        },
+        "trigger": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "default": "Open dialog",
+          "description": "Visible dialog trigger label."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-modal",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "popover": {
+      "description": "Non-modal contextual panel opened by a package-owned control.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": true,
+          "description": "Visible title."
+        },
+        "trigger": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "default": "Show details",
+          "description": "Visible popover trigger label."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-popover",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "filter": {
+      "description": "Client-side text filter for authored list items.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        },
+        "placeholder": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "default": "Filter items",
+          "description": "Search-field placeholder."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-filter",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "toggle": {
+      "description": "Switch controlling visibility of declarative content.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        },
+        "label": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": true,
+          "description": "Visible switch label."
+        },
+        "default": {
+          "kind": "enum",
+          "values": ["off", "on"],
+          "required": false,
+          "default": "off",
+          "description": "Initial switch state."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-toggle",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "chart": {
+      "description": "Responsive bar, line, or pie chart rendered at compile time.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": true,
+          "description": "Visible title."
+        },
+        "description": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 300,
+          "required": true,
+          "description": "Meaningful plain-text description for the visual."
+        },
+        "type": {
+          "kind": "enum",
+          "values": ["bar", "line", "pie"],
+          "required": false,
+          "default": "bar",
+          "description": "Chart form."
+        },
+        "x-label": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "description": "Horizontal-axis label."
+        },
+        "y-label": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "description": "Vertical-axis label."
+        }
+      },
+      "children": "series-directives",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "series": {
+      "description": "One named chart series containing data points.",
+      "forms": ["container"],
+      "attributes": {
+        "label": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": true,
+          "description": "Legend label."
+        }
+      },
+      "children": "point-directives",
+      "placement": { "requiredParent": "chart" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "point": {
+      "description": "One labelled numeric value in a chart series.",
+      "forms": ["leaf"],
+      "attributes": {
+        "label": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": true,
+          "description": "Category label."
+        },
+        "value": {
+          "kind": "number",
+          "minimum": -999999999,
+          "maximum": 999999999,
+          "multipleOf": 0.0001,
+          "lexicalPattern": "^-?(?:0|[1-9]\\d{0,8})(?:\\.\\d{1,4})?$",
+          "required": true,
+          "description": "Finite numeric value between -999999999 and 999999999."
+        }
+      },
+      "children": "none",
+      "placement": { "requiredParent": "series" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "diagram": {
+      "description": "Directed flow diagram rendered as deterministic SVG.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": true,
+          "description": "Visible title."
+        },
+        "description": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 300,
+          "required": true,
+          "description": "Meaningful plain-text description for the visual."
+        },
+        "direction": {
+          "kind": "enum",
+          "values": ["right", "down"],
+          "required": false,
+          "default": "right",
+          "description": "Flow direction."
+        }
+      },
+      "children": "node-and-edge-directives",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "node": {
+      "description": "One labelled node in a flow diagram.",
+      "forms": ["leaf"],
+      "attributes": {
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Unique node identity within the diagram."
+        },
+        "label": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": true,
+          "description": "Visible node label."
+        },
+        "kind": {
+          "kind": "enum",
+          "values": ["neutral", "accent", "success", "warning"],
+          "required": false,
+          "default": "neutral",
+          "description": "Package-owned node emphasis."
+        }
+      },
+      "children": "none",
+      "placement": { "requiredParent": "diagram" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "edge": {
+      "description": "One directed connection between diagram nodes.",
+      "forms": ["leaf"],
+      "attributes": {
+        "from": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Source node identity."
+        },
+        "to": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Target node identity."
+        },
+        "label": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "description": "Optional connection label."
+        }
+      },
+      "children": "none",
+      "placement": { "requiredParent": "diagram" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "timeline": {
+      "description": "Semantic chronological sequence with bounded events.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": true,
+          "description": "Visible title."
+        },
+        "description": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 300,
+          "required": true,
+          "description": "Meaningful plain-text description for the visual."
+        }
+      },
+      "children": "event-directives",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "event": {
+      "description": "One dated timeline event with optional Markdown detail.",
+      "forms": ["container"],
+      "attributes": {
+        "date": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": true,
+          "description": "Visible date or phase label."
+        },
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": true,
+          "description": "Visible title."
+        },
+        "kind": {
+          "kind": "enum",
+          "values": ["neutral", "accent", "success", "warning"],
+          "required": false,
+          "default": "neutral",
+          "description": "Package-owned event emphasis."
+        }
+      },
+      "children": "markdown",
+      "placement": { "requiredParent": "timeline" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "demo": {
+      "description": "Package-owned counter interaction; author code is never executed.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        },
+        "start": {
+          "kind": "integer",
+          "minimum": -999999,
+          "maximum": 999999,
+          "lexicalPattern": "^-?\\d{1,6}$",
+          "required": false,
+          "default": 0,
+          "description": "Initial counter value."
+        },
+        "step": {
+          "kind": "integer",
+          "minimum": -999999,
+          "maximum": 999999,
+          "lexicalPattern": "^-?\\d{1,6}$",
+          "required": false,
+          "default": 1,
+          "description": "Amount added per activation."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-counter",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "asset": {
+      "description": "Download link to a confined local file.",
+      "forms": ["text", "leaf"],
+      "attributes": {
+        "src": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "format": "relative-local-path",
+          "required": true,
+          "description": "Relative local resource path."
+        }
+      },
+      "children": "label-or-generated-label",
+      "placement": {},
+      "resource": "download",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": true },
+      "handoffs": ["resource-graph"]
+    },
+    "font": {
+      "description": "Register a confined local font; the first declaration becomes the document font.",
+      "forms": ["leaf"],
+      "attributes": {
+        "src": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "format": "relative-local-path",
+          "required": true,
+          "description": "Relative local font path."
+        },
+        "family": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[\\p{L}\\p{N} _-]{1,80}$",
+          "required": true,
+          "description": "CSS font family using letters, numbers, spaces, underscores, or hyphens."
+        }
+      },
+      "children": "none",
+      "placement": {},
+      "resource": "font",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": true },
+      "handoffs": ["resource-graph"]
+    }
+  },
+  "outputs": {
+    "default": "single-file",
+    "formats": ["single-file", "directory"],
+    "runtimePlacement": { "single-file": "inline", "directory": "external" }
+  },
+  "page": {
+    "defaultLayout": "document",
+    "layouts": ["document", "dashboard", "landing", "mixed"],
+    "defaultTheme": "system",
+    "themes": ["system", "light", "dark"],
+    "tokens": [
+      {
+        "name": "density",
+        "description": "Controls the shared spacing rhythm and control padding.",
+        "required": false,
+        "default": "comfortable",
+        "constraint": { "kind": "enum", "values": ["compact", "comfortable", "spacious"] }
+      },
+      {
+        "name": "font",
+        "description": "Selects the package-owned typography stack.",
+        "required": false,
+        "default": "sans",
+        "constraint": { "kind": "enum", "values": ["sans", "serif", "mono"] }
+      },
+      {
+        "name": "accent",
+        "description": "Selects the accent and visible-focus color family.",
+        "required": false,
+        "default": "indigo",
+        "constraint": { "kind": "enum", "values": ["indigo", "teal", "coral"] }
+      },
+      {
+        "name": "width",
+        "description": "Controls the maximum shell and reading width.",
+        "required": false,
+        "default": "standard",
+        "constraint": { "kind": "enum", "values": ["narrow", "standard", "wide"] }
+      },
+      {
+        "name": "radius",
+        "description": "Controls the shared corner treatment for surfaces and controls.",
+        "required": false,
+        "default": "soft",
+        "constraint": { "kind": "enum", "values": ["sharp", "soft", "round"] }
+      }
+    ]
+  },
+  "safety": [
+    "canonical source-root confinement",
+    "local resources only",
+    "sanitized Markdown HTML",
+    "no author code or template execution"
+  ],
+  "capabilities": {
+    "init": "Initialize a packaged declarative starter without overwriting user content.",
+    "validate": "Validate a project through the production preparation pipeline.",
+    "inspect": "Inspect a valid project through the production preparation pipeline."
+  },
+  "commands": {
+    "init": "Initialize a packaged declarative starter without overwriting user content.",
+    "validate": "Validate a project without writing an output artifact.",
+    "inspect": "Inspect source usage and the available authoring catalog without writing output.",
+    "build": "Compile a source into a static artifact.",
+    "describe": "Return the complete source contract.",
+    "schema": "Return manifest, directive, or complete source JSON Schema.",
+    "examples": "List packaged buildable examples."
+  }
+}
