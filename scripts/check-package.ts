@@ -87,7 +87,7 @@ const installedExports = requireRecord(installedPackage.exports, 'installed pack
 const installedRootExport = requireRecord(installedExports['.'], 'installed root export');
 if (
   installedPackage.name !== 'agentic-report' ||
-  installedPackage.version !== '0.1.0' ||
+  installedPackage.version !== '0.1.1' ||
   installedPackage.description !==
     'Local declarative page builder for agent-authored interactive HTML artifacts.' ||
   installedPackage.license !== 'MIT' ||
@@ -834,11 +834,16 @@ async function expectedTarballFiles(): Promise<string[]> {
   const expected = new Set([
     'package/package.json',
     'package/README.md',
+    'package/PRODUCT-REQUIREMENTS.md',
     'package/LICENSE',
     'package/dist/browser/document.css',
     'package/dist/browser/runtime.js',
     ...[
       'AGENT-REFERENCE.md',
+      'ARCHITECTURE.md',
+      'DEVELOPMENT.md',
+      'PROJECT_CHECKLIST.md',
+      'TESTING.md',
       'generated/directives.schema.json',
       'generated/extension-proposal.schema.json',
       'generated/extension-proposal.template.json',
