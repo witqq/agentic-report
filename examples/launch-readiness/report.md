@@ -5,12 +5,9 @@ description: A fictional launch decision combining audience value, activation ev
 language: en
 theme: light
 layout: landing
+preset: studio
 tokens:
-  density: spacious
-  font: sans
   accent: teal
-  width: wide
-  radius: round
 ---
 
 # Regional beta launch readiness

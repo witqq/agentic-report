@@ -105,9 +105,11 @@ envelopes are not yet independently versioned; the source-contract major is incl
 inspection results.
 
 The current source schema supports title, description, a documented restricted language-tag syntax,
-theme, layout, compact page-token overrides, and output defaults. `document`, `dashboard`, `landing`, and
-`mixed` share one responsive shell and token system; the token fields select density, typography, accent,
-content width, and radius from closed package-owned domains. Frontmatter overrides the matching manifest fields. Only Markdown partials
+theme, layout, a coordinated preset, compact page-token overrides, and output defaults. `studio`,
+`editorial`, and `signal` are registry-owned token-default families; theme remains an independent color
+mode, and explicitly authored bounded tokens override the preset on density, typography, accent, content
+width, and radius. `document`, `dashboard`, `landing`, and `mixed` share one responsive shell, track
+system, and component surface model. Frontmatter overrides the matching manifest fields. Only Markdown partials
 are allowed; the loader rejects cycles, nesting over 10 levels, and lexical or canonical paths outside the
 source root. The source contract is defined in
 [`product/source-contract.md`](product/source-contract.md).
@@ -169,12 +171,15 @@ not report success. Hostile concurrent path replacement and process/OS crash rec
 proportionate filesystem model. The inline warning threshold counts the actual serialized CSS, inline
 runtime, and image/download data URLs; a font data URL is counted once through generated CSS.
 
-Output format and page layout are independent public data choices. One data-only registry contract owns
-the default and closed domain for both: `single-file` uses an inline runtime and `directory` uses an
-external content-addressed runtime, while page layout selects `document`, `dashboard`, `landing`, or
-`mixed`. The same renderer and stylesheet apply the registry-owned theme and compact token values in both
-formats. The navigation toggle exists only when a table of contents exists; desktop placement varies by
-layout, and all layouts use the same mobile drawer behavior.
+Output format, page layout, and visual preset are independent public data choices. One data-only registry
+contract owns their defaults and closed domains: `single-file` uses an inline runtime and `directory` uses
+an external content-addressed runtime; layout selects document/dashboard/landing/mixed composition; preset
+selects coordinated visual defaults. The schema normalizer resolves preset defaults followed by explicit
+bounded token overrides, and the renderer projects only the resolved preset/theme/token identities into
+the shared package stylesheet in both formats. The stylesheet owns reading/standard/wide tracks, section
+rhythm, component containment, and a single content-surface layer; wide media, tables, charts, and code
+scroll locally instead of widening the document. The navigation toggle exists only when a table of
+contents exists; desktop placement varies by layout, and all layouts use the same mobile drawer behavior.
 
 ## Security properties
 
@@ -192,7 +197,7 @@ layout, and all layouts use the same mobile drawer behavior.
 ## Extension boundaries
 
 The typed registry owns current authoring directives, interaction behavior identities, page layouts,
-themes, compact token domains, capabilities, output behavior, and example/starter metadata. Its schemas,
+presets, themes, compact token domains, capabilities, output behavior, and example/starter metadata. Its schemas,
 discovery values, generated documentation projections, and examples are integrity-checked together. The
 interactive catalog extends this same registry; later data primitives must do the same rather than create
 layout-specific renderers.

@@ -23,6 +23,18 @@
   --space-factor: 1;
   --space-section: calc(2.5rem * var(--space-factor));
   --space-card: calc(1.1rem * var(--space-factor));
+  --section-rhythm: calc(3.5rem * var(--space-factor));
+  --shell-gap: clamp(1rem, 4vw, 3rem);
+  --shell-gutter: clamp(1rem, 3vw, 2rem);
+  --body-leading: 1.65;
+  --heading-weight: 760;
+  --heading-tracking: -0.035em;
+  --card-minimum: 15rem;
+  --page-backdrop: radial-gradient(
+    circle at 8% -10%,
+    color-mix(in srgb, var(--color-accent) 13%, transparent),
+    transparent 28rem
+  );
   --content-width: 76rem;
   --reading-measure: 72ch;
   --sidebar-width: 17rem;
@@ -32,6 +44,45 @@
   font-family: var(--agentic-font, var(--font-body));
   background: var(--color-bg);
   color: var(--color-text);
+}
+
+:root[data-preset='studio'] {
+  --section-rhythm: calc(3.75rem * var(--space-factor));
+  --body-leading: 1.65;
+  --heading-weight: 780;
+  --heading-tracking: -0.045em;
+  --card-minimum: 15rem;
+}
+
+:root[data-preset='editorial'] {
+  --section-rhythm: calc(4.5rem * var(--space-factor));
+  --body-leading: 1.76;
+  --heading-weight: 650;
+  --heading-tracking: -0.022em;
+  --card-minimum: 17rem;
+  --page-backdrop: linear-gradient(
+    90deg,
+    transparent 0,
+    color-mix(in srgb, var(--color-border) 28%, transparent) 50%,
+    transparent 100%
+  );
+}
+
+:root[data-preset='signal'] {
+  --section-rhythm: calc(2.75rem * var(--space-factor));
+  --shell-gap: clamp(0.75rem, 2vw, 1.5rem);
+  --body-leading: 1.55;
+  --heading-weight: 800;
+  --heading-tracking: -0.03em;
+  --card-minimum: 13rem;
+  --page-backdrop:
+    linear-gradient(color-mix(in srgb, var(--color-border) 22%, transparent) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-border) 22%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 2rem 2rem;
 }
 
 :root[data-theme='dark'] {
@@ -170,16 +221,14 @@ body {
   min-width: 20rem;
   margin: 0;
   overflow-wrap: anywhere;
-  background:
-    radial-gradient(
-      circle at 8% -10%,
-      color-mix(in srgb, var(--color-accent) 13%, transparent),
-      transparent 28rem
-    ),
-    var(--color-bg);
+  background: var(--page-backdrop), var(--color-bg);
   color: var(--color-text);
   font-family: var(--agentic-font, var(--font-body));
-  line-height: 1.65;
+  line-height: var(--body-leading);
+}
+
+:root[data-preset='signal'] body {
+  background-size: 2rem 2rem;
 }
 
 a {
@@ -215,6 +264,10 @@ a {
   padding: 0.65rem clamp(1rem, 3vw, 2rem);
   background: color-mix(in srgb, var(--color-surface) 90%, transparent);
   backdrop-filter: blur(16px);
+}
+
+:root[data-preset='editorial'] .topbar {
+  backdrop-filter: none;
 }
 
 .topbar-title {
@@ -264,8 +317,8 @@ a {
   width: min(100%, var(--content-width));
   margin: 0 auto;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-  gap: clamp(1rem, 4vw, 3rem);
-  padding: calc(2rem * var(--space-factor)) clamp(1rem, 3vw, 2rem) 4rem;
+  gap: var(--shell-gap);
+  padding: calc(2rem * var(--space-factor)) var(--shell-gutter) 4rem;
 }
 
 .sidebar {
@@ -318,10 +371,16 @@ a {
 .report-content {
   min-width: 0;
   padding: clamp(1.15rem, 4vw, 3rem);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-large);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-raised);
+  border: 0;
+  background: transparent;
+}
+
+.report-content article,
+.report-content section,
+.semantic-card,
+.semantic-tab,
+.semantic-toggle [data-toggle-panel] {
+  min-width: 0;
 }
 
 .report-content article > :first-child {
@@ -332,6 +391,7 @@ h1,
 h2,
 h3 {
   font-family: var(--font-heading);
+  font-weight: var(--heading-weight);
   line-height: 1.14;
   text-wrap: balance;
 }
@@ -340,7 +400,7 @@ h1 {
   max-width: 18ch;
   margin-bottom: 0.45em;
   font-size: clamp(2.2rem, 7vw, 4.7rem);
-  letter-spacing: -0.045em;
+  letter-spacing: var(--heading-tracking);
 }
 
 h2 {
@@ -356,7 +416,11 @@ h3 {
 
 p,
 li {
-  max-width: var(--reading-measure);
+  max-width: min(100%, var(--flow-measure, var(--reading-measure)));
+}
+
+.report-content article > :is(h1, h2, h3, p, ul, ol, blockquote, hr) {
+  max-width: min(100%, var(--reading-measure));
 }
 
 hr {
@@ -366,6 +430,7 @@ hr {
 }
 
 img {
+  width: auto;
   display: block;
   max-width: 100%;
   height: auto;
@@ -439,6 +504,7 @@ table {
   overflow-x: auto;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
+  overscroll-behavior-inline: contain;
 }
 
 th,
@@ -466,17 +532,20 @@ th {
 .semantic-popover,
 .semantic-filter,
 .semantic-toggle {
-  max-width: var(--reading-measure);
+  max-width: min(100%, var(--flow-measure, var(--reading-measure)));
   margin: calc(1.5rem * var(--space-factor)) 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-medium);
   padding: var(--space-card);
-  background: var(--color-surface-raised);
+  background: var(--color-surface);
 }
 
 .semantic-section {
+  --flow-measure: var(--section-measure, var(--content-width));
+
   width: 100%;
-  margin-block: calc(3.5rem * var(--space-factor));
+  max-width: 100%;
+  margin-block: var(--section-rhythm);
   padding-block: calc(2rem * var(--space-factor));
 }
 
@@ -515,7 +584,7 @@ th {
 }
 
 .semantic-section[data-tone='soft'] {
-  background: var(--color-surface-raised);
+  background: var(--color-surface);
 }
 
 .semantic-section[data-tone='accent'] {
@@ -538,6 +607,16 @@ th {
 
 .semantic-section-title {
   margin-top: 0;
+}
+
+:root[data-preset='editorial'] .semantic-section-title {
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.45em;
+}
+
+:root[data-preset='signal'] .semantic-section-title {
+  border-left: 0.3rem solid var(--color-accent);
+  padding-left: 0.65rem;
 }
 
 .semantic-actions {
@@ -610,7 +689,7 @@ th {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-medium);
   padding: var(--space-card);
-  background: var(--color-surface-raised);
+  background: var(--color-surface);
 }
 
 .visualization-caption {
@@ -633,6 +712,7 @@ th {
 }
 
 .visualization-frame {
+  max-width: 100%;
   width: 100%;
   overflow-x: auto;
   border-radius: var(--radius-small);
@@ -880,7 +960,11 @@ th {
 .semantic-decision {
   border-top: 0.3rem solid var(--color-accent);
   background: var(--color-surface);
-  box-shadow: 0 0.6rem 1.8rem color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+:root[data-preset='signal'] :is(.semantic-card, .semantic-callout, .semantic-decision) {
+  border-width: 1px 1px 1px 0.25rem;
+  border-left-color: var(--color-accent);
 }
 
 .semantic-title {
@@ -894,7 +978,7 @@ th {
   display: grid;
   max-width: 100%;
   gap: calc(1rem * var(--space-factor));
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--card-minimum)), 1fr));
 }
 
 .semantic-cards > .semantic-card {

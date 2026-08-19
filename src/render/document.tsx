@@ -12,7 +12,7 @@ export interface DocumentRenderOptions {
   readonly title: string;
   readonly description?: string;
   readonly language: string;
-  readonly page: Pick<ReportManifest, 'theme' | 'layout' | 'tokens'>;
+  readonly page: Pick<ReportManifest, 'preset' | 'theme' | 'layout' | 'tokens'>;
   readonly contentHtml: string;
   readonly navigation: readonly NavigationItem[];
   readonly contentSecurityPolicy: string;
@@ -34,6 +34,7 @@ export function renderDocument(options: DocumentRenderOptions): string {
   const markup = renderToStaticMarkup(
     <html
       lang={options.language}
+      data-preset={options.page.preset}
       data-theme={options.page.theme}
       data-layout={options.page.layout}
       data-density={options.page.tokens.density}

@@ -5,12 +5,7 @@ description: A fictional security and procurement decision comparing hard gates,
 language: en
 theme: light
 layout: document
-tokens:
-  density: comfortable
-  font: serif
-  accent: indigo
-  width: wide
-  radius: soft
+preset: editorial
 ---
 
 # AI support vendor decision packet

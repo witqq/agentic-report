@@ -43,6 +43,7 @@ title: Architecture options
 description: Decision report
 layout: document
 theme: system
+preset: editorial
 tokens:
   font: serif
   width: narrow
@@ -91,9 +92,11 @@ source-file inventory, observed directives and local-resource occurrence counts,
 command/format/starter/capability catalog.
 
 The package owns four responsive page layouts: `document`, `dashboard`, `landing`, and `mixed`. Authors
-select one as metadata and may choose `system`, `light`, or `dark` plus compact token overrides for
-`density`, `font`, `accent`, `width`, and `radius`. These are closed validated values, not CSS or component
-code. Buildable examples under `examples/layout-*` demonstrate every layout and are listed by
+select one as metadata and may choose the coordinated `studio`, `editorial`, or `signal` preset, an
+independent `system`, `light`, or `dark` color mode, and compact token overrides for `density`, `font`,
+`accent`, `width`, and `radius`. Preset defaults apply first and explicitly authored token values apply
+last. These are closed validated values, not CSS or component code. Buildable examples under
+`examples/layout-*` demonstrate every layout and are listed by
 `agentic-report examples --json`; `examples/interactive-catalog` and `examples/visualization-catalog`
 demonstrate the package-owned interaction and data primitives.
 
@@ -197,9 +200,9 @@ Both formats contain the same package-owned interactive behavior. `single-file` 
 `directory` writes it as a content-addressed local asset. Runtime placement is not a source or CLI option.
 Remote asset fetching and executable templates are not supported.
 
-Page layout is independent of output format: the same document/dashboard/landing/mixed source can be
-built as either one file or a directory artifact. Both paths preserve the selected page tokens, responsive
-navigation, local assets, CSP, and `file://` behavior.
+Page layout and preset are independent of output format: the same declarative source can be built as
+either one file or a directory artifact. Both paths preserve the selected preset, resolved page tokens,
+responsive navigation, local assets, CSP, and `file://` behavior.
 
 There is no public plugin or author-code execution API. Proposed declarative extensions are evaluated
 against the checked [`extension proposal schema`](docs/generated/extension-proposal.schema.json), which

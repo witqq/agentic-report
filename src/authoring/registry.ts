@@ -51,7 +51,54 @@ export const PAGE_TOKEN_FIELDS = [
   },
 ] as const;
 
+export const PAGE_PRESETS = [
+  {
+    name: 'studio',
+    description:
+      'Balanced product storytelling with a generous sans-serif rhythm and restrained depth.',
+    tokens: {
+      density: 'comfortable',
+      font: 'sans',
+      accent: 'indigo',
+      width: 'standard',
+      radius: 'soft',
+    },
+  },
+  {
+    name: 'editorial',
+    description:
+      'Long-form decision reading with serif typography, measured width, and quiet surfaces.',
+    tokens: {
+      density: 'spacious',
+      font: 'serif',
+      accent: 'coral',
+      width: 'narrow',
+      radius: 'soft',
+    },
+  },
+  {
+    name: 'signal',
+    description:
+      'Dense operational evidence with compact spacing, broad tracks, and crisp controls.',
+    tokens: {
+      density: 'compact',
+      font: 'sans',
+      accent: 'teal',
+      width: 'wide',
+      radius: 'sharp',
+    },
+  },
+] as const;
+
+export const PAGE_PRESET_NAMES = PAGE_PRESETS.map((preset) => preset.name) as unknown as readonly [
+  'studio',
+  'editorial',
+  'signal',
+];
+
 export const PAGE_CONTRACT = {
+  defaultPreset: 'studio',
+  presets: PAGE_PRESETS,
   defaultLayout: 'document',
   layouts: ['document', 'dashboard', 'landing', 'mixed'],
   defaultTheme: 'system',
@@ -61,6 +108,7 @@ export const PAGE_CONTRACT = {
 
 export type LayoutChoice = (typeof PAGE_CONTRACT.layouts)[number];
 export type ThemeChoice = (typeof PAGE_CONTRACT.themes)[number];
+export type PresetChoice = (typeof PAGE_PRESET_NAMES)[number];
 
 export type ConstraintDefinition =
   | {
@@ -90,6 +138,7 @@ interface FieldDefinitionBase {
   readonly name: string;
   readonly description: string;
   readonly required: boolean;
+  readonly defaultVisibility?: 'published' | 'normalization-only';
 }
 
 export interface ScalarFieldDefinition extends FieldDefinitionBase {
@@ -307,6 +356,14 @@ export const authoringRegistry = {
       },
     },
     {
+      name: 'preset',
+      description:
+        'Coordinated package-owned visual defaults; explicit bounded token values override the preset.',
+      required: false,
+      default: PAGE_CONTRACT.defaultPreset,
+      constraint: { kind: 'enum', values: PAGE_PRESET_NAMES },
+    },
+    {
       name: 'theme',
       description: 'Initial document color theme.',
       required: false,
@@ -324,6 +381,7 @@ export const authoringRegistry = {
       name: 'tokens',
       description: 'Compact package-owned visual token overrides; arbitrary CSS is not accepted.',
       required: false,
+      defaultVisibility: 'normalization-only',
       default: Object.fromEntries(PAGE_TOKEN_FIELDS.map((token) => [token.name, token.default])),
       fields: PAGE_TOKEN_FIELDS,
     },

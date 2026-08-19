@@ -5,12 +5,7 @@ description: A focused landing page for an offline, agent-friendly interactive p
 language: en
 theme: light
 layout: landing
-tokens:
-  density: spacious
-  font: sans
-  accent: coral
-  width: wide
-  radius: round
+preset: studio
 ---
 
 # From Markdown to a page worth sharing

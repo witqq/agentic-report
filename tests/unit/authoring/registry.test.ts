@@ -169,11 +169,17 @@ describe('authoring registry', () => {
       'examples',
     ]);
     expect(authoringRegistry.page).toMatchObject({
+      defaultPreset: 'studio',
       defaultLayout: 'document',
       layouts: ['document', 'dashboard', 'landing', 'mixed'],
       defaultTheme: 'system',
       themes: ['system', 'light', 'dark'],
     });
+    expect(authoringRegistry.page.presets.map((preset) => preset.name)).toEqual([
+      'studio',
+      'editorial',
+      'signal',
+    ]);
     expect(authoringRegistry.page.tokens.map((token) => token.name)).toEqual([
       'density',
       'font',
@@ -604,10 +610,16 @@ describe('authoring registry', () => {
   });
 
   it('rejects page contract domain, default, and token projection drift', () => {
+    const preset = authoringRegistry.manifestFields.find((field) => field.name === 'preset');
     const theme = authoringRegistry.manifestFields.find((field) => field.name === 'theme');
     const layout = authoringRegistry.manifestFields.find((field) => field.name === 'layout');
     const tokens = authoringRegistry.manifestFields.find((field) => field.name === 'tokens');
-    if (theme === undefined || layout === undefined || tokens?.fields === undefined) {
+    if (
+      preset === undefined ||
+      theme === undefined ||
+      layout === undefined ||
+      tokens?.fields === undefined
+    ) {
       throw new Error('Missing page manifest fields');
     }
 
@@ -616,6 +628,7 @@ describe('authoring registry', () => {
         unsafeRegistryWith({
           page: {
             ...authoringRegistry.page,
+            presets: authoringRegistry.page.presets.slice(0, 2),
             themes: ['system', 'light'],
             layouts: ['document', 'landing'],
           },
@@ -623,6 +636,8 @@ describe('authoring registry', () => {
       ),
     ).toEqual(
       expect.arrayContaining([
+        'page preset: registry domain differs from canonical page contract',
+        'page preset: manifest domain differs from registry domain',
         'page theme: registry domain differs from canonical page contract',
         'page theme: manifest domain differs from registry domain',
         'page layout: registry domain differs from canonical page contract',
@@ -634,6 +649,7 @@ describe('authoring registry', () => {
       authoringRegistryIntegrityIssues(
         registryWith({
           manifestFields: authoringRegistry.manifestFields.map((field) => {
+            if (field.name === 'preset') return { ...preset, default: 'signal' };
             if (field.name === 'theme') return { ...theme, default: 'dark' };
             if (field.name === 'layout') return { ...layout, default: 'mixed' };
             return field;
@@ -642,6 +658,7 @@ describe('authoring registry', () => {
       ),
     ).toEqual(
       expect.arrayContaining([
+        'page preset: manifest default differs from registry default',
         'page theme: manifest default differs from registry default',
         'page layout: manifest default differs from registry default',
       ]),
@@ -697,6 +714,30 @@ describe('authoring registry', () => {
         'page token accent: manifest default differs from registry default',
       ]),
     );
+
+    const incompleteStudio = {
+      ...authoringRegistry.page.presets[0],
+      tokens: {
+        density: 'comfortable',
+        font: 'sans',
+        accent: 'indigo',
+        width: 'standard',
+      },
+    };
+    expect(
+      authoringRegistryIntegrityIssues(
+        unsafeRegistryWith({
+          page: {
+            ...authoringRegistry.page,
+            presets: [
+              incompleteStudio,
+              authoringRegistry.page.presets[1],
+              authoringRegistry.page.presets[2],
+            ],
+          },
+        }),
+      ),
+    ).toContain('page preset studio: token fields differ from registry token catalog');
   });
 
   it('rejects structurally ambiguous fields and returns issues for malformed constraints', () => {

@@ -827,6 +827,42 @@
     "runtimePlacement": { "single-file": "inline", "directory": "external" }
   },
   "page": {
+    "defaultPreset": "studio",
+    "presets": [
+      {
+        "name": "studio",
+        "description": "Balanced product storytelling with a generous sans-serif rhythm and restrained depth.",
+        "tokens": {
+          "density": "comfortable",
+          "font": "sans",
+          "accent": "indigo",
+          "width": "standard",
+          "radius": "soft"
+        }
+      },
+      {
+        "name": "editorial",
+        "description": "Long-form decision reading with serif typography, measured width, and quiet surfaces.",
+        "tokens": {
+          "density": "spacious",
+          "font": "serif",
+          "accent": "coral",
+          "width": "narrow",
+          "radius": "soft"
+        }
+      },
+      {
+        "name": "signal",
+        "description": "Dense operational evidence with compact spacing, broad tracks, and crisp controls.",
+        "tokens": {
+          "density": "compact",
+          "font": "sans",
+          "accent": "teal",
+          "width": "wide",
+          "radius": "sharp"
+        }
+      }
+    ],
     "defaultLayout": "document",
     "layouts": ["document", "dashboard", "landing", "mixed"],
     "defaultTheme": "system",
@@ -837,37 +873,46 @@
         "description": "Controls the shared spacing rhythm and control padding.",
         "required": false,
         "default": "comfortable",
-        "constraint": { "kind": "enum", "values": ["compact", "comfortable", "spacious"] }
+        "constraint": { "kind": "enum", "values": ["compact", "comfortable", "spacious"] },
+        "defaultVisibility": "normalization-only"
       },
       {
         "name": "font",
         "description": "Selects the package-owned typography stack.",
         "required": false,
         "default": "sans",
-        "constraint": { "kind": "enum", "values": ["sans", "serif", "mono"] }
+        "constraint": { "kind": "enum", "values": ["sans", "serif", "mono"] },
+        "defaultVisibility": "normalization-only"
       },
       {
         "name": "accent",
         "description": "Selects the accent and visible-focus color family.",
         "required": false,
         "default": "indigo",
-        "constraint": { "kind": "enum", "values": ["indigo", "teal", "coral"] }
+        "constraint": { "kind": "enum", "values": ["indigo", "teal", "coral"] },
+        "defaultVisibility": "normalization-only"
       },
       {
         "name": "width",
         "description": "Controls the maximum shell and reading width.",
         "required": false,
         "default": "standard",
-        "constraint": { "kind": "enum", "values": ["narrow", "standard", "wide"] }
+        "constraint": { "kind": "enum", "values": ["narrow", "standard", "wide"] },
+        "defaultVisibility": "normalization-only"
       },
       {
         "name": "radius",
         "description": "Controls the shared corner treatment for surfaces and controls.",
         "required": false,
         "default": "soft",
-        "constraint": { "kind": "enum", "values": ["sharp", "soft", "round"] }
+        "constraint": { "kind": "enum", "values": ["sharp", "soft", "round"] },
+        "defaultVisibility": "normalization-only"
       }
-    ]
+    ],
+    "tokenResolution": {
+      "defaultsFrom": "selected-preset",
+      "precedence": ["selected-preset", "explicit-tokens"]
+    }
   },
   "safety": [
     "canonical source-root confinement",

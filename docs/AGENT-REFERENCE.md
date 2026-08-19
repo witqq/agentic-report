@@ -161,12 +161,9 @@ description: Options and decision branches
 language: en
 layout: mixed
 theme: system
+preset: signal
 tokens:
-  density: comfortable
-  font: sans
-  accent: teal
-  width: wide
-  radius: soft
+  radius: round
 ---
 
 # Architecture analysis
@@ -182,16 +179,30 @@ Use semantic directives instead of handwritten layout.
 
 ## Choose the page shape
 
-The package owns the page shell and design system. Metadata selects one closed layout, theme, and optional
-token values:
+The package owns the page shell and design system. Metadata selects one closed layout, coordinated preset,
+theme, and optional token values:
 
 - `layout`: `document` (default), `dashboard`, `landing`, or `mixed`;
+- `preset`: `studio` (default), `editorial`, or `signal`;
 - `theme`: `system` (default), `light`, or `dark`;
-- `tokens.density`: `compact`, `comfortable` (default), or `spacious`;
-- `tokens.font`: `sans` (default), `serif`, or `mono`;
-- `tokens.accent`: `indigo` (default), `teal`, or `coral`;
-- `tokens.width`: `narrow`, `standard` (default), or `wide`;
-- `tokens.radius`: `sharp`, `soft` (default), or `round`.
+- `tokens.density`: `compact`, `comfortable`, or `spacious`;
+- `tokens.font`: `sans`, `serif`, or `mono`;
+- `tokens.accent`: `indigo`, `teal`, or `coral`;
+- `tokens.width`: `narrow`, `standard`, or `wide`;
+- `tokens.radius`: `sharp`, `soft`, or `round`.
+
+Preset token defaults are `studio = comfortable/sans/indigo/standard/soft`, `editorial =
+spacious/serif/coral/narrow/soft`, and `signal = compact/sans/teal/wide/sharp`, in the token order above.
+The preset applies first, theme controls only light/dark/system color resolution, and every explicitly
+authored token field overrides its preset value. Do not repeat all five token fields when the preset
+already expresses the intended family.
+
+The public discovery contract represents this rule as `page.tokenResolution`: defaults come from the
+selected preset, then explicit token fields apply. For source-contract-major compatibility, each
+`page.tokens` entry retains Studio's internal normalization `default` and marks it
+`defaultVisibility: normalization-only`; a discovery consumer must not materialize such values as authored
+tokens. Use the complete maps in `page.presets` when constructing an editor or agent prompt, and apply only
+defaults whose visibility is `published`.
 
 `document` emphasizes long-form reading with persistent desktop contents. `dashboard` uses a wide dense
 surface and horizontal desktop navigation. `landing` provides a spacious centered hero and wide content

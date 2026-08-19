@@ -1,4 +1,4 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -61,6 +61,107 @@ const launchReadinessArtifacts = [
   },
 ] as const;
 
+const presetShowcases = [
+  {
+    name: 'landing',
+    preset: 'studio',
+    heading: 'From Markdown to a page worth sharing',
+    artifacts: landingSectionArtifacts,
+  },
+  {
+    name: 'launch-readiness',
+    preset: 'studio',
+    heading: 'Regional beta launch readiness',
+    artifacts: launchReadinessArtifacts,
+  },
+  {
+    name: 'vendor-decision',
+    preset: 'editorial',
+    heading: 'AI support vendor decision packet',
+    artifacts: vendorDecisionArtifacts,
+  },
+  {
+    name: 'incident-review',
+    preset: 'signal',
+    heading: 'OrbitDesk P1 incident review',
+    artifacts: incidentReviewArtifacts,
+  },
+] as const;
+
+const presetRepresentatives = [presetShowcases[0], presetShowcases[2], presetShowcases[3]] as const;
+
+const presetFixtureExpectations = [
+  {
+    preset: 'studio',
+    density: 'comfortable',
+    font: 'sans',
+    accent: 'indigo',
+    width: 'standard',
+    radius: 'soft',
+    fontFamily: 'Inter',
+    lineHeight: 26.4,
+    contentWidth: '76rem',
+    headingWeight: '780',
+    surfaceRadius: '14.4px',
+    sectionMargin: 60,
+  },
+  {
+    preset: 'editorial',
+    density: 'spacious',
+    font: 'serif',
+    accent: 'coral',
+    width: 'narrow',
+    radius: 'soft',
+    fontFamily: 'Charter',
+    lineHeight: 28.16,
+    contentWidth: '60rem',
+    headingWeight: '650',
+    surfaceRadius: '14.4px',
+    sectionMargin: 92.16,
+  },
+  {
+    preset: 'signal',
+    density: 'compact',
+    font: 'sans',
+    accent: 'teal',
+    width: 'wide',
+    radius: 'sharp',
+    fontFamily: 'Inter',
+    lineHeight: 24.8,
+    contentWidth: '94rem',
+    headingWeight: '800',
+    surfaceRadius: '4px',
+    sectionMargin: 34.32,
+  },
+] as const;
+
+const expectedPresetCapturePaths = [
+  'editorial/directory/dark/desktop.png',
+  'editorial/directory/dark/mobile.png',
+  'editorial/directory/light/desktop.png',
+  'editorial/directory/light/mobile.png',
+  'editorial/single-file/dark/desktop.png',
+  'editorial/single-file/dark/mobile.png',
+  'editorial/single-file/light/desktop.png',
+  'editorial/single-file/light/mobile.png',
+  'signal/directory/dark/desktop.png',
+  'signal/directory/dark/mobile.png',
+  'signal/directory/light/desktop.png',
+  'signal/directory/light/mobile.png',
+  'signal/single-file/dark/desktop.png',
+  'signal/single-file/dark/mobile.png',
+  'signal/single-file/light/desktop.png',
+  'signal/single-file/light/mobile.png',
+  'studio/directory/dark/desktop.png',
+  'studio/directory/dark/mobile.png',
+  'studio/directory/light/desktop.png',
+  'studio/directory/light/mobile.png',
+  'studio/single-file/dark/desktop.png',
+  'studio/single-file/dark/mobile.png',
+  'studio/single-file/light/desktop.png',
+  'studio/single-file/light/mobile.png',
+] as const;
+
 const starters = [
   {
     id: 'basic',
@@ -109,6 +210,7 @@ for (const starter of starters) {
   }, testInfo) => {
     await page.goto(starterArtifactUrl(starter.id));
     await expect(page.locator('html')).toHaveAttribute('data-layout', starter.layout);
+    await expect(page.locator('html')).toHaveAttribute('data-preset', 'studio');
     await expect(page.getByRole('heading', { name: starter.heading, level: 1 })).toBeVisible();
     await expect(page.locator(starter.component).first()).toBeVisible();
     await expect(page.locator('body')).not.toContainText(/lorem ipsum|todo|placeholder/iu);
@@ -623,6 +725,7 @@ for (const artifact of incidentReviewArtifacts) {
   }, testInfo) => {
     await page.goto(artifact.url);
     await expect(page.locator('html')).toHaveAttribute('data-layout', 'mixed');
+    await expect(page.locator('html')).toHaveAttribute('data-preset', 'signal');
     await expect(
       page.getByRole('heading', { name: 'OrbitDesk P1 incident review', level: 1 }),
     ).toBeVisible();
@@ -684,6 +787,7 @@ for (const artifact of vendorDecisionArtifacts) {
   }, testInfo) => {
     await page.goto(artifact.url);
     await expect(page.locator('html')).toHaveAttribute('data-layout', 'document');
+    await expect(page.locator('html')).toHaveAttribute('data-preset', 'editorial');
     await expect(
       page.getByRole('heading', { name: 'AI support vendor decision packet', level: 1 }),
     ).toBeVisible();
@@ -765,6 +869,7 @@ for (const artifact of launchReadinessArtifacts) {
   }, testInfo) => {
     await page.goto(artifact.url);
     await expect(page.locator('html')).toHaveAttribute('data-layout', 'landing');
+    await expect(page.locator('html')).toHaveAttribute('data-preset', 'studio');
     await expect(
       page.getByRole('heading', { name: 'Regional beta launch readiness', level: 1 }),
     ).toBeVisible();
@@ -837,6 +942,184 @@ for (const artifact of launchReadinessArtifacts) {
   });
 }
 
+for (const showcase of presetShowcases) {
+  test(`${showcase.name} preset remains contained with reachable controls at every required width`, async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium');
+    for (const artifact of showcase.artifacts) {
+      for (const viewport of [
+        { name: 'desktop', width: 1280, height: 900 },
+        { name: 'intermediate', width: 768, height: 900 },
+        { name: 'mobile', width: 390, height: 844 },
+        { name: 'dense', width: 320, height: 800 },
+      ] as const) {
+        await page.setViewportSize(viewport);
+        await page.goto(artifact.url);
+        const root = page.locator('html');
+        await expect(root).toHaveAttribute('data-preset', showcase.preset);
+        await expect(page.getByRole('heading', { name: showcase.heading, level: 1 })).toBeVisible();
+        const containment = await page.evaluate(() => {
+          const visibleControls = [
+            ...document.querySelectorAll<HTMLElement>('button, a[href], input, summary'),
+          ].filter((element) => {
+            const style = getComputedStyle(element);
+            const rect = element.getBoundingClientRect();
+            return style.display !== 'none' && style.visibility !== 'hidden' && rect.height > 0;
+          });
+          return {
+            overflow: document.documentElement.scrollWidth - innerWidth,
+            unreachable: visibleControls
+              .filter((element) => {
+                const rect = element.getBoundingClientRect();
+                return rect.left < -0.5 || rect.right > innerWidth + 0.5;
+              })
+              .map((element) => element.textContent?.trim() || element.getAttribute('aria-label')),
+          };
+        });
+        expect(containment.overflow, `${artifact.format} at ${viewport.name}`).toBeLessThanOrEqual(
+          0,
+        );
+        expect(containment.unreachable, `${artifact.format} at ${viewport.name}`).toEqual([]);
+      }
+    }
+  });
+}
+
+test('same-layout preset families retain their coordinated styles in both formats and every color mode', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const remoteRequests: string[] = [];
+  page.on('request', (request) => {
+    if (/^https?:/u.test(request.url())) remoteRequests.push(request.url());
+  });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  for (const expected of presetFixtureExpectations) {
+    for (const artifact of [
+      { format: 'single-file', url: layoutArtifactUrl(`preset-${expected.preset}`) },
+      {
+        format: 'directory',
+        url: pathToFileURL(
+          path.resolve(
+            'test-results/e2e-generated',
+            `preset-${expected.preset}-directory/index.html`,
+          ),
+        ).href,
+      },
+    ] as const) {
+      for (const mode of ['light', 'dark', 'system'] as const) {
+        await page.emulateMedia({ colorScheme: mode === 'light' ? 'light' : 'dark' });
+        await page.goto(artifact.url);
+        await page.locator('html').evaluate((element, value) => {
+          element.dataset.theme = value;
+        }, mode);
+        const state = await page.evaluate(() => {
+          const root = document.documentElement;
+          const rootStyle = getComputedStyle(root);
+          const bodyStyle = getComputedStyle(document.body);
+          const heading = document.querySelector<HTMLElement>('h1');
+          const surface = document.querySelector<HTMLElement>('.semantic-card');
+          const section = document.querySelector<HTMLElement>('.semantic-section');
+          return {
+            preset: root.dataset.preset,
+            density: root.dataset.density,
+            font: root.dataset.font,
+            accent: root.dataset.accent,
+            width: root.dataset.width,
+            radius: root.dataset.radius,
+            fontFamily: bodyStyle.fontFamily,
+            lineHeight: Number.parseFloat(bodyStyle.lineHeight),
+            contentWidth: rootStyle.getPropertyValue('--content-width').trim(),
+            headingWeight: heading === null ? undefined : getComputedStyle(heading).fontWeight,
+            surfaceRadius: surface === null ? undefined : getComputedStyle(surface).borderRadius,
+            sectionMargin:
+              section === null ? undefined : Number.parseFloat(getComputedStyle(section).marginTop),
+            background: bodyStyle.backgroundColor,
+          };
+        });
+        expect(state, `${expected.preset}/${artifact.format}/${mode}`).toMatchObject({
+          preset: expected.preset,
+          density: expected.density,
+          font: expected.font,
+          accent: expected.accent,
+          width: expected.width,
+          radius: expected.radius,
+          contentWidth: expected.contentWidth,
+          headingWeight: expected.headingWeight,
+          surfaceRadius: expected.surfaceRadius,
+          background: mode === 'light' ? 'rgb(244, 246, 251)' : 'rgb(12, 17, 28)',
+        });
+        expect(state.fontFamily).toContain(expected.fontFamily);
+        expect(state.lineHeight).toBeCloseTo(expected.lineHeight, 2);
+        expect(state.sectionMargin).toBeCloseTo(expected.sectionMargin, 2);
+      }
+    }
+  }
+  expect(remoteRequests).toEqual([]);
+});
+
+test('captures light and dark preset evidence in both formats and viewport families', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const captureRoot = path.resolve('test-results/step-2-captures/preset-matrix');
+  await rm(captureRoot, { recursive: true, force: true });
+  for (const showcase of presetRepresentatives) {
+    for (const artifact of showcase.artifacts) {
+      for (const theme of ['light', 'dark'] as const) {
+        for (const viewport of [
+          { name: 'desktop', width: 1280, height: 900 },
+          { name: 'mobile', width: 390, height: 844 },
+        ] as const) {
+          await page.setViewportSize(viewport);
+          await page.goto(artifact.url);
+          await expect(page.locator('html')).toHaveAttribute('data-preset', showcase.preset);
+          await page.locator('html').evaluate((element, value) => {
+            element.dataset.theme = value;
+          }, theme);
+          await page.evaluate(() => window.scrollTo(0, 0));
+          const directory = path.join(captureRoot, showcase.preset, artifact.format, theme);
+          await mkdir(directory, { recursive: true });
+          await page.screenshot({
+            path: path.join(directory, `${viewport.name}.png`),
+            fullPage: true,
+          });
+        }
+      }
+    }
+  }
+  expect(await relativeFiles(captureRoot)).toEqual(expectedPresetCapturePaths);
+});
+
+test('captures exactly six 320 by 800 dense preset states', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const captureRoot = path.resolve('test-results/step-2-captures/dense-320');
+  await rm(captureRoot, { recursive: true, force: true });
+  await mkdir(captureRoot, { recursive: true });
+  await page.setViewportSize({ width: 320, height: 800 });
+  for (const showcase of presetRepresentatives) {
+    for (const theme of ['light', 'dark'] as const) {
+      await page.goto(showcase.artifacts[0].url);
+      await page.locator('html').evaluate((element, value) => {
+        element.dataset.theme = value;
+      }, theme);
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({
+        path: path.join(captureRoot, `${showcase.preset}-${theme}.png`),
+      });
+    }
+  }
+  expect((await readdir(captureRoot)).sort()).toEqual([
+    'editorial-dark.png',
+    'editorial-light.png',
+    'signal-dark.png',
+    'signal-light.png',
+    'studio-dark.png',
+    'studio-light.png',
+  ]);
+});
+
 for (const example of [
   {
     name: 'layout-document',
@@ -850,7 +1133,7 @@ for (const example of [
     spaceFactor: '1',
     fontFamily: 'Charter',
     focusColor: 'rgb(56, 86, 216)',
-    surfaceRadius: '21.6px',
+    surfaceRadius: '14.4px',
     backgroundColor: 'rgb(244, 246, 251)',
     radius: 'soft',
     heading: 'Architecture decision record',
@@ -870,7 +1153,7 @@ for (const example of [
     spaceFactor: '.78',
     fontFamily: 'Inter',
     focusColor: 'rgb(117, 234, 219)',
-    surfaceRadius: '6.4px',
+    surfaceRadius: '4px',
     backgroundColor: 'rgb(12, 17, 28)',
     radius: 'sharp',
     heading: 'Delivery health dashboard',
@@ -889,7 +1172,7 @@ for (const example of [
     spaceFactor: '1.28',
     fontFamily: 'Inter',
     focusColor: 'rgb(194, 65, 93)',
-    surfaceRadius: '32px',
+    surfaceRadius: '21.6px',
     backgroundColor: 'rgb(244, 246, 251)',
     radius: 'round',
     heading: 'Pages agents can finish',
@@ -907,7 +1190,7 @@ for (const example of [
     spaceFactor: '1',
     fontFamily: 'Inter',
     focusColor: 'rgb(8, 127, 117)',
-    surfaceRadius: '21.6px',
+    surfaceRadius: '14.4px',
     backgroundColor: 'rgb(244, 246, 251)',
     radius: 'soft',
     heading: 'Research synthesis',
@@ -922,6 +1205,7 @@ for (const example of [
     await page.goto(layoutArtifactUrl(example.name));
     const root = page.locator('html');
     await expect(root).toHaveAttribute('data-layout', example.layout);
+    await expect(root).toHaveAttribute('data-preset', 'studio');
     await expect(root).toHaveAttribute('data-theme', example.theme);
     await expect(root).toHaveAttribute('data-density', example.density);
     await expect(root).toHaveAttribute('data-font', example.font);
@@ -933,10 +1217,10 @@ for (const example of [
 
     const themeToggle = page.getByRole('button', { name: 'Toggle color theme' });
     await themeToggle.focus();
-    const visualState = await page.evaluate(() => {
+    const visualState = await page.evaluate((componentSelector) => {
       const rootStyle = getComputedStyle(document.documentElement);
       const shell = document.querySelector<HTMLElement>('.report-shell');
-      const surface = document.querySelector<HTMLElement>('.report-content');
+      const surface = document.querySelector<HTMLElement>(componentSelector);
       const focused = document.querySelector<HTMLElement>('[data-theme-toggle]');
       return {
         token: rootStyle.getPropertyValue('--content-width').trim(),
@@ -949,7 +1233,7 @@ for (const example of [
         surfaceRadius: surface === null ? undefined : getComputedStyle(surface).borderRadius,
         backgroundColor: getComputedStyle(document.body).backgroundColor,
       };
-    });
+    }, example.component);
     expect(visualState.token).toBe(example.contentWidth);
     expect(visualState.shell).toBeCloseTo(
       Math.min(
@@ -1057,4 +1341,17 @@ async function expectLoadedImage(image: Locator): Promise<void> {
       }),
     )
     .toBe(true);
+}
+
+async function relativeFiles(root: string, directory = root): Promise<readonly string[]> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = await Promise.all(
+    entries.map(async (entry) => {
+      const absolutePath = path.join(directory, entry.name);
+      return entry.isDirectory()
+        ? relativeFiles(root, absolutePath)
+        : [path.relative(root, absolutePath)];
+    }),
+  );
+  return files.flat().sort();
 }

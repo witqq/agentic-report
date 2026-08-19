@@ -160,6 +160,7 @@ describe('authoring schema projections', () => {
     const expectedDefaults = {
       contractVersion: 1,
       language: 'und',
+      preset: 'studio',
       theme: 'system',
       layout: 'document',
       tokens: {
@@ -183,6 +184,85 @@ describe('authoring schema projections', () => {
     });
     expect(reportManifestInputSchema.safeParse({ unknown: true }).success).toBe(false);
     expect(reportManifestInputSchema.safeParse({ output: { unknown: true } }).success).toBe(false);
+
+    const presetDefaults = {
+      studio: {
+        density: 'comfortable',
+        font: 'sans',
+        accent: 'indigo',
+        width: 'standard',
+        radius: 'soft',
+      },
+      editorial: {
+        density: 'spacious',
+        font: 'serif',
+        accent: 'coral',
+        width: 'narrow',
+        radius: 'soft',
+      },
+      signal: {
+        density: 'compact',
+        font: 'sans',
+        accent: 'teal',
+        width: 'wide',
+        radius: 'sharp',
+      },
+    } as const;
+    for (const [preset, tokens] of Object.entries(presetDefaults)) {
+      expect(parseReportManifest({ preset }).tokens).toEqual(tokens);
+    }
+    expect(
+      parseReportManifest({
+        preset: 'signal',
+        tokens: {
+          density: 'spacious',
+          font: 'mono',
+          accent: 'coral',
+          width: 'narrow',
+          radius: 'round',
+        },
+      }).tokens,
+    ).toEqual({
+      density: 'spacious',
+      font: 'mono',
+      accent: 'coral',
+      width: 'narrow',
+      radius: 'round',
+    });
+    expect(parseReportManifest({ preset: 'editorial', tokens: { accent: 'teal' } }).tokens).toEqual(
+      {
+        ...presetDefaults.editorial,
+        accent: 'teal',
+      },
+    );
+
+    const manifestSchema = getManifestSchema() as {
+      readonly properties: {
+        readonly tokens: {
+          readonly default?: unknown;
+          readonly properties: Readonly<Record<string, { readonly default?: unknown }>>;
+        };
+      };
+    };
+    expect(manifestSchema.properties.tokens.default).toBeUndefined();
+    expect(
+      Object.values(manifestSchema.properties.tokens.properties).every(
+        (property) => property.default === undefined,
+      ),
+    ).toBe(true);
+    const applySchemaDefaults = createAjv({ useDefaults: true }).compile(getManifestSchema());
+    for (const [authored, expected] of [
+      [{ preset: 'editorial' }, presetDefaults.editorial],
+      [{ preset: 'signal' }, presetDefaults.signal],
+      [
+        { preset: 'editorial', tokens: { accent: 'teal' } },
+        { ...presetDefaults.editorial, accent: 'teal' },
+      ],
+    ] as const) {
+      const defaulted = structuredClone(authored) as Record<string, unknown>;
+      expect(applySchemaDefaults(defaulted)).toBe(true);
+      expect(parseReportManifest(defaulted).tokens).toEqual(expected);
+    }
 
     const changedRegistry = {
       ...authoringRegistry,
@@ -210,6 +290,9 @@ describe('authoring schema projections', () => {
       accepted('trimmed metadata', { title: '  Report  ', description: '  Description  ' }),
       accepted('language tag', { language: 'zh-Hant-TW' }),
       accepted('trimmed language tag', { language: '  zh-Hant-TW  ' }),
+      accepted('studio preset', { preset: 'studio' }),
+      accepted('editorial preset', { preset: 'editorial' }),
+      accepted('signal preset', { preset: 'signal' }),
       accepted('theme enum', { theme: 'dark' }),
       accepted('every layout enum', { layout: 'document' }),
       accepted('dashboard layout', { layout: 'dashboard' }),
@@ -237,6 +320,8 @@ describe('authoring schema projections', () => {
       rejected('numeric description', { description: 1 }),
       rejected('invalid language pattern', { language: 'invalid_tag' }),
       rejected('numeric language', { language: 1 }),
+      rejected('unknown preset', { preset: 'cinematic' }),
+      rejected('numeric preset', { preset: 1 }),
       rejected('unknown theme', { theme: 'sepia' }),
       rejected('numeric theme', { theme: 1 }),
       rejected('unknown layout', { layout: 'poster' }),
@@ -814,8 +899,13 @@ describe('authoring schema projections', () => {
   });
 });
 
-function createAjv(): Ajv2020 {
-  const ajv = new Ajv2020({ strict: true, allErrors: true, multipleOfPrecision: 10 });
+function createAjv(options: { readonly useDefaults?: boolean } = {}): Ajv2020 {
+  const ajv = new Ajv2020({
+    strict: true,
+    allErrors: true,
+    multipleOfPrecision: 10,
+    ...options,
+  });
   ajv.addKeyword({ keyword: SCHEMA_CONTRACT_KEYWORD, schemaType: 'object', valid: true });
   ajv.addFormat('relative-local-path', {
     type: 'string',

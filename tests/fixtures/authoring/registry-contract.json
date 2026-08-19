@@ -33,6 +33,42 @@
     "runtimePlacement": { "single-file": "inline", "directory": "external" }
   },
   "page": {
+    "defaultPreset": "studio",
+    "presets": [
+      {
+        "name": "studio",
+        "description": "Balanced product storytelling with a generous sans-serif rhythm and restrained depth.",
+        "tokens": {
+          "density": "comfortable",
+          "font": "sans",
+          "accent": "indigo",
+          "width": "standard",
+          "radius": "soft"
+        }
+      },
+      {
+        "name": "editorial",
+        "description": "Long-form decision reading with serif typography, measured width, and quiet surfaces.",
+        "tokens": {
+          "density": "spacious",
+          "font": "serif",
+          "accent": "coral",
+          "width": "narrow",
+          "radius": "soft"
+        }
+      },
+      {
+        "name": "signal",
+        "description": "Dense operational evidence with compact spacing, broad tracks, and crisp controls.",
+        "tokens": {
+          "density": "compact",
+          "font": "sans",
+          "accent": "teal",
+          "width": "wide",
+          "radius": "sharp"
+        }
+      }
+    ],
     "defaultLayout": "document",
     "layouts": ["document", "dashboard", "landing", "mixed"],
     "defaultTheme": "system",
@@ -108,6 +144,13 @@
       }
     },
     {
+      "name": "preset",
+      "description": "Coordinated package-owned visual defaults; explicit bounded token values override the preset.",
+      "required": false,
+      "default": "studio",
+      "constraint": { "kind": "enum", "values": ["studio", "editorial", "signal"] }
+    },
+    {
       "name": "theme",
       "description": "Initial document color theme.",
       "required": false,
@@ -125,6 +168,7 @@
       "name": "tokens",
       "description": "Compact package-owned visual token overrides; arbitrary CSS is not accepted.",
       "required": false,
+      "defaultVisibility": "normalization-only",
       "default": {
         "density": "comfortable",
         "font": "sans",

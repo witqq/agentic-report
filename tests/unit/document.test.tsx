@@ -11,6 +11,7 @@ const baseOptions = {
   title: 'Runtime contract',
   language: 'en',
   page: {
+    preset: 'studio',
     theme: 'system',
     layout: 'document',
     tokens: {
@@ -41,33 +42,37 @@ describe('renderDocument runtime boundary', () => {
   });
 
   it('projects every validated layout and theme through one semantic page shell', () => {
-    for (const layout of ['document', 'dashboard', 'landing', 'mixed'] as const) {
-      for (const theme of ['system', 'light', 'dark'] as const) {
-        const html = renderDocument({
-          ...inlineOptions,
-          page: {
-            theme,
-            layout,
-            tokens: {
-              density: 'compact',
-              font: 'serif',
-              accent: 'teal',
-              width: 'wide',
-              radius: 'round',
+    for (const preset of ['studio', 'editorial', 'signal'] as const) {
+      for (const layout of ['document', 'dashboard', 'landing', 'mixed'] as const) {
+        for (const theme of ['system', 'light', 'dark'] as const) {
+          const html = renderDocument({
+            ...inlineOptions,
+            page: {
+              preset,
+              theme,
+              layout,
+              tokens: {
+                density: 'compact',
+                font: 'serif',
+                accent: 'teal',
+                width: 'wide',
+                radius: 'round',
+              },
             },
-          },
-          contentHtml: '<h1>Page model</h1><h2 id="section">Section</h2><p>Semantic content.</p>',
-          navigation: [{ id: 'section', label: 'Section', depth: 2 }],
-        });
-        expect(html).toContain(`data-layout="${layout}"`);
-        expect(html).toContain(`data-theme="${theme}"`);
-        expect(html).toContain('data-density="compact"');
-        expect(html).toContain('data-font="serif"');
-        expect(html).toContain('data-accent="teal"');
-        expect(html).toContain('data-width="wide"');
-        expect(html).toContain('data-radius="round"');
-        expect(html).toContain('<main id="report-content" class="report-content">');
-        expect(html).toContain('<nav aria-label="Document contents">');
+            contentHtml: '<h1>Page model</h1><h2 id="section">Section</h2><p>Semantic content.</p>',
+            navigation: [{ id: 'section', label: 'Section', depth: 2 }],
+          });
+          expect(html).toContain(`data-preset="${preset}"`);
+          expect(html).toContain(`data-layout="${layout}"`);
+          expect(html).toContain(`data-theme="${theme}"`);
+          expect(html).toContain('data-density="compact"');
+          expect(html).toContain('data-font="serif"');
+          expect(html).toContain('data-accent="teal"');
+          expect(html).toContain('data-width="wide"');
+          expect(html).toContain('data-radius="round"');
+          expect(html).toContain('<main id="report-content" class="report-content">');
+          expect(html).toContain('<nav aria-label="Document contents">');
+        }
       }
     }
   });

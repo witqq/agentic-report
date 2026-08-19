@@ -41,6 +41,12 @@
           "description": "Language tag using the supported 2-8 letter primary and optional 2-8 character alphanumeric subtags.",
           "default": "und"
         },
+        "preset": {
+          "type": "string",
+          "enum": ["studio", "editorial", "signal"],
+          "description": "Coordinated package-owned visual defaults; explicit bounded token values override the preset.",
+          "default": "studio"
+        },
         "theme": {
           "type": "string",
           "enum": ["system", "light", "dark"],
@@ -60,42 +66,30 @@
             "density": {
               "type": "string",
               "enum": ["compact", "comfortable", "spacious"],
-              "description": "Controls the shared spacing rhythm and control padding.",
-              "default": "comfortable"
+              "description": "Controls the shared spacing rhythm and control padding."
             },
             "font": {
               "type": "string",
               "enum": ["sans", "serif", "mono"],
-              "description": "Selects the package-owned typography stack.",
-              "default": "sans"
+              "description": "Selects the package-owned typography stack."
             },
             "accent": {
               "type": "string",
               "enum": ["indigo", "teal", "coral"],
-              "description": "Selects the accent and visible-focus color family.",
-              "default": "indigo"
+              "description": "Selects the accent and visible-focus color family."
             },
             "width": {
               "type": "string",
               "enum": ["narrow", "standard", "wide"],
-              "description": "Controls the maximum shell and reading width.",
-              "default": "standard"
+              "description": "Controls the maximum shell and reading width."
             },
             "radius": {
               "type": "string",
               "enum": ["sharp", "soft", "round"],
-              "description": "Controls the shared corner treatment for surfaces and controls.",
-              "default": "soft"
+              "description": "Controls the shared corner treatment for surfaces and controls."
             }
           },
-          "description": "Compact package-owned visual token overrides; arbitrary CSS is not accepted.",
-          "default": {
-            "density": "comfortable",
-            "font": "sans",
-            "accent": "indigo",
-            "width": "standard",
-            "radius": "soft"
-          }
+          "description": "Compact package-owned visual token overrides; arbitrary CSS is not accepted."
         },
         "output": {
           "type": "object",

@@ -2,6 +2,7 @@
 title: Landing registry corpus
 description: Bounded landing-page contract coverage.
 language: en
+preset: studio
 ---
 
 # Landing registry corpus

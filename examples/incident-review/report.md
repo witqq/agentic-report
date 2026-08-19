@@ -5,12 +5,9 @@ description: A fictional service incident command review with impact, causal evi
 language: en
 theme: dark
 layout: mixed
+preset: signal
 tokens:
-  density: compact
-  font: sans
   accent: coral
-  width: wide
-  radius: soft
 ---
 
 # OrbitDesk P1 incident review

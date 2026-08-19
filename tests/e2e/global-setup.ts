@@ -87,6 +87,7 @@ export default async function globalSetup(): Promise<void> {
       ],
     },
   ] as const;
+  const presetFixtures = ['studio', 'editorial', 'signal'] as const;
   const layoutExamples = [
     'layout-document',
     'layout-dashboard',
@@ -105,6 +106,31 @@ export default async function globalSetup(): Promise<void> {
     await writeFile(
       path.join(fixtureSource, 'report.md'),
       ['---', `title: ${fixture.title}`, 'language: en', '---', ...fixture.markdown].join('\n'),
+    );
+  }
+  for (const preset of presetFixtures) {
+    const fixtureSource = path.join(fixtureRoot, `preset-${preset}-source`);
+    await mkdir(fixtureSource, { recursive: true });
+    await writeFile(
+      path.join(fixtureSource, 'report.md'),
+      [
+        '---',
+        `title: ${preset} preset fixture`,
+        'language: en',
+        'layout: mixed',
+        'theme: system',
+        `preset: ${preset}`,
+        '---',
+        `# ${preset} preset fixture`,
+        'Identical content isolates the selected visual family from layout and source identity.',
+        '::::section{title="Shared evidence track" id="evidence" width="standard" align="start" tone="soft"}',
+        '::::cards',
+        ':::card{title="Shared card"}',
+        'The same component exposes preset typography, rhythm, measure, and geometry.',
+        ':::',
+        '::::',
+        '::::',
+      ].join('\n'),
     );
   }
   await Promise.all([
@@ -132,6 +158,17 @@ export default async function globalSetup(): Promise<void> {
         output: path.join(fixtureRoot, `starter-${starter.id}.html`),
       }),
     ),
+    ...presetFixtures.flatMap((preset) => [
+      buildReport({
+        input: path.join(fixtureRoot, `preset-${preset}-source`),
+        output: path.join(fixtureRoot, `preset-${preset}.html`),
+      }),
+      buildReport({
+        input: path.join(fixtureRoot, `preset-${preset}-source`),
+        output: path.join(fixtureRoot, `preset-${preset}-directory`),
+        format: 'directory',
+      }),
+    ]),
     buildReport({
       input: path.resolve('examples', 'landing'),
       output: path.join(fixtureRoot, 'starter-landing-directory'),

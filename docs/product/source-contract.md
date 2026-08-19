@@ -24,6 +24,7 @@ Frontmatter takes precedence. Supported fields are:
 - `description`: plain-text metadata description;
 - `language`: tag used on `<html lang>`; the current accepted subset is a 2–8 ASCII-letter primary tag
   followed by optional 2–8 character ASCII alphanumeric subtags; default `und` means undetermined;
+- `preset`: coordinated `studio`, `editorial`, or `signal` package-owned visual defaults;
 - `theme`: `system`, `light`, or `dark`;
 - `layout`: `document`, `dashboard`, `landing`, or `mixed`;
 - `tokens`: optional compact visual overrides containing only the fields below:
@@ -68,12 +69,28 @@ The root metadata value, `tokens`, and `output` must be objects; scalar and arra
 silently replaced by defaults. Validation diagnostics point to the actual manifest or frontmatter field
 range that supplied the failing value.
 
-Defaults are `layout: document`, `theme: system`, and `tokens: { density: comfortable, font: sans,
-accent: indigo, width: standard, radius: soft }`. Omitted token fields receive their individual defaults.
-These values select package-owned styles only; CSS values, class names, JSX, templates, and callbacks are
-not accepted. `agentic-report describe --json` and the ESM `getSourceContract()` return the same `page`
-domain and defaults. The packaged `layout-document`, `layout-dashboard`, `layout-landing`, and
-`layout-mixed` examples exercise every layout.
+Defaults are `layout: document`, `theme: system`, and `preset: studio`. Presets provide these coordinated
+token defaults:
+
+| Preset      | Density     | Font  | Accent | Width    | Radius |
+| ----------- | ----------- | ----- | ------ | -------- | ------ |
+| `studio`    | comfortable | sans  | indigo | standard | soft   |
+| `editorial` | spacious    | serif | coral  | narrow   | soft   |
+| `signal`    | compact     | sans  | teal   | wide     | sharp  |
+
+The selected preset supplies all five token axes, the selected theme supplies only the color mode, and
+explicitly authored token fields apply last. An omitted token field therefore retains its selected preset
+value rather than a second global default. These values select package-owned styles only; CSS values,
+class names, JSX, templates, URLs, arbitrary fonts, and callbacks are not accepted.
+`agentic-report describe --json` and the ESM `getSourceContract()` return the same `page` domain,
+coordinated defaults, and precedence contract. In that discovery value, `page.tokenResolution` declares
+that defaults come from the selected preset before explicit token fields apply. For major-1 compatibility,
+`page.tokens` retains each Studio normalization `default` with
+`defaultVisibility: normalization-only`; discovery consumers must materialize only `published` defaults as
+authored fields. `page.presets` contains every complete coordinated map.
+The landing and launch examples use `studio`, the vendor
+decision uses `editorial`, and the incident review uses `signal`; the packaged `layout-*` examples retain
+the default while exercising every layout.
 The six starter examples combine these layouts with the public content, interaction, visualization,
 partial, and local-asset contracts; they introduce no additional syntax.
 
