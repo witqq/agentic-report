@@ -230,9 +230,10 @@ agentic-report build ./examples/launch-readiness --format directory --output ./l
 ```
 
 Open each single file or directory `index.html` through `file://`. For an installed package, first run
-`agentic-report examples --json`; each result includes an absolute `entryPath`, and its parent directory is the
-input for `validate`, `inspect`, or `build`. `single-file` remains the default; `directory` changes runtime and
-asset placement, not source semantics or reader behavior.
+`agentic-report examples --json`; the response contains an `examples` array whose items have an absolute
+`entry` value. Use the parent directory of that value as the input for `validate`, `inspect`, or `build`.
+`single-file` remains the default; `directory` changes runtime and asset placement, not source semantics or
+reader behavior.
 
 ## Semantic directives
 
