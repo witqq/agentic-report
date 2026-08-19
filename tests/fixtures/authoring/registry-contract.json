@@ -195,6 +195,154 @@
   ],
   "directives": [
     {
+      "name": "section",
+      "description": "Labelled top-level page section containing Markdown.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "id",
+          "description": "Optional stable section anchor.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "renderProperty": "dataId",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "nav",
+          "description": "Optional short primary-navigation label.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataNav",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "width",
+          "description": "Section content track.",
+          "required": false,
+          "default": "standard",
+          "constraint": { "kind": "enum", "values": ["reading", "standard", "wide"] },
+          "renderProperty": "dataWidth",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "align",
+          "description": "Section content alignment.",
+          "required": false,
+          "default": "start",
+          "constraint": { "kind": "enum", "values": ["start", "center"] },
+          "renderProperty": "dataAlign",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "tone",
+          "description": "Package-owned section surface tone.",
+          "required": false,
+          "default": "plain",
+          "constraint": { "kind": "enum", "values": ["plain", "soft", "accent", "contrast"] },
+          "renderProperty": "dataTone",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown",
+      "placement": { "topLevelOnly": true },
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-section",
+        "properties": [
+          "dataSemantic",
+          "dataDirectiveTitle",
+          "dataId",
+          "dataNav",
+          "dataWidth",
+          "dataAlign",
+          "dataTone"
+        ]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "actions",
+      "description": "Responsive group containing ordinary action links.",
+      "forms": ["container"],
+      "attributes": [],
+      "children": "action-directives",
+      "placement": {},
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "div",
+        "className": "semantic-actions",
+        "properties": ["dataSemantic"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "action",
+      "description": "Ordinary safe link inside an actions group.",
+      "forms": ["leaf"],
+      "attributes": [
+        {
+          "name": "href",
+          "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 500,
+            "pattern": "^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*)$"
+          },
+          "renderProperty": "dataHref",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_LINK"
+        },
+        {
+          "name": "kind",
+          "description": "Package-owned action emphasis.",
+          "required": false,
+          "default": "primary",
+          "constraint": { "kind": "enum", "values": ["primary", "secondary", "quiet"] },
+          "renderProperty": "dataKind",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "label-or-generated-label",
+      "placement": { "requiredParent": "actions" },
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "a",
+        "className": "semantic-action",
+        "properties": ["dataSemantic", "dataHref", "dataKind"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
       "name": "callout",
       "description": "Emphasized finding or notice containing Markdown.",
       "forms": ["container"],

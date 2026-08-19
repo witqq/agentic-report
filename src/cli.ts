@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { Command, CommanderError, InvalidArgumentError } from 'commander';
@@ -51,6 +52,7 @@ const program = new Command();
 const schemaScopes: readonly SchemaScope[] = ['manifest', 'directives', 'source'];
 const invocationRunId = randomUUID();
 const jsonRequested = process.argv.slice(2).includes('--json');
+const packageVersion = readPackageVersion();
 program.exitOverride();
 program.configureOutput({
   writeErr: (value) => {
@@ -62,7 +64,7 @@ program.configureOutput({
 program
   .name('agentic-report')
   .description('Compile agent-friendly content sources into portable static HTML artifacts.')
-  .version('0.1.0');
+  .version(packageVersion);
 
 program
   .command('init')
@@ -211,6 +213,21 @@ function parseFormat(value: string): OutputFormat {
     throw new InvalidArgumentError('Expected single-file or directory.');
   }
   return result.data;
+}
+
+function readPackageVersion(): string {
+  const metadata: unknown = JSON.parse(
+    readFileSync(fileURLToPath(new URL('../../package.json', import.meta.url)), 'utf8'),
+  );
+  if (
+    typeof metadata !== 'object' ||
+    metadata === null ||
+    !('version' in metadata) ||
+    typeof metadata.version !== 'string'
+  ) {
+    throw new Error('Installed package metadata does not declare a version.');
+  }
+  return metadata.version;
 }
 
 function parseSchemaScope(value: string): SchemaScope {

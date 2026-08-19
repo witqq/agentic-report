@@ -32,8 +32,8 @@ also contain:
 - `agentic-report.yaml`, `agentic-report.yml`, or `agentic-report.json`;
 - local images referenced by relative paths;
 - Markdown partials included as `{{include: partials/summary.md}}`;
-- semantic directives for content, interactions, compile-time charts/diagrams/timelines, safe built-in
-  demos, downloads, and fonts.
+- semantic directives for labelled page sections, action links, content, interactions, compile-time
+  charts/diagrams/timelines, safe built-in demos, downloads, and fonts.
 
 Example:
 
@@ -55,9 +55,16 @@ tokens:
 
 ![System boundary](assets/system.svg)
 
+::::section{title="Decision" id="decision" nav="Decision" width="reading" align="start" tone="soft"}
 :::callout{title="Key finding" kind="info"}
 The compiler owns responsive layout and navigation.
 :::
+
+:::actions
+::action[Review the decision]{href="#decision" kind="primary"}
+::action[Open the evidence]{href="evidence.html" kind="secondary"}
+:::
+::::
 ```
 
 See [`docs/product/source-contract.md`](docs/product/source-contract.md) for the complete declarative
@@ -89,6 +96,11 @@ select one as metadata and may choose `system`, `light`, or `dark` plus compact 
 code. Buildable examples under `examples/layout-*` demonstrate every layout and are listed by
 `agentic-report examples --json`; `examples/interactive-catalog` and `examples/visualization-catalog`
 demonstrate the package-owned interaction and data primitives.
+
+Authors may replace heading-only structure with top-level `section` directives. Each section owns a
+visible H2 and a stable anchor, plus closed reading/standard/wide tracks, start/center alignment, and
+plain/soft/accent/contrast tones. A nested `actions` group composes ordinary safe links with
+primary/secondary/quiet emphasis. Legacy H2/H3 documents remain valid and retain heading navigation.
 
 ## Realistic showcase portfolio
 

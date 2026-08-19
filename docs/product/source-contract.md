@@ -91,6 +91,10 @@ syntax highlighting and semantic enhancement.
 
 The directive vocabulary is:
 
+- `section`: top-level labelled page region with required `title`, optional stable `id` and short `nav`
+  label, plus closed `width`, `align`, and `tone` choices;
+- `actions` and directly nested leaf `action`: responsive ordinary link group; every action requires a
+  visible label and safe `href` and may select `primary`, `secondary`, or `quiet` emphasis;
 - `callout`: emphasized finding with optional `title` and lowercase `kind`;
 - `decision`: decision or branch container with optional `title`;
 - `cards` and nested `card`: responsive content grid;
@@ -115,7 +119,9 @@ The directive vocabulary is:
   validated `family`.
 
 Container directives use `:::name ... :::`; nested containers use a longer outer fence. `asset` and
-`font` support leaf directives. Use `:term[Canonical term]{key="term-key"}` inside prose; the label marks
+`font` support leaf directives. An `action` uses the labelled leaf form
+`::action[Visible label]{href="#target" kind="primary"}`. Use
+`:term[Canonical term]{key="term-key"}` inside prose; the label marks
 the authored range, while output always uses the registered canonical text. The compatible standalone form
 `::term{key="term-key"}` remains available when a detached reference is intentional. A `tab` must be a
 direct directive child of `tabs`, and other directive children are rejected there. Complete copyable examples
@@ -126,6 +132,20 @@ are in
 [`examples/dashboard`](../../examples/dashboard), [`examples/landing`](../../examples/landing), and
 [`examples/interactive-catalog`](../../examples/interactive-catalog) sources. The complete data example is
 [`examples/visualization-catalog`](../../examples/visualization-catalog).
+
+A `section` must be a direct child of the Markdown document, not a blockquote, list item, or another
+directive. It always renders a real labelled `<section>` and visible H2. `id` is a lowercase identity that
+starts with a letter and contains only letters, digits, and hyphens; duplicate explicit IDs fail. If `id`
+is omitted, the compiler derives a deterministic collision-free identity from `title`. `nav` is optional
+short navigation text. Defaults are `width="standard"`, `align="start"`, and `tone="plain"`; other values
+are `reading|wide`, `center`, and `soft|accent|contrast`. Documents without explicit sections preserve
+legacy H2/H3 navigation.
+
+An `actions` container accepts one or more direct `action` children and no prose. `href` accepts a
+same-page `#anchor`, a relative target, HTTP(S), or `mailto:`. Executable schemes such as `javascript:` and
+`data:`, `file:` URLs, absolute local paths, protocol-relative URLs, callbacks, forms, and scripts are not
+part of the contract. Output is an ordinary keyboard-operable anchor; action emphasis is package-owned
+styling and adds no runtime behavior.
 
 Top-level visuals require `title` and `description`. A chart accepts 1–6 `series`; each series accepts 1–12
 leaf `point` values, and every series must use the same unique labels in the same order. Values are finite
@@ -166,6 +186,9 @@ All state is local to the generated component instance. Browser behavior is pack
 | `filter`            | Labelled search input plus polite live result count; the empty query shows every item.                                                                                                                 | Normal search-input editing.                                                                                                        | Input filters case-insensitively while typing. Only `li` elements in a direct authored `ul` or `ol` are filter targets; nested lists are not independent targets. |
 | `toggle`            | Button with `role="switch"` and a controlled panel; `default="off"` hides content, `on` shows it.                                                                                                      | Native button `Enter`/`Space` toggles `aria-checked` and panel visibility.                                                          | Click/tap toggles the same state. Instances are isolated.                                                                                                         |
 | `demo`              | Bounded numeric output starts at `start` (default `0`).                                                                                                                                                | Native Increment button activation adds `step` (default `1`).                                                                       | Click/tap performs the same package-owned increment; no author script is accepted.                                                                                |
+
+`actions`/`action` does not appear in the stateful table because it is an ordinary group of links. Native
+anchor focus, Enter activation, URL behavior, and browser history apply without a package event handler.
 
 ## Output behavior
 

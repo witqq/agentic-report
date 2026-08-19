@@ -128,6 +128,17 @@ function allocateShellId(base: string, usedIds: Set<string>): string {
 }
 
 export function extractNavigation(html: string): readonly NavigationItem[] {
+  const explicitSections = [
+    ...html.matchAll(
+      /<section\s+([^>]*\bdata-semantic="section"[^>]*)>\s*<h2\s+[^>]*>([\s\S]*?)<\/h2>/g,
+    ),
+  ].map((match) => {
+    const attributes = match[1] ?? '';
+    const id = /\bid="([^"]+)"/u.exec(attributes)?.[1] ?? '';
+    const nav = /\bdata-nav="([^"]+)"/u.exec(attributes)?.[1];
+    return { depth: 2 as const, id, label: stripMarkup(nav ?? match[2] ?? '') };
+  });
+  if (explicitSections.length > 0) return explicitSections;
   const headingPattern = /<h([23])\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/h\1>/g;
   return [...html.matchAll(headingPattern)].map((match) => ({
     depth: Number(match[1]) as 2 | 3,

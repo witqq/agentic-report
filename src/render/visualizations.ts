@@ -29,13 +29,18 @@ interface DiagramEdge {
   readonly label?: string;
 }
 
-export function enhanceVisualization(node: Element, semantic: string, instance: number): boolean {
+export function enhanceVisualization(
+  node: Element,
+  semantic: string,
+  instance: number,
+  allocateId: (base: string) => string,
+): boolean {
   if (semantic === 'chart') {
-    enhanceChart(node, instance);
+    enhanceChart(node, instance, allocateId);
     return true;
   }
   if (semantic === 'diagram') {
-    enhanceDiagram(node, instance);
+    enhanceDiagram(node, instance, allocateId);
     return true;
   }
   if (semantic === 'timeline') {
@@ -45,7 +50,7 @@ export function enhanceVisualization(node: Element, semantic: string, instance: 
   return false;
 }
 
-function enhanceChart(node: Element, instance: number): void {
+function enhanceChart(node: Element, instance: number, allocateId: (base: string) => string): void {
   const title = take(node, 'dataDirectiveTitle') ?? 'Chart';
   const description = take(node, 'dataDescription') ?? title;
   const type = take(node, 'dataType') ?? 'bar';
@@ -58,8 +63,8 @@ function enhanceChart(node: Element, instance: number): void {
       value: Number(take(point, 'dataValue') ?? '0'),
     })),
   }));
-  const titleId = `visual-${instance}-title`;
-  const descriptionId = `visual-${instance}-description`;
+  const titleId = allocateId(`visual-${instance}-title`);
+  const descriptionId = allocateId(`visual-${instance}-description`);
   const accessibleDescription = chartDescription(description, series);
   const svgChildren: ElementContent[] = [
     element('title', { id: titleId }, [text(title)]),
@@ -309,7 +314,11 @@ function chartDescription(description: string, series: readonly ChartSeries[]): 
   return `${description} Data: ${data.join('; ')}.`;
 }
 
-function enhanceDiagram(node: Element, instance: number): void {
+function enhanceDiagram(
+  node: Element,
+  instance: number,
+  allocateId: (base: string) => string,
+): void {
   const title = take(node, 'dataDirectiveTitle') ?? 'Diagram';
   const description = take(node, 'dataDescription') ?? title;
   const direction = take(node, 'dataDirection') ?? 'right';
@@ -340,8 +349,8 @@ function enhanceDiagram(node: Element, instance: number): void {
       ...(label === undefined ? {} : { label }),
     };
   });
-  const titleId = `visual-${instance}-title`;
-  const descriptionId = `visual-${instance}-description`;
+  const titleId = allocateId(`visual-${instance}-title`);
+  const descriptionId = allocateId(`visual-${instance}-description`);
   const edgeElements = edges.flatMap((edge, index) => {
     const from = byId.get(edge.from);
     const to = byId.get(edge.to);

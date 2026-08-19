@@ -193,7 +193,7 @@ export async function renderMarkdown(
       themes: { light: 'github-light', dark: 'github-dark' },
       defaultColor: false,
     })
-    .use(rehypeEnhanceDirectives)
+    .use(rehypeEnhanceDirectives, { sourceMap: options.sourceMap })
     .use(rehypeAssets, { ...options, collector })
     .use(rehypeStringify)
     .process(markdown);

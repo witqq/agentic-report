@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  extractNavigation,
   renderDocument,
   type DocumentRenderOptions,
   type DocumentRuntime,
@@ -90,6 +91,22 @@ describe('renderDocument runtime boundary', () => {
     expect(html).toContain('href="#report-content-2"');
     expect(html.match(/id="report-content"/gu)).toHaveLength(1);
     expect(html.match(/id="report-navigation"/gu)).toHaveLength(1);
+  });
+
+  it('uses explicit section targets and short labels while preserving legacy heading navigation', () => {
+    expect(
+      extractNavigation(
+        '<h1 id="page">Page</h1><section class="semantic-section" data-nav="Proof" data-semantic="section" id="proof" aria-labelledby="proof-title">\n<h2 id="proof-title">Long proof heading</h2><h3 id="detail">Detail</h3></section>',
+      ),
+    ).toEqual([{ depth: 2, id: 'proof', label: 'Proof' }]);
+    expect(
+      extractNavigation(
+        '<h1 id="page">Page</h1><h2 id="legacy">Legacy section</h2><h3 id="detail">Detail</h3>',
+      ),
+    ).toEqual([
+      { depth: 2, id: 'legacy', label: 'Legacy section' },
+      { depth: 3, id: 'detail', label: 'Detail' },
+    ]);
   });
 });
 

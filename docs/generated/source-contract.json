@@ -13,6 +13,103 @@
     "resources": ["local images", "downloadable local assets", "local fonts"]
   },
   "directives": {
+    "section": {
+      "description": "Labelled top-level page section containing Markdown.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": true,
+          "description": "Visible title."
+        },
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": false,
+          "description": "Optional stable section anchor."
+        },
+        "nav": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "description": "Optional short primary-navigation label."
+        },
+        "width": {
+          "kind": "enum",
+          "values": ["reading", "standard", "wide"],
+          "required": false,
+          "default": "standard",
+          "description": "Section content track."
+        },
+        "align": {
+          "kind": "enum",
+          "values": ["start", "center"],
+          "required": false,
+          "default": "start",
+          "description": "Section content alignment."
+        },
+        "tone": {
+          "kind": "enum",
+          "values": ["plain", "soft", "accent", "contrast"],
+          "required": false,
+          "default": "plain",
+          "description": "Package-owned section surface tone."
+        }
+      },
+      "children": "markdown",
+      "placement": { "topLevelOnly": true },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "actions": {
+      "description": "Responsive group containing ordinary action links.",
+      "forms": ["container"],
+      "attributes": {},
+      "children": "action-directives",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "action": {
+      "description": "Ordinary safe link inside an actions group.",
+      "forms": ["leaf"],
+      "attributes": {
+        "href": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 500,
+          "pattern": "^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*)$",
+          "required": true,
+          "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected."
+        },
+        "kind": {
+          "kind": "enum",
+          "values": ["primary", "secondary", "quiet"],
+          "required": false,
+          "default": "primary",
+          "description": "Package-owned action emphasis."
+        }
+      },
+      "children": "label-or-generated-label",
+      "placement": { "requiredParent": "actions" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
     "callout": {
       "description": "Emphasized finding or notice containing Markdown.",
       "forms": ["container"],

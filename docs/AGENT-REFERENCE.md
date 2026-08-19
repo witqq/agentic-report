@@ -241,9 +241,17 @@ Directives are declarative and allowlisted. Unknown names and invalid attributes
 diagnostics.
 
 ```markdown
+::::section{title="Decision" id="decision" nav="Decision" width="wide" align="start" tone="soft"}
 :::callout{title="Finding" kind="warning"}
 Content may contain ordinary Markdown.
 :::
+
+:::actions
+::action[Review the decision]{href="#decision" kind="primary"}
+::action[Open related evidence]{href="evidence.html" kind="secondary"}
+::action[Project home]{href="https://example.com/project" kind="quiet"}
+:::
+::::
 
 :::decision{title="Output choice"}
 Choose `single-file` when transport is the priority.
@@ -355,6 +363,18 @@ labels may be shortened to preserve layout, but accessible point values, node id
 labels are not truncated. Numeric output retains the supported four decimal places.
 
 `callout.kind` is a lowercase presentation token. `demo.start` and `demo.step` are bounded integers.
+`section` is top-level only and requires `title`. Its optional `id` is a lowercase letter-led identity;
+omission derives a deterministic collision-free ID from the title. `nav` supplies a short primary label.
+`width` is `reading|standard|wide`, `align` is `start|center`, and `tone` is
+`plain|soft|accent|contrast`; defaults are `standard`, `start`, and `plain`. Explicit sections own real
+labelled section/H2 markup and primary navigation, while heading-only sources retain legacy H2/H3
+navigation.
+
+`actions` accepts only direct labelled `::action[...]` children. Every action requires `href`; valid targets
+are same-page anchors, relative paths, HTTP(S), and `mailto:`. `javascript:`, `data:`, `file:`, absolute
+local paths, and protocol-relative URLs fail validation. `kind` is `primary`, `secondary`, or `quiet` and
+changes package styling only; the output remains an ordinary anchor with no callback or form behavior.
+
 `asset.src` and `font.src` must resolve to existing files under the canonical source root. The first font
 directive becomes the document font; later directives register additional faces. The text form uses its
 authored label; the leaf asset form receives `Download <filename>` so it remains visible and accessible.

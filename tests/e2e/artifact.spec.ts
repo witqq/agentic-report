@@ -15,6 +15,15 @@ const layoutArtifactUrl = (name: string): string =>
 
 const interactiveArtifactUrl = layoutArtifactUrl('interactive-catalog');
 const starterArtifactUrl = (id: string): string => layoutArtifactUrl(`starter-${id}`);
+const landingSectionArtifacts = [
+  { format: 'single-file', url: starterArtifactUrl('landing') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/starter-landing-directory/index.html'),
+    ).href,
+  },
+] as const;
 const visualizationArtifacts = [
   { format: 'single-file', url: layoutArtifactUrl('visualization-catalog') },
   {
@@ -162,6 +171,155 @@ for (const starter of starters) {
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
       path: path.join(captureDirectory, `${starter.id}.png`),
+      fullPage: true,
+    });
+  });
+}
+
+for (const artifact of landingSectionArtifacts) {
+  test(`${artifact.format} section and action contract is semantic and responsive from file URL`, async ({
+    page,
+  }, testInfo) => {
+    await page.goto(artifact.url);
+    const sections = page.locator('section.semantic-section');
+    await expect(sections).toHaveCount(4);
+    await expect(page.locator('#workflow')).toHaveAttribute('aria-labelledby', 'workflow-title');
+    await expect(
+      page.getByRole('heading', { name: 'Start with the work, not the framework', level: 2 }),
+    ).toHaveAttribute('id', 'workflow-title');
+    await expect(page.locator('#workflow')).toHaveAttribute('data-width', 'wide');
+    await expect(page.locator('#workflow')).toHaveAttribute('data-tone', 'soft');
+    await expect(page.locator('#proof')).toHaveAttribute('data-width', 'reading');
+    await expect(page.locator('#proof')).toHaveAttribute('data-tone', 'accent');
+    await expect(page.locator('#boundaries')).toHaveAttribute('data-align', 'center');
+    await expect(page.locator('#boundaries')).toHaveAttribute('data-tone', 'contrast');
+
+    const navigation = page.locator('[data-navigation]');
+    await expect(navigation.locator('a')).toHaveCount(4);
+    await expect(navigation.locator('a', { hasText: 'Workflow' })).toHaveAttribute(
+      'href',
+      '#workflow',
+    );
+    await expect(navigation.locator('a', { hasText: 'Proof' })).toHaveAttribute('href', '#proof');
+
+    const primary = page.locator('.semantic-action[data-kind="primary"]').first();
+    const secondary = page.locator('.semantic-action[data-kind="secondary"]').first();
+    const quiet = page.locator('.semantic-action[data-kind="quiet"]').first();
+    await expect(primary).toHaveAttribute('href', '#workflow');
+    await expect(secondary).toHaveAttribute('href', '#proof');
+    await expect(quiet).toHaveAttribute('href', '#boundaries');
+    await primary.focus();
+    await expect(primary).toBeFocused();
+    expect(
+      await primary.evaluate((element) =>
+        Number.parseFloat(getComputedStyle(element).outlineWidth),
+      ),
+    ).toBeGreaterThan(0);
+
+    const contrastActions = page.locator('#boundaries .semantic-action');
+    await expect(contrastActions).toHaveCount(3);
+    const themeVariants = [
+      { theme: 'light', colorScheme: 'light' },
+      { theme: 'dark', colorScheme: 'dark' },
+      { theme: 'system', colorScheme: 'light' },
+      { theme: 'system', colorScheme: 'dark' },
+    ] as const;
+    for (const variant of themeVariants) {
+      await page.emulateMedia({ colorScheme: variant.colorScheme });
+      for (const accent of ['indigo', 'teal', 'coral'] as const) {
+        await page.locator('html').evaluate(
+          (root, state) => {
+            root.dataset.theme = state.theme;
+            root.dataset.accent = state.accent;
+          },
+          { theme: variant.theme, accent },
+        );
+        for (const tone of ['plain', 'soft', 'accent', 'contrast'] as const) {
+          await page.locator('#boundaries').evaluate((section, value) => {
+            section.dataset.tone = value;
+          }, tone);
+          for (const kind of ['primary', 'secondary', 'quiet'] as const) {
+            const action = page.locator(`#boundaries .semantic-action[data-kind="${kind}"]`);
+            await action.focus();
+            const contrast = await action.evaluate((element) => {
+              const section = element.closest<HTMLElement>('.semantic-section');
+              if (section === null) throw new Error('Action has no owning section.');
+              const actionStyle = getComputedStyle(element);
+              const sectionStyle = getComputedStyle(section);
+              const parseRgb = (value: string): readonly [number, number, number] => {
+                const channels = value
+                  .match(/[\d.]+/gu)
+                  ?.slice(0, 3)
+                  .map(Number);
+                if (channels?.length !== 3) throw new Error(`Unsupported computed color: ${value}`);
+                return channels as unknown as readonly [number, number, number];
+              };
+              const luminance = (value: string): number => {
+                const linearize = (channel: number): number => {
+                  const normalized = channel / 255;
+                  return normalized <= 0.04045
+                    ? normalized / 12.92
+                    : ((normalized + 0.055) / 1.055) ** 2.4;
+                };
+                const [red, green, blue] = parseRgb(value);
+                return (
+                  0.2126 * linearize(red) + 0.7152 * linearize(green) + 0.0722 * linearize(blue)
+                );
+              };
+              const ratio = (first: string, second: string): number => {
+                const firstLuminance = luminance(first);
+                const secondLuminance = luminance(second);
+                const lighter = Math.max(firstLuminance, secondLuminance);
+                const darker = Math.min(firstLuminance, secondLuminance);
+                return (lighter + 0.05) / (darker + 0.05);
+              };
+              const transparent = (value: string): boolean => value.endsWith(', 0)');
+              const sectionBackground = transparent(sectionStyle.backgroundColor)
+                ? getComputedStyle(document.body).backgroundColor
+                : sectionStyle.backgroundColor;
+              const ownBackground = actionStyle.backgroundColor;
+              const textBackground = transparent(ownBackground) ? sectionBackground : ownBackground;
+              return {
+                text: ratio(actionStyle.color, textBackground),
+                focus: ratio(actionStyle.outlineColor, sectionBackground),
+                outlineWidth: Number.parseFloat(actionStyle.outlineWidth),
+              };
+            });
+            expect(
+              contrast.text,
+              `${artifact.format}/${variant.theme}/${accent}/${tone}/${kind}/text`,
+            ).toBeGreaterThanOrEqual(4.5);
+            expect(
+              contrast.focus,
+              `${artifact.format}/${variant.theme}/${accent}/${tone}/${kind}/focus`,
+            ).toBeGreaterThanOrEqual(3);
+            expect(
+              contrast.outlineWidth,
+              `${artifact.format}/${variant.theme}/${accent}/${tone}/${kind}/outline`,
+            ).toBeGreaterThan(0);
+          }
+        }
+      }
+    }
+
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.locator('html').evaluate((root) => {
+      root.dataset.theme = 'light';
+      root.dataset.accent = 'coral';
+    });
+    await page.locator('#boundaries').evaluate((section) => {
+      section.dataset.tone = 'contrast';
+    });
+    await page.locator('#boundaries .semantic-action[data-kind="quiet"]').focus();
+    await page.evaluate(() => scrollTo(0, 0));
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+
+    const captureDirectory = path.resolve('test-results/step-1-captures', testInfo.project.name);
+    await mkdir(captureDirectory, { recursive: true });
+    await page.screenshot({
+      path: path.join(captureDirectory, `${artifact.format}-landing.png`),
       fullPage: true,
     });
   });

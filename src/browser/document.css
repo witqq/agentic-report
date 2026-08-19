@@ -474,6 +474,134 @@ th {
   background: var(--color-surface-raised);
 }
 
+.semantic-section {
+  width: 100%;
+  margin-block: calc(3.5rem * var(--space-factor));
+  padding-block: calc(2rem * var(--space-factor));
+}
+
+.semantic-section > * {
+  max-width: min(100%, var(--section-measure, var(--content-width)));
+  margin-inline: var(--section-margin-inline, 0);
+}
+
+.semantic-section[data-width='reading'] {
+  --section-measure: var(--reading-measure);
+}
+
+.semantic-section[data-width='standard'] {
+  --section-measure: min(100%, 64rem);
+}
+
+.semantic-section[data-width='wide'] {
+  --section-measure: 100%;
+}
+
+.semantic-section[data-align='center'] {
+  --section-margin-inline: auto;
+
+  text-align: center;
+}
+
+.semantic-section[data-align='center'] :is(p, ul, ol) {
+  margin-inline: auto;
+}
+
+.semantic-section[data-tone='soft'],
+.semantic-section[data-tone='accent'],
+.semantic-section[data-tone='contrast'] {
+  border-radius: var(--radius-large);
+  padding-inline: clamp(1rem, 4vw, 2.5rem);
+}
+
+.semantic-section[data-tone='soft'] {
+  background: var(--color-surface-raised);
+}
+
+.semantic-section[data-tone='accent'] {
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  background: var(--color-accent-soft);
+}
+
+.semantic-section[data-tone='contrast'] {
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+
+.semantic-section[data-tone='contrast'] :is(h2, h3, p, li) {
+  color: inherit;
+}
+
+.semantic-section[data-tone='contrast'] a:not(.semantic-action) {
+  color: inherit;
+}
+
+.semantic-section-title {
+  margin-top: 0;
+}
+
+.semantic-actions {
+  display: flex;
+  max-width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
+  margin-block: calc(1.5rem * var(--space-factor));
+}
+
+.semantic-action {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-small);
+  padding: 0.65rem 1rem;
+  font-weight: 750;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+}
+
+.semantic-action[data-kind='primary'] {
+  background: var(--color-accent);
+  color: var(--color-surface);
+}
+
+.semantic-action[data-kind='secondary'] {
+  border-color: var(--color-accent);
+  background: var(--color-surface);
+  color: var(--color-accent-strong);
+}
+
+.semantic-action[data-kind='quiet'] {
+  color: var(--color-accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.semantic-section[data-tone='contrast'] .semantic-action[data-kind='quiet'] {
+  color: var(--color-bg);
+}
+
+.semantic-section[data-tone='contrast'] .semantic-action:focus-visible {
+  outline-color: var(--color-bg);
+}
+
+.semantic-action:hover {
+  filter: brightness(0.96);
+}
+
+@media (width <= 30rem) {
+  .semantic-actions {
+    display: grid;
+  }
+
+  .semantic-action {
+    width: 100%;
+  }
+}
+
 .semantic-chart,
 .semantic-diagram,
 .semantic-timeline {

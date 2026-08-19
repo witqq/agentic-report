@@ -5,6 +5,14 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
+const sourcePackage = requireRecord(
+  JSON.parse(await readFile(path.resolve('package.json'), 'utf8')) as unknown,
+  'source package metadata',
+);
+if (typeof sourcePackage.version !== 'string') {
+  throw new Error('Source package metadata does not declare a version.');
+}
+const releaseVersion = sourcePackage.version;
 const packageDirectory = path.resolve('test-results/package');
 await mkdir(packageDirectory, { recursive: true });
 await execFileAsync('pnpm', ['pack', '--pack-destination', packageDirectory]);
@@ -87,7 +95,7 @@ const installedExports = requireRecord(installedPackage.exports, 'installed pack
 const installedRootExport = requireRecord(installedExports['.'], 'installed root export');
 if (
   installedPackage.name !== 'agentic-report' ||
-  installedPackage.version !== '0.1.1' ||
+  installedPackage.version !== releaseVersion ||
   installedPackage.description !==
     'Local declarative page builder for agent-authored interactive HTML artifacts.' ||
   installedPackage.license !== 'MIT' ||
@@ -126,6 +134,12 @@ const binary = path.join(
   '.bin',
   process.platform === 'win32' ? 'agentic-report.cmd' : 'agentic-report',
 );
+const { stdout: installedVersion } = await execFileAsync(binary, ['--version'], {
+  cwd: consumerDirectory,
+});
+if (installedVersion.trim() !== releaseVersion) {
+  throw new Error('Installed CLI version differs from the package/runtime release identity.');
+}
 const { stdout: descriptionOutput } = await execFileAsync(binary, ['describe', '--json'], {
   cwd: consumerDirectory,
 });

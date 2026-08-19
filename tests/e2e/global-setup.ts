@@ -133,6 +133,11 @@ export default async function globalSetup(): Promise<void> {
       }),
     ),
     buildReport({
+      input: path.resolve('examples', 'landing'),
+      output: path.join(fixtureRoot, 'starter-landing-directory'),
+      format: 'directory',
+    }),
+    buildReport({
       input: path.resolve('examples', 'visualization-catalog'),
       output: path.join(fixtureRoot, 'visualization-catalog-directory'),
       format: 'directory',

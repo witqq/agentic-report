@@ -50,15 +50,16 @@ Markdown + metadata + local assets + partials + semantic directives
 - `src/render/directives.ts` maps the documented, allowlisted directive vocabulary to semantic HAST.
   Unknown directives, invalid attributes/nesting, unresolved glossary references, duplicate definitions,
   and unmarked occurrences of registered glossary terms fail with authored-range diagnostics. Compile-time
-  enhancement creates native disclosures and accessible package-owned tabs, dialogs, popovers, filters,
-  switches, and bounded counters without accepting author code.
+  enhancement creates labelled top-level sections, ordinary safe action links, native disclosures, and
+  accessible package-owned tabs, dialogs, popovers, filters, switches, and bounded counters without
+  accepting author code.
 - `src/render/visualizations.ts` projects validated chart series/points, diagram nodes/edges, and timeline
   events into deterministic accessible SVG or semantic HTML. It is compile-time code and does not add a
   visualization browser runtime.
-- `src/render/document.tsx` creates the static HTML document, H2/H3 heading navigation, selected
-  registry-owned page layout/tokens, responsive shell, metadata, and content security policy. It allocates
-  collision-free shell IDs around authored content IDs and uses them consistently for navigation and
-  accessibility relationships.
+- `src/render/document.tsx` creates the static HTML document, explicit-section or legacy H2/H3 navigation,
+  selected registry-owned page layout/tokens, responsive shell, metadata, and content security policy. It
+  allocates collision-free shell IDs around authored content IDs and uses them consistently for navigation
+  and accessibility relationships.
 - `src/browser/` contains the browser runtime and token-based stylesheet bundled by Vite. One delegated
   event controller handles theme/navigation controls, code copying, glossary hover/focus/tap explanations,
   tab selection, modal/popover focus, filtering, switches, and bounded counters. Interaction instances keep state in their own semantic DOM
@@ -71,7 +72,8 @@ Markdown + metadata + local assets + partials + semantic directives
   `src/core/analyze-report.ts` projects the same preparation into compact validation and inspection
   results without output publication.
 - `src/cli.ts` adapts initialization, building, validation, inspection, and discovery to human text or
-  agent-oriented NDJSON. `src/index.ts` is the ESM API.
+  agent-oriented NDJSON. The executable reads its version from the installed package metadata rather than
+  carrying a second version literal. `src/index.ts` is the ESM API.
 
 ## Public contracts
 
@@ -109,6 +111,14 @@ content width, and radius from closed package-owned domains. Frontmatter overrid
 are allowed; the loader rejects cycles, nesting over 10 levels, and lexical or canonical paths outside the
 source root. The source contract is defined in
 [`product/source-contract.md`](product/source-contract.md).
+
+The `section` directive is restricted to the Markdown root. It creates one real `<section>` labelled by an
+owned visible H2, with a validated explicit ID or deterministic title-derived ID. Explicit duplicates and
+unsafe IDs fail; generated collisions receive deterministic suffixes. When explicit sections exist they
+are the primary navigation inventory, using `nav` when supplied; documents without them keep legacy H2/H3
+navigation. `actions` accepts only direct `action` children. Each action becomes an ordinary anchor after
+its same-page, relative, HTTP(S), or mail target passes the closed registry constraint; executable,
+local-file, absolute-path, and protocol-relative targets are rejected.
 
 Partial expansion produces a compact offset source map. Markdown AST positions resolve through that map,
 so diagnostics from entry content and nested partials identify the original authored file and range rather

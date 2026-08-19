@@ -132,6 +132,9 @@
   "$defs": {
     "directive": {
       "oneOf": [
+        { "$ref": "#/$defs/section" },
+        { "$ref": "#/$defs/actions" },
+        { "$ref": "#/$defs/action" },
         { "$ref": "#/$defs/callout" },
         { "$ref": "#/$defs/decision" },
         { "$ref": "#/$defs/cards" },
@@ -158,6 +161,92 @@
         { "$ref": "#/$defs/asset" },
         { "$ref": "#/$defs/font" }
       ]
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "section" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Optional stable section anchor."
+            },
+            "nav": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Optional short primary-navigation label."
+            },
+            "width": {
+              "type": "string",
+              "enum": ["reading", "standard", "wide"],
+              "description": "Section content track.",
+              "default": "standard"
+            },
+            "align": {
+              "type": "string",
+              "enum": ["start", "center"],
+              "description": "Section content alignment.",
+              "default": "start"
+            },
+            "tone": {
+              "type": "string",
+              "enum": ["plain", "soft", "accent", "contrast"],
+              "description": "Package-owned section surface tone.",
+              "default": "plain"
+            }
+          },
+          "required": ["title"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "actions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "actions" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "action" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "href": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
+              "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected."
+            },
+            "kind": {
+              "type": "string",
+              "enum": ["primary", "secondary", "quiet"],
+              "description": "Package-owned action emphasis.",
+              "default": "primary"
+            }
+          },
+          "required": ["href"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
     },
     "callout": {
       "type": "object",

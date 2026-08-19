@@ -108,7 +108,10 @@ export type FieldDefinition = ScalarFieldDefinition | ObjectFieldDefinition;
 
 export type DirectiveForm = 'container' | 'leaf' | 'text';
 export type DirectiveAttributeDiagnosticCode =
-  'INVALID_DIRECTIVE_ATTRIBUTE' | 'INVALID_DIRECTIVE_PATH' | 'INVALID_FONT_FAMILY';
+  | 'INVALID_DIRECTIVE_ATTRIBUTE'
+  | 'INVALID_DIRECTIVE_LINK'
+  | 'INVALID_DIRECTIVE_PATH'
+  | 'INVALID_FONT_FAMILY';
 
 export interface DirectiveAttributeDefinition {
   readonly name: string;
@@ -132,6 +135,7 @@ export interface DirectiveDefinition {
     | 'markdown'
     | 'markdown-and-card-directives'
     | 'markdown-and-tab-directives'
+    | 'action-directives'
     | 'series-directives'
     | 'point-directives'
     | 'node-and-edge-directives'
@@ -141,6 +145,7 @@ export interface DirectiveDefinition {
   readonly placement: {
     readonly requiredParent?: string;
     readonly preferredParent?: string;
+    readonly topLevelOnly?: true;
   };
   readonly behavior: {
     readonly renderer: RendererKey;
@@ -157,7 +162,7 @@ export interface DirectiveDefinition {
       | 'package-owned-toggle';
   };
   readonly sanitizer: {
-    readonly tagName: 'a' | 'article' | 'aside' | 'section' | 'span';
+    readonly tagName: 'a' | 'article' | 'aside' | 'div' | 'section' | 'span';
     readonly className: string;
     readonly properties: readonly [string, ...string[]];
   };
@@ -346,6 +351,9 @@ export const authoringRegistry = {
     },
   ],
   directives: [
+    sectionDirective(),
+    actionsDirective(),
+    actionDirective(),
     {
       name: 'callout',
       description: 'Emphasized finding or notice containing Markdown.',
@@ -679,6 +687,85 @@ function semanticContainers() {
   ] as const;
 }
 
+function sectionDirective(): DirectiveDefinition {
+  const attributes = [
+    requiredTitleAttribute(),
+    optionalIdentityAttribute('id', 'Optional stable section anchor.'),
+    textAttribute('nav', 'Optional short primary-navigation label.', false),
+    enumAttribute('width', 'Section content track.', ['reading', 'standard', 'wide'], 'standard'),
+    enumAttribute('align', 'Section content alignment.', ['start', 'center'], 'start'),
+    enumAttribute(
+      'tone',
+      'Package-owned section surface tone.',
+      ['plain', 'soft', 'accent', 'contrast'],
+      'plain',
+    ),
+  ] as const;
+  return {
+    name: 'section',
+    description: 'Labelled top-level page section containing Markdown.',
+    forms: ['container'],
+    attributes,
+    children: 'markdown',
+    placement: { topLevelOnly: true },
+    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+    sanitizer: {
+      tagName: 'section',
+      className: 'semantic-section',
+      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
+    },
+    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+    handoffs: ['semantic-document'],
+  };
+}
+
+function actionsDirective(): DirectiveDefinition {
+  return {
+    name: 'actions',
+    description: 'Responsive group containing ordinary action links.',
+    forms: ['container'],
+    attributes: [],
+    children: 'action-directives',
+    placement: {},
+    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+    sanitizer: {
+      tagName: 'div',
+      className: 'semantic-actions',
+      properties: ['dataSemantic'],
+    },
+    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+    handoffs: ['semantic-document'],
+  };
+}
+
+function actionDirective(): DirectiveDefinition {
+  const attributes = [
+    linkAttribute(),
+    enumAttribute(
+      'kind',
+      'Package-owned action emphasis.',
+      ['primary', 'secondary', 'quiet'],
+      'primary',
+    ),
+  ] as const;
+  return {
+    name: 'action',
+    description: 'Ordinary safe link inside an actions group.',
+    forms: ['leaf'],
+    attributes,
+    children: 'label-or-generated-label',
+    placement: { requiredParent: 'actions' },
+    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+    sanitizer: {
+      tagName: 'a',
+      className: 'semantic-action',
+      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
+    },
+    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+    handoffs: ['semantic-document'],
+  };
+}
+
 function interactiveDirectives(): readonly DirectiveDefinition[] {
   return [
     interactiveContainer('glossary', 'Reusable glossary definition containing Markdown.', {
@@ -935,6 +1022,29 @@ function identityAttribute(
     },
     renderProperty: attributeRenderProperty(name),
     invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
+  };
+}
+
+function optionalIdentityAttribute(name: 'id', description: string): DirectiveAttributeDefinition {
+  return { ...identityAttribute(name, description), required: false };
+}
+
+function linkAttribute(): DirectiveAttributeDefinition {
+  return {
+    name: 'href',
+    description:
+      'Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected.',
+    required: true,
+    constraint: {
+      kind: 'string',
+      normalization: 'trim',
+      minLength: 1,
+      maxLength: 500,
+      pattern:
+        '^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*)$',
+    },
+    renderProperty: 'dataHref',
+    invalidDiagnostic: 'INVALID_DIRECTIVE_LINK',
   };
 }
 
