@@ -633,6 +633,15 @@ export const authoringRegistry = {
         'Fictional P1 incident review with impact metrics, causal evidence, recovery timeline, and accountable follow-up.',
       classes: ['work-report', 'incident-response-showcase'],
     },
+    {
+      id: 'vendor-decision',
+      path: 'vendor-decision',
+      entry: 'report.md',
+      title: 'AI support vendor decision packet',
+      description:
+        'Fictional procurement decision separating hard security gates, weighted evidence, and conditional adoption.',
+      classes: ['research-report', 'vendor-governance-showcase'],
+    },
   ],
 } as const satisfies AuthoringRegistryDefinition;
 

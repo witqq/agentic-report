@@ -95,6 +95,7 @@ export default async function globalSetup(): Promise<void> {
     'interactive-catalog',
     'visualization-catalog',
     'incident-review',
+    'vendor-decision',
   ] as const;
   const starters = listExamples().filter((example) => example.starter !== undefined);
   for (const fixture of representativeSources) {
@@ -138,6 +139,11 @@ export default async function globalSetup(): Promise<void> {
     buildReport({
       input: path.resolve('examples', 'incident-review'),
       output: path.join(fixtureRoot, 'incident-review-directory'),
+      format: 'directory',
+    }),
+    buildReport({
+      input: path.resolve('examples', 'vendor-decision'),
+      output: path.join(fixtureRoot, 'vendor-decision-directory'),
       format: 'directory',
     }),
   ]);

@@ -229,6 +229,28 @@
           "sha256": "ada2903562e85194191c16d5d156ae31cf1cfa08a20a5d1c7810723e2f20b33d"
         }
       ]
+    },
+    {
+      "id": "vendor-decision",
+      "path": "vendor-decision",
+      "entry": "report.md",
+      "title": "AI support vendor decision packet",
+      "description": "Fictional procurement decision separating hard security gates, weighted evidence, and conditional adoption.",
+      "classes": ["research-report", "vendor-governance-showcase"],
+      "files": [
+        {
+          "path": "assets/evidence-map.svg",
+          "sha256": "3eb99c2756b75cd3939a3d8d89d0da74d64a87495989461782a896d70f90f8d8"
+        },
+        {
+          "path": "partials/gates.md",
+          "sha256": "5178214ac7e881a09155bb57d9f3c8fbad57d9ccf801c0a26aec7646417dc6f8"
+        },
+        {
+          "path": "report.md",
+          "sha256": "fbb5b79095a42471f2f470a827de48ca0a37699bc7cec5496c6405b6bee11964"
+        }
+      ]
     }
   ],
   "status": "complete",

@@ -192,6 +192,7 @@ describe('authoring registry', () => {
       'interactive-catalog',
       'visualization-catalog',
       'incident-review',
+      'vendor-decision',
     ]);
     expect(
       authoringRegistry.examples

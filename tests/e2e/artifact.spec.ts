@@ -33,6 +33,15 @@ const incidentReviewArtifacts = [
     ).href,
   },
 ] as const;
+const vendorDecisionArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('vendor-decision') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/vendor-decision-directory/index.html'),
+    ).href,
+  },
+] as const;
 
 const starters = [
   {
@@ -492,6 +501,86 @@ for (const artifact of incidentReviewArtifacts) {
           Number.parseFloat(getComputedStyle(element).outlineWidth),
         ),
       ).toBeGreaterThan(0);
+    }
+
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+  });
+}
+
+for (const artifact of vendorDecisionArtifacts) {
+  test(`${artifact.format} vendor decision keeps hard gates ahead of scoring from file URL`, async ({
+    page,
+  }, testInfo) => {
+    await page.goto(artifact.url);
+    await expect(page.locator('html')).toHaveAttribute('data-layout', 'document');
+    await expect(
+      page.getByRole('heading', { name: 'AI support vendor decision packet', level: 1 }),
+    ).toBeVisible();
+    await expect(page.getByText('Fictional showcase', { exact: false })).toBeVisible();
+    await expectLoadedImage(
+      page.getByRole('img', {
+        name: 'Sample evidence map connecting requirements, vendor evidence, gates, scoring, and a conditional decision',
+      }),
+    );
+    await expect(
+      page.getByRole('img', { name: /Weighted score after evidence review/u }),
+    ).toBeVisible();
+    await expect(page.getByText('Fail · global support telemetry', { exact: true })).toBeVisible();
+    await expect(page.getByText('Meridian Reply · 89/100', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText('Approve Cedar Assist for a reversible pilot', { exact: true }),
+    ).toBeVisible();
+
+    const term = page.getByRole('button', { name: /hard gate/iu }).first();
+    await term.focus();
+    await page.keyboard.press('Enter');
+    const glossaryDialog = page.getByRole('dialog', { name: 'Hard gate' });
+    await expect(glossaryDialog).toBeVisible();
+    await expect(glossaryDialog).toContainText('disqualifies a candidate');
+    await page.keyboard.press('Escape');
+    await expect(glossaryDialog).toBeHidden();
+    await expect(term).toBeFocused();
+    expect(
+      await term.evaluate((element) => Number.parseFloat(getComputedStyle(element).outlineWidth)),
+    ).toBeGreaterThan(0);
+
+    const residualRisk = page.getByRole('tab', { name: 'Residual risks' });
+    await residualRisk.click();
+    await expect(residualRisk).toHaveAttribute('aria-selected', 'true');
+    await expect(
+      page.getByRole('tabpanel').filter({ hasText: 'Cedar must prove deletion propagation' }),
+    ).toBeVisible();
+
+    const rankingTrigger = page.getByRole('button', { name: 'Why not the top score?' });
+    await rankingTrigger.click();
+    const rankingDialog = page.getByRole('dialog', { name: 'Ranking exception' });
+    await expect(rankingDialog).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(rankingDialog).toBeHidden();
+    await expect(rankingTrigger).toBeFocused();
+
+    const checklistTrigger = page.getByRole('button', { name: 'Open the evidence checklist' });
+    await checklistTrigger.focus();
+    await page.keyboard.press('Enter');
+    const checklist = page.getByRole('dialog', { name: 'Reviewer evidence checklist' });
+    await expect(checklist).toBeVisible();
+    await expect(rankingDialog).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(checklist).toBeHidden();
+    await expect(checklistTrigger).toBeFocused();
+
+    if (testInfo.project.name.startsWith('mobile')) {
+      const comparison = page.getByRole('table').filter({ hasText: 'Weighted criterion' });
+      expect(
+        await comparison.evaluate((element) => element.scrollWidth > element.clientWidth),
+      ).toBe(true);
+      const navigationToggle = page.getByRole('button', { name: 'Contents' });
+      await navigationToggle.focus();
+      await page.keyboard.press('Enter');
+      await expect(navigationToggle).toHaveAttribute('aria-expanded', 'true');
+      await expect(page.locator('[data-navigation]')).toHaveAttribute('data-open', '');
     }
 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
