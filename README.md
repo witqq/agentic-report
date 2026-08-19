@@ -90,6 +90,31 @@ code. Buildable examples under `examples/layout-*` demonstrate every layout and 
 `agentic-report examples --json`; `examples/interactive-catalog` and `examples/visualization-catalog`
 demonstrate the package-owned interaction and data primitives.
 
+## Realistic showcase portfolio
+
+Three non-starter examples show complete decision-oriented pages built through the same public source and
+compiler paths:
+
+| Example                                          | Reader job                                                                                                   |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| [`incident-review`](examples/incident-review/)   | Reconstruct a fictional service incident, inspect evidence, and filter accountable follow-up                 |
+| [`vendor-decision`](examples/vendor-decision/)   | Separate mandatory procurement gates from weighted preference and approve a conditional path                 |
+| [`launch-readiness`](examples/launch-readiness/) | Judge a fictional regional beta from audience value, funnel evidence, launch gates, and a reversible rollout |
+
+From a repository or package-source checkout, validate and rebuild them with the public CLI:
+
+```bash
+agentic-report validate ./examples/incident-review
+agentic-report build ./examples/incident-review --output ./incident-review.html
+agentic-report build ./examples/vendor-decision --output ./vendor-decision.html
+agentic-report build ./examples/launch-readiness --output ./launch-readiness.html
+agentic-report build ./examples/launch-readiness --format directory --output ./launch-readiness-directory
+```
+
+Open the HTML file or directory `index.html` directly through `file://`. In an installed package,
+`agentic-report examples --json` returns each absolute installed entry path; use its containing directory as
+the build input. These examples remain discovery-only and do not change the six `init` starters.
+
 ## Commands
 
 After a local build:

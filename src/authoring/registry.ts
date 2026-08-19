@@ -642,6 +642,15 @@ export const authoringRegistry = {
         'Fictional procurement decision separating hard security gates, weighted evidence, and conditional adoption.',
       classes: ['research-report', 'vendor-governance-showcase'],
     },
+    {
+      id: 'launch-readiness',
+      path: 'launch-readiness',
+      entry: 'report.md',
+      title: 'Regional beta launch readiness',
+      description:
+        'Fictional launch brief combining audience value, funnel evidence, operational gates, and a reversible rollout.',
+      classes: ['landing-page', 'launch-readiness-showcase'],
+    },
   ],
 } as const satisfies AuthoringRegistryDefinition;
 

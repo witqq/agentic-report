@@ -207,6 +207,33 @@ placement, or a layout-specific template.
 The same inventory also contains the six initializable starters. Starters are buildable examples with
 `starter` metadata, not a second template or generator system.
 
+### Rebuild the realistic showcases
+
+The registry also exposes three non-starter, decision-oriented examples. They are ordinary public source
+trees rather than templates or a separate showcase system:
+
+| ID                                                  | Page shape | Intended review                                                                          |
+| --------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------- |
+| [`incident-review`](../examples/incident-review/)   | `mixed`    | Service impact, causal evidence, recovery, and owned follow-up                           |
+| [`vendor-decision`](../examples/vendor-decision/)   | `document` | Mandatory procurement gates, weighted evidence, and conditional adoption                 |
+| [`launch-readiness`](../examples/launch-readiness/) | `landing`  | Audience value, activation/funnel evidence, launch gates, and a reversible regional beta |
+
+From a checkout containing the package-owned source paths:
+
+```bash
+agentic-report validate ./examples/incident-review
+agentic-report inspect ./examples/vendor-decision --json
+agentic-report build ./examples/incident-review --output ./incident-review.html
+agentic-report build ./examples/vendor-decision --output ./vendor-decision.html
+agentic-report build ./examples/launch-readiness --output ./launch-readiness.html
+agentic-report build ./examples/launch-readiness --format directory --output ./launch-readiness-directory
+```
+
+Open each single file or directory `index.html` through `file://`. For an installed package, first run
+`agentic-report examples --json`; each result includes an absolute `entryPath`, and its parent directory is the
+input for `validate`, `inspect`, or `build`. `single-file` remains the default; `directory` changes runtime and
+asset placement, not source semantics or reader behavior.
+
 ## Semantic directives
 
 Directives are declarative and allowlisted. Unknown names and invalid attributes fail with actionable

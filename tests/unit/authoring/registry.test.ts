@@ -193,6 +193,7 @@ describe('authoring registry', () => {
       'visualization-catalog',
       'incident-review',
       'vendor-decision',
+      'launch-readiness',
     ]);
     expect(
       authoringRegistry.examples

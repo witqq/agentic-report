@@ -42,6 +42,15 @@ const vendorDecisionArtifacts = [
     ).href,
   },
 ] as const;
+const launchReadinessArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('launch-readiness') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/launch-readiness-directory/index.html'),
+    ).href,
+  },
+] as const;
 
 const starters = [
   {
@@ -254,6 +263,7 @@ test('mobile navigation opens without a hardcoded server URL', async ({ page }, 
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator('[data-navigation]')).toHaveAttribute('data-open', '');
+  await expect(page.locator('[data-navigation]')).toBeVisible();
 });
 
 test('declarative interactions preserve scoped state, focus, and responsive file behavior', async ({
@@ -495,6 +505,7 @@ for (const artifact of incidentReviewArtifacts) {
       await page.keyboard.press('Enter');
       await expect(navigationToggle).toHaveAttribute('aria-expanded', 'true');
       await expect(page.locator('[data-navigation]')).toHaveAttribute('data-open', '');
+      await expect(page.locator('[data-navigation]')).toBeVisible();
       await expect(navigationToggle).toBeFocused();
       expect(
         await navigationToggle.evaluate((element) =>
@@ -581,6 +592,85 @@ for (const artifact of vendorDecisionArtifacts) {
       await page.keyboard.press('Enter');
       await expect(navigationToggle).toHaveAttribute('aria-expanded', 'true');
       await expect(page.locator('[data-navigation]')).toHaveAttribute('data-open', '');
+      await expect(page.locator('[data-navigation]')).toBeVisible();
+    }
+
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+  });
+}
+
+for (const artifact of launchReadinessArtifacts) {
+  test(`${artifact.format} launch readiness keeps evidence and hold conditions actionable from file URL`, async ({
+    page,
+  }, testInfo) => {
+    await page.goto(artifact.url);
+    await expect(page.locator('html')).toHaveAttribute('data-layout', 'landing');
+    await expect(
+      page.getByRole('heading', { name: 'Regional beta launch readiness', level: 1 }),
+    ).toBeVisible();
+    await expect(page.getByText('Fictional showcase', { exact: false })).toBeVisible();
+    await expectLoadedImage(
+      page.getByRole('img', {
+        name: 'Sample beta learning loop connecting a bounded audience, collaborative value, evidence, and a governed rollout',
+      }),
+    );
+    await expect(
+      page.getByRole('img', { name: /Activated workspace rate by cohort/u }),
+    ).toBeVisible();
+    await expect(page.getByRole('img', { name: /Design-partner funnel/u })).toBeVisible();
+    await expect(page.getByText('64% · target ≥ 60%', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText('Go: bounded European Economic Area beta', { exact: true }),
+    ).toBeVisible();
+
+    const residualRisk = page.getByRole('tab', { name: 'Residual risk' });
+    await residualRisk.click();
+    await expect(residualRisk).toHaveAttribute('aria-selected', 'true');
+    await expect(
+      page.getByRole('tabpanel').filter({ hasText: 'Single-participant rooms' }),
+    ).toBeVisible();
+
+    const regionTrigger = page.getByRole('button', { name: 'Why not launch globally?' });
+    await regionTrigger.focus();
+    await page.keyboard.press('Enter');
+    const regionDialog = page.getByRole('dialog', { name: 'Regional boundary' });
+    await expect(regionDialog).toBeVisible();
+    await expect(regionDialog).toContainText('invalidate the current capacity');
+    await page.keyboard.press('Escape');
+    await expect(regionDialog).toBeHidden();
+    await expect(regionTrigger).toBeFocused();
+
+    const holdToggle = page.getByRole('switch', { name: 'Show the automatic hold condition' });
+    await expect(holdToggle).toHaveAttribute('aria-checked', 'false');
+    await holdToggle.focus();
+    await page.keyboard.press('Enter');
+    await expect(holdToggle).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByText('Pause new invitations', { exact: false })).toBeVisible();
+    expect(
+      await holdToggle.evaluate((element) =>
+        Number.parseFloat(getComputedStyle(element).outlineWidth),
+      ),
+    ).toBeGreaterThan(0);
+
+    const limits = page
+      .locator('[data-disclosure]')
+      .filter({ hasText: 'Read the experiment limits' });
+    await limits.getByText('Read the experiment limits', { exact: true }).click();
+    await expect(limits).toHaveAttribute('open', '');
+
+    if (testInfo.project.name.startsWith('mobile')) {
+      const register = page.getByRole('table').filter({ hasText: 'Mandatory condition' });
+      expect(await register.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+        true,
+      );
+      const navigationToggle = page.getByRole('button', { name: 'Contents' });
+      await navigationToggle.focus();
+      await page.keyboard.press('Enter');
+      await expect(navigationToggle).toHaveAttribute('aria-expanded', 'true');
+      await expect(page.locator('[data-navigation]')).toHaveAttribute('data-open', '');
+      await expect(page.locator('[data-navigation]')).toBeVisible();
     }
 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -748,6 +838,7 @@ for (const example of [
       await toggle.click();
       await expect(toggle).toHaveAttribute('aria-expanded', 'true');
       await expect(navigation).toHaveAttribute('data-open', '');
+      await expect(navigation).toBeVisible();
     } else {
       await expect(navigation).toBeVisible();
     }

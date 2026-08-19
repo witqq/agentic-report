@@ -262,6 +262,9 @@ const expectedLayoutExamples = [
   { id: 'layout-mixed', layout: 'mixed' },
   { id: 'interactive-catalog', layout: 'mixed' },
   { id: 'visualization-catalog', layout: 'dashboard' },
+  { id: 'incident-review', layout: 'mixed' },
+  { id: 'vendor-decision', layout: 'document' },
+  { id: 'launch-readiness', layout: 'landing' },
 ] as const;
 const installedExamples = examplesContract.examples.map((example) =>
   requireRecord(example, 'installed example'),

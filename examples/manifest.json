@@ -251,6 +251,28 @@
           "sha256": "fbb5b79095a42471f2f470a827de48ca0a37699bc7cec5496c6405b6bee11964"
         }
       ]
+    },
+    {
+      "id": "launch-readiness",
+      "path": "launch-readiness",
+      "entry": "report.md",
+      "title": "Regional beta launch readiness",
+      "description": "Fictional launch brief combining audience value, funnel evidence, operational gates, and a reversible rollout.",
+      "classes": ["landing-page", "launch-readiness-showcase"],
+      "files": [
+        {
+          "path": "assets/beta-learning-loop.svg",
+          "sha256": "333a42acd4b21c015351b056fb7a4969306423a3c52917211ea56dffdde82342"
+        },
+        {
+          "path": "partials/readiness-register.md",
+          "sha256": "03eafc20a0b6d1db1bacad6654afa56a0f6d40e78c7b6bf842059214fedc6ae3"
+        },
+        {
+          "path": "report.md",
+          "sha256": "0742b7443727b582508dc12b2256a09f669e05af820c508dcb1237fce4f461a0"
+        }
+      ]
     }
   ],
   "status": "complete",
