@@ -624,6 +624,15 @@ export const authoringRegistry = {
         'Validated bar, line, and pie charts, a directed flow diagram, and a semantic timeline.',
       classes: ['data-visualization-catalog'],
     },
+    {
+      id: 'incident-review',
+      path: 'incident-review',
+      entry: 'report.md',
+      title: 'Service incident command review',
+      description:
+        'Fictional P1 incident review with impact metrics, causal evidence, recovery timeline, and accountable follow-up.',
+      classes: ['work-report', 'incident-response-showcase'],
+    },
   ],
 } as const satisfies AuthoringRegistryDefinition;
 

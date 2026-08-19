@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">OrbitDesk incident topology</title>
+  <desc id="desc">A sample system topology showing customer traffic flowing through checkout and billing to a payment provider, with retry amplification highlighted between billing and the provider.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151b2c"/>
+      <stop offset="1" stop-color="#242039"/>
+    </linearGradient>
+    <linearGradient id="alert" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff8a7a"/>
+      <stop offset="1" stop-color="#ffbe7a"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#070912" flood-opacity=".42"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a7b5d8"/>
+    </marker>
+    <marker id="alert-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff9b7a"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="520" rx="36" fill="url(#background)"/>
+  <text x="72" y="82" fill="#f5f7ff" font-family="Inter, system-ui, sans-serif" font-size="30" font-weight="700">Incident boundary · sample topology</text>
+  <text x="72" y="118" fill="#aeb9d5" font-family="Inter, system-ui, sans-serif" font-size="18">Customer path stayed intact; retry traffic exhausted shared capacity.</text>
+  <g fill="none" stroke="#a7b5d8" stroke-width="5" marker-end="url(#arrow)">
+    <path d="M246 293 H378"/>
+    <path d="M578 293 H710"/>
+  </g>
+  <path d="M910 270 C1002 212 1002 372 910 316" fill="none" stroke="url(#alert)" stroke-width="9" stroke-linecap="round" marker-end="url(#alert-arrow)"/>
+  <g filter="url(#shadow)" font-family="Inter, system-ui, sans-serif">
+    <g>
+      <rect x="62" y="214" width="184" height="158" rx="26" fill="#202a43" stroke="#61749d" stroke-width="2"/>
+      <circle cx="154" cy="264" r="22" fill="#7e94c4"/>
+      <path d="M116 333c8-29 29-44 38-44s30 15 38 44" fill="#7e94c4"/>
+      <text x="154" y="354" text-anchor="middle" fill="#eef2ff" font-size="18" font-weight="650">Customer</text>
+    </g>
+    <g>
+      <rect x="378" y="214" width="200" height="158" rx="26" fill="#19343b" stroke="#4fa39b" stroke-width="2"/>
+      <rect x="420" y="253" width="116" height="56" rx="14" fill="#2f716d"/>
+      <path d="M441 328h74" stroke="#83ddd3" stroke-width="7" stroke-linecap="round"/>
+      <text x="478" y="354" text-anchor="middle" fill="#eefdfc" font-size="18" font-weight="650">Checkout</text>
+    </g>
+    <g>
+      <rect x="710" y="214" width="200" height="158" rx="26" fill="#4a2731" stroke="#ff8a7a" stroke-width="3"/>
+      <path d="M763 283h94M763 309h70" stroke="#ffb09d" stroke-width="9" stroke-linecap="round"/>
+      <text x="810" y="354" text-anchor="middle" fill="#fff2ed" font-size="18" font-weight="650">Billing adapter</text>
+    </g>
+    <g>
+      <rect x="972" y="214" width="166" height="158" rx="26" fill="#2a3043" stroke="#7d88a6" stroke-width="2"/>
+      <path d="M1015 264h80v54h-80zM1028 278h54M1028 294h39" fill="none" stroke="#b9c3de" stroke-width="6" stroke-linecap="round"/>
+      <text x="1055" y="354" text-anchor="middle" fill="#f0f2fb" font-size="18" font-weight="650">Provider</text>
+    </g>
+  </g>
+  <g font-family="Inter, system-ui, sans-serif" font-size="16" font-weight="650">
+    <text x="312" y="275" text-anchor="middle" fill="#b8c3de">requests</text>
+    <text x="644" y="275" text-anchor="middle" fill="#b8c3de">shared pool</text>
+    <text x="1021" y="186" text-anchor="middle" fill="#ffb096">12× retries</text>
+  </g>
+  <rect x="72" y="430" width="1056" height="4" rx="2" fill="#3b4561"/>
+  <rect x="72" y="430" width="754" height="4" rx="2" fill="url(#alert)"/>
+  <text x="72" y="470" fill="#aeb9d5" font-family="Inter, system-ui, sans-serif" font-size="15">09:42 detection</text>
+  <text x="985" y="470" fill="#aeb9d5" font-family="Inter, system-ui, sans-serif" font-size="15">10:29 recovery</text>
+</svg>

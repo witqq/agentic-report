@@ -24,6 +24,15 @@ const visualizationArtifacts = [
     ).href,
   },
 ] as const;
+const incidentReviewArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('incident-review') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/incident-review-directory/index.html'),
+    ).href,
+  },
+] as const;
 
 const starters = [
   {
@@ -428,6 +437,66 @@ for (const artifact of visualizationArtifacts) {
         .first()
         .evaluate((element) => element.scrollWidth >= element.clientWidth),
     ).toBe(true);
+  });
+}
+
+for (const artifact of incidentReviewArtifacts) {
+  test(`${artifact.format} incident review is decision-ready and interactive from file URL`, async ({
+    page,
+  }, testInfo) => {
+    await page.goto(artifact.url);
+    await expect(page.locator('html')).toHaveAttribute('data-layout', 'mixed');
+    await expect(
+      page.getByRole('heading', { name: 'OrbitDesk P1 incident review', level: 1 }),
+    ).toBeVisible();
+    await expect(page.getByText('Fictional showcase', { exact: false })).toBeVisible();
+    await expectLoadedImage(
+      page.getByRole('img', {
+        name: 'Sample topology showing traffic entering checkout, billing, and the payment provider',
+      }),
+    );
+    await expect(page.getByRole('img', { name: /Failed checkout attempts/u })).toBeVisible();
+    await expect(page.getByRole('img', { name: /Causal chain/u })).toBeVisible();
+    await expect(page.locator('.visualization-timeline-event')).toHaveCount(5);
+
+    const filter = page.getByRole('searchbox', { name: 'Filter' });
+    await filter.fill('Reliability');
+    await expect(page.locator('[data-filter-count]')).toHaveText('1 item');
+    await expect(page.getByText('Amplification alert', { exact: true })).toBeVisible();
+    await expect(page.getByText('Pool reservation', { exact: false })).toBeHidden();
+
+    const tab = page.getByRole('tab', { name: 'Ruled out' });
+    await tab.click();
+    await expect(tab).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByText('Ledger and order-store writes', { exact: false })).toBeVisible();
+
+    await tab.focus();
+    await expect(tab).toBeFocused();
+    expect(
+      await tab.evaluate((element) => Number.parseFloat(getComputedStyle(element).outlineWidth)),
+    ).toBeGreaterThan(0);
+
+    const disclosure = page.locator('[data-disclosure]');
+    await disclosure.getByText('Open the customer communication draft', { exact: true }).click();
+    await expect(disclosure).toHaveAttribute('open', '');
+
+    if (testInfo.project.name.startsWith('mobile')) {
+      const navigationToggle = page.getByRole('button', { name: 'Contents' });
+      await navigationToggle.focus();
+      await page.keyboard.press('Enter');
+      await expect(navigationToggle).toHaveAttribute('aria-expanded', 'true');
+      await expect(page.locator('[data-navigation]')).toHaveAttribute('data-open', '');
+      await expect(navigationToggle).toBeFocused();
+      expect(
+        await navigationToggle.evaluate((element) =>
+          Number.parseFloat(getComputedStyle(element).outlineWidth),
+        ),
+      ).toBeGreaterThan(0);
+    }
+
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
   });
 }
 

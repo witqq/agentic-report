@@ -191,6 +191,7 @@ describe('authoring registry', () => {
       'layout-mixed',
       'interactive-catalog',
       'visualization-catalog',
+      'incident-review',
     ]);
     expect(
       authoringRegistry.examples

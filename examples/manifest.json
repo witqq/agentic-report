@@ -207,6 +207,28 @@
           "sha256": "a9bcf7735b0b2987cca84318549417f21fb760ac8c9cc33501956641b3d666d2"
         }
       ]
+    },
+    {
+      "id": "incident-review",
+      "path": "incident-review",
+      "entry": "report.md",
+      "title": "Service incident command review",
+      "description": "Fictional P1 incident review with impact metrics, causal evidence, recovery timeline, and accountable follow-up.",
+      "classes": ["work-report", "incident-response-showcase"],
+      "files": [
+        {
+          "path": "assets/service-topology.svg",
+          "sha256": "81df781d029808e3163deb4138a62fdb24966b7360024203a179e99496efc13e"
+        },
+        {
+          "path": "partials/actions.md",
+          "sha256": "026190b268a53ea5c4b487f1e9ff87a3c7ca5a23a6ce7e80a8ac05e9e2aee945"
+        },
+        {
+          "path": "report.md",
+          "sha256": "ada2903562e85194191c16d5d156ae31cf1cfa08a20a5d1c7810723e2f20b33d"
+        }
+      ]
     }
   ],
   "status": "complete",
