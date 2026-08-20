@@ -38,6 +38,12 @@
         "description": "Language tag using the supported 2-8 letter primary and optional 2-8 character alphanumeric subtags.",
         "default": "und"
       },
+      "preset": {
+        "type": "string",
+        "enum": ["studio", "editorial", "signal"],
+        "description": "Coordinated package-owned visual defaults; explicit bounded token values override the preset.",
+        "default": "studio"
+      },
       "theme": {
         "type": "string",
         "enum": ["system", "light", "dark"],
@@ -50,6 +56,11 @@
         "description": "Responsive page composition selected from the package-owned layout catalog.",
         "default": "document"
       },
+      "scrollProgress": {
+        "type": "boolean",
+        "description": "Enables a decorative package-owned scroll indicator only in the normal-motion profile.",
+        "default": false
+      },
       "tokens": {
         "type": "object",
         "additionalProperties": false,
@@ -57,42 +68,30 @@
           "density": {
             "type": "string",
             "enum": ["compact", "comfortable", "spacious"],
-            "description": "Controls the shared spacing rhythm and control padding.",
-            "default": "comfortable"
+            "description": "Controls the shared spacing rhythm and control padding."
           },
           "font": {
             "type": "string",
             "enum": ["sans", "serif", "mono"],
-            "description": "Selects the package-owned typography stack.",
-            "default": "sans"
+            "description": "Selects the package-owned typography stack."
           },
           "accent": {
             "type": "string",
             "enum": ["indigo", "teal", "coral"],
-            "description": "Selects the accent and visible-focus color family.",
-            "default": "indigo"
+            "description": "Selects the accent and visible-focus color family."
           },
           "width": {
             "type": "string",
             "enum": ["narrow", "standard", "wide"],
-            "description": "Controls the maximum shell and reading width.",
-            "default": "standard"
+            "description": "Controls the maximum shell and reading width."
           },
           "radius": {
             "type": "string",
             "enum": ["sharp", "soft", "round"],
-            "description": "Controls the shared corner treatment for surfaces and controls.",
-            "default": "soft"
+            "description": "Controls the shared corner treatment for surfaces and controls."
           }
         },
-        "description": "Compact package-owned visual token overrides; arbitrary CSS is not accepted.",
-        "default": {
-          "density": "comfortable",
-          "font": "sans",
-          "accent": "indigo",
-          "width": "standard",
-          "radius": "soft"
-        }
+        "description": "Compact package-owned visual token overrides; arbitrary CSS is not accepted."
       },
       "output": {
         "type": "object",
@@ -131,6 +130,9 @@
       }
     },
     "oneOf": [
+      { "$ref": "#/$defs/section" },
+      { "$ref": "#/$defs/actions" },
+      { "$ref": "#/$defs/action" },
       { "$ref": "#/$defs/callout" },
       { "$ref": "#/$defs/decision" },
       { "$ref": "#/$defs/cards" },
@@ -158,6 +160,97 @@
       { "$ref": "#/$defs/font" }
     ],
     "$defs": {
+      "section": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "section" },
+          "form": { "type": "string", "enum": ["container"] },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "title": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+                "description": "Visible title."
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+                "description": "Optional stable section anchor."
+              },
+              "nav": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+                "description": "Optional short primary-navigation label."
+              },
+              "width": {
+                "type": "string",
+                "enum": ["reading", "standard", "wide"],
+                "description": "Section content track.",
+                "default": "standard"
+              },
+              "align": {
+                "type": "string",
+                "enum": ["start", "center"],
+                "description": "Section content alignment.",
+                "default": "start"
+              },
+              "tone": {
+                "type": "string",
+                "enum": ["plain", "soft", "accent", "contrast"],
+                "description": "Package-owned section surface tone.",
+                "default": "plain"
+              },
+              "reveal": {
+                "type": "boolean",
+                "description": "Enables one package-owned one-time section reveal in the normal-motion profile.",
+                "default": false
+              }
+            },
+            "required": ["title"]
+          }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "actions": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "actions" },
+          "form": { "type": "string", "enum": ["container"] },
+          "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "action": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "action" },
+          "form": { "type": "string", "enum": ["leaf"] },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "href": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
+                "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected."
+              },
+              "kind": {
+                "type": "string",
+                "enum": ["primary", "secondary", "quiet"],
+                "description": "Package-owned action emphasis.",
+                "default": "primary"
+              }
+            },
+            "required": ["href"]
+          }
+        },
+        "required": ["name", "form", "attributes"]
+      },
       "callout": {
         "type": "object",
         "additionalProperties": false,
@@ -863,6 +956,12 @@
             "description": "Language tag using the supported 2-8 letter primary and optional 2-8 character alphanumeric subtags.",
             "default": "und"
           },
+          "preset": {
+            "type": "string",
+            "enum": ["studio", "editorial", "signal"],
+            "description": "Coordinated package-owned visual defaults; explicit bounded token values override the preset.",
+            "default": "studio"
+          },
           "theme": {
             "type": "string",
             "enum": ["system", "light", "dark"],
@@ -875,6 +974,11 @@
             "description": "Responsive page composition selected from the package-owned layout catalog.",
             "default": "document"
           },
+          "scrollProgress": {
+            "type": "boolean",
+            "description": "Enables a decorative package-owned scroll indicator only in the normal-motion profile.",
+            "default": false
+          },
           "tokens": {
             "type": "object",
             "additionalProperties": false,
@@ -882,42 +986,30 @@
               "density": {
                 "type": "string",
                 "enum": ["compact", "comfortable", "spacious"],
-                "description": "Controls the shared spacing rhythm and control padding.",
-                "default": "comfortable"
+                "description": "Controls the shared spacing rhythm and control padding."
               },
               "font": {
                 "type": "string",
                 "enum": ["sans", "serif", "mono"],
-                "description": "Selects the package-owned typography stack.",
-                "default": "sans"
+                "description": "Selects the package-owned typography stack."
               },
               "accent": {
                 "type": "string",
                 "enum": ["indigo", "teal", "coral"],
-                "description": "Selects the accent and visible-focus color family.",
-                "default": "indigo"
+                "description": "Selects the accent and visible-focus color family."
               },
               "width": {
                 "type": "string",
                 "enum": ["narrow", "standard", "wide"],
-                "description": "Controls the maximum shell and reading width.",
-                "default": "standard"
+                "description": "Controls the maximum shell and reading width."
               },
               "radius": {
                 "type": "string",
                 "enum": ["sharp", "soft", "round"],
-                "description": "Controls the shared corner treatment for surfaces and controls.",
-                "default": "soft"
+                "description": "Controls the shared corner treatment for surfaces and controls."
               }
             },
-            "description": "Compact package-owned visual token overrides; arbitrary CSS is not accepted.",
-            "default": {
-              "density": "comfortable",
-              "font": "sans",
-              "accent": "indigo",
-              "width": "standard",
-              "radius": "soft"
-            }
+            "description": "Compact package-owned visual token overrides; arbitrary CSS is not accepted."
           },
           "output": {
             "type": "object",
@@ -957,6 +1049,9 @@
     "$defs": {
       "directive": {
         "oneOf": [
+          { "$ref": "#/$defs/section" },
+          { "$ref": "#/$defs/actions" },
+          { "$ref": "#/$defs/action" },
           { "$ref": "#/$defs/callout" },
           { "$ref": "#/$defs/decision" },
           { "$ref": "#/$defs/cards" },
@@ -983,6 +1078,97 @@
           { "$ref": "#/$defs/asset" },
           { "$ref": "#/$defs/font" }
         ]
+      },
+      "section": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "section" },
+          "form": { "type": "string", "enum": ["container"] },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "title": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+                "description": "Visible title."
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+                "description": "Optional stable section anchor."
+              },
+              "nav": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+                "description": "Optional short primary-navigation label."
+              },
+              "width": {
+                "type": "string",
+                "enum": ["reading", "standard", "wide"],
+                "description": "Section content track.",
+                "default": "standard"
+              },
+              "align": {
+                "type": "string",
+                "enum": ["start", "center"],
+                "description": "Section content alignment.",
+                "default": "start"
+              },
+              "tone": {
+                "type": "string",
+                "enum": ["plain", "soft", "accent", "contrast"],
+                "description": "Package-owned section surface tone.",
+                "default": "plain"
+              },
+              "reveal": {
+                "type": "boolean",
+                "description": "Enables one package-owned one-time section reveal in the normal-motion profile.",
+                "default": false
+              }
+            },
+            "required": ["title"]
+          }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "actions": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "actions" },
+          "form": { "type": "string", "enum": ["container"] },
+          "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "action": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "action" },
+          "form": { "type": "string", "enum": ["leaf"] },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "href": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
+                "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected."
+              },
+              "kind": {
+                "type": "string",
+                "enum": ["primary", "secondary", "quiet"],
+                "description": "Package-owned action emphasis.",
+                "default": "primary"
+              }
+            },
+            "required": ["href"]
+          }
+        },
+        "required": ["name", "form", "attributes"]
       },
       "callout": {
         "type": "object",

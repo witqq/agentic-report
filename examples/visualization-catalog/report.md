@@ -18,6 +18,9 @@ output:
 
 # Product signal atlas
 
+**Fictional sample.** Every metric, status, organization, and decision on this page exists only to
+demonstrate the report engine; replace it with verified project evidence before use.
+
 Every visual below is authored as bounded Markdown directives. The compiler validates the data and emits
 deterministic SVG or semantic HTML; the page performs no visualization-time network request.
 

@@ -15,6 +15,9 @@ tokens:
 
 # Build your first portable page
 
+**Fictional sample.** Every metric, status, organization, and decision on this page exists only to
+demonstrate the report engine; replace it with verified project evidence before use.
+
 By the end of this tutorial you will have one offline HTML file built from Markdown—without authoring JSX,
 CSS, browser JavaScript, or a deployment configuration.
 

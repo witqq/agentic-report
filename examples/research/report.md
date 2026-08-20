@@ -15,6 +15,9 @@ tokens:
 
 # Assisted authoring research synthesis
 
+**Fictional sample.** Every metric, status, organization, and decision on this page exists only to
+demonstrate the report engine; replace it with verified project evidence before use.
+
 This starter turns a research question into a transparent recommendation. It keeps the method and evidence
 close enough for another agent to challenge the conclusion.
 

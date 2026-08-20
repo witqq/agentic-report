@@ -52,8 +52,8 @@ absolute entry paths from the CLI adapter.
 The ESM API exposes the same data through `getSourceContract()`, `getAuthoringSchema(scope)`, and
 `listExamples()`. The first two return defensive values rather than public Zod instances; `listExamples()`
 returns package-relative example identities and entry paths, while the CLI resolves entries to absolute
-installed paths. Checked
-JSON projections are under [`generated/`](generated/), and the hash-bound packaged inventory is
+installed paths. The complete checked JSON projection is
+[`generated/source-contract.json`](generated/source-contract.json), and the hash-bound packaged inventory is
 [`../examples/manifest.json`](../examples/manifest.json). Agents should inspect these contracts instead of
 inferring unsupported fields.
 
@@ -161,12 +161,10 @@ description: Options and decision branches
 language: en
 layout: mixed
 theme: system
+preset: signal
+scrollProgress: true
 tokens:
-  density: comfortable
-  font: sans
-  accent: teal
-  width: wide
-  radius: soft
+  radius: round
 ---
 
 # Architecture analysis
@@ -182,16 +180,31 @@ Use semantic directives instead of handwritten layout.
 
 ## Choose the page shape
 
-The package owns the page shell and design system. Metadata selects one closed layout, theme, and optional
-token values:
+The package owns the page shell and design system. Metadata selects one closed layout, coordinated preset,
+theme, and optional token values:
 
 - `layout`: `document` (default), `dashboard`, `landing`, or `mixed`;
+- `preset`: `studio` (default), `editorial`, or `signal`;
 - `theme`: `system` (default), `light`, or `dark`;
-- `tokens.density`: `compact`, `comfortable` (default), or `spacious`;
-- `tokens.font`: `sans` (default), `serif`, or `mono`;
-- `tokens.accent`: `indigo` (default), `teal`, or `coral`;
-- `tokens.width`: `narrow`, `standard` (default), or `wide`;
-- `tokens.radius`: `sharp`, `soft` (default), or `round`.
+- `scrollProgress`: boolean, default `false`; decorative normal-motion reading progress;
+- `tokens.density`: `compact`, `comfortable`, or `spacious`;
+- `tokens.font`: `sans`, `serif`, or `mono`;
+- `tokens.accent`: `indigo`, `teal`, or `coral`;
+- `tokens.width`: `narrow`, `standard`, or `wide`;
+- `tokens.radius`: `sharp`, `soft`, or `round`.
+
+Preset token defaults are `studio = comfortable/sans/indigo/standard/soft`, `editorial =
+spacious/serif/coral/narrow/soft`, and `signal = compact/sans/teal/wide/sharp`, in the token order above.
+The preset applies first, theme controls only light/dark/system color resolution, and every explicitly
+authored token field overrides its preset value. Do not repeat all five token fields when the preset
+already expresses the intended family.
+
+The public discovery contract represents this rule as `page.tokenResolution`: defaults come from the
+selected preset, then explicit token fields apply. For source-contract-major compatibility, each
+`page.tokens` entry retains Studio's internal normalization `default` and marks it
+`defaultVisibility: normalization-only`; a discovery consumer must not materialize such values as authored
+tokens. Use the complete maps in `page.presets` when constructing an editor or agent prompt, and apply only
+defaults whose visibility is `published`.
 
 `document` emphasizes long-form reading with persistent desktop contents. `dashboard` uses a wide dense
 surface and horizontal desktop navigation. `landing` provides a spacious centered hero and wide content
@@ -207,15 +220,76 @@ placement, or a layout-specific template.
 The same inventory also contains the six initializable starters. Starters are buildable examples with
 `starter` metadata, not a second template or generator system.
 
+### Rebuild the realistic showcases
+
+The registry also exposes three non-starter, decision-oriented examples. They are ordinary public source
+trees rather than templates or a separate showcase system:
+
+| ID                                                           | Page shape | Intended review                                                                          |
+| ------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------- |
+| [`incident-review`](../examples/incident-review/report.md)   | `mixed`    | Service impact, causal evidence, recovery, and owned follow-up                           |
+| [`vendor-decision`](../examples/vendor-decision/report.md)   | `document` | Mandatory procurement gates, weighted evidence, and conditional adoption                 |
+| [`launch-readiness`](../examples/launch-readiness/report.md) | `landing`  | Audience value, activation/funnel evidence, launch gates, and a reversible regional beta |
+
+From a checkout containing the package-owned source paths:
+
+```bash
+agentic-report validate ./examples/incident-review
+agentic-report inspect ./examples/vendor-decision --json
+agentic-report build ./examples/incident-review --output ./incident-review.html
+agentic-report build ./examples/vendor-decision --output ./vendor-decision.html
+agentic-report build ./examples/launch-readiness --output ./launch-readiness.html
+agentic-report build ./examples/launch-readiness --format directory --output ./launch-readiness-directory
+```
+
+Open each single file or directory `index.html` through `file://`. For an installed package, first run
+`agentic-report examples --json`; the response contains an `examples` array whose items have an absolute
+`entry` value. Use the parent directory of that value as the input for `validate`, `inspect`, or `build`.
+`single-file` remains the default; `directory` changes runtime and asset placement, not source semantics or
+reader behavior.
+
+### Build a landing page
+
+Use the `landing` starter for a new restrained product or project page. It is the same declarative contract
+as reports and decisions, not a frontend-project scaffold:
+
+```bash
+npx --yes agentic-report init ./my-page --starter landing --json
+npx --yes agentic-report validate ./my-page --json
+npx --yes agentic-report inspect ./my-page --json
+npx --yes agentic-report build ./my-page --output ./my-page.html --json
+```
+
+The first zero-install `npx` run requires registry/network access and Node.js 24.18.0 or newer. The normal
+generated page then opens locally through `file://` and requires the included package-owned browser runtime.
+Authors write no JSX, raw HTML, CSS, or browser JavaScript.
+
+The CLI and ESM entry read this floor from installed package metadata before accepting work. A lower CLI
+runtime exits with code `1` and `NODE_VERSION_UNSUPPORTED`; an ESM import throws `AgenticReportError` with
+the same diagnostic. Neither path continues after npm's engine warning.
+
+The repository's canonical product proof is [`../website/landing/report.md`](../website/landing/report.md). Its example cards
+link to separately publishable incident-review, vendor-decision, and launch-readiness pages plus direct
+public Markdown source routes. [`../website/routes.json`](../website/routes.json) owns those relative route
+identities for deterministic static staging; a screenshot alone is never treated as the live example.
+
 ## Semantic directives
 
 Directives are declarative and allowlisted. Unknown names and invalid attributes fail with actionable
 diagnostics.
 
 ```markdown
+::::section{title="Decision" id="decision" nav="Decision" width="wide" align="start" tone="soft" reveal="true"}
 :::callout{title="Finding" kind="warning"}
 Content may contain ordinary Markdown.
 :::
+
+:::actions
+::action[Review the decision]{href="#decision" kind="primary"}
+::action[Open related evidence]{href="evidence.html" kind="secondary"}
+::action[Project home]{href="https://example.com/project" kind="quiet"}
+:::
+::::
 
 :::decision{title="Output choice"}
 Choose `single-file` when transport is the priority.
@@ -327,6 +401,19 @@ labels may be shortened to preserve layout, but accessible point values, node id
 labels are not truncated. Numeric output retains the supported four decimal places.
 
 `callout.kind` is a lowercase presentation token. `demo.start` and `demo.step` are bounded integers.
+`section` is top-level only and requires `title`. Its optional `id` is a lowercase letter-led identity;
+omission derives a deterministic collision-free ID from the title. `nav` supplies a short primary label.
+`width` is `reading|standard|wide`, `align` is `start|center`, and `tone` is
+`plain|soft|accent|contrast`; `reveal` is boolean. Defaults are `standard`, `start`, `plain`, and
+`reveal="false"`. Explicit sections own real labelled section/H2 markup and primary navigation, while
+heading-only sources use H2 primary links. H3 and component anchors remain owned targets without becoming
+primary links.
+
+`actions` accepts only direct labelled `::action[...]` children. Every action requires `href`; valid targets
+are same-page anchors, relative paths, HTTP(S), and `mailto:`. `javascript:`, `data:`, `file:`, absolute
+local paths, and protocol-relative URLs fail validation. `kind` is `primary`, `secondary`, or `quiet` and
+changes package styling only; the output remains an ordinary anchor with no callback or form behavior.
+
 `asset.src` and `font.src` must resolve to existing files under the canonical source root. The first font
 directive becomes the document font; later directives register additional faces. The text form uses its
 authored label; the leaf asset form receives `Download <filename>` so it remains visible and accessible.
@@ -351,6 +438,21 @@ declarative, and all interaction code belongs to the package.
 
 Each instance owns its state. Tabs, overlays, filters, switches, and demos do not change another instance.
 
+### Page navigation and bounded motion
+
+Two or more explicit sections produce one navigation list; a heading-only document uses its H2 headings
+when at least two exist. Exactly one primary link carries `aria-current="location"` for section,
+descendant, outside, invalid, scroll-boundary, and document-bottom states. Desktop contents are non-modal
+and collapse per document session. Mobile contents use a native modal dialog: Close receives initial
+focus, Tab stays contained, Escape/backdrop/Close return to the trigger, and a chosen link closes the dialog
+and focuses its section heading. Do not add `menu` keyboard behavior or persist collapse state.
+
+Set root metadata `scrollProgress: true` only when decorative reading progress is useful. Set
+`reveal="true"` only on selected top-level sections. Both features run only in the normal-motion profile;
+reduced motion installs no progress or reveal machinery, and an unavailable `IntersectionObserver` leaves
+reveals visible. The package owns the fixed transform/opacity behavior and duration; authors cannot supply
+animation coordinates, easing, JavaScript, or parallax.
+
 ## Build for an agent
 
 ```bash
@@ -373,7 +475,7 @@ input locally when a later operation needs it. Source bodies are never included.
 credentials regardless; redaction is a transport boundary, not a secret-storage mechanism.
 
 Exit code `0` means the requested operation succeeded. Exit code `1` means the source, manifest,
-option, destination, or local asset input is invalid. Exit code `2` means the installed package cannot
+option, destination, local asset input, or Node.js runtime is unsupported. Exit code `2` means the installed package cannot
 supply a required build asset.
 Exit code `3` means an unexpected internal failure occurred.
 

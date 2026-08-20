@@ -1,0 +1,14 @@
+{
+  "name": "agentic-report",
+  "version": "0.2.0",
+  "description": "Create polished local interactive pages from declarative Markdown with agentic-report.",
+  "author": {
+    "name": "witqq",
+    "url": "https://github.com/witqq"
+  },
+  "homepage": "https://agentic-report.witqq.dev/",
+  "repository": "https://github.com/witqq/agentic-report",
+  "license": "MIT",
+  "keywords": ["agent-skill", "markdown", "reports", "static-site"],
+  "skills": "./skills/"
+}

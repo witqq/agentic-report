@@ -14,6 +14,9 @@ tokens:
 
 # Pages agents can finish
 
+**Fictional sample.** Every metric, status, organization, and decision on this page exists only to
+demonstrate the report engine; replace it with verified project evidence before use.
+
 Write Markdown, choose a page shape, and build a polished offline artifact without hand-building another
 frontend application.
 

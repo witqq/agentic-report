@@ -1,3 +1,5 @@
+import { PAGE_MOTION_POLICY } from '../page-motion.js';
+
 export const SOURCE_CONTRACT_MAJOR = 1 as const;
 
 export const OUTPUT_CONTRACT = {
@@ -51,16 +53,66 @@ export const PAGE_TOKEN_FIELDS = [
   },
 ] as const;
 
+export const PAGE_PRESETS = [
+  {
+    name: 'studio',
+    description:
+      'Balanced product storytelling with a generous sans-serif rhythm and restrained depth.',
+    tokens: {
+      density: 'comfortable',
+      font: 'sans',
+      accent: 'indigo',
+      width: 'standard',
+      radius: 'soft',
+    },
+  },
+  {
+    name: 'editorial',
+    description:
+      'Long-form decision reading with serif typography, measured width, and quiet surfaces.',
+    tokens: {
+      density: 'spacious',
+      font: 'serif',
+      accent: 'coral',
+      width: 'narrow',
+      radius: 'soft',
+    },
+  },
+  {
+    name: 'signal',
+    description:
+      'Dense operational evidence with compact spacing, broad tracks, and crisp controls.',
+    tokens: {
+      density: 'compact',
+      font: 'sans',
+      accent: 'teal',
+      width: 'wide',
+      radius: 'sharp',
+    },
+  },
+] as const;
+
+export const PAGE_PRESET_NAMES = PAGE_PRESETS.map((preset) => preset.name) as unknown as readonly [
+  'studio',
+  'editorial',
+  'signal',
+];
+
 export const PAGE_CONTRACT = {
+  defaultPreset: 'studio',
+  presets: PAGE_PRESETS,
   defaultLayout: 'document',
   layouts: ['document', 'dashboard', 'landing', 'mixed'],
   defaultTheme: 'system',
   themes: ['system', 'light', 'dark'],
+  defaultScrollProgress: false,
+  motion: PAGE_MOTION_POLICY,
   tokens: PAGE_TOKEN_FIELDS,
 } as const;
 
 export type LayoutChoice = (typeof PAGE_CONTRACT.layouts)[number];
 export type ThemeChoice = (typeof PAGE_CONTRACT.themes)[number];
+export type PresetChoice = (typeof PAGE_PRESET_NAMES)[number];
 
 export type ConstraintDefinition =
   | {
@@ -84,16 +136,18 @@ export type ConstraintDefinition =
       readonly multipleOf?: number;
       readonly lexicalPattern?: string;
     }
+  | { readonly kind: 'boolean' }
   | { readonly kind: 'enum'; readonly values: readonly string[] };
 
 interface FieldDefinitionBase {
   readonly name: string;
   readonly description: string;
   readonly required: boolean;
+  readonly defaultVisibility?: 'published' | 'normalization-only';
 }
 
 export interface ScalarFieldDefinition extends FieldDefinitionBase {
-  readonly default?: string | number;
+  readonly default?: string | number | boolean;
   readonly constraint: ConstraintDefinition;
   readonly fields?: never;
 }
@@ -108,13 +162,16 @@ export type FieldDefinition = ScalarFieldDefinition | ObjectFieldDefinition;
 
 export type DirectiveForm = 'container' | 'leaf' | 'text';
 export type DirectiveAttributeDiagnosticCode =
-  'INVALID_DIRECTIVE_ATTRIBUTE' | 'INVALID_DIRECTIVE_PATH' | 'INVALID_FONT_FAMILY';
+  | 'INVALID_DIRECTIVE_ATTRIBUTE'
+  | 'INVALID_DIRECTIVE_LINK'
+  | 'INVALID_DIRECTIVE_PATH'
+  | 'INVALID_FONT_FAMILY';
 
 export interface DirectiveAttributeDefinition {
   readonly name: string;
   readonly description: string;
   readonly required: boolean;
-  readonly default?: string | number;
+  readonly default?: string | number | boolean;
   readonly constraint: ConstraintDefinition;
   readonly renderProperty: string;
   readonly invalidDiagnostic: DirectiveAttributeDiagnosticCode;
@@ -132,6 +189,7 @@ export interface DirectiveDefinition {
     | 'markdown'
     | 'markdown-and-card-directives'
     | 'markdown-and-tab-directives'
+    | 'action-directives'
     | 'series-directives'
     | 'point-directives'
     | 'node-and-edge-directives'
@@ -141,6 +199,7 @@ export interface DirectiveDefinition {
   readonly placement: {
     readonly requiredParent?: string;
     readonly preferredParent?: string;
+    readonly topLevelOnly?: true;
   };
   readonly behavior: {
     readonly renderer: RendererKey;
@@ -157,7 +216,7 @@ export interface DirectiveDefinition {
       | 'package-owned-toggle';
   };
   readonly sanitizer: {
-    readonly tagName: 'a' | 'article' | 'aside' | 'section' | 'span';
+    readonly tagName: 'a' | 'article' | 'aside' | 'div' | 'section' | 'span';
     readonly className: string;
     readonly properties: readonly [string, ...string[]];
   };
@@ -302,6 +361,14 @@ export const authoringRegistry = {
       },
     },
     {
+      name: 'preset',
+      description:
+        'Coordinated package-owned visual defaults; explicit bounded token values override the preset.',
+      required: false,
+      default: PAGE_CONTRACT.defaultPreset,
+      constraint: { kind: 'enum', values: PAGE_PRESET_NAMES },
+    },
+    {
       name: 'theme',
       description: 'Initial document color theme.',
       required: false,
@@ -316,9 +383,18 @@ export const authoringRegistry = {
       constraint: { kind: 'enum', values: PAGE_CONTRACT.layouts },
     },
     {
+      name: 'scrollProgress',
+      description:
+        'Enables a decorative package-owned scroll indicator only in the normal-motion profile.',
+      required: false,
+      default: PAGE_CONTRACT.defaultScrollProgress,
+      constraint: { kind: 'boolean' },
+    },
+    {
       name: 'tokens',
       description: 'Compact package-owned visual token overrides; arbitrary CSS is not accepted.',
       required: false,
+      defaultVisibility: 'normalization-only',
       default: Object.fromEntries(PAGE_TOKEN_FIELDS.map((token) => [token.name, token.default])),
       fields: PAGE_TOKEN_FIELDS,
     },
@@ -346,6 +422,9 @@ export const authoringRegistry = {
     },
   ],
   directives: [
+    sectionDirective(),
+    actionsDirective(),
+    actionDirective(),
     {
       name: 'callout',
       description: 'Emphasized finding or notice containing Markdown.',
@@ -624,6 +703,33 @@ export const authoringRegistry = {
         'Validated bar, line, and pie charts, a directed flow diagram, and a semantic timeline.',
       classes: ['data-visualization-catalog'],
     },
+    {
+      id: 'incident-review',
+      path: 'incident-review',
+      entry: 'report.md',
+      title: 'Service incident command review',
+      description:
+        'Fictional P1 incident review with impact metrics, causal evidence, recovery timeline, and accountable follow-up.',
+      classes: ['work-report', 'incident-response-showcase'],
+    },
+    {
+      id: 'vendor-decision',
+      path: 'vendor-decision',
+      entry: 'report.md',
+      title: 'AI support vendor decision packet',
+      description:
+        'Fictional procurement decision separating hard security gates, weighted evidence, and conditional adoption.',
+      classes: ['research-report', 'vendor-governance-showcase'],
+    },
+    {
+      id: 'launch-readiness',
+      path: 'launch-readiness',
+      entry: 'report.md',
+      title: 'Regional beta launch readiness',
+      description:
+        'Fictional launch brief combining audience value, funnel evidence, operational gates, and a reversible rollout.',
+      classes: ['landing-page', 'launch-readiness-showcase'],
+    },
   ],
 } as const satisfies AuthoringRegistryDefinition;
 
@@ -650,6 +756,90 @@ function semanticContainers() {
       },
     ),
   ] as const;
+}
+
+function sectionDirective(): DirectiveDefinition {
+  const attributes = [
+    requiredTitleAttribute(),
+    optionalIdentityAttribute('id', 'Optional stable section anchor.'),
+    textAttribute('nav', 'Optional short primary-navigation label.', false),
+    enumAttribute('width', 'Section content track.', ['reading', 'standard', 'wide'], 'standard'),
+    enumAttribute('align', 'Section content alignment.', ['start', 'center'], 'start'),
+    enumAttribute(
+      'tone',
+      'Package-owned section surface tone.',
+      ['plain', 'soft', 'accent', 'contrast'],
+      'plain',
+    ),
+    booleanAttribute(
+      'reveal',
+      'Enables one package-owned one-time section reveal in the normal-motion profile.',
+      PAGE_CONTRACT.motion.sectionReveal.default,
+    ),
+  ] as const;
+  return {
+    name: 'section',
+    description: 'Labelled top-level page section containing Markdown.',
+    forms: ['container'],
+    attributes,
+    children: 'markdown',
+    placement: { topLevelOnly: true },
+    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+    sanitizer: {
+      tagName: 'section',
+      className: 'semantic-section',
+      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
+    },
+    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+    handoffs: ['semantic-document'],
+  };
+}
+
+function actionsDirective(): DirectiveDefinition {
+  return {
+    name: 'actions',
+    description: 'Responsive group containing ordinary action links.',
+    forms: ['container'],
+    attributes: [],
+    children: 'action-directives',
+    placement: {},
+    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+    sanitizer: {
+      tagName: 'div',
+      className: 'semantic-actions',
+      properties: ['dataSemantic'],
+    },
+    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+    handoffs: ['semantic-document'],
+  };
+}
+
+function actionDirective(): DirectiveDefinition {
+  const attributes = [
+    linkAttribute(),
+    enumAttribute(
+      'kind',
+      'Package-owned action emphasis.',
+      ['primary', 'secondary', 'quiet'],
+      'primary',
+    ),
+  ] as const;
+  return {
+    name: 'action',
+    description: 'Ordinary safe link inside an actions group.',
+    forms: ['leaf'],
+    attributes,
+    children: 'label-or-generated-label',
+    placement: { requiredParent: 'actions' },
+    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+    sanitizer: {
+      tagName: 'a',
+      className: 'semantic-action',
+      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
+    },
+    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+    handoffs: ['semantic-document'],
+  };
 }
 
 function interactiveDirectives(): readonly DirectiveDefinition[] {
@@ -911,6 +1101,29 @@ function identityAttribute(
   };
 }
 
+function optionalIdentityAttribute(name: 'id', description: string): DirectiveAttributeDefinition {
+  return { ...identityAttribute(name, description), required: false };
+}
+
+function linkAttribute(): DirectiveAttributeDefinition {
+  return {
+    name: 'href',
+    description:
+      'Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected.',
+    required: true,
+    constraint: {
+      kind: 'string',
+      normalization: 'trim',
+      minLength: 1,
+      maxLength: 500,
+      pattern:
+        '^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*)$',
+    },
+    renderProperty: 'dataHref',
+    invalidDiagnostic: 'INVALID_DIRECTIVE_LINK',
+  };
+}
+
 function descriptionAttribute(): DirectiveAttributeDefinition {
   return {
     name: 'description',
@@ -975,6 +1188,22 @@ function enumAttribute(
     required: false,
     default: defaultValue,
     constraint: { kind: 'enum', values },
+    renderProperty: `data${name[0]?.toUpperCase() ?? ''}${name.slice(1)}`,
+    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
+  };
+}
+
+function booleanAttribute(
+  name: string,
+  description: string,
+  defaultValue: boolean,
+): DirectiveAttributeDefinition {
+  return {
+    name,
+    description,
+    required: false,
+    default: defaultValue,
+    constraint: { kind: 'boolean' },
     renderProperty: `data${name[0]?.toUpperCase() ?? ''}${name.slice(1)}`,
     invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
   };

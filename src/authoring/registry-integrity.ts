@@ -184,8 +184,17 @@ function checkOutputFormats(registry: RegistryIntegrityInput, issues: string[]):
 }
 
 function checkPageContract(registry: RegistryIntegrityInput, issues: string[]): void {
+  const presetDomain = topLevelManifestEnumValues(registry, 'preset');
   const themeDomain = topLevelManifestEnumValues(registry, 'theme');
   const layoutDomain = topLevelManifestEnumValues(registry, 'layout');
+  const presetNames = registry.page.presets.map((preset) => preset.name);
+  const canonicalPresetNames = PAGE_CONTRACT.presets.map((preset) => preset.name);
+  if (!sameOrderedValues(presetNames, canonicalPresetNames)) {
+    issues.push('page preset: registry domain differs from canonical page contract');
+  }
+  if (!sameOrderedValues(presetDomain, presetNames)) {
+    issues.push('page preset: manifest domain differs from registry domain');
+  }
   if (!sameOrderedValues(registry.page.themes, PAGE_CONTRACT.themes)) {
     issues.push('page theme: registry domain differs from canonical page contract');
   }
@@ -198,13 +207,37 @@ function checkPageContract(registry: RegistryIntegrityInput, issues: string[]): 
   if (!sameOrderedValues(layoutDomain, registry.page.layouts)) {
     issues.push('page layout: manifest domain differs from registry domain');
   }
+  if (
+    registry.page.motion.scrollProgress.normalMotionOnly !==
+      PAGE_CONTRACT.motion.scrollProgress.normalMotionOnly ||
+    registry.page.motion.sectionReveal.default !== PAGE_CONTRACT.motion.sectionReveal.default ||
+    registry.page.motion.sectionReveal.normalMotionOnly !==
+      PAGE_CONTRACT.motion.sectionReveal.normalMotionOnly ||
+    registry.page.motion.sectionReveal.durationMs !==
+      PAGE_CONTRACT.motion.sectionReveal.durationMs ||
+    registry.page.motion.sectionReveal.translationPx !==
+      PAGE_CONTRACT.motion.sectionReveal.translationPx
+  ) {
+    issues.push('page motion: registry policy differs from canonical page contract');
+  }
+  const preset = registry.manifestFields.find((field) => field.name === 'preset');
   const theme = registry.manifestFields.find((field) => field.name === 'theme');
   const layout = registry.manifestFields.find((field) => field.name === 'layout');
+  const scrollProgress = registry.manifestFields.find((field) => field.name === 'scrollProgress');
+  if (preset?.default !== registry.page.defaultPreset) {
+    issues.push('page preset: manifest default differs from registry default');
+  }
   if (theme?.default !== registry.page.defaultTheme) {
     issues.push('page theme: manifest default differs from registry default');
   }
   if (layout?.default !== registry.page.defaultLayout) {
     issues.push('page layout: manifest default differs from registry default');
+  }
+  if (
+    scrollProgress?.constraint?.kind !== 'boolean' ||
+    scrollProgress.default !== registry.page.defaultScrollProgress
+  ) {
+    issues.push('page motion: scroll-progress field differs from registry default');
   }
 
   const tokens = registry.manifestFields.find((field) => field.name === 'tokens');
@@ -231,6 +264,25 @@ function checkPageContract(registry: RegistryIntegrityInput, issues: string[]): 
       issues.push(`page token ${token.name}: manifest default differs from registry default`);
     }
   }
+  for (const pagePreset of registry.page.presets) {
+    const presetTokenNames = Object.keys(pagePreset.tokens);
+    if (
+      !sameOrderedValues(
+        presetTokenNames,
+        registry.page.tokens.map((token) => token.name),
+      )
+    ) {
+      issues.push(
+        `page preset ${pagePreset.name}: token fields differ from registry token catalog`,
+      );
+      continue;
+    }
+    for (const token of registry.page.tokens) {
+      if (!(token.constraint.values as readonly string[]).includes(pagePreset.tokens[token.name])) {
+        issues.push(`page preset ${pagePreset.name}: invalid ${token.name} token default`);
+      }
+    }
+  }
 }
 
 function manifestEnumValues(
@@ -244,7 +296,7 @@ function manifestEnumValues(
 
 function topLevelManifestEnumValues(
   registry: RegistryIntegrityInput,
-  fieldName: 'theme' | 'layout',
+  fieldName: 'preset' | 'theme' | 'layout',
 ): readonly string[] {
   const field = registry.manifestFields.find((candidate) => candidate.name === fieldName);
   return field?.constraint?.kind === 'enum' ? field.constraint.values : [];
@@ -438,6 +490,8 @@ function checkConstraint(
       }
       return { valid };
     }
+    case 'boolean':
+      return { valid: true };
     case 'enum': {
       let valid = true;
       if (constraint.values.length === 0) {
@@ -494,6 +548,8 @@ function defaultMatchesConstraint(
         (constraint.multipleOf === undefined ||
           zodCompatibleMultipleOf(value, constraint.multipleOf))
       );
+    case 'boolean':
+      return typeof value === 'boolean';
     case 'enum':
       return typeof value === 'string' && constraint.values.includes(value);
     default: {

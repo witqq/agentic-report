@@ -33,10 +33,56 @@
     "runtimePlacement": { "single-file": "inline", "directory": "external" }
   },
   "page": {
+    "defaultPreset": "studio",
+    "presets": [
+      {
+        "name": "studio",
+        "description": "Balanced product storytelling with a generous sans-serif rhythm and restrained depth.",
+        "tokens": {
+          "density": "comfortable",
+          "font": "sans",
+          "accent": "indigo",
+          "width": "standard",
+          "radius": "soft"
+        }
+      },
+      {
+        "name": "editorial",
+        "description": "Long-form decision reading with serif typography, measured width, and quiet surfaces.",
+        "tokens": {
+          "density": "spacious",
+          "font": "serif",
+          "accent": "coral",
+          "width": "narrow",
+          "radius": "soft"
+        }
+      },
+      {
+        "name": "signal",
+        "description": "Dense operational evidence with compact spacing, broad tracks, and crisp controls.",
+        "tokens": {
+          "density": "compact",
+          "font": "sans",
+          "accent": "teal",
+          "width": "wide",
+          "radius": "sharp"
+        }
+      }
+    ],
     "defaultLayout": "document",
     "layouts": ["document", "dashboard", "landing", "mixed"],
     "defaultTheme": "system",
     "themes": ["system", "light", "dark"],
+    "defaultScrollProgress": false,
+    "motion": {
+      "scrollProgress": { "normalMotionOnly": true },
+      "sectionReveal": {
+        "default": false,
+        "normalMotionOnly": true,
+        "durationMs": 220,
+        "translationPx": 12
+      }
+    },
     "tokens": [
       {
         "name": "density",
@@ -108,6 +154,13 @@
       }
     },
     {
+      "name": "preset",
+      "description": "Coordinated package-owned visual defaults; explicit bounded token values override the preset.",
+      "required": false,
+      "default": "studio",
+      "constraint": { "kind": "enum", "values": ["studio", "editorial", "signal"] }
+    },
+    {
       "name": "theme",
       "description": "Initial document color theme.",
       "required": false,
@@ -122,9 +175,17 @@
       "constraint": { "kind": "enum", "values": ["document", "dashboard", "landing", "mixed"] }
     },
     {
+      "name": "scrollProgress",
+      "description": "Enables a decorative package-owned scroll indicator only in the normal-motion profile.",
+      "required": false,
+      "default": false,
+      "constraint": { "kind": "boolean" }
+    },
+    {
       "name": "tokens",
       "description": "Compact package-owned visual token overrides; arbitrary CSS is not accepted.",
       "required": false,
+      "defaultVisibility": "normalization-only",
       "default": {
         "density": "comfortable",
         "font": "sans",
@@ -194,6 +255,164 @@
     }
   ],
   "directives": [
+    {
+      "name": "section",
+      "description": "Labelled top-level page section containing Markdown.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "id",
+          "description": "Optional stable section anchor.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "renderProperty": "dataId",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "nav",
+          "description": "Optional short primary-navigation label.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataNav",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "width",
+          "description": "Section content track.",
+          "required": false,
+          "default": "standard",
+          "constraint": { "kind": "enum", "values": ["reading", "standard", "wide"] },
+          "renderProperty": "dataWidth",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "align",
+          "description": "Section content alignment.",
+          "required": false,
+          "default": "start",
+          "constraint": { "kind": "enum", "values": ["start", "center"] },
+          "renderProperty": "dataAlign",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "tone",
+          "description": "Package-owned section surface tone.",
+          "required": false,
+          "default": "plain",
+          "constraint": { "kind": "enum", "values": ["plain", "soft", "accent", "contrast"] },
+          "renderProperty": "dataTone",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "reveal",
+          "description": "Enables one package-owned one-time section reveal in the normal-motion profile.",
+          "required": false,
+          "default": false,
+          "constraint": { "kind": "boolean" },
+          "renderProperty": "dataReveal",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "markdown",
+      "placement": { "topLevelOnly": true },
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-section",
+        "properties": [
+          "dataSemantic",
+          "dataDirectiveTitle",
+          "dataId",
+          "dataNav",
+          "dataWidth",
+          "dataAlign",
+          "dataTone",
+          "dataReveal"
+        ]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "actions",
+      "description": "Responsive group containing ordinary action links.",
+      "forms": ["container"],
+      "attributes": [],
+      "children": "action-directives",
+      "placement": {},
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "div",
+        "className": "semantic-actions",
+        "properties": ["dataSemantic"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "action",
+      "description": "Ordinary safe link inside an actions group.",
+      "forms": ["leaf"],
+      "attributes": [
+        {
+          "name": "href",
+          "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 500,
+            "pattern": "^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*)$"
+          },
+          "renderProperty": "dataHref",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_LINK"
+        },
+        {
+          "name": "kind",
+          "description": "Package-owned action emphasis.",
+          "required": false,
+          "default": "primary",
+          "constraint": { "kind": "enum", "values": ["primary", "secondary", "quiet"] },
+          "renderProperty": "dataKind",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "label-or-generated-label",
+      "placement": { "requiredParent": "actions" },
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "a",
+        "className": "semantic-action",
+        "properties": ["dataSemantic", "dataHref", "dataKind"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
     {
       "name": "callout",
       "description": "Emphasized finding or notice containing Markdown.",
@@ -1445,6 +1664,30 @@
       "title": "Declarative visualization catalog",
       "description": "Validated bar, line, and pie charts, a directed flow diagram, and a semantic timeline.",
       "classes": ["data-visualization-catalog"]
+    },
+    {
+      "id": "incident-review",
+      "path": "incident-review",
+      "entry": "report.md",
+      "title": "Service incident command review",
+      "description": "Fictional P1 incident review with impact metrics, causal evidence, recovery timeline, and accountable follow-up.",
+      "classes": ["work-report", "incident-response-showcase"]
+    },
+    {
+      "id": "vendor-decision",
+      "path": "vendor-decision",
+      "entry": "report.md",
+      "title": "AI support vendor decision packet",
+      "description": "Fictional procurement decision separating hard security gates, weighted evidence, and conditional adoption.",
+      "classes": ["research-report", "vendor-governance-showcase"]
+    },
+    {
+      "id": "launch-readiness",
+      "path": "launch-readiness",
+      "entry": "report.md",
+      "title": "Regional beta launch readiness",
+      "description": "Fictional launch brief combining audience value, funnel evidence, operational gates, and a reversible rollout.",
+      "classes": ["landing-page", "launch-readiness-showcase"]
     }
   ]
 }

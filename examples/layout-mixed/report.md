@@ -14,6 +14,9 @@ tokens:
 
 # Research synthesis
 
+**Fictional sample.** Every metric, status, organization, and decision on this page exists only to
+demonstrate the report engine; replace it with verified project evidence before use.
+
 A mixed page keeps the main argument readable while allowing evidence-heavy sections to use the available
 width.
 

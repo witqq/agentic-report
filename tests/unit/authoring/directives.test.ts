@@ -41,6 +41,12 @@ describe('registry-driven semantic directives', () => {
     await writeFile(path.join(workspace, 'reader.woff'), 'package-owned-font-bytes');
     const markdown = [
       '# Registry renderers',
+      '::::section{title="Semantic section" id="semantic-section" nav="Section" width="wide" align="center" tone="accent" reveal="true"}',
+      'Section body.',
+      ':::actions',
+      '::action[Primary action]{href="#semantic-section" kind="primary"}',
+      ':::',
+      '::::',
       ':::callout{title="  Notice  "}',
       'Callout body.',
       ':::',
@@ -119,6 +125,202 @@ describe('registry-driven semantic directives', () => {
     expect(rendered.html).toContain('>Download data.json</a>');
     expect(rendered.html).toContain('data:application/json;base64,');
     expect(rendered.fontCss).toContain('font-family:"Reader Sans"');
+  });
+
+  it('renders labelled top-level sections and safe ordinary action links', async () => {
+    const workspace = await trackedWorkspace('section-actions');
+    const rendered = await render(
+      [
+        '# Explicit structure',
+        '::::section{title="Proof" id="proof" nav="Short proof" width="wide" align="center" tone="accent" reveal="true"}',
+        'A package-owned section body.',
+        ':::actions',
+        '::action[Start here]{href="#proof" kind="primary"}',
+        '::action[Read the guide]{href="../docs/guide.html" kind="secondary"}',
+        '::action[HTTP mirror]{href="http://example.com/mirror" kind="quiet"}',
+        '::action[Project home]{href="https://example.com/project" kind="quiet"}',
+        '::action[Email owner]{href="mailto:owner@example.com" kind="quiet"}',
+        ':::',
+        '::::',
+        ':::section{title="Proof" width="reading" align="start" tone="soft"}',
+        'A repeated title receives a deterministic generated suffix.',
+        ':::',
+      ].join('\n'),
+      workspace,
+    );
+
+    expect(rendered.html).toContain(
+      '<section class="semantic-section" data-nav="Short proof" data-width="wide" data-align="center" data-tone="accent" data-reveal="true" data-semantic="section" id="proof" aria-labelledby="proof-title">',
+    );
+    expect(rendered.html).toContain(
+      '<h2 id="proof-title" class="semantic-section-title">Proof</h2>',
+    );
+    expect(rendered.html).toContain('id="proof-2" aria-labelledby="proof-2-title"');
+    expect(rendered.html).toContain('data-reveal="false" data-semantic="section" id="proof-2"');
+    expect(rendered.html).toContain(
+      '<a class="semantic-action" data-kind="primary" data-semantic="action" href="#proof">Start here</a>',
+    );
+    expect(rendered.html).toContain('href="../docs/guide.html">Read the guide</a>');
+    expect(rendered.html).toContain('href="http://example.com/mirror">HTTP mirror</a>');
+    expect(rendered.html).toContain('href="https://example.com/project">Project home</a>');
+    expect(rendered.html).toContain('href="mailto:owner@example.com">Email owner</a>');
+    expect(rendered.html).not.toMatch(/onclick|<script|javascript:/u);
+  });
+
+  it('rejects section and action structure or targets outside the closed contract', async () => {
+    const workspace = await trackedWorkspace('section-action-negatives');
+    const cases = [
+      {
+        label: 'duplicate section id',
+        source:
+          ':::section{title="One" id="same"}\nBody.\n:::\n:::section{title="Two" id="same"}\nBody.\n:::',
+        code: 'DUPLICATE_SECTION_ID',
+      },
+      {
+        label: 'nested section',
+        source: '::::callout\n:::section{title="Nested"}\nBody.\n:::\n::::',
+        code: 'INVALID_DIRECTIVE_PLACEMENT',
+      },
+      {
+        label: 'unsafe section id',
+        source: ':::section{title="Unsafe" id="Bad ID"}\nBody.\n:::',
+        code: 'INVALID_DIRECTIVE_ATTRIBUTE',
+      },
+      {
+        label: 'action outside group',
+        source: '::action[Outside]{href="#target"}',
+        code: 'INVALID_DIRECTIVE_PLACEMENT',
+      },
+      {
+        label: 'missing action label',
+        source: ':::actions\n::action{href="#target"}\n:::',
+        code: 'DIRECTIVE_LABEL_REQUIRED',
+      },
+      {
+        label: 'prose inside actions',
+        source: ':::actions\nProse.\n::action[Valid]{href="#target"}\n:::',
+        code: 'INVALID_DIRECTIVE_PLACEMENT',
+      },
+      {
+        label: 'executable action target',
+        source: ':::actions\n::action[Unsafe]{href="javascript:alert(1)"}\n:::',
+        code: 'INVALID_DIRECTIVE_LINK',
+      },
+      {
+        label: 'local-file action target',
+        source: ':::actions\n::action[Unsafe]{href="file:///tmp/private"}\n:::',
+        code: 'INVALID_DIRECTIVE_LINK',
+      },
+      {
+        label: 'data action target',
+        source: ':::actions\n::action[Unsafe]{href="data:text/html,private"}\n:::',
+        code: 'INVALID_DIRECTIVE_LINK',
+      },
+      {
+        label: 'root-absolute action target',
+        source: ':::actions\n::action[Unsafe]{href="/private/report.html"}\n:::',
+        code: 'INVALID_DIRECTIVE_LINK',
+      },
+      {
+        label: 'protocol-relative action target',
+        source: ':::actions\n::action[Unsafe]{href="//example.com/path"}\n:::',
+        code: 'INVALID_DIRECTIVE_LINK',
+      },
+      {
+        label: 'backslash action target',
+        source: ':::actions\n::action[Unsafe]{href="docs\\\\private.html"}\n:::',
+        code: 'INVALID_DIRECTIVE_LINK',
+      },
+    ] as const;
+
+    for (const testCase of cases) {
+      await expect(
+        render(`# Invalid\n${testCase.source}\n`, workspace),
+        testCase.label,
+      ).rejects.toMatchObject({ diagnostic: { code: testCase.code } });
+    }
+  });
+
+  it('reserves explicit section ids and allocates every generated document id page-wide', async () => {
+    const workspace = await trackedWorkspace('section-id-allocation');
+    await expect(
+      render('# Shared\n\n:::section{title="Collision" id="shared"}\nBody.\n:::\n', workspace),
+    ).rejects.toMatchObject({
+      diagnostic: {
+        code: 'DUPLICATE_SECTION_ID',
+        source: {
+          file: path.join(workspace, 'report.md'),
+          line: 3,
+          column: 1,
+          endLine: 5,
+          endColumn: 4,
+        },
+      },
+    });
+
+    const cases = [
+      {
+        label: 'explicit section before component',
+        source:
+          '# Page\n\n:::section{title="Reserved" id="modal-1"}\nBody.\n:::\n\n:::modal{title="Dialog"}\nBody.\n:::',
+        sectionId: 'modal-1',
+        componentId: 'modal-1-2',
+      },
+      {
+        label: 'component before explicit section',
+        source:
+          '# Page\n\n:::modal{title="Dialog"}\nBody.\n:::\n\n:::section{title="Reserved" id="modal-1"}\nBody.\n:::',
+        sectionId: 'modal-1',
+        componentId: 'modal-1-2',
+      },
+      {
+        label: 'generated section before component',
+        source:
+          '# Page\n\n:::section{title="Modal 1"}\nBody.\n:::\n\n:::modal{title="Dialog"}\nBody.\n:::',
+        sectionId: 'modal-1',
+        componentId: 'modal-1-2',
+      },
+      {
+        label: 'component before generated section',
+        source:
+          '# Page\n\n:::modal{title="Dialog"}\nBody.\n:::\n\n:::section{title="Modal 1"}\nBody.\n:::',
+        sectionId: 'modal-1-2',
+        componentId: 'modal-1',
+      },
+    ] as const;
+
+    for (const testCase of cases) {
+      const rendered = await render(testCase.source, workspace);
+      const ids = [...rendered.html.matchAll(/\sid="([^"]+)"/gu)].map((match) => match[1]);
+      expect(new Set(ids).size, testCase.label).toBe(ids.length);
+      expect(rendered.html, testCase.label).toContain(
+        `<section class="semantic-section" data-width="standard" data-align="start" data-tone="plain" data-reveal="false" data-semantic="section" id="${testCase.sectionId}"`,
+      );
+      expect(rendered.html, testCase.label).toContain(`<dialog id="${testCase.componentId}"`);
+      expect(rendered.html, testCase.label).toContain(
+        `aria-labelledby="${testCase.componentId}-title"`,
+      );
+    }
+
+    const headingCollision = await render(
+      '# Shared\n\n:::section{title="Shared"}\nGenerated identity remains stable by suffixing.\n:::\n',
+      workspace,
+    );
+    expect(headingCollision.html).toContain('id="shared-2" aria-labelledby="shared-2-title"');
+
+    const orderings = [
+      '# Page\n\n:::section{title="Target"}\nGenerated first.\n:::\n\n:::section{title="Explicit" id="target"}\nExplicit second.\n:::',
+      '# Page\n\n:::section{title="Explicit" id="target"}\nExplicit first.\n:::\n\n:::section{title="Target"}\nGenerated second.\n:::',
+    ];
+    for (const source of orderings) {
+      const rendered = await render(source, workspace);
+      expect(rendered.html).toContain(
+        'id="target" aria-labelledby="target-title"><h2 id="target-title" class="semantic-section-title">Explicit</h2>',
+      );
+      expect(rendered.html).toContain(
+        'id="target-2" aria-labelledby="target-2-title"><h2 id="target-2-title" class="semantic-section-title">Target</h2>',
+      );
+    }
   });
 
   it('interprets every registered attribute constraint, default and rendered property', () => {
@@ -1366,7 +1568,9 @@ describe('six-class declarative registry corpus', () => {
               contract.attributes[name]?.kind === 'integer' ||
               contract.attributes[name]?.kind === 'number'
                 ? Number(value)
-                : value,
+                : contract.attributes[name]?.kind === 'boolean'
+                  ? value === 'true'
+                  : value,
             ]),
           ),
         };
@@ -1507,6 +1711,7 @@ function diagramNodePosition(html: string, id: string): Readonly<{ x: number; y:
 }
 
 function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
+  if (attribute.constraint.kind === 'boolean') return 'true';
   if (attribute.constraint.kind === 'integer') return '2';
   if (attribute.constraint.kind === 'number') return '2.5';
   if (
@@ -1518,11 +1723,13 @@ function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
   if (attribute.name === 'kind' && attribute.constraint.kind === 'string') return 'warning';
   if (attribute.constraint.kind === 'enum') return attribute.constraint.values.at(-1) ?? '';
   if (attribute.name === 'family') return 'Reader Sans';
+  if (attribute.name === 'href') return '#valid-target';
   if (['key', 'id', 'from', 'to'].includes(attribute.name)) return 'valid-key';
   return 'Valid title';
 }
 
 function renderedAttributeValue(attribute: DirectiveAttributeDefinition): string {
+  if (attribute.constraint.kind === 'boolean') return 'true';
   if (attribute.constraint.kind === 'integer') return '-999999';
   if (attribute.constraint.kind === 'number') return '2.5';
   if (
@@ -1534,6 +1741,7 @@ function renderedAttributeValue(attribute: DirectiveAttributeDefinition): string
   if (attribute.name === 'kind' && attribute.constraint.kind === 'string') return 'warning';
   if (attribute.constraint.kind === 'enum') return attribute.constraint.values.at(-1) ?? '';
   if (attribute.name === 'family') return 'Reader Sans';
+  if (attribute.name === 'href') return '#valid-target';
   if (['key', 'id', 'from', 'to'].includes(attribute.name)) return 'valid-key';
   return 'T';
 }
@@ -1560,12 +1768,17 @@ function directiveInvocation(
     .map(([name, value]) => `${name}=${JSON.stringify(value)}`)
     .join(' ');
   const suffix = serialized.length === 0 ? '' : `{${serialized}}`;
+  if (directive.name === 'actions') {
+    return `:::actions${suffix}\n::action[Projection label]{href="#target"}\n:::`;
+  }
   const invocation =
     form === 'container'
       ? `:::${directive.name}${suffix}\nBody\n:::`
       : form === 'text'
         ? `:${directive.name}[Projection label]${suffix}`
-        : `::${directive.name}${suffix}`;
+        : directive.name === 'action'
+          ? `::action[Projection label]${suffix}`
+          : `::${directive.name}${suffix}`;
   const requiredParent = directive.placement.requiredParent;
   const placed =
     requiredParent === undefined
@@ -1671,8 +1884,15 @@ function bareDirectiveInvocation(directive: DirectiveDefinition, suffix?: string
       .join(' ');
   const attributes =
     serialized.length === 0 ? '' : serialized.startsWith('{') ? serialized : `{${serialized}}`;
+  if (directive.name === 'actions') {
+    return `:::actions${attributes}\n::action[Label]{href="#target"}\n:::`;
+  }
   if (directive.forms.includes('container')) return `:::${directive.name}${attributes}\nBody\n:::`;
-  if (directive.forms.includes('leaf')) return `::${directive.name}${attributes}`;
+  if (directive.forms.includes('leaf')) {
+    return directive.name === 'action'
+      ? `::action[Label]${attributes}`
+      : `::${directive.name}${attributes}`;
+  }
   return `:${directive.name}[Label]${attributes}`;
 }
 
@@ -1680,7 +1900,7 @@ function assertRenderedAttribute(
   rendered: Awaited<ReturnType<typeof render>>,
   directive: DirectiveDefinition,
   attribute: DirectiveAttributeDefinition,
-  expected: string | number | undefined,
+  expected: string | number | boolean | undefined,
 ): void {
   if (expected === undefined) throw new Error(`Missing expected value for ${directive.name}`);
   const serialized = String(expected);
@@ -1713,6 +1933,15 @@ function assertRenderedAttribute(
   }
   if (directive.name === 'term' && attribute.name === 'key') {
     expect(rendered.html).toContain(`data-term-reference="${serialized}"`);
+    return;
+  }
+  if (directive.name === 'section' && attribute.name === 'id') {
+    expect(rendered.html).toContain(`id="${serialized}"`);
+    return;
+  }
+  if (directive.name === 'action' && attribute.name === 'href') {
+    expect(rendered.html).toContain(`href="${serialized}"`);
+    expect(rendered.html).not.toContain('data-href=');
     return;
   }
   if (attribute.name === 'open') {
@@ -1865,6 +2094,7 @@ function registryManifestPaths(): string[] {
 }
 
 function invalidAttributeValue(attribute: DirectiveAttributeDefinition): string {
+  if (attribute.constraint.kind === 'boolean') return 'yes';
   if (attribute.constraint.kind === 'integer') return '1.5';
   if (attribute.constraint.kind === 'number') return 'NaN';
   if (
@@ -1875,6 +2105,7 @@ function invalidAttributeValue(attribute: DirectiveAttributeDefinition): string 
   }
   if (attribute.name === 'kind') return 'Warning';
   if (attribute.name === 'family') return 'Bad;Family';
+  if (attribute.name === 'href') return 'javascript:alert(1)';
   if (attribute.constraint.kind === 'enum') return 'unsupported';
   if (attribute.name === 'key') return 'Invalid Key';
   return ' ';

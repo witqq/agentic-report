@@ -13,6 +13,109 @@
     "resources": ["local images", "downloadable local assets", "local fonts"]
   },
   "directives": {
+    "section": {
+      "description": "Labelled top-level page section containing Markdown.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": true,
+          "description": "Visible title."
+        },
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": false,
+          "description": "Optional stable section anchor."
+        },
+        "nav": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "description": "Optional short primary-navigation label."
+        },
+        "width": {
+          "kind": "enum",
+          "values": ["reading", "standard", "wide"],
+          "required": false,
+          "default": "standard",
+          "description": "Section content track."
+        },
+        "align": {
+          "kind": "enum",
+          "values": ["start", "center"],
+          "required": false,
+          "default": "start",
+          "description": "Section content alignment."
+        },
+        "tone": {
+          "kind": "enum",
+          "values": ["plain", "soft", "accent", "contrast"],
+          "required": false,
+          "default": "plain",
+          "description": "Package-owned section surface tone."
+        },
+        "reveal": {
+          "kind": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Enables one package-owned one-time section reveal in the normal-motion profile."
+        }
+      },
+      "children": "markdown",
+      "placement": { "topLevelOnly": true },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "actions": {
+      "description": "Responsive group containing ordinary action links.",
+      "forms": ["container"],
+      "attributes": {},
+      "children": "action-directives",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "action": {
+      "description": "Ordinary safe link inside an actions group.",
+      "forms": ["leaf"],
+      "attributes": {
+        "href": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 500,
+          "pattern": "^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*)$",
+          "required": true,
+          "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected."
+        },
+        "kind": {
+          "kind": "enum",
+          "values": ["primary", "secondary", "quiet"],
+          "required": false,
+          "default": "primary",
+          "description": "Package-owned action emphasis."
+        }
+      },
+      "children": "label-or-generated-label",
+      "placement": { "requiredParent": "actions" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
     "callout": {
       "description": "Emphasized finding or notice containing Markdown.",
       "forms": ["container"],
@@ -730,47 +833,102 @@
     "runtimePlacement": { "single-file": "inline", "directory": "external" }
   },
   "page": {
+    "defaultPreset": "studio",
+    "presets": [
+      {
+        "name": "studio",
+        "description": "Balanced product storytelling with a generous sans-serif rhythm and restrained depth.",
+        "tokens": {
+          "density": "comfortable",
+          "font": "sans",
+          "accent": "indigo",
+          "width": "standard",
+          "radius": "soft"
+        }
+      },
+      {
+        "name": "editorial",
+        "description": "Long-form decision reading with serif typography, measured width, and quiet surfaces.",
+        "tokens": {
+          "density": "spacious",
+          "font": "serif",
+          "accent": "coral",
+          "width": "narrow",
+          "radius": "soft"
+        }
+      },
+      {
+        "name": "signal",
+        "description": "Dense operational evidence with compact spacing, broad tracks, and crisp controls.",
+        "tokens": {
+          "density": "compact",
+          "font": "sans",
+          "accent": "teal",
+          "width": "wide",
+          "radius": "sharp"
+        }
+      }
+    ],
     "defaultLayout": "document",
     "layouts": ["document", "dashboard", "landing", "mixed"],
     "defaultTheme": "system",
     "themes": ["system", "light", "dark"],
+    "defaultScrollProgress": false,
+    "motion": {
+      "scrollProgress": { "normalMotionOnly": true },
+      "sectionReveal": {
+        "default": false,
+        "normalMotionOnly": true,
+        "durationMs": 220,
+        "translationPx": 12
+      }
+    },
     "tokens": [
       {
         "name": "density",
         "description": "Controls the shared spacing rhythm and control padding.",
         "required": false,
         "default": "comfortable",
-        "constraint": { "kind": "enum", "values": ["compact", "comfortable", "spacious"] }
+        "constraint": { "kind": "enum", "values": ["compact", "comfortable", "spacious"] },
+        "defaultVisibility": "normalization-only"
       },
       {
         "name": "font",
         "description": "Selects the package-owned typography stack.",
         "required": false,
         "default": "sans",
-        "constraint": { "kind": "enum", "values": ["sans", "serif", "mono"] }
+        "constraint": { "kind": "enum", "values": ["sans", "serif", "mono"] },
+        "defaultVisibility": "normalization-only"
       },
       {
         "name": "accent",
         "description": "Selects the accent and visible-focus color family.",
         "required": false,
         "default": "indigo",
-        "constraint": { "kind": "enum", "values": ["indigo", "teal", "coral"] }
+        "constraint": { "kind": "enum", "values": ["indigo", "teal", "coral"] },
+        "defaultVisibility": "normalization-only"
       },
       {
         "name": "width",
         "description": "Controls the maximum shell and reading width.",
         "required": false,
         "default": "standard",
-        "constraint": { "kind": "enum", "values": ["narrow", "standard", "wide"] }
+        "constraint": { "kind": "enum", "values": ["narrow", "standard", "wide"] },
+        "defaultVisibility": "normalization-only"
       },
       {
         "name": "radius",
         "description": "Controls the shared corner treatment for surfaces and controls.",
         "required": false,
         "default": "soft",
-        "constraint": { "kind": "enum", "values": ["sharp", "soft", "round"] }
+        "constraint": { "kind": "enum", "values": ["sharp", "soft", "round"] },
+        "defaultVisibility": "normalization-only"
       }
-    ]
+    ],
+    "tokenResolution": {
+      "defaultsFrom": "selected-preset",
+      "precedence": ["selected-preset", "explicit-tokens"]
+    }
   },
   "safety": [
     "canonical source-root confinement",

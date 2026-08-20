@@ -24,8 +24,10 @@ Frontmatter takes precedence. Supported fields are:
 - `description`: plain-text metadata description;
 - `language`: tag used on `<html lang>`; the current accepted subset is a 2–8 ASCII-letter primary tag
   followed by optional 2–8 character ASCII alphanumeric subtags; default `und` means undetermined;
+- `preset`: coordinated `studio`, `editorial`, or `signal` package-owned visual defaults;
 - `theme`: `system`, `light`, or `dark`;
 - `layout`: `document`, `dashboard`, `landing`, or `mixed`;
+- `scrollProgress`: boolean; default `false`; enables decorative normal-motion reading progress;
 - `tokens`: optional compact visual overrides containing only the fields below:
   - `density`: `compact`, `comfortable`, or `spacious`;
   - `font`: `sans`, `serif`, or `mono`;
@@ -40,7 +42,8 @@ remain optional in the emitted JSON Schema because the compiler accepts their om
 `schema --scope directives` for directive grammar and constraints, or `schema --scope source` for the
 complete source-object schema. The ESM API exposes defensive project-owned projections through
 `getAuthoringSchema(scope)`, `getSourceContract()`, and `listExamples()`; concrete Zod schemas remain an
-internal implementation detail. Checked JSON forms are available in [`../generated/`](../generated/),
+internal implementation detail. The complete checked JSON form is
+[`../generated/source-contract.json`](../generated/source-contract.json),
 and [`../../examples/manifest.json`](../../examples/manifest.json) binds packaged example identities to
 their source-file SHA-256 hashes.
 
@@ -68,12 +71,28 @@ The root metadata value, `tokens`, and `output` must be objects; scalar and arra
 silently replaced by defaults. Validation diagnostics point to the actual manifest or frontmatter field
 range that supplied the failing value.
 
-Defaults are `layout: document`, `theme: system`, and `tokens: { density: comfortable, font: sans,
-accent: indigo, width: standard, radius: soft }`. Omitted token fields receive their individual defaults.
-These values select package-owned styles only; CSS values, class names, JSX, templates, and callbacks are
-not accepted. `agentic-report describe --json` and the ESM `getSourceContract()` return the same `page`
-domain and defaults. The packaged `layout-document`, `layout-dashboard`, `layout-landing`, and
-`layout-mixed` examples exercise every layout.
+Defaults are `layout: document`, `theme: system`, `preset: studio`, and `scrollProgress: false`. Presets provide these coordinated
+token defaults:
+
+| Preset      | Density     | Font  | Accent | Width    | Radius |
+| ----------- | ----------- | ----- | ------ | -------- | ------ |
+| `studio`    | comfortable | sans  | indigo | standard | soft   |
+| `editorial` | spacious    | serif | coral  | narrow   | soft   |
+| `signal`    | compact     | sans  | teal   | wide     | sharp  |
+
+The selected preset supplies all five token axes, the selected theme supplies only the color mode, and
+explicitly authored token fields apply last. An omitted token field therefore retains its selected preset
+value rather than a second global default. These values select package-owned styles only; CSS values,
+class names, JSX, templates, URLs, arbitrary fonts, and callbacks are not accepted.
+`agentic-report describe --json` and the ESM `getSourceContract()` return the same `page` domain,
+coordinated defaults, and precedence contract. In that discovery value, `page.tokenResolution` declares
+that defaults come from the selected preset before explicit token fields apply. For major-1 compatibility,
+`page.tokens` retains each Studio normalization `default` with
+`defaultVisibility: normalization-only`; discovery consumers must materialize only `published` defaults as
+authored fields. `page.presets` contains every complete coordinated map.
+The landing and launch examples use `studio`, the vendor
+decision uses `editorial`, and the incident review uses `signal`; the packaged `layout-*` examples retain
+the default while exercising every layout.
 The six starter examples combine these layouts with the public content, interaction, visualization,
 partial, and local-asset contracts; they introduce no additional syntax.
 
@@ -91,6 +110,10 @@ syntax highlighting and semantic enhancement.
 
 The directive vocabulary is:
 
+- `section`: top-level labelled page region with required `title`, optional stable `id` and short `nav`
+  label, closed `width`, `align`, and `tone` choices, and optional boolean `reveal`;
+- `actions` and directly nested leaf `action`: responsive ordinary link group; every action requires a
+  visible label and safe `href` and may select `primary`, `secondary`, or `quiet` emphasis;
 - `callout`: emphasized finding with optional `title` and lowercase `kind`;
 - `decision`: decision or branch container with optional `title`;
 - `cards` and nested `card`: responsive content grid;
@@ -115,17 +138,34 @@ The directive vocabulary is:
   validated `family`.
 
 Container directives use `:::name ... :::`; nested containers use a longer outer fence. `asset` and
-`font` support leaf directives. Use `:term[Canonical term]{key="term-key"}` inside prose; the label marks
+`font` support leaf directives. An `action` uses the labelled leaf form
+`::action[Visible label]{href="#target" kind="primary"}`. Use
+`:term[Canonical term]{key="term-key"}` inside prose; the label marks
 the authored range, while output always uses the registered canonical text. The compatible standalone form
 `::term{key="term-key"}` remains available when a detached reference is intentional. A `tab` must be a
 direct directive child of `tabs`, and other directive children are rejected there. Complete copyable examples
 are in
 [`docs/AGENT-REFERENCE.md`](../AGENT-REFERENCE.md) and the shipped
-[`examples/basic`](../../examples/basic), [`examples/research`](../../examples/research),
-[`examples/architecture`](../../examples/architecture), [`examples/tutorial`](../../examples/tutorial),
-[`examples/dashboard`](../../examples/dashboard), [`examples/landing`](../../examples/landing), and
-[`examples/interactive-catalog`](../../examples/interactive-catalog) sources. The complete data example is
-[`examples/visualization-catalog`](../../examples/visualization-catalog).
+[`examples/basic`](../../examples/basic/report.md), [`examples/research`](../../examples/research/report.md),
+[`examples/architecture`](../../examples/architecture/report.md), [`examples/tutorial`](../../examples/tutorial/report.md),
+[`examples/dashboard`](../../examples/dashboard/report.md), [`examples/landing`](../../examples/landing/report.md), and
+[`examples/interactive-catalog`](../../examples/interactive-catalog/report.md) sources. The complete data example is
+[`examples/visualization-catalog`](../../examples/visualization-catalog/report.md).
+
+A `section` must be a direct child of the Markdown document, not a blockquote, list item, or another
+directive. It always renders a real labelled `<section>` and visible H2. `id` is a lowercase identity that
+starts with a letter and contains only letters, digits, and hyphens; duplicate explicit IDs fail. If `id`
+is omitted, the compiler derives a deterministic collision-free identity from `title`. `nav` is optional
+short navigation text. Defaults are `width="standard"`, `align="start"`, `tone="plain"`, and
+`reveal="false"`; other values are `reading|wide`, `center`, `soft|accent|contrast`, and boolean
+`reveal="true"`. Documents without explicit sections use legacy H2 headings for primary navigation. H3
+and component anchors remain owned descendant targets but are not primary links.
+
+An `actions` container accepts one or more direct `action` children and no prose. `href` accepts a
+same-page `#anchor`, a relative target, HTTP(S), or `mailto:`. Executable schemes such as `javascript:` and
+`data:`, `file:` URLs, absolute local paths, protocol-relative URLs, callbacks, forms, and scripts are not
+part of the contract. Output is an ordinary keyboard-operable anchor; action emphasis is package-owned
+styling and adds no runtime behavior.
 
 Top-level visuals require `title` and `description`. A chart accepts 1–6 `series`; each series accepts 1–12
 leaf `point` values, and every series must use the same unique labels in the same order. Values are finite
@@ -167,6 +207,36 @@ All state is local to the generated component instance. Browser behavior is pack
 | `toggle`            | Button with `role="switch"` and a controlled panel; `default="off"` hides content, `on` shows it.                                                                                                      | Native button `Enter`/`Space` toggles `aria-checked` and panel visibility.                                                          | Click/tap toggles the same state. Instances are isolated.                                                                                                         |
 | `demo`              | Bounded numeric output starts at `start` (default `0`).                                                                                                                                                | Native Increment button activation adds `step` (default `1`).                                                                       | Click/tap performs the same package-owned increment; no author script is accepted.                                                                                |
 
+`actions`/`action` does not appear in the stateful table because it is an ordinary group of links. Native
+anchor focus, Enter activation, URL behavior, and browser history apply without a package event handler.
+
+## Page navigation and motion
+
+Navigation is generated only when a page has at least two explicit top-level sections, or at least two
+legacy H2 headings when no explicit sections exist. It is one native labelled navigation list with no
+`menu` role. Exactly one link has `aria-current="location"`: a section or owned descendant hash selects
+that section, a valid outside target selects the preceding section or the first when none precedes it, and
+an empty or invalid hash uses the sticky-topbar activation line. Equal tops choose the later section and
+document bottom chooses the final section. Without `IntersectionObserver`, direct hashes and clicks remain
+deterministic and the same total geometry rules run at resize and settled-scroll boundaries; empty or
+invalid hashes therefore use the current activation-line owner rather than a fixed fallback. Hash and
+focused targets clear the sticky topbar. During normal-motion smooth hash navigation, the hash owner remains
+current until the scroll settles. Native `scrollend` performs one terminal geometry update; browsers without
+it coalesce the scroll series into one terminal update. Reduced motion uses the same final ownership without
+smooth traversal.
+
+On desktop, a persistent `Hide contents`/`Show contents` button collapses a non-modal navigation region,
+removes hidden links from focus, and releases the content column. This state lasts only for the current
+document session. On mobile, the same links move into a labelled native modal dialog. Close receives
+initial focus; Tab and Shift+Tab remain contained; Escape, backdrop, and Close restore the trigger; a link
+closes the dialog and focuses its target heading. Crossing to desktop while open closes the dialog safely.
+
+`scrollProgress: true` installs one decorative transform-based progress indicator only in normal motion.
+A section with `reveal="true"` becomes visible once using opacity and at most 12 pixels of translation over
+220 milliseconds. Under `prefers-reduced-motion: reduce`, progress DOM/listeners/animation frames and
+reveal hidden state/observer are absent. Without `IntersectionObserver`, reveal sections are immediately
+visible. These behaviors are identical in both output formats through `file://`.
+
 ## Output behavior
 
 `single-file` is the default. CSS and the package runtime are embedded inline; images, downloads,
@@ -179,7 +249,7 @@ destinations; clean-package verification repeats the build through independent C
 data URLs including base64 expansion. A font data URL is counted once through generated CSS. The result's `bytes` field
 separately reports the HTML file size, not a directory-tree total.
 
-Both formats include the same package-owned page layout, theme/tokens, responsive navigation, code-copy,
+Both formats include the same package-owned page layout, theme/tokens, responsive navigation and bounded motion, code-copy,
 tabs, overlays, filters, switches, visualizations, and demo behavior. Tabs start on their first panel; disclosures use the
 authored `open` value; toggles use `default: off` unless set to `on`; popovers start closed; filter counts
 and modal state initialize in the browser. Wide tables and code scroll inside their content surface on

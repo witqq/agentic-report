@@ -22,6 +22,9 @@ It is a local compiler, not a hosted or cloud service, and it does not start a s
 | [`docs/AGENT-REFERENCE.md`](docs/AGENT-REFERENCE.md)                 | Current copyable CLI and source reference for agents       |
 | [`docs/TESTING.md`](docs/TESTING.md)                                 | Current verification entry points and covered guarantees   |
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)                         | Contributor setup and local quality commands               |
+| [`docs/PUBLIC-SITE.md`](docs/PUBLIC-SITE.md)                         | Static-site and skill release contract                     |
+| [`docs/RELEASE.md`](docs/RELEASE.md)                                 | Ordered release and post-publication verification runbook  |
+| [`skills/agentic-report/SKILL.md`](skills/agentic-report/SKILL.md)   | Canonical cross-agent authoring skill                      |
 
 ## Source format
 
@@ -32,8 +35,8 @@ also contain:
 - `agentic-report.yaml`, `agentic-report.yml`, or `agentic-report.json`;
 - local images referenced by relative paths;
 - Markdown partials included as `{{include: partials/summary.md}}`;
-- semantic directives for content, interactions, compile-time charts/diagrams/timelines, safe built-in
-  demos, downloads, and fonts.
+- semantic directives for labelled page sections, action links, content, interactions, compile-time
+  charts/diagrams/timelines, safe built-in demos, downloads, and fonts.
 
 Example:
 
@@ -43,6 +46,8 @@ title: Architecture options
 description: Decision report
 layout: document
 theme: system
+preset: editorial
+scrollProgress: true
 tokens:
   font: serif
   width: narrow
@@ -55,9 +60,16 @@ tokens:
 
 ![System boundary](assets/system.svg)
 
+::::section{title="Decision" id="decision" nav="Decision" width="reading" align="start" tone="soft" reveal="true"}
 :::callout{title="Key finding" kind="info"}
 The compiler owns responsive layout and navigation.
 :::
+
+:::actions
+::action[Review the decision]{href="#decision" kind="primary"}
+::action[Open the evidence]{href="evidence.html" kind="secondary"}
+:::
+::::
 ```
 
 See [`docs/product/source-contract.md`](docs/product/source-contract.md) for the complete declarative
@@ -84,11 +96,84 @@ source-file inventory, observed directives and local-resource occurrence counts,
 command/format/starter/capability catalog.
 
 The package owns four responsive page layouts: `document`, `dashboard`, `landing`, and `mixed`. Authors
-select one as metadata and may choose `system`, `light`, or `dark` plus compact token overrides for
-`density`, `font`, `accent`, `width`, and `radius`. These are closed validated values, not CSS or component
-code. Buildable examples under `examples/layout-*` demonstrate every layout and are listed by
+select one as metadata and may choose the coordinated `studio`, `editorial`, or `signal` preset, an
+independent `system`, `light`, or `dark` color mode, and compact token overrides for `density`, `font`,
+`accent`, `width`, and `radius`. Preset defaults apply first and explicitly authored token values apply
+last. These are closed validated values, not CSS or component code. Buildable examples under
+`examples/layout-*` demonstrate every layout and are listed by
 `agentic-report examples --json`; `examples/interactive-catalog` and `examples/visualization-catalog`
 demonstrate the package-owned interaction and data primitives.
+
+Authors may replace heading-only structure with top-level `section` directives. Each section owns a
+visible H2 and a stable anchor, plus closed reading/standard/wide tracks, start/center alignment, and
+plain/soft/accent/contrast tones. `reveal="true"` opts one section into a bounded one-time normal-motion
+reveal. A nested `actions` group composes ordinary safe links with primary/secondary/quiet emphasis.
+Legacy heading documents remain valid; their H2 headings define the primary navigation while H3 and
+component anchors remain owned descendant targets.
+
+Pages with at least two eligible sections receive one responsive contents navigation. Desktop readers can
+collapse the non-modal sidebar without persisting state; mobile readers get a labelled native dialog with
+contained focus and focus return. Exactly one link exposes `aria-current="location"`, including for
+descendant and outside hashes. `scrollProgress: true` enables a decorative progress line. Progress and
+section-reveal DOM work are entirely absent under reduced motion; navigation semantics remain available.
+
+## Realistic showcase portfolio
+
+Three non-starter examples show complete decision-oriented pages built through the same public source and
+compiler paths:
+
+| Example                                          | Reader job                                                                                                   |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| [`incident-review`](examples/incident-review/)   | Reconstruct a fictional service incident, inspect evidence, and filter accountable follow-up                 |
+| [`vendor-decision`](examples/vendor-decision/)   | Separate mandatory procurement gates from weighted preference and approve a conditional path                 |
+| [`launch-readiness`](examples/launch-readiness/) | Judge a fictional regional beta from audience value, funnel evidence, launch gates, and a reversible rollout |
+
+From a repository or package-source checkout, validate and rebuild them with the public CLI:
+
+```bash
+agentic-report validate ./examples/incident-review
+agentic-report build ./examples/incident-review --output ./incident-review.html
+agentic-report build ./examples/vendor-decision --output ./vendor-decision.html
+agentic-report build ./examples/launch-readiness --output ./launch-readiness.html
+agentic-report build ./examples/launch-readiness --format directory --output ./launch-readiness-directory
+```
+
+Open the HTML file or directory `index.html` directly through `file://`. In an installed package,
+`agentic-report examples --json` returns each absolute installed entry path; use its containing directory as
+the build input. These examples remain discovery-only and do not change the six `init` starters.
+
+## Product-built landing
+
+The canonical public landing is itself an ordinary compiler input at
+[`website/landing`](website/landing/). It uses only supported Markdown, frontmatter, semantic directives,
+and local screenshots generated from the three fictional showcases. Build it through the same public path
+as any user page:
+
+```bash
+agentic-report validate ./website/landing --json
+agentic-report inspect ./website/landing --json
+agentic-report build ./website/landing --output ./landing.html --json
+agentic-report build ./website/landing --format directory --output ./landing-directory --json
+```
+
+[`website/routes.json`](website/routes.json) is the deployment-route authority. It gives every internal
+landing destination one relative URL, canonical repository source, owner, and readiness state. Each example
+card points to a separately publishable live page and a separately retrievable Markdown source; screenshots
+are previews, not substitutes for the published demos. Static site assembly resolves these declarations
+without adding a client router or a second authoring framework.
+
+The same-origin public tree also exposes [human documentation](website/docs/report.md), a
+[direct agent quickstart](website/docs/agent/index.md), the complete reference and source contract,
+the byte-identical canonical skill, [`llms.txt`](website/llms.txt), and hash-bound release metadata.
+Build the deployment tree from a clean revision:
+
+```bash
+pnpm build:site -- --output ./site --revision "$(git rev-parse HEAD)"
+```
+
+The output path must not exist. Open `site/index.html` through `file://`; see
+[`docs/PUBLIC-SITE.md`](docs/PUBLIC-SITE.md) for deterministic staging, trusted-TLS hosting, skill
+distribution, and synchronized update gates.
 
 ## Commands
 
@@ -160,9 +245,9 @@ Both formats contain the same package-owned interactive behavior. `single-file` 
 `directory` writes it as a content-addressed local asset. Runtime placement is not a source or CLI option.
 Remote asset fetching and executable templates are not supported.
 
-Page layout is independent of output format: the same document/dashboard/landing/mixed source can be
-built as either one file or a directory artifact. Both paths preserve the selected page tokens, responsive
-navigation, local assets, CSP, and `file://` behavior.
+Page layout and preset are independent of output format: the same declarative source can be built as
+either one file or a directory artifact. Both paths preserve the selected preset, resolved page tokens,
+responsive navigation, local assets, CSP, and `file://` behavior.
 
 There is no public plugin or author-code execution API. Proposed declarative extensions are evaluated
 against the checked [`extension proposal schema`](docs/generated/extension-proposal.schema.json), which

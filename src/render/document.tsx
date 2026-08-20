@@ -5,14 +5,14 @@ import type { ReportManifest } from '../contracts.js';
 export interface NavigationItem {
   readonly id: string;
   readonly label: string;
-  readonly depth: 2 | 3;
+  readonly depth: 2;
 }
 
 export interface DocumentRenderOptions {
   readonly title: string;
   readonly description?: string;
   readonly language: string;
-  readonly page: Pick<ReportManifest, 'theme' | 'layout' | 'tokens'>;
+  readonly page: Pick<ReportManifest, 'preset' | 'theme' | 'layout' | 'tokens' | 'scrollProgress'>;
   readonly contentHtml: string;
   readonly navigation: readonly NavigationItem[];
   readonly contentSecurityPolicy: string;
@@ -25,15 +25,19 @@ export type DocumentRuntime =
   | { readonly src: string; readonly inline?: never };
 
 export function renderDocument(options: DocumentRenderOptions): string {
-  const hasNavigation = options.navigation.length > 0;
+  const hasNavigation = options.navigation.length >= 2;
   const usedIds = new Set(
     [...options.contentHtml.matchAll(/\sid="([^"]+)"/gu)].map((match) => match[1] ?? ''),
   );
   const contentId = allocateShellId('report-content', usedIds);
   const navigationId = allocateShellId('report-navigation', usedIds);
+  const navigationHostId = allocateShellId('report-navigation-host', usedIds);
+  const navigationDialogId = allocateShellId('report-navigation-dialog', usedIds);
+  const navigationDialogTitleId = allocateShellId('report-navigation-dialog-title', usedIds);
   const markup = renderToStaticMarkup(
     <html
       lang={options.language}
+      data-preset={options.page.preset}
       data-theme={options.page.theme}
       data-layout={options.page.layout}
       data-density={options.page.tokens.density}
@@ -41,6 +45,7 @@ export function renderDocument(options: DocumentRenderOptions): string {
       data-accent={options.page.tokens.accent}
       data-width={options.page.tokens.width}
       data-radius={options.page.tokens.radius}
+      data-scroll-progress={options.page.scrollProgress ? 'true' : undefined}
     >
       <head>
         <meta charSet="utf-8" />
@@ -61,16 +66,17 @@ export function renderDocument(options: DocumentRenderOptions): string {
         <a className="skip-link" href={`#${contentId}`}>
           Skip to content
         </a>
-        <header className="topbar">
+        <header className="topbar" data-nav-outside>
           {hasNavigation ? (
             <button
               className="nav-toggle"
               type="button"
               aria-controls={navigationId}
-              aria-expanded="false"
+              aria-expanded="true"
+              aria-label="Hide contents"
               data-nav-toggle
             >
-              Contents
+              Hide contents
             </button>
           ) : null}
           <a className="topbar-title" href={`#${contentId}`}>
@@ -85,15 +91,17 @@ export function renderDocument(options: DocumentRenderOptions): string {
             Theme
           </button>
         </header>
-        <div className="report-shell">
+        <div className="report-shell" data-nav-outside>
           {hasNavigation ? (
-            <aside className="sidebar" id={navigationId} data-navigation>
-              <nav aria-label="Document contents">
+            <aside className="sidebar" id={navigationHostId} data-nav-desktop-host>
+              <nav id={navigationId} aria-label="Document contents" data-navigation>
                 <p className="sidebar-label">On this page</p>
                 <ol>
-                  {options.navigation.map((item) => (
+                  {options.navigation.map((item, index) => (
                     <li key={item.id} data-depth={item.depth}>
-                      <a href={`#${item.id}`}>{item.label}</a>
+                      <a href={`#${item.id}`} aria-current={index === 0 ? 'location' : undefined}>
+                        {item.label}
+                      </a>
                     </li>
                   ))}
                 </ol>
@@ -105,6 +113,24 @@ export function renderDocument(options: DocumentRenderOptions): string {
             <article dangerouslySetInnerHTML={{ __html: options.contentHtml }} />
           </main>
         </div>
+        {hasNavigation ? (
+          <dialog
+            className="nav-dialog"
+            id={navigationDialogId}
+            aria-labelledby={navigationDialogTitleId}
+            data-nav-dialog
+          >
+            <div className="nav-dialog-panel">
+              <div className="nav-dialog-header">
+                <p id={navigationDialogTitleId}>Contents</p>
+                <button type="button" className="nav-dialog-close" data-nav-close>
+                  Close
+                </button>
+              </div>
+              <div data-nav-dialog-content />
+            </div>
+          </dialog>
+        ) : null}
         {options.runtime.inline === undefined ? null : (
           // biome-ignore lint/security/noDangerouslySetInnerHtml: JavaScript is the package-owned Vite build artifact.
           <script dangerouslySetInnerHTML={{ __html: options.runtime.inline }} />
@@ -128,12 +154,26 @@ function allocateShellId(base: string, usedIds: Set<string>): string {
 }
 
 export function extractNavigation(html: string): readonly NavigationItem[] {
-  const headingPattern = /<h([23])\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/h\1>/g;
-  return [...html.matchAll(headingPattern)].map((match) => ({
-    depth: Number(match[1]) as 2 | 3,
-    id: match[2] ?? '',
-    label: stripMarkup(match[3] ?? ''),
+  const explicitSections = [
+    ...html.matchAll(
+      /<section\s+([^>]*\bdata-semantic="section"[^>]*)>\s*<h2\s+[^>]*>([\s\S]*?)<\/h2>/g,
+    ),
+  ].map((match) => {
+    const attributes = match[1] ?? '';
+    const id = /\bid="([^"]+)"/u.exec(attributes)?.[1] ?? '';
+    const nav = /\bdata-nav="([^"]+)"/u.exec(attributes)?.[1];
+    return { depth: 2 as const, id, label: stripMarkup(nav ?? match[2] ?? '') };
+  });
+  if (explicitSections.length > 0) {
+    return explicitSections.length >= 2 ? explicitSections : [];
+  }
+  const headingPattern = /<h2\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g;
+  const legacySections = [...html.matchAll(headingPattern)].map((match) => ({
+    depth: 2 as const,
+    id: match[1] ?? '',
+    label: stripMarkup(match[2] ?? ''),
   }));
+  return legacySections.length >= 2 ? legacySections : [];
 }
 
 function stripMarkup(value: string): string {

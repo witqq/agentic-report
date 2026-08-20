@@ -20,8 +20,17 @@ import {
   validateExtensionProposal,
 } from '../../src/index.js';
 import { authoringRegistry } from '../../src/authoring/registry.js';
+import { parseReportManifest } from '../../src/authoring/schemas.js';
 
 const execFileAsync = promisify(execFile);
+type PublicPageKeys = keyof ReturnType<typeof getSourceContract>['page'];
+type ExpectedPublicPageKeys = keyof typeof authoringRegistry.page | 'tokenResolution';
+type SameKeys<Left, Right> = [Left] extends [Right]
+  ? [Right] extends [Left]
+    ? true
+    : false
+  : false;
+const publicPageKeysAreExact: SameKeys<PublicPageKeys, ExpectedPublicPageKeys> = true;
 
 describe('agent discovery contract', () => {
   it('projects all public contract identities and format-derived runtime placement', () => {
@@ -37,7 +46,35 @@ describe('agent discovery contract', () => {
       formats: ['single-file', 'directory'],
       runtimePlacement: { 'single-file': 'inline', directory: 'external' },
     });
-    expect(contract.page).toEqual(authoringRegistry.page);
+    expect(contract.page).toMatchObject({
+      defaultPreset: authoringRegistry.page.defaultPreset,
+      presets: authoringRegistry.page.presets,
+      defaultLayout: authoringRegistry.page.defaultLayout,
+      layouts: authoringRegistry.page.layouts,
+      defaultTheme: authoringRegistry.page.defaultTheme,
+      themes: authoringRegistry.page.themes,
+      defaultScrollProgress: authoringRegistry.page.defaultScrollProgress,
+      motion: authoringRegistry.page.motion,
+      tokenResolution: {
+        defaultsFrom: 'selected-preset',
+        precedence: ['selected-preset', 'explicit-tokens'],
+      },
+    });
+    expect(publicPageKeysAreExact).toBe(true);
+    expect(Object.keys(contract.page).sort()).toEqual(
+      [...Object.keys(authoringRegistry.page), 'tokenResolution'].sort(),
+    );
+    expect(contract.page.tokens).toEqual(
+      authoringRegistry.page.tokens.map((token) => ({
+        ...token,
+        defaultVisibility: 'normalization-only',
+      })),
+    );
+    expect(
+      contract.page.tokens.every(
+        (token) => 'default' in token && token.defaultVisibility === 'normalization-only',
+      ),
+    ).toBe(true);
     expect(contract.capabilities).toEqual(
       Object.fromEntries(
         authoringRegistry.capabilities.map((capability) => [capability.id, capability.description]),
@@ -46,6 +83,34 @@ describe('agent discovery contract', () => {
     expect(contract.commands.init).toBe(contract.capabilities.init);
     expect(demo.runtime).toBe('package-owned-counter');
     expect(demo).not.toHaveProperty('fallback');
+  });
+
+  it('keeps discovered token defaults conditional on the selected preset', () => {
+    const contract = getSourceContract();
+    const expectedByPreset = Object.fromEntries(
+      contract.page.presets.map((preset) => [preset.name, preset.tokens]),
+    );
+
+    for (const preset of ['editorial', 'signal'] as const) {
+      const discoveredDefaults = Object.fromEntries(
+        contract.page.tokens.flatMap((token) => {
+          const candidate = token as unknown as Readonly<Record<string, unknown>>;
+          return candidate.defaultVisibility === 'published' && 'default' in candidate
+            ? [[token.name, candidate.default]]
+            : [];
+        }),
+      );
+      const materialized =
+        Object.keys(discoveredDefaults).length === 0
+          ? { preset }
+          : { preset, tokens: discoveredDefaults };
+
+      expect(parseReportManifest(materialized).tokens).toEqual(expectedByPreset[preset]);
+      expect(
+        parseReportManifest({ ...materialized, tokens: { ...discoveredDefaults, radius: 'round' } })
+          .tokens,
+      ).toEqual({ ...expectedByPreset[preset], radius: 'round' });
+    }
   });
 
   it('returns defensive deterministic schema, contract and example values', () => {

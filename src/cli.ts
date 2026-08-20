@@ -30,6 +30,8 @@ import {
   listExamples,
   type SchemaScope,
 } from './discovery.js';
+import { getNodeCompatibilityDiagnostic } from './node-compatibility.js';
+import { readInstalledPackageMetadata } from './package-metadata.js';
 
 interface BuildCommandOptions {
   readonly output?: string;
@@ -51,6 +53,7 @@ const program = new Command();
 const schemaScopes: readonly SchemaScope[] = ['manifest', 'directives', 'source'];
 const invocationRunId = randomUUID();
 const jsonRequested = process.argv.slice(2).includes('--json');
+const packageMetadata = readInstalledPackageMetadata();
 program.exitOverride();
 program.configureOutput({
   writeErr: (value) => {
@@ -62,7 +65,7 @@ program.configureOutput({
 program
   .name('agentic-report')
   .description('Compile agent-friendly content sources into portable static HTML artifacts.')
-  .version('0.1.0');
+  .version(packageMetadata.version);
 
 program
   .command('init')
@@ -187,21 +190,30 @@ program
     );
   });
 
-try {
-  await program.parseAsync(process.argv);
-} catch (error) {
-  if (!(error instanceof CommanderError && error.exitCode === 0)) {
-    const diagnostic: Diagnostic =
-      error instanceof CommanderError
-        ? {
-            level: 'error',
-            code: 'CLI_ARGUMENT_INVALID',
-            message: error.message,
-            remediation: 'Run `agentic-report --help` and correct the command or option value.',
-          }
-        : toDiagnostic(error);
-    writeFailure(diagnostic, invocationRunId, jsonRequested);
-    process.exitCode = exitCodeForDiagnostic(diagnostic);
+const compatibilityDiagnostic = getNodeCompatibilityDiagnostic(
+  process.versions.node,
+  packageMetadata.nodeEngine,
+);
+if (compatibilityDiagnostic !== undefined) {
+  writeFailure(compatibilityDiagnostic, invocationRunId, jsonRequested);
+  process.exitCode = exitCodeForDiagnostic(compatibilityDiagnostic);
+} else {
+  try {
+    await program.parseAsync(process.argv);
+  } catch (error) {
+    if (!(error instanceof CommanderError && error.exitCode === 0)) {
+      const diagnostic: Diagnostic =
+        error instanceof CommanderError
+          ? {
+              level: 'error',
+              code: 'CLI_ARGUMENT_INVALID',
+              message: error.message,
+              remediation: 'Run `agentic-report --help` and correct the command or option value.',
+            }
+          : toDiagnostic(error);
+      writeFailure(diagnostic, invocationRunId, jsonRequested);
+      process.exitCode = exitCodeForDiagnostic(diagnostic);
+    }
   }
 }
 

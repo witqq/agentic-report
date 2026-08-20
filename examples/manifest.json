@@ -21,7 +21,7 @@
         },
         {
           "path": "report.md",
-          "sha256": "274049de4a9275ae4778b55e74771288e1aaf174f5d4abb8f3fd77be13b99ec2"
+          "sha256": "258fbc621ae8cef8ae4c0a3d4113325ef8cebad814ad2910005cb5109e92c2f7"
         }
       ]
     },
@@ -44,7 +44,7 @@
         },
         {
           "path": "report.md",
-          "sha256": "df1eb52204251c5fee332ebabcc65f0ecf96996cb8bcd1c635a2964695e7d9aa"
+          "sha256": "f836bf018d6e725c7161bb1daa0f987cf67cf846c2b7e2d94de5febb25b27b73"
         }
       ]
     },
@@ -67,7 +67,7 @@
         },
         {
           "path": "report.md",
-          "sha256": "01de47548a11960f2179190a2232fb4676b6e811379e3d14bb8a0e60f0eef7fc"
+          "sha256": "047301627bb19264cfe371588e7d905779d33c141537a4f42accecc227a81ed5"
         }
       ]
     },
@@ -82,7 +82,7 @@
       "files": [
         {
           "path": "report.md",
-          "sha256": "b473a206714a9cc0e4f0f4555578c30d2214c99d9923b86fb09035989333144c"
+          "sha256": "cfad08c26e5f46cd91005353fa1e05872229c4879947828b716ad6ffb989e0bc"
         }
       ]
     },
@@ -97,7 +97,7 @@
       "files": [
         {
           "path": "report.md",
-          "sha256": "22f6df96a10245040a31e576e69106bc0249c5db2c95d45310848611ce431eac"
+          "sha256": "77ea378502442b88fb63ca4d266327b6371bd8ccf49bdee8b66f5f0b1710f688"
         }
       ]
     },
@@ -112,7 +112,7 @@
       "files": [
         {
           "path": "report.md",
-          "sha256": "35551771fe0093efed28ac1a91466807d22d4c7677497957d28da8f7d5ca7665"
+          "sha256": "626ee6f42a0fbf537c36c919438a9c3e1232a7b992355f08f3d79666212e9489"
         }
       ]
     },
@@ -130,7 +130,7 @@
         },
         {
           "path": "report.md",
-          "sha256": "f0c4ba4a8b2b582fbd33893662f2536a9ccbbedb19ee18ef4747aff49ef3f348"
+          "sha256": "e2b4ee0e2517c1a0310703d4f50e2303ee553ce6bd3b5bff5c4eafee55afd4ba"
         }
       ]
     },
@@ -144,7 +144,7 @@
       "files": [
         {
           "path": "report.md",
-          "sha256": "63e3b209040df83414b38bc03d328e4ee12c678439d1a2ea5d79e1f05c60c90f"
+          "sha256": "9db39ce32020dc63dbba57a45752d038103f644ef748bd169a19927beb6ba4dc"
         }
       ]
     },
@@ -158,7 +158,7 @@
       "files": [
         {
           "path": "report.md",
-          "sha256": "6fb291b176047597df466d3497f002efe275988e653dd8cf7146a9396e34a7fc"
+          "sha256": "5457aa0d5cc2fa1c26c3f427d588fffb7c96072f011978b427a8a6c8ecc4e0f4"
         }
       ]
     },
@@ -176,7 +176,7 @@
         },
         {
           "path": "report.md",
-          "sha256": "559db92a6a3705642920e3abed1d9068c0795db3c9dbae949af6eaf88ee1f589"
+          "sha256": "79d5462c5f9b06afb5349f979d8c5cc96e4c6046c588ab39938afeb50e684ba5"
         }
       ]
     },
@@ -190,7 +190,7 @@
       "files": [
         {
           "path": "report.md",
-          "sha256": "983d97f9abbcf68a5e852c31520312ae4ef8f1006609eda4d36a9d10158ed22b"
+          "sha256": "b81ff253d2728ab39ff0dcc16bab43135d32174d1b3ef05e1312478af9aea3bb"
         }
       ]
     },
@@ -204,7 +204,73 @@
       "files": [
         {
           "path": "report.md",
-          "sha256": "a9bcf7735b0b2987cca84318549417f21fb760ac8c9cc33501956641b3d666d2"
+          "sha256": "a73fb87e59ad241e9380a61d45a897db0e19de52fe74dd739a7bce3eb249a016"
+        }
+      ]
+    },
+    {
+      "id": "incident-review",
+      "path": "incident-review",
+      "entry": "report.md",
+      "title": "Service incident command review",
+      "description": "Fictional P1 incident review with impact metrics, causal evidence, recovery timeline, and accountable follow-up.",
+      "classes": ["work-report", "incident-response-showcase"],
+      "files": [
+        {
+          "path": "assets/service-topology.svg",
+          "sha256": "81df781d029808e3163deb4138a62fdb24966b7360024203a179e99496efc13e"
+        },
+        {
+          "path": "partials/actions.md",
+          "sha256": "026190b268a53ea5c4b487f1e9ff87a3c7ca5a23a6ce7e80a8ac05e9e2aee945"
+        },
+        {
+          "path": "report.md",
+          "sha256": "3aad026526695ad3ac2f4752416159f8fb5c3834e4fe3ee21cdf6c4e80d36b12"
+        }
+      ]
+    },
+    {
+      "id": "vendor-decision",
+      "path": "vendor-decision",
+      "entry": "report.md",
+      "title": "AI support vendor decision packet",
+      "description": "Fictional procurement decision separating hard security gates, weighted evidence, and conditional adoption.",
+      "classes": ["research-report", "vendor-governance-showcase"],
+      "files": [
+        {
+          "path": "assets/evidence-map.svg",
+          "sha256": "3eb99c2756b75cd3939a3d8d89d0da74d64a87495989461782a896d70f90f8d8"
+        },
+        {
+          "path": "partials/gates.md",
+          "sha256": "5178214ac7e881a09155bb57d9f3c8fbad57d9ccf801c0a26aec7646417dc6f8"
+        },
+        {
+          "path": "report.md",
+          "sha256": "d389a0038a7d8450a46bdb2115bf26a469df849a8e6fa4b24407ed6e81468535"
+        }
+      ]
+    },
+    {
+      "id": "launch-readiness",
+      "path": "launch-readiness",
+      "entry": "report.md",
+      "title": "Regional beta launch readiness",
+      "description": "Fictional launch brief combining audience value, funnel evidence, operational gates, and a reversible rollout.",
+      "classes": ["landing-page", "launch-readiness-showcase"],
+      "files": [
+        {
+          "path": "assets/beta-learning-loop.svg",
+          "sha256": "333a42acd4b21c015351b056fb7a4969306423a3c52917211ea56dffdde82342"
+        },
+        {
+          "path": "partials/readiness-register.md",
+          "sha256": "03eafc20a0b6d1db1bacad6654afa56a0f6d40e78c7b6bf842059214fedc6ae3"
+        },
+        {
+          "path": "report.md",
+          "sha256": "e3674fffe5a1955e2dbb0be958cfae6c27cfd65d2e48d102f3e746d4045b0cfc"
         }
       ]
     }

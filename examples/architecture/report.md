@@ -15,6 +15,9 @@ tokens:
 
 # Portable page architecture
 
+**Fictional sample.** Every metric, status, organization, and decision on this page exists only to
+demonstrate the report engine; replace it with verified project evidence before use.
+
 This starter records one system decision in enough detail for implementation and later reversal. It keeps
 the trust boundary visible instead of hiding it in framework code.
 

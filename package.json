@@ -1,6 +1,6 @@
 {
   "name": "agentic-report",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Local declarative page builder for agent-authored interactive HTML artifacts.",
   "type": "module",
   "license": "MIT",
@@ -8,7 +8,7 @@
     "type": "git",
     "url": "git+https://github.com/witqq/agentic-report.git"
   },
-  "homepage": "https://github.com/witqq/agentic-report#readme",
+  "homepage": "https://agentic-report.witqq.dev/",
   "bugs": {
     "url": "https://github.com/witqq/agentic-report/issues"
   },
@@ -36,15 +36,19 @@
     "docs/ARCHITECTURE.md",
     "docs/DEVELOPMENT.md",
     "docs/PROJECT_CHECKLIST.md",
+    "docs/PUBLIC-SITE.md",
+    "docs/RELEASE.md",
     "docs/TESTING.md",
     "docs/generated",
     "docs/product/source-contract.md",
     "PRODUCT-REQUIREMENTS.md",
+    "skills",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && vite build --config vite.runtime.config.ts",
+    "build:site": "pnpm build && node --experimental-strip-types scripts/build-site.ts",
     "generate:authoring": "pnpm build && node --experimental-strip-types scripts/generate-authoring.ts",
     "check:authoring": "pnpm build && node --experimental-strip-types scripts/generate-authoring.ts --check",
     "typecheck": "tsc --noEmit",
@@ -59,7 +63,7 @@
     "test:e2e": "testfold e2e",
     "prepack:check": "pnpm check:authoring",
     "pack:check": "node --experimental-strip-types scripts/check-package.ts",
-    "verify": "pnpm check:authoring && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm pack:check",
+    "verify": "pnpm check:authoring && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test:unit && pnpm test:e2e && pnpm pack:check",
     "prepare": "husky"
   },
   "dependencies": {

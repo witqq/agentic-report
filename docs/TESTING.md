@@ -22,30 +22,48 @@ writes its summary to `test-results/summary.json` and failure reports under
 The Testfold configuration rejects suites that produce zero test results. This guard prevents setup or
 discovery failures from being reported as successful empty runs.
 
+`pnpm verify` runs the unit and E2E entry points sequentially. Both suites own files under `test-results/`, so
+the required pre-commit gate must not run their workspace setup and cleanup concurrently.
+
 ## Tiers
 
 - `unit` uses Vitest for source loading, validation, lexical and symlink partial/asset confinement,
   Markdown/directive rendering, image/download/font embedding and copying, absent-only starter
   initialization, installed starter-root resolution, no-overwrite/incomplete-state behavior, CLI
   diagnostics, both output formats and their derived runtime placement, truthful discovery/schema defaults,
+  declared Node.js floor comparison and below-floor diagnostic behavior,
   manifest/frontmatter provenance, entry/partial diagnostic source maps, source/output collision protection,
   exact serialized inline-size accounting, canonical and hard-link source/output collision protection,
   injected partial-write/rename preservation and retry for both output formats, same-process name/content
   determinism, registry-owned page layouts/themes/token defaults, GFM table rendering, collision-free
-  document shell IDs, and compiler results. Hostile concurrent path mutation, process/OS crash recovery,
+  document shell IDs, compiler results, deterministic public-site staging, complete declared-route
+  reachability, direct-file byte identity, release hashes, synchronized skill/plugin metadata, and public
+  tree safety. Public-site staging also rejects route/source escapes, canonically external page sources,
+  symlinked direct inputs, an existing destination, release-identity divergence, and invalid generated routes
+  while proving failed candidates are removed and prior destination bytes are preserved. Hostile concurrent
+  path mutation, process/OS crash recovery,
   and a cross-platform determinism matrix are outside the proportionate filesystem contract.
 - `e2e` uses Playwright with desktop and mobile Chromium profiles. Global setup generates a real
   self-contained artifact; tests open it through `file://` and verify document navigation, code,
-  responsive navigation, themes, visible focus, locally scrolling wide tables, built-in demo and code-copy interactions, embedded single-file and
+  responsive navigation, deterministic current-section ownership, sticky-topbar target clearance and
+  settled normal/reduced hash ownership including the no-`scrollend` fallback, full bounded geometry and
+  hash ownership without `IntersectionObserver`, desktop collapse,
+  native-dialog mobile
+  focus containment/return, normal/reduced-motion progress and one-time reveal, themes, visible focus,
+  locally scrolling wide tables, built-in demo and code-copy interactions, embedded single-file and
   external directory runtimes, and representative architecture, tutorial, work-report, and landing-page
   artifacts. The document, dashboard, landing, and mixed examples are built and exercised through
   `file://` in desktop and mobile profiles, including their page data contract and local images. All six
   package starters are also opened in both profiles, exercise a declared interaction, assert responsive
-  containment, and produce inspected captures. A local SVG must complete with non-zero intrinsic width in both embedded and rewritten hashed
+  containment, and produce inspected captures. Dedicated semantic-tabs coverage builds every current
+  tab-bearing starter, example, and fixture for desktop and mobile `file://` artifacts; it asserts readable
+  non-shrinking single-line labels, list-owned overflow where needed, document containment, and pointer and
+  keyboard selection and focus. A local SVG must complete with non-zero intrinsic width in both embedded and rewritten hashed
   forms. The current suite does not cover browser behavior for downloadable assets or local fonts,
-  axe/screen-reader evidence, full keyboard focus, or difficult-content reflow.
+  axe/screen-reader evidence or difficult-content reflow beyond the authored fixtures.
 - `pack:check` builds an npm tarball, checks its exact release allowlist, metadata, license, types, exports,
-  engine, CLI shebang, file count, absence of private/temporary paths, and common secret/token patterns. It
+  engine, installed CLI version and supported-runtime behavior, CLI shebang, file count, absence of private/temporary paths,
+  and common secret/token patterns. It
   computes and prints the candidate SHA-256, then installs the
   tarball into a clean temporary npm consumer, invokes discovery, and builds complete offline artifacts through the
   installed binary in both formats plus directory output through the ESM API. It also builds every packaged
@@ -56,6 +74,13 @@ discovery failures from being reported as successful empty runs.
   values without output mutation, and contains conflicting `dist/browser` files to prove the installed
   compiler uses only package-owned runtime assets. Repeated clean-consumer builds compare exact
   single-file bytes and directory trees across independent CLI processes.
+
+The E2E setup also stages the same-origin public tree and builds directory-format documentation fixtures.
+Tests start from the staged landing, follow real `file://` links to human and direct agent documentation,
+open all three independently staged showcase pages, compare rendered documentation across output formats,
+assert code/content containment, exercise responsive navigation, and capture desktop/mobile documentation
+states in both formats. Screenshots supplement behavioral and byte assertions; they are never the only
+evidence.
 
 Tests do not need a URL, port, service, credential, database, or external API. Test workspaces and failure
 artifacts live under ignored `test-results/`.

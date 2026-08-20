@@ -1,9 +1,10 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type { Locator } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
+import { PAGE_MOTION_POLICY } from '../../src/page-motion.js';
 import { test, expect } from './fixtures.js';
 
 const artifactUrl = pathToFileURL(path.resolve('test-results/e2e-artifact/report.html')).href;
@@ -15,6 +16,15 @@ const layoutArtifactUrl = (name: string): string =>
 
 const interactiveArtifactUrl = layoutArtifactUrl('interactive-catalog');
 const starterArtifactUrl = (id: string): string => layoutArtifactUrl(`starter-${id}`);
+const landingSectionArtifacts = [
+  { format: 'single-file', url: starterArtifactUrl('landing') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/starter-landing-directory/index.html'),
+    ).href,
+  },
+] as const;
 const visualizationArtifacts = [
   { format: 'single-file', url: layoutArtifactUrl('visualization-catalog') },
   {
@@ -23,6 +33,146 @@ const visualizationArtifacts = [
       path.resolve('test-results/e2e-generated/visualization-catalog-directory/index.html'),
     ).href,
   },
+] as const;
+const incidentReviewArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('incident-review') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/incident-review-directory/index.html'),
+    ).href,
+  },
+] as const;
+const vendorDecisionArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('vendor-decision') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/vendor-decision-directory/index.html'),
+    ).href,
+  },
+] as const;
+const launchReadinessArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('launch-readiness') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/launch-readiness-directory/index.html'),
+    ).href,
+  },
+] as const;
+const navigationArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('navigation') },
+  {
+    format: 'directory',
+    url: pathToFileURL(path.resolve('test-results/e2e-generated/navigation-directory/index.html'))
+      .href,
+  },
+] as const;
+const defaultMotionArtifacts = [
+  { format: 'single-file', url: artifactUrl },
+  { format: 'directory', url: directoryArtifactUrl },
+] as const;
+
+const presetShowcases = [
+  {
+    name: 'landing',
+    preset: 'studio',
+    heading: 'From Markdown to a page worth sharing',
+    artifacts: landingSectionArtifacts,
+  },
+  {
+    name: 'launch-readiness',
+    preset: 'studio',
+    heading: 'Regional beta launch readiness',
+    artifacts: launchReadinessArtifacts,
+  },
+  {
+    name: 'vendor-decision',
+    preset: 'editorial',
+    heading: 'AI support vendor decision packet',
+    artifacts: vendorDecisionArtifacts,
+  },
+  {
+    name: 'incident-review',
+    preset: 'signal',
+    heading: 'OrbitDesk P1 incident review',
+    artifacts: incidentReviewArtifacts,
+  },
+] as const;
+
+const presetRepresentatives = [presetShowcases[0], presetShowcases[2], presetShowcases[3]] as const;
+
+const presetFixtureExpectations = [
+  {
+    preset: 'studio',
+    density: 'comfortable',
+    font: 'sans',
+    accent: 'indigo',
+    width: 'standard',
+    radius: 'soft',
+    fontFamily: 'Inter',
+    lineHeight: 26.4,
+    contentWidth: '76rem',
+    headingWeight: '780',
+    surfaceRadius: '14.4px',
+    sectionMargin: 60,
+  },
+  {
+    preset: 'editorial',
+    density: 'spacious',
+    font: 'serif',
+    accent: 'coral',
+    width: 'narrow',
+    radius: 'soft',
+    fontFamily: 'Charter',
+    lineHeight: 28.16,
+    contentWidth: '60rem',
+    headingWeight: '650',
+    surfaceRadius: '14.4px',
+    sectionMargin: 92.16,
+  },
+  {
+    preset: 'signal',
+    density: 'compact',
+    font: 'sans',
+    accent: 'teal',
+    width: 'wide',
+    radius: 'sharp',
+    fontFamily: 'Inter',
+    lineHeight: 24.8,
+    contentWidth: '94rem',
+    headingWeight: '800',
+    surfaceRadius: '4px',
+    sectionMargin: 34.32,
+  },
+] as const;
+
+const expectedPresetCapturePaths = [
+  'editorial/directory/dark/desktop.png',
+  'editorial/directory/dark/mobile.png',
+  'editorial/directory/light/desktop.png',
+  'editorial/directory/light/mobile.png',
+  'editorial/single-file/dark/desktop.png',
+  'editorial/single-file/dark/mobile.png',
+  'editorial/single-file/light/desktop.png',
+  'editorial/single-file/light/mobile.png',
+  'signal/directory/dark/desktop.png',
+  'signal/directory/dark/mobile.png',
+  'signal/directory/light/desktop.png',
+  'signal/directory/light/mobile.png',
+  'signal/single-file/dark/desktop.png',
+  'signal/single-file/dark/mobile.png',
+  'signal/single-file/light/desktop.png',
+  'signal/single-file/light/mobile.png',
+  'studio/directory/dark/desktop.png',
+  'studio/directory/dark/mobile.png',
+  'studio/directory/light/desktop.png',
+  'studio/directory/light/mobile.png',
+  'studio/single-file/dark/desktop.png',
+  'studio/single-file/dark/mobile.png',
+  'studio/single-file/light/desktop.png',
+  'studio/single-file/light/mobile.png',
 ] as const;
 
 const starters = [
@@ -67,12 +217,42 @@ const starters = [
   },
 ] as const;
 
+async function expectCurrentNavigation(page: Page, targetId: string): Promise<void> {
+  const current = page.locator('[data-navigation] a[aria-current="location"]');
+  await expect(current).toHaveCount(1);
+  await expect(current).toHaveAttribute('href', `#${targetId}`);
+}
+
+interface MotionEvidence {
+  readonly rafRequests: number;
+  readonly documentScrollAdds: number;
+  readonly documentScrollRemoves: number;
+  readonly windowResizeAdds: number;
+  readonly windowResizeRemoves: number;
+  readonly observers: number;
+  readonly observerDisconnects: number;
+  readonly revealTargets: number;
+  readonly revealUnobserves: number;
+}
+
+async function readMotionEvidence(page: Page): Promise<MotionEvidence> {
+  return page.evaluate(
+    () =>
+      (
+        window as unknown as {
+          readonly __motionEvidence: MotionEvidence;
+        }
+      ).__motionEvidence,
+  );
+}
+
 for (const starter of starters) {
   test(`starter ${starter.id} is useful, responsive, and interactive from file URL`, async ({
     page,
   }, testInfo) => {
     await page.goto(starterArtifactUrl(starter.id));
     await expect(page.locator('html')).toHaveAttribute('data-layout', starter.layout);
+    await expect(page.locator('html')).toHaveAttribute('data-preset', 'studio');
     await expect(page.getByRole('heading', { name: starter.heading, level: 1 })).toBeVisible();
     await expect(page.locator(starter.component).first()).toBeVisible();
     await expect(page.locator('body')).not.toContainText(/lorem ipsum|todo|placeholder/iu);
@@ -135,6 +315,155 @@ for (const starter of starters) {
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
       path: path.join(captureDirectory, `${starter.id}.png`),
+      fullPage: true,
+    });
+  });
+}
+
+for (const artifact of landingSectionArtifacts) {
+  test(`${artifact.format} section and action contract is semantic and responsive from file URL`, async ({
+    page,
+  }, testInfo) => {
+    await page.goto(artifact.url);
+    const sections = page.locator('section.semantic-section');
+    await expect(sections).toHaveCount(4);
+    await expect(page.locator('#workflow')).toHaveAttribute('aria-labelledby', 'workflow-title');
+    await expect(
+      page.getByRole('heading', { name: 'Start with the work, not the framework', level: 2 }),
+    ).toHaveAttribute('id', 'workflow-title');
+    await expect(page.locator('#workflow')).toHaveAttribute('data-width', 'wide');
+    await expect(page.locator('#workflow')).toHaveAttribute('data-tone', 'soft');
+    await expect(page.locator('#proof')).toHaveAttribute('data-width', 'reading');
+    await expect(page.locator('#proof')).toHaveAttribute('data-tone', 'accent');
+    await expect(page.locator('#boundaries')).toHaveAttribute('data-align', 'center');
+    await expect(page.locator('#boundaries')).toHaveAttribute('data-tone', 'contrast');
+
+    const navigation = page.locator('[data-navigation]');
+    await expect(navigation.locator('a')).toHaveCount(4);
+    await expect(navigation.locator('a', { hasText: 'Workflow' })).toHaveAttribute(
+      'href',
+      '#workflow',
+    );
+    await expect(navigation.locator('a', { hasText: 'Proof' })).toHaveAttribute('href', '#proof');
+
+    const primary = page.locator('.semantic-action[data-kind="primary"]').first();
+    const secondary = page.locator('.semantic-action[data-kind="secondary"]').first();
+    const quiet = page.locator('.semantic-action[data-kind="quiet"]').first();
+    await expect(primary).toHaveAttribute('href', '#workflow');
+    await expect(secondary).toHaveAttribute('href', '#proof');
+    await expect(quiet).toHaveAttribute('href', '#boundaries');
+    await primary.focus();
+    await expect(primary).toBeFocused();
+    expect(
+      await primary.evaluate((element) =>
+        Number.parseFloat(getComputedStyle(element).outlineWidth),
+      ),
+    ).toBeGreaterThan(0);
+
+    const contrastActions = page.locator('#boundaries .semantic-action');
+    await expect(contrastActions).toHaveCount(3);
+    const themeVariants = [
+      { theme: 'light', colorScheme: 'light' },
+      { theme: 'dark', colorScheme: 'dark' },
+      { theme: 'system', colorScheme: 'light' },
+      { theme: 'system', colorScheme: 'dark' },
+    ] as const;
+    for (const variant of themeVariants) {
+      await page.emulateMedia({ colorScheme: variant.colorScheme });
+      for (const accent of ['indigo', 'teal', 'coral'] as const) {
+        await page.locator('html').evaluate(
+          (root, state) => {
+            root.dataset.theme = state.theme;
+            root.dataset.accent = state.accent;
+          },
+          { theme: variant.theme, accent },
+        );
+        for (const tone of ['plain', 'soft', 'accent', 'contrast'] as const) {
+          await page.locator('#boundaries').evaluate((section, value) => {
+            section.dataset.tone = value;
+          }, tone);
+          for (const kind of ['primary', 'secondary', 'quiet'] as const) {
+            const action = page.locator(`#boundaries .semantic-action[data-kind="${kind}"]`);
+            await action.focus();
+            const contrast = await action.evaluate((element) => {
+              const section = element.closest<HTMLElement>('.semantic-section');
+              if (section === null) throw new Error('Action has no owning section.');
+              const actionStyle = getComputedStyle(element);
+              const sectionStyle = getComputedStyle(section);
+              const parseRgb = (value: string): readonly [number, number, number] => {
+                const channels = value
+                  .match(/[\d.]+/gu)
+                  ?.slice(0, 3)
+                  .map(Number);
+                if (channels?.length !== 3) throw new Error(`Unsupported computed color: ${value}`);
+                return channels as unknown as readonly [number, number, number];
+              };
+              const luminance = (value: string): number => {
+                const linearize = (channel: number): number => {
+                  const normalized = channel / 255;
+                  return normalized <= 0.04045
+                    ? normalized / 12.92
+                    : ((normalized + 0.055) / 1.055) ** 2.4;
+                };
+                const [red, green, blue] = parseRgb(value);
+                return (
+                  0.2126 * linearize(red) + 0.7152 * linearize(green) + 0.0722 * linearize(blue)
+                );
+              };
+              const ratio = (first: string, second: string): number => {
+                const firstLuminance = luminance(first);
+                const secondLuminance = luminance(second);
+                const lighter = Math.max(firstLuminance, secondLuminance);
+                const darker = Math.min(firstLuminance, secondLuminance);
+                return (lighter + 0.05) / (darker + 0.05);
+              };
+              const transparent = (value: string): boolean => value.endsWith(', 0)');
+              const sectionBackground = transparent(sectionStyle.backgroundColor)
+                ? getComputedStyle(document.body).backgroundColor
+                : sectionStyle.backgroundColor;
+              const ownBackground = actionStyle.backgroundColor;
+              const textBackground = transparent(ownBackground) ? sectionBackground : ownBackground;
+              return {
+                text: ratio(actionStyle.color, textBackground),
+                focus: ratio(actionStyle.outlineColor, sectionBackground),
+                outlineWidth: Number.parseFloat(actionStyle.outlineWidth),
+              };
+            });
+            expect(
+              contrast.text,
+              `${artifact.format}/${variant.theme}/${accent}/${tone}/${kind}/text`,
+            ).toBeGreaterThanOrEqual(4.5);
+            expect(
+              contrast.focus,
+              `${artifact.format}/${variant.theme}/${accent}/${tone}/${kind}/focus`,
+            ).toBeGreaterThanOrEqual(3);
+            expect(
+              contrast.outlineWidth,
+              `${artifact.format}/${variant.theme}/${accent}/${tone}/${kind}/outline`,
+            ).toBeGreaterThan(0);
+          }
+        }
+      }
+    }
+
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.locator('html').evaluate((root) => {
+      root.dataset.theme = 'light';
+      root.dataset.accent = 'coral';
+    });
+    await page.locator('#boundaries').evaluate((section) => {
+      section.dataset.tone = 'contrast';
+    });
+    await page.locator('#boundaries .semantic-action[data-kind="quiet"]').focus();
+    await page.evaluate(() => scrollTo(0, 0));
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+
+    const captureDirectory = path.resolve('test-results/step-1-captures', testInfo.project.name);
+    await mkdir(captureDirectory, { recursive: true });
+    await page.screenshot({
+      path: path.join(captureDirectory, `${artifact.format}-landing.png`),
       fullPage: true,
     });
   });
@@ -216,6 +545,825 @@ for (const fixture of [
   });
 }
 
+test('desktop navigation has one total current state and a non-modal session collapse in both formats', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const artifact of navigationArtifacts) {
+    await page.goto(artifact.url);
+    const navigation = page.locator('[data-navigation]');
+    await expect(navigation.locator('a')).toHaveCount(3);
+    await expect(navigation).not.toContainText('Alpha detail');
+    await expect(page.locator('[role="menu"]')).toHaveCount(0);
+    await expect(page.locator('[aria-live]')).toHaveCount(0);
+    await expectCurrentNavigation(page, 'alpha');
+
+    expect(
+      await page.evaluate(() => {
+        let geometryReads = 0;
+        for (const heading of document.querySelectorAll<HTMLElement>(
+          '[data-navigation] a[href^="#"]',
+        )) {
+          const target = document.querySelector<HTMLElement>(heading.getAttribute('href') ?? '');
+          const ownedHeading = target?.querySelector<HTMLElement>(':scope > h2') ?? target;
+          if (ownedHeading === null) continue;
+          const getBoundingClientRect = ownedHeading.getBoundingClientRect.bind(ownedHeading);
+          ownedHeading.getBoundingClientRect = () => {
+            geometryReads += 1;
+            return getBoundingClientRect();
+          };
+        }
+        for (let index = 0; index < 5; index += 1) dispatchEvent(new Event('scroll'));
+        return geometryReads;
+      }),
+    ).toBe(0);
+
+    const toggle = page.locator('[data-nav-toggle]');
+    await expect(toggle).toHaveAccessibleName('Hide contents');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('[data-nav-outside][inert]')).toHaveCount(0);
+    const expandedColumns = await page
+      .locator('.report-shell')
+      .evaluate((element) => getComputedStyle(element).gridTemplateColumns);
+    await toggle.click();
+    await expect(toggle).toHaveAccessibleName('Show contents');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(navigation).toBeHidden();
+    await expect(toggle).toBeFocused();
+    const collapsedColumns = await page
+      .locator('.report-shell')
+      .evaluate((element) => getComputedStyle(element).gridTemplateColumns);
+    expect(expandedColumns).not.toBe(collapsedColumns);
+    expect(collapsedColumns.trim().split(/\s+/u)).toHaveLength(1);
+    await toggle.press('Enter');
+    await expect(toggle).toHaveAccessibleName('Hide contents');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(navigation).toBeVisible();
+    expect(
+      await page
+        .locator('.report-shell')
+        .evaluate((element) => getComputedStyle(element).gridTemplateColumns),
+    ).toBe(expandedColumns);
+    await toggle.press('Enter');
+    await expect(toggle).toHaveAccessibleName('Show contents');
+    await expect(navigation).toBeHidden();
+    await page.keyboard.press('Tab');
+    await expect(page.locator('.topbar-title')).toBeFocused();
+    await page.reload();
+    await expect(toggle).toHaveAccessibleName('Hide contents');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(navigation).toBeVisible();
+
+    for (const [hash, owner] of [
+      ['#alpha', 'alpha'],
+      ['#alpha-detail', 'alpha'],
+      ['#beta-detail', 'beta'],
+      ['#modal-1', 'beta'],
+      ['#navigation-runtime-fixture', 'alpha'],
+      ['#appendix-outside-navigation', 'gamma'],
+    ] as const) {
+      await page.evaluate((value) => {
+        location.hash = value;
+      }, hash);
+      await expectCurrentNavigation(page, owner);
+    }
+
+    await page.evaluate(() => {
+      history.replaceState(null, '', '#missing-target');
+      scrollTo({ top: 0, behavior: 'instant' });
+      dispatchEvent(new Event('resize'));
+    });
+    await expectCurrentNavigation(page, 'alpha');
+    await page.evaluate(() => dispatchEvent(new Event('resize')));
+    await expectCurrentNavigation(page, 'alpha');
+
+    await page.evaluate(() => {
+      const heading = document.getElementById('beta-title');
+      if (heading === null) throw new Error('Missing Beta heading.');
+      scrollTo({ top: scrollY + heading.getBoundingClientRect().top - 70, behavior: 'instant' });
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      location.hash = '#another-missing-target';
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      history.replaceState(null, '', location.pathname);
+      dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      const heading = document.getElementById('alpha-title');
+      if (heading === null) throw new Error('Missing Alpha heading.');
+      scrollTo({ top: scrollY + heading.getBoundingClientRect().top - 70, behavior: 'instant' });
+    });
+    await expectCurrentNavigation(page, 'alpha');
+
+    await page.evaluate(() => {
+      const heading = document.getElementById('beta-title');
+      if (heading === null) throw new Error('Missing Beta heading.');
+      scrollTo({ top: scrollY + heading.getBoundingClientRect().top - 70, behavior: 'instant' });
+      dispatchEvent(new Event('resize'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+
+    await page.evaluate(() => {
+      scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
+      dispatchEvent(new Event('scroll'));
+    });
+    await expectCurrentNavigation(page, 'gamma');
+
+    await page.evaluate(() => {
+      scrollTo({ top: 0, behavior: 'instant' });
+      const tops: Readonly<Record<string, number>> = {
+        'alpha-title': 70,
+        'beta-title': 70,
+        'gamma-title': 500,
+      };
+      for (const [id, top] of Object.entries(tops)) {
+        const heading = document.getElementById(id);
+        if (heading === null) throw new Error(`Missing ${id}.`);
+        Object.defineProperty(heading, 'getBoundingClientRect', {
+          configurable: true,
+          value: () => new DOMRect(0, top, 400, 40),
+        });
+      }
+      dispatchEvent(new Event('resize'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+  }
+});
+
+test('mobile contents drawer uses native modal focus and closes safely in both formats', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  for (const artifact of navigationArtifacts) {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(artifact.url);
+    const toggle = page.locator('[data-nav-toggle]');
+    await expect(toggle).toHaveAccessibleName('Open contents');
+    const dialog = page.locator('[data-nav-dialog]');
+    await expect(dialog).toBeHidden();
+    await toggle.click();
+    await expect(dialog).toBeVisible();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
+    await expect(page.locator('[data-nav-outside][inert]')).toHaveCount(2);
+    await page.keyboard.press('Shift+Tab');
+    expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press('Tab');
+    expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(toggle).toBeFocused();
+    await expect(page.locator('[data-nav-outside][inert]')).toHaveCount(0);
+
+    await toggle.click();
+    await page.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(toggle).toBeFocused();
+
+    await toggle.click();
+    await dialog.evaluate((element) =>
+      element.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+    await expect(dialog).toBeHidden();
+    await expect(toggle).toBeFocused();
+
+    await toggle.click();
+    await page.locator('[data-navigation] a[href="#beta"]').click();
+    await expect(dialog).toBeHidden();
+    await expect(page.locator('#beta-title')).toBeFocused();
+    await expectCurrentNavigation(page, 'beta');
+
+    await toggle.click();
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await expect(dialog).toBeHidden();
+    await expect(toggle).toBeFocused();
+    await expect(toggle).toHaveAccessibleName('Hide contents');
+    await expect(page.locator('[data-nav-desktop-host] [data-navigation]')).toBeVisible();
+  }
+});
+
+test('navigation fallback keeps hash ownership deterministic without IntersectionObserver', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await page.addInitScript(() => {
+    Reflect.deleteProperty(window, 'IntersectionObserver');
+  });
+  for (const artifact of navigationArtifacts) {
+    const pageErrors: string[] = [];
+    const recordPageError = (error: Error): void => {
+      pageErrors.push(error.message);
+    };
+    page.on('pageerror', recordPageError);
+    const initialHashes = [
+      ['#beta', 'beta'],
+      ['#beta-detail', 'beta'],
+      ['#modal-1', 'beta'],
+      ['#navigation-runtime-fixture', 'alpha'],
+      ['#appendix-outside-navigation', 'gamma'],
+      ['#missing-target', 'alpha'],
+      ['#%E0%A4%A', 'alpha'],
+      ['', 'alpha'],
+    ] as const;
+    for (const [hash, expectedOwner] of initialHashes) {
+      await page.goto(`${artifact.url}${hash}`);
+      await expectCurrentNavigation(page, expectedOwner);
+      await expect(page.locator('[data-reveal-pending]')).toHaveCount(0);
+    }
+    expect(pageErrors).toEqual([]);
+    page.off('pageerror', recordPageError);
+
+    await page.goto(`${artifact.url}#beta-detail`);
+    expect(await page.evaluate(() => 'onscrollend' in window)).toBe(true);
+    await expectCurrentNavigation(page, 'beta');
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await page.evaluate(() => dispatchEvent(new Event('resize')));
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      history.replaceState(null, '', '#beta-detail');
+      dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      history.replaceState(null, '', '#navigation-runtime-fixture');
+      dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await expectCurrentNavigation(page, 'alpha');
+    await page.evaluate(() => {
+      history.replaceState(null, '', '#appendix-outside-navigation');
+      dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await expectCurrentNavigation(page, 'gamma');
+    await page.evaluate(() => {
+      const appendix = document.getElementById('appendix-outside-navigation');
+      if (appendix === null) throw new Error('Missing appendix heading.');
+      scrollTo({
+        top: scrollY + appendix.getBoundingClientRect().top - 70,
+        behavior: 'instant',
+      });
+      dispatchEvent(new Event('scroll'));
+      dispatchEvent(new Event('scrollend'));
+    });
+    await expectCurrentNavigation(page, 'gamma');
+    await page.evaluate(() => {
+      history.replaceState(null, '', location.pathname);
+      dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await expectCurrentNavigation(page, 'gamma');
+    await page.evaluate(() => {
+      history.replaceState(null, '', '#beta-detail');
+      dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      scrollTo({ top: 0, behavior: 'instant' });
+      dispatchEvent(new Event('scroll'));
+      dispatchEvent(new Event('scrollend'));
+    });
+    await expectCurrentNavigation(page, 'alpha');
+
+    await page.evaluate(() => {
+      const heading = document.getElementById('beta-title');
+      if (heading === null) throw new Error('Missing Beta heading.');
+      scrollTo({ top: scrollY + heading.getBoundingClientRect().top - 70, behavior: 'instant' });
+      dispatchEvent(new Event('scroll'));
+      dispatchEvent(new Event('scrollend'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      history.replaceState(null, '', '#missing-at-beta');
+      dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      history.replaceState(null, '', location.pathname);
+      dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+
+    await page.evaluate(() => {
+      const tops: Readonly<Record<string, number>> = {
+        'alpha-title': 70,
+        'beta-title': 70,
+        'gamma-title': 500,
+      };
+      for (const [id, top] of Object.entries(tops)) {
+        const heading = document.getElementById(id);
+        if (heading === null) throw new Error(`Missing ${id}.`);
+        Object.defineProperty(heading, 'getBoundingClientRect', {
+          configurable: true,
+          value: () => new DOMRect(0, top, 400, 40),
+        });
+      }
+      dispatchEvent(new Event('resize'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      for (const id of ['alpha-title', 'beta-title', 'gamma-title']) {
+        const heading = document.getElementById(id);
+        if (heading === null) throw new Error(`Missing ${id}.`);
+        Reflect.deleteProperty(heading, 'getBoundingClientRect');
+      }
+    });
+
+    const geometryReads = await page.evaluate(() => {
+      let reads = 0;
+      for (const link of document.querySelectorAll<HTMLAnchorElement>(
+        '[data-navigation] a[href^="#"]',
+      )) {
+        const target = document.querySelector<HTMLElement>(link.hash);
+        const heading = target?.querySelector<HTMLElement>(':scope > h2') ?? target;
+        if (heading === null || heading === undefined) continue;
+        const getBoundingClientRect = heading.getBoundingClientRect.bind(heading);
+        heading.getBoundingClientRect = () => {
+          reads += 1;
+          return getBoundingClientRect();
+        };
+      }
+      for (let index = 0; index < 5; index += 1) dispatchEvent(new Event('scroll'));
+      const duringScroll = reads;
+      dispatchEvent(new Event('scrollend'));
+      return { duringScroll, afterScrollEnd: reads };
+    });
+    expect(geometryReads).toEqual({ duringScroll: 0, afterScrollEnd: 3 });
+
+    await page.locator('[data-navigation] a[href="#gamma"]').click();
+    await expectCurrentNavigation(page, 'gamma');
+    await settleVisualState(page);
+    await expectCurrentNavigation(page, 'gamma');
+    await page.evaluate(() => {
+      history.replaceState(null, '', location.pathname);
+      dispatchEvent(new HashChangeEvent('hashchange'));
+      scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
+      dispatchEvent(new Event('scroll'));
+    });
+    await expectCurrentNavigation(page, 'gamma');
+  }
+});
+
+test('navigation coalesces geometry without IntersectionObserver or scrollend', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await page.addInitScript(() => {
+    Reflect.deleteProperty(window, 'IntersectionObserver');
+    Reflect.deleteProperty(window, 'onscrollend');
+    Reflect.deleteProperty(Window.prototype, 'onscrollend');
+  });
+  for (const artifact of navigationArtifacts) {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`${artifact.url}#beta-detail`);
+    expect(
+      await page.evaluate(() => !('IntersectionObserver' in window) && !('onscrollend' in window)),
+    ).toBe(true);
+    await expect(page.locator('[data-reveal-pending]')).toHaveCount(0);
+    await expectCurrentNavigation(page, 'beta');
+    await settleVisualState(page);
+    await expectCurrentNavigation(page, 'beta');
+
+    const immediateOwner = await page.evaluate(() => {
+      const evidence = { headingReads: 0 };
+      (
+        window as unknown as { __combinedFallbackEvidence: typeof evidence }
+      ).__combinedFallbackEvidence = evidence;
+      for (const link of document.querySelectorAll<HTMLAnchorElement>(
+        '[data-navigation] a[href^="#"]',
+      )) {
+        const target = document.querySelector<HTMLElement>(link.hash);
+        const heading = target?.querySelector<HTMLElement>(':scope > h2') ?? target;
+        if (heading === null || heading === undefined) continue;
+        const getBoundingClientRect = heading.getBoundingClientRect.bind(heading);
+        heading.getBoundingClientRect = () => {
+          evidence.headingReads += 1;
+          return getBoundingClientRect();
+        };
+      }
+      scrollTo({ top: 0, behavior: 'instant' });
+      for (let index = 0; index < 5; index += 1) dispatchEvent(new Event('scroll'));
+      return document
+        .querySelector<HTMLAnchorElement>('[data-navigation] a[aria-current="location"]')
+        ?.getAttribute('href');
+    });
+    expect(immediateOwner).toBe('#beta');
+    await expectCurrentNavigation(page, 'alpha');
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (
+              window as unknown as {
+                readonly __combinedFallbackEvidence: { readonly headingReads: number };
+              }
+            ).__combinedFallbackEvidence.headingReads,
+        ),
+      )
+      .toBe(3);
+
+    const readsBeforeBetaBurst = await page.evaluate(() => {
+      const heading = document.getElementById('beta-title');
+      if (heading === null) throw new Error('Missing Beta heading.');
+      scrollTo({ top: scrollY + heading.getBoundingClientRect().top - 70, behavior: 'instant' });
+      const reads = (
+        window as unknown as {
+          readonly __combinedFallbackEvidence: { readonly headingReads: number };
+        }
+      ).__combinedFallbackEvidence.headingReads;
+      for (let index = 0; index < 5; index += 1) dispatchEvent(new Event('scroll'));
+      return reads;
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (
+              window as unknown as {
+                readonly __combinedFallbackEvidence: { readonly headingReads: number };
+              }
+            ).__combinedFallbackEvidence.headingReads,
+        ),
+      )
+      .toBe(readsBeforeBetaBurst + 3);
+  }
+});
+
+test('navigation returns from hash ownership to geometry when scrollend is unavailable', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await page.addInitScript(() => {
+    Reflect.deleteProperty(window, 'onscrollend');
+    Reflect.deleteProperty(Window.prototype, 'onscrollend');
+  });
+  for (const artifact of navigationArtifacts) {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(artifact.url);
+    expect(await page.evaluate(() => 'onscrollend' in window)).toBe(false);
+    await page.evaluate(() => {
+      location.hash = '#beta';
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await settleVisualState(page);
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+    await expectCurrentNavigation(page, 'alpha');
+    await page.evaluate(() => {
+      const heading = document.getElementById('beta-title');
+      if (heading === null) throw new Error('Missing Beta heading.');
+      scrollTo({ top: scrollY + heading.getBoundingClientRect().top - 70, behavior: 'instant' });
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      const evidence = { headingReads: 0 };
+      (
+        window as unknown as { __fallbackScrollEvidence: typeof evidence }
+      ).__fallbackScrollEvidence = evidence;
+      for (const link of document.querySelectorAll<HTMLAnchorElement>(
+        '[data-navigation] a[href^="#"]',
+      )) {
+        const target = document.querySelector<HTMLElement>(link.hash);
+        const heading = target?.querySelector<HTMLElement>(':scope > h2') ?? target;
+        if (heading === null || heading === undefined) continue;
+        const getBoundingClientRect = heading.getBoundingClientRect.bind(heading);
+        heading.getBoundingClientRect = () => {
+          evidence.headingReads += 1;
+          return getBoundingClientRect();
+        };
+      }
+      for (let index = 0; index < 5; index += 1) dispatchEvent(new Event('scroll'));
+    });
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (
+              window as unknown as {
+                readonly __fallbackScrollEvidence: { readonly headingReads: number };
+              }
+            ).__fallbackScrollEvidence.headingReads,
+        ),
+      )
+      .toBe(3);
+  }
+});
+
+test('navigation visual evidence covers every required state, theme, motion profile, and format', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const captureRoot = path.resolve('test-results/step-3-captures');
+  await rm(captureRoot, { recursive: true, force: true });
+  let captures = 0;
+
+  for (const artifact of navigationArtifacts) {
+    for (const theme of ['light', 'dark'] as const) {
+      for (const motion of ['normal', 'reduced'] as const) {
+        await page.goto('about:blank');
+        await page.emulateMedia({
+          colorScheme: theme,
+          reducedMotion: motion === 'reduced' ? 'reduce' : 'no-preference',
+        });
+        await page.setViewportSize({ width: 1440, height: 900 });
+        await page.goto(`${artifact.url}#beta`);
+        await page.locator('html').evaluate((element, value) => {
+          element.dataset.theme = value;
+        }, theme);
+        await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+        await expectCurrentNavigation(page, 'beta');
+        await settleVisualState(page);
+        await expectCurrentNavigation(page, 'beta');
+        const anchorClearance = await page.evaluate(() => {
+          const topbar = document.querySelector('.topbar');
+          const heading = document.getElementById('beta-title');
+          if (!(topbar instanceof HTMLElement) || !(heading instanceof HTMLElement)) {
+            throw new Error('Expected the sticky topbar and Beta heading');
+          }
+          return heading.getBoundingClientRect().top - topbar.getBoundingClientRect().bottom;
+        });
+        expect(anchorClearance).toBeGreaterThanOrEqual(0);
+        const captureDirectory = path.join(captureRoot, artifact.format, theme, motion);
+        await mkdir(captureDirectory, { recursive: true });
+        await page.screenshot({ path: path.join(captureDirectory, 'expanded-current-1440.png') });
+        captures += 1;
+
+        await page.setViewportSize({ width: 1280, height: 800 });
+        const toggle = page.locator('[data-nav-toggle]');
+        await expect(toggle).toHaveAccessibleName('Hide contents');
+        await toggle.click();
+        await expect(page.locator('[data-navigation]')).toBeHidden();
+        await settleVisualState(page);
+        await page.screenshot({ path: path.join(captureDirectory, 'collapsed-1280.png') });
+        captures += 1;
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        const dialog = page.locator('[data-nav-dialog]');
+        await expect(dialog).toBeHidden();
+        await settleVisualState(page);
+        await page.screenshot({ path: path.join(captureDirectory, 'drawer-closed-390.png') });
+        captures += 1;
+        await toggle.click();
+        await expect(dialog).toBeVisible();
+        await settleVisualState(page);
+        await page.screenshot({ path: path.join(captureDirectory, 'drawer-open-390.png') });
+        captures += 1;
+      }
+    }
+  }
+
+  expect(captures).toBe(32);
+});
+
+test('reduced motion omits progress and reveal machinery while normal motion stays bounded', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await page.addInitScript(() => {
+    const evidence = {
+      rafRequests: 0,
+      documentScrollAdds: 0,
+      documentScrollRemoves: 0,
+      windowResizeAdds: 0,
+      windowResizeRemoves: 0,
+      observers: 0,
+      observerDisconnects: 0,
+      revealTargets: 0,
+      revealUnobserves: 0,
+    };
+    Object.defineProperty(window, '__motionEvidence', { value: evidence, configurable: true });
+    window.requestAnimationFrame = new Proxy(window.requestAnimationFrame, {
+      apply(target, thisArg, argumentsList: Parameters<typeof window.requestAnimationFrame>) {
+        evidence.rafRequests += 1;
+        return Reflect.apply(target, thisArg, argumentsList) as number;
+      },
+    });
+    document.addEventListener = new Proxy(document.addEventListener, {
+      apply(target, thisArg, argumentsList: Parameters<typeof document.addEventListener>) {
+        if (argumentsList[0] === 'scroll') evidence.documentScrollAdds += 1;
+        Reflect.apply(target, thisArg, argumentsList);
+        return undefined;
+      },
+    });
+    document.removeEventListener = new Proxy(document.removeEventListener, {
+      apply(target, thisArg, argumentsList: Parameters<typeof document.removeEventListener>) {
+        if (argumentsList[0] === 'scroll') evidence.documentScrollRemoves += 1;
+        Reflect.apply(target, thisArg, argumentsList);
+        return undefined;
+      },
+    });
+    window.addEventListener = new Proxy(window.addEventListener, {
+      apply(target, thisArg, argumentsList: Parameters<typeof window.addEventListener>) {
+        if (argumentsList[0] === 'resize') evidence.windowResizeAdds += 1;
+        Reflect.apply(target, thisArg, argumentsList);
+        return undefined;
+      },
+    });
+    window.removeEventListener = new Proxy(window.removeEventListener, {
+      apply(target, thisArg, argumentsList: Parameters<typeof window.removeEventListener>) {
+        if (argumentsList[0] === 'resize') evidence.windowResizeRemoves += 1;
+        Reflect.apply(target, thisArg, argumentsList);
+        return undefined;
+      },
+    });
+    const NativeObserver = window.IntersectionObserver;
+    window.IntersectionObserver = new Proxy(NativeObserver, {
+      construct(target, argumentsList) {
+        evidence.observers += 1;
+        const observer = Reflect.construct(target, argumentsList) as IntersectionObserver;
+        observer.observe = new Proxy(observer.observe, {
+          apply(observe, observerThis, observeArguments: [Element]) {
+            if (observeArguments[0].matches('[data-reveal="true"]')) {
+              evidence.revealTargets += 1;
+            }
+            Reflect.apply(observe, observerThis, observeArguments);
+            return undefined;
+          },
+        });
+        observer.unobserve = new Proxy(observer.unobserve, {
+          apply(unobserve, observerThis, unobserveArguments: [Element]) {
+            if (unobserveArguments[0].matches('[data-reveal="true"]')) {
+              evidence.revealUnobserves += 1;
+            }
+            Reflect.apply(unobserve, observerThis, unobserveArguments);
+            return undefined;
+          },
+        });
+        observer.disconnect = new Proxy(observer.disconnect, {
+          apply(disconnect, observerThis, disconnectArguments: []) {
+            evidence.observerDisconnects += 1;
+            Reflect.apply(disconnect, observerThis, disconnectArguments);
+            return undefined;
+          },
+        });
+        return observer;
+      },
+    });
+  });
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  for (const artifact of defaultMotionArtifacts) {
+    await page.goto(artifact.url);
+    await expect(page.locator('[data-scroll-progress-indicator]')).toHaveCount(0);
+    const disabledEvidence = await readMotionEvidence(page);
+    expect(disabledEvidence.rafRequests).toBe(0);
+    expect(disabledEvidence.documentScrollAdds).toBe(0);
+    expect(disabledEvidence.windowResizeAdds).toBe(1);
+  }
+
+  for (const artifact of navigationArtifacts) {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(artifact.url);
+    await expect(page.locator('[data-scroll-progress-indicator]')).toHaveCount(0);
+    await expect(page.locator('[data-reveal-pending], [data-reveal-motion]')).toHaveCount(0);
+    const reducedEvidence = await readMotionEvidence(page);
+    expect(reducedEvidence).toEqual({
+      rafRequests: 0,
+      documentScrollAdds: 0,
+      documentScrollRemoves: 0,
+      windowResizeAdds: 1,
+      windowResizeRemoves: 0,
+      observers: 1,
+      observerDisconnects: 0,
+      revealTargets: 0,
+      revealUnobserves: 0,
+    });
+    expect(
+      await page.locator('#beta').evaluate((element) => ({
+        opacity: getComputedStyle(element).opacity,
+        transform: getComputedStyle(element).transform,
+      })),
+    ).toEqual({ opacity: '1', transform: 'none' });
+
+    await page.goto('about:blank');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.goto(artifact.url);
+    const progress = page.locator('[data-scroll-progress-indicator]');
+    await expect(progress).toBeAttached();
+    expect(
+      await page.locator('html').evaluate((element) => ({
+        duration: element.style.getPropertyValue('--motion-reveal-duration'),
+        translation: element.style.getPropertyValue('--motion-reveal-translation'),
+      })),
+    ).toEqual({
+      duration: `${PAGE_MOTION_POLICY.sectionReveal.durationMs}ms`,
+      translation: `${PAGE_MOTION_POLICY.sectionReveal.translationPx}px`,
+    });
+    const beta = page.locator('#beta');
+    await expect(beta).toHaveAttribute('data-reveal-pending', '');
+    const initialMotion = await beta.evaluate((element) => ({
+      opacity: getComputedStyle(element).opacity,
+      transform: getComputedStyle(element).transform,
+      translationY: new DOMMatrix(getComputedStyle(element).transform).m42,
+      duration: getComputedStyle(element).transitionDuration,
+      properties: getComputedStyle(element).transitionProperty,
+    }));
+    expect(initialMotion.opacity).toBe('0');
+    expect(initialMotion.translationY).toBe(PAGE_MOTION_POLICY.sectionReveal.translationPx);
+    expect(Math.abs(initialMotion.translationY)).toBeLessThanOrEqual(12);
+    expect(initialMotion.duration).toContain(
+      `${PAGE_MOTION_POLICY.sectionReveal.durationMs / 1000}s`,
+    );
+    const durationMs = Number.parseFloat(initialMotion.duration) * 1000;
+    expect(durationMs).toBeGreaterThanOrEqual(180);
+    expect(durationMs).toBeLessThanOrEqual(240);
+    expect(initialMotion.properties).toBe('opacity, transform');
+    await beta.scrollIntoViewIfNeeded();
+    await expect(beta).not.toHaveAttribute('data-reveal-pending', '');
+    await expect(beta).toHaveAttribute('data-reveal-shown', '');
+    await page.evaluate(() =>
+      scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }),
+    );
+    await expect
+      .poll(() => progress.evaluate((element) => (element as HTMLElement).style.transform))
+      .toBe('scaleX(1)');
+    expect(await progress.getAttribute('style')).toBe('transform: scaleX(1);');
+
+    const afterReveal = await readMotionEvidence(page);
+    expect(afterReveal.documentScrollAdds).toBe(1);
+    expect(afterReveal.observers).toBe(2);
+    expect(afterReveal.revealTargets).toBe(2);
+    expect(afterReveal.revealUnobserves).toBeGreaterThanOrEqual(1);
+
+    await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+    await expect(beta).toHaveAttribute('data-reveal-shown', '');
+    await expect(beta).not.toHaveAttribute('data-reveal-pending', '');
+    await beta.scrollIntoViewIfNeeded();
+    const afterReentry = await readMotionEvidence(page);
+    expect(afterReentry.revealTargets).toBe(afterReveal.revealTargets);
+    expect(afterReentry.revealUnobserves).toBe(afterReveal.revealUnobserves);
+
+    await page.setViewportSize({ width: 1200, height: 700 });
+    await page.evaluate(() => scrollTo({ top: 1000, behavior: 'instant' }));
+    const progressRatio = async (): Promise<number> =>
+      Number.parseFloat(
+        (await progress.evaluate((element) => (element as HTMLElement).style.transform)).slice(
+          'scaleX('.length,
+          -1,
+        ),
+      );
+    await expect.poll(progressRatio).toBeGreaterThan(0);
+    const ratioBeforeResize = await progressRatio();
+    const scrollBeforeResize = await page.evaluate(() => scrollY);
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await expect.poll(progressRatio).toBeGreaterThan(ratioBeforeResize);
+    expect(await page.evaluate(() => scrollY)).toBe(scrollBeforeResize);
+
+    const beforeBurst = (await readMotionEvidence(page)).rafRequests;
+    await page.evaluate(() => {
+      for (let index = 0; index < 5; index += 1) dispatchEvent(new Event('resize'));
+    });
+    await expect
+      .poll(async () => (await readMotionEvidence(page)).rafRequests)
+      .toBe(beforeBurst + 1);
+
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        }),
+    );
+    const beforeScrollBurst = (await readMotionEvidence(page)).rafRequests;
+    await page.evaluate(() => {
+      for (let index = 0; index < 5; index += 1) document.dispatchEvent(new Event('scroll'));
+    });
+    await expect
+      .poll(async () => (await readMotionEvidence(page)).rafRequests)
+      .toBe(beforeScrollBurst + 1);
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(progress).toHaveCount(0);
+    await expect(page.locator('[data-reveal-pending], [data-reveal-motion]')).toHaveCount(0);
+    const afterPreferenceReduction = await readMotionEvidence(page);
+    expect(afterPreferenceReduction.documentScrollRemoves).toBe(1);
+    expect(afterPreferenceReduction.windowResizeRemoves).toBe(1);
+    expect(afterPreferenceReduction.observerDisconnects).toBeGreaterThanOrEqual(1);
+    const reducedRafCount = afterPreferenceReduction.rafRequests;
+    await page.evaluate(() => {
+      for (let index = 0; index < 3; index += 1) document.dispatchEvent(new Event('scroll'));
+    });
+    expect((await readMotionEvidence(page)).rafRequests).toBe(reducedRafCount);
+    expect(
+      await beta.evaluate((element) => ({
+        opacity: getComputedStyle(element).opacity,
+        transform: getComputedStyle(element).transform,
+      })),
+    ).toEqual({ opacity: '1', transform: 'none' });
+
+    const revealedBeforeRestore = afterPreferenceReduction.revealTargets;
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await expect(page.locator('[data-scroll-progress-indicator]')).toBeAttached();
+    await expect(page.locator('[data-reveal-pending]')).toHaveCount(0);
+    const restoredEvidence = await readMotionEvidence(page);
+    expect(restoredEvidence.documentScrollAdds).toBe(2);
+    expect(restoredEvidence.windowResizeAdds).toBe(3);
+    expect(restoredEvidence.revealTargets).toBe(revealedBeforeRestore);
+  }
+});
+
 test('reduced-motion preference disables smooth scrolling and transitions', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(artifactUrl);
@@ -232,10 +1380,12 @@ test('reduced-motion preference disables smooth scrolling and transitions', asyn
 test('mobile navigation opens without a hardcoded server URL', async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.startsWith('mobile'));
   await page.goto(artifactUrl);
-  const toggle = page.getByRole('button', { name: 'Contents' });
+  const toggle = page.locator('[data-nav-toggle]');
+  await expect(toggle).toHaveAccessibleName('Open contents');
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.locator('[data-navigation]')).toHaveAttribute('data-open', '');
+  await expect(page.locator('[data-navigation]')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
 });
 
 test('declarative interactions preserve scoped state, focus, and responsive file behavior', async ({
@@ -348,7 +1498,7 @@ test('declarative interactions preserve scoped state, focus, and responsive file
   await expect(dialog).toBeHidden();
   await expect(modalOpener).toBeFocused();
   await activate(modalOpener);
-  await activate(dialog.getByRole('button', { name: 'Close' }));
+  await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
   await expect(modalOpener).toBeFocused();
 
   const popoverTrigger = page.getByRole('button', { name: 'Show portability note' });
@@ -431,6 +1581,426 @@ for (const artifact of visualizationArtifacts) {
   });
 }
 
+for (const artifact of incidentReviewArtifacts) {
+  test(`${artifact.format} incident review is decision-ready and interactive from file URL`, async ({
+    page,
+  }, testInfo) => {
+    await page.goto(artifact.url);
+    await expect(page.locator('html')).toHaveAttribute('data-layout', 'mixed');
+    await expect(page.locator('html')).toHaveAttribute('data-preset', 'signal');
+    await expect(
+      page.getByRole('heading', { name: 'OrbitDesk P1 incident review', level: 1 }),
+    ).toBeVisible();
+    await expect(page.getByText('Fictional showcase', { exact: false })).toBeVisible();
+    await expectLoadedImage(
+      page.getByRole('img', {
+        name: 'Sample topology showing traffic entering checkout, billing, and the payment provider',
+      }),
+    );
+    await expect(page.getByRole('img', { name: /Failed checkout attempts/u })).toBeVisible();
+    await expect(page.getByRole('img', { name: /Causal chain/u })).toBeVisible();
+    await expect(page.locator('.visualization-timeline-event')).toHaveCount(5);
+
+    const filter = page.getByRole('searchbox', { name: 'Filter' });
+    await filter.fill('Reliability');
+    await expect(page.locator('[data-filter-count]')).toHaveText('1 item');
+    await expect(page.getByText('Amplification alert', { exact: true })).toBeVisible();
+    await expect(page.getByText('Pool reservation', { exact: false })).toBeHidden();
+
+    const tab = page.getByRole('tab', { name: 'Ruled out' });
+    await tab.click();
+    await expect(tab).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByText('Ledger and order-store writes', { exact: false })).toBeVisible();
+
+    await tab.focus();
+    await expect(tab).toBeFocused();
+    expect(
+      await tab.evaluate((element) => Number.parseFloat(getComputedStyle(element).outlineWidth)),
+    ).toBeGreaterThan(0);
+
+    const disclosure = page.locator('[data-disclosure]');
+    await disclosure.getByText('Open the customer communication draft', { exact: true }).click();
+    await expect(disclosure).toHaveAttribute('open', '');
+
+    if (testInfo.project.name.startsWith('mobile')) {
+      const navigationToggle = page.locator('[data-nav-toggle]');
+      await expect(navigationToggle).toHaveAccessibleName('Open contents');
+      await navigationToggle.focus();
+      await page.keyboard.press('Enter');
+      await expect(navigationToggle).toHaveAttribute('aria-expanded', 'true');
+      await expect(page.locator('[data-navigation]')).toBeVisible();
+      const navigationClose = page.getByRole('button', { name: 'Close', exact: true });
+      await expect(navigationClose).toBeFocused();
+      expect(
+        await navigationClose.evaluate((element) =>
+          Number.parseFloat(getComputedStyle(element).outlineWidth),
+        ),
+      ).toBeGreaterThan(0);
+    }
+
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+  });
+}
+
+for (const artifact of vendorDecisionArtifacts) {
+  test(`${artifact.format} vendor decision keeps hard gates ahead of scoring from file URL`, async ({
+    page,
+  }, testInfo) => {
+    await page.goto(artifact.url);
+    await expect(page.locator('html')).toHaveAttribute('data-layout', 'document');
+    await expect(page.locator('html')).toHaveAttribute('data-preset', 'editorial');
+    await expect(
+      page.getByRole('heading', { name: 'AI support vendor decision packet', level: 1 }),
+    ).toBeVisible();
+    await expect(page.getByText('Fictional showcase', { exact: false })).toBeVisible();
+    await expectLoadedImage(
+      page.getByRole('img', {
+        name: 'Sample evidence map connecting requirements, vendor evidence, gates, scoring, and a conditional decision',
+      }),
+    );
+    await expect(
+      page.getByRole('img', { name: /Weighted score after evidence review/u }),
+    ).toBeVisible();
+    await expect(page.getByText('Fail · global support telemetry', { exact: true })).toBeVisible();
+    await expect(page.getByText('Meridian Reply · 89/100', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText('Approve Cedar Assist for a reversible pilot', { exact: true }),
+    ).toBeVisible();
+
+    const term = page.getByRole('button', { name: /hard gate/iu }).first();
+    await term.focus();
+    await page.keyboard.press('Enter');
+    const glossaryDialog = page.getByRole('dialog', { name: 'Hard gate' });
+    await expect(glossaryDialog).toBeVisible();
+    await expect(glossaryDialog).toContainText('disqualifies a candidate');
+    await page.keyboard.press('Escape');
+    await expect(glossaryDialog).toBeHidden();
+    await expect(term).toBeFocused();
+    expect(
+      await term.evaluate((element) => Number.parseFloat(getComputedStyle(element).outlineWidth)),
+    ).toBeGreaterThan(0);
+
+    const residualRisk = page.getByRole('tab', { name: 'Residual risks' });
+    await residualRisk.click();
+    await expect(residualRisk).toHaveAttribute('aria-selected', 'true');
+    await expect(
+      page.getByRole('tabpanel').filter({ hasText: 'Cedar must prove deletion propagation' }),
+    ).toBeVisible();
+
+    const rankingTrigger = page.getByRole('button', { name: 'Why not the top score?' });
+    await rankingTrigger.click();
+    const rankingDialog = page.getByRole('dialog', { name: 'Ranking exception' });
+    await expect(rankingDialog).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(rankingDialog).toBeHidden();
+    await expect(rankingTrigger).toBeFocused();
+
+    const checklistTrigger = page.getByRole('button', { name: 'Open the evidence checklist' });
+    await checklistTrigger.focus();
+    await page.keyboard.press('Enter');
+    const checklist = page.getByRole('dialog', { name: 'Reviewer evidence checklist' });
+    await expect(checklist).toBeVisible();
+    await expect(rankingDialog).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(checklist).toBeHidden();
+    await expect(checklistTrigger).toBeFocused();
+
+    if (testInfo.project.name.startsWith('mobile')) {
+      const comparison = page.getByRole('table').filter({ hasText: 'Weighted criterion' });
+      expect(
+        await comparison.evaluate((element) => element.scrollWidth > element.clientWidth),
+      ).toBe(true);
+      const navigationToggle = page.locator('[data-nav-toggle]');
+      await expect(navigationToggle).toHaveAccessibleName('Open contents');
+      await navigationToggle.focus();
+      await page.keyboard.press('Enter');
+      await expect(navigationToggle).toHaveAttribute('aria-expanded', 'true');
+      await expect(page.locator('[data-navigation]')).toBeVisible();
+    }
+
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+  });
+}
+
+for (const artifact of launchReadinessArtifacts) {
+  test(`${artifact.format} launch readiness keeps evidence and hold conditions actionable from file URL`, async ({
+    page,
+  }, testInfo) => {
+    await page.goto(artifact.url);
+    await expect(page.locator('html')).toHaveAttribute('data-layout', 'landing');
+    await expect(page.locator('html')).toHaveAttribute('data-preset', 'studio');
+    await expect(
+      page.getByRole('heading', { name: 'Regional beta launch readiness', level: 1 }),
+    ).toBeVisible();
+    await expect(page.getByText('Fictional showcase', { exact: false })).toBeVisible();
+    await expectLoadedImage(
+      page.getByRole('img', {
+        name: 'Sample beta learning loop connecting a bounded audience, collaborative value, evidence, and a governed rollout',
+      }),
+    );
+    await expect(
+      page.getByRole('img', { name: /Activated workspace rate by cohort/u }),
+    ).toBeVisible();
+    await expect(page.getByRole('img', { name: /Design-partner funnel/u })).toBeVisible();
+    await expect(page.getByText('64% · target ≥ 60%', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText('Go: bounded European Economic Area beta', { exact: true }),
+    ).toBeVisible();
+
+    const residualRisk = page.getByRole('tab', { name: 'Residual risk' });
+    await residualRisk.click();
+    await expect(residualRisk).toHaveAttribute('aria-selected', 'true');
+    await expect(
+      page.getByRole('tabpanel').filter({ hasText: 'Single-participant rooms' }),
+    ).toBeVisible();
+
+    const regionTrigger = page.getByRole('button', { name: 'Why not launch globally?' });
+    await regionTrigger.focus();
+    await page.keyboard.press('Enter');
+    const regionDialog = page.getByRole('dialog', { name: 'Regional boundary' });
+    await expect(regionDialog).toBeVisible();
+    await expect(regionDialog).toContainText('invalidate the current capacity');
+    await page.keyboard.press('Escape');
+    await expect(regionDialog).toBeHidden();
+    await expect(regionTrigger).toBeFocused();
+
+    const holdToggle = page.getByRole('switch', { name: 'Show the automatic hold condition' });
+    await expect(holdToggle).toHaveAttribute('aria-checked', 'false');
+    await holdToggle.focus();
+    await page.keyboard.press('Enter');
+    await expect(holdToggle).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByText('Pause new invitations', { exact: false })).toBeVisible();
+    expect(
+      await holdToggle.evaluate((element) =>
+        Number.parseFloat(getComputedStyle(element).outlineWidth),
+      ),
+    ).toBeGreaterThan(0);
+
+    const limits = page
+      .locator('[data-disclosure]')
+      .filter({ hasText: 'Read the experiment limits' });
+    await limits.getByText('Read the experiment limits', { exact: true }).click();
+    await expect(limits).toHaveAttribute('open', '');
+
+    if (testInfo.project.name.startsWith('mobile')) {
+      const register = page.getByRole('table').filter({ hasText: 'Mandatory condition' });
+      expect(await register.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+        true,
+      );
+      const navigationToggle = page.locator('[data-nav-toggle]');
+      await expect(navigationToggle).toHaveAccessibleName('Open contents');
+      await navigationToggle.focus();
+      await page.keyboard.press('Enter');
+      await expect(navigationToggle).toHaveAttribute('aria-expanded', 'true');
+      await expect(page.locator('[data-navigation]')).toBeVisible();
+    }
+
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+  });
+}
+
+for (const showcase of presetShowcases) {
+  test(`${showcase.name} preset remains contained with reachable controls at every required width`, async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium');
+    for (const artifact of showcase.artifacts) {
+      for (const viewport of [
+        { name: 'desktop', width: 1280, height: 900 },
+        { name: 'intermediate', width: 768, height: 900 },
+        { name: 'mobile', width: 390, height: 844 },
+        { name: 'dense', width: 320, height: 800 },
+      ] as const) {
+        await page.setViewportSize(viewport);
+        await page.goto(artifact.url);
+        const root = page.locator('html');
+        await expect(root).toHaveAttribute('data-preset', showcase.preset);
+        await expect(page.getByRole('heading', { name: showcase.heading, level: 1 })).toBeVisible();
+        const containment = await page.evaluate(() => {
+          const visibleControls = [
+            ...document.querySelectorAll<HTMLElement>('button, a[href], input, summary'),
+          ].filter((element) => {
+            const style = getComputedStyle(element);
+            const rect = element.getBoundingClientRect();
+            return style.display !== 'none' && style.visibility !== 'hidden' && rect.height > 0;
+          });
+          const reachableThroughLocalScroller = (element: HTMLElement): boolean => {
+            let ancestor = element.parentElement;
+            while (ancestor !== null && ancestor !== document.body) {
+              const style = getComputedStyle(ancestor);
+              if (
+                (style.overflowX === 'auto' || style.overflowX === 'scroll') &&
+                ancestor.scrollWidth > ancestor.clientWidth
+              ) {
+                const rect = ancestor.getBoundingClientRect();
+                return rect.left >= -0.5 && rect.right <= innerWidth + 0.5;
+              }
+              ancestor = ancestor.parentElement;
+            }
+            return false;
+          };
+          return {
+            overflow: document.documentElement.scrollWidth - innerWidth,
+            unreachable: visibleControls
+              .filter((element) => {
+                const rect = element.getBoundingClientRect();
+                return (
+                  (rect.left < -0.5 || rect.right > innerWidth + 0.5) &&
+                  !reachableThroughLocalScroller(element)
+                );
+              })
+              .map((element) => element.textContent?.trim() || element.getAttribute('aria-label')),
+          };
+        });
+        expect(containment.overflow, `${artifact.format} at ${viewport.name}`).toBeLessThanOrEqual(
+          0,
+        );
+        expect(containment.unreachable, `${artifact.format} at ${viewport.name}`).toEqual([]);
+      }
+    }
+  });
+}
+
+test('same-layout preset families retain their coordinated styles in both formats and every color mode', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const remoteRequests: string[] = [];
+  page.on('request', (request) => {
+    if (/^https?:/u.test(request.url())) remoteRequests.push(request.url());
+  });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  for (const expected of presetFixtureExpectations) {
+    for (const artifact of [
+      { format: 'single-file', url: layoutArtifactUrl(`preset-${expected.preset}`) },
+      {
+        format: 'directory',
+        url: pathToFileURL(
+          path.resolve(
+            'test-results/e2e-generated',
+            `preset-${expected.preset}-directory/index.html`,
+          ),
+        ).href,
+      },
+    ] as const) {
+      for (const mode of ['light', 'dark', 'system'] as const) {
+        await page.emulateMedia({ colorScheme: mode === 'light' ? 'light' : 'dark' });
+        await page.goto(artifact.url);
+        await page.locator('html').evaluate((element, value) => {
+          element.dataset.theme = value;
+        }, mode);
+        const state = await page.evaluate(() => {
+          const root = document.documentElement;
+          const rootStyle = getComputedStyle(root);
+          const bodyStyle = getComputedStyle(document.body);
+          const heading = document.querySelector<HTMLElement>('h1');
+          const surface = document.querySelector<HTMLElement>('.semantic-card');
+          const section = document.querySelector<HTMLElement>('.semantic-section');
+          return {
+            preset: root.dataset.preset,
+            density: root.dataset.density,
+            font: root.dataset.font,
+            accent: root.dataset.accent,
+            width: root.dataset.width,
+            radius: root.dataset.radius,
+            fontFamily: bodyStyle.fontFamily,
+            lineHeight: Number.parseFloat(bodyStyle.lineHeight),
+            contentWidth: rootStyle.getPropertyValue('--content-width').trim(),
+            headingWeight: heading === null ? undefined : getComputedStyle(heading).fontWeight,
+            surfaceRadius: surface === null ? undefined : getComputedStyle(surface).borderRadius,
+            sectionMargin:
+              section === null ? undefined : Number.parseFloat(getComputedStyle(section).marginTop),
+            background: bodyStyle.backgroundColor,
+          };
+        });
+        expect(state, `${expected.preset}/${artifact.format}/${mode}`).toMatchObject({
+          preset: expected.preset,
+          density: expected.density,
+          font: expected.font,
+          accent: expected.accent,
+          width: expected.width,
+          radius: expected.radius,
+          contentWidth: expected.contentWidth,
+          headingWeight: expected.headingWeight,
+          surfaceRadius: expected.surfaceRadius,
+          background: mode === 'light' ? 'rgb(244, 246, 251)' : 'rgb(12, 17, 28)',
+        });
+        expect(state.fontFamily).toContain(expected.fontFamily);
+        expect(state.lineHeight).toBeCloseTo(expected.lineHeight, 2);
+        expect(state.sectionMargin).toBeCloseTo(expected.sectionMargin, 2);
+      }
+    }
+  }
+  expect(remoteRequests).toEqual([]);
+});
+
+test('captures light and dark preset evidence in both formats and viewport families', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const captureRoot = path.resolve('test-results/step-2-captures/preset-matrix');
+  await rm(captureRoot, { recursive: true, force: true });
+  for (const showcase of presetRepresentatives) {
+    for (const artifact of showcase.artifacts) {
+      for (const theme of ['light', 'dark'] as const) {
+        for (const viewport of [
+          { name: 'desktop', width: 1280, height: 900 },
+          { name: 'mobile', width: 390, height: 844 },
+        ] as const) {
+          await page.setViewportSize(viewport);
+          await page.goto(artifact.url);
+          await expect(page.locator('html')).toHaveAttribute('data-preset', showcase.preset);
+          await page.locator('html').evaluate((element, value) => {
+            element.dataset.theme = value;
+          }, theme);
+          await page.evaluate(() => window.scrollTo(0, 0));
+          const directory = path.join(captureRoot, showcase.preset, artifact.format, theme);
+          await mkdir(directory, { recursive: true });
+          await page.screenshot({
+            path: path.join(directory, `${viewport.name}.png`),
+            fullPage: true,
+          });
+        }
+      }
+    }
+  }
+  expect(await relativeFiles(captureRoot)).toEqual(expectedPresetCapturePaths);
+});
+
+test('captures exactly six 320 by 800 dense preset states', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const captureRoot = path.resolve('test-results/step-2-captures/dense-320');
+  await rm(captureRoot, { recursive: true, force: true });
+  await mkdir(captureRoot, { recursive: true });
+  await page.setViewportSize({ width: 320, height: 800 });
+  for (const showcase of presetRepresentatives) {
+    for (const theme of ['light', 'dark'] as const) {
+      await page.goto(showcase.artifacts[0].url);
+      await page.locator('html').evaluate((element, value) => {
+        element.dataset.theme = value;
+      }, theme);
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({
+        path: path.join(captureRoot, `${showcase.preset}-${theme}.png`),
+      });
+    }
+  }
+  expect((await readdir(captureRoot)).sort()).toEqual([
+    'editorial-dark.png',
+    'editorial-light.png',
+    'signal-dark.png',
+    'signal-light.png',
+    'studio-dark.png',
+    'studio-light.png',
+  ]);
+});
+
 for (const example of [
   {
     name: 'layout-document',
@@ -444,7 +2014,7 @@ for (const example of [
     spaceFactor: '1',
     fontFamily: 'Charter',
     focusColor: 'rgb(56, 86, 216)',
-    surfaceRadius: '21.6px',
+    surfaceRadius: '14.4px',
     backgroundColor: 'rgb(244, 246, 251)',
     radius: 'soft',
     heading: 'Architecture decision record',
@@ -464,7 +2034,7 @@ for (const example of [
     spaceFactor: '.78',
     fontFamily: 'Inter',
     focusColor: 'rgb(117, 234, 219)',
-    surfaceRadius: '6.4px',
+    surfaceRadius: '4px',
     backgroundColor: 'rgb(12, 17, 28)',
     radius: 'sharp',
     heading: 'Delivery health dashboard',
@@ -483,7 +2053,7 @@ for (const example of [
     spaceFactor: '1.28',
     fontFamily: 'Inter',
     focusColor: 'rgb(194, 65, 93)',
-    surfaceRadius: '32px',
+    surfaceRadius: '21.6px',
     backgroundColor: 'rgb(244, 246, 251)',
     radius: 'round',
     heading: 'Pages agents can finish',
@@ -501,7 +2071,7 @@ for (const example of [
     spaceFactor: '1',
     fontFamily: 'Inter',
     focusColor: 'rgb(8, 127, 117)',
-    surfaceRadius: '21.6px',
+    surfaceRadius: '14.4px',
     backgroundColor: 'rgb(244, 246, 251)',
     radius: 'soft',
     heading: 'Research synthesis',
@@ -516,6 +2086,7 @@ for (const example of [
     await page.goto(layoutArtifactUrl(example.name));
     const root = page.locator('html');
     await expect(root).toHaveAttribute('data-layout', example.layout);
+    await expect(root).toHaveAttribute('data-preset', 'studio');
     await expect(root).toHaveAttribute('data-theme', example.theme);
     await expect(root).toHaveAttribute('data-density', example.density);
     await expect(root).toHaveAttribute('data-font', example.font);
@@ -527,10 +2098,10 @@ for (const example of [
 
     const themeToggle = page.getByRole('button', { name: 'Toggle color theme' });
     await themeToggle.focus();
-    const visualState = await page.evaluate(() => {
+    const visualState = await page.evaluate((componentSelector) => {
       const rootStyle = getComputedStyle(document.documentElement);
       const shell = document.querySelector<HTMLElement>('.report-shell');
-      const surface = document.querySelector<HTMLElement>('.report-content');
+      const surface = document.querySelector<HTMLElement>(componentSelector);
       const focused = document.querySelector<HTMLElement>('[data-theme-toggle]');
       return {
         token: rootStyle.getPropertyValue('--content-width').trim(),
@@ -543,7 +2114,7 @@ for (const example of [
         surfaceRadius: surface === null ? undefined : getComputedStyle(surface).borderRadius,
         backgroundColor: getComputedStyle(document.body).backgroundColor,
       };
-    });
+    }, example.component);
     expect(visualState.token).toBe(example.contentWidth);
     expect(visualState.shell).toBeCloseTo(
       Math.min(
@@ -586,10 +2157,11 @@ for (const example of [
             .evaluate((element) => getComputedStyle(element).overflowWrap),
         ).toBe('normal');
       }
-      const toggle = page.getByRole('button', { name: 'Contents' });
+      const toggle = page.locator('[data-nav-toggle]');
+      await expect(toggle).toHaveAccessibleName('Open contents');
       await toggle.click();
       await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-      await expect(navigation).toHaveAttribute('data-open', '');
+      await expect(navigation).toBeVisible();
     } else {
       await expect(navigation).toBeVisible();
     }
@@ -641,6 +2213,31 @@ async function codeThemeState(
   }));
 }
 
+async function settleVisualState(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve) => {
+      let previous = window.scrollY;
+      let stableFrames = 0;
+      let sampledFrames = 0;
+      const sample = (): void => {
+        const current = window.scrollY;
+        stableFrames = Math.abs(current - previous) < 0.5 ? stableFrames + 1 : 0;
+        previous = current;
+        sampledFrames += 1;
+        if (stableFrames >= 3 || sampledFrames >= 240) resolve();
+        else window.requestAnimationFrame(sample);
+      };
+      window.requestAnimationFrame(sample);
+    });
+    await Promise.all(
+      document.getAnimations().map((animation) => animation.finished.catch(() => undefined)),
+    );
+    await new Promise<void>((resolve) => {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+    });
+  });
+}
+
 async function expectLoadedImage(image: Locator): Promise<void> {
   await expect
     .poll(async () =>
@@ -650,4 +2247,17 @@ async function expectLoadedImage(image: Locator): Promise<void> {
       }),
     )
     .toBe(true);
+}
+
+async function relativeFiles(root: string, directory = root): Promise<readonly string[]> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = await Promise.all(
+    entries.map(async (entry) => {
+      const absolutePath = path.join(directory, entry.name);
+      return entry.isDirectory()
+        ? relativeFiles(root, absolutePath)
+        : [path.relative(root, absolutePath)];
+    }),
+  );
+  return files.flat().sort();
 }

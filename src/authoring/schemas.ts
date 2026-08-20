@@ -21,12 +21,14 @@ type ConstraintValue<Constraint extends ConstraintDefinition> = Constraint exten
   readonly kind: 'integer' | 'number';
 }
   ? number
-  : Constraint extends {
-        readonly kind: 'enum';
-        readonly values: readonly (infer Value extends string)[];
-      }
-    ? Value
-    : string;
+  : Constraint extends { readonly kind: 'boolean' }
+    ? boolean
+    : Constraint extends {
+          readonly kind: 'enum';
+          readonly values: readonly (infer Value extends string)[];
+        }
+      ? Value
+      : string;
 
 type FieldValue<Field extends FieldDefinition, Normalized extends boolean> = Field extends {
   readonly fields: infer Fields extends readonly FieldDefinition[];
@@ -104,7 +106,7 @@ export const directiveInvocationSchema = z.union(
 export type DirectiveAttributeInterpretation =
   | {
       readonly ok: true;
-      readonly values: Readonly<Record<string, string | number>>;
+      readonly values: Readonly<Record<string, string | number | boolean>>;
     }
   | {
       readonly ok: false;
@@ -161,9 +163,9 @@ export function interpretDirectiveAttributes(
   const unknown = Object.keys(input).filter((name) => !knownNames.has(name));
   if (unknown.length > 0) return { ok: false, reason: 'unknown', attributes: unknown };
 
-  const values: Record<string, string | number> = Object.create(null) as Record<
+  const values: Record<string, string | number | boolean> = Object.create(null) as Record<
     string,
-    string | number
+    string | number | boolean
   >;
   for (const attribute of directive.attributes) {
     const authored = input[attribute.name];
@@ -176,7 +178,7 @@ export function interpretDirectiveAttributes(
     if (candidate === undefined) return { ok: false, reason: 'invalid', attribute };
     const parsed = zodConstraint(attribute.constraint).safeParse(candidate);
     if (!parsed.success) return { ok: false, reason: 'invalid', attribute };
-    values[attribute.name] = parsed.data as string | number;
+    values[attribute.name] = parsed.data as string | number | boolean;
   }
   return { ok: true, values };
 }
@@ -232,9 +234,21 @@ function normalizeManifest<const Registry extends AuthoringRegistryDefinition>(
   input: ManifestInputFromRegistry<Registry>,
   registry: Registry,
 ): ManifestFromRegistry<Registry> {
-  return bindRegistryValue<ManifestFromRegistry<Registry>>(
-    normalizeFieldValues(registry.manifestFields, input),
-  );
+  const normalized = normalizeFieldValues(registry.manifestFields, input);
+  const presetName = normalized.preset;
+  const preset = registry.page.presets.find((candidate) => candidate.name === presetName);
+  if (preset === undefined) {
+    throw new Error(`Cannot normalize unknown page preset: ${String(presetName)}`);
+  }
+  const inputRecord = input as Readonly<Record<string, unknown>>;
+  const authoredTokens = isRecord(inputRecord.tokens) ? inputRecord.tokens : {};
+  return bindRegistryValue<ManifestFromRegistry<Registry>>({
+    ...normalized,
+    tokens: {
+      ...preset.tokens,
+      ...authoredTokens,
+    },
+  });
 }
 
 function normalizeFieldValues(
@@ -259,7 +273,7 @@ function normalizeFieldValues(
 function zodManifestInputSchema(registry: AuthoringRegistryDefinition): z.ZodType {
   return z.strictObject(
     Object.fromEntries(
-      registry.manifestFields.map((field) => [field.name, zodField(field)]),
+      registry.manifestFields.map((field) => [field.name, zodField(field, true)]),
     ) as Record<string, z.ZodType>,
   );
 }
@@ -272,16 +286,21 @@ function bindRegistryValue<Value>(value: unknown): Value {
   return value as Value;
 }
 
-function zodField(field: FieldDefinition): z.ZodType {
+function zodField(field: FieldDefinition, publishDefaults: boolean): z.ZodType {
+  const publishFieldDefaults = publishDefaults && field.defaultVisibility !== 'normalization-only';
   const schema =
     field.fields === undefined
       ? zodConstraint(field.constraint)
       : z.strictObject(
-          Object.fromEntries(field.fields.map((nested) => [nested.name, zodField(nested)])),
+          Object.fromEntries(
+            field.fields.map((nested) => [nested.name, zodField(nested, publishFieldDefaults)]),
+          ),
         );
   const described = schema.describe(field.description);
   const documented =
-    field.default === undefined ? described : described.meta({ default: field.default });
+    !publishFieldDefaults || field.default === undefined
+      ? described
+      : described.meta({ default: field.default });
   return field.required ? documented : documented.optional();
 }
 
@@ -333,6 +352,8 @@ function zodConstraint(constraint: ConstraintDefinition): z.ZodType {
       if (constraint.multipleOf !== undefined) schema = schema.multipleOf(constraint.multipleOf);
       return schema;
     }
+    case 'boolean':
+      return z.boolean();
     case 'enum':
       return z.enum(asNonEmptyTuple(constraint.values));
     default:
@@ -343,7 +364,12 @@ function zodConstraint(constraint: ConstraintDefinition): z.ZodType {
 function lexicalAttributeValue(
   authored: string,
   constraint: ConstraintDefinition,
-): string | number | undefined {
+): string | number | boolean | undefined {
+  if (constraint.kind === 'boolean') {
+    if (authored === 'true') return true;
+    if (authored === 'false') return false;
+    return undefined;
+  }
   if (constraint.kind !== 'integer' && constraint.kind !== 'number') return authored;
   if (
     constraint.lexicalPattern !== undefined &&
@@ -395,6 +421,7 @@ function objectSchemaFromFields(
   fields: readonly FieldDefinition[],
   id?: string,
   title?: string,
+  publishDefaults = true,
 ): JsonSchema {
   const required = fields.filter((field) => field.required).map((field) => field.name);
   return {
@@ -404,20 +431,27 @@ function objectSchemaFromFields(
     ...(id === undefined ? {} : { [SCHEMA_CONTRACT_KEYWORD]: contractMetadata(registry) }),
     type: 'object',
     additionalProperties: false,
-    properties: Object.fromEntries(fields.map((field) => [field.name, jsonField(registry, field)])),
+    properties: Object.fromEntries(
+      fields.map((field) => [field.name, jsonField(registry, field, publishDefaults)]),
+    ),
     ...(required.length === 0 ? {} : { required }),
   };
 }
 
-function jsonField(registry: AuthoringRegistryDefinition, field: FieldDefinition): JsonSchema {
+function jsonField(
+  registry: AuthoringRegistryDefinition,
+  field: FieldDefinition,
+  publishDefaults: boolean,
+): JsonSchema {
+  const publishFieldDefaults = publishDefaults && field.defaultVisibility !== 'normalization-only';
   const schema =
     field.fields === undefined
       ? jsonConstraint(field)
-      : objectSchemaFromFields(registry, field.fields);
+      : objectSchemaFromFields(registry, field.fields, undefined, undefined, publishFieldDefaults);
   return {
     ...withoutSchemaDialect(schema),
     description: field.description,
-    ...(field.default === undefined ? {} : { default: field.default }),
+    ...(!publishFieldDefaults || field.default === undefined ? {} : { default: field.default }),
   };
 }
 
@@ -443,6 +477,8 @@ function jsonConstraint(field: ScalarFieldDefinition): JsonSchema {
         ...(constraint.maximum === undefined ? {} : { maximum: constraint.maximum }),
         ...(constraint.multipleOf === undefined ? {} : { multipleOf: constraint.multipleOf }),
       };
+    case 'boolean':
+      return { type: 'boolean' };
     case 'enum':
       return { type: 'string', enum: [...constraint.values] };
     default:

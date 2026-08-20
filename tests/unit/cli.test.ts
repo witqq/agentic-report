@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { chmod, cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -20,6 +21,29 @@ afterEach(async () => {
 });
 
 describe('CLI transport', () => {
+  it('rejects a below-floor runtime through human and JSON CLI transports', async () => {
+    const human = await runCliAsNodeVersion(['--version'], '22.18.0');
+    expect(human).toEqual({
+      exitCode: 1,
+      stdout: '',
+      stderr:
+        'NODE_VERSION_UNSUPPORTED: Node.js 22.18.0 is unsupported; agentic-report requires Node.js 24.18.0 or newer.\n' +
+        'Install Node.js 24.18.0 or newer, then rerun the same command.\n',
+    });
+
+    const machine = await runCliAsNodeVersion(['--version', '--json'], '22.18.0');
+    expect(machine).toMatchObject({ exitCode: 1, stderr: '' });
+    expect(JSON.parse(machine.stdout)).toEqual({
+      type: 'diagnostic',
+      runId: expect.stringMatching(/^[0-9a-f-]{36}$/u),
+      level: 'error',
+      code: 'NODE_VERSION_UNSUPPORTED',
+      message: 'Node.js 22.18.0 is unsupported; agentic-report requires Node.js 24.18.0 or newer.',
+      remediation: 'Install Node.js 24.18.0 or newer, then rerun the same command.',
+      details: { currentVersion: '22.18.0', requiredEngine: '>=24.18.0' },
+    });
+  });
+
   it('serializes injected registry examples through the complete adapter used by the CLI action', async () => {
     const examplesRoot = path.join(path.sep, 'installed package', 'examples');
     const example = {
@@ -49,7 +73,7 @@ describe('CLI transport', () => {
 
     const cliSource = await readFile(path.resolve('src/cli.ts'), 'utf8');
     const actionStart = cliSource.indexOf(".command('examples')");
-    const actionEnd = cliSource.indexOf('\ntry {', actionStart);
+    const actionEnd = cliSource.indexOf('\nconst compatibilityDiagnostic', actionStart);
     const actionSource = cliSource.slice(actionStart, actionEnd);
     expect(actionStart).toBeGreaterThanOrEqual(0);
     expect(actionEnd).toBeGreaterThan(actionStart);
@@ -452,6 +476,42 @@ describe('CLI transport', () => {
   });
 });
 
+describe('ESM entry compatibility', () => {
+  it('throws the public diagnostic before exposing the API below the Node floor', async () => {
+    const entryUrl = pathToFileURL(path.resolve('dist/node/index.js')).href;
+    const outcome = await runNodeBootstrap(`
+      Object.defineProperty(process.versions, 'node', { value: '22.18.0' });
+      try {
+        await import(${JSON.stringify(entryUrl)});
+        console.error('ESM entry unexpectedly loaded below the Node floor.');
+        process.exitCode = 97;
+      } catch (error) {
+        console.log(JSON.stringify({
+          name: error instanceof Error ? error.name : undefined,
+          message: error instanceof Error ? error.message : undefined,
+          diagnostic: typeof error === 'object' && error !== null && 'diagnostic' in error
+            ? error.diagnostic
+            : undefined,
+        }));
+      }
+    `);
+
+    expect(outcome).toMatchObject({ exitCode: 0, stderr: '' });
+    expect(JSON.parse(outcome.stdout)).toEqual({
+      name: 'AgenticReportError',
+      message: 'Node.js 22.18.0 is unsupported; agentic-report requires Node.js 24.18.0 or newer.',
+      diagnostic: {
+        level: 'error',
+        code: 'NODE_VERSION_UNSUPPORTED',
+        message:
+          'Node.js 22.18.0 is unsupported; agentic-report requires Node.js 24.18.0 or newer.',
+        remediation: 'Install Node.js 24.18.0 or newer, then rerun the same command.',
+        details: { currentVersion: '22.18.0', requiredEngine: '>=24.18.0' },
+      },
+    });
+  });
+});
+
 async function runCli(
   arguments_: readonly string[],
   cwd?: string,
@@ -463,6 +523,38 @@ async function runCli(
     const child = spawn(process.execPath, [path.resolve('dist/node/cli.js'), ...arguments_], {
       env: environment,
       ...(cwd === undefined ? {} : { cwd }),
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.setEncoding('utf8').on('data', (chunk: string) => {
+      stderr += chunk;
+    });
+    child.on('error', reject);
+    child.on('close', (exitCode) => resolve({ exitCode, stdout, stderr }));
+  });
+}
+
+async function runCliAsNodeVersion(
+  arguments_: readonly string[],
+  nodeVersion: string,
+): Promise<{ readonly exitCode: number | null; readonly stdout: string; readonly stderr: string }> {
+  const cliPath = path.resolve('dist/node/cli.js');
+  return await runNodeBootstrap(`
+    Object.defineProperty(process.versions, 'node', { value: ${JSON.stringify(nodeVersion)} });
+    process.argv = [process.execPath, ${JSON.stringify(cliPath)}, ...${JSON.stringify(arguments_)}];
+    await import(${JSON.stringify(pathToFileURL(cliPath).href)});
+  `);
+}
+
+async function runNodeBootstrap(
+  source: string,
+): Promise<{ readonly exitCode: number | null; readonly stdout: string; readonly stderr: string }> {
+  return await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ['--input-type=module', '--eval', source], {
+      env: { PATH: process.env.PATH, NO_COLOR: '1' },
     });
     let stdout = '';
     let stderr = '';

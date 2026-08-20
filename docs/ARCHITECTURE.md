@@ -39,6 +39,9 @@ Markdown + metadata + local assets + partials + semantic directives
 
 - `src/contracts.ts` assembles internal validation schemas and the TypeScript contracts selectively exposed
   by `src/index.ts`.
+- `src/page-motion.ts` is the presentation-neutral source of truth for the fixed package motion policy.
+  The authoring registry projects it into discovery, while the browser runtime consumes the same values and
+  supplies its duration/translation to package CSS through runtime-owned custom properties.
 - `src/source/load-source.ts` resolves the entry, parses metadata, and expands confined Markdown
   partials. It validates raw metadata shapes before merging and retains metadata/partial provenance for
   diagnostics and output-collision protection. Reads perform lexical/canonical confinement. The product
@@ -50,17 +53,19 @@ Markdown + metadata + local assets + partials + semantic directives
 - `src/render/directives.ts` maps the documented, allowlisted directive vocabulary to semantic HAST.
   Unknown directives, invalid attributes/nesting, unresolved glossary references, duplicate definitions,
   and unmarked occurrences of registered glossary terms fail with authored-range diagnostics. Compile-time
-  enhancement creates native disclosures and accessible package-owned tabs, dialogs, popovers, filters,
-  switches, and bounded counters without accepting author code.
+  enhancement creates labelled top-level sections, ordinary safe action links, native disclosures, and
+  accessible package-owned tabs, dialogs, popovers, filters, switches, and bounded counters without
+  accepting author code.
 - `src/render/visualizations.ts` projects validated chart series/points, diagram nodes/edges, and timeline
   events into deterministic accessible SVG or semantic HTML. It is compile-time code and does not add a
   visualization browser runtime.
-- `src/render/document.tsx` creates the static HTML document, H2/H3 heading navigation, selected
-  registry-owned page layout/tokens, responsive shell, metadata, and content security policy. It allocates
-  collision-free shell IDs around authored content IDs and uses them consistently for navigation and
-  accessibility relationships.
+- `src/render/document.tsx` creates the static HTML document, explicit-section or legacy H2 navigation,
+  selected registry-owned page layout/tokens, responsive shell, metadata, and content security policy. It
+  allocates collision-free shell IDs around authored content IDs and uses them consistently for navigation
+  and accessibility relationships.
 - `src/browser/` contains the browser runtime and token-based stylesheet bundled by Vite. One delegated
-  event controller handles theme/navigation controls, code copying, glossary hover/focus/tap explanations,
+  event controller handles theme/navigation controls, current-section ownership, bounded normal-motion
+  progress/reveal, code copying, glossary hover/focus/tap explanations,
   tab selection, modal/popover focus, filtering, switches, and bounded counters. Interaction instances keep state in their own semantic DOM
   subtree, so repeated components do not share accidental state.
 - `src/core/prepare-report.ts` owns the shared side-effect-free preparation used by building, validation,
@@ -71,7 +76,12 @@ Markdown + metadata + local assets + partials + semantic directives
   `src/core/analyze-report.ts` projects the same preparation into compact validation and inspection
   results without output publication.
 - `src/cli.ts` adapts initialization, building, validation, inspection, and discovery to human text or
-  agent-oriented NDJSON. `src/index.ts` is the ESM API.
+  agent-oriented NDJSON. The executable reads its version from the installed package metadata rather than
+  carrying a second version literal. Before parsing a command it compares the running Node.js version with
+  that same installed package's minimum engine and returns `NODE_VERSION_UNSUPPORTED` below the floor rather
+  than relying on npm's warning-only behavior. `src/index.ts` is the ESM API and applies the same installed
+  engine gate before exposing operations; programmatic callers receive an `AgenticReportError` carrying the
+  same diagnostic.
 
 ## Public contracts
 
@@ -103,12 +113,24 @@ envelopes are not yet independently versioned; the source-contract major is incl
 inspection results.
 
 The current source schema supports title, description, a documented restricted language-tag syntax,
-theme, layout, compact page-token overrides, and output defaults. `document`, `dashboard`, `landing`, and
-`mixed` share one responsive shell and token system; the token fields select density, typography, accent,
-content width, and radius from closed package-owned domains. Frontmatter overrides the matching manifest fields. Only Markdown partials
+theme, layout, a coordinated preset, optional scroll progress, compact page-token overrides, and output defaults. `studio`,
+`editorial`, and `signal` are registry-owned token-default families; theme remains an independent color
+mode, and explicitly authored bounded tokens override the preset on density, typography, accent, content
+width, and radius. `document`, `dashboard`, `landing`, and `mixed` share one responsive shell, track
+system, and component surface model. Frontmatter overrides the matching manifest fields. Only Markdown partials
 are allowed; the loader rejects cycles, nesting over 10 levels, and lexical or canonical paths outside the
 source root. The source contract is defined in
 [`product/source-contract.md`](product/source-contract.md).
+
+The `section` directive is restricted to the Markdown root. It creates one real `<section>` labelled by an
+owned visible H2, with a validated explicit ID or deterministic title-derived ID. Explicit duplicates and
+unsafe IDs fail; generated collisions receive deterministic suffixes. When explicit sections exist they
+are the primary navigation inventory, using `nav` when supplied; documents without them use legacy H2
+headings. H3 and component IDs remain owned descendant hash targets but do not become primary links.
+`reveal` defaults to false and opts only that section into the package-owned normal-motion reveal.
+`actions` accepts only direct `action` children. Each action becomes an ordinary anchor after
+its same-page, relative, HTTP(S), or mail target passes the closed registry constraint; executable,
+local-file, absolute-path, and protocol-relative targets are rejected.
 
 Partial expansion produces a compact offset source map. Markdown AST positions resolve through that map,
 so diagnostics from entry content and nested partials identify the original authored file and range rather
@@ -159,12 +181,57 @@ not report success. Hostile concurrent path replacement and process/OS crash rec
 proportionate filesystem model. The inline warning threshold counts the actual serialized CSS, inline
 runtime, and image/download data URLs; a font data URL is counted once through generated CSS.
 
-Output format and page layout are independent public data choices. One data-only registry contract owns
-the default and closed domain for both: `single-file` uses an inline runtime and `directory` uses an
-external content-addressed runtime, while page layout selects `document`, `dashboard`, `landing`, or
-`mixed`. The same renderer and stylesheet apply the registry-owned theme and compact token values in both
-formats. The navigation toggle exists only when a table of contents exists; desktop placement varies by
-layout, and all layouts use the same mobile drawer behavior.
+Output format, page layout, and visual preset are independent public data choices. One data-only registry
+contract owns their defaults and closed domains: `single-file` uses an inline runtime and `directory` uses
+an external content-addressed runtime; layout selects document/dashboard/landing/mixed composition; preset
+selects coordinated visual defaults. The schema normalizer resolves preset defaults followed by explicit
+bounded token overrides, and the renderer projects only the resolved preset/theme/token identities into
+the shared package stylesheet in both formats. The stylesheet owns reading/standard/wide tracks, section
+rhythm, component containment, and a single content-surface layer; wide media, tables, charts, and code
+scroll locally instead of widening the document. Navigation exists only with at least two eligible
+sections. One ordinary link is always current: direct and descendant hashes resolve through section
+ownership, outside targets use the preceding or first section, and geometry uses the sticky-topbar
+activation line with deterministic bottom and equal-top rules. Root scroll padding keeps hash/focus targets
+below the sticky topbar; primary sections compensate their own block padding. In browsers with `scrollend`,
+a smooth hash traversal retains synchronous hash ownership until scrolling settles and then returns to
+geometry; other browsers debounce the scroll signal into one terminal geometry pass. When
+`IntersectionObserver` is unavailable, those same terminal and resize boundaries run the total geometry
+selection directly instead of scanning on every scroll signal. Desktop collapse is non-modal and
+session-only. Mobile moves the same nav into a native modal dialog with inert background, cyclic focus,
+Escape/backdrop/Close return, link-to-heading focus, and safe breakpoint closure.
+
+`scrollProgress` defaults to false. In normal motion, an enabled page installs one passive document scroll
+listener and one resize listener, coalesces updates through one animation frame, and changes one decorative
+`scaleX()` transform. A section with `reveal=true` is observed once and uses only opacity plus a 12-pixel,
+220-millisecond transition. Reduced motion installs neither progress DOM/listeners/frames nor reveal hidden
+state/observer; lack of `IntersectionObserver` leaves sections visible while navigation retains hash,
+activation-line, equal-top, resize, short-final and document-bottom ownership through bounded terminal
+geometry selection.
+
+## Public site staging
+
+The public site is not a compiler mode or a multi-page framework. `scripts/build-site.ts` reads the closed
+`website/routes.json` inventory, invokes the normal page compiler independently for the landing, each
+showcase, and each rendered documentation page, and copies canonical direct Markdown/text/skill files
+without rewriting their bytes. It publishes the complete new tree by one sibling-directory rename and
+refuses an existing destination.
+
+Every staged route is relative and confined to the output tree. Every declared source is relative to
+`website/` and confined to the repository before use; copied sources must be ordinary non-symlink files.
+The deterministic `release.json` records package/engine identity, a caller-supplied complete Git revision,
+canonical skill identity, route hashes, and the sorted complete file inventory. It deliberately omits a
+build timestamp, workstation path, credential, and self-referential hash. The same inputs, package build,
+and revision produce identical staged bytes.
+
+The human docs, direct agent quickstart, complete agent reference, source contract, canonical skill, and
+`llms.txt` are available under the same static origin as the product-built landing and separately built
+examples. Hosting is outside the compiler. A valid deployment serves these files directly with appropriate
+MIME types, a real 404 rather than an SPA fallback, and ordinary publicly trusted HTTPS.
+
+The canonical skill is instruction-only. Its OpenAI and Claude plugin manifests point to the same
+`skills/` folder and carry the same package version, license, homepage, and compatibility contract.
+Repository/marketplace metadata is community distribution metadata; it grants no deployment, publication,
+credential, remote-source, or unrelated mutation authority.
 
 ## Security properties
 
@@ -182,7 +249,7 @@ layout, and all layouts use the same mobile drawer behavior.
 ## Extension boundaries
 
 The typed registry owns current authoring directives, interaction behavior identities, page layouts,
-themes, compact token domains, capabilities, output behavior, and example/starter metadata. Its schemas,
+presets, themes, compact token domains, capabilities, output behavior, and example/starter metadata. Its schemas,
 discovery values, generated documentation projections, and examples are integrity-checked together. The
 interactive catalog extends this same registry; later data primitives must do the same rather than create
 layout-specific renderers.

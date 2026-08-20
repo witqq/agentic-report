@@ -1,0 +1,22 @@
+# agentic-report
+
+> Local declarative compiler for polished interactive HTML pages authored by agents.
+
+- Agent quickstart: docs/agent/index.md
+- Human documentation: docs/index.html
+- Complete agent reference: docs/AGENT-REFERENCE.md
+- Declarative source contract: docs/product/source-contract.md
+- Agent skill: skills/agentic-report/SKILL.md
+- Incident review demo: examples/incident-review/index.html
+- Vendor decision demo: examples/vendor-decision/index.html
+- Launch readiness demo: examples/launch-readiness/index.html
+- Release identity and hashes: release.json
+- npm package: https://www.npmjs.com/package/agentic-report
+- Source repository: https://github.com/witqq/agentic-report
+
+Requires Node.js 24.18.0 or newer. The first npx run requires npm registry access. Start with:
+
+    npx --yes agentic-report@0.2.0 init ./my-page --starter landing --json
+    npx --yes agentic-report@0.2.0 validate ./my-page --json
+    npx --yes agentic-report@0.2.0 inspect ./my-page --json
+    npx --yes agentic-report@0.2.0 build ./my-page --output ./my-page.html --json

@@ -34,11 +34,23 @@ export interface SourceContract {
     readonly formats: typeof authoringRegistry.output.formats;
     readonly runtimePlacement: typeof authoringRegistry.output.runtimePlacement;
   };
-  readonly page: typeof authoringRegistry.page;
+  readonly page: PublicPageContract;
   readonly safety: readonly string[];
   readonly capabilities: Readonly<Record<string, string>>;
   readonly commands: Readonly<Record<string, string>>;
 }
+
+type PublicPageToken = (typeof authoringRegistry.page.tokens)[number] & {
+  readonly defaultVisibility: 'normalization-only';
+};
+
+type PublicPageContract = Omit<typeof authoringRegistry.page, 'tokens'> & {
+  readonly tokens: readonly PublicPageToken[];
+  readonly tokenResolution: {
+    readonly defaultsFrom: 'selected-preset';
+    readonly precedence: readonly ['selected-preset', 'explicit-tokens'];
+  };
+};
 
 interface DirectiveContract {
   readonly description: string;
@@ -54,7 +66,7 @@ interface DirectiveContract {
 
 type AttributeContract = ConstraintDefinition & {
   readonly required: boolean;
-  readonly default?: string | number;
+  readonly default?: string | number | boolean;
   readonly description: string;
 };
 
@@ -111,7 +123,17 @@ function createSourceContract(): SourceContract {
       ]),
     ),
     outputs: authoringRegistry.output,
-    page: authoringRegistry.page,
+    page: {
+      ...authoringRegistry.page,
+      tokens: authoringRegistry.page.tokens.map((token) => ({
+        ...token,
+        defaultVisibility: 'normalization-only',
+      })),
+      tokenResolution: {
+        defaultsFrom: 'selected-preset',
+        precedence: ['selected-preset', 'explicit-tokens'],
+      },
+    },
     safety: [
       'canonical source-root confinement',
       'local resources only',

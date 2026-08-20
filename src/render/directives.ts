@@ -37,16 +37,26 @@ interface DirectivePluginOptions {
   readonly observedDirectives?: Set<string>;
 }
 
+interface DirectiveEnhancementOptions {
+  readonly sourceMap: readonly SourceMapSegment[];
+}
+
 const directiveByName: ReadonlyMap<string, DirectiveDefinition> = new Map(
   authoringRegistry.directives.map((directive) => [directive.name, directive]),
 );
+const GENERATED_SECTION_ID_PREFIX = 'generated:';
 
 export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoot> =
   (options) => (tree) => {
     const glossaryByKey = new Map<string, GlossaryDefinition>();
     const glossaryTerms = new Map<string, GlossaryDefinition>();
     const termReferences: Array<{ readonly key: string; readonly node: DirectiveNode }> = [];
-    const attributesByNode = new WeakMap<object, Readonly<Record<string, string | number>>>();
+    const attributesByNode = new WeakMap<
+      object,
+      Readonly<Record<string, string | number | boolean>>
+    >();
+    const sectionIds = collectAuthoredSectionIds(tree);
+    const claimedAuthoredSectionIds = new Set<string>();
     visit(tree, (node, _index, parent) => {
       if (!isDirectiveNode(node)) {
         return;
@@ -59,7 +69,17 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
         requireDirectivePlacement(node, directive, parent);
         const interpretation = interpretDirectiveAttributes(directive, node.attributes ?? {});
         if (!interpretation.ok) throw directiveAttributeError(node, interpretation);
-        attributesByNode.set(node, interpretation.values);
+        const values =
+          directive.name === 'section'
+            ? normalizeSectionAttributes(
+                node,
+                interpretation.values,
+                sectionIds,
+                claimedAuthoredSectionIds,
+              )
+            : interpretation.values;
+        if (directive.name === 'action') requireActionLabel(node);
+        attributesByNode.set(node, values);
         if (directive.name === 'glossary') {
           const key = String(interpretation.values.key);
           const term = String(interpretation.values.term);
@@ -80,7 +100,7 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
           termReferences.push({ key: String(interpretation.values.key), node });
         }
         options.observedDirectives?.add(directive.name);
-        node.data = renderDirective(directive, interpretation.values);
+        node.data = renderDirective(directive, values);
       } catch (error) {
         if (
           error instanceof AgenticReportError &&
@@ -127,12 +147,112 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
       }
     }
     validateVisualizationData(tree, attributesByNode, options);
+    validateActionGroups(tree, options);
     validateUnmarkedGlossaryTerms(tree, [...glossaryByKey.values()], options);
   };
 
+function normalizeSectionAttributes(
+  node: DirectiveNode,
+  values: Readonly<Record<string, string | number | boolean>>,
+  used: Set<string>,
+  claimedAuthored: Set<string>,
+): Readonly<Record<string, string | number | boolean>> {
+  const authoredId = values.id;
+  if (typeof authoredId === 'string') {
+    if (!claimedAuthored.has(authoredId)) {
+      claimedAuthored.add(authoredId);
+      return values;
+    }
+    throw directiveError(
+      node,
+      'DUPLICATE_SECTION_ID',
+      `Section id is defined more than once: ${authoredId}.`,
+      'Use a unique explicit id or omit it to generate a collision-free id from the title.',
+    );
+  }
+  const base = sectionSlug(String(values.title));
+  let id = base;
+  let suffix = 2;
+  while (used.has(id)) {
+    id = suffixedIdentity(base, suffix);
+    suffix += 1;
+  }
+  used.add(id);
+  return { ...values, id: `${GENERATED_SECTION_ID_PREFIX}${id}` };
+}
+
+function collectAuthoredSectionIds(tree: MdastRoot): Set<string> {
+  const ids = new Set<string>();
+  visit(tree, (node) => {
+    if (!isDirectiveNode(node) || node.name !== 'section') return;
+    const id = node.attributes?.id;
+    if (typeof id === 'string') ids.add(id.trim());
+  });
+  return ids;
+}
+
+function sectionSlug(title: string): string {
+  const slug = title
+    .normalize('NFKD')
+    .replace(/\p{M}+/gu, '')
+    .toLocaleLowerCase('und')
+    .replace(/[^a-z0-9]+/gu, '-')
+    .replace(/^-+|-+$/gu, '')
+    .slice(0, 56)
+    .replace(/-+$/gu, '');
+  if (slug.length === 0) return 'section';
+  return /^[a-z]/u.test(slug) ? slug : `section-${slug}`;
+}
+
+function suffixedIdentity(base: string, suffix: number): string {
+  const suffixText = `-${suffix}`;
+  return `${base.slice(0, 64 - suffixText.length).replace(/-+$/gu, '')}${suffixText}`;
+}
+
+function requireActionLabel(node: DirectiveNode): void {
+  const label = (node.children ?? [])
+    .map((child) =>
+      typeof child === 'object' && child !== null && 'value' in child
+        ? String((child as { readonly value?: unknown }).value ?? '')
+        : '',
+    )
+    .join('')
+    .trim();
+  if (label.length === 0) {
+    throw directiveError(
+      node,
+      'DIRECTIVE_LABEL_REQUIRED',
+      'action requires a visible label.',
+      'Use ::action[Visible label]{href="..."}.',
+    );
+  }
+}
+
+function validateActionGroups(tree: MdastRoot, options: DirectivePluginOptions): void {
+  visit(tree, (candidate) => {
+    if (!isDirectiveNode(candidate) || candidate.name !== 'actions') return;
+    const children = candidate.children ?? [];
+    if (
+      children.length === 0 ||
+      children.some((child) => !isDirectiveNode(child) || child.name !== 'action')
+    ) {
+      throw attachDirectiveSource(
+        directiveError(
+          candidate,
+          'INVALID_DIRECTIVE_PLACEMENT',
+          'actions accepts one or more action directives as direct children.',
+          'Move prose outside actions and add links with ::action[Label]{href="..."}.',
+        ),
+        candidate,
+        options,
+      );
+    }
+  });
+}
+
 function validateVisualizationData(
   tree: MdastRoot,
-  attributesByNode: WeakMap<object, Readonly<Record<string, string | number>>>,
+  attributesByNode: WeakMap<object, Readonly<Record<string, string | number | boolean>>>,
   options: DirectivePluginOptions,
 ): void {
   visit(tree, (candidate) => {
@@ -247,7 +367,7 @@ function validateVisualizationData(
     return directives;
   }
 
-  function attributes(node: DirectiveNode): Readonly<Record<string, string | number>> {
+  function attributes(node: DirectiveNode): Readonly<Record<string, string | number | boolean>> {
     const values = attributesByNode.get(node);
     if (values === undefined) throw new Error(`Missing validated attributes for ${node.name}.`);
     return values;
@@ -764,145 +884,236 @@ function skipQuotedValue(value: string, start: number, quote: '"' | "'"): number
   return value.length;
 }
 
-export const rehypeEnhanceDirectives: Plugin<[], HastRoot> = () => (tree) => {
-  const glossary = new Map<string, { readonly term: string; readonly explanation: string }>();
-  visit(tree, 'element', (node: Element) => {
-    if (node.properties.dataSemantic !== 'glossary') return;
-    const key = stringProperty(node, 'dataKey');
-    const term = stringProperty(node, 'dataTerm');
-    if (key !== undefined && term !== undefined) {
-      glossary.set(key, { term, explanation: hastText(node) });
-    }
-  });
-
-  let instance = 0;
-  let glossaryReferenceInstance = 0;
-  visit(tree, 'element', (node: Element) => {
-    if (
-      node.tagName === 'a' &&
-      typeof node.properties.dataLocalAsset === 'string' &&
-      node.children.length === 0
-    ) {
-      node.children.push({
-        type: 'text',
-        value: `Download ${assetLabel(node.properties.dataLocalAsset)}`,
-      });
-    }
-    const semantic = stringProperty(node, 'dataSemantic');
-    if (semantic !== undefined && ['chart', 'diagram', 'timeline'].includes(semantic)) {
-      instance += 1;
-      enhanceVisualization(node, semantic, instance);
-      return;
-    }
-    if (semantic === 'term') {
-      const key = stringProperty(node, 'dataKey');
-      const definition = key === undefined ? undefined : glossary.get(key);
-      if (key !== undefined && definition !== undefined) {
-        glossaryReferenceInstance += 1;
-        const panelId = `glossary-reference-${glossaryReferenceInstance}`;
-        node.tagName = 'span';
-        node.properties.dataTermReference = key;
-        node.properties.dataPopover = '';
-        node.properties.dataGlossaryReference = '';
-        node.children = [
-          {
-            type: 'element',
-            tagName: 'button',
-            properties: {
-              type: 'button',
-              ariaControls: [panelId],
-              ariaExpanded: 'false',
-              ariaHasPopup: 'dialog',
-              dataPopoverTrigger: '',
-              dataGlossaryTrigger: '',
-            },
-            children: [{ type: 'text', value: definition.term }],
-          },
-          {
-            type: 'element',
-            tagName: 'span',
-            properties: {
-              id: panelId,
-              role: 'dialog',
-              ariaLabelledBy: [`${panelId}-title`],
-              hidden: '',
-              dataPopoverPanel: '',
-              dataGlossaryPanel: '',
-            },
-            children: [
-              {
-                type: 'element',
-                tagName: 'span',
-                properties: { id: `${panelId}-title`, className: ['semantic-title'] },
-                children: [{ type: 'text', value: definition.term }],
-              },
-              {
-                type: 'element',
-                tagName: 'span',
-                properties: { className: ['semantic-glossary-explanation'] },
-                children: [{ type: 'text', value: definition.explanation }],
-              },
-              {
-                type: 'element',
-                tagName: 'a',
-                properties: {
-                  href: `#glossary-${key}`,
-                  className: ['semantic-glossary-link'],
-                  dataGlossaryDefinitionLink: '',
-                },
-                children: [{ type: 'text', value: 'View full definition' }],
-              },
-            ],
-          },
-        ];
-        delete node.properties.dataKey;
-      }
-      return;
-    }
-    if (semantic === 'glossary') {
+export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], HastRoot> =
+  (options) => (tree) => {
+    const allocateId = createDocumentIdAllocator(tree, options);
+    const glossary = new Map<
+      string,
+      { readonly term: string; readonly explanation: string; readonly id: string }
+    >();
+    visit(tree, 'element', (node: Element) => {
+      if (node.properties.dataSemantic !== 'glossary') return;
       const key = stringProperty(node, 'dataKey');
       const term = stringProperty(node, 'dataTerm');
       if (key !== undefined && term !== undefined) {
-        node.properties.id = `glossary-${key}`;
-        node.children.unshift(semanticTitle(term));
+        glossary.set(key, {
+          term,
+          explanation: hastText(node),
+          id: allocateId(`glossary-${key}`),
+        });
       }
-      delete node.properties.dataKey;
-      delete node.properties.dataTerm;
-      return;
-    }
-    if (semantic === 'disclosure') {
-      enhanceDisclosure(node);
-      return;
-    }
-    if (semantic === 'tabs') {
-      instance += 1;
-      enhanceTabs(node, instance);
-      return;
-    }
-    if (semantic === 'modal') {
-      instance += 1;
-      enhanceModal(node, instance);
-      return;
-    }
-    if (semantic === 'popover') {
-      instance += 1;
-      enhancePopover(node, instance);
-      return;
-    }
-    if (semantic === 'filter') {
-      instance += 1;
-      enhanceFilter(node, instance);
-      return;
-    }
-    if (semantic === 'toggle') {
-      instance += 1;
-      enhanceToggle(node, instance);
-      return;
-    }
-    prependDirectiveTitle(node);
-    if ('dataDemoCounter' in node.properties) enhanceCounter(node);
+    });
+
+    let instance = 0;
+    let glossaryReferenceInstance = 0;
+    visit(tree, 'element', (node: Element) => {
+      if (
+        node.tagName === 'a' &&
+        typeof node.properties.dataLocalAsset === 'string' &&
+        node.children.length === 0
+      ) {
+        node.children.push({
+          type: 'text',
+          value: `Download ${assetLabel(node.properties.dataLocalAsset)}`,
+        });
+      }
+      const semantic = stringProperty(node, 'dataSemantic');
+      if (semantic === 'section') {
+        enhanceSection(node, allocateId);
+        return;
+      }
+      if (semantic === 'action') {
+        enhanceAction(node);
+        return;
+      }
+      if (semantic !== undefined && ['chart', 'diagram', 'timeline'].includes(semantic)) {
+        instance += 1;
+        enhanceVisualization(node, semantic, instance, allocateId);
+        return;
+      }
+      if (semantic === 'term') {
+        const key = stringProperty(node, 'dataKey');
+        const definition = key === undefined ? undefined : glossary.get(key);
+        if (key !== undefined && definition !== undefined) {
+          glossaryReferenceInstance += 1;
+          const panelId = allocateId(`glossary-reference-${glossaryReferenceInstance}`);
+          const panelTitleId = allocateId(`${panelId}-title`);
+          node.tagName = 'span';
+          node.properties.dataTermReference = key;
+          node.properties.dataPopover = '';
+          node.properties.dataGlossaryReference = '';
+          node.children = [
+            {
+              type: 'element',
+              tagName: 'button',
+              properties: {
+                type: 'button',
+                ariaControls: [panelId],
+                ariaExpanded: 'false',
+                ariaHasPopup: 'dialog',
+                dataPopoverTrigger: '',
+                dataGlossaryTrigger: '',
+              },
+              children: [{ type: 'text', value: definition.term }],
+            },
+            {
+              type: 'element',
+              tagName: 'span',
+              properties: {
+                id: panelId,
+                role: 'dialog',
+                ariaLabelledBy: [panelTitleId],
+                hidden: '',
+                dataPopoverPanel: '',
+                dataGlossaryPanel: '',
+              },
+              children: [
+                {
+                  type: 'element',
+                  tagName: 'span',
+                  properties: { id: panelTitleId, className: ['semantic-title'] },
+                  children: [{ type: 'text', value: definition.term }],
+                },
+                {
+                  type: 'element',
+                  tagName: 'span',
+                  properties: { className: ['semantic-glossary-explanation'] },
+                  children: [{ type: 'text', value: definition.explanation }],
+                },
+                {
+                  type: 'element',
+                  tagName: 'a',
+                  properties: {
+                    href: `#${definition.id}`,
+                    className: ['semantic-glossary-link'],
+                    dataGlossaryDefinitionLink: '',
+                  },
+                  children: [{ type: 'text', value: 'View full definition' }],
+                },
+              ],
+            },
+          ];
+          delete node.properties.dataKey;
+        }
+        return;
+      }
+      if (semantic === 'glossary') {
+        const key = stringProperty(node, 'dataKey');
+        const term = stringProperty(node, 'dataTerm');
+        if (key !== undefined && term !== undefined) {
+          node.properties.id = glossary.get(key)?.id ?? allocateId(`glossary-${key}`);
+          node.children.unshift(semanticTitle(term));
+        }
+        delete node.properties.dataKey;
+        delete node.properties.dataTerm;
+        return;
+      }
+      if (semantic === 'disclosure') {
+        enhanceDisclosure(node);
+        return;
+      }
+      if (semantic === 'tabs') {
+        instance += 1;
+        enhanceTabs(node, instance, allocateId);
+        return;
+      }
+      if (semantic === 'modal') {
+        instance += 1;
+        enhanceModal(node, instance, allocateId);
+        return;
+      }
+      if (semantic === 'popover') {
+        instance += 1;
+        enhancePopover(node, instance, allocateId);
+        return;
+      }
+      if (semantic === 'filter') {
+        instance += 1;
+        enhanceFilter(node, instance, allocateId);
+        return;
+      }
+      if (semantic === 'toggle') {
+        instance += 1;
+        enhanceToggle(node, instance, allocateId);
+        return;
+      }
+      prependDirectiveTitle(node);
+      if ('dataDemoCounter' in node.properties) enhanceCounter(node);
+    });
+  };
+
+function enhanceSection(node: Element, allocateId: (base: string) => string): void {
+  const title = takeStringProperty(node, 'dataDirectiveTitle');
+  const transportedId = takeStringProperty(node, 'dataId');
+  if (title === undefined || transportedId === undefined) {
+    throw new Error('Validated section is missing its title or id.');
+  }
+  const generated = transportedId.startsWith(GENERATED_SECTION_ID_PREFIX);
+  const desiredId = generated
+    ? transportedId.slice(GENERATED_SECTION_ID_PREFIX.length)
+    : transportedId;
+  const sectionId = generated ? allocateId(desiredId) : desiredId;
+  const titleId = allocateId(`${sectionId}-title`);
+  node.properties.id = sectionId;
+  node.properties.ariaLabelledBy = [titleId];
+  node.children.unshift({
+    type: 'element',
+    tagName: 'h2',
+    properties: { id: titleId, className: ['semantic-section-title'] },
+    children: [{ type: 'text', value: title }],
   });
-};
+}
+
+function createDocumentIdAllocator(
+  tree: HastRoot,
+  options: DirectiveEnhancementOptions,
+): (base: string) => string {
+  const usedIds = new Set<string>();
+  visit(tree, 'element', (node: Element) => {
+    const id = stringProperty(node, 'id');
+    if (id !== undefined) usedIds.add(id);
+  });
+  visit(tree, 'element', (node: Element) => {
+    if (node.properties.dataSemantic !== 'section') return;
+    const transportedId = stringProperty(node, 'dataId');
+    if (transportedId === undefined || transportedId.startsWith(GENERATED_SECTION_ID_PREFIX)) {
+      return;
+    }
+    if (usedIds.has(transportedId)) {
+      const diagnostic = {
+        level: 'error',
+        code: 'DUPLICATE_SECTION_ID',
+        message: `Section id collides with another document id: ${transportedId}.`,
+        remediation: 'Use a unique explicit section id or omit it to generate a collision-free id.',
+        details: { id: transportedId },
+      } as const;
+      const start = node.position?.start.offset;
+      const end = node.position?.end.offset;
+      const source =
+        start === undefined || end === undefined
+          ? undefined
+          : resolveSourceLocation(options.sourceMap, start, end);
+      throw new AgenticReportError(source === undefined ? diagnostic : { ...diagnostic, source });
+    }
+    usedIds.add(transportedId);
+  });
+  return (base: string): string => {
+    let candidate = base;
+    let suffix = 2;
+    while (usedIds.has(candidate)) {
+      candidate = suffixedIdentity(base, suffix);
+      suffix += 1;
+    }
+    usedIds.add(candidate);
+    return candidate;
+  };
+}
+
+function enhanceAction(node: Element): void {
+  const href = takeStringProperty(node, 'dataHref');
+  if (href === undefined) throw new Error('Validated action is missing its href.');
+  node.properties.href = href;
+}
 
 function hastText(node: Element): string {
   const values: string[] = [];
@@ -929,9 +1140,9 @@ function enhanceDisclosure(node: Element): void {
   });
 }
 
-function enhanceTabs(node: Element, instance: number): void {
+function enhanceTabs(node: Element, instance: number, allocateId: (base: string) => string): void {
   const title = takeStringProperty(node, 'dataDirectiveTitle');
-  const titleId = `tabs-${instance}-title`;
+  const titleId = title === undefined ? undefined : allocateId(`tabs-${instance}-title`);
   const panels = node.children.filter(
     (child): child is Element =>
       child.type === 'element' && child.properties.dataSemantic === 'tab',
@@ -939,8 +1150,8 @@ function enhanceTabs(node: Element, instance: number): void {
   const buttons: Element[] = [];
   panels.forEach((panel, index) => {
     const label = takeStringProperty(panel, 'dataLabel') ?? `Tab ${index + 1}`;
-    const tabId = `tabs-${instance}-tab-${index + 1}`;
-    const panelId = `tabs-${instance}-panel-${index + 1}`;
+    const tabId = allocateId(`tabs-${instance}-tab-${index + 1}`);
+    const panelId = allocateId(`tabs-${instance}-panel-${index + 1}`);
     panel.properties.id = panelId;
     panel.properties.role = 'tabpanel';
     panel.properties.ariaLabelledBy = [tabId];
@@ -964,13 +1175,13 @@ function enhanceTabs(node: Element, instance: number): void {
   });
   node.properties.dataTabs = '';
   node.children = [
-    ...(title === undefined ? [] : [semanticTitle(title, titleId)]),
+    ...(title === undefined || titleId === undefined ? [] : [semanticTitle(title, titleId)]),
     {
       type: 'element',
       tagName: 'div',
       properties: {
         role: 'tablist',
-        ...(title === undefined
+        ...(titleId === undefined
           ? { ariaLabel: 'Content sections' }
           : { ariaLabelledBy: [titleId] }),
         className: ['semantic-tab-list'],
@@ -981,10 +1192,11 @@ function enhanceTabs(node: Element, instance: number): void {
   ];
 }
 
-function enhanceModal(node: Element, instance: number): void {
+function enhanceModal(node: Element, instance: number, allocateId: (base: string) => string): void {
   const title = takeStringProperty(node, 'dataDirectiveTitle') ?? 'Dialog';
   const trigger = takeStringProperty(node, 'dataTrigger') ?? 'Open dialog';
-  const dialogId = `modal-${instance}`;
+  const dialogId = allocateId(`modal-${instance}`);
+  const titleId = allocateId(`${dialogId}-title`);
   const content = node.children;
   node.properties.dataModal = '';
   node.children = [
@@ -992,9 +1204,9 @@ function enhanceModal(node: Element, instance: number): void {
     {
       type: 'element',
       tagName: 'dialog',
-      properties: { id: dialogId, ariaLabelledBy: [`${dialogId}-title`], dataModalDialog: '' },
+      properties: { id: dialogId, ariaLabelledBy: [titleId], dataModalDialog: '' },
       children: [
-        semanticTitle(title, `${dialogId}-title`),
+        semanticTitle(title, titleId),
         ...content,
         actionButton('Close', { dataModalClose: '' }),
       ],
@@ -1002,10 +1214,15 @@ function enhanceModal(node: Element, instance: number): void {
   ];
 }
 
-function enhancePopover(node: Element, instance: number): void {
+function enhancePopover(
+  node: Element,
+  instance: number,
+  allocateId: (base: string) => string,
+): void {
   const title = takeStringProperty(node, 'dataDirectiveTitle') ?? 'Details';
   const trigger = takeStringProperty(node, 'dataTrigger') ?? 'Show details';
-  const panelId = `popover-${instance}`;
+  const panelId = allocateId(`popover-${instance}`);
+  const titleId = allocateId(`${panelId}-title`);
   const content = node.children;
   node.properties.dataPopover = '';
   node.children = [
@@ -1021,19 +1238,23 @@ function enhancePopover(node: Element, instance: number): void {
       properties: {
         id: panelId,
         role: 'dialog',
-        ariaLabelledBy: [`${panelId}-title`],
+        ariaLabelledBy: [titleId],
         hidden: '',
         dataPopoverPanel: '',
       },
-      children: [semanticTitle(title, `${panelId}-title`), ...content],
+      children: [semanticTitle(title, titleId), ...content],
     },
   ];
 }
 
-function enhanceFilter(node: Element, instance: number): void {
+function enhanceFilter(
+  node: Element,
+  instance: number,
+  allocateId: (base: string) => string,
+): void {
   const title = takeStringProperty(node, 'dataDirectiveTitle');
   const placeholder = takeStringProperty(node, 'dataPlaceholder') ?? 'Filter items';
-  const inputId = `filter-${instance}`;
+  const inputId = allocateId(`filter-${instance}`);
   node.properties.dataFilter = '';
   node.children = [
     ...(title === undefined ? [] : [semanticTitle(title)]),
@@ -1066,11 +1287,15 @@ function enhanceFilter(node: Element, instance: number): void {
   ];
 }
 
-function enhanceToggle(node: Element, instance: number): void {
+function enhanceToggle(
+  node: Element,
+  instance: number,
+  allocateId: (base: string) => string,
+): void {
   const title = takeStringProperty(node, 'dataDirectiveTitle');
   const label = takeStringProperty(node, 'dataLabel') ?? 'Toggle content';
   const active = takeStringProperty(node, 'dataDefault') === 'on';
-  const panelId = `toggle-${instance}`;
+  const panelId = allocateId(`toggle-${instance}`);
   const content = node.children;
   node.properties.dataToggle = '';
   node.children = [
@@ -1193,6 +1418,17 @@ function requireDirectivePlacement(
 ): void {
   const parentDirective = isDirectiveNode(parent) ? directiveByName.get(parent.name) : undefined;
   const requiredParent = directive.placement.requiredParent;
+  if (
+    directive.placement.topLevelOnly === true &&
+    (!isTraversableNode(parent) || parent.type !== 'root')
+  ) {
+    throw directiveError(
+      node,
+      'INVALID_DIRECTIVE_PLACEMENT',
+      `${directive.name} must be a top-level directive.`,
+      `Move this ${directive.name} directive outside blockquotes, lists, and other directives.`,
+    );
+  }
   if (requiredParent !== undefined && parentDirective?.name !== requiredParent) {
     throw directiveError(
       node,
@@ -1221,6 +1457,8 @@ function allowedDirectiveChildren(
       return ['card'];
     case 'markdown-and-tab-directives':
       return ['tab'];
+    case 'action-directives':
+      return ['action'];
     case 'series-directives':
       return ['series'];
     case 'point-directives':
@@ -1241,9 +1479,13 @@ function allowedDirectiveChildren(
   }
 }
 
+function isTraversableNode(value: unknown): value is TraversableNode {
+  return typeof value === 'object' && value !== null && 'type' in value;
+}
+
 function renderDirective(
   directive: DirectiveDefinition,
-  values: Readonly<Record<string, string | number>>,
+  values: Readonly<Record<string, string | number | boolean>>,
 ): NonNullable<DirectiveNode['data']> {
   const properties: Record<string, string | string[]> = {
     className: [directive.sanitizer.className],
@@ -1311,6 +1553,9 @@ function requiredAttributeRemediation(attribute: DirectiveAttributeDefinition): 
   if (attribute.invalidDiagnostic === 'INVALID_FONT_FAMILY') {
     return 'Add {family="Readable font name"} to the directive.';
   }
+  if (attribute.invalidDiagnostic === 'INVALID_DIRECTIVE_LINK') {
+    return `Add {${attribute.name}="#anchor"} or another safe link target to the directive.`;
+  }
   return `Add the required ${attribute.name} attribute.`;
 }
 
@@ -1324,6 +1569,9 @@ function invalidAttributeMessage(
   if (attribute.invalidDiagnostic === 'INVALID_FONT_FAMILY') {
     return 'font.family contains unsupported characters.';
   }
+  if (attribute.invalidDiagnostic === 'INVALID_DIRECTIVE_LINK') {
+    return `${directiveName}.${attribute.name} must be a safe same-page, relative, HTTP(S), or email target.`;
+  }
   if (attribute.constraint.kind === 'integer') {
     return `${directiveName}.${attribute.name} must be an integer with at most six digits.`;
   }
@@ -1336,6 +1584,9 @@ function invalidAttributeRemediation(attribute: DirectiveAttributeDefinition): s
   }
   if (attribute.invalidDiagnostic === 'INVALID_FONT_FAMILY') {
     return 'Use 1-80 letters, numbers, spaces, underscores, or hyphens.';
+  }
+  if (attribute.invalidDiagnostic === 'INVALID_DIRECTIVE_LINK') {
+    return 'Use #anchor, a relative path, https:// or http:// URL, or mailto: address.';
   }
   if (attribute.constraint.kind === 'integer') {
     return `Use an integer ${attribute.name} value.`;
