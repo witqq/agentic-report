@@ -55,7 +55,10 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   artifacts. The document, dashboard, landing, and mixed examples are built and exercised through
   `file://` in desktop and mobile profiles, including their page data contract and local images. All six
   package starters are also opened in both profiles, exercise a declared interaction, assert responsive
-  containment, and produce inspected captures. A local SVG must complete with non-zero intrinsic width in both embedded and rewritten hashed
+  containment, and produce inspected captures. Dedicated semantic-tabs coverage builds every current
+  tab-bearing starter, example, and fixture for desktop and mobile `file://` artifacts; it asserts readable
+  non-shrinking single-line labels, list-owned overflow where needed, document containment, and pointer and
+  keyboard selection and focus. A local SVG must complete with non-zero intrinsic width in both embedded and rewritten hashed
   forms. The current suite does not cover browser behavior for downloadable assets or local fonts,
   axe/screen-reader evidence or difficult-content reflow beyond the authored fixtures.
 - `pack:check` builds an npm tarball, checks its exact release allowlist, metadata, license, types, exports,
