@@ -229,6 +229,15 @@ export default async function globalSetup(): Promise<void> {
       format: 'directory',
     }),
     buildReport({
+      input: path.resolve('website', 'landing'),
+      output: path.join(fixtureRoot, 'public-landing.html'),
+    }),
+    buildReport({
+      input: path.resolve('website', 'landing'),
+      output: path.join(fixtureRoot, 'public-landing-directory'),
+      format: 'directory',
+    }),
+    buildReport({
       input: path.resolve('examples', 'visualization-catalog'),
       output: path.join(fixtureRoot, 'visualization-catalog-directory'),
       format: 'directory',

@@ -1,0 +1,117 @@
+{
+  "contractVersion": 1,
+  "routes": [
+    {
+      "id": "landing",
+      "href": "index.html",
+      "source": "landing/report.md",
+      "owner": "unit-4",
+      "state": "source-ready"
+    },
+    {
+      "id": "example-incident",
+      "href": "examples/incident-review/index.html",
+      "source": "../examples/incident-review",
+      "owner": "unit-4",
+      "state": "source-ready"
+    },
+    {
+      "id": "source-incident",
+      "href": "examples/incident-review/source/report.md",
+      "source": "../examples/incident-review/report.md",
+      "owner": "unit-5",
+      "state": "staging-pending"
+    },
+    {
+      "id": "example-vendor",
+      "href": "examples/vendor-decision/index.html",
+      "source": "../examples/vendor-decision",
+      "owner": "unit-4",
+      "state": "source-ready"
+    },
+    {
+      "id": "source-vendor",
+      "href": "examples/vendor-decision/source/report.md",
+      "source": "../examples/vendor-decision/report.md",
+      "owner": "unit-5",
+      "state": "staging-pending"
+    },
+    {
+      "id": "example-launch",
+      "href": "examples/launch-readiness/index.html",
+      "source": "../examples/launch-readiness",
+      "owner": "unit-4",
+      "state": "source-ready"
+    },
+    {
+      "id": "source-launch",
+      "href": "examples/launch-readiness/source/report.md",
+      "source": "../examples/launch-readiness/report.md",
+      "owner": "unit-5",
+      "state": "staging-pending"
+    },
+    {
+      "id": "source-landing",
+      "href": "source/landing/report.md",
+      "source": "landing/report.md",
+      "owner": "unit-5",
+      "state": "staging-pending"
+    },
+    {
+      "id": "starter-landing",
+      "href": "source/starter/landing/report.md",
+      "source": "../examples/landing/report.md",
+      "owner": "unit-5",
+      "state": "staging-pending"
+    },
+    {
+      "id": "docs-human",
+      "href": "docs/index.html",
+      "source": "docs/report.md",
+      "owner": "unit-5",
+      "state": "staging-pending"
+    },
+    {
+      "id": "docs-agent",
+      "href": "docs/agent/index.md",
+      "source": "docs/agent/index.md",
+      "owner": "unit-5",
+      "state": "staging-pending"
+    },
+    {
+      "id": "docs-agent-reference",
+      "href": "docs/agent/reference.md",
+      "source": "../docs/AGENT-REFERENCE.md",
+      "owner": "unit-5",
+      "state": "staging-pending"
+    },
+    {
+      "id": "docs-source-contract",
+      "href": "docs/source-contract/index.md",
+      "source": "../docs/product/source-contract.md",
+      "owner": "unit-5",
+      "state": "staging-pending"
+    },
+    {
+      "id": "skill",
+      "href": "skills/agentic-report/SKILL.md",
+      "source": "../skills/agentic-report/SKILL.md",
+      "owner": "unit-5",
+      "state": "staging-pending"
+    },
+    {
+      "id": "llms",
+      "href": "llms.txt",
+      "source": "llms.txt",
+      "owner": "unit-5",
+      "state": "staging-pending"
+    },
+    {
+      "id": "release",
+      "href": "release.json",
+      "source": "generated",
+      "owner": "unit-5",
+      "state": "staging-pending"
+    }
+  ]
+}

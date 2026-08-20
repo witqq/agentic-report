@@ -248,6 +248,27 @@ Open each single file or directory `index.html` through `file://`. For an instal
 `single-file` remains the default; `directory` changes runtime and asset placement, not source semantics or
 reader behavior.
 
+### Build a landing page
+
+Use the `landing` starter for a new restrained product or project page. It is the same declarative contract
+as reports and decisions, not a frontend-project scaffold:
+
+```bash
+npx --yes agentic-report init ./my-page --starter landing --json
+npx --yes agentic-report validate ./my-page --json
+npx --yes agentic-report inspect ./my-page --json
+npx --yes agentic-report build ./my-page --output ./my-page.html --json
+```
+
+The first zero-install `npx` run requires registry/network access and Node.js 24.18.0 or newer. The normal
+generated page then opens locally through `file://` and requires the included package-owned browser runtime.
+Authors write no JSX, raw HTML, CSS, or browser JavaScript.
+
+The repository's canonical product proof is [`../website/landing`](../website/landing/). Its example cards
+link to separately publishable incident-review, vendor-decision, and launch-readiness pages plus direct
+public Markdown source routes. [`../website/routes.json`](../website/routes.json) owns those relative route
+identities for deterministic static staging; a screenshot alone is never treated as the live example.
+
 ## Semantic directives
 
 Directives are declarative and allowlisted. Unknown names and invalid attributes fail with actionable

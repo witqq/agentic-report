@@ -1039,6 +1039,12 @@ th {
   background: var(--color-surface);
 }
 
+@media (width >= 45.01rem) and (width <= 68rem) {
+  .semantic-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .semantic-steps ol {
   padding-left: 1.4rem;
 }
@@ -1412,7 +1418,11 @@ th {
   }
 
   :root[data-layout='landing'] .report-content article > h1 {
-    font-size: clamp(2.5rem, 14vw, 4.5rem);
+    font-size: clamp(2.4rem, 11vw, 3.5rem);
+  }
+
+  :root[data-layout='landing'] .report-content article > h1 + p {
+    margin-bottom: calc(1.5rem * var(--space-factor));
   }
 
   @starting-style {

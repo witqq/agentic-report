@@ -139,6 +139,26 @@ Open the HTML file or directory `index.html` directly through `file://`. In an i
 `agentic-report examples --json` returns each absolute installed entry path; use its containing directory as
 the build input. These examples remain discovery-only and do not change the six `init` starters.
 
+## Product-built landing
+
+The canonical public landing is itself an ordinary compiler input at
+[`website/landing`](website/landing/). It uses only supported Markdown, frontmatter, semantic directives,
+and local screenshots generated from the three fictional showcases. Build it through the same public path
+as any user page:
+
+```bash
+agentic-report validate ./website/landing --json
+agentic-report inspect ./website/landing --json
+agentic-report build ./website/landing --output ./landing.html --json
+agentic-report build ./website/landing --format directory --output ./landing-directory --json
+```
+
+[`website/routes.json`](website/routes.json) is the deployment-route authority. It gives every internal
+landing destination one relative URL, canonical repository source, owner, and readiness state. Each example
+card points to a separately publishable live page and a separately retrievable Markdown source; screenshots
+are previews, not substitutes for the published demos. Static site assembly resolves these declarations
+without adding a client router or a second authoring framework.
+
 ## Commands
 
 After a local build:
