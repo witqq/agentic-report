@@ -42,7 +42,8 @@ remain optional in the emitted JSON Schema because the compiler accepts their om
 `schema --scope directives` for directive grammar and constraints, or `schema --scope source` for the
 complete source-object schema. The ESM API exposes defensive project-owned projections through
 `getAuthoringSchema(scope)`, `getSourceContract()`, and `listExamples()`; concrete Zod schemas remain an
-internal implementation detail. Checked JSON forms are available in [`../generated/`](../generated/),
+internal implementation detail. The complete checked JSON form is
+[`../generated/source-contract.json`](../generated/source-contract.json),
 and [`../../examples/manifest.json`](../../examples/manifest.json) binds packaged example identities to
 their source-file SHA-256 hashes.
 
@@ -145,11 +146,11 @@ the authored range, while output always uses the registered canonical text. The 
 direct directive child of `tabs`, and other directive children are rejected there. Complete copyable examples
 are in
 [`docs/AGENT-REFERENCE.md`](../AGENT-REFERENCE.md) and the shipped
-[`examples/basic`](../../examples/basic), [`examples/research`](../../examples/research),
-[`examples/architecture`](../../examples/architecture), [`examples/tutorial`](../../examples/tutorial),
-[`examples/dashboard`](../../examples/dashboard), [`examples/landing`](../../examples/landing), and
-[`examples/interactive-catalog`](../../examples/interactive-catalog) sources. The complete data example is
-[`examples/visualization-catalog`](../../examples/visualization-catalog).
+[`examples/basic`](../../examples/basic/report.md), [`examples/research`](../../examples/research/report.md),
+[`examples/architecture`](../../examples/architecture/report.md), [`examples/tutorial`](../../examples/tutorial/report.md),
+[`examples/dashboard`](../../examples/dashboard/report.md), [`examples/landing`](../../examples/landing/report.md), and
+[`examples/interactive-catalog`](../../examples/interactive-catalog/report.md) sources. The complete data example is
+[`examples/visualization-catalog`](../../examples/visualization-catalog/report.md).
 
 A `section` must be a direct child of the Markdown document, not a blockquote, list item, or another
 directive. It always renders a real labelled `<section>` and visible H2. `id` is a lowercase identity that

@@ -37,12 +37,12 @@ for composition, and local assets for media and downloads.
 :::card{title="Agent reference"}
 Commands, JSON output, starters, components, layouts, themes, diagnostics, and output behavior.
 
-[Read the reference](agent/reference.md)
+[Read the reference](AGENT-REFERENCE.md)
 :::
 :::card{title="Source contract"}
 The authoritative syntax, confinement boundary, output modes, and security model.
 
-[Read the source contract](source-contract/index.md)
+[Read the source contract](product/source-contract.md)
 :::
 :::card{title="Live discovery"}
 Run `describe --json`, `schema`, and `examples --json` against the installed release for machine-readable

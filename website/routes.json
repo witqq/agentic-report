@@ -19,7 +19,7 @@
     },
     {
       "id": "source-incident",
-      "href": "examples/incident-review/source/report.md",
+      "href": "examples/incident-review/report.md",
       "source": "../examples/incident-review/report.md",
       "kind": "copy",
       "owner": "unit-5",
@@ -35,7 +35,7 @@
     },
     {
       "id": "source-vendor",
-      "href": "examples/vendor-decision/source/report.md",
+      "href": "examples/vendor-decision/report.md",
       "source": "../examples/vendor-decision/report.md",
       "kind": "copy",
       "owner": "unit-5",
@@ -51,7 +51,7 @@
     },
     {
       "id": "source-launch",
-      "href": "examples/launch-readiness/source/report.md",
+      "href": "examples/launch-readiness/report.md",
       "source": "../examples/launch-readiness/report.md",
       "kind": "copy",
       "owner": "unit-5",
@@ -99,7 +99,7 @@
     },
     {
       "id": "docs-agent-reference",
-      "href": "docs/agent/reference.md",
+      "href": "docs/AGENT-REFERENCE.md",
       "source": "../docs/AGENT-REFERENCE.md",
       "kind": "copy",
       "owner": "unit-5",
@@ -107,7 +107,7 @@
     },
     {
       "id": "docs-source-contract",
-      "href": "docs/source-contract/index.md",
+      "href": "docs/product/source-contract.md",
       "source": "../docs/product/source-contract.md",
       "kind": "copy",
       "owner": "unit-5",
@@ -125,6 +125,142 @@
       "id": "llms",
       "href": "llms.txt",
       "source": "llms.txt",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "product-requirements",
+      "href": "PRODUCT-REQUIREMENTS.md",
+      "source": "../PRODUCT-REQUIREMENTS.md",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "docs-architecture",
+      "href": "docs/ARCHITECTURE.md",
+      "source": "../docs/ARCHITECTURE.md",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "docs-testing",
+      "href": "docs/TESTING.md",
+      "source": "../docs/TESTING.md",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "generated-source-contract",
+      "href": "docs/generated/source-contract.json",
+      "source": "../docs/generated/source-contract.json",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "generated-extension-schema",
+      "href": "docs/generated/extension-proposal.schema.json",
+      "source": "../docs/generated/extension-proposal.schema.json",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "generated-extension-template",
+      "href": "docs/generated/extension-proposal.template.json",
+      "source": "../docs/generated/extension-proposal.template.json",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "examples-manifest",
+      "href": "examples/manifest.json",
+      "source": "../examples/manifest.json",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "source-basic",
+      "href": "examples/basic/report.md",
+      "source": "../examples/basic/report.md",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "source-research",
+      "href": "examples/research/report.md",
+      "source": "../examples/research/report.md",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "source-architecture",
+      "href": "examples/architecture/report.md",
+      "source": "../examples/architecture/report.md",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "source-tutorial",
+      "href": "examples/tutorial/report.md",
+      "source": "../examples/tutorial/report.md",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "source-dashboard",
+      "href": "examples/dashboard/report.md",
+      "source": "../examples/dashboard/report.md",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "source-landing-starter",
+      "href": "examples/landing/report.md",
+      "source": "../examples/landing/report.md",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "source-interactive-catalog",
+      "href": "examples/interactive-catalog/report.md",
+      "source": "../examples/interactive-catalog/report.md",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "source-visualization-catalog",
+      "href": "examples/visualization-catalog/report.md",
+      "source": "../examples/visualization-catalog/report.md",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "canonical-landing-source",
+      "href": "website/landing/report.md",
+      "source": "landing/report.md",
+      "kind": "copy",
+      "owner": "unit-5",
+      "state": "staged-ready"
+    },
+    {
+      "id": "route-manifest",
+      "href": "website/routes.json",
+      "source": "routes.json",
       "kind": "copy",
       "owner": "unit-5",
       "state": "staged-ready"

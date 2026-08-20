@@ -52,8 +52,8 @@ absolute entry paths from the CLI adapter.
 The ESM API exposes the same data through `getSourceContract()`, `getAuthoringSchema(scope)`, and
 `listExamples()`. The first two return defensive values rather than public Zod instances; `listExamples()`
 returns package-relative example identities and entry paths, while the CLI resolves entries to absolute
-installed paths. Checked
-JSON projections are under [`generated/`](generated/), and the hash-bound packaged inventory is
+installed paths. The complete checked JSON projection is
+[`generated/source-contract.json`](generated/source-contract.json), and the hash-bound packaged inventory is
 [`../examples/manifest.json`](../examples/manifest.json). Agents should inspect these contracts instead of
 inferring unsupported fields.
 
@@ -225,11 +225,11 @@ The same inventory also contains the six initializable starters. Starters are bu
 The registry also exposes three non-starter, decision-oriented examples. They are ordinary public source
 trees rather than templates or a separate showcase system:
 
-| ID                                                  | Page shape | Intended review                                                                          |
-| --------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------- |
-| [`incident-review`](../examples/incident-review/)   | `mixed`    | Service impact, causal evidence, recovery, and owned follow-up                           |
-| [`vendor-decision`](../examples/vendor-decision/)   | `document` | Mandatory procurement gates, weighted evidence, and conditional adoption                 |
-| [`launch-readiness`](../examples/launch-readiness/) | `landing`  | Audience value, activation/funnel evidence, launch gates, and a reversible regional beta |
+| ID                                                           | Page shape | Intended review                                                                          |
+| ------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------- |
+| [`incident-review`](../examples/incident-review/report.md)   | `mixed`    | Service impact, causal evidence, recovery, and owned follow-up                           |
+| [`vendor-decision`](../examples/vendor-decision/report.md)   | `document` | Mandatory procurement gates, weighted evidence, and conditional adoption                 |
+| [`launch-readiness`](../examples/launch-readiness/report.md) | `landing`  | Audience value, activation/funnel evidence, launch gates, and a reversible regional beta |
 
 From a checkout containing the package-owned source paths:
 
@@ -268,7 +268,7 @@ The CLI and ESM entry read this floor from installed package metadata before acc
 runtime exits with code `1` and `NODE_VERSION_UNSUPPORTED`; an ESM import throws `AgenticReportError` with
 the same diagnostic. Neither path continues after npm's engine warning.
 
-The repository's canonical product proof is [`../website/landing`](../website/landing/). Its example cards
+The repository's canonical product proof is [`../website/landing/report.md`](../website/landing/report.md). Its example cards
 link to separately publishable incident-review, vendor-decision, and launch-readiness pages plus direct
 public Markdown source routes. [`../website/routes.json`](../website/routes.json) owns those relative route
 identities for deterministic static staging; a screenshot alone is never treated as the live example.

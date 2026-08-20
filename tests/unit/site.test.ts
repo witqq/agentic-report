@@ -2,6 +2,10 @@ import { createHash } from 'node:crypto';
 import { lstat, mkdir, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import type { Link } from 'mdast';
+import remarkParse from 'remark-parse';
+import { unified } from 'unified';
+import { visit } from 'unist-util-visit';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { parse as parseYaml } from 'yaml';
 
@@ -130,13 +134,20 @@ const createSiteFixture = async (
 };
 
 const extractInternalLinks = (source: string, route: string): string[] => {
-  const htmlLinks = [...source.matchAll(/\bhref="([^"]+)"/gu)].flatMap((match) =>
-    match[1] === undefined ? [] : [match[1]],
-  );
-  const markdownLinks = [...source.matchAll(/(?<!!)\[[^\]]+\]\(([^)]+)\)/gu)].flatMap((match) =>
-    match[1] === undefined ? [] : [match[1]],
-  );
-  return [...htmlLinks, ...markdownLinks]
+  const links: string[] = [];
+  if (route.endsWith('.md')) {
+    const tree = unified().use(remarkParse).parse(source);
+    visit(tree, 'link', (node: Link) => {
+      links.push(node.url);
+    });
+  } else if (route.endsWith('.html')) {
+    links.push(
+      ...[...source.matchAll(/\bhref="([^"]+)"/gu)].flatMap((match) =>
+        match[1] === undefined ? [] : [match[1]],
+      ),
+    );
+  }
+  return links
     .filter(
       (href) =>
         !href.startsWith('#') &&
@@ -209,7 +220,12 @@ describe('deterministic public site staging', () => {
     const declared = new Set(routes.map((route) => route.href));
     const navigable = new Set(
       routes
-        .filter((route) => route.kind === 'page' || ['docs-agent', 'llms'].includes(route.id))
+        .filter(
+          (route) =>
+            route.kind === 'page' ||
+            route.href.startsWith('docs/') ||
+            ['PRODUCT-REQUIREMENTS.md', 'llms.txt'].includes(route.href),
+        )
         .map((route) => route.href),
     );
     expect(await crawlRoutes(firstSite, declared, navigable)).toEqual(declared);
@@ -222,6 +238,15 @@ describe('deterministic public site staging', () => {
         'docs/deliberately-missing.md',
       ),
     ).rejects.toThrow(/ENOENT/u);
+  });
+
+  it('follows real Markdown links while ignoring illustrative links in fenced code', () => {
+    expect(
+      extractInternalLinks(
+        '```md\n[Illustrative only](missing.md)\n```\n\n[Follow this](present.md)\n',
+        'docs/reference.md',
+      ),
+    ).toEqual(['docs/present.md']);
   });
 
   it('copies direct documentation and skill bytes and records every staged hash', async () => {

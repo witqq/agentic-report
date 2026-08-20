@@ -71,6 +71,22 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
   await expect(
     page.getByText('npx --yes agentic-report@0.2.0 init ./my-page', { exact: false }).first(),
   ).toBeVisible();
+  await expect(page.getByRole('link', { name: 'complete agent reference' })).toHaveAttribute(
+    'href',
+    '../AGENT-REFERENCE.md',
+  );
+  await page.getByRole('link', { name: 'complete agent reference' }).click();
+  await expect(page.locator('body')).toContainText('This is the copyable reference');
+
+  await page.goto(fileUrl('docs/agent/index.html'));
+  await expect(page.getByRole('link', { name: 'declarative source contract' })).toHaveAttribute(
+    'href',
+    '../product/source-contract.md',
+  );
+  await page.getByRole('link', { name: 'declarative source contract' }).click();
+  await expect(page.locator('body')).toContainText(
+    'This document defines the current author-facing input',
+  );
 
   await page.goto(fileUrl('docs/agent/index.md'));
   await expect(page.locator('body')).toContainText('npx --yes agentic-report@0.2.0 validate');

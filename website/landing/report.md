@@ -67,7 +67,7 @@ tokens:
 **Fictional showcase · 19 August 2026 · conditional go**
 ```
 
-[Read the complete launch source](examples/launch-readiness/source/report.md)
+[Read the complete launch source](examples/launch-readiness/report.md)
 :::
 :::card{title="Compiled result"}
 ![Decision-oriented launch page with navigation, evidence cards, charts, and a timeline](assets/launch-readiness.png)
@@ -124,7 +124,7 @@ evidence tabs, response timeline, and accountable action register.
 
 **What to try:** switch the Evidence and limits tabs, then open the customer communication disclosure.
 
-[Open live example](examples/incident-review/index.html) · [View declarative source](examples/incident-review/source/report.md)
+[Open live example](examples/incident-review/index.html) · [View declarative source](examples/incident-review/report.md)
 :::
 :::card{title="AI support vendor decision"}
 ![Fictional vendor decision showing hard gates and weighted evidence](assets/vendor-decision.png)
@@ -134,7 +134,7 @@ the highest-scoring candidate is not eligible.
 
 **What to try:** open the ranking explanation and the reviewer evidence checklist.
 
-[Open live example](examples/vendor-decision/index.html) · [View declarative source](examples/vendor-decision/source/report.md)
+[Open live example](examples/vendor-decision/index.html) · [View declarative source](examples/vendor-decision/report.md)
 :::
 :::card{title="Regional beta launch readiness"}
 ![Fictional launch review showing audience value and activation evidence](assets/launch-readiness.png)
@@ -144,7 +144,7 @@ and a reversible rollout.
 
 **What to try:** switch the audience tabs and reveal the automatic hold condition.
 
-[Open live example](examples/launch-readiness/index.html) · [View declarative source](examples/launch-readiness/source/report.md)
+[Open live example](examples/launch-readiness/index.html) · [View declarative source](examples/launch-readiness/report.md)
 :::
 ::::
 :::::
@@ -225,7 +225,7 @@ npx --yes agentic-report build ./website/landing --output ./site/index.html --js
   :::
   ::::
 
-[Architecture](docs/agent/reference.md) · [Source contract](docs/source-contract/index.md) · [MIT license](https://github.com/witqq/agentic-report/blob/main/LICENSE)
+[Architecture](docs/ARCHITECTURE.md) · [Source contract](docs/product/source-contract.md) · [MIT license](https://github.com/witqq/agentic-report/blob/main/LICENSE)
 :::::
 
 :::::section{title="For humans and agents." id="docs" nav="Docs" width="wide" align="start" tone="soft"}
@@ -244,7 +244,7 @@ browser JavaScript required.
 :::card{title="Source contract and skill"}
 Use the closed authoring reference and canonical skill without downloading a documentation application.
 
-[Read the source contract](docs/source-contract/index.md) · [Open the skill](skills/agentic-report/SKILL.md)
+[Read the source contract](docs/product/source-contract.md) · [Open the skill](skills/agentic-report/SKILL.md)
 :::
 ::::
 

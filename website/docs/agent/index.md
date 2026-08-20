@@ -50,7 +50,7 @@ npx --yes agentic-report@0.2.0 schema --scope source
 npx --yes agentic-report@0.2.0 examples --json
 ```
 
-Read the [complete agent reference](reference.md), the [declarative source contract](../source-contract/index.md),
+Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),
 or the [agentic-report skill](../../skills/agentic-report/SKILL.md) when more guidance is needed.
 
 ## Boundaries

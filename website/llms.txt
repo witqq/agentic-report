@@ -4,8 +4,8 @@
 
 - Agent quickstart: docs/agent/index.md
 - Human documentation: docs/index.html
-- Complete agent reference: docs/agent/reference.md
-- Declarative source contract: docs/source-contract/index.md
+- Complete agent reference: docs/AGENT-REFERENCE.md
+- Declarative source contract: docs/product/source-contract.md
 - Agent skill: skills/agentic-report/SKILL.md
 - Incident review demo: examples/incident-review/index.html
 - Vendor decision demo: examples/vendor-decision/index.html

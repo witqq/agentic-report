@@ -87,17 +87,17 @@ describe('public landing product proof', () => {
       {
         id: 'incident-review',
         live: 'examples/incident-review/index.html',
-        source: 'examples/incident-review/source/report.md',
+        source: 'examples/incident-review/report.md',
       },
       {
         id: 'vendor-decision',
         live: 'examples/vendor-decision/index.html',
-        source: 'examples/vendor-decision/source/report.md',
+        source: 'examples/vendor-decision/report.md',
       },
       {
         id: 'launch-readiness',
         live: 'examples/launch-readiness/index.html',
-        source: 'examples/launch-readiness/source/report.md',
+        source: 'examples/launch-readiness/report.md',
       },
     ] as const;
 

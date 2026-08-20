@@ -95,14 +95,18 @@ test('landing proof links identify separately publishable examples and their pub
   test.skip(testInfo.project.name !== 'desktop-chromium');
   await page.goto(landingArtifacts[0].url);
   const expectedLinks = [
-    ['examples/incident-review/index.html', 'examples/incident-review/source/report.md'],
-    ['examples/vendor-decision/index.html', 'examples/vendor-decision/source/report.md'],
-    ['examples/launch-readiness/index.html', 'examples/launch-readiness/source/report.md'],
+    ['examples/incident-review/index.html', 'examples/incident-review/report.md'],
+    ['examples/vendor-decision/index.html', 'examples/vendor-decision/report.md'],
+    ['examples/launch-readiness/index.html', 'examples/launch-readiness/report.md'],
   ] as const;
   for (const [live, source] of expectedLinks) {
     await expect(page.locator(`#examples a[href="${live}"]`)).toHaveCount(1);
     await expect(page.locator(`#examples a[href="${source}"]`)).toHaveCount(1);
   }
+  await expect(page.getByRole('link', { name: 'Architecture', exact: true })).toHaveAttribute(
+    'href',
+    'docs/ARCHITECTURE.md',
+  );
 
   const provenance = JSON.parse(
     await readFile(path.resolve('website/landing/assets/screenshots.json'), 'utf8'),
