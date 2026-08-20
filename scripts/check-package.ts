@@ -31,13 +31,33 @@ if (typeof sourcePackage.version !== 'string') {
 const releaseVersion = sourcePackage.version;
 const packageDirectory = path.resolve('test-results/package');
 await mkdir(packageDirectory, { recursive: true });
-await execFileAsync('pnpm', ['pack', '--pack-destination', packageDirectory]);
-const tarballs = (await readdir(packageDirectory)).filter((file) => file.endsWith('.tgz')).sort();
-const tarball = tarballs.at(-1);
-if (tarball === undefined) {
-  throw new Error('pnpm pack did not create a tarball.');
+const packageRunDirectory = await mkdtemp(path.join(packageDirectory, 'candidate-'));
+const npmPackCacheDirectory = path.join(packageRunDirectory, '.npm-cache');
+const npmPackEnvironment: NodeJS.ProcessEnv = {
+  PATH: [executableDirectory, '/usr/local/bin', '/usr/bin', '/bin'].join(path.delimiter),
+  CI: 'true',
+  NO_COLOR: '1',
+  npm_config_cache: npmPackCacheDirectory,
+  npm_config_update_notifier: 'false',
+};
+const npmPackArgv = [
+  'pack',
+  '--json',
+  '--ignore-scripts',
+  '--pack-destination',
+  packageRunDirectory,
+] as const;
+const npmPackOutcome = await execFileAsync(npmExecutable, npmPackArgv, {
+  maxBuffer: 10 * 1024 * 1024,
+  env: npmPackEnvironment,
+});
+const npmPackRecords: unknown = JSON.parse(npmPackOutcome.stdout);
+if (!Array.isArray(npmPackRecords) || npmPackRecords.length !== 1) {
+  throw new Error('npm pack --json did not return exactly one package record.');
 }
-const tarballPath = path.join(packageDirectory, tarball);
+const npmPackRecord = requireRecord(npmPackRecords[0], 'npm pack record');
+const tarballFilename = requireString(npmPackRecord.filename, 'npm pack filename');
+const tarballPath = path.join(packageRunDirectory, tarballFilename);
 const { stdout: listing } = await execFileAsync('tar', ['-tf', tarballPath]);
 const packedFiles = listing.trim().split('\n').sort();
 const expectedPackedFiles = await expectedTarballFiles();
@@ -55,9 +75,31 @@ if (missingPackedFiles.length > 0 || unexpectedPackedFiles.length > 0) {
   );
 }
 await assertPackedContentIsPublishSafe(tarballPath, packedFiles);
-const tarballSha256 = createHash('sha256')
-  .update(await readFile(tarballPath))
-  .digest('hex');
+const tarballBytes = await readFile(tarballPath);
+const tarballSha256 = createHash('sha256').update(tarballBytes).digest('hex');
+const tarballShasum = createHash('sha1').update(tarballBytes).digest('hex');
+const tarballIntegrity = `sha512-${createHash('sha512').update(tarballBytes).digest('base64')}`;
+const tarballSize = (await lstat(tarballPath)).size;
+const extractedDirectory = path.join(packageRunDirectory, 'extracted');
+await mkdir(extractedDirectory);
+await execFileAsync('tar', ['-xf', tarballPath, '-C', extractedDirectory]);
+const packedInventory = await Promise.all(
+  packedFiles.map(async (file) => {
+    const bytes = await readFile(path.join(extractedDirectory, ...file.split('/')));
+    return {
+      path: file,
+      size: bytes.byteLength,
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+    };
+  }),
+);
+assertNpmPackRecord(npmPackRecord, {
+  tarballFilename,
+  tarballShasum,
+  tarballIntegrity,
+  tarballSize,
+  packedInventory,
+});
 const cli = await readFile(path.resolve('dist/node/cli.js'), 'utf8');
 if (!cli.startsWith('#!/usr/bin/env node')) {
   throw new Error('CLI build is missing its Node shebang.');
@@ -991,7 +1033,7 @@ if (
 }
 
 await writeFile(
-  path.join(packageDirectory, 'candidate-evidence.json'),
+  path.join(packageRunDirectory, 'candidate-evidence.json'),
   `${JSON.stringify(
     {
       evidenceKind: 'local-packed-candidate',
@@ -1000,6 +1042,15 @@ await writeFile(
       runtime: { executable: process.execPath, version: process.versions.node },
       npm: { executable: npmExecutable, version: npmVersionOutput.trim() },
       npx: { executable: npxExecutable, version: npxVersionOutput.trim() },
+      npmPack: {
+        cwd: path.resolve('.'),
+        argv: npmPackArgv,
+        cacheDirectory: npmPackCacheDirectory,
+        environment: npmPackEnvironment,
+        exitCode: 0,
+        stdout: npmPackOutcome.stdout,
+        stderr: npmPackOutcome.stderr,
+      },
       preflight: {
         consumerDirectory,
         npmCacheDirectory,
@@ -1013,7 +1064,12 @@ await writeFile(
       tarball: {
         path: tarballPath,
         sha256: tarballSha256,
+        integrity: tarballIntegrity,
+        shasum: tarballShasum,
+        size: tarballSize,
+        unpackedSize: packedInventory.reduce((total, file) => total + file.size, 0),
         files: packedFiles.length,
+        inventory: packedInventory,
         packageVersion: releaseVersion,
       },
       install: {
@@ -1043,8 +1099,70 @@ await writeFile(
 );
 
 console.log(
-  `Package and clean npm consumer verified: ${tarballPath} (sha256 ${tarballSha256}, ${packedFiles.length} files)`,
+  `Package and clean npm consumer verified: ${tarballPath} (sha256 ${tarballSha256}, integrity ${tarballIntegrity}, shasum ${tarballShasum}, ${tarballSize} bytes, ${packedFiles.length} files)`,
 );
+
+function assertNpmPackRecord(
+  record: Readonly<Record<string, unknown>>,
+  expected: {
+    readonly tarballFilename: string;
+    readonly tarballShasum: string;
+    readonly tarballIntegrity: string;
+    readonly tarballSize: number;
+    readonly packedInventory: readonly {
+      readonly path: string;
+      readonly size: number;
+      readonly sha256: string;
+    }[];
+  },
+): void {
+  const npmFiles = record.files;
+  if (!Array.isArray(npmFiles)) {
+    throw new Error('npm pack record does not contain a files array.');
+  }
+  const npmInventory = npmFiles
+    .map((value) => {
+      const file = requireRecord(value, 'npm pack file');
+      return {
+        path: `package/${requireString(file.path, 'npm pack file path')}`,
+        size: requireNumber(file.size, 'npm pack file size'),
+      };
+    })
+    .sort(compareInventoryPaths);
+  const expectedInventory = expected.packedInventory
+    .map(({ path: file, size }) => ({ path: file, size }))
+    .sort(compareInventoryPaths);
+  const unpackedSize = expected.packedInventory.reduce((total, file) => total + file.size, 0);
+  const mismatches = [
+    ['id', record.id, `agentic-report@${releaseVersion}`],
+    ['name', record.name, 'agentic-report'],
+    ['version', record.version, releaseVersion],
+    ['filename', record.filename, expected.tarballFilename],
+    ['shasum', record.shasum, expected.tarballShasum],
+    ['integrity', record.integrity, expected.tarballIntegrity],
+    ['size', record.size, expected.tarballSize],
+    ['unpackedSize', record.unpackedSize, unpackedSize],
+    ['entryCount', record.entryCount, expected.packedInventory.length],
+    ['files', npmInventory, expectedInventory],
+  ].filter(([, actual, wanted]) => JSON.stringify(actual) !== JSON.stringify(wanted));
+  if (mismatches.length > 0) {
+    throw new Error(
+      `npm pack metadata differs from the extracted tarball bytes: ${mismatches
+        .map(
+          ([field, actual, wanted]) =>
+            `${String(field)}=${JSON.stringify(actual)} expected ${JSON.stringify(wanted)}`,
+        )
+        .join('; ')}`,
+    );
+  }
+}
+
+function compareInventoryPaths(
+  left: { readonly path: string },
+  right: { readonly path: string },
+): number {
+  return left.path < right.path ? -1 : left.path > right.path ? 1 : 0;
+}
 
 async function expectedTarballFiles(): Promise<string[]> {
   const expected = new Set([
@@ -1310,6 +1428,18 @@ function requireRecord(value: unknown, label: string): Readonly<Record<string, u
     throw new Error(`${label} must be an object.`);
   }
   return value as Readonly<Record<string, unknown>>;
+}
+
+function requireString(value: unknown, label: string): string {
+  if (typeof value !== 'string') throw new Error(`${label} must be a string.`);
+  return value;
+}
+
+function requireNumber(value: unknown, label: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`${label} must be a finite number.`);
+  }
+  return value;
 }
 
 function redactCredentialPath(value: string): string {

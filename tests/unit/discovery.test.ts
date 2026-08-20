@@ -23,6 +23,14 @@ import { authoringRegistry } from '../../src/authoring/registry.js';
 import { parseReportManifest } from '../../src/authoring/schemas.js';
 
 const execFileAsync = promisify(execFile);
+type PublicPageKeys = keyof ReturnType<typeof getSourceContract>['page'];
+type ExpectedPublicPageKeys = keyof typeof authoringRegistry.page | 'tokenResolution';
+type SameKeys<Left, Right> = [Left] extends [Right]
+  ? [Right] extends [Left]
+    ? true
+    : false
+  : false;
+const publicPageKeysAreExact: SameKeys<PublicPageKeys, ExpectedPublicPageKeys> = true;
 
 describe('agent discovery contract', () => {
   it('projects all public contract identities and format-derived runtime placement', () => {
@@ -45,11 +53,17 @@ describe('agent discovery contract', () => {
       layouts: authoringRegistry.page.layouts,
       defaultTheme: authoringRegistry.page.defaultTheme,
       themes: authoringRegistry.page.themes,
+      defaultScrollProgress: authoringRegistry.page.defaultScrollProgress,
+      motion: authoringRegistry.page.motion,
       tokenResolution: {
         defaultsFrom: 'selected-preset',
         precedence: ['selected-preset', 'explicit-tokens'],
       },
     });
+    expect(publicPageKeysAreExact).toBe(true);
+    expect(Object.keys(contract.page).sort()).toEqual(
+      [...Object.keys(authoringRegistry.page), 'tokenResolution'].sort(),
+    );
     expect(contract.page.tokens).toEqual(
       authoringRegistry.page.tokens.map((token) => ({
         ...token,

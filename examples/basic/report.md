@@ -15,6 +15,9 @@ tokens:
 
 # Release decision report
 
+**Fictional sample.** Every metric, status, organization, and decision on this page exists only to
+demonstrate the report engine; replace it with verified project evidence before use.
+
 This starter organizes a real review: the decision, the evidence behind it, the remaining risk, and the
 next accountable steps. Replace the sample facts while keeping the semantic structure.
 

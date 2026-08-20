@@ -44,19 +44,13 @@ type PublicPageToken = (typeof authoringRegistry.page.tokens)[number] & {
   readonly defaultVisibility: 'normalization-only';
 };
 
-interface PublicPageContract {
-  readonly defaultPreset: typeof authoringRegistry.page.defaultPreset;
-  readonly presets: typeof authoringRegistry.page.presets;
-  readonly defaultLayout: typeof authoringRegistry.page.defaultLayout;
-  readonly layouts: typeof authoringRegistry.page.layouts;
-  readonly defaultTheme: typeof authoringRegistry.page.defaultTheme;
-  readonly themes: typeof authoringRegistry.page.themes;
+type PublicPageContract = Omit<typeof authoringRegistry.page, 'tokens'> & {
   readonly tokens: readonly PublicPageToken[];
   readonly tokenResolution: {
     readonly defaultsFrom: 'selected-preset';
     readonly precedence: readonly ['selected-preset', 'explicit-tokens'];
   };
-}
+};
 
 interface DirectiveContract {
   readonly description: string;

@@ -14,6 +14,9 @@ tokens:
 
 # Delivery health dashboard
 
+**Fictional sample.** Every metric, status, organization, and decision on this page exists only to
+demonstrate the report engine; replace it with verified project evidence before use.
+
 Current signals for a release candidate, arranged for scanning without introducing a separate dashboard
 framework.
 

@@ -11,6 +11,9 @@ scrollProgress: true
 
 # From Markdown to a page worth sharing
 
+**Fictional sample.** Every metric, status, organization, and decision on this page exists only to
+demonstrate the report engine; replace it with verified project evidence before use.
+
 Give an agent a declarative source, not a frontend project. Build reports, research, architecture notes,
 tutorials, dashboards, and landing pages that open directly from disk.
 

@@ -14,6 +14,9 @@ tokens:
 
 # Architecture decision record
 
+**Fictional sample.** Every metric, status, organization, and decision on this page exists only to
+demonstrate the report engine; replace it with verified project evidence before use.
+
 A focused reading surface for a decision, its evidence, and the path from constraints to rollout.
 
 :::callout{kind="info" title="Decision status"}

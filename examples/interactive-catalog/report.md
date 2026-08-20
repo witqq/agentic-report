@@ -15,6 +15,9 @@ tokens:
 
 # Interactive component catalog
 
+**Fictional sample.** Every metric, status, organization, and decision on this page exists only to
+demonstrate the report engine; replace it with verified project evidence before use.
+
 This page demonstrates package-owned behavior authored entirely as Markdown directives. A
 :term[Decision packet]{key="decision-packet"} keeps a reusable definition close to the exact language it
 explains.

@@ -15,6 +15,9 @@ tokens:
 
 # Delivery control room
 
+**Fictional sample.** Every metric, status, organization, and decision on this page exists only to
+demonstrate the report engine; replace it with verified project evidence before use.
+
 This starter keeps current signals scan-friendly while preserving the evidence and owner behind each state.
 
 ::::cards

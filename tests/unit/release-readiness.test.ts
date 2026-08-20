@@ -1,6 +1,9 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import matter from 'gray-matter';
+import remarkParse from 'remark-parse';
+import { unified } from 'unified';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { inspectExecutableSearch } from '../../scripts/package-provenance.ts';
@@ -13,6 +16,58 @@ afterEach(async () => {
 });
 
 describe('release provenance', () => {
+  it('labels every packaged example as fictional before its first evidence claims', async () => {
+    const manifest = JSON.parse(await readFile(path.resolve('examples/manifest.json'), 'utf8')) as {
+      readonly examples: readonly {
+        readonly id: string;
+        readonly path: string;
+        readonly entry: string;
+      }[];
+    };
+
+    expect(manifest.examples).toHaveLength(15);
+    for (const example of manifest.examples) {
+      const source = await readFile(path.resolve('examples', example.path, example.entry), 'utf8');
+      expect(fictionalMarkerIssue(source), example.id).toBeUndefined();
+    }
+
+    expect(
+      fictionalMarkerIssue(
+        '# Dashboard\n\n142 checks passed in production.\n\n**Fictional sample.** Replace this.\n',
+      ),
+    ).toBe('first visible block after H1 is not a fictional notice');
+    expect(
+      fictionalMarkerIssue(
+        '# Dashboard\n\n```markdown\n**Fictional sample.** Hidden example.\n```\n',
+      ),
+    ).toBe('first visible block after H1 is not a fictional notice');
+    expect(
+      fictionalMarkerIssue(
+        '```markdown\n# Fake heading\n**Fictional sample.** Hidden example.\n```\n\n# Real dashboard\n\n142 checks passed in production.\n',
+      ),
+    ).toBe('first visible block is not H1');
+    expect(
+      fictionalMarkerIssue(
+        '~~~~markdown\n# Fake heading\n**Fictional sample.** Hidden example.\n~~~~\n\n# Real dashboard\n\n142 checks passed in production.\n',
+      ),
+    ).toBe('first visible block is not H1');
+    expect(
+      fictionalMarkerIssue(
+        '\t```markdown\n# Real dashboard\n\n142 checks passed in production.\n```\n# Fake heading\n**Fictional sample.** Hidden example.\n',
+      ),
+    ).toBe('first visible block is not H1');
+    expect(
+      fictionalMarkerIssue(
+        '142 checks passed in production.\n\n# Dashboard\n\n**Fictional sample.** Too late.\n',
+      ),
+    ).toBe('first visible block is not H1');
+    expect(
+      fictionalMarkerIssue(
+        '# Dashboard\n\n**`142 checks passed`Fictional sample.** Hidden after a visible claim.\n',
+      ),
+    ).toBe('first visible block after H1 is not a fictional notice');
+  });
+
   it('finds an executable present only in a later search directory', async () => {
     const workspace = await createTestWorkspace('release-executable-search');
     workspaces.push(workspace);
@@ -82,4 +137,25 @@ function registryCommands(block: string): string[] {
   return block
     .split('\n')
     .filter((line) => line.includes('"$release_npm"') || line.includes('"$release_npx"'));
+}
+
+function fictionalMarkerIssue(source: string): string | undefined {
+  let content: string;
+  try {
+    content = matter(source).content;
+  } catch {
+    return 'frontmatter is not closed';
+  }
+  const blocks = unified().use(remarkParse).parse(content).children;
+  const h1 = blocks[0];
+  if (h1 === undefined) return 'first H1 is missing';
+  if (h1.type !== 'heading' || h1.depth !== 1) return 'first visible block is not H1';
+  const firstVisible = blocks[1];
+  if (firstVisible === undefined) return 'visible fictional notice is missing';
+  const firstInline = firstVisible.type === 'paragraph' ? firstVisible.children[0] : undefined;
+  const markerStart = firstInline?.type === 'strong' ? firstInline.children[0] : undefined;
+  const marker = markerStart?.type === 'text' ? markerStart.value : '';
+  return /^(?:Fictional sample\.|Fictional showcase ·)/u.test(marker)
+    ? undefined
+    : 'first visible block after H1 is not a fictional notice';
 }
