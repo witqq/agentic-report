@@ -1,10 +1,26 @@
 import { execFile, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
+import { chromium } from '@playwright/test';
+
+import { inspectExecutableSearch } from './package-provenance.ts';
+
 const execFileAsync = promisify(execFile);
+const executableDirectory = path.dirname(process.execPath);
+const npmExecutable = path.join(
+  executableDirectory,
+  process.platform === 'win32' ? 'npm.cmd' : 'npm',
+);
+const npxExecutable = path.join(
+  executableDirectory,
+  process.platform === 'win32' ? 'npx.cmd' : 'npx',
+);
+const { stdout: npmVersionOutput } = await execFileAsync(npmExecutable, ['--version']);
+const { stdout: npxVersionOutput } = await execFileAsync(npxExecutable, ['--version']);
 const sourcePackage = requireRecord(
   JSON.parse(await readFile(path.resolve('package.json'), 'utf8')) as unknown,
   'source package metadata',
@@ -51,26 +67,77 @@ const consumersDirectory = path.resolve('test-results/package-consumers');
 await mkdir(consumersDirectory, { recursive: true });
 const consumerDirectory = await mkdtemp(path.join(consumersDirectory, 'consumer-'));
 const npmCacheDirectory = path.join(consumerDirectory, '.npm-cache');
+const candidateExecutableSearchDirectories = [
+  ...new Set(
+    process.platform === 'win32'
+      ? [
+          executableDirectory,
+          ...(process.env.PATH ?? '').split(path.delimiter).filter((value) => value !== ''),
+        ]
+      : [executableDirectory, '/usr/local/bin', '/usr/bin', '/bin'],
+  ),
+];
+const candidateExecutableNames =
+  process.platform === 'win32'
+    ? ([
+        'agentic-report.cmd',
+        'agentic-report.exe',
+        'agentic-report.bat',
+        'agentic-report',
+      ] as const)
+    : (['agentic-report'] as const);
+const { checks: globalExecutableChecks, allAbsent: globalExecutableAbsent } =
+  await inspectExecutableSearch(candidateExecutableSearchDirectories, candidateExecutableNames);
+const candidateInstallEnvironment: NodeJS.ProcessEnv = {
+  PATH: candidateExecutableSearchDirectories.join(path.delimiter),
+  CI: 'true',
+  NO_COLOR: '1',
+  npm_config_cache: npmCacheDirectory,
+  npm_config_update_notifier: 'false',
+  ...(process.platform === 'win32' && process.env.SystemRoot !== undefined
+    ? { SystemRoot: process.env.SystemRoot }
+    : {}),
+  ...(process.platform === 'win32' && process.env.ComSpec !== undefined
+    ? { ComSpec: process.env.ComSpec }
+    : {}),
+  ...(process.platform === 'win32' && process.env.PATHEXT !== undefined
+    ? { PATHEXT: process.env.PATHEXT }
+    : {}),
+};
+const candidateNpxEnvironment: NodeJS.ProcessEnv = {
+  ...candidateInstallEnvironment,
+  npm_config_offline: 'true',
+};
+if (
+  (await pathExists(path.join(consumerDirectory, 'node_modules'))) ||
+  !globalExecutableAbsent ||
+  (await pathExists(npmCacheDirectory))
+) {
+  throw new Error(
+    'Clean consumer preflight found a checkout link, global executable, or reused cache.',
+  );
+}
 await writeFile(
   path.join(consumerDirectory, 'package.json'),
   JSON.stringify({ name: 'agentic-report-package-consumer', private: true }),
 );
-await execFileAsync(
-  'npm',
-  [
-    'install',
-    '--ignore-scripts',
-    '--package-lock=false',
-    '--no-audit',
-    '--no-fund',
-    '--no-update-notifier',
-    '--loglevel=error',
-    '--cache',
-    npmCacheDirectory,
-    tarballPath,
-  ],
-  { cwd: consumerDirectory, timeout: 120_000 },
-);
+const installArgv = [
+  'install',
+  '--ignore-scripts',
+  '--package-lock=false',
+  '--no-audit',
+  '--no-fund',
+  '--no-update-notifier',
+  '--loglevel=error',
+  '--cache',
+  npmCacheDirectory,
+  tarballPath,
+] as const;
+const installOutcome = await execFileAsync(npmExecutable, installArgv, {
+  cwd: consumerDirectory,
+  timeout: 120_000,
+  env: candidateInstallEnvironment,
+});
 const installedExampleManifest = requireRecord(
   JSON.parse(
     await readFile(
@@ -122,6 +189,22 @@ if (
   throw new Error('Installed package license differs from the repository license.');
 }
 if (
+  !(
+    await readFile(
+      path.join(
+        consumerDirectory,
+        'node_modules',
+        'agentic-report',
+        'skills',
+        'agentic-report',
+        'SKILL.md',
+      ),
+    )
+  ).equals(await readFile(path.resolve('skills/agentic-report/SKILL.md')))
+) {
+  throw new Error('Installed canonical skill bytes differ from the repository skill.');
+}
+if (
   installedExampleManifest.status !== 'complete' ||
   JSON.stringify(installedExampleManifest.missingShowcaseClasses) !== JSON.stringify([])
 ) {
@@ -134,6 +217,73 @@ const binary = path.join(
   '.bin',
   process.platform === 'win32' ? 'agentic-report.cmd' : 'agentic-report',
 );
+const installedBinaryTarget = path.join(
+  consumerDirectory,
+  'node_modules',
+  'agentic-report',
+  'dist',
+  'node',
+  'cli.js',
+);
+const binaryIdentity = {
+  localShim: binary,
+  localShimRealpath: await realpath(binary),
+  packageBinTarget: installedBinaryTarget,
+};
+if (
+  !(await pathExists(installedBinaryTarget)) ||
+  (process.platform !== 'win32' && binaryIdentity.localShimRealpath !== installedBinaryTarget)
+) {
+  throw new Error('Installed local CLI shim does not resolve to the declared package bin target.');
+}
+const resolutionCommand =
+  process.platform === 'win32' ? 'where agentic-report' : 'command -v agentic-report';
+const resolutionArgv = ['--no-install', '--call', resolutionCommand] as const;
+const resolutionOutcome = await runCommand(
+  npxExecutable,
+  resolutionArgv,
+  consumerDirectory,
+  candidateNpxEnvironment,
+);
+const resolvedExecutableCandidates = resolutionOutcome.stdout.trim().split(/\r?\n/u);
+if (
+  resolutionOutcome.exitCode !== 0 ||
+  resolutionOutcome.stderr !== '' ||
+  resolvedExecutableCandidates[0] !== binary
+) {
+  throw new Error('Local-only npx did not resolve agentic-report to the installed consumer shim.');
+}
+const candidateNpxEvidence: {
+  readonly cwd: string;
+  readonly argv: readonly string[];
+  readonly resolvedExecutable: typeof binaryIdentity;
+  readonly exitCode: number | null;
+  readonly stdout: string;
+  readonly stderr: string;
+}[] = [];
+const runCandidateNpx = async (
+  arguments_: readonly string[],
+  cwd: string,
+): Promise<{
+  readonly exitCode: number | null;
+  readonly stdout: string;
+  readonly stderr: string;
+}> => {
+  const argv = ['--no-install', 'agentic-report', ...arguments_];
+  const outcome = await runCommand(npxExecutable, argv, cwd, candidateNpxEnvironment);
+  candidateNpxEvidence.push({ cwd, argv, resolvedExecutable: binaryIdentity, ...outcome });
+  return outcome;
+};
+const candidateNpxVersionOutcome = await runCandidateNpx(['--version'], consumerDirectory);
+if (
+  candidateNpxVersionOutcome.exitCode !== 0 ||
+  candidateNpxVersionOutcome.stderr !== '' ||
+  candidateNpxVersionOutcome.stdout.trim() !== releaseVersion
+) {
+  throw new Error(
+    'Tarball-installed candidate did not run through local-only npx without warnings.',
+  );
+}
 const { stdout: installedVersion } = await execFileAsync(binary, ['--version'], {
   cwd: consumerDirectory,
 });
@@ -325,8 +475,7 @@ for (const expected of expectedLayoutExamples) {
 
 const firstUseProject = path.join(consumerDirectory, 'token=path-sentinel');
 const transportedFirstUseProject = redactCredentialPath(firstUseProject);
-const initialized = await runCommand(
-  binary,
+const initialized = await runCandidateNpx(
   ['init', firstUseProject, '--starter', 'report', '--json'],
   consumerDirectory,
 );
@@ -379,11 +528,7 @@ if (
 }
 
 await writeFile(firstUseEntry, editedSource);
-const validated = await runCommand(
-  binary,
-  ['validate', firstUseProject, '--json'],
-  consumerDirectory,
-);
+const validated = await runCandidateNpx(['validate', firstUseProject, '--json'], consumerDirectory);
 const validatedRecord = requireSingleNdjsonRecord(validated, 'installed validate result');
 assertExactKeys(
   validatedRecord,
@@ -412,8 +557,7 @@ if (
   throw new Error('Installed validate did not accept the fixed first-use project.');
 }
 
-const inspected = await runCommand(
-  binary,
+const inspected = await runCandidateNpx(
   ['inspect', firstUseProject, '--format', 'directory', '--json'],
   consumerDirectory,
 );
@@ -488,8 +632,7 @@ if (
 }
 
 const firstUseOutput = path.join(firstUseProject, 'built.html');
-const firstUseBuild = await runCommand(
-  binary,
+const firstUseBuild = await runCandidateNpx(
   ['build', firstUseProject, '--output', firstUseOutput, '--json'],
   consumerDirectory,
 );
@@ -594,6 +737,10 @@ if (
 ) {
   throw new Error('Independent installed CLI processes produced different directory trees.');
 }
+const candidateBrowserEvidence = await inspectCandidateArtifacts([
+  { format: 'single-file', path: firstUseOutput },
+  { format: 'directory', path: path.join(directoryJourneyOutput, 'index.html') },
+]);
 
 const shadowDirectory = path.join(consumerDirectory, 'cwd-shadow');
 await mkdir(path.join(shadowDirectory, 'dist', 'browser'), { recursive: true });
@@ -843,6 +990,58 @@ if (
   throw new Error('Installed CLI did not emit the expected actionable validation diagnostic.');
 }
 
+await writeFile(
+  path.join(packageDirectory, 'candidate-evidence.json'),
+  `${JSON.stringify(
+    {
+      evidenceKind: 'local-packed-candidate',
+      registryCandidateClaim: false,
+      sourceState: await readSourceState(),
+      runtime: { executable: process.execPath, version: process.versions.node },
+      npm: { executable: npmExecutable, version: npmVersionOutput.trim() },
+      npx: { executable: npxExecutable, version: npxVersionOutput.trim() },
+      preflight: {
+        consumerDirectory,
+        npmCacheDirectory,
+        checkoutLinkAbsent: true,
+        executableSearchDirectories: candidateExecutableSearchDirectories,
+        globalExecutableChecks,
+        globalExecutableAbsent,
+        reusedCacheAbsent: true,
+        sanitizedEnvironment: candidateNpxEnvironment,
+      },
+      tarball: {
+        path: tarballPath,
+        sha256: tarballSha256,
+        files: packedFiles.length,
+        packageVersion: releaseVersion,
+      },
+      install: {
+        cwd: consumerDirectory,
+        argv: installArgv,
+        exitCode: 0,
+        stdout: installOutcome.stdout,
+        stderr: installOutcome.stderr,
+      },
+      installed: {
+        packagePath: path.join(consumerDirectory, 'node_modules', 'agentic-report'),
+        binary,
+        binaryIdentity,
+        version: installedVersion.trim(),
+      },
+      localOnlyNpxResolution: {
+        cwd: consumerDirectory,
+        argv: resolutionArgv,
+        ...resolutionOutcome,
+      },
+      localOnlyNpxCommands: candidateNpxEvidence,
+      chromium: candidateBrowserEvidence,
+    },
+    null,
+    2,
+  )}\n`,
+);
+
 console.log(
   `Package and clean npm consumer verified: ${tarballPath} (sha256 ${tarballSha256}, ${packedFiles.length} files)`,
 );
@@ -861,6 +1060,7 @@ async function expectedTarballFiles(): Promise<string[]> {
       'DEVELOPMENT.md',
       'PROJECT_CHECKLIST.md',
       'PUBLIC-SITE.md',
+      'RELEASE.md',
       'TESTING.md',
       'generated/directives.schema.json',
       'generated/extension-proposal.schema.json',
@@ -976,9 +1176,13 @@ async function runCommand(
   command: string,
   arguments_: readonly string[],
   cwd: string,
+  environment?: NodeJS.ProcessEnv,
 ): Promise<{ readonly exitCode: number | null; readonly stdout: string; readonly stderr: string }> {
   return await new Promise((resolve, reject) => {
-    const child = spawn(command, arguments_, { cwd });
+    const child = spawn(command, arguments_, {
+      cwd,
+      ...(environment === undefined ? {} : { env: environment }),
+    });
     let stdout = '';
     let stderr = '';
     child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
@@ -990,6 +1194,104 @@ async function runCommand(
     child.on('error', reject);
     child.on('close', (exitCode) => resolve({ exitCode, stdout, stderr }));
   });
+}
+
+async function pathExists(candidate: string): Promise<boolean> {
+  try {
+    await lstat(candidate);
+    return true;
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return false;
+    throw error;
+  }
+}
+
+async function inspectCandidateArtifacts(
+  artifacts: readonly { readonly format: 'single-file' | 'directory'; readonly path: string }[],
+): Promise<readonly Readonly<Record<string, unknown>>[]> {
+  const browser = await chromium.launch();
+  try {
+    const evidence: Readonly<Record<string, unknown>>[] = [];
+    for (const artifact of artifacts) {
+      const context = await browser.newContext({
+        viewport:
+          artifact.format === 'single-file'
+            ? { width: 1440, height: 1000 }
+            : { width: 390, height: 844 },
+      });
+      const page = await context.newPage();
+      const errors: string[] = [];
+      page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
+      page.on('console', (message) => {
+        if (message.type() === 'error') errors.push(`console: ${message.text()}`);
+      });
+      await page.goto(pathToFileURL(artifact.path).href);
+      const themeToggle = page.locator('[data-theme-toggle]');
+      const themeBefore = await page.locator('html').getAttribute('data-theme');
+      if ((await themeToggle.count()) !== 1) {
+        throw new Error(`Installed ${artifact.format} candidate is missing its theme control.`);
+      }
+      await themeToggle.click();
+      const themeAfter = await page.locator('html').getAttribute('data-theme');
+      const observed = await page.evaluate(() => ({
+        title: document.title,
+        heading: document.querySelector('h1')?.textContent ?? '',
+        horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
+      }));
+      await context.close();
+      if (
+        errors.length > 0 ||
+        observed.heading === '' ||
+        observed.horizontalOverflow ||
+        themeBefore === themeAfter
+      ) {
+        throw new Error(
+          `Installed ${artifact.format} candidate failed Chromium inspection: ${JSON.stringify({ errors, observed })}`,
+        );
+      }
+      evidence.push({
+        format: artifact.format,
+        path: artifact.path,
+        errors,
+        themeBefore,
+        themeAfter,
+        ...observed,
+      });
+    }
+    return evidence;
+  } finally {
+    await browser.close();
+  }
+}
+
+async function readSourceState(): Promise<Readonly<Record<string, unknown>>> {
+  const [{ stdout: revisionOutput }, { stdout: statusOutput }] = await Promise.all([
+    execFileAsync('git', ['rev-parse', 'HEAD']),
+    execFileAsync('git', ['status', '--porcelain=v1', '-uall', '-z']),
+  ]);
+  const entries = statusOutput.split('\0').filter(Boolean);
+  if (entries.length === 0) {
+    return { kind: 'committed', revision: revisionOutput.trim() };
+  }
+  const hash = createHash('sha256');
+  for (const entry of entries) {
+    const status = entry.slice(0, 2);
+    const file = entry.slice(3);
+    hash.update(status);
+    hash.update('\0');
+    hash.update(file);
+    hash.update('\0');
+    if ((await pathExists(file)) && (await lstat(file)).isFile()) {
+      hash.update(await readFile(file));
+    }
+    hash.update('\0');
+  }
+  return {
+    kind: 'working-tree-candidate',
+    baseRevision: revisionOutput.trim(),
+    changedFiles: entries.length,
+    statusSha256: hash.digest('hex'),
+  };
 }
 
 function requireSingleNdjsonRecord(

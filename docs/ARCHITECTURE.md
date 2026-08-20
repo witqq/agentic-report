@@ -77,7 +77,11 @@ Markdown + metadata + local assets + partials + semantic directives
   results without output publication.
 - `src/cli.ts` adapts initialization, building, validation, inspection, and discovery to human text or
   agent-oriented NDJSON. The executable reads its version from the installed package metadata rather than
-  carrying a second version literal. `src/index.ts` is the ESM API.
+  carrying a second version literal. Before parsing a command it compares the running Node.js version with
+  that same installed package's minimum engine and returns `NODE_VERSION_UNSUPPORTED` below the floor rather
+  than relying on npm's warning-only behavior. `src/index.ts` is the ESM API and applies the same installed
+  engine gate before exposing operations; programmatic callers receive an `AgenticReportError` carrying the
+  same diagnostic.
 
 ## Public contracts
 

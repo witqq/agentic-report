@@ -54,3 +54,6 @@ The channel contracts used by this process are the public [Agent Skills specific
 [plugin marketplace documentation](https://code.claude.com/docs/en/plugin-marketplaces), and the
 [skills.sh CLI documentation](https://www.skills.sh/docs/cli). Recheck those sources at release time;
 their submission and discovery behavior is external to this repository and may change independently.
+
+The complete source → npm → registry `npx` → trusted-TLS site → skill-channel order, exact future commands,
+provenance requirements, and stop conditions are maintained in [`RELEASE.md`](RELEASE.md).

@@ -264,6 +264,10 @@ The first zero-install `npx` run requires registry/network access and Node.js 24
 generated page then opens locally through `file://` and requires the included package-owned browser runtime.
 Authors write no JSX, raw HTML, CSS, or browser JavaScript.
 
+The CLI and ESM entry read this floor from installed package metadata before accepting work. A lower CLI
+runtime exits with code `1` and `NODE_VERSION_UNSUPPORTED`; an ESM import throws `AgenticReportError` with
+the same diagnostic. Neither path continues after npm's engine warning.
+
 The repository's canonical product proof is [`../website/landing`](../website/landing/). Its example cards
 link to separately publishable incident-review, vendor-decision, and launch-readiness pages plus direct
 public Markdown source routes. [`../website/routes.json`](../website/routes.json) owns those relative route
@@ -471,7 +475,7 @@ input locally when a later operation needs it. Source bodies are never included.
 credentials regardless; redaction is a transport boundary, not a secret-storage mechanism.
 
 Exit code `0` means the requested operation succeeded. Exit code `1` means the source, manifest,
-option, destination, or local asset input is invalid. Exit code `2` means the installed package cannot
+option, destination, local asset input, or Node.js runtime is unsupported. Exit code `2` means the installed package cannot
 supply a required build asset.
 Exit code `3` means an unexpected internal failure occurred.
 

@@ -23,6 +23,7 @@ It is a local compiler, not a hosted or cloud service, and it does not start a s
 | [`docs/TESTING.md`](docs/TESTING.md)                                 | Current verification entry points and covered guarantees   |
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)                         | Contributor setup and local quality commands               |
 | [`docs/PUBLIC-SITE.md`](docs/PUBLIC-SITE.md)                         | Static-site and skill release contract                     |
+| [`docs/RELEASE.md`](docs/RELEASE.md)                                 | Ordered release and post-publication verification runbook  |
 | [`skills/agentic-report/SKILL.md`](skills/agentic-report/SKILL.md)   | Canonical cross-agent authoring skill                      |
 
 ## Source format

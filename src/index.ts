@@ -1,3 +1,16 @@
+import { AgenticReportError } from './diagnostics.js';
+import { getNodeCompatibilityDiagnostic } from './node-compatibility.js';
+import { readInstalledPackageMetadata } from './package-metadata.js';
+
+const installedPackage = readInstalledPackageMetadata();
+const compatibilityDiagnostic = getNodeCompatibilityDiagnostic(
+  process.versions.node,
+  installedPackage.nodeEngine,
+);
+if (compatibilityDiagnostic !== undefined) {
+  throw new AgenticReportError(compatibilityDiagnostic);
+}
+
 export { buildReport } from './core/compiler.js';
 export { inspectReport, validateReport } from './core/analyze-report.js';
 export { initProject } from './authoring/init-project.js';

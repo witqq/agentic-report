@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { Command, CommanderError, InvalidArgumentError } from 'commander';
@@ -31,6 +30,8 @@ import {
   listExamples,
   type SchemaScope,
 } from './discovery.js';
+import { getNodeCompatibilityDiagnostic } from './node-compatibility.js';
+import { readInstalledPackageMetadata } from './package-metadata.js';
 
 interface BuildCommandOptions {
   readonly output?: string;
@@ -52,7 +53,7 @@ const program = new Command();
 const schemaScopes: readonly SchemaScope[] = ['manifest', 'directives', 'source'];
 const invocationRunId = randomUUID();
 const jsonRequested = process.argv.slice(2).includes('--json');
-const packageVersion = readPackageVersion();
+const packageMetadata = readInstalledPackageMetadata();
 program.exitOverride();
 program.configureOutput({
   writeErr: (value) => {
@@ -64,7 +65,7 @@ program.configureOutput({
 program
   .name('agentic-report')
   .description('Compile agent-friendly content sources into portable static HTML artifacts.')
-  .version(packageVersion);
+  .version(packageMetadata.version);
 
 program
   .command('init')
@@ -189,21 +190,30 @@ program
     );
   });
 
-try {
-  await program.parseAsync(process.argv);
-} catch (error) {
-  if (!(error instanceof CommanderError && error.exitCode === 0)) {
-    const diagnostic: Diagnostic =
-      error instanceof CommanderError
-        ? {
-            level: 'error',
-            code: 'CLI_ARGUMENT_INVALID',
-            message: error.message,
-            remediation: 'Run `agentic-report --help` and correct the command or option value.',
-          }
-        : toDiagnostic(error);
-    writeFailure(diagnostic, invocationRunId, jsonRequested);
-    process.exitCode = exitCodeForDiagnostic(diagnostic);
+const compatibilityDiagnostic = getNodeCompatibilityDiagnostic(
+  process.versions.node,
+  packageMetadata.nodeEngine,
+);
+if (compatibilityDiagnostic !== undefined) {
+  writeFailure(compatibilityDiagnostic, invocationRunId, jsonRequested);
+  process.exitCode = exitCodeForDiagnostic(compatibilityDiagnostic);
+} else {
+  try {
+    await program.parseAsync(process.argv);
+  } catch (error) {
+    if (!(error instanceof CommanderError && error.exitCode === 0)) {
+      const diagnostic: Diagnostic =
+        error instanceof CommanderError
+          ? {
+              level: 'error',
+              code: 'CLI_ARGUMENT_INVALID',
+              message: error.message,
+              remediation: 'Run `agentic-report --help` and correct the command or option value.',
+            }
+          : toDiagnostic(error);
+      writeFailure(diagnostic, invocationRunId, jsonRequested);
+      process.exitCode = exitCodeForDiagnostic(diagnostic);
+    }
   }
 }
 
@@ -213,21 +223,6 @@ function parseFormat(value: string): OutputFormat {
     throw new InvalidArgumentError('Expected single-file or directory.');
   }
   return result.data;
-}
-
-function readPackageVersion(): string {
-  const metadata: unknown = JSON.parse(
-    readFileSync(fileURLToPath(new URL('../../package.json', import.meta.url)), 'utf8'),
-  );
-  if (
-    typeof metadata !== 'object' ||
-    metadata === null ||
-    !('version' in metadata) ||
-    typeof metadata.version !== 'string'
-  ) {
-    throw new Error('Installed package metadata does not declare a version.');
-  }
-  return metadata.version;
 }
 
 function parseSchemaScope(value: string): SchemaScope {

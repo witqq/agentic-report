@@ -31,6 +31,7 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   Markdown/directive rendering, image/download/font embedding and copying, absent-only starter
   initialization, installed starter-root resolution, no-overwrite/incomplete-state behavior, CLI
   diagnostics, both output formats and their derived runtime placement, truthful discovery/schema defaults,
+  declared Node.js floor comparison and below-floor diagnostic behavior,
   manifest/frontmatter provenance, entry/partial diagnostic source maps, source/output collision protection,
   exact serialized inline-size accounting, canonical and hard-link source/output collision protection,
   injected partial-write/rename preservation and retry for both output formats, same-process name/content
@@ -58,7 +59,8 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   forms. The current suite does not cover browser behavior for downloadable assets or local fonts,
   axe/screen-reader evidence or difficult-content reflow beyond the authored fixtures.
 - `pack:check` builds an npm tarball, checks its exact release allowlist, metadata, license, types, exports,
-  engine, CLI shebang, file count, absence of private/temporary paths, and common secret/token patterns. It
+  engine, installed CLI version and supported-runtime behavior, CLI shebang, file count, absence of private/temporary paths,
+  and common secret/token patterns. It
   computes and prints the candidate SHA-256, then installs the
   tarball into a clean temporary npm consumer, invokes discovery, and builds complete offline artifacts through the
   installed binary in both formats plus directory output through the ESM API. It also builds every packaged
