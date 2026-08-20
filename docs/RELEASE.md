@@ -56,7 +56,7 @@ different bytes from the working tree.
 
 ```sh
 npm publish --access public ./agentic-report-0.2.0.tgz
-npm view agentic-report@0.2.0 version dist.integrity dist.tarball --json
+npm view agentic-report@0.2.0 version dist.integrity dist.shasum dist.tarball --json
 npm view agentic-report dist-tags --json
 ```
 
@@ -100,7 +100,7 @@ its assigned cache and executable:
 
 ```sh
 cd "$pinned_work"
-env PATH="$release_path" npm_config_cache="$pinned_cache" "$release_npm" view agentic-report@0.2.0 version dist.integrity dist.tarball --json
+env PATH="$release_path" npm_config_cache="$pinned_cache" "$release_npm" view agentic-report@0.2.0 version dist.integrity dist.shasum dist.tarball --json
 env PATH="$release_path" npm_config_cache="$pinned_cache" "$release_npx" --yes agentic-report@0.2.0 --version
 env PATH="$release_path" npm_config_cache="$pinned_cache" "$release_npx" --yes agentic-report@0.2.0 init ./pinned-page --starter landing --json
 env PATH="$release_path" npm_config_cache="$pinned_cache" "$release_npx" --yes agentic-report@0.2.0 validate ./pinned-page --json
@@ -116,7 +116,7 @@ cache and workspace:
 ```sh
 cd "$latest_work"
 env PATH="$release_path" npm_config_cache="$latest_cache" "$release_npm" view agentic-report dist-tags --json
-env PATH="$release_path" npm_config_cache="$latest_cache" "$release_npm" view agentic-report@0.2.0 version dist.integrity dist.tarball --json
+env PATH="$release_path" npm_config_cache="$latest_cache" "$release_npm" view agentic-report@0.2.0 version dist.integrity dist.shasum dist.tarball --json
 env PATH="$release_path" npm_config_cache="$latest_cache" "$release_npx" --yes agentic-report --version
 env PATH="$release_path" npm_config_cache="$latest_cache" "$release_npx" --yes agentic-report init ./latest-page --starter landing --json
 env PATH="$release_path" npm_config_cache="$latest_cache" "$release_npx" --yes agentic-report validate ./latest-page --json
