@@ -1097,7 +1097,15 @@ th {
   max-width: 100%;
   gap: 0.4rem;
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
   padding-bottom: 0.35rem;
+}
+
+.semantic-tab-list [role='tab'] {
+  flex: 0 0 auto;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  word-break: normal;
 }
 
 .semantic-tab-list [aria-selected='true'] {

@@ -259,6 +259,10 @@ export default async function globalSetup(): Promise<void> {
       format: 'directory',
     }),
     buildReport({
+      input: path.resolve('tests', 'fixtures', 'authoring', 'corpus', 'research-report'),
+      output: path.join(fixtureRoot, 'research-corpus.html'),
+    }),
+    buildReport({
       input: path.resolve('website', 'docs'),
       output: path.join(fixtureRoot, 'human-docs-directory'),
       format: 'directory',

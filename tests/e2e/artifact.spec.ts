@@ -1830,12 +1830,30 @@ for (const showcase of presetShowcases) {
             const rect = element.getBoundingClientRect();
             return style.display !== 'none' && style.visibility !== 'hidden' && rect.height > 0;
           });
+          const reachableThroughLocalScroller = (element: HTMLElement): boolean => {
+            let ancestor = element.parentElement;
+            while (ancestor !== null && ancestor !== document.body) {
+              const style = getComputedStyle(ancestor);
+              if (
+                (style.overflowX === 'auto' || style.overflowX === 'scroll') &&
+                ancestor.scrollWidth > ancestor.clientWidth
+              ) {
+                const rect = ancestor.getBoundingClientRect();
+                return rect.left >= -0.5 && rect.right <= innerWidth + 0.5;
+              }
+              ancestor = ancestor.parentElement;
+            }
+            return false;
+          };
           return {
             overflow: document.documentElement.scrollWidth - innerWidth,
             unreachable: visibleControls
               .filter((element) => {
                 const rect = element.getBoundingClientRect();
-                return rect.left < -0.5 || rect.right > innerWidth + 0.5;
+                return (
+                  (rect.left < -0.5 || rect.right > innerWidth + 0.5) &&
+                  !reachableThroughLocalScroller(element)
+                );
               })
               .map((element) => element.textContent?.trim() || element.getAttribute('aria-label')),
           };
