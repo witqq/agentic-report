@@ -101,7 +101,7 @@ if (
   installedPackage.license !== 'MIT' ||
   JSON.stringify(installedPackage.repository) !==
     JSON.stringify({ type: 'git', url: 'git+https://github.com/witqq/agentic-report.git' }) ||
-  installedPackage.homepage !== 'https://github.com/witqq/agentic-report#readme' ||
+  installedPackage.homepage !== 'https://agentic-report.witqq.dev/' ||
   JSON.stringify(installedPackage.bugs) !==
     JSON.stringify({ url: 'https://github.com/witqq/agentic-report/issues' }) ||
   JSON.stringify(installedPackage.publishConfig) !== JSON.stringify({ access: 'public' }) ||
@@ -860,6 +860,7 @@ async function expectedTarballFiles(): Promise<string[]> {
       'ARCHITECTURE.md',
       'DEVELOPMENT.md',
       'PROJECT_CHECKLIST.md',
+      'PUBLIC-SITE.md',
       'TESTING.md',
       'generated/directives.schema.json',
       'generated/extension-proposal.schema.json',
@@ -870,6 +871,7 @@ async function expectedTarballFiles(): Promise<string[]> {
       'product/source-contract.md',
     ].map((file) => `package/docs/${file}`),
   ]);
+  expected.add('package/skills/agentic-report/SKILL.md');
 
   for (const source of await recursiveRelativeFiles(path.resolve('src'))) {
     if (

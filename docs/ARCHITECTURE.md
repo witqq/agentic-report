@@ -204,6 +204,31 @@ state/observer; lack of `IntersectionObserver` leaves sections visible while nav
 activation-line, equal-top, resize, short-final and document-bottom ownership through bounded terminal
 geometry selection.
 
+## Public site staging
+
+The public site is not a compiler mode or a multi-page framework. `scripts/build-site.ts` reads the closed
+`website/routes.json` inventory, invokes the normal page compiler independently for the landing, each
+showcase, and each rendered documentation page, and copies canonical direct Markdown/text/skill files
+without rewriting their bytes. It publishes the complete new tree by one sibling-directory rename and
+refuses an existing destination.
+
+Every staged route is relative and confined to the output tree. Every declared source is relative to
+`website/` and confined to the repository before use; copied sources must be ordinary non-symlink files.
+The deterministic `release.json` records package/engine identity, a caller-supplied complete Git revision,
+canonical skill identity, route hashes, and the sorted complete file inventory. It deliberately omits a
+build timestamp, workstation path, credential, and self-referential hash. The same inputs, package build,
+and revision produce identical staged bytes.
+
+The human docs, direct agent quickstart, complete agent reference, source contract, canonical skill, and
+`llms.txt` are available under the same static origin as the product-built landing and separately built
+examples. Hosting is outside the compiler. A valid deployment serves these files directly with appropriate
+MIME types, a real 404 rather than an SPA fallback, and ordinary publicly trusted HTTPS.
+
+The canonical skill is instruction-only. Its OpenAI and Claude plugin manifests point to the same
+`skills/` folder and carry the same package version, license, homepage, and compatibility contract.
+Repository/marketplace metadata is community distribution metadata; it grants no deployment, publication,
+credential, remote-source, or unrelated mutation authority.
+
 ## Security properties
 
 - HTTP(S) image sources fail instead of triggering a network request.

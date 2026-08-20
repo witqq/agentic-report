@@ -2,6 +2,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { buildReport, listExamples } from '../../dist/node/index.js';
+import { stageSite } from '../../scripts/build-site.js';
 
 export default async function globalSetup(): Promise<void> {
   const fixtureRoot = path.resolve('test-results/e2e-generated');
@@ -257,5 +258,21 @@ export default async function globalSetup(): Promise<void> {
       output: path.join(fixtureRoot, 'launch-readiness-directory'),
       format: 'directory',
     }),
+    buildReport({
+      input: path.resolve('website', 'docs'),
+      output: path.join(fixtureRoot, 'human-docs-directory'),
+      format: 'directory',
+    }),
+    buildReport({
+      input: path.resolve('website', 'docs', 'agent'),
+      output: path.join(fixtureRoot, 'agent-docs-directory'),
+      format: 'directory',
+    }),
   ]);
+  const siteOutput = path.resolve('test-results/e2e-site');
+  await rm(siteOutput, { recursive: true, force: true });
+  await stageSite({
+    output: siteOutput,
+    revision: 'fd9b4b3721c5c33ca94e5df239e3480cf3b39b8e',
+  });
 }

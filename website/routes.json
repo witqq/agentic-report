@@ -5,113 +5,137 @@
       "id": "landing",
       "href": "index.html",
       "source": "landing/report.md",
+      "kind": "page",
       "owner": "unit-4",
-      "state": "source-ready"
+      "state": "staged-ready"
     },
     {
       "id": "example-incident",
       "href": "examples/incident-review/index.html",
       "source": "../examples/incident-review",
+      "kind": "page",
       "owner": "unit-4",
-      "state": "source-ready"
+      "state": "staged-ready"
     },
     {
       "id": "source-incident",
       "href": "examples/incident-review/source/report.md",
       "source": "../examples/incident-review/report.md",
+      "kind": "copy",
       "owner": "unit-5",
-      "state": "staging-pending"
+      "state": "staged-ready"
     },
     {
       "id": "example-vendor",
       "href": "examples/vendor-decision/index.html",
       "source": "../examples/vendor-decision",
+      "kind": "page",
       "owner": "unit-4",
-      "state": "source-ready"
+      "state": "staged-ready"
     },
     {
       "id": "source-vendor",
       "href": "examples/vendor-decision/source/report.md",
       "source": "../examples/vendor-decision/report.md",
+      "kind": "copy",
       "owner": "unit-5",
-      "state": "staging-pending"
+      "state": "staged-ready"
     },
     {
       "id": "example-launch",
       "href": "examples/launch-readiness/index.html",
       "source": "../examples/launch-readiness",
+      "kind": "page",
       "owner": "unit-4",
-      "state": "source-ready"
+      "state": "staged-ready"
     },
     {
       "id": "source-launch",
       "href": "examples/launch-readiness/source/report.md",
       "source": "../examples/launch-readiness/report.md",
+      "kind": "copy",
       "owner": "unit-5",
-      "state": "staging-pending"
+      "state": "staged-ready"
     },
     {
       "id": "source-landing",
       "href": "source/landing/report.md",
       "source": "landing/report.md",
+      "kind": "copy",
       "owner": "unit-5",
-      "state": "staging-pending"
+      "state": "staged-ready"
     },
     {
       "id": "starter-landing",
       "href": "source/starter/landing/report.md",
       "source": "../examples/landing/report.md",
+      "kind": "copy",
       "owner": "unit-5",
-      "state": "staging-pending"
+      "state": "staged-ready"
     },
     {
       "id": "docs-human",
       "href": "docs/index.html",
       "source": "docs/report.md",
+      "kind": "page",
       "owner": "unit-5",
-      "state": "staging-pending"
+      "state": "staged-ready"
+    },
+    {
+      "id": "docs-agent-human",
+      "href": "docs/agent/index.html",
+      "source": "docs/agent",
+      "kind": "page",
+      "owner": "unit-5",
+      "state": "staged-ready"
     },
     {
       "id": "docs-agent",
       "href": "docs/agent/index.md",
       "source": "docs/agent/index.md",
+      "kind": "copy",
       "owner": "unit-5",
-      "state": "staging-pending"
+      "state": "staged-ready"
     },
     {
       "id": "docs-agent-reference",
       "href": "docs/agent/reference.md",
       "source": "../docs/AGENT-REFERENCE.md",
+      "kind": "copy",
       "owner": "unit-5",
-      "state": "staging-pending"
+      "state": "staged-ready"
     },
     {
       "id": "docs-source-contract",
       "href": "docs/source-contract/index.md",
       "source": "../docs/product/source-contract.md",
+      "kind": "copy",
       "owner": "unit-5",
-      "state": "staging-pending"
+      "state": "staged-ready"
     },
     {
       "id": "skill",
       "href": "skills/agentic-report/SKILL.md",
       "source": "../skills/agentic-report/SKILL.md",
+      "kind": "copy",
       "owner": "unit-5",
-      "state": "staging-pending"
+      "state": "staged-ready"
     },
     {
       "id": "llms",
       "href": "llms.txt",
       "source": "llms.txt",
+      "kind": "copy",
       "owner": "unit-5",
-      "state": "staging-pending"
+      "state": "staged-ready"
     },
     {
       "id": "release",
       "href": "release.json",
       "source": "generated",
+      "kind": "generated",
       "owner": "unit-5",
-      "state": "staging-pending"
+      "state": "staged-ready"
     }
   ]
 }

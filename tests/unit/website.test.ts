@@ -8,8 +8,9 @@ interface SiteRoute {
   readonly id: string;
   readonly href: string;
   readonly source: string;
+  readonly kind: 'page' | 'copy' | 'generated';
   readonly owner: 'unit-4' | 'unit-5';
-  readonly state: 'source-ready' | 'staging-pending';
+  readonly state: 'staged-ready';
 }
 
 interface RouteManifest {
@@ -201,11 +202,12 @@ describe('public landing product proof', () => {
       expect(route.href).not.toMatch(/^(?:\/|[a-z]+:|\.\.?\/)/iu);
       expect(route.href).not.toMatch(/placeholder|todo|example\.com|\/Users\//iu);
       expect(['unit-4', 'unit-5']).toContain(route.owner);
-      expect(['source-ready', 'staging-pending']).toContain(route.state);
+      expect(['page', 'copy', 'generated']).toContain(route.kind);
+      expect(route.state).toBe('staged-ready');
       expect(route.source.trim()).not.toBe('');
       expect(route.source).not.toMatch(/^(?:\/|[a-z][a-z0-9+.-]*:|[a-z]:[\\/])/iu);
       expect(route.source).not.toMatch(/placeholder|todo|example\.com|\/Users\//iu);
-      if (route.state === 'source-ready') {
+      if (route.kind !== 'generated') {
         expect(await stat(path.resolve(repositoryRoot, 'website', route.source))).toBeTruthy();
       } else {
         expect(route.owner).toBe('unit-5');

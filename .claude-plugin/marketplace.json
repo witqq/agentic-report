@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "agentic-report-community",
+  "version": "0.2.0",
+  "description": "Community distribution metadata for the agentic-report skill.",
+  "owner": {
+    "name": "witqq"
+  },
+  "plugins": [
+    {
+      "name": "agentic-report",
+      "description": "Create polished local interactive pages from declarative Markdown.",
+      "version": "0.2.0",
+      "author": {
+        "name": "witqq"
+      },
+      "source": "./",
+      "category": "development",
+      "homepage": "https://agentic-report.witqq.dev/"
+    }
+  ]
+}

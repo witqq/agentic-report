@@ -22,6 +22,8 @@ It is a local compiler, not a hosted or cloud service, and it does not start a s
 | [`docs/AGENT-REFERENCE.md`](docs/AGENT-REFERENCE.md)                 | Current copyable CLI and source reference for agents       |
 | [`docs/TESTING.md`](docs/TESTING.md)                                 | Current verification entry points and covered guarantees   |
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)                         | Contributor setup and local quality commands               |
+| [`docs/PUBLIC-SITE.md`](docs/PUBLIC-SITE.md)                         | Static-site and skill release contract                     |
+| [`skills/agentic-report/SKILL.md`](skills/agentic-report/SKILL.md)   | Canonical cross-agent authoring skill                      |
 
 ## Source format
 
@@ -158,6 +160,19 @@ landing destination one relative URL, canonical repository source, owner, and re
 card points to a separately publishable live page and a separately retrievable Markdown source; screenshots
 are previews, not substitutes for the published demos. Static site assembly resolves these declarations
 without adding a client router or a second authoring framework.
+
+The same-origin public tree also exposes [human documentation](website/docs/report.md), a
+[direct agent quickstart](website/docs/agent/index.md), the complete reference and source contract,
+the byte-identical canonical skill, [`llms.txt`](website/llms.txt), and hash-bound release metadata.
+Build the deployment tree from a clean revision:
+
+```bash
+pnpm build:site -- --output ./site --revision "$(git rev-parse HEAD)"
+```
+
+The output path must not exist. Open `site/index.html` through `file://`; see
+[`docs/PUBLIC-SITE.md`](docs/PUBLIC-SITE.md) for deterministic staging, trusted-TLS hosting, skill
+distribution, and synchronized update gates.
 
 ## Commands
 

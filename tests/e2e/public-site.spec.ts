@@ -1,0 +1,156 @@
+import { mkdir, rm } from 'node:fs/promises';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+import type { Page } from '@playwright/test';
+
+import { expect, test } from './fixtures.js';
+
+const siteRoot = path.resolve('test-results/e2e-site');
+const generatedRoot = path.resolve('test-results/e2e-generated');
+const fileUrl = (file: string): string => pathToFileURL(path.join(siteRoot, file)).href;
+
+const docsArtifacts = [
+  { format: 'single-file', url: fileUrl('docs/index.html') },
+  {
+    format: 'directory',
+    url: pathToFileURL(path.join(generatedRoot, 'human-docs-directory/index.html')).href,
+  },
+] as const;
+
+const agentArtifacts = [
+  { format: 'single-file', url: fileUrl('docs/agent/index.html') },
+  {
+    format: 'directory',
+    url: pathToFileURL(path.join(generatedRoot, 'agent-docs-directory/index.html')).href,
+  },
+] as const;
+
+const expectContained = async (page: Page): Promise<void> => {
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const overflowingCode = await page
+    .locator('pre')
+    .evaluateAll((elements) =>
+      elements.filter(
+        (element) =>
+          element.scrollWidth > element.clientWidth &&
+          getComputedStyle(element).overflowX !== 'auto',
+      ),
+    );
+  expect(overflowingCode).toEqual([]);
+};
+
+const revealAllSections = async (page: Page): Promise<void> => {
+  const sections = page.locator('section.semantic-section');
+  for (let index = 0; index < (await sections.count()); index += 1) {
+    await sections.nth(index).evaluate((element) => {
+      element.scrollIntoView({ behavior: 'instant', block: 'center' });
+    });
+  }
+  await expect(page.locator('[data-reveal-pending]')).toHaveCount(0);
+  await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+};
+
+test('staged landing reaches live examples, human docs, and direct agent instructions through file URLs', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await page.goto(fileUrl('index.html'));
+  await page.locator('a[href="docs/index.html"]').first().click();
+  await expect(page).toHaveTitle('agentic-report documentation');
+  await expect(
+    page.getByRole('heading', { name: 'Build the page, not a frontend project' }),
+  ).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open the quickstart' })).toHaveAttribute(
+    'href',
+    'agent/index.html',
+  );
+  await page.getByRole('link', { name: 'Open the quickstart' }).click();
+  await expect(page).toHaveTitle('Agent quickstart');
+  await expect(page.getByText('Node.js 24.18.0 or newer', { exact: false }).first()).toBeVisible();
+  await expect(
+    page.getByText('npx --yes agentic-report@0.2.0 init ./my-page', { exact: false }).first(),
+  ).toBeVisible();
+
+  await page.goto(fileUrl('docs/agent/index.md'));
+  await expect(page.locator('body')).toContainText('npx --yes agentic-report@0.2.0 validate');
+  await expect(page.locator('body')).toContainText('Authors do not need React');
+
+  for (const example of ['incident-review', 'vendor-decision', 'launch-readiness']) {
+    await page.goto(fileUrl(`examples/${example}/index.html`));
+    await expect(page.locator('main')).not.toBeEmpty();
+    await expect(page.locator('[data-navigation]')).toBeVisible();
+  }
+});
+
+test('human and agent documentation preserve content, navigation, and containment in both output formats', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  for (const artifacts of [docsArtifacts, agentArtifacts]) {
+    const content: string[] = [];
+    for (const artifact of artifacts) {
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.goto(artifact.url);
+      await expect(page.locator('[data-navigation] a[aria-current="location"]')).toHaveCount(1);
+      await expect(page.locator('main p').filter({ hasText: /^::::$/u })).toHaveCount(0);
+      await expectContained(page);
+      content.push(await page.locator('main').innerText());
+    }
+    expect(content[0]).toBe(content[1]);
+  }
+});
+
+test('captures documentation desktop and mobile states in both output formats', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const captureRoot = path.resolve('test-results/step-5-captures/docs');
+  await rm(captureRoot, { recursive: true, force: true });
+  await mkdir(captureRoot, { recursive: true });
+
+  for (const [pageName, artifacts] of [
+    ['human', docsArtifacts],
+    ['agent', agentArtifacts],
+  ] as const) {
+    for (const artifact of artifacts) {
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+      await page.goto(artifact.url);
+      await page.locator('html').evaluate((element) => {
+        element.dataset.theme = 'dark';
+      });
+      await revealAllSections(page);
+      await expectContained(page);
+      await page.screenshot({
+        path: path.join(captureRoot, `${pageName}-${artifact.format}-desktop-dark.png`),
+        fullPage: true,
+      });
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+      await page.goto(artifact.url);
+      await page.locator('html').evaluate((element) => {
+        element.dataset.theme = 'light';
+      });
+      await expectContained(page);
+      await page.screenshot({
+        path: path.join(captureRoot, `${pageName}-${artifact.format}-mobile-light.png`),
+        fullPage: true,
+      });
+      if ((await page.getByRole('button', { name: 'Open contents' }).count()) > 0) {
+        await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+        await page.getByRole('button', { name: 'Open contents' }).click();
+        await expect(page.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
+        await expect(page.locator('[data-nav-dialog]')).toHaveCSS('opacity', '1');
+        await expect(page.locator('[data-nav-dialog]')).toHaveCSS(
+          'transform',
+          /^(?:none|matrix\(1, 0, 0, 1, 0, 0\))$/u,
+        );
+        await page.screenshot({
+          path: path.join(captureRoot, `${pageName}-${artifact.format}-mobile-nav-light.png`),
+        });
+      }
+    }
+  }
+});
