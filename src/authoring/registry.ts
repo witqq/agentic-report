@@ -1,3 +1,5 @@
+import { PAGE_MOTION_POLICY } from '../page-motion.js';
+
 export const SOURCE_CONTRACT_MAJOR = 1 as const;
 
 export const OUTPUT_CONTRACT = {
@@ -103,6 +105,8 @@ export const PAGE_CONTRACT = {
   layouts: ['document', 'dashboard', 'landing', 'mixed'],
   defaultTheme: 'system',
   themes: ['system', 'light', 'dark'],
+  defaultScrollProgress: false,
+  motion: PAGE_MOTION_POLICY,
   tokens: PAGE_TOKEN_FIELDS,
 } as const;
 
@@ -132,6 +136,7 @@ export type ConstraintDefinition =
       readonly multipleOf?: number;
       readonly lexicalPattern?: string;
     }
+  | { readonly kind: 'boolean' }
   | { readonly kind: 'enum'; readonly values: readonly string[] };
 
 interface FieldDefinitionBase {
@@ -142,7 +147,7 @@ interface FieldDefinitionBase {
 }
 
 export interface ScalarFieldDefinition extends FieldDefinitionBase {
-  readonly default?: string | number;
+  readonly default?: string | number | boolean;
   readonly constraint: ConstraintDefinition;
   readonly fields?: never;
 }
@@ -166,7 +171,7 @@ export interface DirectiveAttributeDefinition {
   readonly name: string;
   readonly description: string;
   readonly required: boolean;
-  readonly default?: string | number;
+  readonly default?: string | number | boolean;
   readonly constraint: ConstraintDefinition;
   readonly renderProperty: string;
   readonly invalidDiagnostic: DirectiveAttributeDiagnosticCode;
@@ -376,6 +381,14 @@ export const authoringRegistry = {
       required: false,
       default: PAGE_CONTRACT.defaultLayout,
       constraint: { kind: 'enum', values: PAGE_CONTRACT.layouts },
+    },
+    {
+      name: 'scrollProgress',
+      description:
+        'Enables a decorative package-owned scroll indicator only in the normal-motion profile.',
+      required: false,
+      default: PAGE_CONTRACT.defaultScrollProgress,
+      constraint: { kind: 'boolean' },
     },
     {
       name: 'tokens',
@@ -757,6 +770,11 @@ function sectionDirective(): DirectiveDefinition {
       'Package-owned section surface tone.',
       ['plain', 'soft', 'accent', 'contrast'],
       'plain',
+    ),
+    booleanAttribute(
+      'reveal',
+      'Enables one package-owned one-time section reveal in the normal-motion profile.',
+      PAGE_CONTRACT.motion.sectionReveal.default,
     ),
   ] as const;
   return {
@@ -1170,6 +1188,22 @@ function enumAttribute(
     required: false,
     default: defaultValue,
     constraint: { kind: 'enum', values },
+    renderProperty: `data${name[0]?.toUpperCase() ?? ''}${name.slice(1)}`,
+    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
+  };
+}
+
+function booleanAttribute(
+  name: string,
+  description: string,
+  defaultValue: boolean,
+): DirectiveAttributeDefinition {
+  return {
+    name,
+    description,
+    required: false,
+    default: defaultValue,
+    constraint: { kind: 'boolean' },
     renderProperty: `data${name[0]?.toUpperCase() ?? ''}${name.slice(1)}`,
     invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
   };

@@ -72,7 +72,7 @@ interface DirectiveContract {
 
 type AttributeContract = ConstraintDefinition & {
   readonly required: boolean;
-  readonly default?: string | number;
+  readonly default?: string | number | boolean;
   readonly description: string;
 };
 

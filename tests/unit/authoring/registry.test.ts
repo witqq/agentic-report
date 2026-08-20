@@ -174,6 +174,16 @@ describe('authoring registry', () => {
       layouts: ['document', 'dashboard', 'landing', 'mixed'],
       defaultTheme: 'system',
       themes: ['system', 'light', 'dark'],
+      defaultScrollProgress: false,
+      motion: {
+        scrollProgress: { normalMotionOnly: true },
+        sectionReveal: {
+          default: false,
+          normalMotionOnly: true,
+          durationMs: 220,
+          translationPx: 12,
+        },
+      },
     });
     expect(authoringRegistry.page.presets.map((preset) => preset.name)).toEqual([
       'studio',
@@ -647,6 +657,23 @@ describe('authoring registry', () => {
 
     expect(
       authoringRegistryIntegrityIssues(
+        unsafeRegistryWith({
+          page: {
+            ...authoringRegistry.page,
+            motion: {
+              ...authoringRegistry.page.motion,
+              sectionReveal: {
+                ...authoringRegistry.page.motion.sectionReveal,
+                durationMs: authoringRegistry.page.motion.sectionReveal.durationMs + 1,
+              },
+            },
+          },
+        }),
+      ),
+    ).toContain('page motion: registry policy differs from canonical page contract');
+
+    expect(
+      authoringRegistryIntegrityIssues(
         registryWith({
           manifestFields: authoringRegistry.manifestFields.map((field) => {
             if (field.name === 'preset') return { ...preset, default: 'signal' };
@@ -935,6 +962,8 @@ function classifyConstraint(constraint: ConstraintDefinition): ConstraintDefinit
       return 'integer';
     case 'number':
       return 'number';
+    case 'boolean':
+      return 'boolean';
     case 'enum':
       return 'enum';
     default: {
@@ -961,6 +990,9 @@ function expectValidDefault(attribute: DirectiveDefinition['attributes'][number]
       expect(Number.isFinite(attribute.default)).toBe(true);
       expect(attribute.default).toBeGreaterThanOrEqual(attribute.constraint.minimum ?? -Infinity);
       expect(attribute.default).toBeLessThanOrEqual(attribute.constraint.maximum ?? Infinity);
+      return;
+    case 'boolean':
+      expect(typeof attribute.default).toBe('boolean');
       return;
     default: {
       assertNever(attribute.constraint);

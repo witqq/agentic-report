@@ -85,6 +85,11 @@
               "enum": ["plain", "soft", "accent", "contrast"],
               "description": "Package-owned section surface tone.",
               "default": "plain"
+            },
+            "reveal": {
+              "type": "boolean",
+              "description": "Enables one package-owned one-time section reveal in the normal-motion profile.",
+              "default": false
             }
           },
           "required": ["title"]

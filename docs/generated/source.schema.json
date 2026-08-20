@@ -59,6 +59,11 @@
           "description": "Responsive page composition selected from the package-owned layout catalog.",
           "default": "document"
         },
+        "scrollProgress": {
+          "type": "boolean",
+          "description": "Enables a decorative package-owned scroll indicator only in the normal-motion profile.",
+          "default": false
+        },
         "tokens": {
           "type": "object",
           "additionalProperties": false,
@@ -198,6 +203,11 @@
               "enum": ["plain", "soft", "accent", "contrast"],
               "description": "Package-owned section surface tone.",
               "default": "plain"
+            },
+            "reveal": {
+              "type": "boolean",
+              "description": "Enables one package-owned one-time section reveal in the normal-motion profile.",
+              "default": false
             }
           },
           "required": ["title"]

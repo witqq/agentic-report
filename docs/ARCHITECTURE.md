@@ -39,6 +39,9 @@ Markdown + metadata + local assets + partials + semantic directives
 
 - `src/contracts.ts` assembles internal validation schemas and the TypeScript contracts selectively exposed
   by `src/index.ts`.
+- `src/page-motion.ts` is the presentation-neutral source of truth for the fixed package motion policy.
+  The authoring registry projects it into discovery, while the browser runtime consumes the same values and
+  supplies its duration/translation to package CSS through runtime-owned custom properties.
 - `src/source/load-source.ts` resolves the entry, parses metadata, and expands confined Markdown
   partials. It validates raw metadata shapes before merging and retains metadata/partial provenance for
   diagnostics and output-collision protection. Reads perform lexical/canonical confinement. The product
@@ -56,12 +59,13 @@ Markdown + metadata + local assets + partials + semantic directives
 - `src/render/visualizations.ts` projects validated chart series/points, diagram nodes/edges, and timeline
   events into deterministic accessible SVG or semantic HTML. It is compile-time code and does not add a
   visualization browser runtime.
-- `src/render/document.tsx` creates the static HTML document, explicit-section or legacy H2/H3 navigation,
+- `src/render/document.tsx` creates the static HTML document, explicit-section or legacy H2 navigation,
   selected registry-owned page layout/tokens, responsive shell, metadata, and content security policy. It
   allocates collision-free shell IDs around authored content IDs and uses them consistently for navigation
   and accessibility relationships.
 - `src/browser/` contains the browser runtime and token-based stylesheet bundled by Vite. One delegated
-  event controller handles theme/navigation controls, code copying, glossary hover/focus/tap explanations,
+  event controller handles theme/navigation controls, current-section ownership, bounded normal-motion
+  progress/reveal, code copying, glossary hover/focus/tap explanations,
   tab selection, modal/popover focus, filtering, switches, and bounded counters. Interaction instances keep state in their own semantic DOM
   subtree, so repeated components do not share accidental state.
 - `src/core/prepare-report.ts` owns the shared side-effect-free preparation used by building, validation,
@@ -105,7 +109,7 @@ envelopes are not yet independently versioned; the source-contract major is incl
 inspection results.
 
 The current source schema supports title, description, a documented restricted language-tag syntax,
-theme, layout, a coordinated preset, compact page-token overrides, and output defaults. `studio`,
+theme, layout, a coordinated preset, optional scroll progress, compact page-token overrides, and output defaults. `studio`,
 `editorial`, and `signal` are registry-owned token-default families; theme remains an independent color
 mode, and explicitly authored bounded tokens override the preset on density, typography, accent, content
 width, and radius. `document`, `dashboard`, `landing`, and `mixed` share one responsive shell, track
@@ -117,8 +121,10 @@ source root. The source contract is defined in
 The `section` directive is restricted to the Markdown root. It creates one real `<section>` labelled by an
 owned visible H2, with a validated explicit ID or deterministic title-derived ID. Explicit duplicates and
 unsafe IDs fail; generated collisions receive deterministic suffixes. When explicit sections exist they
-are the primary navigation inventory, using `nav` when supplied; documents without them keep legacy H2/H3
-navigation. `actions` accepts only direct `action` children. Each action becomes an ordinary anchor after
+are the primary navigation inventory, using `nav` when supplied; documents without them use legacy H2
+headings. H3 and component IDs remain owned descendant hash targets but do not become primary links.
+`reveal` defaults to false and opts only that section into the package-owned normal-motion reveal.
+`actions` accepts only direct `action` children. Each action becomes an ordinary anchor after
 its same-page, relative, HTTP(S), or mail target passes the closed registry constraint; executable,
 local-file, absolute-path, and protocol-relative targets are rejected.
 
@@ -178,8 +184,25 @@ selects coordinated visual defaults. The schema normalizer resolves preset defau
 bounded token overrides, and the renderer projects only the resolved preset/theme/token identities into
 the shared package stylesheet in both formats. The stylesheet owns reading/standard/wide tracks, section
 rhythm, component containment, and a single content-surface layer; wide media, tables, charts, and code
-scroll locally instead of widening the document. The navigation toggle exists only when a table of
-contents exists; desktop placement varies by layout, and all layouts use the same mobile drawer behavior.
+scroll locally instead of widening the document. Navigation exists only with at least two eligible
+sections. One ordinary link is always current: direct and descendant hashes resolve through section
+ownership, outside targets use the preceding or first section, and geometry uses the sticky-topbar
+activation line with deterministic bottom and equal-top rules. Root scroll padding keeps hash/focus targets
+below the sticky topbar; primary sections compensate their own block padding. In browsers with `scrollend`,
+a smooth hash traversal retains synchronous hash ownership until scrolling settles and then returns to
+geometry; other browsers debounce the scroll signal into one terminal geometry pass. When
+`IntersectionObserver` is unavailable, those same terminal and resize boundaries run the total geometry
+selection directly instead of scanning on every scroll signal. Desktop collapse is non-modal and
+session-only. Mobile moves the same nav into a native modal dialog with inert background, cyclic focus,
+Escape/backdrop/Close return, link-to-heading focus, and safe breakpoint closure.
+
+`scrollProgress` defaults to false. In normal motion, an enabled page installs one passive document scroll
+listener and one resize listener, coalesces updates through one animation frame, and changes one decorative
+`scaleX()` transform. A section with `reveal=true` is observed once and uses only opacity plus a 12-pixel,
+220-millisecond transition. Reduced motion installs neither progress DOM/listeners/frames nor reveal hidden
+state/observer; lack of `IntersectionObserver` leaves sections visible while navigation retains hash,
+activation-line, equal-top, resize, short-final and document-bottom ownership through bounded terminal
+geometry selection.
 
 ## Security properties
 

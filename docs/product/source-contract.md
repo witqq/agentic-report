@@ -27,6 +27,7 @@ Frontmatter takes precedence. Supported fields are:
 - `preset`: coordinated `studio`, `editorial`, or `signal` package-owned visual defaults;
 - `theme`: `system`, `light`, or `dark`;
 - `layout`: `document`, `dashboard`, `landing`, or `mixed`;
+- `scrollProgress`: boolean; default `false`; enables decorative normal-motion reading progress;
 - `tokens`: optional compact visual overrides containing only the fields below:
   - `density`: `compact`, `comfortable`, or `spacious`;
   - `font`: `sans`, `serif`, or `mono`;
@@ -69,7 +70,7 @@ The root metadata value, `tokens`, and `output` must be objects; scalar and arra
 silently replaced by defaults. Validation diagnostics point to the actual manifest or frontmatter field
 range that supplied the failing value.
 
-Defaults are `layout: document`, `theme: system`, and `preset: studio`. Presets provide these coordinated
+Defaults are `layout: document`, `theme: system`, `preset: studio`, and `scrollProgress: false`. Presets provide these coordinated
 token defaults:
 
 | Preset      | Density     | Font  | Accent | Width    | Radius |
@@ -109,7 +110,7 @@ syntax highlighting and semantic enhancement.
 The directive vocabulary is:
 
 - `section`: top-level labelled page region with required `title`, optional stable `id` and short `nav`
-  label, plus closed `width`, `align`, and `tone` choices;
+  label, closed `width`, `align`, and `tone` choices, and optional boolean `reveal`;
 - `actions` and directly nested leaf `action`: responsive ordinary link group; every action requires a
   visible label and safe `href` and may select `primary`, `secondary`, or `quiet` emphasis;
 - `callout`: emphasized finding with optional `title` and lowercase `kind`;
@@ -154,9 +155,10 @@ A `section` must be a direct child of the Markdown document, not a blockquote, l
 directive. It always renders a real labelled `<section>` and visible H2. `id` is a lowercase identity that
 starts with a letter and contains only letters, digits, and hyphens; duplicate explicit IDs fail. If `id`
 is omitted, the compiler derives a deterministic collision-free identity from `title`. `nav` is optional
-short navigation text. Defaults are `width="standard"`, `align="start"`, and `tone="plain"`; other values
-are `reading|wide`, `center`, and `soft|accent|contrast`. Documents without explicit sections preserve
-legacy H2/H3 navigation.
+short navigation text. Defaults are `width="standard"`, `align="start"`, `tone="plain"`, and
+`reveal="false"`; other values are `reading|wide`, `center`, `soft|accent|contrast`, and boolean
+`reveal="true"`. Documents without explicit sections use legacy H2 headings for primary navigation. H3
+and component anchors remain owned descendant targets but are not primary links.
 
 An `actions` container accepts one or more direct `action` children and no prose. `href` accepts a
 same-page `#anchor`, a relative target, HTTP(S), or `mailto:`. Executable schemes such as `javascript:` and
@@ -207,6 +209,33 @@ All state is local to the generated component instance. Browser behavior is pack
 `actions`/`action` does not appear in the stateful table because it is an ordinary group of links. Native
 anchor focus, Enter activation, URL behavior, and browser history apply without a package event handler.
 
+## Page navigation and motion
+
+Navigation is generated only when a page has at least two explicit top-level sections, or at least two
+legacy H2 headings when no explicit sections exist. It is one native labelled navigation list with no
+`menu` role. Exactly one link has `aria-current="location"`: a section or owned descendant hash selects
+that section, a valid outside target selects the preceding section or the first when none precedes it, and
+an empty or invalid hash uses the sticky-topbar activation line. Equal tops choose the later section and
+document bottom chooses the final section. Without `IntersectionObserver`, direct hashes and clicks remain
+deterministic and the same total geometry rules run at resize and settled-scroll boundaries; empty or
+invalid hashes therefore use the current activation-line owner rather than a fixed fallback. Hash and
+focused targets clear the sticky topbar. During normal-motion smooth hash navigation, the hash owner remains
+current until the scroll settles. Native `scrollend` performs one terminal geometry update; browsers without
+it coalesce the scroll series into one terminal update. Reduced motion uses the same final ownership without
+smooth traversal.
+
+On desktop, a persistent `Hide contents`/`Show contents` button collapses a non-modal navigation region,
+removes hidden links from focus, and releases the content column. This state lasts only for the current
+document session. On mobile, the same links move into a labelled native modal dialog. Close receives
+initial focus; Tab and Shift+Tab remain contained; Escape, backdrop, and Close restore the trigger; a link
+closes the dialog and focuses its target heading. Crossing to desktop while open closes the dialog safely.
+
+`scrollProgress: true` installs one decorative transform-based progress indicator only in normal motion.
+A section with `reveal="true"` becomes visible once using opacity and at most 12 pixels of translation over
+220 milliseconds. Under `prefers-reduced-motion: reduce`, progress DOM/listeners/animation frames and
+reveal hidden state/observer are absent. Without `IntersectionObserver`, reveal sections are immediately
+visible. These behaviors are identical in both output formats through `file://`.
+
 ## Output behavior
 
 `single-file` is the default. CSS and the package runtime are embedded inline; images, downloads,
@@ -219,7 +248,7 @@ destinations; clean-package verification repeats the build through independent C
 data URLs including base64 expansion. A font data URL is counted once through generated CSS. The result's `bytes` field
 separately reports the HTML file size, not a directory-tree total.
 
-Both formats include the same package-owned page layout, theme/tokens, responsive navigation, code-copy,
+Both formats include the same package-owned page layout, theme/tokens, responsive navigation and bounded motion, code-copy,
 tabs, overlays, filters, switches, visualizations, and demo behavior. Tabs start on their first panel; disclosures use the
 authored `open` value; toggles use `default: off` unless set to `on`; popovers start closed; filter counts
 and modal state initialize in the browser. Wide tables and code scroll inside their content surface on

@@ -36,14 +36,19 @@ discovery failures from being reported as successful empty runs.
   and a cross-platform determinism matrix are outside the proportionate filesystem contract.
 - `e2e` uses Playwright with desktop and mobile Chromium profiles. Global setup generates a real
   self-contained artifact; tests open it through `file://` and verify document navigation, code,
-  responsive navigation, themes, visible focus, locally scrolling wide tables, built-in demo and code-copy interactions, embedded single-file and
+  responsive navigation, deterministic current-section ownership, sticky-topbar target clearance and
+  settled normal/reduced hash ownership including the no-`scrollend` fallback, full bounded geometry and
+  hash ownership without `IntersectionObserver`, desktop collapse,
+  native-dialog mobile
+  focus containment/return, normal/reduced-motion progress and one-time reveal, themes, visible focus,
+  locally scrolling wide tables, built-in demo and code-copy interactions, embedded single-file and
   external directory runtimes, and representative architecture, tutorial, work-report, and landing-page
   artifacts. The document, dashboard, landing, and mixed examples are built and exercised through
   `file://` in desktop and mobile profiles, including their page data contract and local images. All six
   package starters are also opened in both profiles, exercise a declared interaction, assert responsive
   containment, and produce inspected captures. A local SVG must complete with non-zero intrinsic width in both embedded and rewritten hashed
   forms. The current suite does not cover browser behavior for downloadable assets or local fonts,
-  axe/screen-reader evidence, full keyboard focus, or difficult-content reflow.
+  axe/screen-reader evidence or difficult-content reflow beyond the authored fixtures.
 - `pack:check` builds an npm tarball, checks its exact release allowlist, metadata, license, types, exports,
   engine, CLI shebang, file count, absence of private/temporary paths, and common secret/token patterns. It
   computes and prints the candidate SHA-256, then installs the

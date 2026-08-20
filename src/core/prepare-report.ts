@@ -106,6 +106,7 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
       theme: source.manifest.theme,
       layout: source.manifest.layout,
       tokens: source.manifest.tokens,
+      scrollProgress: source.manifest.scrollProgress,
     },
     contentHtml: markdown.html,
     navigation: extractNavigation(markdown.html),

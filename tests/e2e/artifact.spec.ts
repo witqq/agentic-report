@@ -2,8 +2,9 @@ import { mkdir, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type { Locator } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
+import { PAGE_MOTION_POLICY } from '../../src/page-motion.js';
 import { test, expect } from './fixtures.js';
 
 const artifactUrl = pathToFileURL(path.resolve('test-results/e2e-artifact/report.html')).href;
@@ -59,6 +60,18 @@ const launchReadinessArtifacts = [
       path.resolve('test-results/e2e-generated/launch-readiness-directory/index.html'),
     ).href,
   },
+] as const;
+const navigationArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('navigation') },
+  {
+    format: 'directory',
+    url: pathToFileURL(path.resolve('test-results/e2e-generated/navigation-directory/index.html'))
+      .href,
+  },
+] as const;
+const defaultMotionArtifacts = [
+  { format: 'single-file', url: artifactUrl },
+  { format: 'directory', url: directoryArtifactUrl },
 ] as const;
 
 const presetShowcases = [
@@ -203,6 +216,35 @@ const starters = [
     component: '.semantic-timeline',
   },
 ] as const;
+
+async function expectCurrentNavigation(page: Page, targetId: string): Promise<void> {
+  const current = page.locator('[data-navigation] a[aria-current="location"]');
+  await expect(current).toHaveCount(1);
+  await expect(current).toHaveAttribute('href', `#${targetId}`);
+}
+
+interface MotionEvidence {
+  readonly rafRequests: number;
+  readonly documentScrollAdds: number;
+  readonly documentScrollRemoves: number;
+  readonly windowResizeAdds: number;
+  readonly windowResizeRemoves: number;
+  readonly observers: number;
+  readonly observerDisconnects: number;
+  readonly revealTargets: number;
+  readonly revealUnobserves: number;
+}
+
+async function readMotionEvidence(page: Page): Promise<MotionEvidence> {
+  return page.evaluate(
+    () =>
+      (
+        window as unknown as {
+          readonly __motionEvidence: MotionEvidence;
+        }
+      ).__motionEvidence,
+  );
+}
 
 for (const starter of starters) {
   test(`starter ${starter.id} is useful, responsive, and interactive from file URL`, async ({
@@ -503,6 +545,825 @@ for (const fixture of [
   });
 }
 
+test('desktop navigation has one total current state and a non-modal session collapse in both formats', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const artifact of navigationArtifacts) {
+    await page.goto(artifact.url);
+    const navigation = page.locator('[data-navigation]');
+    await expect(navigation.locator('a')).toHaveCount(3);
+    await expect(navigation).not.toContainText('Alpha detail');
+    await expect(page.locator('[role="menu"]')).toHaveCount(0);
+    await expect(page.locator('[aria-live]')).toHaveCount(0);
+    await expectCurrentNavigation(page, 'alpha');
+
+    expect(
+      await page.evaluate(() => {
+        let geometryReads = 0;
+        for (const heading of document.querySelectorAll<HTMLElement>(
+          '[data-navigation] a[href^="#"]',
+        )) {
+          const target = document.querySelector<HTMLElement>(heading.getAttribute('href') ?? '');
+          const ownedHeading = target?.querySelector<HTMLElement>(':scope > h2') ?? target;
+          if (ownedHeading === null) continue;
+          const getBoundingClientRect = ownedHeading.getBoundingClientRect.bind(ownedHeading);
+          ownedHeading.getBoundingClientRect = () => {
+            geometryReads += 1;
+            return getBoundingClientRect();
+          };
+        }
+        for (let index = 0; index < 5; index += 1) dispatchEvent(new Event('scroll'));
+        return geometryReads;
+      }),
+    ).toBe(0);
+
+    const toggle = page.locator('[data-nav-toggle]');
+    await expect(toggle).toHaveAccessibleName('Hide contents');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('[data-nav-outside][inert]')).toHaveCount(0);
+    const expandedColumns = await page
+      .locator('.report-shell')
+      .evaluate((element) => getComputedStyle(element).gridTemplateColumns);
+    await toggle.click();
+    await expect(toggle).toHaveAccessibleName('Show contents');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(navigation).toBeHidden();
+    await expect(toggle).toBeFocused();
+    const collapsedColumns = await page
+      .locator('.report-shell')
+      .evaluate((element) => getComputedStyle(element).gridTemplateColumns);
+    expect(expandedColumns).not.toBe(collapsedColumns);
+    expect(collapsedColumns.trim().split(/\s+/u)).toHaveLength(1);
+    await toggle.press('Enter');
+    await expect(toggle).toHaveAccessibleName('Hide contents');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(navigation).toBeVisible();
+    expect(
+      await page
+        .locator('.report-shell')
+        .evaluate((element) => getComputedStyle(element).gridTemplateColumns),
+    ).toBe(expandedColumns);
+    await toggle.press('Enter');
+    await expect(toggle).toHaveAccessibleName('Show contents');
+    await expect(navigation).toBeHidden();
+    await page.keyboard.press('Tab');
+    await expect(page.locator('.topbar-title')).toBeFocused();
+    await page.reload();
+    await expect(toggle).toHaveAccessibleName('Hide contents');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(navigation).toBeVisible();
+
+    for (const [hash, owner] of [
+      ['#alpha', 'alpha'],
+      ['#alpha-detail', 'alpha'],
+      ['#beta-detail', 'beta'],
+      ['#modal-1', 'beta'],
+      ['#navigation-runtime-fixture', 'alpha'],
+      ['#appendix-outside-navigation', 'gamma'],
+    ] as const) {
+      await page.evaluate((value) => {
+        location.hash = value;
+      }, hash);
+      await expectCurrentNavigation(page, owner);
+    }
+
+    await page.evaluate(() => {
+      history.replaceState(null, '', '#missing-target');
+      scrollTo({ top: 0, behavior: 'instant' });
+      dispatchEvent(new Event('resize'));
+    });
+    await expectCurrentNavigation(page, 'alpha');
+    await page.evaluate(() => dispatchEvent(new Event('resize')));
+    await expectCurrentNavigation(page, 'alpha');
+
+    await page.evaluate(() => {
+      const heading = document.getElementById('beta-title');
+      if (heading === null) throw new Error('Missing Beta heading.');
+      scrollTo({ top: scrollY + heading.getBoundingClientRect().top - 70, behavior: 'instant' });
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      location.hash = '#another-missing-target';
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      history.replaceState(null, '', location.pathname);
+      dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      const heading = document.getElementById('alpha-title');
+      if (heading === null) throw new Error('Missing Alpha heading.');
+      scrollTo({ top: scrollY + heading.getBoundingClientRect().top - 70, behavior: 'instant' });
+    });
+    await expectCurrentNavigation(page, 'alpha');
+
+    await page.evaluate(() => {
+      const heading = document.getElementById('beta-title');
+      if (heading === null) throw new Error('Missing Beta heading.');
+      scrollTo({ top: scrollY + heading.getBoundingClientRect().top - 70, behavior: 'instant' });
+      dispatchEvent(new Event('resize'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+
+    await page.evaluate(() => {
+      scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
+      dispatchEvent(new Event('scroll'));
+    });
+    await expectCurrentNavigation(page, 'gamma');
+
+    await page.evaluate(() => {
+      scrollTo({ top: 0, behavior: 'instant' });
+      const tops: Readonly<Record<string, number>> = {
+        'alpha-title': 70,
+        'beta-title': 70,
+        'gamma-title': 500,
+      };
+      for (const [id, top] of Object.entries(tops)) {
+        const heading = document.getElementById(id);
+        if (heading === null) throw new Error(`Missing ${id}.`);
+        Object.defineProperty(heading, 'getBoundingClientRect', {
+          configurable: true,
+          value: () => new DOMRect(0, top, 400, 40),
+        });
+      }
+      dispatchEvent(new Event('resize'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+  }
+});
+
+test('mobile contents drawer uses native modal focus and closes safely in both formats', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  for (const artifact of navigationArtifacts) {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(artifact.url);
+    const toggle = page.locator('[data-nav-toggle]');
+    await expect(toggle).toHaveAccessibleName('Open contents');
+    const dialog = page.locator('[data-nav-dialog]');
+    await expect(dialog).toBeHidden();
+    await toggle.click();
+    await expect(dialog).toBeVisible();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
+    await expect(page.locator('[data-nav-outside][inert]')).toHaveCount(2);
+    await page.keyboard.press('Shift+Tab');
+    expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press('Tab');
+    expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(toggle).toBeFocused();
+    await expect(page.locator('[data-nav-outside][inert]')).toHaveCount(0);
+
+    await toggle.click();
+    await page.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(toggle).toBeFocused();
+
+    await toggle.click();
+    await dialog.evaluate((element) =>
+      element.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+    await expect(dialog).toBeHidden();
+    await expect(toggle).toBeFocused();
+
+    await toggle.click();
+    await page.locator('[data-navigation] a[href="#beta"]').click();
+    await expect(dialog).toBeHidden();
+    await expect(page.locator('#beta-title')).toBeFocused();
+    await expectCurrentNavigation(page, 'beta');
+
+    await toggle.click();
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await expect(dialog).toBeHidden();
+    await expect(toggle).toBeFocused();
+    await expect(toggle).toHaveAccessibleName('Hide contents');
+    await expect(page.locator('[data-nav-desktop-host] [data-navigation]')).toBeVisible();
+  }
+});
+
+test('navigation fallback keeps hash ownership deterministic without IntersectionObserver', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await page.addInitScript(() => {
+    Reflect.deleteProperty(window, 'IntersectionObserver');
+  });
+  for (const artifact of navigationArtifacts) {
+    const pageErrors: string[] = [];
+    const recordPageError = (error: Error): void => {
+      pageErrors.push(error.message);
+    };
+    page.on('pageerror', recordPageError);
+    const initialHashes = [
+      ['#beta', 'beta'],
+      ['#beta-detail', 'beta'],
+      ['#modal-1', 'beta'],
+      ['#navigation-runtime-fixture', 'alpha'],
+      ['#appendix-outside-navigation', 'gamma'],
+      ['#missing-target', 'alpha'],
+      ['#%E0%A4%A', 'alpha'],
+      ['', 'alpha'],
+    ] as const;
+    for (const [hash, expectedOwner] of initialHashes) {
+      await page.goto(`${artifact.url}${hash}`);
+      await expectCurrentNavigation(page, expectedOwner);
+      await expect(page.locator('[data-reveal-pending]')).toHaveCount(0);
+    }
+    expect(pageErrors).toEqual([]);
+    page.off('pageerror', recordPageError);
+
+    await page.goto(`${artifact.url}#beta-detail`);
+    expect(await page.evaluate(() => 'onscrollend' in window)).toBe(true);
+    await expectCurrentNavigation(page, 'beta');
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await page.evaluate(() => dispatchEvent(new Event('resize')));
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      history.replaceState(null, '', '#beta-detail');
+      dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      history.replaceState(null, '', '#navigation-runtime-fixture');
+      dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await expectCurrentNavigation(page, 'alpha');
+    await page.evaluate(() => {
+      history.replaceState(null, '', '#appendix-outside-navigation');
+      dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await expectCurrentNavigation(page, 'gamma');
+    await page.evaluate(() => {
+      const appendix = document.getElementById('appendix-outside-navigation');
+      if (appendix === null) throw new Error('Missing appendix heading.');
+      scrollTo({
+        top: scrollY + appendix.getBoundingClientRect().top - 70,
+        behavior: 'instant',
+      });
+      dispatchEvent(new Event('scroll'));
+      dispatchEvent(new Event('scrollend'));
+    });
+    await expectCurrentNavigation(page, 'gamma');
+    await page.evaluate(() => {
+      history.replaceState(null, '', location.pathname);
+      dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await expectCurrentNavigation(page, 'gamma');
+    await page.evaluate(() => {
+      history.replaceState(null, '', '#beta-detail');
+      dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      scrollTo({ top: 0, behavior: 'instant' });
+      dispatchEvent(new Event('scroll'));
+      dispatchEvent(new Event('scrollend'));
+    });
+    await expectCurrentNavigation(page, 'alpha');
+
+    await page.evaluate(() => {
+      const heading = document.getElementById('beta-title');
+      if (heading === null) throw new Error('Missing Beta heading.');
+      scrollTo({ top: scrollY + heading.getBoundingClientRect().top - 70, behavior: 'instant' });
+      dispatchEvent(new Event('scroll'));
+      dispatchEvent(new Event('scrollend'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      history.replaceState(null, '', '#missing-at-beta');
+      dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      history.replaceState(null, '', location.pathname);
+      dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+
+    await page.evaluate(() => {
+      const tops: Readonly<Record<string, number>> = {
+        'alpha-title': 70,
+        'beta-title': 70,
+        'gamma-title': 500,
+      };
+      for (const [id, top] of Object.entries(tops)) {
+        const heading = document.getElementById(id);
+        if (heading === null) throw new Error(`Missing ${id}.`);
+        Object.defineProperty(heading, 'getBoundingClientRect', {
+          configurable: true,
+          value: () => new DOMRect(0, top, 400, 40),
+        });
+      }
+      dispatchEvent(new Event('resize'));
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      for (const id of ['alpha-title', 'beta-title', 'gamma-title']) {
+        const heading = document.getElementById(id);
+        if (heading === null) throw new Error(`Missing ${id}.`);
+        Reflect.deleteProperty(heading, 'getBoundingClientRect');
+      }
+    });
+
+    const geometryReads = await page.evaluate(() => {
+      let reads = 0;
+      for (const link of document.querySelectorAll<HTMLAnchorElement>(
+        '[data-navigation] a[href^="#"]',
+      )) {
+        const target = document.querySelector<HTMLElement>(link.hash);
+        const heading = target?.querySelector<HTMLElement>(':scope > h2') ?? target;
+        if (heading === null || heading === undefined) continue;
+        const getBoundingClientRect = heading.getBoundingClientRect.bind(heading);
+        heading.getBoundingClientRect = () => {
+          reads += 1;
+          return getBoundingClientRect();
+        };
+      }
+      for (let index = 0; index < 5; index += 1) dispatchEvent(new Event('scroll'));
+      const duringScroll = reads;
+      dispatchEvent(new Event('scrollend'));
+      return { duringScroll, afterScrollEnd: reads };
+    });
+    expect(geometryReads).toEqual({ duringScroll: 0, afterScrollEnd: 3 });
+
+    await page.locator('[data-navigation] a[href="#gamma"]').click();
+    await expectCurrentNavigation(page, 'gamma');
+    await settleVisualState(page);
+    await expectCurrentNavigation(page, 'gamma');
+    await page.evaluate(() => {
+      history.replaceState(null, '', location.pathname);
+      dispatchEvent(new HashChangeEvent('hashchange'));
+      scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
+      dispatchEvent(new Event('scroll'));
+    });
+    await expectCurrentNavigation(page, 'gamma');
+  }
+});
+
+test('navigation coalesces geometry without IntersectionObserver or scrollend', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await page.addInitScript(() => {
+    Reflect.deleteProperty(window, 'IntersectionObserver');
+    Reflect.deleteProperty(window, 'onscrollend');
+    Reflect.deleteProperty(Window.prototype, 'onscrollend');
+  });
+  for (const artifact of navigationArtifacts) {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`${artifact.url}#beta-detail`);
+    expect(
+      await page.evaluate(() => !('IntersectionObserver' in window) && !('onscrollend' in window)),
+    ).toBe(true);
+    await expect(page.locator('[data-reveal-pending]')).toHaveCount(0);
+    await expectCurrentNavigation(page, 'beta');
+    await settleVisualState(page);
+    await expectCurrentNavigation(page, 'beta');
+
+    const immediateOwner = await page.evaluate(() => {
+      const evidence = { headingReads: 0 };
+      (
+        window as unknown as { __combinedFallbackEvidence: typeof evidence }
+      ).__combinedFallbackEvidence = evidence;
+      for (const link of document.querySelectorAll<HTMLAnchorElement>(
+        '[data-navigation] a[href^="#"]',
+      )) {
+        const target = document.querySelector<HTMLElement>(link.hash);
+        const heading = target?.querySelector<HTMLElement>(':scope > h2') ?? target;
+        if (heading === null || heading === undefined) continue;
+        const getBoundingClientRect = heading.getBoundingClientRect.bind(heading);
+        heading.getBoundingClientRect = () => {
+          evidence.headingReads += 1;
+          return getBoundingClientRect();
+        };
+      }
+      scrollTo({ top: 0, behavior: 'instant' });
+      for (let index = 0; index < 5; index += 1) dispatchEvent(new Event('scroll'));
+      return document
+        .querySelector<HTMLAnchorElement>('[data-navigation] a[aria-current="location"]')
+        ?.getAttribute('href');
+    });
+    expect(immediateOwner).toBe('#beta');
+    await expectCurrentNavigation(page, 'alpha');
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (
+              window as unknown as {
+                readonly __combinedFallbackEvidence: { readonly headingReads: number };
+              }
+            ).__combinedFallbackEvidence.headingReads,
+        ),
+      )
+      .toBe(3);
+
+    const readsBeforeBetaBurst = await page.evaluate(() => {
+      const heading = document.getElementById('beta-title');
+      if (heading === null) throw new Error('Missing Beta heading.');
+      scrollTo({ top: scrollY + heading.getBoundingClientRect().top - 70, behavior: 'instant' });
+      const reads = (
+        window as unknown as {
+          readonly __combinedFallbackEvidence: { readonly headingReads: number };
+        }
+      ).__combinedFallbackEvidence.headingReads;
+      for (let index = 0; index < 5; index += 1) dispatchEvent(new Event('scroll'));
+      return reads;
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (
+              window as unknown as {
+                readonly __combinedFallbackEvidence: { readonly headingReads: number };
+              }
+            ).__combinedFallbackEvidence.headingReads,
+        ),
+      )
+      .toBe(readsBeforeBetaBurst + 3);
+  }
+});
+
+test('navigation returns from hash ownership to geometry when scrollend is unavailable', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await page.addInitScript(() => {
+    Reflect.deleteProperty(window, 'onscrollend');
+    Reflect.deleteProperty(Window.prototype, 'onscrollend');
+  });
+  for (const artifact of navigationArtifacts) {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(artifact.url);
+    expect(await page.evaluate(() => 'onscrollend' in window)).toBe(false);
+    await page.evaluate(() => {
+      location.hash = '#beta';
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await settleVisualState(page);
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+    await expectCurrentNavigation(page, 'alpha');
+    await page.evaluate(() => {
+      const heading = document.getElementById('beta-title');
+      if (heading === null) throw new Error('Missing Beta heading.');
+      scrollTo({ top: scrollY + heading.getBoundingClientRect().top - 70, behavior: 'instant' });
+    });
+    await expectCurrentNavigation(page, 'beta');
+    await page.evaluate(() => {
+      const evidence = { headingReads: 0 };
+      (
+        window as unknown as { __fallbackScrollEvidence: typeof evidence }
+      ).__fallbackScrollEvidence = evidence;
+      for (const link of document.querySelectorAll<HTMLAnchorElement>(
+        '[data-navigation] a[href^="#"]',
+      )) {
+        const target = document.querySelector<HTMLElement>(link.hash);
+        const heading = target?.querySelector<HTMLElement>(':scope > h2') ?? target;
+        if (heading === null || heading === undefined) continue;
+        const getBoundingClientRect = heading.getBoundingClientRect.bind(heading);
+        heading.getBoundingClientRect = () => {
+          evidence.headingReads += 1;
+          return getBoundingClientRect();
+        };
+      }
+      for (let index = 0; index < 5; index += 1) dispatchEvent(new Event('scroll'));
+    });
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (
+              window as unknown as {
+                readonly __fallbackScrollEvidence: { readonly headingReads: number };
+              }
+            ).__fallbackScrollEvidence.headingReads,
+        ),
+      )
+      .toBe(3);
+  }
+});
+
+test('navigation visual evidence covers every required state, theme, motion profile, and format', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const captureRoot = path.resolve('test-results/step-3-captures');
+  await rm(captureRoot, { recursive: true, force: true });
+  let captures = 0;
+
+  for (const artifact of navigationArtifacts) {
+    for (const theme of ['light', 'dark'] as const) {
+      for (const motion of ['normal', 'reduced'] as const) {
+        await page.goto('about:blank');
+        await page.emulateMedia({
+          colorScheme: theme,
+          reducedMotion: motion === 'reduced' ? 'reduce' : 'no-preference',
+        });
+        await page.setViewportSize({ width: 1440, height: 900 });
+        await page.goto(`${artifact.url}#beta`);
+        await page.locator('html').evaluate((element, value) => {
+          element.dataset.theme = value;
+        }, theme);
+        await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+        await expectCurrentNavigation(page, 'beta');
+        await settleVisualState(page);
+        await expectCurrentNavigation(page, 'beta');
+        const anchorClearance = await page.evaluate(() => {
+          const topbar = document.querySelector('.topbar');
+          const heading = document.getElementById('beta-title');
+          if (!(topbar instanceof HTMLElement) || !(heading instanceof HTMLElement)) {
+            throw new Error('Expected the sticky topbar and Beta heading');
+          }
+          return heading.getBoundingClientRect().top - topbar.getBoundingClientRect().bottom;
+        });
+        expect(anchorClearance).toBeGreaterThanOrEqual(0);
+        const captureDirectory = path.join(captureRoot, artifact.format, theme, motion);
+        await mkdir(captureDirectory, { recursive: true });
+        await page.screenshot({ path: path.join(captureDirectory, 'expanded-current-1440.png') });
+        captures += 1;
+
+        await page.setViewportSize({ width: 1280, height: 800 });
+        const toggle = page.locator('[data-nav-toggle]');
+        await expect(toggle).toHaveAccessibleName('Hide contents');
+        await toggle.click();
+        await expect(page.locator('[data-navigation]')).toBeHidden();
+        await settleVisualState(page);
+        await page.screenshot({ path: path.join(captureDirectory, 'collapsed-1280.png') });
+        captures += 1;
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        const dialog = page.locator('[data-nav-dialog]');
+        await expect(dialog).toBeHidden();
+        await settleVisualState(page);
+        await page.screenshot({ path: path.join(captureDirectory, 'drawer-closed-390.png') });
+        captures += 1;
+        await toggle.click();
+        await expect(dialog).toBeVisible();
+        await settleVisualState(page);
+        await page.screenshot({ path: path.join(captureDirectory, 'drawer-open-390.png') });
+        captures += 1;
+      }
+    }
+  }
+
+  expect(captures).toBe(32);
+});
+
+test('reduced motion omits progress and reveal machinery while normal motion stays bounded', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await page.addInitScript(() => {
+    const evidence = {
+      rafRequests: 0,
+      documentScrollAdds: 0,
+      documentScrollRemoves: 0,
+      windowResizeAdds: 0,
+      windowResizeRemoves: 0,
+      observers: 0,
+      observerDisconnects: 0,
+      revealTargets: 0,
+      revealUnobserves: 0,
+    };
+    Object.defineProperty(window, '__motionEvidence', { value: evidence, configurable: true });
+    window.requestAnimationFrame = new Proxy(window.requestAnimationFrame, {
+      apply(target, thisArg, argumentsList: Parameters<typeof window.requestAnimationFrame>) {
+        evidence.rafRequests += 1;
+        return Reflect.apply(target, thisArg, argumentsList) as number;
+      },
+    });
+    document.addEventListener = new Proxy(document.addEventListener, {
+      apply(target, thisArg, argumentsList: Parameters<typeof document.addEventListener>) {
+        if (argumentsList[0] === 'scroll') evidence.documentScrollAdds += 1;
+        Reflect.apply(target, thisArg, argumentsList);
+        return undefined;
+      },
+    });
+    document.removeEventListener = new Proxy(document.removeEventListener, {
+      apply(target, thisArg, argumentsList: Parameters<typeof document.removeEventListener>) {
+        if (argumentsList[0] === 'scroll') evidence.documentScrollRemoves += 1;
+        Reflect.apply(target, thisArg, argumentsList);
+        return undefined;
+      },
+    });
+    window.addEventListener = new Proxy(window.addEventListener, {
+      apply(target, thisArg, argumentsList: Parameters<typeof window.addEventListener>) {
+        if (argumentsList[0] === 'resize') evidence.windowResizeAdds += 1;
+        Reflect.apply(target, thisArg, argumentsList);
+        return undefined;
+      },
+    });
+    window.removeEventListener = new Proxy(window.removeEventListener, {
+      apply(target, thisArg, argumentsList: Parameters<typeof window.removeEventListener>) {
+        if (argumentsList[0] === 'resize') evidence.windowResizeRemoves += 1;
+        Reflect.apply(target, thisArg, argumentsList);
+        return undefined;
+      },
+    });
+    const NativeObserver = window.IntersectionObserver;
+    window.IntersectionObserver = new Proxy(NativeObserver, {
+      construct(target, argumentsList) {
+        evidence.observers += 1;
+        const observer = Reflect.construct(target, argumentsList) as IntersectionObserver;
+        observer.observe = new Proxy(observer.observe, {
+          apply(observe, observerThis, observeArguments: [Element]) {
+            if (observeArguments[0].matches('[data-reveal="true"]')) {
+              evidence.revealTargets += 1;
+            }
+            Reflect.apply(observe, observerThis, observeArguments);
+            return undefined;
+          },
+        });
+        observer.unobserve = new Proxy(observer.unobserve, {
+          apply(unobserve, observerThis, unobserveArguments: [Element]) {
+            if (unobserveArguments[0].matches('[data-reveal="true"]')) {
+              evidence.revealUnobserves += 1;
+            }
+            Reflect.apply(unobserve, observerThis, unobserveArguments);
+            return undefined;
+          },
+        });
+        observer.disconnect = new Proxy(observer.disconnect, {
+          apply(disconnect, observerThis, disconnectArguments: []) {
+            evidence.observerDisconnects += 1;
+            Reflect.apply(disconnect, observerThis, disconnectArguments);
+            return undefined;
+          },
+        });
+        return observer;
+      },
+    });
+  });
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  for (const artifact of defaultMotionArtifacts) {
+    await page.goto(artifact.url);
+    await expect(page.locator('[data-scroll-progress-indicator]')).toHaveCount(0);
+    const disabledEvidence = await readMotionEvidence(page);
+    expect(disabledEvidence.rafRequests).toBe(0);
+    expect(disabledEvidence.documentScrollAdds).toBe(0);
+    expect(disabledEvidence.windowResizeAdds).toBe(1);
+  }
+
+  for (const artifact of navigationArtifacts) {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(artifact.url);
+    await expect(page.locator('[data-scroll-progress-indicator]')).toHaveCount(0);
+    await expect(page.locator('[data-reveal-pending], [data-reveal-motion]')).toHaveCount(0);
+    const reducedEvidence = await readMotionEvidence(page);
+    expect(reducedEvidence).toEqual({
+      rafRequests: 0,
+      documentScrollAdds: 0,
+      documentScrollRemoves: 0,
+      windowResizeAdds: 1,
+      windowResizeRemoves: 0,
+      observers: 1,
+      observerDisconnects: 0,
+      revealTargets: 0,
+      revealUnobserves: 0,
+    });
+    expect(
+      await page.locator('#beta').evaluate((element) => ({
+        opacity: getComputedStyle(element).opacity,
+        transform: getComputedStyle(element).transform,
+      })),
+    ).toEqual({ opacity: '1', transform: 'none' });
+
+    await page.goto('about:blank');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.goto(artifact.url);
+    const progress = page.locator('[data-scroll-progress-indicator]');
+    await expect(progress).toBeAttached();
+    expect(
+      await page.locator('html').evaluate((element) => ({
+        duration: element.style.getPropertyValue('--motion-reveal-duration'),
+        translation: element.style.getPropertyValue('--motion-reveal-translation'),
+      })),
+    ).toEqual({
+      duration: `${PAGE_MOTION_POLICY.sectionReveal.durationMs}ms`,
+      translation: `${PAGE_MOTION_POLICY.sectionReveal.translationPx}px`,
+    });
+    const beta = page.locator('#beta');
+    await expect(beta).toHaveAttribute('data-reveal-pending', '');
+    const initialMotion = await beta.evaluate((element) => ({
+      opacity: getComputedStyle(element).opacity,
+      transform: getComputedStyle(element).transform,
+      translationY: new DOMMatrix(getComputedStyle(element).transform).m42,
+      duration: getComputedStyle(element).transitionDuration,
+      properties: getComputedStyle(element).transitionProperty,
+    }));
+    expect(initialMotion.opacity).toBe('0');
+    expect(initialMotion.translationY).toBe(PAGE_MOTION_POLICY.sectionReveal.translationPx);
+    expect(Math.abs(initialMotion.translationY)).toBeLessThanOrEqual(12);
+    expect(initialMotion.duration).toContain(
+      `${PAGE_MOTION_POLICY.sectionReveal.durationMs / 1000}s`,
+    );
+    const durationMs = Number.parseFloat(initialMotion.duration) * 1000;
+    expect(durationMs).toBeGreaterThanOrEqual(180);
+    expect(durationMs).toBeLessThanOrEqual(240);
+    expect(initialMotion.properties).toBe('opacity, transform');
+    await beta.scrollIntoViewIfNeeded();
+    await expect(beta).not.toHaveAttribute('data-reveal-pending', '');
+    await expect(beta).toHaveAttribute('data-reveal-shown', '');
+    await page.evaluate(() =>
+      scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }),
+    );
+    await expect
+      .poll(() => progress.evaluate((element) => (element as HTMLElement).style.transform))
+      .toBe('scaleX(1)');
+    expect(await progress.getAttribute('style')).toBe('transform: scaleX(1);');
+
+    const afterReveal = await readMotionEvidence(page);
+    expect(afterReveal.documentScrollAdds).toBe(1);
+    expect(afterReveal.observers).toBe(2);
+    expect(afterReveal.revealTargets).toBe(2);
+    expect(afterReveal.revealUnobserves).toBeGreaterThanOrEqual(1);
+
+    await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+    await expect(beta).toHaveAttribute('data-reveal-shown', '');
+    await expect(beta).not.toHaveAttribute('data-reveal-pending', '');
+    await beta.scrollIntoViewIfNeeded();
+    const afterReentry = await readMotionEvidence(page);
+    expect(afterReentry.revealTargets).toBe(afterReveal.revealTargets);
+    expect(afterReentry.revealUnobserves).toBe(afterReveal.revealUnobserves);
+
+    await page.setViewportSize({ width: 1200, height: 700 });
+    await page.evaluate(() => scrollTo({ top: 1000, behavior: 'instant' }));
+    const progressRatio = async (): Promise<number> =>
+      Number.parseFloat(
+        (await progress.evaluate((element) => (element as HTMLElement).style.transform)).slice(
+          'scaleX('.length,
+          -1,
+        ),
+      );
+    await expect.poll(progressRatio).toBeGreaterThan(0);
+    const ratioBeforeResize = await progressRatio();
+    const scrollBeforeResize = await page.evaluate(() => scrollY);
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await expect.poll(progressRatio).toBeGreaterThan(ratioBeforeResize);
+    expect(await page.evaluate(() => scrollY)).toBe(scrollBeforeResize);
+
+    const beforeBurst = (await readMotionEvidence(page)).rafRequests;
+    await page.evaluate(() => {
+      for (let index = 0; index < 5; index += 1) dispatchEvent(new Event('resize'));
+    });
+    await expect
+      .poll(async () => (await readMotionEvidence(page)).rafRequests)
+      .toBe(beforeBurst + 1);
+
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        }),
+    );
+    const beforeScrollBurst = (await readMotionEvidence(page)).rafRequests;
+    await page.evaluate(() => {
+      for (let index = 0; index < 5; index += 1) document.dispatchEvent(new Event('scroll'));
+    });
+    await expect
+      .poll(async () => (await readMotionEvidence(page)).rafRequests)
+      .toBe(beforeScrollBurst + 1);
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(progress).toHaveCount(0);
+    await expect(page.locator('[data-reveal-pending], [data-reveal-motion]')).toHaveCount(0);
+    const afterPreferenceReduction = await readMotionEvidence(page);
+    expect(afterPreferenceReduction.documentScrollRemoves).toBe(1);
+    expect(afterPreferenceReduction.windowResizeRemoves).toBe(1);
+    expect(afterPreferenceReduction.observerDisconnects).toBeGreaterThanOrEqual(1);
+    const reducedRafCount = afterPreferenceReduction.rafRequests;
+    await page.evaluate(() => {
+      for (let index = 0; index < 3; index += 1) document.dispatchEvent(new Event('scroll'));
+    });
+    expect((await readMotionEvidence(page)).rafRequests).toBe(reducedRafCount);
+    expect(
+      await beta.evaluate((element) => ({
+        opacity: getComputedStyle(element).opacity,
+        transform: getComputedStyle(element).transform,
+      })),
+    ).toEqual({ opacity: '1', transform: 'none' });
+
+    const revealedBeforeRestore = afterPreferenceReduction.revealTargets;
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await expect(page.locator('[data-scroll-progress-indicator]')).toBeAttached();
+    await expect(page.locator('[data-reveal-pending]')).toHaveCount(0);
+    const restoredEvidence = await readMotionEvidence(page);
+    expect(restoredEvidence.documentScrollAdds).toBe(2);
+    expect(restoredEvidence.windowResizeAdds).toBe(3);
+    expect(restoredEvidence.revealTargets).toBe(revealedBeforeRestore);
+  }
+});
+
 test('reduced-motion preference disables smooth scrolling and transitions', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(artifactUrl);
@@ -519,11 +1380,12 @@ test('reduced-motion preference disables smooth scrolling and transitions', asyn
 test('mobile navigation opens without a hardcoded server URL', async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.startsWith('mobile'));
   await page.goto(artifactUrl);
-  const toggle = page.getByRole('button', { name: 'Contents' });
+  const toggle = page.locator('[data-nav-toggle]');
+  await expect(toggle).toHaveAccessibleName('Open contents');
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.locator('[data-navigation]')).toHaveAttribute('data-open', '');
   await expect(page.locator('[data-navigation]')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
 });
 
 test('declarative interactions preserve scoped state, focus, and responsive file behavior', async ({
@@ -636,7 +1498,7 @@ test('declarative interactions preserve scoped state, focus, and responsive file
   await expect(dialog).toBeHidden();
   await expect(modalOpener).toBeFocused();
   await activate(modalOpener);
-  await activate(dialog.getByRole('button', { name: 'Close' }));
+  await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
   await expect(modalOpener).toBeFocused();
 
   const popoverTrigger = page.getByRole('button', { name: 'Show portability note' });
@@ -761,15 +1623,16 @@ for (const artifact of incidentReviewArtifacts) {
     await expect(disclosure).toHaveAttribute('open', '');
 
     if (testInfo.project.name.startsWith('mobile')) {
-      const navigationToggle = page.getByRole('button', { name: 'Contents' });
+      const navigationToggle = page.locator('[data-nav-toggle]');
+      await expect(navigationToggle).toHaveAccessibleName('Open contents');
       await navigationToggle.focus();
       await page.keyboard.press('Enter');
       await expect(navigationToggle).toHaveAttribute('aria-expanded', 'true');
-      await expect(page.locator('[data-navigation]')).toHaveAttribute('data-open', '');
       await expect(page.locator('[data-navigation]')).toBeVisible();
-      await expect(navigationToggle).toBeFocused();
+      const navigationClose = page.getByRole('button', { name: 'Close', exact: true });
+      await expect(navigationClose).toBeFocused();
       expect(
-        await navigationToggle.evaluate((element) =>
+        await navigationClose.evaluate((element) =>
           Number.parseFloat(getComputedStyle(element).outlineWidth),
         ),
       ).toBeGreaterThan(0);
@@ -849,11 +1712,11 @@ for (const artifact of vendorDecisionArtifacts) {
       expect(
         await comparison.evaluate((element) => element.scrollWidth > element.clientWidth),
       ).toBe(true);
-      const navigationToggle = page.getByRole('button', { name: 'Contents' });
+      const navigationToggle = page.locator('[data-nav-toggle]');
+      await expect(navigationToggle).toHaveAccessibleName('Open contents');
       await navigationToggle.focus();
       await page.keyboard.press('Enter');
       await expect(navigationToggle).toHaveAttribute('aria-expanded', 'true');
-      await expect(page.locator('[data-navigation]')).toHaveAttribute('data-open', '');
       await expect(page.locator('[data-navigation]')).toBeVisible();
     }
 
@@ -928,11 +1791,11 @@ for (const artifact of launchReadinessArtifacts) {
       expect(await register.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
         true,
       );
-      const navigationToggle = page.getByRole('button', { name: 'Contents' });
+      const navigationToggle = page.locator('[data-nav-toggle]');
+      await expect(navigationToggle).toHaveAccessibleName('Open contents');
       await navigationToggle.focus();
       await page.keyboard.press('Enter');
       await expect(navigationToggle).toHaveAttribute('aria-expanded', 'true');
-      await expect(page.locator('[data-navigation]')).toHaveAttribute('data-open', '');
       await expect(page.locator('[data-navigation]')).toBeVisible();
     }
 
@@ -1276,10 +2139,10 @@ for (const example of [
             .evaluate((element) => getComputedStyle(element).overflowWrap),
         ).toBe('normal');
       }
-      const toggle = page.getByRole('button', { name: 'Contents' });
+      const toggle = page.locator('[data-nav-toggle]');
+      await expect(toggle).toHaveAccessibleName('Open contents');
       await toggle.click();
       await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-      await expect(navigation).toHaveAttribute('data-open', '');
       await expect(navigation).toBeVisible();
     } else {
       await expect(navigation).toBeVisible();
@@ -1330,6 +2193,31 @@ async function codeThemeState(
       .slice(0, 3)
       .map((token) => getComputedStyle(token).color),
   }));
+}
+
+async function settleVisualState(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve) => {
+      let previous = window.scrollY;
+      let stableFrames = 0;
+      let sampledFrames = 0;
+      const sample = (): void => {
+        const current = window.scrollY;
+        stableFrames = Math.abs(current - previous) < 0.5 ? stableFrames + 1 : 0;
+        previous = current;
+        sampledFrames += 1;
+        if (stableFrames >= 3 || sampledFrames >= 240) resolve();
+        else window.requestAnimationFrame(sample);
+      };
+      window.requestAnimationFrame(sample);
+    });
+    await Promise.all(
+      document.getAnimations().map((animation) => animation.finished.catch(() => undefined)),
+    );
+    await new Promise<void>((resolve) => {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+    });
+  });
 }
 
 async function expectLoadedImage(image: Locator): Promise<void> {

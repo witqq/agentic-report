@@ -62,6 +62,12 @@
           "required": false,
           "default": "plain",
           "description": "Package-owned section surface tone."
+        },
+        "reveal": {
+          "kind": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Enables one package-owned one-time section reveal in the normal-motion profile."
         }
       },
       "children": "markdown",
@@ -867,6 +873,16 @@
     "layouts": ["document", "dashboard", "landing", "mixed"],
     "defaultTheme": "system",
     "themes": ["system", "light", "dark"],
+    "defaultScrollProgress": false,
+    "motion": {
+      "scrollProgress": { "normalMotionOnly": true },
+      "sectionReveal": {
+        "default": false,
+        "normalMotionOnly": true,
+        "durationMs": 220,
+        "translationPx": 12
+      }
+    },
     "tokens": [
       {
         "name": "density",

@@ -41,7 +41,7 @@ describe('registry-driven semantic directives', () => {
     await writeFile(path.join(workspace, 'reader.woff'), 'package-owned-font-bytes');
     const markdown = [
       '# Registry renderers',
-      '::::section{title="Semantic section" id="semantic-section" nav="Section" width="wide" align="center" tone="accent"}',
+      '::::section{title="Semantic section" id="semantic-section" nav="Section" width="wide" align="center" tone="accent" reveal="true"}',
       'Section body.',
       ':::actions',
       '::action[Primary action]{href="#semantic-section" kind="primary"}',
@@ -132,7 +132,7 @@ describe('registry-driven semantic directives', () => {
     const rendered = await render(
       [
         '# Explicit structure',
-        '::::section{title="Proof" id="proof" nav="Short proof" width="wide" align="center" tone="accent"}',
+        '::::section{title="Proof" id="proof" nav="Short proof" width="wide" align="center" tone="accent" reveal="true"}',
         'A package-owned section body.',
         ':::actions',
         '::action[Start here]{href="#proof" kind="primary"}',
@@ -150,12 +150,13 @@ describe('registry-driven semantic directives', () => {
     );
 
     expect(rendered.html).toContain(
-      '<section class="semantic-section" data-nav="Short proof" data-width="wide" data-align="center" data-tone="accent" data-semantic="section" id="proof" aria-labelledby="proof-title">',
+      '<section class="semantic-section" data-nav="Short proof" data-width="wide" data-align="center" data-tone="accent" data-reveal="true" data-semantic="section" id="proof" aria-labelledby="proof-title">',
     );
     expect(rendered.html).toContain(
       '<h2 id="proof-title" class="semantic-section-title">Proof</h2>',
     );
     expect(rendered.html).toContain('id="proof-2" aria-labelledby="proof-2-title"');
+    expect(rendered.html).toContain('data-reveal="false" data-semantic="section" id="proof-2"');
     expect(rendered.html).toContain(
       '<a class="semantic-action" data-kind="primary" data-semantic="action" href="#proof">Start here</a>',
     );
@@ -293,7 +294,7 @@ describe('registry-driven semantic directives', () => {
       const ids = [...rendered.html.matchAll(/\sid="([^"]+)"/gu)].map((match) => match[1]);
       expect(new Set(ids).size, testCase.label).toBe(ids.length);
       expect(rendered.html, testCase.label).toContain(
-        `<section class="semantic-section" data-width="standard" data-align="start" data-tone="plain" data-semantic="section" id="${testCase.sectionId}"`,
+        `<section class="semantic-section" data-width="standard" data-align="start" data-tone="plain" data-reveal="false" data-semantic="section" id="${testCase.sectionId}"`,
       );
       expect(rendered.html, testCase.label).toContain(`<dialog id="${testCase.componentId}"`);
       expect(rendered.html, testCase.label).toContain(
@@ -1567,7 +1568,9 @@ describe('six-class declarative registry corpus', () => {
               contract.attributes[name]?.kind === 'integer' ||
               contract.attributes[name]?.kind === 'number'
                 ? Number(value)
-                : value,
+                : contract.attributes[name]?.kind === 'boolean'
+                  ? value === 'true'
+                  : value,
             ]),
           ),
         };
@@ -1708,6 +1711,7 @@ function diagramNodePosition(html: string, id: string): Readonly<{ x: number; y:
 }
 
 function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
+  if (attribute.constraint.kind === 'boolean') return 'true';
   if (attribute.constraint.kind === 'integer') return '2';
   if (attribute.constraint.kind === 'number') return '2.5';
   if (
@@ -1725,6 +1729,7 @@ function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
 }
 
 function renderedAttributeValue(attribute: DirectiveAttributeDefinition): string {
+  if (attribute.constraint.kind === 'boolean') return 'true';
   if (attribute.constraint.kind === 'integer') return '-999999';
   if (attribute.constraint.kind === 'number') return '2.5';
   if (
@@ -1895,7 +1900,7 @@ function assertRenderedAttribute(
   rendered: Awaited<ReturnType<typeof render>>,
   directive: DirectiveDefinition,
   attribute: DirectiveAttributeDefinition,
-  expected: string | number | undefined,
+  expected: string | number | boolean | undefined,
 ): void {
   if (expected === undefined) throw new Error(`Missing expected value for ${directive.name}`);
   const serialized = String(expected);
@@ -2089,6 +2094,7 @@ function registryManifestPaths(): string[] {
 }
 
 function invalidAttributeValue(attribute: DirectiveAttributeDefinition): string {
+  if (attribute.constraint.kind === 'boolean') return 'yes';
   if (attribute.constraint.kind === 'integer') return '1.5';
   if (attribute.constraint.kind === 'number') return 'NaN';
   if (

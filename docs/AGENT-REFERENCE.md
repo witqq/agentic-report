@@ -162,6 +162,7 @@ language: en
 layout: mixed
 theme: system
 preset: signal
+scrollProgress: true
 tokens:
   radius: round
 ---
@@ -185,6 +186,7 @@ theme, and optional token values:
 - `layout`: `document` (default), `dashboard`, `landing`, or `mixed`;
 - `preset`: `studio` (default), `editorial`, or `signal`;
 - `theme`: `system` (default), `light`, or `dark`;
+- `scrollProgress`: boolean, default `false`; decorative normal-motion reading progress;
 - `tokens.density`: `compact`, `comfortable`, or `spacious`;
 - `tokens.font`: `sans`, `serif`, or `mono`;
 - `tokens.accent`: `indigo`, `teal`, or `coral`;
@@ -252,7 +254,7 @@ Directives are declarative and allowlisted. Unknown names and invalid attributes
 diagnostics.
 
 ```markdown
-::::section{title="Decision" id="decision" nav="Decision" width="wide" align="start" tone="soft"}
+::::section{title="Decision" id="decision" nav="Decision" width="wide" align="start" tone="soft" reveal="true"}
 :::callout{title="Finding" kind="warning"}
 Content may contain ordinary Markdown.
 :::
@@ -377,9 +379,10 @@ labels are not truncated. Numeric output retains the supported four decimal plac
 `section` is top-level only and requires `title`. Its optional `id` is a lowercase letter-led identity;
 omission derives a deterministic collision-free ID from the title. `nav` supplies a short primary label.
 `width` is `reading|standard|wide`, `align` is `start|center`, and `tone` is
-`plain|soft|accent|contrast`; defaults are `standard`, `start`, and `plain`. Explicit sections own real
-labelled section/H2 markup and primary navigation, while heading-only sources retain legacy H2/H3
-navigation.
+`plain|soft|accent|contrast`; `reveal` is boolean. Defaults are `standard`, `start`, `plain`, and
+`reveal="false"`. Explicit sections own real labelled section/H2 markup and primary navigation, while
+heading-only sources use H2 primary links. H3 and component anchors remain owned targets without becoming
+primary links.
 
 `actions` accepts only direct labelled `::action[...]` children. Every action requires `href`; valid targets
 are same-page anchors, relative paths, HTTP(S), and `mailto:`. `javascript:`, `data:`, `file:`, absolute
@@ -409,6 +412,21 @@ declarative, and all interaction code belongs to the package.
 | `demo`              | Numeric output starts at `start="0"`.                                                                                      | Increment button adds `step="1"` by default; author code is never executed.                                                                                                |
 
 Each instance owns its state. Tabs, overlays, filters, switches, and demos do not change another instance.
+
+### Page navigation and bounded motion
+
+Two or more explicit sections produce one navigation list; a heading-only document uses its H2 headings
+when at least two exist. Exactly one primary link carries `aria-current="location"` for section,
+descendant, outside, invalid, scroll-boundary, and document-bottom states. Desktop contents are non-modal
+and collapse per document session. Mobile contents use a native modal dialog: Close receives initial
+focus, Tab stays contained, Escape/backdrop/Close return to the trigger, and a chosen link closes the dialog
+and focuses its section heading. Do not add `menu` keyboard behavior or persist collapse state.
+
+Set root metadata `scrollProgress: true` only when decorative reading progress is useful. Set
+`reveal="true"` only on selected top-level sections. Both features run only in the normal-motion profile;
+reduced motion installs no progress or reveal machinery, and an unavailable `IntersectionObserver` leaves
+reveals visible. The package owns the fixed transform/opacity behavior and duration; authors cannot supply
+animation coordinates, easing, JavaScript, or parallax.
 
 ## Build for an agent
 

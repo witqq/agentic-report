@@ -51,7 +51,10 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
     const glossaryByKey = new Map<string, GlossaryDefinition>();
     const glossaryTerms = new Map<string, GlossaryDefinition>();
     const termReferences: Array<{ readonly key: string; readonly node: DirectiveNode }> = [];
-    const attributesByNode = new WeakMap<object, Readonly<Record<string, string | number>>>();
+    const attributesByNode = new WeakMap<
+      object,
+      Readonly<Record<string, string | number | boolean>>
+    >();
     const sectionIds = collectAuthoredSectionIds(tree);
     const claimedAuthoredSectionIds = new Set<string>();
     visit(tree, (node, _index, parent) => {
@@ -150,10 +153,10 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
 
 function normalizeSectionAttributes(
   node: DirectiveNode,
-  values: Readonly<Record<string, string | number>>,
+  values: Readonly<Record<string, string | number | boolean>>,
   used: Set<string>,
   claimedAuthored: Set<string>,
-): Readonly<Record<string, string | number>> {
+): Readonly<Record<string, string | number | boolean>> {
   const authoredId = values.id;
   if (typeof authoredId === 'string') {
     if (!claimedAuthored.has(authoredId)) {
@@ -249,7 +252,7 @@ function validateActionGroups(tree: MdastRoot, options: DirectivePluginOptions):
 
 function validateVisualizationData(
   tree: MdastRoot,
-  attributesByNode: WeakMap<object, Readonly<Record<string, string | number>>>,
+  attributesByNode: WeakMap<object, Readonly<Record<string, string | number | boolean>>>,
   options: DirectivePluginOptions,
 ): void {
   visit(tree, (candidate) => {
@@ -364,7 +367,7 @@ function validateVisualizationData(
     return directives;
   }
 
-  function attributes(node: DirectiveNode): Readonly<Record<string, string | number>> {
+  function attributes(node: DirectiveNode): Readonly<Record<string, string | number | boolean>> {
     const values = attributesByNode.get(node);
     if (values === undefined) throw new Error(`Missing validated attributes for ${node.name}.`);
     return values;
@@ -1482,7 +1485,7 @@ function isTraversableNode(value: unknown): value is TraversableNode {
 
 function renderDirective(
   directive: DirectiveDefinition,
-  values: Readonly<Record<string, string | number>>,
+  values: Readonly<Record<string, string | number | boolean>>,
 ): NonNullable<DirectiveNode['data']> {
   const properties: Record<string, string | string[]> = {
     className: [directive.sanitizer.className],

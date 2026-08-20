@@ -21,12 +21,14 @@ type ConstraintValue<Constraint extends ConstraintDefinition> = Constraint exten
   readonly kind: 'integer' | 'number';
 }
   ? number
-  : Constraint extends {
-        readonly kind: 'enum';
-        readonly values: readonly (infer Value extends string)[];
-      }
-    ? Value
-    : string;
+  : Constraint extends { readonly kind: 'boolean' }
+    ? boolean
+    : Constraint extends {
+          readonly kind: 'enum';
+          readonly values: readonly (infer Value extends string)[];
+        }
+      ? Value
+      : string;
 
 type FieldValue<Field extends FieldDefinition, Normalized extends boolean> = Field extends {
   readonly fields: infer Fields extends readonly FieldDefinition[];
@@ -104,7 +106,7 @@ export const directiveInvocationSchema = z.union(
 export type DirectiveAttributeInterpretation =
   | {
       readonly ok: true;
-      readonly values: Readonly<Record<string, string | number>>;
+      readonly values: Readonly<Record<string, string | number | boolean>>;
     }
   | {
       readonly ok: false;
@@ -161,9 +163,9 @@ export function interpretDirectiveAttributes(
   const unknown = Object.keys(input).filter((name) => !knownNames.has(name));
   if (unknown.length > 0) return { ok: false, reason: 'unknown', attributes: unknown };
 
-  const values: Record<string, string | number> = Object.create(null) as Record<
+  const values: Record<string, string | number | boolean> = Object.create(null) as Record<
     string,
-    string | number
+    string | number | boolean
   >;
   for (const attribute of directive.attributes) {
     const authored = input[attribute.name];
@@ -176,7 +178,7 @@ export function interpretDirectiveAttributes(
     if (candidate === undefined) return { ok: false, reason: 'invalid', attribute };
     const parsed = zodConstraint(attribute.constraint).safeParse(candidate);
     if (!parsed.success) return { ok: false, reason: 'invalid', attribute };
-    values[attribute.name] = parsed.data as string | number;
+    values[attribute.name] = parsed.data as string | number | boolean;
   }
   return { ok: true, values };
 }
@@ -350,6 +352,8 @@ function zodConstraint(constraint: ConstraintDefinition): z.ZodType {
       if (constraint.multipleOf !== undefined) schema = schema.multipleOf(constraint.multipleOf);
       return schema;
     }
+    case 'boolean':
+      return z.boolean();
     case 'enum':
       return z.enum(asNonEmptyTuple(constraint.values));
     default:
@@ -360,7 +364,12 @@ function zodConstraint(constraint: ConstraintDefinition): z.ZodType {
 function lexicalAttributeValue(
   authored: string,
   constraint: ConstraintDefinition,
-): string | number | undefined {
+): string | number | boolean | undefined {
+  if (constraint.kind === 'boolean') {
+    if (authored === 'true') return true;
+    if (authored === 'false') return false;
+    return undefined;
+  }
   if (constraint.kind !== 'integer' && constraint.kind !== 'number') return authored;
   if (
     constraint.lexicalPattern !== undefined &&
@@ -468,6 +477,8 @@ function jsonConstraint(field: ScalarFieldDefinition): JsonSchema {
         ...(constraint.maximum === undefined ? {} : { maximum: constraint.maximum }),
         ...(constraint.multipleOf === undefined ? {} : { multipleOf: constraint.multipleOf }),
       };
+    case 'boolean':
+      return { type: 'boolean' };
     case 'enum':
       return { type: 'string', enum: [...constraint.values] };
     default:

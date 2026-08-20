@@ -44,6 +44,7 @@ description: Decision report
 layout: document
 theme: system
 preset: editorial
+scrollProgress: true
 tokens:
   font: serif
   width: narrow
@@ -56,7 +57,7 @@ tokens:
 
 ![System boundary](assets/system.svg)
 
-::::section{title="Decision" id="decision" nav="Decision" width="reading" align="start" tone="soft"}
+::::section{title="Decision" id="decision" nav="Decision" width="reading" align="start" tone="soft" reveal="true"}
 :::callout{title="Key finding" kind="info"}
 The compiler owns responsive layout and navigation.
 :::
@@ -102,8 +103,16 @@ demonstrate the package-owned interaction and data primitives.
 
 Authors may replace heading-only structure with top-level `section` directives. Each section owns a
 visible H2 and a stable anchor, plus closed reading/standard/wide tracks, start/center alignment, and
-plain/soft/accent/contrast tones. A nested `actions` group composes ordinary safe links with
-primary/secondary/quiet emphasis. Legacy H2/H3 documents remain valid and retain heading navigation.
+plain/soft/accent/contrast tones. `reveal="true"` opts one section into a bounded one-time normal-motion
+reveal. A nested `actions` group composes ordinary safe links with primary/secondary/quiet emphasis.
+Legacy heading documents remain valid; their H2 headings define the primary navigation while H3 and
+component anchors remain owned descendant targets.
+
+Pages with at least two eligible sections receive one responsive contents navigation. Desktop readers can
+collapse the non-modal sidebar without persisting state; mobile readers get a labelled native dialog with
+contained focus and focus return. Exactly one link exposes `aria-current="location"`, including for
+descendant and outside hashes. `scrollProgress: true` enables a decorative progress line. Progress and
+section-reveal DOM work are entirely absent under reduced motion; navigation semantics remain available.
 
 ## Realistic showcase portfolio
 

@@ -37,6 +37,8 @@ export default async function globalSetup(): Promise<void> {
       '```ts',
       "const output = 'single-file';",
       '```',
+      '## Runtime evidence',
+      'The package-owned runtime preserves the same interaction contract in both output formats.',
       ':::demo{title="Safe counter" start="1" step="2"}',
       'A declarative interaction powered by the package runtime.',
       ':::',
@@ -88,6 +90,7 @@ export default async function globalSetup(): Promise<void> {
     },
   ] as const;
   const presetFixtures = ['studio', 'editorial', 'signal'] as const;
+  const navigationSource = path.join(fixtureRoot, 'navigation-source');
   const layoutExamples = [
     'layout-document',
     'layout-dashboard',
@@ -133,6 +136,48 @@ export default async function globalSetup(): Promise<void> {
       ].join('\n'),
     );
   }
+  await mkdir(navigationSource, { recursive: true });
+  await writeFile(
+    path.join(navigationSource, 'report.md'),
+    [
+      '---',
+      'title: Navigation runtime fixture',
+      'language: en',
+      'layout: document',
+      'theme: light',
+      'preset: studio',
+      'scrollProgress: true',
+      '---',
+      '# Navigation runtime fixture',
+      'Content before the first eligible section provides an outside hash target.',
+      ':::section{title="Alpha section" id="alpha" nav="Alpha" reveal="true"}',
+      '### Alpha detail',
+      'The first section owns this descendant heading.',
+      ...Array.from(
+        { length: 14 },
+        (_, index) =>
+          `Alpha evidence paragraph ${index + 1} keeps the section tall enough to exercise bidirectional geometry.`,
+      ),
+      ':::',
+      '::::section{title="Beta section" id="beta" nav="Beta" tone="soft" reveal="true"}',
+      '### Beta detail',
+      'The second section owns this descendant heading.',
+      ':::modal{title="Beta component target"}',
+      'A component inside Beta provides descendant ownership.',
+      ':::',
+      ...Array.from(
+        { length: 14 },
+        (_, index) =>
+          `Beta evidence paragraph ${index + 1} keeps the section tall enough to cross the activation line.`,
+      ),
+      '::::',
+      ':::section{title="Gamma section" id="gamma" nav="Gamma" tone="contrast"}',
+      'The final section is deliberately shorter than the viewport.',
+      ':::',
+      '## Appendix outside navigation',
+      'This valid target follows every eligible section.',
+    ].join('\n\n'),
+  );
   await Promise.all([
     buildReport({ input: source, output: singleOutput }),
     buildReport({
@@ -169,6 +214,15 @@ export default async function globalSetup(): Promise<void> {
         format: 'directory',
       }),
     ]),
+    buildReport({
+      input: navigationSource,
+      output: path.join(fixtureRoot, 'navigation.html'),
+    }),
+    buildReport({
+      input: navigationSource,
+      output: path.join(fixtureRoot, 'navigation-directory'),
+      format: 'directory',
+    }),
     buildReport({
       input: path.resolve('examples', 'landing'),
       output: path.join(fixtureRoot, 'starter-landing-directory'),

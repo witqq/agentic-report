@@ -73,6 +73,16 @@
     "layouts": ["document", "dashboard", "landing", "mixed"],
     "defaultTheme": "system",
     "themes": ["system", "light", "dark"],
+    "defaultScrollProgress": false,
+    "motion": {
+      "scrollProgress": { "normalMotionOnly": true },
+      "sectionReveal": {
+        "default": false,
+        "normalMotionOnly": true,
+        "durationMs": 220,
+        "translationPx": 12
+      }
+    },
     "tokens": [
       {
         "name": "density",
@@ -163,6 +173,13 @@
       "required": false,
       "default": "document",
       "constraint": { "kind": "enum", "values": ["document", "dashboard", "landing", "mixed"] }
+    },
+    {
+      "name": "scrollProgress",
+      "description": "Enables a decorative package-owned scroll indicator only in the normal-motion profile.",
+      "required": false,
+      "default": false,
+      "constraint": { "kind": "boolean" }
     },
     {
       "name": "tokens",
@@ -309,6 +326,15 @@
           "constraint": { "kind": "enum", "values": ["plain", "soft", "accent", "contrast"] },
           "renderProperty": "dataTone",
           "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "reveal",
+          "description": "Enables one package-owned one-time section reveal in the normal-motion profile.",
+          "required": false,
+          "default": false,
+          "constraint": { "kind": "boolean" },
+          "renderProperty": "dataReveal",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
         }
       ],
       "children": "markdown",
@@ -324,7 +350,8 @@
           "dataNav",
           "dataWidth",
           "dataAlign",
-          "dataTone"
+          "dataTone",
+          "dataReveal"
         ]
       },
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },

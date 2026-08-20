@@ -163,6 +163,7 @@ describe('authoring schema projections', () => {
       preset: 'studio',
       theme: 'system',
       layout: 'document',
+      scrollProgress: false,
       tokens: {
         density: 'comfortable',
         font: 'sans',
@@ -298,6 +299,8 @@ describe('authoring schema projections', () => {
       accepted('dashboard layout', { layout: 'dashboard' }),
       accepted('landing layout', { layout: 'landing' }),
       accepted('mixed layout', { layout: 'mixed' }),
+      accepted('scroll progress enabled', { scrollProgress: true }),
+      accepted('scroll progress disabled', { scrollProgress: false }),
       accepted('compact visual token overrides', {
         tokens: {
           density: 'compact',
@@ -326,6 +329,8 @@ describe('authoring schema projections', () => {
       rejected('numeric theme', { theme: 1 }),
       rejected('unknown layout', { layout: 'poster' }),
       rejected('numeric layout', { layout: 1 }),
+      rejected('string scroll progress', { scrollProgress: 'true' }),
+      rejected('numeric scroll progress', { scrollProgress: 1 }),
       rejected('non-object tokens', { tokens: 'wide' }),
       rejected('unknown token field', { tokens: { color: 'red' } }),
       rejected('unknown density token', { tokens: { density: 'tiny' } }),
@@ -993,8 +998,12 @@ function safeParseManifestFromRegistry(
   }
 }
 
-function validAttributeValue(kind: 'string' | 'integer' | 'number' | 'enum'): string | number {
-  return kind === 'integer' || kind === 'number' ? 1 : 'value';
+function validAttributeValue(
+  kind: 'string' | 'integer' | 'number' | 'boolean' | 'enum',
+): string | number | boolean {
+  if (kind === 'integer' || kind === 'number') return 1;
+  if (kind === 'boolean') return true;
+  return 'value';
 }
 
 function attributeCases(
@@ -1046,6 +1055,14 @@ function attributeCases(
         [null, false],
         ...(constraint.minimum === undefined ? [] : ([[constraint.minimum - 1, false]] as const)),
         ...(constraint.maximum === undefined ? [] : ([[constraint.maximum + 1, false]] as const)),
+      ];
+    case 'boolean':
+      return [
+        [true, true],
+        [false, true],
+        ['true', false],
+        [1, false],
+        [null, false],
       ];
     case 'enum':
       return [

@@ -6,6 +6,7 @@ language: en
 theme: light
 layout: landing
 preset: studio
+scrollProgress: true
 ---
 
 # From Markdown to a page worth sharing
@@ -19,7 +20,7 @@ tutorials, dashboards, and landing pages that open directly from disk.
 ::action[Read the boundaries]{href="#boundaries" kind="quiet"}
 ::::
 
-:::::section{title="Start with the work, not the framework" id="workflow" nav="Workflow" width="wide" align="start" tone="soft"}
+:::::section{title="Start with the work, not the framework" id="workflow" nav="Workflow" width="wide" align="start" tone="soft" reveal="true"}
 :::callout{kind="success" title="One portable result"}
 The default output is one self-contained HTML file with no server, remote runtime, or author JavaScript.
 :::
@@ -54,7 +55,7 @@ Exercise the real page at desktop and mobile widths through `file://`.
 ::::
 :::::
 
-::::section{title="Proof without a hidden service" id="proof" nav="Proof" width="reading" align="start" tone="accent"}
+::::section{title="Proof without a hidden service" id="proof" nav="Proof" width="reading" align="start" tone="accent" reveal="true"}
 :::decision{title="Keep the public format data-only"}
 The package owns rendering and interaction behavior so authors do not need JSX, CSS, callbacks, or a hosted
 editor to finish a page.
@@ -66,7 +67,7 @@ runtime after compilation.
 :::
 ::::
 
-::::section{title="Build the first page" id="boundaries" nav="Start" width="standard" align="center" tone="contrast"}
+::::section{title="Build the first page" id="boundaries" nav="Start" width="standard" align="center" tone="contrast" reveal="true"}
 
 ```sh
 agentic-report init ./my-page --starter landing
