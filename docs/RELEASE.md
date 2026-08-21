@@ -1,7 +1,7 @@
 # Release runbook
 
 This runbook separates local release-candidate evidence from observations that can exist only after the
-candidate is public. Release `0.2.0` is not proven by an installed tarball alone: GitHub, npm, registry-clean
+candidate is public. Release `0.2.1` is not proven by an installed tarball alone: GitHub, npm, registry-clean
 `npx`, the hosted site, and community skill channels are distinct ordered gates.
 
 ## Local candidate
@@ -21,9 +21,23 @@ paths, and the exact source commit. Inspect the complete `npm pack --json` inven
 site inventory before scanning their bounded bytes for credentials, private paths, workflow files, caches,
 logs, editor state, VCS state, and temporary output.
 
+The package gate writes the accepted current record to `test-results/package/candidate-evidence.json` as well
+as beside its unique candidate. Bind later commands to that record before leaving the repository:
+
+```sh
+candidate_record="$(pwd)/test-results/package/candidate-evidence.json"
+test -f "$candidate_record"
+candidate_sha256="$(node -e 'const r=require(process.argv[1]); process.stdout.write(r.tarball.sha256)' "$candidate_record")"
+candidate_integrity="$(node -e 'const r=require(process.argv[1]); process.stdout.write(r.tarball.integrity)' "$candidate_record")"
+candidate_shasum="$(node -e 'const r=require(process.argv[1]); process.stdout.write(r.tarball.shasum)' "$candidate_record")"
+test -n "$candidate_sha256"
+test -n "$candidate_integrity"
+test -n "$candidate_shasum"
+```
+
 The candidate must agree on all of these values before any external action:
 
-- package, installed CLI `--version`, skill and plugin metadata: `0.2.0`;
+- package, installed CLI `--version`, skill and plugin metadata: `0.2.1`;
 - package and skill license: MIT;
 - package engine and human/agent/skill compatibility: Node.js `>=24.18.0`;
 - repository: `https://github.com/witqq/agentic-report`;
@@ -31,7 +45,7 @@ The candidate must agree on all of these values before any external action:
 - homepage and staged-site origin: `https://agentic-report.witqq.dev/`.
 
 Running the installed tarball through `npx --no-install` is local-candidate evidence. It is not evidence that
-the npm registry serves `0.2.0` and must be labelled accordingly.
+the npm registry serves `0.2.1` and must be labelled accordingly.
 
 ## Publish source before package
 
@@ -42,25 +56,50 @@ Do not tag a dirty tree or move an existing tag.
 ```sh
 git status --short
 git rev-parse HEAD
-git tag -a v0.2.0 -m "agentic-report 0.2.0"
+git tag -a v0.2.1 -m "agentic-report 0.2.1"
 git push origin HEAD
-git push origin v0.2.0
+git push origin v0.2.1
 ```
 
 Push and tag creation are external mutations and require the release operator's explicit authorization.
+The GitHub Release description for the tag must end with
+`[Made with Moira](https://github.com/witqq/mcp-moira)`.
 
 ## Publish the inspected tarball
 
-Publish the exact tarball whose SHA-256 and inventory passed the local gate; do not let `npm publish` create
-different bytes from the working tree.
+Upload the exact locally accepted `agentic-report-0.2.1.tgz` bytes as the asset of the verified GitHub
+Release `v0.2.1`. Download that public asset into a new empty directory, verify its SHA-256 equals the local
+candidate, then publish the exact canonical HTTPS asset URL. Local directories, relative/absolute paths,
+`file:` specifications, alternate hosts/repositories/tags/names/versions, URL credentials, query strings,
+fragments, and encoded near-misses are forbidden because npm copies source provenance into immutable public
+metadata.
 
 ```sh
-npm publish --access public ./agentic-report-0.2.0.tgz
-npm view agentic-report@0.2.0 version dist.integrity dist.shasum dist.tarball --json
-npm view agentic-report dist-tags --json
+candidate_record="$(pwd)/test-results/package/candidate-evidence.json"
+candidate_sha256="$(node -e 'const r=require(process.argv[1]); process.stdout.write(r.tarball.sha256)' "$candidate_record")"
+candidate_integrity="$(node -e 'const r=require(process.argv[1]); process.stdout.write(r.tarball.integrity)' "$candidate_record")"
+candidate_shasum="$(node -e 'const r=require(process.argv[1]); process.stdout.write(r.tarball.shasum)' "$candidate_record")"
+release_asset_url="https://github.com/witqq/agentic-report/releases/download/v0.2.1/agentic-report-0.2.1.tgz"
+asset_root="$(mktemp -d)"
+curl --fail --location --proto '=https' --tlsv1.2 --output "$asset_root/agentic-report-0.2.1.tgz" "$release_asset_url"
+test "$(shasum -a 256 "$asset_root/agentic-report-0.2.1.tgz" | awk '{print $1}')" = "$candidate_sha256"
+npm publish --access public "$release_asset_url"
+metadata_root="$(mktemp -d)"
+mkdir -p "$metadata_root/home" "$metadata_root/npm-cache"
+: > "$metadata_root/user.npmrc"
+: > "$metadata_root/global.npmrc"
+env -i PATH="$PATH" HOME="$metadata_root/home" npm_config_cache="$metadata_root/npm-cache" npm_config_userconfig="$metadata_root/user.npmrc" npm_config_globalconfig="$metadata_root/global.npmrc" npm view agentic-report@0.2.1 --json > "$asset_root/npm-version.json"
+printf 'Expected integrity: %s\nExpected shasum: %s\n' "$candidate_integrity" "$candidate_shasum"
+cat "$asset_root/npm-version.json"
+env -i PATH="$PATH" HOME="$metadata_root/home" npm_config_cache="$metadata_root/npm-cache" npm_config_userconfig="$metadata_root/user.npmrc" npm_config_globalconfig="$metadata_root/global.npmrc" npm view agentic-report dist-tags --json
 ```
 
-The gate passes only when the immutable version exists and the `latest` dist-tag resolves to `0.2.0`.
+Inspect the complete unauthenticated version document, not a selected projection. Confirm the expected
+package, version, license, Node engine, executable, repository, homepage, `_from`, `_resolved`, registry
+tarball, SHA-512 integrity, and SHA-1 shasum. Search the complete document for workstation or temporary
+paths such as `/Users/` and `/tmp/`, `file:` sources, credentials, tokens, passwords, private keys, workflow
+paths, and test output. Stop on any mismatch or sensitive value. Continue only when `latest` resolves to
+`0.2.1`.
 
 ## Prove real registry npx
 
@@ -84,11 +123,27 @@ pinned_work="$pinned_root/work"
 latest_work="$latest_root/work"
 pinned_cache="$pinned_root/npm-cache"
 latest_cache="$latest_root/npm-cache"
-mkdir -p "$pinned_work" "$latest_work" "$pinned_cache" "$latest_cache"
+pinned_home="$pinned_root/home"
+latest_home="$latest_root/home"
+pinned_userconfig="$pinned_root/user.npmrc"
+latest_userconfig="$latest_root/user.npmrc"
+pinned_globalconfig="$pinned_root/global.npmrc"
+latest_globalconfig="$latest_root/global.npmrc"
+mkdir -p "$pinned_work" "$latest_work" "$pinned_cache" "$latest_cache" "$pinned_home" "$latest_home"
+: > "$pinned_userconfig"
+: > "$latest_userconfig"
+: > "$pinned_globalconfig"
+: > "$latest_globalconfig"
 test "$pinned_root" != "$latest_root"
 test "$pinned_cache" != "$latest_cache"
+test "$pinned_userconfig" != "$latest_userconfig"
+test "$pinned_globalconfig" != "$latest_globalconfig"
 test -z "$(find "$pinned_cache" -mindepth 1 -print -quit)"
 test -z "$(find "$latest_cache" -mindepth 1 -print -quit)"
+test ! -s "$pinned_userconfig"
+test ! -s "$latest_userconfig"
+test ! -s "$pinned_globalconfig"
+test ! -s "$latest_globalconfig"
 test ! -e "$pinned_work/node_modules"
 test ! -e "$latest_work/node_modules"
 if PATH="$release_path" command -v agentic-report >/dev/null 2>&1; then exit 1; fi
@@ -100,28 +155,30 @@ its assigned cache and executable:
 
 ```sh
 cd "$pinned_work"
-env PATH="$release_path" npm_config_cache="$pinned_cache" "$release_npm" view agentic-report@0.2.0 version dist.integrity dist.shasum dist.tarball --json
-env PATH="$release_path" npm_config_cache="$pinned_cache" "$release_npx" --yes agentic-report@0.2.0 --version
-env PATH="$release_path" npm_config_cache="$pinned_cache" "$release_npx" --yes agentic-report@0.2.0 init ./pinned-page --starter landing --json
-env PATH="$release_path" npm_config_cache="$pinned_cache" "$release_npx" --yes agentic-report@0.2.0 validate ./pinned-page --json
-env PATH="$release_path" npm_config_cache="$pinned_cache" "$release_npx" --yes agentic-report@0.2.0 inspect ./pinned-page --json
-env PATH="$release_path" npm_config_cache="$pinned_cache" "$release_npx" --yes agentic-report@0.2.0 build ./pinned-page --output ./pinned-page.html --json
+env -i PATH="$release_path" HOME="$pinned_home" npm_config_cache="$pinned_cache" npm_config_userconfig="$pinned_userconfig" npm_config_globalconfig="$pinned_globalconfig" "$release_npm" view agentic-report@0.2.1 --json > ./npm-version.json
+cat ./npm-version.json
+env -i PATH="$release_path" HOME="$pinned_home" npm_config_cache="$pinned_cache" npm_config_userconfig="$pinned_userconfig" npm_config_globalconfig="$pinned_globalconfig" "$release_npx" --yes agentic-report@0.2.1 --version
+env -i PATH="$release_path" HOME="$pinned_home" npm_config_cache="$pinned_cache" npm_config_userconfig="$pinned_userconfig" npm_config_globalconfig="$pinned_globalconfig" "$release_npx" --yes agentic-report@0.2.1 init ./pinned-page --starter landing --json
+env -i PATH="$release_path" HOME="$pinned_home" npm_config_cache="$pinned_cache" npm_config_userconfig="$pinned_userconfig" npm_config_globalconfig="$pinned_globalconfig" "$release_npx" --yes agentic-report@0.2.1 validate ./pinned-page --json
+env -i PATH="$release_path" HOME="$pinned_home" npm_config_cache="$pinned_cache" npm_config_userconfig="$pinned_userconfig" npm_config_globalconfig="$pinned_globalconfig" "$release_npx" --yes agentic-report@0.2.1 inspect ./pinned-page --json
+env -i PATH="$release_path" HOME="$pinned_home" npm_config_cache="$pinned_cache" npm_config_userconfig="$pinned_userconfig" npm_config_globalconfig="$pinned_globalconfig" "$release_npx" --yes agentic-report@0.2.1 build ./pinned-page --output ./pinned-page.html --json
 find "$pinned_cache/_npx" -path '*/node_modules/agentic-report/package.json' -print
 find "$pinned_cache/_npx" -name package-lock.json -print
 ```
 
-The unversioned journey first observes `latest=0.2.0` through its own still-empty cache, then uses only that
+The unversioned journey first observes `latest=0.2.1` through its own still-empty cache, then uses only that
 cache and workspace:
 
 ```sh
 cd "$latest_work"
-env PATH="$release_path" npm_config_cache="$latest_cache" "$release_npm" view agentic-report dist-tags --json
-env PATH="$release_path" npm_config_cache="$latest_cache" "$release_npm" view agentic-report@0.2.0 version dist.integrity dist.shasum dist.tarball --json
-env PATH="$release_path" npm_config_cache="$latest_cache" "$release_npx" --yes agentic-report --version
-env PATH="$release_path" npm_config_cache="$latest_cache" "$release_npx" --yes agentic-report init ./latest-page --starter landing --json
-env PATH="$release_path" npm_config_cache="$latest_cache" "$release_npx" --yes agentic-report validate ./latest-page --json
-env PATH="$release_path" npm_config_cache="$latest_cache" "$release_npx" --yes agentic-report inspect ./latest-page --json
-env PATH="$release_path" npm_config_cache="$latest_cache" "$release_npx" --yes agentic-report build ./latest-page --output ./latest-page.html --json
+env -i PATH="$release_path" HOME="$latest_home" npm_config_cache="$latest_cache" npm_config_userconfig="$latest_userconfig" npm_config_globalconfig="$latest_globalconfig" "$release_npm" view agentic-report dist-tags --json
+env -i PATH="$release_path" HOME="$latest_home" npm_config_cache="$latest_cache" npm_config_userconfig="$latest_userconfig" npm_config_globalconfig="$latest_globalconfig" "$release_npm" view agentic-report@0.2.1 --json > ./npm-version.json
+cat ./npm-version.json
+env -i PATH="$release_path" HOME="$latest_home" npm_config_cache="$latest_cache" npm_config_userconfig="$latest_userconfig" npm_config_globalconfig="$latest_globalconfig" "$release_npx" --yes agentic-report --version
+env -i PATH="$release_path" HOME="$latest_home" npm_config_cache="$latest_cache" npm_config_userconfig="$latest_userconfig" npm_config_globalconfig="$latest_globalconfig" "$release_npx" --yes agentic-report init ./latest-page --starter landing --json
+env -i PATH="$release_path" HOME="$latest_home" npm_config_cache="$latest_cache" npm_config_userconfig="$latest_userconfig" npm_config_globalconfig="$latest_globalconfig" "$release_npx" --yes agentic-report validate ./latest-page --json
+env -i PATH="$release_path" HOME="$latest_home" npm_config_cache="$latest_cache" npm_config_userconfig="$latest_userconfig" npm_config_globalconfig="$latest_globalconfig" "$release_npx" --yes agentic-report inspect ./latest-page --json
+env -i PATH="$release_path" HOME="$latest_home" npm_config_cache="$latest_cache" npm_config_userconfig="$latest_userconfig" npm_config_globalconfig="$latest_globalconfig" "$release_npx" --yes agentic-report build ./latest-page --output ./latest-page.html --json
 find "$latest_cache/_npx" -path '*/node_modules/agentic-report/package.json' -print
 find "$latest_cache/_npx" -name package-lock.json -print
 ```

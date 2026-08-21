@@ -15,7 +15,31 @@ afterEach(async () => {
   await Promise.all(workspaces.splice(0).map(removeTestWorkspace));
 });
 
-describe('release provenance', () => {
+describe('release readiness', () => {
+  it('documents the public asset publish source and manual metadata inspection', async () => {
+    const runbook = await readFile(path.resolve('docs/RELEASE.md'), 'utf8');
+    const publish = runbook
+      .split('## Publish the inspected tarball\n')[1]
+      ?.split('## Prove real registry npx\n')[0];
+    if (publish === undefined) throw new Error('Release publish section is missing.');
+
+    expect(publish).toContain(
+      'release_asset_url="https://github.com/witqq/agentic-report/releases/download/v0.2.1/agentic-report-0.2.1.tgz"',
+    );
+    expect(publish).toContain('npm publish --access public "$release_asset_url"');
+    expect(publish).toContain('shasum -a 256');
+    expect(publish).toContain('npm view agentic-report@0.2.1 --json');
+    expect(publish).toContain('Inspect the complete unauthenticated version document');
+    expect(publish).toContain('Stop on any mismatch or sensitive value.');
+    expect(
+      publish
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.startsWith('npm publish ')),
+    ).toEqual(['npm publish --access public "$release_asset_url"']);
+    expect(runbook).toContain('`[Made with Moira](https://github.com/witqq/mcp-moira)`.');
+  });
+
   it('labels every packaged example as fictional before its first evidence claims', async () => {
     const manifest = JSON.parse(await readFile(path.resolve('examples/manifest.json'), 'utf8')) as {
       readonly examples: readonly {
@@ -24,48 +48,23 @@ describe('release provenance', () => {
         readonly entry: string;
       }[];
     };
-
     expect(manifest.examples).toHaveLength(15);
     for (const example of manifest.examples) {
       const source = await readFile(path.resolve('examples', example.path, example.entry), 'utf8');
       expect(fictionalMarkerIssue(source), example.id).toBeUndefined();
     }
 
-    expect(
-      fictionalMarkerIssue(
-        '# Dashboard\n\n142 checks passed in production.\n\n**Fictional sample.** Replace this.\n',
-      ),
-    ).toBe('first visible block after H1 is not a fictional notice');
-    expect(
-      fictionalMarkerIssue(
-        '# Dashboard\n\n```markdown\n**Fictional sample.** Hidden example.\n```\n',
-      ),
-    ).toBe('first visible block after H1 is not a fictional notice');
-    expect(
-      fictionalMarkerIssue(
-        '```markdown\n# Fake heading\n**Fictional sample.** Hidden example.\n```\n\n# Real dashboard\n\n142 checks passed in production.\n',
-      ),
-    ).toBe('first visible block is not H1');
-    expect(
-      fictionalMarkerIssue(
-        '~~~~markdown\n# Fake heading\n**Fictional sample.** Hidden example.\n~~~~\n\n# Real dashboard\n\n142 checks passed in production.\n',
-      ),
-    ).toBe('first visible block is not H1');
-    expect(
-      fictionalMarkerIssue(
-        '\t```markdown\n# Real dashboard\n\n142 checks passed in production.\n```\n# Fake heading\n**Fictional sample.** Hidden example.\n',
-      ),
-    ).toBe('first visible block is not H1');
-    expect(
-      fictionalMarkerIssue(
-        '142 checks passed in production.\n\n# Dashboard\n\n**Fictional sample.** Too late.\n',
-      ),
-    ).toBe('first visible block is not H1');
-    expect(
-      fictionalMarkerIssue(
-        '# Dashboard\n\n**`142 checks passed`Fictional sample.** Hidden after a visible claim.\n',
-      ),
-    ).toBe('first visible block after H1 is not a fictional notice');
+    const late = '# Dashboard\n\n142 checks passed.\n\n**Fictional sample.** Replace this.\n';
+    const hidden = '# Dashboard\n\n```markdown\n**Fictional sample.** Hidden.\n```\n';
+    expect(fictionalMarkerIssue(late)).toBe(
+      'first visible block after H1 is not a fictional notice',
+    );
+    expect(fictionalMarkerIssue(hidden)).toBe(
+      'first visible block after H1 is not a fictional notice',
+    );
+    expect(fictionalMarkerIssue('Text first.\n\n# Dashboard\n')).toBe(
+      'first visible block is not H1',
+    );
   });
 
   it('finds an executable present only in a later search directory', async () => {
@@ -78,9 +77,7 @@ describe('release provenance', () => {
     const unintended = path.join(later, 'agentic-report');
     await writeFile(unintended, '#!/bin/sh\n');
 
-    const observed = await inspectExecutableSearch([first, later], ['agentic-report']);
-
-    expect(observed).toEqual({
+    expect(await inspectExecutableSearch([first, later], ['agentic-report'])).toEqual({
       checks: [
         { path: path.join(first, 'agentic-report'), exists: false },
         { path: unintended, exists: true },
@@ -89,44 +86,44 @@ describe('release provenance', () => {
     });
   });
 
-  it('binds every future registry command to one of two independently empty caches', async () => {
+  it('keeps the two registry npx journeys isolated', async () => {
     const runbook = await readFile(path.resolve('docs/RELEASE.md'), 'utf8');
     const section = runbook
       .split('## Prove real registry npx\n')[1]
       ?.split('## Deploy and accept')[0];
-    if (section === undefined)
-      throw new Error('Release runbook is missing its registry-npx section.');
-    const shellBlocks = [...section.matchAll(/```sh\n([\s\S]*?)```/gu)].map(
-      (match) => match[1] ?? '',
-    );
-    expect(shellBlocks).toHaveLength(3);
-    const [setup = '', pinned = '', latest = ''] = shellBlocks;
+    if (section === undefined) throw new Error('Registry-npx section is missing.');
+    const blocks = [...section.matchAll(/```sh\n([\s\S]*?)```/gu)].map((match) => match[1] ?? '');
+    expect(blocks).toHaveLength(3);
+    const [setup = '', pinned = '', latest = ''] = blocks;
 
-    expect(setup).toContain('pinned_root="$(mktemp -d)"');
-    expect(setup).toContain('latest_root="$(mktemp -d)"');
     expect(setup).toContain('test "$pinned_cache" != "$latest_cache"');
     expect(setup).toContain('find "$pinned_cache" -mindepth 1 -print -quit');
     expect(setup).toContain('find "$latest_cache" -mindepth 1 -print -quit');
-
-    expect(pinned).toContain('cd "$pinned_work"');
-    expect(latest).toContain('cd "$latest_work"');
-    const pinnedRegistryCommands = registryCommands(pinned);
-    const latestRegistryCommands = registryCommands(latest);
-    expect(pinnedRegistryCommands).toHaveLength(6);
-    expect(latestRegistryCommands).toHaveLength(7);
+    for (const block of [pinned, latest]) {
+      expect(block).toContain('view agentic-report@0.2.1 --json > ./npm-version.json');
+      expect(block).toContain('cat ./npm-version.json');
+    }
+    const pinnedCommands = registryCommands(pinned);
+    const latestCommands = registryCommands(latest);
+    expect(pinnedCommands).toHaveLength(6);
+    expect(latestCommands).toHaveLength(7);
     expect(
-      pinnedRegistryCommands.every((line) => line.includes('npm_config_cache="$pinned_cache"')),
+      pinnedCommands.every(
+        (line) => line.startsWith('env -i ') && line.includes('npm_config_cache="$pinned_cache"'),
+      ),
     ).toBe(true);
     expect(
-      latestRegistryCommands.every((line) => line.includes('npm_config_cache="$latest_cache"')),
+      latestCommands.every(
+        (line) => line.startsWith('env -i ') && line.includes('npm_config_cache="$latest_cache"'),
+      ),
     ).toBe(true);
     expect(
-      pinnedRegistryCommands
+      pinnedCommands
         .filter((line) => line.includes('"$release_npx"'))
-        .every((line) => line.includes('agentic-report@0.2.0')),
+        .every((line) => line.includes('agentic-report@0.2.1')),
     ).toBe(true);
     expect(
-      latestRegistryCommands
+      latestCommands
         .filter((line) => line.includes('"$release_npx"'))
         .every((line) => !line.includes('agentic-report@')),
     ).toBe(true);

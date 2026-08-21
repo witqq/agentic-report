@@ -10,6 +10,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { parse as parseYaml } from 'yaml';
 
 import { stageSite } from '../../scripts/build-site.js';
+import { buildReport } from '../../src/core/compiler.js';
 
 interface SiteRoute {
   readonly id: string;
@@ -56,6 +57,7 @@ const repositoryRoot = path.resolve(import.meta.dirname, '../..');
 const firstSite = path.join(repositoryRoot, 'test-results/site-unit-first');
 const secondSite = path.join(repositoryRoot, 'test-results/site-unit-second');
 const failureFixtureRoot = path.join(repositoryRoot, 'test-results/site-failure-fixtures');
+const standalonePage = path.join(repositoryRoot, 'test-results/site-unit-standalone.html');
 const revision = 'fd9b4b3721c5c33ca94e5df239e3480cf3b39b8e';
 
 const sha256 = (value: Buffer | string): string => createHash('sha256').update(value).digest('hex');
@@ -118,13 +120,13 @@ const createSiteFixture = async (
     path.join(root, 'package.json'),
     `${JSON.stringify({
       name: 'agentic-report',
-      version: options.packageVersion ?? '0.2.0',
+      version: options.packageVersion ?? '0.2.1',
       engines: { node: '>=24.18.0' },
     })}\n`,
   );
   await writeFile(
     path.join(root, 'skills/agentic-report/SKILL.md'),
-    `---\nname: agentic-report\nlicense: MIT\nmetadata:\n  version: '${options.skillVersion ?? '0.2.0'}'\n  compatibility: Requires Node.js 24.18.0 or newer.\n---\n\n# Fixture skill\n`,
+    `---\nname: agentic-report\nlicense: MIT\nmetadata:\n  version: '${options.skillVersion ?? '0.2.1'}'\n  compatibility: Requires Node.js 24.18.0 or newer.\n---\n\n# Fixture skill\n`,
   );
   await writeFile(
     path.join(root, 'website/routes.json'),
@@ -199,8 +201,13 @@ beforeAll(async () => {
   await rm(firstSite, { recursive: true, force: true });
   await rm(secondSite, { recursive: true, force: true });
   await rm(failureFixtureRoot, { recursive: true, force: true });
+  await rm(standalonePage, { force: true });
   await stageSite({ output: firstSite, revision, repositoryRoot });
   await stageSite({ output: secondSite, revision, repositoryRoot });
+  await buildReport({
+    input: path.join(repositoryRoot, 'website/docs/agent/index.md'),
+    output: standalonePage,
+  });
 });
 
 describe('deterministic public site staging', () => {
@@ -249,6 +256,25 @@ describe('deterministic public site staging', () => {
     ).toEqual(['docs/present.md']);
   });
 
+  it('adds one linked Moira attribution footer to every public HTML page only', async () => {
+    const routes = await readRoutes();
+    for (const route of routes.filter((candidate) => candidate.kind === 'page')) {
+      const source = await readFile(path.join(firstSite, route.href), 'utf8');
+      expect(source.match(/data-site-attribution(?:[ >])/gu), route.href).toHaveLength(1);
+      expect(source, route.href).toContain(
+        '<a href="https://github.com/witqq/mcp-moira" aria-label="Made with Moira">Made with Moira</a>',
+      );
+      expect(source.indexOf('<footer class="site-attribution"'), route.href).toBeGreaterThan(
+        source.lastIndexOf('</main>'),
+      );
+    }
+    for (const route of routes.filter((candidate) => candidate.kind === 'copy')) {
+      const source = await readFile(path.join(firstSite, route.href), 'utf8');
+      expect(source, route.href).not.toContain('data-site-attribution');
+    }
+    expect(await readFile(standalonePage, 'utf8')).not.toContain('data-site-attribution');
+  });
+
   it('copies direct documentation and skill bytes and records every staged hash', async () => {
     const routes = await readRoutes();
     const release = await readRelease();
@@ -256,11 +282,11 @@ describe('deterministic public site staging', () => {
       contractVersion: 1,
       package: {
         name: 'agentic-report',
-        version: '0.2.0',
+        version: '0.2.1',
         engines: { node: '>=24.18.0' },
       },
       sourceRevision: revision,
-      skill: { version: '0.2.0', license: 'MIT' },
+      skill: { version: '0.2.1', license: 'MIT' },
     });
     expect(release.routes).toHaveLength(routes.length - 1);
     const actualFiles = (await listFiles(firstSite)).filter((file) => file !== 'release.json');
@@ -322,6 +348,7 @@ describe('deterministic public site staging', () => {
     const marketplace = JSON.parse(
       await readFile(path.join(repositoryRoot, '.claude-plugin/marketplace.json'), 'utf8'),
     ) as {
+      readonly version: string;
       readonly plugins: readonly {
         readonly name: string;
         readonly version: string;
@@ -334,6 +361,7 @@ describe('deterministic public site staging', () => {
       license: 'MIT',
       metadata: { version: packageMetadata.version, homepage: packageMetadata.homepage },
     });
+    expect(packageMetadata.version).toBe('0.2.1');
     expect(skillFrontmatter.metadata.compatibility).toContain('Node.js 24.18.0 or newer');
     expect(packageMetadata.engines.node).toBe('>=24.18.0');
     for (const plugin of [openAiPlugin, claudePlugin]) {
@@ -344,6 +372,7 @@ describe('deterministic public site staging', () => {
         skills: './skills/',
       });
     }
+    expect(marketplace.version).toBe(packageMetadata.version);
     expect(marketplace.plugins).toEqual([
       expect.objectContaining({
         name: 'agentic-report',
@@ -352,9 +381,27 @@ describe('deterministic public site staging', () => {
       }),
     ]);
     expect(skillSource).toContain(
-      'npx --yes agentic-report@0.2.0 build ./my-page --output ./my-page.html --json',
+      'npx --yes agentic-report@0.2.1 build ./my-page --output ./my-page.html --json',
     );
     expect(skillSource).toContain('Do not deploy, publish, use credentials');
+    for (const [publicSource, source] of [
+      ['skills/agentic-report/SKILL.md', skillSource],
+      [
+        'website/docs/agent/index.md',
+        await readFile(path.join(repositoryRoot, 'website/docs/agent/index.md'), 'utf8'),
+      ],
+      ['website/llms.txt', await readFile(path.join(repositoryRoot, 'website/llms.txt'), 'utf8')],
+    ] as const) {
+      const pinnedVersions = [...source.matchAll(/\bagentic-report@(\d+\.\d+\.\d+)/gu)].map(
+        (match) => match[1],
+      );
+      expect(pinnedVersions.length, publicSource).toBeGreaterThan(0);
+      expect(new Set(pinnedVersions), publicSource).toEqual(new Set([packageMetadata.version]));
+    }
+    const readme = await readFile(path.join(repositoryRoot, 'README.md'), 'utf8');
+    expect(readme.trimEnd()).toMatch(
+      /<a href="https:\/\/github\.com\/witqq\/mcp-moira"><img alt="Made with Moira"[^>]*><\/a>\n<\/p>$/u,
+    );
   });
 
   it('contains no internal workflow paths, workstation paths, credential assignments, or authority claims', async () => {
@@ -453,7 +500,7 @@ describe('deterministic public site staging', () => {
   });
 
   it('rejects divergent package and skill versions before creating a staging candidate', async () => {
-    const root = await createSiteFixture('version-mismatch', { skillVersion: '0.2.1' });
+    const root = await createSiteFixture('version-mismatch', { skillVersion: '0.2.2' });
     const output = path.join(root, 'public-site');
 
     await expect(stageSite({ output, revision, repositoryRoot: root })).rejects.toThrow(
