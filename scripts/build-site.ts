@@ -67,7 +67,7 @@ const sha256 = (value: Buffer | string): string => createHash('sha256').update(v
 const moiraAttribution = `<style data-site-attribution-style>
 .site-attribution{display:flex;justify-content:center;padding:1.5rem 1rem 2rem}.site-attribution a{display:inline-flex;align-items:center;border:1px solid color-mix(in srgb,currentColor 28%,transparent);border-radius:999px;padding:.42rem .78rem;color:inherit;font:600 .78rem/1.2 ui-sans-serif,system-ui,sans-serif;letter-spacing:.02em;text-decoration:none;opacity:.78}.site-attribution a:hover,.site-attribution a:focus-visible{opacity:1}.site-attribution a:focus-visible{outline:2px solid currentColor;outline-offset:3px}
 </style>`;
-const moiraAttributionFooter = `<footer class="site-attribution" data-site-attribution><a href="https://github.com/witqq/mcp-moira" aria-label="Made with Moira">Made with Moira</a></footer>`;
+const moiraAttributionFooter = `<footer class="site-attribution" data-site-attribution><a href="https://moira-mcp.com/" aria-label="Made with Moira">Made with Moira</a></footer>`;
 
 const addMoiraAttribution = (source: string): string => {
   if (!source.includes('</head>') || !source.includes('</body>')) {

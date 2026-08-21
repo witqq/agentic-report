@@ -59,7 +59,7 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
   const attribution = page.locator('[data-site-attribution]');
   await expect(attribution.getByRole('link', { name: 'Made with Moira' })).toHaveAttribute(
     'href',
-    'https://github.com/witqq/mcp-moira',
+    'https://moira-mcp.com/',
   );
   const attributionLink = attribution.getByRole('link', { name: 'Made with Moira' });
   for (const theme of ['light', 'dark'] as const) {
@@ -95,7 +95,7 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
   await expect(page).toHaveTitle('Agent quickstart');
   await expect(page.getByText('Node.js 24.18.0 or newer', { exact: false }).first()).toBeVisible();
   await expect(
-    page.getByText('npx --yes agentic-report@0.2.1 init ./my-page', { exact: false }).first(),
+    page.getByText('npx --yes agentic-report@0.2.2 init ./my-page', { exact: false }).first(),
   ).toBeVisible();
   await expect(page.getByRole('link', { name: 'complete agent reference' })).toHaveAttribute(
     'href',
@@ -115,7 +115,7 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
   );
 
   await page.goto(fileUrl('docs/agent/index.md'));
-  await expect(page.locator('body')).toContainText('npx --yes agentic-report@0.2.1 validate');
+  await expect(page.locator('body')).toContainText('npx --yes agentic-report@0.2.2 validate');
   await expect(page.locator('body')).toContainText('Authors do not need React');
 
   for (const example of ['incident-review', 'vendor-decision', 'launch-readiness']) {
