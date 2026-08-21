@@ -276,5 +276,5 @@ MIT. See [`LICENSE`](LICENSE).
 ---
 
 <p align="center">
-  <a href="https://github.com/witqq/mcp-moira"><img alt="Made with Moira" src="https://img.shields.io/badge/Made_with-Moira-6d5dfc?style=flat-square"></a>
+  <a href="https://moira-mcp.com/"><img alt="Made with Moira" src="https://img.shields.io/badge/Made_with-Moira-6d5dfc?style=flat-square"></a>
 </p>

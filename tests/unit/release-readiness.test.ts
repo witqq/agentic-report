@@ -24,11 +24,11 @@ describe('release readiness', () => {
     if (publish === undefined) throw new Error('Release publish section is missing.');
 
     expect(publish).toContain(
-      'release_asset_url="https://github.com/witqq/agentic-report/releases/download/v0.2.1/agentic-report-0.2.1.tgz"',
+      'release_asset_url="https://github.com/witqq/agentic-report/releases/download/v0.2.2/agentic-report-0.2.2.tgz"',
     );
     expect(publish).toContain('npm publish --access public "$release_asset_url"');
     expect(publish).toContain('shasum -a 256');
-    expect(publish).toContain('npm view agentic-report@0.2.1 --json');
+    expect(publish).toContain('npm view agentic-report@0.2.2 --json');
     expect(publish).toContain('Inspect the complete unauthenticated version document');
     expect(publish).toContain('Stop on any mismatch or sensitive value.');
     expect(
@@ -37,7 +37,7 @@ describe('release readiness', () => {
         .map((line) => line.trim())
         .filter((line) => line.startsWith('npm publish ')),
     ).toEqual(['npm publish --access public "$release_asset_url"']);
-    expect(runbook).toContain('`[Made with Moira](https://github.com/witqq/mcp-moira)`.');
+    expect(runbook).toContain('`[Made with Moira](https://moira-mcp.com/)`.');
   });
 
   it('labels every packaged example as fictional before its first evidence claims', async () => {
@@ -100,7 +100,7 @@ describe('release readiness', () => {
     expect(setup).toContain('find "$pinned_cache" -mindepth 1 -print -quit');
     expect(setup).toContain('find "$latest_cache" -mindepth 1 -print -quit');
     for (const block of [pinned, latest]) {
-      expect(block).toContain('view agentic-report@0.2.1 --json > ./npm-version.json');
+      expect(block).toContain('view agentic-report@0.2.2 --json > ./npm-version.json');
       expect(block).toContain('cat ./npm-version.json');
     }
     const pinnedCommands = registryCommands(pinned);
@@ -120,7 +120,7 @@ describe('release readiness', () => {
     expect(
       pinnedCommands
         .filter((line) => line.includes('"$release_npx"'))
-        .every((line) => line.includes('agentic-report@0.2.1')),
+        .every((line) => line.includes('agentic-report@0.2.2')),
     ).toBe(true);
     expect(
       latestCommands
