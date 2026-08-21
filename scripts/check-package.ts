@@ -1032,71 +1032,70 @@ if (
   throw new Error('Installed CLI did not emit the expected actionable validation diagnostic.');
 }
 
-await writeFile(
-  path.join(packageRunDirectory, 'candidate-evidence.json'),
-  `${JSON.stringify(
-    {
-      evidenceKind: 'local-packed-candidate',
-      registryCandidateClaim: false,
-      sourceState: await readSourceState(),
-      runtime: { executable: process.execPath, version: process.versions.node },
-      npm: { executable: npmExecutable, version: npmVersionOutput.trim() },
-      npx: { executable: npxExecutable, version: npxVersionOutput.trim() },
-      npmPack: {
-        cwd: path.resolve('.'),
-        argv: npmPackArgv,
-        cacheDirectory: npmPackCacheDirectory,
-        environment: npmPackEnvironment,
-        exitCode: 0,
-        stdout: npmPackOutcome.stdout,
-        stderr: npmPackOutcome.stderr,
-      },
-      preflight: {
-        consumerDirectory,
-        npmCacheDirectory,
-        checkoutLinkAbsent: true,
-        executableSearchDirectories: candidateExecutableSearchDirectories,
-        globalExecutableChecks,
-        globalExecutableAbsent,
-        reusedCacheAbsent: true,
-        sanitizedEnvironment: candidateNpxEnvironment,
-      },
-      tarball: {
-        path: tarballPath,
-        sha256: tarballSha256,
-        integrity: tarballIntegrity,
-        shasum: tarballShasum,
-        size: tarballSize,
-        unpackedSize: packedInventory.reduce((total, file) => total + file.size, 0),
-        files: packedFiles.length,
-        inventory: packedInventory,
-        packageVersion: releaseVersion,
-      },
-      install: {
-        cwd: consumerDirectory,
-        argv: installArgv,
-        exitCode: 0,
-        stdout: installOutcome.stdout,
-        stderr: installOutcome.stderr,
-      },
-      installed: {
-        packagePath: path.join(consumerDirectory, 'node_modules', 'agentic-report'),
-        binary,
-        binaryIdentity,
-        version: installedVersion.trim(),
-      },
-      localOnlyNpxResolution: {
-        cwd: consumerDirectory,
-        argv: resolutionArgv,
-        ...resolutionOutcome,
-      },
-      localOnlyNpxCommands: candidateNpxEvidence,
-      chromium: candidateBrowserEvidence,
+const candidateEvidenceBytes = `${JSON.stringify(
+  {
+    evidenceKind: 'local-packed-candidate',
+    registryCandidateClaim: false,
+    sourceState: await readSourceState(),
+    runtime: { executable: process.execPath, version: process.versions.node },
+    npm: { executable: npmExecutable, version: npmVersionOutput.trim() },
+    npx: { executable: npxExecutable, version: npxVersionOutput.trim() },
+    npmPack: {
+      cwd: path.resolve('.'),
+      argv: npmPackArgv,
+      cacheDirectory: npmPackCacheDirectory,
+      environment: npmPackEnvironment,
+      exitCode: 0,
+      stdout: npmPackOutcome.stdout,
+      stderr: npmPackOutcome.stderr,
     },
-    null,
-    2,
-  )}\n`,
-);
+    preflight: {
+      consumerDirectory,
+      npmCacheDirectory,
+      checkoutLinkAbsent: true,
+      executableSearchDirectories: candidateExecutableSearchDirectories,
+      globalExecutableChecks,
+      globalExecutableAbsent,
+      reusedCacheAbsent: true,
+      sanitizedEnvironment: candidateNpxEnvironment,
+    },
+    tarball: {
+      path: tarballPath,
+      sha256: tarballSha256,
+      integrity: tarballIntegrity,
+      shasum: tarballShasum,
+      size: tarballSize,
+      unpackedSize: packedInventory.reduce((total, file) => total + file.size, 0),
+      files: packedFiles.length,
+      inventory: packedInventory,
+      packageVersion: releaseVersion,
+    },
+    install: {
+      cwd: consumerDirectory,
+      argv: installArgv,
+      exitCode: 0,
+      stdout: installOutcome.stdout,
+      stderr: installOutcome.stderr,
+    },
+    installed: {
+      packagePath: path.join(consumerDirectory, 'node_modules', 'agentic-report'),
+      binary,
+      binaryIdentity,
+      version: installedVersion.trim(),
+    },
+    localOnlyNpxResolution: {
+      cwd: consumerDirectory,
+      argv: resolutionArgv,
+      ...resolutionOutcome,
+    },
+    localOnlyNpxCommands: candidateNpxEvidence,
+    chromium: candidateBrowserEvidence,
+  },
+  null,
+  2,
+)}\n`;
+await writeFile(path.join(packageRunDirectory, 'candidate-evidence.json'), candidateEvidenceBytes);
+await writeFile(path.join(packageDirectory, 'candidate-evidence.json'), candidateEvidenceBytes);
 
 console.log(
   `Package and clean npm consumer verified: ${tarballPath} (sha256 ${tarballSha256}, integrity ${tarballIntegrity}, shasum ${tarballShasum}, ${tarballSize} bytes, ${packedFiles.length} files)`,

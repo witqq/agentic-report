@@ -272,3 +272,9 @@ See the contributor, testing, and architecture entries in the document map above
 ## License
 
 MIT. See [`LICENSE`](LICENSE).
+
+---
+
+<p align="center">
+  <a href="https://github.com/witqq/mcp-moira"><img alt="Made with Moira" src="https://img.shields.io/badge/Made_with-Moira-6d5dfc?style=flat-square"></a>
+</p>

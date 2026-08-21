@@ -74,6 +74,8 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   values without output mutation, and contains conflicting `dist/browser` files to prove the installed
   compiler uses only package-owned runtime assets. Repeated clean-consumer builds compare exact
   single-file bytes and directory trees across independent CLI processes.
+  The accepted record is written beside the unique candidate and to the stable ignored
+  `test-results/package/candidate-evidence.json` handoff used by the release runbook.
 
 The E2E setup also stages the same-origin public tree and builds directory-format documentation fixtures.
 Tests start from the staged landing, follow real `file://` links to human and direct agent documentation,

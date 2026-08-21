@@ -18,6 +18,11 @@ The output destination must not exist. Open `site/index.html` through `file://`,
 digest and byte count. Direct Markdown and skill files are copied from their canonical repository sources;
 they are not rendered or maintained as separate copies.
 
+Site assembly adds one compact `Made with Moira` footer to every staged HTML page. The footer links to
+`https://github.com/witqq/mcp-moira`, makes no runtime request, and is deliberately owned by the public-site
+assembler rather than the compiler. Ordinary pages built by package users are therefore unchanged. The
+same attribution appears at the bottom of the repository README rendered by GitHub and npm.
+
 ## Host acceptance
 
 Deploy the complete `site/` tree without an SPA fallback. Before accepting the deployment, require:
@@ -43,6 +48,9 @@ and generated `release.json` together. Then:
 5. Only then submit or update the community OpenAI and Anthropic listings and verify
    `npx skills add witqq/agentic-report --skill agentic-report` from the public repository.
 
+The GitHub Release description must end with a `Made with Moira` link to the same canonical Moira
+repository. This keeps attribution present on the GitHub release surface as well as the README and site.
+
 OpenAI/ChatGPT, Anthropic, and skills.sh review or discovery status must be recorded as observed. Repository
 metadata is community/unofficial and must not claim curated, verified, or official placement. Pending
 review is not publication. Credentials and irreversible submission actions never belong in repository
@@ -56,4 +64,4 @@ The channel contracts used by this process are the public [Agent Skills specific
 their submission and discovery behavior is external to this repository and may change independently.
 
 The complete source → npm → registry `npx` → trusted-TLS site → skill-channel order, exact future commands,
-provenance requirements, and stop conditions are maintained in [`RELEASE.md`](RELEASE.md).
+operator checks, and stop conditions are maintained in [`RELEASE.md`](RELEASE.md).

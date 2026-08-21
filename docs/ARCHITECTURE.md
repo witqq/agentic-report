@@ -233,6 +233,16 @@ The canonical skill is instruction-only. Its OpenAI and Claude plugin manifests 
 Repository/marketplace metadata is community distribution metadata; it grants no deployment, publication,
 credential, remote-source, or unrelated mutation authority.
 
+## Release provenance boundary
+
+`scripts/check-package.ts` writes the exact accepted local-candidate record both beside its unique tarball
+and at the stable ignored `test-results/package/candidate-evidence.json` handoff path. GitHub publication
+must bind those tarball bytes to the canonical public asset before npm consumes its URL. The release
+operator verifies the asset hash, inspects the complete public npm version document, and stops on any
+identity mismatch or sensitive value. Registry queries, network access, authentication, publication, and
+deployment remain operator actions described by `docs/RELEASE.md`; none enters the compiler, CLI, ESM API,
+browser runtime, or a separate release-validation subsystem.
+
 ## Security properties
 
 - HTTP(S) image sources fail instead of triggering a network request.
