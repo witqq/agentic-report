@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import type { ReportManifest } from '../contracts.js';
+import { PACKAGE_ICON_PATHS, type PackageIconName } from '../iconography.js';
 
 export interface NavigationItem {
   readonly id: string;
@@ -76,7 +77,8 @@ export function renderDocument(options: DocumentRenderOptions): string {
               aria-label="Hide contents"
               data-nav-toggle
             >
-              Hide contents
+              <PackageIcon name="three-bars" />
+              <span data-nav-toggle-label>Hide contents</span>
             </button>
           ) : null}
           <a className="topbar-title" href={`#${contentId}`}>
@@ -88,6 +90,7 @@ export function renderDocument(options: DocumentRenderOptions): string {
             aria-label="Toggle color theme"
             data-theme-toggle
           >
+            <PackageIcon name="sun" />
             Theme
           </button>
         </header>
@@ -124,6 +127,7 @@ export function renderDocument(options: DocumentRenderOptions): string {
               <div className="nav-dialog-header">
                 <p id={navigationDialogTitleId}>Contents</p>
                 <button type="button" className="nav-dialog-close" data-nav-close>
+                  <PackageIcon name="x" />
                   Close
                 </button>
               </div>
@@ -140,6 +144,22 @@ export function renderDocument(options: DocumentRenderOptions): string {
     </html>,
   );
   return `<!doctype html>${markup}`;
+}
+
+function PackageIcon({ name }: { readonly name: PackageIconName }) {
+  return (
+    <svg
+      className="package-icon"
+      data-package-icon={name}
+      viewBox="0 0 16 16"
+      width="16"
+      height="16"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d={PACKAGE_ICON_PATHS[name]} />
+    </svg>
+  );
 }
 
 function allocateShellId(base: string, usedIds: Set<string>): string {

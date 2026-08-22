@@ -77,7 +77,7 @@ token defaults:
 | Preset      | Density     | Font  | Accent | Width    | Radius |
 | ----------- | ----------- | ----- | ------ | -------- | ------ |
 | `studio`    | comfortable | sans  | indigo | standard | soft   |
-| `editorial` | spacious    | serif | coral  | narrow   | soft   |
+| `editorial` | comfortable | serif | indigo | wide     | sharp  |
 | `signal`    | compact     | sans  | teal   | wide     | sharp  |
 
 The selected preset supplies all five token axes, the selected theme supplies only the color mode, and
@@ -90,8 +90,8 @@ that defaults come from the selected preset before explicit token fields apply. 
 `page.tokens` retains each Studio normalization `default` with
 `defaultVisibility: normalization-only`; discovery consumers must materialize only `published` defaults as
 authored fields. `page.presets` contains every complete coordinated map.
-The landing and launch examples use `studio`, the vendor
-decision uses `editorial`, and the incident review uses `signal`; the packaged `layout-*` examples retain
+The public landing and vendor decision use the Field Manual `editorial` preset, the launch example uses
+`studio`, and the incident review uses `signal`; the packaged `layout-*` examples retain
 the default while exercising every layout.
 The six starter examples combine these layouts with the public content, interaction, visualization,
 partial, and local-asset contracts; they introduce no additional syntax.

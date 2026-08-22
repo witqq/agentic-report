@@ -99,7 +99,8 @@ The package owns four responsive page layouts: `document`, `dashboard`, `landing
 select one as metadata and may choose the coordinated `studio`, `editorial`, or `signal` preset, an
 independent `system`, `light`, or `dark` color mode, and compact token overrides for `density`, `font`,
 `accent`, `width`, and `radius`. Preset defaults apply first and explicitly authored token values apply
-last. These are closed validated values, not CSS or component code. Buildable examples under
+last. The `editorial` preset is the Field Manual system for warm long-form pages with compact controls,
+numbered contents, and package-owned action icons. These are closed validated values, not CSS or component code. Buildable examples under
 `examples/layout-*` demonstrate every layout and are listed by
 `agentic-report examples --json`; `examples/interactive-catalog` and `examples/visualization-catalog`
 demonstrate the package-owned interaction and data primitives.

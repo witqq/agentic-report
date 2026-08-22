@@ -194,7 +194,7 @@ theme, and optional token values:
 - `tokens.radius`: `sharp`, `soft`, or `round`.
 
 Preset token defaults are `studio = comfortable/sans/indigo/standard/soft`, `editorial =
-spacious/serif/coral/narrow/soft`, and `signal = compact/sans/teal/wide/sharp`, in the token order above.
+comfortable/serif/indigo/wide/sharp`, and `signal = compact/sans/teal/wide/sharp`, in the token order above.
 The preset applies first, theme controls only light/dark/system color resolution, and every explicitly
 authored token field overrides its preset value. Do not repeat all five token fields when the preset
 already expresses the intended family.
@@ -206,7 +206,9 @@ selected preset, then explicit token fields apply. For source-contract-major com
 tokens. Use the complete maps in `page.presets` when constructing an editor or agent prompt, and apply only
 defaults whose visibility is `published`.
 
-`document` emphasizes long-form reading with persistent desktop contents. `dashboard` uses a wide dense
+`editorial` is the Field Manual family: serif display typography, warm plates, compact controls,
+package-owned action icons, numbered desktop contents, and a left mobile contents sheet. `document`
+emphasizes long-form reading with persistent desktop contents. `dashboard` uses a wide dense
 surface and horizontal desktop navigation. `landing` provides a spacious centered hero and wide content
 sections. `mixed` combines a reading column with wide evidence, cards, tables, and media. Every layout
 collapses to one mobile column with a package-owned contents drawer. Wide tables and code remain locally

@@ -44,7 +44,8 @@
     "PRODUCT-REQUIREMENTS.md",
     "skills",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && vite build --config vite.runtime.config.ts",

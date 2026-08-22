@@ -45,6 +45,7 @@ test('public landing has the exact proof-first contract in both output formats',
     await expect(page).toHaveTitle(
       'agentic-report — declarative interactive pages for agent handoffs',
     );
+    await expect(page.locator('html')).toHaveAttribute('data-preset', 'editorial');
     await expect(
       page.getByRole('heading', { name: 'Markdown in. An interactive page out.', level: 1 }),
     ).toBeVisible();
@@ -60,6 +61,63 @@ test('public landing has the exact proof-first contract in both output formats',
       'Start',
     ]);
     await expect(page.locator('[data-navigation] a[aria-current="location"]')).toHaveCount(1);
+    const fieldManualState = await page.evaluate(() => {
+      const sidebar = document.querySelector<HTMLElement>('[data-nav-desktop-host]');
+      const content = document.querySelector<HTMLElement>('.report-content');
+      const action = document.querySelector<HTMLElement>('.semantic-action[data-kind="primary"]');
+      const icon = action?.querySelector<SVGElement>('[data-package-icon="arrow-right"]');
+      const navigationIcon = document.querySelector<SVGElement>(
+        '.nav-toggle [data-package-icon="three-bars"]',
+      );
+      if (
+        sidebar === null ||
+        content === null ||
+        action === null ||
+        icon === undefined ||
+        icon === null ||
+        navigationIcon === null
+      ) {
+        throw new Error('Field Manual shell, action, and icon are required.');
+      }
+      const sidebarBox = sidebar.getBoundingClientRect();
+      const contentBox = content.getBoundingClientRect();
+      const controls = [
+        ['nav', document.querySelector<HTMLElement>('.nav-toggle')],
+        ['theme', document.querySelector<HTMLElement>('.theme-toggle')],
+        ['copy', document.querySelector<HTMLElement>('.copy-code')],
+        ['action', action],
+      ] as const;
+      return {
+        sidebarPosition: getComputedStyle(sidebar).position,
+        separated: sidebarBox.right <= contentBox.left,
+        iconSize: icon.getBoundingClientRect().width,
+        navigationIconSize: navigationIcon.getBoundingClientRect().width,
+        controls: controls.map(([name, control]) => {
+          if (control === null) throw new Error(`Missing Field Manual ${name} control.`);
+          const style = getComputedStyle(control);
+          return {
+            name,
+            height: control.getBoundingClientRect().height,
+            paddingLeft: Number.parseFloat(style.paddingLeft),
+            paddingRight: Number.parseFloat(style.paddingRight),
+            gap: Number.parseFloat(style.gap),
+          };
+        }),
+      };
+    });
+    expect(fieldManualState).toMatchObject({
+      sidebarPosition: 'sticky',
+      separated: true,
+      iconSize: 16,
+      navigationIconSize: 16,
+    });
+    for (const control of fieldManualState.controls) {
+      expect(control.height, control.name).toBeGreaterThanOrEqual(32);
+      expect(control.height, control.name).toBeLessThanOrEqual(40);
+      expect(control.paddingLeft, control.name).toBeLessThanOrEqual(13.2);
+      expect(control.paddingRight, control.name).toBeLessThanOrEqual(13.2);
+      expect(control.gap, control.name).toBe(6);
+    }
     await expect(page.locator('#page-types .semantic-card')).toHaveCount(7);
     await expect(page.locator('#proof .semantic-card')).toHaveCount(2);
     await expect(
@@ -227,6 +285,25 @@ test('captures the complete public-landing acceptance states in both formats', a
         'transform',
         /^(?:none|matrix\(1, 0, 0, 1, 0, 0\))$/u,
       );
+      const drawerBounds = await page.locator('[data-nav-dialog]').evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        return { x: box.x, height: box.height, width: box.width };
+      });
+      expect(drawerBounds.x).toBe(0);
+      expect(drawerBounds.height).toBe(options.height);
+      expect(drawerBounds.width).toBeLessThan(options.width);
+      const closeMetrics = await page
+        .getByRole('button', { name: 'Close', exact: true })
+        .evaluate((button) => {
+          const style = getComputedStyle(button);
+          return {
+            height: button.getBoundingClientRect().height,
+            paddingLeft: Number.parseFloat(style.paddingLeft),
+            paddingRight: Number.parseFloat(style.paddingRight),
+            gap: Number.parseFloat(style.gap),
+          };
+        });
+      expect(closeMetrics).toEqual({ height: 40, paddingLeft: 12, paddingRight: 12, gap: 6 });
     }
     await expectNoDocumentOverflow(page);
     await page.screenshot({

@@ -50,6 +50,7 @@ describe('public landing product proof', () => {
     expect(source).toContain(
       'Turn declarative Markdown into a finished interactive page an agent can hand to a human—locally, with one\nbuild command and no frontend project.',
     );
+    expect(source).toContain('preset: editorial');
     expect(source).toContain('No author JSX, JS, or CSS');
     expect(source).toContain('Use Node.js 24.18.0 or newer.');
     expect(source).toContain('first `npx` run needs registry and network access');

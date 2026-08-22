@@ -1,5 +1,6 @@
 import './document.css';
 
+import { COPY_ICON_PATH } from '../iconography.js';
 import { PAGE_MOTION_POLICY } from '../page-motion.js';
 
 const root = document.documentElement;
@@ -209,8 +210,26 @@ for (const block of document.querySelectorAll<HTMLElement>('pre')) {
   button.type = 'button';
   button.className = 'copy-code';
   button.dataset.copyCode = '';
-  button.textContent = 'Copy';
+  const label = document.createElement('span');
+  label.dataset.copyCodeLabel = '';
+  label.textContent = 'Copy';
+  button.append(createCopyIcon(), label);
   block.append(button);
+}
+
+function createCopyIcon(): SVGSVGElement {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.classList.add('package-icon');
+  svg.dataset.packageIcon = 'copy';
+  svg.setAttribute('viewBox', '0 0 16 16');
+  svg.setAttribute('width', '16');
+  svg.setAttribute('height', '16');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', COPY_ICON_PATH);
+  svg.append(path);
+  return svg;
 }
 
 interface NavigationController {
@@ -232,6 +251,7 @@ function createNavigationController(): NavigationController | undefined {
   const dialogContent = dialog?.querySelector<HTMLElement>('[data-nav-dialog-content]');
   const close = dialog?.querySelector<HTMLButtonElement>('[data-nav-close]');
   const toggle = document.querySelector<HTMLButtonElement>('[data-nav-toggle]');
+  const toggleLabel = toggle?.querySelector<HTMLElement>('[data-nav-toggle-label]');
   if (
     navigation === null ||
     desktopHost === null ||
@@ -240,7 +260,9 @@ function createNavigationController(): NavigationController | undefined {
     dialogContent === null ||
     close === undefined ||
     close === null ||
-    toggle === null
+    toggle === null ||
+    toggleLabel === undefined ||
+    toggleLabel === null
   ) {
     return undefined;
   }
@@ -335,7 +357,7 @@ function createNavigationController(): NavigationController | undefined {
     root.toggleAttribute('data-nav-collapsed', !desktopExpanded);
     toggle.setAttribute('aria-expanded', String(desktopExpanded));
     toggle.setAttribute('aria-label', desktopExpanded ? 'Hide contents' : 'Show contents');
-    toggle.textContent = desktopExpanded ? 'Hide contents' : 'Show contents';
+    toggleLabel.textContent = desktopExpanded ? 'Hide contents' : 'Show contents';
   };
 
   const applyViewport = (): void => {
@@ -360,7 +382,7 @@ function createNavigationController(): NavigationController | undefined {
     toggle.setAttribute('aria-controls', dialog.id);
     toggle.setAttribute('aria-expanded', 'false');
     toggle.setAttribute('aria-label', 'Open contents');
-    toggle.textContent = 'Contents';
+    toggleLabel.textContent = 'Contents';
   };
 
   const closeMobile = (restoreFocus: boolean): void => {
@@ -676,13 +698,14 @@ function applyFilter(input: HTMLInputElement): void {
 
 async function copyCode(button: HTMLButtonElement): Promise<void> {
   const text = button.closest('pre')?.querySelector('code')?.textContent ?? '';
+  const label = button.querySelector<HTMLElement>('[data-copy-code-label]') ?? button;
   try {
     await navigator.clipboard.writeText(text);
-    button.textContent = 'Copied';
+    label.textContent = 'Copied';
   } catch {
-    button.textContent = 'Copy unavailable';
+    label.textContent = 'Copy unavailable';
   }
   window.setTimeout(() => {
-    button.textContent = 'Copy';
+    label.textContent = 'Copy';
   }, 1200);
 }

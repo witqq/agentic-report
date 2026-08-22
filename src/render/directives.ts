@@ -14,6 +14,7 @@ import { interpretDirectiveAttributes } from '../authoring/schemas.js';
 import type { SourceMapSegment } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
 import { resolveSourceLocation } from '../source/source-map.js';
+import { decorativeIcon } from './icons.js';
 import { enhanceVisualization } from './visualizations.js';
 
 interface DirectiveNode {
@@ -1113,6 +1114,7 @@ function enhanceAction(node: Element): void {
   const href = takeStringProperty(node, 'dataHref');
   if (href === undefined) throw new Error('Validated action is missing its href.');
   node.properties.href = href;
+  node.children.unshift(decorativeIcon('arrow-right'));
 }
 
 function hastText(node: Element): string {
