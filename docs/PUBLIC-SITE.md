@@ -35,6 +35,35 @@ Deploy the complete `site/` tree without an SPA fallback. Before accepting the d
 - a deliberate absent path returning a real 404 rather than the landing HTML;
 - hosted direct-file bytes matching `release.json`, normal landing navigation, and normal browser behavior.
 
+## Prepare and deploy the container
+
+Deployment uses the same site assembler as local inspection. Begin from a clean committed feature or release
+revision; preparation refuses a dirty checkout so `release.json.sourceRevision` cannot describe different
+bytes.
+
+```sh
+pnpm deploy:prepare
+pnpm deploy:config
+docker build --platform linux/amd64 --tag agentic-report-site:local .
+```
+
+`deploy:prepare` safely replaces only the ignored generated `site/` directory. `.dockerignore` admits only
+that directory, the nginx configuration, and the Dockerfile, so source, Git state, credentials, tests, caches,
+and agent workspaces are outside the image build context. nginx serves explicit files and directory indexes
+without an SPA fallback; an absent path remains a real 404.
+
+The production command builds the same image and deploys it through the configured `infra-tools` and Traefik
+contract:
+
+```sh
+pnpm deploy:prod
+infra-tools status agentic-report-site --server witqq.ru --remote-dir /opt/agentic-report
+infra-tools logs agentic-report-site 100 --server witqq.ru --remote-dir /opt/agentic-report
+```
+
+No environment file or application secret is required by this static service. Production execution remains
+an external mutation and must use an explicitly authorized release revision.
+
 ## Keep the skill synchronized
 
 For release `R`, update the package version, CLI runtime identity, `skills/agentic-report/SKILL.md`

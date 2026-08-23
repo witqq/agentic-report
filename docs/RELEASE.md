@@ -193,9 +193,24 @@ and workspace roots must remain distinct, and neither may contain a checkout lin
 
 ## Deploy and accept the site
 
-Build the site from the same public release commit and deploy the complete new tree. Trusted TLS is the first
-gate. A certificate failure stops acceptance; never use `-k`, a custom CA, a hosts-file override, HTTP, or a
-browser bypass to turn it green.
+Build the site from the same public release commit and deploy the complete new tree through the repository's
+Docker/infra-tools contract:
+
+```sh
+pnpm deploy:prepare
+test "$(node -e 'process.stdout.write(require("./site/release.json").sourceRevision)')" = "$(git rev-parse HEAD)"
+pnpm deploy:config
+pnpm deploy:prod
+infra-tools status agentic-report-site --server witqq.ru --remote-dir /opt/agentic-report
+infra-tools logs agentic-report-site 100 --server witqq.ru --remote-dir /opt/agentic-report
+```
+
+Preparation requires a clean checkout and replaces only ignored `site/`. The Docker context is an allowlist
+containing the generated public tree and nginx-owned deployment files; do not weaken it by adding source,
+`.git`, environment files, credentials, tests, caches, or workflow artifacts.
+
+Trusted TLS is the first hosted gate. A certificate failure stops acceptance; never use `-k`, a custom CA, a
+hosts-file override, HTTP, or a browser bypass to turn it green.
 
 For every declaration in `website/routes.json`, require HTTPS 2xx, the expected MIME family, and hosted bytes
 matching `release.json`. Crawl internal links from the landing, open the three live examples and their public

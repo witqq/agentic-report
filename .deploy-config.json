@@ -1,0 +1,15 @@
+{
+  "serviceName": "agentic-report-site",
+  "dockerComposePath": "docker-compose.remote.yml",
+  "dockerfile": "Dockerfile",
+  "buildContext": ".",
+  "platform": "linux/amd64",
+  "remoteDir": "/opt/agentic-report",
+  "imageName": "agentic-report-site",
+  "deploymentType": "build",
+  "healthCheck": {
+    "containerName": "agentic-report-site",
+    "timeout": 120,
+    "interval": 3
+  }
+}

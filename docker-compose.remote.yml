@@ -1,0 +1,17 @@
+services:
+  agentic-report:
+    image: agentic-report-site:latest
+    container_name: agentic-report-site
+    restart: unless-stopped
+    networks:
+      - traefik
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.agentic-report.rule=Host(`agentic-report.witqq.dev`)'
+      - 'traefik.http.routers.agentic-report.entrypoints=websecure'
+      - 'traefik.http.routers.agentic-report.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.agentic-report.loadbalancer.server.port=80'
+
+networks:
+  traefik:
+    external: true
