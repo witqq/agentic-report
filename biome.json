@@ -6,6 +6,7 @@
       "!dist",
       "!node_modules",
       "!coverage",
+      "!site",
       "!test-results",
       "!agent_temp_files_local",
       "!moira-ws"
