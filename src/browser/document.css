@@ -335,9 +335,14 @@ a {
   backdrop-filter: none;
 }
 
-.topbar-title {
+.topbar-context {
   min-width: 0;
   flex: 1;
+}
+
+.topbar-title {
+  display: block;
+  min-width: 0;
   overflow: hidden;
   color: var(--color-text);
   font-family: var(--font-heading);
@@ -345,6 +350,11 @@ a {
   text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.topbar-title-short,
+.topbar-current {
+  display: none;
 }
 
 .nav-toggle,
@@ -1440,9 +1450,40 @@ th {
 }
 
 :root[data-preset='editorial'] .topbar-title {
+  flex: 0 1 auto;
   font-size: 1.05rem;
   font-weight: 650;
   letter-spacing: -0.025em;
+}
+
+:root[data-preset='editorial'] .topbar-context {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+:root[data-preset='editorial'] .topbar-title-full {
+  display: none;
+}
+
+:root[data-preset='editorial'] .topbar-title-short {
+  display: block;
+}
+
+:root[data-preset='editorial'] .topbar-current {
+  display: block;
+  min-width: 0;
+  border-left: 1px solid var(--color-border-strong);
+  padding-left: 0.7rem;
+  color: var(--color-text-muted);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
 }
 
 :root[data-preset='editorial'] :is(.nav-toggle, .theme-toggle, .copy-code, .nav-dialog-close) {
@@ -1775,6 +1816,31 @@ th {
 
   :root[data-preset='editorial'] .topbar-title {
     font-size: 0.98rem;
+  }
+
+  :root[data-preset='editorial'] .topbar-context {
+    align-self: stretch;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+  }
+
+  :root[data-preset='editorial'] .topbar-title,
+  :root[data-preset='editorial'] .topbar-current {
+    max-width: 100%;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  :root[data-preset='editorial'] .topbar-current {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  :root[data-preset='editorial'] [data-theme-toggle-label] {
+    display: none;
   }
 
   :root[data-preset='editorial'] :is(.nav-toggle, .theme-toggle) {

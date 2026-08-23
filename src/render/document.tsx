@@ -27,6 +27,7 @@ export type DocumentRuntime =
 
 export function renderDocument(options: DocumentRenderOptions): string {
   const hasNavigation = options.navigation.length >= 2;
+  const documentIdentity = compactDocumentIdentity(options.title);
   const usedIds = new Set(
     [...options.contentHtml.matchAll(/\sid="([^"]+)"/gu)].map((match) => match[1] ?? ''),
   );
@@ -81,9 +82,23 @@ export function renderDocument(options: DocumentRenderOptions): string {
               <span data-nav-toggle-label>Hide contents</span>
             </button>
           ) : null}
-          <a className="topbar-title" href={`#${contentId}`}>
-            {options.title}
-          </a>
+          <div className="topbar-context">
+            <a
+              className="topbar-title"
+              href={`#${contentId}`}
+              aria-label={options.title}
+              title={options.title}
+            >
+              <span className="topbar-title-full">{options.title}</span>
+              <span className="topbar-title-short">{documentIdentity}</span>
+            </a>
+            {hasNavigation ? (
+              <span className="topbar-current">
+                <span className="topbar-current-prefix">Current / </span>
+                <span data-topbar-current>{options.navigation[0]?.label}</span>
+              </span>
+            ) : null}
+          </div>
           <button
             className="theme-toggle"
             type="button"
@@ -91,7 +106,7 @@ export function renderDocument(options: DocumentRenderOptions): string {
             data-theme-toggle
           >
             <PackageIcon name="sun" />
-            Theme
+            <span data-theme-toggle-label>Theme</span>
           </button>
         </header>
         <div className="report-shell" data-nav-outside>
@@ -144,6 +159,16 @@ export function renderDocument(options: DocumentRenderOptions): string {
     </html>,
   );
   return `<!doctype html>${markup}`;
+}
+
+function compactDocumentIdentity(title: string): string {
+  const segment = title.split(/\s+(?:—|–|\||·)\s+/u, 1)[0]?.trim() || title;
+  if (!/^[\p{Ll}\d_-]+$/u.test(segment)) return segment;
+  return segment
+    .split(/[-_]+/u)
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toLocaleUpperCase()}${part.slice(1)}`)
+    .join(' ');
 }
 
 function PackageIcon({ name }: { readonly name: PackageIconName }) {

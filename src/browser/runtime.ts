@@ -252,6 +252,7 @@ function createNavigationController(): NavigationController | undefined {
   const close = dialog?.querySelector<HTMLButtonElement>('[data-nav-close]');
   const toggle = document.querySelector<HTMLButtonElement>('[data-nav-toggle]');
   const toggleLabel = toggle?.querySelector<HTMLElement>('[data-nav-toggle-label]');
+  const currentLabel = document.querySelector<HTMLElement>('[data-topbar-current]');
   if (
     navigation === null ||
     desktopHost === null ||
@@ -262,7 +263,8 @@ function createNavigationController(): NavigationController | undefined {
     close === null ||
     toggle === null ||
     toggleLabel === undefined ||
-    toggleLabel === null
+    toggleLabel === null ||
+    currentLabel === null
   ) {
     return undefined;
   }
@@ -304,6 +306,8 @@ function createNavigationController(): NavigationController | undefined {
       if (candidate === owner) candidate.link.setAttribute('aria-current', 'location');
       else candidate.link.removeAttribute('aria-current');
     }
+    currentLabel.textContent =
+      owner.link.textContent?.trim() || owner.heading.textContent?.trim() || '';
   };
 
   const ownerForTarget = (target: HTMLElement): NavigationOwner => {

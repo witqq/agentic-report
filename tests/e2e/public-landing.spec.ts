@@ -34,6 +34,23 @@ const expectLoaded = async (image: Locator): Promise<void> => {
 
 const sha256 = (value: Buffer): string => createHash('sha256').update(value).digest('hex');
 
+const expectCompactFieldManualHeader = async (
+  page: Page,
+  width: 320 | 390,
+  section: 'Proof' | 'Examples',
+): Promise<void> => {
+  await page.setViewportSize({ width, height: 844 });
+  const identity = page.locator('.topbar-title-short');
+  const current = page.locator('.topbar-current');
+  await expect(identity).toHaveText('Agentic Report');
+  await expect(current).toContainText(`Current / ${section}`);
+  for (const label of [identity, current]) {
+    expect(await label.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+      true,
+    );
+  }
+};
+
 test('public landing has the exact proof-first contract in both output formats', async ({
   page,
 }, testInfo) => {
@@ -312,6 +329,12 @@ test('captures the complete public-landing acceptance states in both formats', a
   };
 
   for (const artifact of landingArtifacts) {
+    for (const width of [320, 390] as const) {
+      await page.goto(artifact.url);
+      await expectCompactFieldManualHeader(page, width, 'Proof');
+      await page.goto(`${artifact.url}#examples`);
+      await expectCompactFieldManualHeader(page, width, 'Examples');
+    }
     await capture(artifact, 's1-hero-light-expanded', { width: 1440, height: 1000 });
     await capture(artifact, 's2-examples-dark-expanded', {
       width: 1440,
