@@ -1169,6 +1169,7 @@ async function expectedTarballFiles(): Promise<string[]> {
     'package/README.md',
     'package/PRODUCT-REQUIREMENTS.md',
     'package/LICENSE',
+    'package/THIRD_PARTY_NOTICES.md',
     'package/dist/browser/document.css',
     'package/dist/browser/runtime.js',
     ...[

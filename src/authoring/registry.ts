@@ -69,13 +69,13 @@ export const PAGE_PRESETS = [
   {
     name: 'editorial',
     description:
-      'Long-form decision reading with serif typography, measured width, and quiet surfaces.',
+      'Field Manual reading with serif display type, compact controls, warm plates, and document navigation.',
     tokens: {
-      density: 'spacious',
+      density: 'comfortable',
       font: 'serif',
-      accent: 'coral',
-      width: 'narrow',
-      radius: 'soft',
+      accent: 'indigo',
+      width: 'wide',
+      radius: 'sharp',
     },
   },
   {

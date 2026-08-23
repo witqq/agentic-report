@@ -195,11 +195,11 @@ describe('authoring schema projections', () => {
         radius: 'soft',
       },
       editorial: {
-        density: 'spacious',
+        density: 'comfortable',
         font: 'serif',
-        accent: 'coral',
-        width: 'narrow',
-        radius: 'soft',
+        accent: 'indigo',
+        width: 'wide',
+        radius: 'sharp',
       },
       signal: {
         density: 'compact',

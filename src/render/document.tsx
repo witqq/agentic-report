@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import type { ReportManifest } from '../contracts.js';
+import { PACKAGE_ICON_PATHS, type PackageIconName } from '../iconography.js';
 
 export interface NavigationItem {
   readonly id: string;
@@ -26,6 +27,7 @@ export type DocumentRuntime =
 
 export function renderDocument(options: DocumentRenderOptions): string {
   const hasNavigation = options.navigation.length >= 2;
+  const documentIdentity = compactDocumentIdentity(options.title);
   const usedIds = new Set(
     [...options.contentHtml.matchAll(/\sid="([^"]+)"/gu)].map((match) => match[1] ?? ''),
   );
@@ -76,19 +78,35 @@ export function renderDocument(options: DocumentRenderOptions): string {
               aria-label="Hide contents"
               data-nav-toggle
             >
-              Hide contents
+              <PackageIcon name="three-bars" />
+              <span data-nav-toggle-label>Hide contents</span>
             </button>
           ) : null}
-          <a className="topbar-title" href={`#${contentId}`}>
-            {options.title}
-          </a>
+          <div className="topbar-context">
+            <a
+              className="topbar-title"
+              href={`#${contentId}`}
+              aria-label={options.title}
+              title={options.title}
+            >
+              <span className="topbar-title-full">{options.title}</span>
+              <span className="topbar-title-short">{documentIdentity}</span>
+            </a>
+            {hasNavigation ? (
+              <span className="topbar-current">
+                <span className="topbar-current-prefix">Current / </span>
+                <span data-topbar-current>{options.navigation[0]?.label}</span>
+              </span>
+            ) : null}
+          </div>
           <button
             className="theme-toggle"
             type="button"
             aria-label="Toggle color theme"
             data-theme-toggle
           >
-            Theme
+            <PackageIcon name="sun" />
+            <span data-theme-toggle-label>Theme</span>
           </button>
         </header>
         <div className="report-shell" data-nav-outside>
@@ -124,6 +142,7 @@ export function renderDocument(options: DocumentRenderOptions): string {
               <div className="nav-dialog-header">
                 <p id={navigationDialogTitleId}>Contents</p>
                 <button type="button" className="nav-dialog-close" data-nav-close>
+                  <PackageIcon name="x" />
                   Close
                 </button>
               </div>
@@ -140,6 +159,32 @@ export function renderDocument(options: DocumentRenderOptions): string {
     </html>,
   );
   return `<!doctype html>${markup}`;
+}
+
+function compactDocumentIdentity(title: string): string {
+  const segment = title.split(/\s+(?:—|–|\||·)\s+/u, 1)[0]?.trim() || title;
+  if (!/^[\p{Ll}\d_-]+$/u.test(segment)) return segment;
+  return segment
+    .split(/[-_]+/u)
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toLocaleUpperCase()}${part.slice(1)}`)
+    .join(' ');
+}
+
+function PackageIcon({ name }: { readonly name: PackageIconName }) {
+  return (
+    <svg
+      className="package-icon"
+      data-package-icon={name}
+      viewBox="0 0 16 16"
+      width="16"
+      height="16"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d={PACKAGE_ICON_PATHS[name]} />
+    </svg>
+  );
 }
 
 function allocateShellId(base: string, usedIds: Set<string>): string {

@@ -5,7 +5,7 @@ description: Turn declarative Markdown into a finished interactive page an agent
 language: en
 theme: system
 layout: landing
-preset: studio
+preset: editorial
 scrollProgress: true
 ---
 
@@ -199,7 +199,7 @@ npx --yes agentic-report build ./website/landing --output ./site/index.html --js
 :::card{title="Ordinary engine features"}
 
 - eight semantic sections derived into navigation;
-- the reusable `studio` preset and responsive content tracks;
+- the reusable Field Manual `editorial` preset and responsive content tracks;
 - ordinary safe action links and local screenshots;
 - one optional progress line and three bounded one-time reveals.
   :::

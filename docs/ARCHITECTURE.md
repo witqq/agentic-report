@@ -114,9 +114,13 @@ inspection results.
 
 The current source schema supports title, description, a documented restricted language-tag syntax,
 theme, layout, a coordinated preset, optional scroll progress, compact page-token overrides, and output defaults. `studio`,
-`editorial`, and `signal` are registry-owned token-default families; theme remains an independent color
-mode, and explicitly authored bounded tokens override the preset on density, typography, accent, content
-width, and radius. `document`, `dashboard`, `landing`, and `mixed` share one responsive shell, track
+`editorial`, and `signal` are registry-owned token-default families; `editorial` is the Field Manual family
+with warm package surfaces, compact controls, numbered document navigation, and package-owned decorative
+action/shell icons. Theme remains an independent color mode, and explicitly authored bounded tokens
+override the preset on density, typography, accent, content width, and radius. The icon vocabulary is a
+small compile-time set of MIT-licensed Primer Octicon paths: it adds no author syntax, network request,
+runtime dependency, or CSP branch, and visible control text remains the accessible name. `document`,
+`dashboard`, `landing`, and `mixed` share one responsive shell, track
 system, and component surface model. Frontmatter overrides the matching manifest fields. Only Markdown partials
 are allowed; the loader rejects cycles, nesting over 10 levels, and lexical or canonical paths outside the
 source root. The source contract is defined in

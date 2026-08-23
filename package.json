@@ -1,6 +1,6 @@
 {
   "name": "agentic-report",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Local declarative page builder for agent-authored interactive HTML artifacts.",
   "type": "module",
   "license": "MIT",
@@ -44,11 +44,15 @@
     "PRODUCT-REQUIREMENTS.md",
     "skills",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && vite build --config vite.runtime.config.ts",
     "build:site": "pnpm build && node --experimental-strip-types scripts/build-site.ts",
+    "deploy:prepare": "pnpm build && node --experimental-strip-types scripts/prepare-deploy.ts",
+    "deploy:config": "infra-tools config .deploy-config.json --server witqq.ru",
+    "deploy:prod": "pnpm deploy:prepare && infra-tools auto --server witqq.ru --config .deploy-config.json --no-log",
     "generate:authoring": "pnpm build && node --experimental-strip-types scripts/generate-authoring.ts",
     "check:authoring": "pnpm build && node --experimental-strip-types scripts/generate-authoring.ts --check",
     "typecheck": "tsc --noEmit",

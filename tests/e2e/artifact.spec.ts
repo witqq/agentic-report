@@ -117,20 +117,24 @@ const presetFixtureExpectations = [
     headingWeight: '780',
     surfaceRadius: '14.4px',
     sectionMargin: 60,
+    lightBackground: 'rgb(244, 246, 251)',
+    darkBackground: 'rgb(12, 17, 28)',
   },
   {
     preset: 'editorial',
-    density: 'spacious',
+    density: 'comfortable',
     font: 'serif',
-    accent: 'coral',
-    width: 'narrow',
-    radius: 'soft',
-    fontFamily: 'Charter',
-    lineHeight: 28.16,
-    contentWidth: '60rem',
-    headingWeight: '650',
-    surfaceRadius: '14.4px',
-    sectionMargin: 92.16,
+    accent: 'indigo',
+    width: 'wide',
+    radius: 'sharp',
+    fontFamily: 'Inter',
+    lineHeight: 26.88,
+    contentWidth: '94rem',
+    headingWeight: '610',
+    surfaceRadius: '0px',
+    sectionMargin: 64,
+    lightBackground: 'rgb(244, 240, 231)',
+    darkBackground: 'rgb(23, 23, 19)',
   },
   {
     preset: 'signal',
@@ -145,6 +149,8 @@ const presetFixtureExpectations = [
     headingWeight: '800',
     surfaceRadius: '4px',
     sectionMargin: 34.32,
+    lightBackground: 'rgb(244, 246, 251)',
+    darkBackground: 'rgb(12, 17, 28)',
   },
 ] as const;
 
@@ -1392,9 +1398,26 @@ test('declarative interactions preserve scoped state, focus, and responsive file
   page,
 }, testInfo) => {
   await page.goto(interactiveArtifactUrl);
+  await page.locator('html').evaluate((element) => {
+    element.dataset.preset = 'editorial';
+  });
   const activate = async (locator: Locator): Promise<void> => {
     if (testInfo.project.name.startsWith('mobile')) await locator.tap();
     else await locator.click();
+  };
+  const expectCompactControl = async (locator: Locator, name: string): Promise<void> => {
+    const metrics = await locator.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        height: element.getBoundingClientRect().height,
+        paddingLeft: Number.parseFloat(style.paddingLeft),
+        paddingRight: Number.parseFloat(style.paddingRight),
+      };
+    });
+    expect(metrics.height, name).toBeGreaterThanOrEqual(32);
+    expect(metrics.height, name).toBeLessThanOrEqual(40);
+    expect(metrics.paddingLeft, name).toBeLessThanOrEqual(12);
+    expect(metrics.paddingRight, name).toBeLessThanOrEqual(12);
   };
 
   const terms = page.getByRole('button', { name: 'Decision packet' });
@@ -1454,6 +1477,7 @@ test('declarative interactions preserve scoped state, focus, and responsive file
   await expect(tabGroups).toHaveCount(2);
   const deliveryTabs = tabGroups.nth(0);
   const independentTabs = tabGroups.nth(1);
+  await expectCompactControl(deliveryTabs.getByRole('tab', { name: 'Directory' }), 'tab');
   await activate(deliveryTabs.getByRole('tab', { name: 'Directory' }));
   await expect(deliveryTabs.getByRole('tab', { name: 'Directory' })).toHaveAttribute(
     'aria-selected',
@@ -1491,9 +1515,14 @@ test('declarative interactions preserve scoped state, focus, and responsive file
   );
 
   const modalOpener = page.getByRole('button', { name: 'Open release checklist' });
+  await expectCompactControl(modalOpener, 'modal opener');
   await activate(modalOpener);
   const dialog = page.getByRole('dialog', { name: 'Release checklist' });
   await expect(dialog).toBeVisible();
+  await expectCompactControl(
+    dialog.getByRole('button', { name: 'Close', exact: true }),
+    'modal close',
+  );
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   await expect(modalOpener).toBeFocused();
@@ -1929,7 +1958,7 @@ test('same-layout preset families retain their coordinated styles in both format
           contentWidth: expected.contentWidth,
           headingWeight: expected.headingWeight,
           surfaceRadius: expected.surfaceRadius,
-          background: mode === 'light' ? 'rgb(244, 246, 251)' : 'rgb(12, 17, 28)',
+          background: mode === 'light' ? expected.lightBackground : expected.darkBackground,
         });
         expect(state.fontFamily).toContain(expected.fontFamily);
         expect(state.lineHeight).toBeCloseTo(expected.lineHeight, 2);

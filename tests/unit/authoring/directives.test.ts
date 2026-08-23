@@ -157,13 +157,19 @@ describe('registry-driven semantic directives', () => {
     );
     expect(rendered.html).toContain('id="proof-2" aria-labelledby="proof-2-title"');
     expect(rendered.html).toContain('data-reveal="false" data-semantic="section" id="proof-2"');
-    expect(rendered.html).toContain(
-      '<a class="semantic-action" data-kind="primary" data-semantic="action" href="#proof">Start here</a>',
+    expect(rendered.html).toMatch(
+      /<a class="semantic-action" data-kind="primary" data-semantic="action" href="#proof"><svg class="package-icon" data-package-icon="arrow-right"[^>]*>.*<\/svg>Start here<\/a>/u,
     );
-    expect(rendered.html).toContain('href="../docs/guide.html">Read the guide</a>');
-    expect(rendered.html).toContain('href="http://example.com/mirror">HTTP mirror</a>');
-    expect(rendered.html).toContain('href="https://example.com/project">Project home</a>');
-    expect(rendered.html).toContain('href="mailto:owner@example.com">Email owner</a>');
+    expect(rendered.html).toMatch(
+      /data-package-icon="arrow-right"[^>]*>.*<\/svg>Read the guide<\/a>/u,
+    );
+    expect(rendered.html).toMatch(
+      /data-package-icon="arrow-right"[^>]*>.*<\/svg>HTTP mirror<\/a>/u,
+    );
+    expect(rendered.html).toMatch(/href="\.\.\/docs\/guide\.html">.*Read the guide<\/a>/u);
+    expect(rendered.html).toMatch(/href="http:\/\/example\.com\/mirror">.*HTTP mirror<\/a>/u);
+    expect(rendered.html).toMatch(/href="https:\/\/example\.com\/project">.*Project home<\/a>/u);
+    expect(rendered.html).toMatch(/href="mailto:owner@example\.com">.*Email owner<\/a>/u);
     expect(rendered.html).not.toMatch(/onclick|<script|javascript:/u);
   });
 
