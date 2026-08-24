@@ -149,14 +149,14 @@ describe('registry-driven semantic directives', () => {
       workspace,
     );
 
-    expect(rendered.html).toContain(
-      '<section class="semantic-section" data-nav="Short proof" data-width="wide" data-align="center" data-tone="accent" data-reveal="true" data-semantic="section" id="proof" aria-labelledby="proof-title">',
+    expect(rendered.html).toMatch(
+      /<section class="semantic-section"[^>]*data-nav="Short proof"[^>]*data-width="wide"[^>]*data-align="center"[^>]*data-tone="accent"[^>]*data-reveal="true"[^>]*data-semantic="section"[^>]*id="proof"[^>]*aria-labelledby="proof-title">/u,
     );
     expect(rendered.html).toContain(
       '<h2 id="proof-title" class="semantic-section-title">Proof</h2>',
     );
     expect(rendered.html).toContain('id="proof-2" aria-labelledby="proof-2-title"');
-    expect(rendered.html).toContain('data-reveal="false" data-semantic="section" id="proof-2"');
+    expect(rendered.html).toMatch(/data-reveal="false" data-semantic="section"[^>]*id="proof-2"/u);
     expect(rendered.html).toMatch(
       /<a class="semantic-action" data-kind="primary" data-semantic="action" href="#proof"><svg class="package-icon" data-package-icon="arrow-right"[^>]*>.*<\/svg>Start here<\/a>/u,
     );
@@ -299,8 +299,11 @@ describe('registry-driven semantic directives', () => {
       const rendered = await render(testCase.source, workspace);
       const ids = [...rendered.html.matchAll(/\sid="([^"]+)"/gu)].map((match) => match[1]);
       expect(new Set(ids).size, testCase.label).toBe(ids.length);
-      expect(rendered.html, testCase.label).toContain(
-        `<section class="semantic-section" data-width="standard" data-align="start" data-tone="plain" data-reveal="false" data-semantic="section" id="${testCase.sectionId}"`,
+      expect(rendered.html, testCase.label).toMatch(
+        new RegExp(
+          `<section class="semantic-section"[^>]*data-width="standard"[^>]*data-align="start"[^>]*data-tone="plain"[^>]*data-reveal="false"[^>]*data-semantic="section"[^>]*id="${testCase.sectionId}"`,
+          'u',
+        ),
       );
       expect(rendered.html, testCase.label).toContain(`<dialog id="${testCase.componentId}"`);
       expect(rendered.html, testCase.label).toContain(
@@ -1652,7 +1655,7 @@ describe('six-class declarative registry corpus', () => {
     expect(allHtml).toContain('>Open retained data</a>');
     expect(allHtml).toContain('>Download private-data.json</a>');
     expect(allHtml).toContain('font-family:"Private Reader"');
-    expect(allHtml).toContain('<table>');
+    expect(allHtml).toContain('<table ');
     expect(allHtml).toContain('<th>Задача</th>');
   });
 });

@@ -692,6 +692,74 @@ if (
 ) {
   throw new Error('Installed CLI did not build the fixed first-use project.');
 }
+const firstUseHtml = await readFile(firstUseOutput, 'utf8');
+const encodedReviewManifest = /<template data-review-manifest="true">([\s\S]*?)<\/template>/u.exec(
+  firstUseHtml,
+)?.[1];
+if (encodedReviewManifest === undefined) {
+  throw new Error('Installed build did not embed the review target manifest.');
+}
+const reviewManifest = requireRecord(
+  JSON.parse(
+    encodedReviewManifest
+      .replaceAll('&quot;', '"')
+      .replaceAll('&#x27;', "'")
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&amp;', '&'),
+  ),
+  'installed review target manifest',
+);
+if (!Array.isArray(reviewManifest.targets)) {
+  throw new Error('Installed review target manifest did not contain targets.');
+}
+const reviewTarget = reviewManifest.targets.find(
+  (value) =>
+    typeof value === 'object' &&
+    value !== null &&
+    'kind' in value &&
+    value.kind === 'markdown:paragraph',
+);
+if (reviewTarget === undefined || typeof reviewManifest.reportRevision !== 'string') {
+  throw new Error('Installed review target manifest did not expose a paragraph target.');
+}
+const installedReviewPath = path.join(firstUseProject, 'review.json');
+await writeFile(
+  installedReviewPath,
+  `${JSON.stringify({
+    contractVersion: 1,
+    report: { revision: reviewManifest.reportRevision },
+    responses: [
+      {
+        id: 'response-a',
+        kind: 'comment',
+        target: reviewTarget,
+        message: 'token=installed-private-value',
+      },
+    ],
+  })}\n`,
+);
+const installedReview = await runCommand(
+  binary,
+  ['review', 'review.json', firstUseProject, '--json'],
+  consumerDirectory,
+);
+const installedReviewRecord = requireSingleNdjsonRecord(
+  installedReview,
+  'installed review binding result',
+);
+if (
+  installedReview.exitCode !== 0 ||
+  installedReview.stderr !== '' ||
+  installedReviewRecord.type !== 'result' ||
+  installedReviewRecord.reportStatus !== 'exact' ||
+  !Array.isArray(installedReviewRecord.responses) ||
+  installedReviewRecord.responses.length !== 1 ||
+  installedReview.stdout.includes('installed-private-value') ||
+  !installedReview.stdout.includes('token=[REDACTED]')
+) {
+  throw new Error('Installed CLI did not resolve and sanitize the review artifact.');
+}
 const repeatedFirstUseOutput = path.join(firstUseProject, 'built-again.html');
 await execFileAsync(binary, ['build', firstUseProject, '--output', repeatedFirstUseOutput], {
   cwd: consumerDirectory,
@@ -844,7 +912,7 @@ if (cliResult.format !== 'single-file') {
   throw new Error('Installed CLI default build did not select single-file output.');
 }
 const installedHtml = await readFile(outputPath, 'utf8');
-if (!installedHtml.includes('<h1 id="packed-cli-report">Packed CLI report</h1>')) {
+if (!/<h1[^>]*id="packed-cli-report"[^>]*>Packed CLI report<\/h1>/u.test(installedHtml)) {
   throw new Error('Installed CLI did not build the expected self-contained HTML artifact.');
 }
 
@@ -957,12 +1025,16 @@ if (
 await writeFile(
   path.join(consumerDirectory, 'contract.ts'),
   [
-    "import type { BuildReportOptions, BuildReportResult, InspectReportOptions, InspectReportResult, ValidateReportOptions, ValidateReportResult } from 'agentic-report';",
+    "import type { BuildReportOptions, BuildReportResult, InspectReportOptions, InspectReportResult, InspectReviewOptions, InspectReviewResult, ReviewArtifact, ReviewTargetManifest, ValidateReportOptions, ValidateReportResult } from 'agentic-report';",
     "const supported: BuildReportOptions = { input: 'report.md', format: 'directory' };",
     "const validate: ValidateReportOptions = { input: 'report.md' };",
     "const inspect: InspectReportOptions = { input: 'report.md', format: 'directory' };",
+    "const review: InspectReviewOptions = { input: '.', review: 'review.json' };",
     'declare const validateResult: ValidateReportResult;',
     'declare const inspectResult: InspectReportResult;',
+    'declare const reviewResult: InspectReviewResult;',
+    'declare const reviewArtifact: ReviewArtifact;',
+    'declare const reviewManifest: ReviewTargetManifest;',
     '// @ts-expect-error scripts is a retired option and must not reappear',
     "const retired: BuildReportOptions = { input: 'report.md', scripts: 'none' };",
     'declare const result: BuildReportResult;',
@@ -971,8 +1043,12 @@ await writeFile(
     'void supported;',
     'void validate;',
     'void inspect;',
+    'void review;',
     'void validateResult;',
     'void inspectResult;',
+    'void reviewResult;',
+    'void reviewArtifact;',
+    'void reviewManifest;',
     'void retired;',
   ].join('\n'),
 );
@@ -1186,6 +1262,7 @@ async function expectedTarballFiles(): Promise<string[]> {
       'generated/manifest.schema.json',
       'generated/source-contract.json',
       'generated/source.schema.json',
+      'product/review-workspace-extension.json',
       'product/source-contract.md',
     ].map((file) => `package/docs/${file}`),
   ]);

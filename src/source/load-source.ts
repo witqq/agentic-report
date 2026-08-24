@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { access, readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -97,7 +98,23 @@ export async function loadSource(input: string): Promise<SourceDocument> {
     markdown: expanded.markdown,
     manifest: manifestResult.data,
     sourceMap: expanded.sourceMap,
+    sourceDigests: sourceDigests(entryPath, raw, manifestDocument.origin, expanded.sourceMap),
   };
+}
+
+function sourceDigests(
+  entryPath: string,
+  entryText: string,
+  manifestOrigin: MetadataOrigin | undefined,
+  sourceMap: readonly SourceMapSegment[],
+): readonly { readonly file: string; readonly sha256: string }[] {
+  const sources = new Map<string, string>([[entryPath, entryText]]);
+  if (manifestOrigin !== undefined) sources.set(manifestOrigin.file, manifestOrigin.text);
+  for (const segment of sourceMap) sources.set(segment.sourceFile, segment.sourceText);
+  return [...sources].map(([file, text]) => ({
+    file,
+    sha256: createHash('sha256').update(text).digest('hex'),
+  }));
 }
 
 async function statOrInputError(input: string): Promise<Awaited<ReturnType<typeof stat>>> {

@@ -95,6 +95,11 @@ resolved project, entry, format, runtime placement, and warnings. Inspection add
 source-file inventory, observed directives and local-resource occurrence counts, and the registry-derived
 command/format/starter/capability catalog.
 
+Generated pages also carry an inert deterministic review-target manifest. Use
+`inspectReview({ input, review })` or `agentic-report review <review> [input] --json` to validate a confined
+versioned `review.json` and resolve each response to the current Markdown or partial range. Stale, changed,
+missing, and ambiguous targets remain explicit; the command never rewrites source.
+
 The package owns four responsive page layouts: `document`, `dashboard`, `landing`, and `mixed`. Authors
 select one as metadata and may choose the coordinated `studio`, `editorial`, or `signal` preset, an
 independent `system`, `light`, or `dark` color mode, and compact token overrides for `density`, `font`,
@@ -232,6 +237,7 @@ npm install --global agentic-report
 agentic-report init ./my-report
 agentic-report validate ./my-report
 agentic-report inspect ./my-report --json
+agentic-report review ./review.json ./my-report --json
 agentic-report build ./report-source --output report.html
 ```
 

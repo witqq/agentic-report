@@ -50,6 +50,11 @@ Markdown + metadata + local assets + partials + semantic directives
   strikethrough, task-list, and autolink-literal parsing. Raw HTML is not passed through; rehype sanitization
   runs before trusted compile-time syntax highlighting. The asset plugin embeds local images, downloads,
   and fonts or copies them under deterministic hashed names.
+- `src/review/contract.ts`, `src/review/targets.ts`, and `src/review/binding.ts` own the platform-neutral
+  versioned review data contract, bounded canonical serialization, compile-time target inventory,
+  local-input revision, and exact/changed/missing/ambiguous binding. Target provenance is captured while AST
+  offsets and the partial source map are available; it is never reconstructed from final HTML or matched by
+  proximity.
 - `src/render/directives.ts` maps the documented, allowlisted directive vocabulary to semantic HAST.
   Unknown directives, invalid attributes/nesting, unresolved glossary references, duplicate definitions,
   and unmarked occurrences of registered glossary terms fail with authored-range diagnostics. Compile-time
@@ -75,7 +80,10 @@ Markdown + metadata + local assets + partials + semantic directives
 - `src/core/compiler.ts` publishes a prepared single-file or staged directory artifact.
   `src/core/analyze-report.ts` projects the same preparation into compact validation and inspection
   results without output publication.
-- `src/cli.ts` adapts initialization, building, validation, inspection, and discovery to human text or
+- `src/core/inspect-review.ts` reads one strictly bounded review JSON file confined under the prepared
+  source root, validates it, binds its structured responses to the current target manifest, and returns a
+  centrally sanitized result without publishing output or editing Markdown.
+- `src/cli.ts` adapts initialization, building, validation, inspection, review binding, and discovery to human text or
   agent-oriented NDJSON. The executable reads its version from the installed package metadata rather than
   carrying a second version literal. Before parsing a command it compares the running Node.js version with
   that same installed package's minimum engine and returns `NODE_VERSION_UNSUPPORTED` below the floor rather
@@ -99,6 +107,15 @@ exposes the same operation as `init <destination> [--starter <id>] [--json]`. Th
 optional format override. Both run production preparation without output publication. Validation reports
 project/entry identity, format, runtime placement, and warnings. Inspection adds relative source inventory,
 observed directives/resources, and a registry-derived authoring catalog.
+
+The ESM root also exposes `inspectReview({ input, review })`, the review contract types, and defensive
+parse/serialize functions. CLI `review <review> [input] [--json]` adapts the same read-only resolution. The
+review path is a relative local reference confined under the report source root. Exact report revisions
+resolve recorded targets; stale revisions resolve only a stable explicit identity or a unique matching
+fingerprint in the same source file. A unique cross-file fingerprint is treated as a move only after the
+previous source file disappears from the current target graph, preventing equal text elsewhere from
+impersonating content changed in a still-present file. Changed, missing, and ambiguous targets remain
+explicit and never trigger source mutation.
 
 Six package-owned starter trees are ordinary buildable examples carrying registry `starter` metadata:
 the default report tree (canonical ID `basic`, alias `report`), `research`, `architecture`, `tutorial`,
@@ -204,6 +221,14 @@ selection directly instead of scanning on every scroll signal. Desktop collapse 
 session-only. Mobile moves the same nav into a native modal dialog with inert background, cyclic focus,
 Escape/backdrop/Close return, link-to-heading focus, and safe breakpoint closure.
 
+Both formats contain the same inert escaped review-target manifest in a `template` element. Reviewable
+container directives and ordinary Markdown blocks carry deterministic `data-review-target` identities. The
+manifest contains source-root-relative ranges and SHA-256 fingerprints, not source bodies or workstation
+paths. Its report revision covers the confined entry, manifest, expanded partials, referenced local resource
+bytes, review/source-contract versions, target-algorithm version, and canonical target inventory; it is
+independent of output destination and format. A 500-target and 750,000-byte manifest limit bounds
+artifact/runtime input; review files are limited separately before JSON parsing.
+
 `scrollProgress` defaults to false. In normal motion, an enabled page installs one passive document scroll
 listener and one resize listener, coalesces updates through one animation frame, and changes one decorative
 `scaleX()` transform. A section with `reveal=true` is observed once and uses only opacity plus a 12-pixel,
@@ -255,6 +280,8 @@ browser runtime, or a separate release-validation subsystem.
 - Raw Markdown HTML is not enabled, and content is sanitized before trusted renderer plugins run.
 - Template partials are Markdown text; directives are allowlisted data; neither can execute author code.
 - Generated documents receive a Content Security Policy matching their output format and package runtime.
+- Review metadata is inert escaped markup; review inspection reads only a confined ordinary bounded JSON
+  file, rejects unknown fields and unsupported versions, and never evaluates feedback.
 - Package-owned inline JavaScript escapes HTML script terminators before insertion and CSP hashing.
 - Unexpected internal errors are projected without causes or source bodies. Expected diagnostics and
   public transport results retain actionable structure while centrally replacing recognized

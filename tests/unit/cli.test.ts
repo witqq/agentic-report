@@ -10,6 +10,7 @@ import {
   getSourceContract,
   initProject,
   listExamples,
+  serializeReviewArtifact,
 } from '../../src/index.js';
 import { formatInstalledExamples } from '../../src/cli-examples.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
@@ -42,6 +43,78 @@ describe('CLI transport', () => {
       remediation: 'Install Node.js 24.18.0 or newer, then rerun the same command.',
       details: { currentVersion: '22.18.0', requiredEngine: '>=24.18.0' },
     });
+  });
+
+  it('resolves a confined review artifact through bounded sanitized NDJSON', async () => {
+    const workspace = await createTestWorkspace('cli-review');
+    workspaces.push(workspace);
+    await writeFile(path.join(workspace, 'report.md'), '# Review source\n\nTarget paragraph.\n');
+    await writeFile(
+      path.join(workspace, 'review.json'),
+      serializeReviewArtifact({
+        contractVersion: 1,
+        report: { revision: `sha256:${'a'.repeat(64)}` },
+        responses: [
+          {
+            id: 'response-a',
+            kind: 'comment',
+            target: {
+              id: 'rt-prior',
+              kind: 'markdown:paragraph',
+              fingerprint: `sha256:${'b'.repeat(64)}`,
+              source: { file: 'report.md', line: 3, column: 1, endLine: 3, endColumn: 18 },
+            },
+            message: 'token=private-value',
+          },
+        ],
+      }),
+    );
+
+    const result = await runCli(['review', 'review.json', workspace, '--json']);
+
+    expect(result).toMatchObject({ exitCode: 0, stderr: '' });
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      type: 'result',
+      contractVersion: 1,
+      reportStatus: 'stale',
+      responses: [{ binding: 'missing', response: { message: 'token=[REDACTED]' } }],
+    });
+    expect(result.stdout).not.toContain('private-value');
+  });
+
+  it('prints only a bounded human review summary', async () => {
+    const workspace = await createTestWorkspace('cli-review-human');
+    workspaces.push(workspace);
+    await writeFile(path.join(workspace, 'report.md'), '# Review source\n\nTarget paragraph.\n');
+    await writeFile(
+      path.join(workspace, 'review.json'),
+      serializeReviewArtifact({
+        contractVersion: 1,
+        report: { revision: `sha256:${'a'.repeat(64)}` },
+        responses: [
+          {
+            id: 'response-a',
+            kind: 'comment',
+            target: {
+              id: 'rt-prior',
+              kind: 'markdown:paragraph',
+              fingerprint: `sha256:${'b'.repeat(64)}`,
+              source: { file: 'report.md', line: 3, column: 1, endLine: 3, endColumn: 18 },
+            },
+            message: 'token=human-private-value',
+          },
+        ],
+      }),
+    );
+
+    const result = await runCli(['review', 'review.json', workspace]);
+
+    expect(result).toEqual({
+      exitCode: 0,
+      stdout: 'Review stale: 0 exact, 0 changed, 1 missing, 0 ambiguous\n',
+      stderr: '',
+    });
+    expect(result.stdout).not.toMatch(/human-private-value|Target paragraph/u);
   });
 
   it('serializes injected registry examples through the complete adapter used by the CLI action', async () => {
@@ -205,7 +278,9 @@ describe('CLI transport', () => {
     expect(build).toMatchObject({ exitCode: 0, stderr: '' });
     expect(JSON.parse(build.stdout)).toMatchObject({ type: 'result', outputPath: output });
     const html = await readFile(output, 'utf8');
-    expect(html).toContain('<h1 id="release-decision-report">Release decision report</h1>');
+    expect(html).toMatch(
+      /<h1[^>]*id="release-decision-report"[^>]*>Release decision report<\/h1>/u,
+    );
     expect(html).toContain('>Recommendation</p>');
     expect(html).toContain('>Download the evidence map</a>');
     expect(html).toContain('data-start="1"');

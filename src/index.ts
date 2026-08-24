@@ -13,6 +13,7 @@ if (compatibilityDiagnostic !== undefined) {
 
 export { buildReport } from './core/compiler.js';
 export { inspectReport, validateReport } from './core/analyze-report.js';
+export { inspectReview } from './core/inspect-review.js';
 export { initProject } from './authoring/init-project.js';
 export type {
   BuildReportOptions,
@@ -22,12 +23,25 @@ export type {
   InitProjectResult,
   InspectReportOptions,
   InspectReportResult,
+  InspectReviewOptions,
+  InspectReviewResult,
   OutputFormat,
   ReportManifest,
   ReportManifestInput,
   ValidateReportOptions,
   ValidateReportResult,
 } from './contracts.js';
+export {
+  REVIEW_CONTRACT_VERSION,
+  parseReviewArtifact,
+  parseReviewTargetManifest,
+  serializeReviewArtifact,
+  type ReviewArtifact,
+  type ReviewBinding,
+  type ReviewResponse,
+  type ReviewTargetManifest,
+  type ReviewTargetReference,
+} from './review/contract.js';
 export { AgenticReportError } from './diagnostics.js';
 export {
   EXTENSION_PROPOSAL_CONTRACT_VERSION,

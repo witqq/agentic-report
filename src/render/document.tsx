@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 import type { ReportManifest } from '../contracts.js';
 import { PACKAGE_ICON_PATHS, type PackageIconName } from '../iconography.js';
+import type { ReviewTargetManifest } from '../review/contract.js';
 
 export interface NavigationItem {
   readonly id: string;
@@ -19,6 +20,7 @@ export interface DocumentRenderOptions {
   readonly contentSecurityPolicy: string;
   readonly styles: { readonly inline?: string; readonly href?: string };
   readonly runtime: DocumentRuntime;
+  readonly reviewManifest: ReviewTargetManifest;
 }
 
 export type DocumentRuntime =
@@ -150,6 +152,7 @@ export function renderDocument(options: DocumentRenderOptions): string {
             </div>
           </dialog>
         ) : null}
+        <template data-review-manifest>{JSON.stringify(options.reviewManifest)}</template>
         {options.runtime.inline === undefined ? null : (
           // biome-ignore lint/security/noDangerouslySetInnerHtml: JavaScript is the package-owned Vite build artifact.
           <script dangerouslySetInnerHTML={{ __html: options.runtime.inline }} />
@@ -212,12 +215,14 @@ export function extractNavigation(html: string): readonly NavigationItem[] {
   if (explicitSections.length > 0) {
     return explicitSections.length >= 2 ? explicitSections : [];
   }
-  const headingPattern = /<h2\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g;
-  const legacySections = [...html.matchAll(headingPattern)].map((match) => ({
-    depth: 2 as const,
-    id: match[1] ?? '',
-    label: stripMarkup(match[2] ?? ''),
-  }));
+  const headingPattern = /<h2\s+([^>]*)>([\s\S]*?)<\/h2>/g;
+  const legacySections = [...html.matchAll(headingPattern)]
+    .map((match) => ({
+      depth: 2 as const,
+      id: /\bid="([^"]+)"/u.exec(match[1] ?? '')?.[1] ?? '',
+      label: stripMarkup(match[2] ?? ''),
+    }))
+    .filter((item) => item.id.length > 0);
   return legacySections.length >= 2 ? legacySections : [];
 }
 

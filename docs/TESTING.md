@@ -33,6 +33,8 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   diagnostics, both output formats and their derived runtime placement, truthful discovery/schema defaults,
   declared Node.js floor comparison and below-floor diagnostic behavior,
   manifest/frontmatter provenance, entry/partial diagnostic source maps, source/output collision protection,
+  deterministic review-target manifests and local-input revisions, strict canonical review JSON,
+  exact/changed/missing/ambiguous entry/partial binding, confined review paths, and sanitized review transport,
   exact serialized inline-size accounting, canonical and hard-link source/output collision protection,
   injected partial-write/rename preservation and retry for both output formats, same-process name/content
   determinism, registry-owned page layouts/themes/token defaults, GFM table rendering, collision-free

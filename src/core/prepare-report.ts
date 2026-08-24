@@ -10,6 +10,8 @@ import {
 } from '../authoring/registry.js';
 import type { Diagnostic, OutputFormat, SourceDocument } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
+import type { ReviewTargetManifest } from '../review/contract.js';
+import { createReviewTargetManifest } from '../review/targets.js';
 import { extractNavigation, renderDocument } from '../render/document.js';
 import {
   renderMarkdown,
@@ -39,6 +41,7 @@ export interface PreparedReport {
   readonly observedDirectives: readonly string[];
   readonly observedResources: MarkdownRenderResult['observedResources'];
   readonly resourceSourceFiles: readonly string[];
+  readonly reviewManifest: ReviewTargetManifest;
 }
 
 export async function prepareReport(options: PrepareReportOptions): Promise<PreparedReport> {
@@ -69,6 +72,11 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
     ...(outputFilePath === undefined ? {} : { outputFilePath }),
   });
   const documentStyles = markdown.fontCss.length === 0 ? styles : `${styles}\n${markdown.fontCss}`;
+  const reviewManifest = await createReviewTargetManifest(
+    source.sourceRoot,
+    [...source.sourceDigests, ...markdown.resourceDigests],
+    markdown.reviewTargets,
+  );
   if (collisionTargetPath !== undefined) {
     await assertOutputDoesNotCollide(collisionTargetPath, [
       ...source.sourceFiles,
@@ -119,6 +127,7 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
       runtimePlacement === 'inline'
         ? { inline: inlineRuntime }
         : { src: requireAssetReference(external.scriptSrc, 'runtime script') },
+    reviewManifest,
   });
 
   return {
@@ -135,6 +144,7 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
     observedDirectives: markdown.observedDirectives,
     observedResources: markdown.observedResources,
     resourceSourceFiles: markdown.sourceFiles,
+    reviewManifest,
   };
 }
 

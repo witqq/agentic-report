@@ -566,6 +566,10 @@ export const authoringRegistry = {
       id: 'inspect',
       description: 'Inspect a valid project through the production preparation pipeline.',
     },
+    {
+      id: 'review',
+      description: 'Resolve a versioned review artifact to current Markdown source locations.',
+    },
   ],
   commands: [
     {
@@ -580,6 +584,10 @@ export const authoringRegistry = {
       id: 'inspect',
       description:
         'Inspect source usage and the available authoring catalog without writing output.',
+    },
+    {
+      id: 'review',
+      description: 'Resolve a confined review artifact without changing report sources.',
     },
     { id: 'build', description: 'Compile a source into a static artifact.' },
     { id: 'describe', description: 'Return the complete source contract.' },

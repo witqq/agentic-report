@@ -138,6 +138,34 @@ const validation = await validateReport({ input: './my-report' });
 const inspection = await inspectReport({ input: './my-report', format: 'directory' });
 ```
 
+## Resolve review feedback to source
+
+A generated report contains an inert review-target manifest bound to the local source graph. A versioned
+review artifact created for that report can be resolved without writing output or changing Markdown:
+
+```bash
+agentic-report review ./review.json ./my-report
+agentic-report review ./review.json ./my-report --json
+```
+
+The review path is relative to `./my-report` and must remain inside its canonical source root. JSON output
+contains the current and reviewed revisions plus each response with `exact`, `changed`, `missing`, or
+`ambiguous` binding and the current entry/partial range when resolved. Feedback fields are bounded and
+credential-sanitized; source bodies are not returned.
+
+The ESM equivalent is:
+
+```js
+import { inspectReview, parseReviewArtifact, serializeReviewArtifact } from 'agentic-report';
+
+const result = await inspectReview({ input: './my-report', review: 'review.json' });
+```
+
+`parseReviewArtifact()` enforces the closed version-1 schema. `serializeReviewArtifact()` trims and
+normalizes human text to Unicode NFC, then produces canonical newline-terminated JSON without a timestamp or
+random value. A changed or ambiguous target is never applied automatically; inspect its reported source
+state and edit the Markdown explicitly.
+
 ## Minimal source
 
 ```text

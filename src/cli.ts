@@ -11,11 +11,13 @@ import {
   type Diagnostic,
   type InitProjectResult,
   type InspectReportResult,
+  type InspectReviewResult,
   type OutputFormat,
   type ValidateReportResult,
 } from './contracts.js';
 import { inspectReport, validateReport } from './core/analyze-report.js';
 import { buildReport } from './core/compiler.js';
+import { inspectReview } from './core/inspect-review.js';
 import {
   exitCodeForDiagnostic,
   sanitizeDiagnostic,
@@ -46,6 +48,10 @@ interface InitCommandOptions {
 
 interface AnalysisCommandOptions {
   readonly format?: OutputFormat;
+  readonly json?: boolean;
+}
+
+interface ReviewCommandOptions {
   readonly json?: boolean;
 }
 
@@ -144,6 +150,23 @@ program
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
       });
       writeInspectSuccess(result, invocationRunId, commandOptions.json === true);
+    } catch (error) {
+      const diagnostic = toDiagnostic(error);
+      writeFailure(diagnostic, invocationRunId, commandOptions.json === true);
+      process.exitCode = exitCodeForDiagnostic(diagnostic);
+    }
+  });
+
+program
+  .command('review')
+  .description('Resolve a versioned review artifact against its current Markdown source.')
+  .argument('<review>', 'Confined relative review JSON path')
+  .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
+  .option('--json', 'Emit NDJSON suitable for agents')
+  .action(async (review: string, input: string, commandOptions: ReviewCommandOptions) => {
+    try {
+      const result = await inspectReview({ input, review });
+      writeReviewSuccess(result, invocationRunId, commandOptions.json === true);
     } catch (error) {
       const diagnostic = toDiagnostic(error);
       writeFailure(diagnostic, invocationRunId, commandOptions.json === true);
@@ -273,6 +296,23 @@ function writeInspectSuccess(result: InspectReportResult, runId: string, json: b
     return;
   }
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+}
+
+function writeReviewSuccess(result: InspectReviewResult, runId: string, json: boolean): void {
+  const sanitized = sanitizeTransportValue(result);
+  if (json) {
+    writeResultRecord(sanitized, runId);
+    return;
+  }
+  const counts = Object.fromEntries(
+    ['exact', 'changed', 'missing', 'ambiguous'].map((binding) => [
+      binding,
+      sanitized.responses.filter((response) => response.binding === binding).length,
+    ]),
+  );
+  process.stdout.write(
+    `Review ${sanitized.reportStatus}: ${counts.exact} exact, ${counts.changed} changed, ${counts.missing} missing, ${counts.ambiguous} ambiguous\n`,
+  );
 }
 
 function writeWarnings(warnings: readonly Diagnostic[], runId: string, json: boolean): void {

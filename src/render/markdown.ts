@@ -20,10 +20,12 @@ import {
   type AuthoringRegistryDefinition,
   type DirectiveDefinition,
 } from '../authoring/registry.js';
-import type { Diagnostic, OutputFormat, SourceMapSegment } from '../contracts.js';
+import type { Diagnostic, OutputFormat, SourceDigest, SourceMapSegment } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
 import { resolveLocalPath } from '../source/load-source.js';
 import { resolveSourceLocation } from '../source/source-map.js';
+import type { ReviewTargetReference } from '../review/contract.js';
+import { remarkReviewTargets } from '../review/targets.js';
 import { rehypeEnhanceDirectives, remarkSemanticDirectives } from './directives.js';
 
 export interface MarkdownRenderOptions {
@@ -47,7 +49,9 @@ export interface MarkdownRenderResult {
   readonly warnings: readonly Diagnostic[];
   readonly resourceFiles: readonly PreparedResourceFile[];
   readonly sourceFiles: readonly string[];
+  readonly resourceDigests: readonly SourceDigest[];
   readonly observedDirectives: readonly string[];
+  readonly reviewTargets: readonly ReviewTargetReference[];
   readonly observedResources: {
     readonly images: number;
     readonly downloads: number;
@@ -63,6 +67,7 @@ interface AssetCollector {
   fontCss: string[];
   resourceFiles: Map<string, Buffer>;
   sourceFiles: Set<string>;
+  resourceDigests: Map<string, string>;
   observedResources: { images: number; downloads: number; fonts: number };
 }
 
@@ -76,7 +81,10 @@ export function projectSemanticSanitizeSchema(
   registry: AuthoringRegistryDefinition,
 ): SanitizeSchema {
   const tagNames = [...(defaultSchema.tagNames ?? [])];
-  const attributes = { ...defaultSchema.attributes };
+  const attributes: NonNullable<SanitizeSchema['attributes']> = {
+    ...defaultSchema.attributes,
+    '*': [...(defaultSchema.attributes?.['*'] ?? []), 'dataReviewTarget'],
+  };
   const directivesByTag = new Map<string, DirectiveDefinition[]>();
   for (const directive of registry.directives) {
     const existing = directivesByTag.get(directive.sanitizer.tagName) ?? [];
@@ -174,9 +182,11 @@ export async function renderMarkdown(
     fontCss: [],
     resourceFiles: new Map(),
     sourceFiles: new Set(),
+    resourceDigests: new Map(),
     observedResources: { images: 0, downloads: 0, fonts: 0 },
   };
   const observedDirectives = new Set<string>();
+  const reviewTargets: ReviewTargetReference[] = [];
   const result = await unified()
     .use(remarkParse)
     .use(remarkGfm)
@@ -185,6 +195,11 @@ export async function renderMarkdown(
       sourceMap: options.sourceMap,
       markdown,
       observedDirectives,
+    })
+    .use(remarkReviewTargets, {
+      sourceRoot: options.sourceRoot,
+      sourceMap: options.sourceMap,
+      targets: reviewTargets,
     })
     .use(remarkRehype)
     .use(rehypeSanitize, semanticSanitizeSchema)
@@ -210,7 +225,11 @@ export async function renderMarkdown(
       bytes,
     })),
     sourceFiles: [...collector.sourceFiles].sort(compareNames),
+    resourceDigests: [...collector.resourceDigests]
+      .map(([file, sha256]) => ({ file, sha256 }))
+      .sort((left, right) => compareNames(left.file, right.file)),
     observedDirectives: [...observedDirectives].sort(compareNames),
+    reviewTargets,
     observedResources: collector.observedResources,
   };
 }
@@ -236,6 +255,7 @@ async function processAssetTarget(
   }
   const reference = await materializeLocalAsset(source, options);
   options.collector.sourceFiles.add(reference.sourcePath);
+  options.collector.resourceDigests.set(reference.sourcePath, reference.sha256);
   if (options.format === 'single-file') {
     options.collector.embeddedAssets += 1;
     if (target.kind !== 'font') {
@@ -290,7 +310,12 @@ function assetSource(target: {
 async function materializeLocalAsset(
   source: string,
   options: AssetPluginOptions,
-): Promise<{ readonly url: string; readonly extension: string; readonly sourcePath: string }> {
+): Promise<{
+  readonly url: string;
+  readonly extension: string;
+  readonly sourcePath: string;
+  readonly sha256: string;
+}> {
   const withoutQuery = source.split(/[?#]/, 1)[0];
   if (withoutQuery === undefined || withoutQuery.length === 0) {
     throw new AgenticReportError({
@@ -332,17 +357,18 @@ async function materializeLocalAsset(
   }
   const mime = lookupMime(assetPath) || 'application/octet-stream';
   const extension = path.extname(assetPath).toLowerCase();
+  const sha256 = createHash('sha256').update(bytes).digest('hex');
 
   if (options.format === 'single-file') {
     const url = `data:${mime};base64,${bytes.toString('base64')}`;
-    return { url, extension, sourcePath: assetPath };
+    return { url, extension, sourcePath: assetPath, sha256 };
   }
 
   const digest = createHash('sha256').update(bytes).digest('hex').slice(0, 12);
   const fileName = `${path.basename(assetPath, extension)}.${digest}${extension}`;
   options.collector.resourceFiles.set(`assets/${fileName}`, bytes);
   options.collector.externalAssets += 1;
-  return { url: `assets/${fileName}`, extension, sourcePath: assetPath };
+  return { url: `assets/${fileName}`, extension, sourcePath: assetPath, sha256 };
 }
 
 function isNonLocalReference(reference: string): boolean {

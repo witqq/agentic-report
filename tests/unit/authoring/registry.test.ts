@@ -158,11 +158,16 @@ describe('authoring registry', () => {
         id: 'inspect',
         description: 'Inspect a valid project through the production preparation pipeline.',
       },
+      {
+        id: 'review',
+        description: 'Resolve a versioned review artifact to current Markdown source locations.',
+      },
     ]);
     expect(authoringRegistry.commands.map((command) => command.id)).toEqual([
       'init',
       'validate',
       'inspect',
+      'review',
       'build',
       'describe',
       'schema',

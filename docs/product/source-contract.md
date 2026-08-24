@@ -67,6 +67,49 @@ and warnings. Inspection also reports sorted relative source files, observed dir
 occurrence counts, and the registry-derived command/format/starter/capability catalog. Both commands read
 and validate all resources required by the selected format but do not create or replace an output artifact.
 
+## Review protocol and source binding
+
+Every normal build embeds an inert version-1 review manifest in a `template` element. Container directives
+and ordinary Markdown blocks receive deterministic review-target identities. Each target records its kind,
+SHA-256 fingerprint, source-root-relative entry or partial path, and authored range. A section with an
+explicit `id` also receives a stable review key. The manifest never contains source bodies or absolute
+workstation paths.
+
+The manifest `reportRevision` is a SHA-256 identity over the complete confined local input graph used by the
+report—entry, metadata, expanded partials, and referenced local resources—plus the review/source-contract
+versions, target-algorithm version, and canonical target inventory. It is independent of output destination
+and `single-file` versus `directory`; `BuildReportResult.contentHash` remains the hash of the serialized
+output HTML and is a separate contract.
+
+A review artifact is strict versioned JSON with a bound report revision and at most 500 structured
+responses. It supports bounded feedback, target verdict, decision, and checklist response records so one
+contract can be consumed by the package-owned reader interface. Negative verdicts and not-applicable
+checklist values require explanations. Serialization orders records canonically and adds no clock or random
+field. Reviewer names, messages, rationales, and notes are trimmed and normalized to Unicode NFC before
+length validation, so canonically equivalent input produces identical bytes. Reviewer text is local
+potentially sensitive data and must be handled like report source.
+
+Use the read-only ESM operation or CLI adapter:
+
+```sh
+agentic-report review ./review.json ./my-report --json
+```
+
+```ts
+const result = await inspectReview({ input: './my-report', review: 'review.json' });
+```
+
+The review path is resolved relative to the prepared source root and cannot be absolute, traverse outside,
+or escape through a symlink. An exact bound revision requires the exact target identity and fingerprint. For
+a stale revision, an explicit stable key may resolve changed content; otherwise only one matching kind and
+fingerprint resolves within the same source file. A unique cross-file match is considered a move only when
+the previous source file no longer contributes any current review target; content changed in a still-present
+file cannot bind to an equal block elsewhere. Zero matches return `missing`, multiple matches return
+`ambiguous`, and a stable target whose fingerprint changed returns `changed`. The operation does not rewrite
+Markdown or publish output.
+Structured feedback is bounded and credential-sanitized before CLI/ESM transport; surrounding source and
+complete input files are never returned.
+
 The root metadata value, `tokens`, and `output` must be objects; scalar and array shapes fail instead of being
 silently replaced by defaults. Validation diagnostics point to the actual manifest or frontmatter field
 range that supplied the failing value.
