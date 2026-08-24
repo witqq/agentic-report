@@ -4,9 +4,10 @@ export const REVIEW_CONTRACT_VERSION = 1 as const;
 export const MAX_REVIEW_RESPONSES = 500;
 export const MAX_REVIEW_TARGETS = 500;
 export const MAX_REVIEW_MANIFEST_BYTES = 750_000;
+export const MAX_REVIEW_FILE_BYTES = 3_000_000;
+export const MAX_REVIEW_NAME_LENGTH = 200;
+export const MAX_REVIEW_TEXT_LENGTH = 4_000;
 
-const MAX_NAME_LENGTH = 200;
-const MAX_TEXT_LENGTH = 4_000;
 const MAX_REVIEW_ISSUES = 100;
 const ID_PATTERN = /^[a-z][a-z0-9:._-]{0,127}$/u;
 const FINGERPRINT_PATTERN = /^sha256:[a-f0-9]{64}$/u;
@@ -88,6 +89,27 @@ export interface ReviewArtifact {
 export interface ReviewContractIssue {
   readonly path: string;
   readonly message: string;
+}
+
+export interface ReviewTextConstraint {
+  readonly input: string;
+  readonly canonical: string;
+  readonly codePointLength: number;
+  readonly truncated: boolean;
+}
+
+export function constrainReviewText(value: string, maximum: number): ReviewTextConstraint {
+  const normalized = value.normalize('NFC');
+  const leadingWhitespace = /^\s*/u.exec(normalized)?.[0] ?? '';
+  const codePoints = Array.from(normalized.trim());
+  const truncated = codePoints.length > maximum;
+  const canonical = (truncated ? codePoints.slice(0, maximum) : codePoints).join('');
+  return {
+    input: truncated ? `${leadingWhitespace}${canonical}` : normalized,
+    canonical,
+    codePointLength: codePoints.length,
+    truncated,
+  };
 }
 
 export class ReviewContractError extends Error {
@@ -180,7 +202,12 @@ function reviewArtifact(input: unknown, issues: ReviewContractIssue[]): ReviewAr
     const reviewerRecord = requireRecord(record.reviewer, '$.reviewer', issues);
     if (reviewerRecord !== undefined) {
       exactKeys(reviewerRecord, ['name'], '$.reviewer', issues);
-      const name = boundedText(reviewerRecord.name, '$.reviewer.name', MAX_NAME_LENGTH, issues);
+      const name = boundedText(
+        reviewerRecord.name,
+        '$.reviewer.name',
+        MAX_REVIEW_NAME_LENGTH,
+        issues,
+      );
       if (name !== undefined) reviewer = { name };
     }
   }
@@ -206,6 +233,29 @@ function reviewArtifact(input: unknown, issues: ReviewContractIssue[]): ReviewAr
     'response id',
     issues,
   );
+  const verdictTargets = new Set<string>();
+  for (const response of responses) {
+    if (response.kind !== 'verdict') continue;
+    if (verdictTargets.has(response.target.id)) {
+      issue(issues, '$.responses', 'Imported review contains more than one verdict for a block.');
+      break;
+    }
+    verdictTargets.add(response.target.id);
+  }
+  if (
+    pageVerdict?.verdict === 'approve' &&
+    responses.some(
+      (response) =>
+        response.kind === 'blocker' ||
+        (response.kind === 'verdict' && response.verdict !== 'approve'),
+    )
+  ) {
+    issue(
+      issues,
+      '$.pageVerdict.verdict',
+      'Resolve blockers and revise or reject block verdicts before approving the report.',
+    );
+  }
   if (revision === undefined || issues.length > 0) return undefined;
   return {
     contractVersion: REVIEW_CONTRACT_VERSION,
@@ -229,7 +279,7 @@ function reviewResponse(
   const target = reviewTarget(record.target, `${path}.target`, issues);
   if (isFeedbackKind(kind)) {
     exactKeys(record, [...commonKeys, 'message'], path, issues);
-    const message = boundedText(record.message, `${path}.message`, MAX_TEXT_LENGTH, issues);
+    const message = boundedText(record.message, `${path}.message`, MAX_REVIEW_TEXT_LENGTH, issues);
     return id === undefined || target === undefined || message === undefined
       ? undefined
       : { id, kind, target, message };
@@ -474,13 +524,12 @@ function boundedText(
     issue(issues, path, 'must be text');
     return undefined;
   }
-  const normalized = value.trim().normalize('NFC');
-  const length = [...normalized].length;
-  if (length === 0 || length > maximum) {
+  const constrained = constrainReviewText(value, maximum);
+  if (constrained.codePointLength === 0 || constrained.truncated) {
     issue(issues, path, `must contain 1 to ${maximum} Unicode code points`);
     return undefined;
   }
-  return normalized;
+  return constrained.canonical;
 }
 
 function optionalText(
@@ -488,7 +537,7 @@ function optionalText(
   path: string,
   issues: ReviewContractIssue[],
 ): string | undefined {
-  return value === undefined ? undefined : boundedText(value, path, MAX_TEXT_LENGTH, issues);
+  return value === undefined ? undefined : boundedText(value, path, MAX_REVIEW_TEXT_LENGTH, issues);
 }
 
 function positiveInteger(

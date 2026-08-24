@@ -214,6 +214,7 @@ describe('authoring registry', () => {
       'layout-landing',
       'layout-mixed',
       'interactive-catalog',
+      'review-workspace',
       'visualization-catalog',
       'incident-review',
       'vendor-decision',

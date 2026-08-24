@@ -1428,6 +1428,16 @@ async function inspectCandidateArtifacts(
       }
       await themeToggle.click();
       const themeAfter = await page.locator('html').getAttribute('data-theme');
+      const reviewToggle = page.locator('[data-review-toggle]');
+      if ((await reviewToggle.count()) !== 1) {
+        throw new Error(`Installed ${artifact.format} candidate is missing Review Workspace.`);
+      }
+      await reviewToggle.click();
+      const reviewDialog = page.locator('[data-review-dialog]');
+      const reviewOpen = await reviewDialog.getAttribute('open');
+      const reviewTargets = await page.locator('[data-review-target-control]:visible').count();
+      const reviewModal = await reviewDialog.evaluate((element) => element.matches(':modal'));
+      await page.locator('[data-review-exit]').click();
       const observed = await page.evaluate(() => ({
         title: document.title,
         heading: document.querySelector('h1')?.textContent ?? '',
@@ -1438,7 +1448,10 @@ async function inspectCandidateArtifacts(
         errors.length > 0 ||
         observed.heading === '' ||
         observed.horizontalOverflow ||
-        themeBefore === themeAfter
+        themeBefore === themeAfter ||
+        reviewOpen === null ||
+        reviewTargets === 0 ||
+        reviewModal !== (artifact.format === 'directory')
       ) {
         throw new Error(
           `Installed ${artifact.format} candidate failed Chromium inspection: ${JSON.stringify({ errors, observed })}`,
@@ -1450,6 +1463,8 @@ async function inspectCandidateArtifacts(
         errors,
         themeBefore,
         themeAfter,
+        reviewTargets,
+        reviewModal,
         ...observed,
       });
     }

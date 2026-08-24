@@ -25,7 +25,7 @@ import { AgenticReportError } from '../diagnostics.js';
 import { resolveLocalPath } from '../source/load-source.js';
 import { resolveSourceLocation } from '../source/source-map.js';
 import type { ReviewTargetReference } from '../review/contract.js';
-import { remarkReviewTargets } from '../review/targets.js';
+import { rehypeReviewTargets, remarkReviewTargets } from '../review/targets.js';
 import { rehypeEnhanceDirectives, remarkSemanticDirectives } from './directives.js';
 
 export interface MarkdownRenderOptions {
@@ -207,6 +207,11 @@ export async function renderMarkdown(
     .use(rehypeShiki, {
       themes: { light: 'github-light', dark: 'github-dark' },
       defaultColor: false,
+    })
+    .use(rehypeReviewTargets, {
+      sourceRoot: options.sourceRoot,
+      sourceMap: options.sourceMap,
+      targets: reviewTargets,
     })
     .use(rehypeEnhanceDirectives, { sourceMap: options.sourceMap })
     .use(rehypeAssets, { ...options, collector })

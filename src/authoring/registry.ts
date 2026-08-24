@@ -703,6 +703,15 @@ export const authoringRegistry = {
       classes: ['interactive-component-catalog'],
     },
     {
+      id: 'review-workspace',
+      path: 'review-workspace',
+      entry: 'report.md',
+      title: 'Human review handoff example',
+      description:
+        'Offline report with repeated evidence blocks for comments, independent verdicts, and deterministic review export.',
+      classes: ['work-report'],
+    },
+    {
       id: 'visualization-catalog',
       path: 'visualization-catalog',
       entry: 'report.md',

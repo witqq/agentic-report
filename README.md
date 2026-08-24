@@ -100,6 +100,11 @@ Generated pages also carry an inert deterministic review-target manifest. Use
 versioned `review.json` and resolve each response to the current Markdown or partial range. Stale, changed,
 missing, and ambiguous targets remain explicit; the command never rewrites source.
 
+In the generated page, `Review` opens the local Review Workspace. Readers can comment on blocks, set
+independent block and overall `approve`/`revise`/`reject` verdicts, and download deterministic `review.json`.
+Desktop uses a non-modal rail; mobile uses a modal sheet. State leaves the page only through explicit local
+import/export—there is no account, backend, network sync, or authenticated signature.
+
 The package owns four responsive page layouts: `document`, `dashboard`, `landing`, and `mixed`. Authors
 select one as metadata and may choose the coordinated `studio`, `editorial`, or `signal` preset, an
 independent `system`, `light`, or `dark` color mode, and compact token overrides for `density`, `font`,

@@ -110,6 +110,27 @@ Markdown or publish output.
 Structured feedback is bounded and credential-sanitized before CLI/ESM transport; surrounding source and
 complete input files are never returned.
 
+### Review Workspace reader interface
+
+When a report contains review targets, its topbar includes `Review`. The normal page remains clean until the
+reader activates that control. In review mode each actual block target receives a labelled button; selecting
+it opens the target editor. Tight-list paragraphs do not become separate targets because they render without
+their own paragraph element—the containing list remains reviewable.
+
+The interface supports reviewer name; comment, question, change request, and blocker feedback with add,
+edit, and remove actions; one independent `approve`, `revise`, or `reject` verdict per target; a separate
+optional page verdict and rationale; and canonical `review.json` download and exact-revision JSON import.
+
+`revise` and `reject` require rationale. An `approve` page verdict cannot export while blocker feedback or a
+target `revise`/`reject` remains. Drafts without a page verdict can export if the shared strict contract is
+otherwise valid. Import rejects oversized, malformed, unsupported, stale, foreign, or non-current targets
+without replacing the active review.
+
+Desktop uses a non-modal right rail and leaves the report interactive. Mobile uses a native modal bottom
+sheet; closing it returns focus to the topbar or target button that opened it, while `Exit review` hides every
+target control. Review state is session-only and never written to browser storage, URL, network, or report
+source. Reviewer identity is descriptive rather than authenticated.
+
 The root metadata value, `tokens`, and `output` must be objects; scalar and array shapes fail instead of being
 silently replaced by defaults. Validation diagnostics point to the actual manifest or frontmatter field
 range that supplied the failing value.

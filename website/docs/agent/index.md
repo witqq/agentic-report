@@ -26,6 +26,16 @@ npx --yes agentic-report inspect ./my-page --json
 npx --yes agentic-report build ./my-page --output ./my-page.html --json
 ```
 
+Open the generated page and select **Review** when the human needs to return structured feedback. After the
+reader downloads `review.json`, map it back to the authored files with:
+
+```sh
+npx --yes agentic-report review review.json ./my-page --json
+```
+
+Review import/export is local and exact-revision bound; it is not an account, signature, or collaboration
+service.
+
 Use the pinned form for repeatable agent work. Use the unpinned form only when intentionally accepting the
 registry's current `latest` release.
 

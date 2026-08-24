@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 
+import type { Element, Root as HastRoot } from 'hast';
 import type { Root } from 'mdast';
 import type { Plugin } from 'unified';
 import { visit } from 'unist-util-visit';
@@ -53,9 +54,10 @@ export const remarkReviewTargets: Plugin<[ReviewTargetPluginOptions], Root> =
   (options) => (tree) => {
     const occurrences = new Map<string, number>();
     const stableKeys = new Set<string>();
-    visit(tree, (candidate) => {
+    visit(tree, (candidate, _index, parent) => {
       const node = candidate as unknown as PositionedNode;
       const kind = reviewableKind(node);
+      if (kind === 'markdown:paragraph' && parent?.type === 'listItem') return;
       const start = node.position?.start.offset;
       const end = node.position?.end.offset;
       if (kind === undefined || start === undefined || end === undefined || end <= start) return;
@@ -118,6 +120,69 @@ export const remarkReviewTargets: Plugin<[ReviewTargetPluginOptions], Root> =
     });
   };
 
+export const rehypeReviewTargets: Plugin<[ReviewTargetPluginOptions], HastRoot> =
+  (options) => (tree) => {
+    const projected = new Set<string>();
+    const codeTargets = options.targets.filter((target) => target.kind === 'markdown:code');
+    let codeIndex = 0;
+    const targetsByRange = new Map(
+      options.targets.map((target) => [sourceRangeKey(target.source), target]),
+    );
+    visit(tree, 'element', (node: Element) => {
+      const existing = node.properties.dataReviewTarget;
+      if (typeof existing === 'string') {
+        projected.add(existing);
+        return;
+      }
+      if (node.tagName === 'pre') {
+        const target = codeTargets[codeIndex];
+        codeIndex += 1;
+        if (target !== undefined) {
+          node.properties.dataReviewTarget = target.id;
+          projected.add(target.id);
+        }
+        return;
+      }
+      const start = node.position?.start.offset;
+      const end = node.position?.end.offset;
+      if (start === undefined || end === undefined || reviewableElementKind(node) === undefined)
+        return;
+      const source = resolveSourceLocation(options.sourceMap, start, end);
+      if (
+        source === undefined ||
+        source.line === undefined ||
+        source.column === undefined ||
+        source.endLine === undefined ||
+        source.endColumn === undefined
+      ) {
+        return;
+      }
+      const target = targetsByRange.get(
+        sourceRangeKey({
+          file: relativeSourcePath(options.sourceRoot, source.file),
+          line: source.line,
+          column: source.column,
+          endLine: source.endLine,
+          endColumn: source.endColumn,
+        }),
+      );
+      if (target === undefined || target.kind !== reviewableElementKind(node)) return;
+      node.properties.dataReviewTarget = target.id;
+      projected.add(target.id);
+    });
+    const missing = options.targets.filter((target) => !projected.has(target.id));
+    if (missing.length > 0) {
+      throw new AgenticReportError({
+        level: 'error',
+        code: 'REVIEW_TARGET_PROJECTION_FAILED',
+        message: `Review targets did not produce DOM owners: ${missing.map((target) => target.id).join(', ')}.`,
+        remediation:
+          'Report the source and package version; do not publish an incomplete review manifest.',
+        details: { targets: missing.map((target) => ({ id: target.id, kind: target.kind })) },
+      });
+    }
+  };
+
 export async function createReviewTargetManifest(
   sourceRoot: string,
   sourceDigests: readonly SourceDigest[],
@@ -177,6 +242,23 @@ function reviewableKind(node: PositionedNode): string | undefined {
   return REVIEWABLE_MARKDOWN_BLOCKS.has(node.type) ? `markdown:${node.type}` : undefined;
 }
 
+function reviewableElementKind(node: Element): string | undefined {
+  const semantic = node.properties.dataSemantic;
+  if (typeof semantic === 'string') return `directive:${semantic}`;
+  if (/^h[1-6]$/u.test(node.tagName)) return 'markdown:heading';
+  return (
+    {
+      blockquote: 'markdown:blockquote',
+      hr: 'markdown:thematicBreak',
+      ol: 'markdown:list',
+      p: 'markdown:paragraph',
+      pre: 'markdown:code',
+      table: 'markdown:table',
+      ul: 'markdown:list',
+    } as Readonly<Record<string, string>>
+  )[node.tagName];
+}
+
 function directiveExplicitId(node: PositionedNode): string | undefined {
   const value = node.type === 'containerDirective' ? node.attributes?.id : undefined;
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
@@ -204,6 +286,16 @@ function relativeSourcePath(sourceRoot: string, file: string): string {
     });
   }
   return relative.split(path.sep).join('/');
+}
+
+function sourceRangeKey(source: {
+  readonly file: string;
+  readonly line: number;
+  readonly column: number;
+  readonly endLine: number;
+  readonly endColumn: number;
+}): string {
+  return `${source.file}\0${source.line}\0${source.column}\0${source.endLine}\0${source.endColumn}`;
 }
 
 function targetId(value: string): string {

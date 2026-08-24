@@ -73,6 +73,11 @@ Markdown + metadata + local assets + partials + semantic directives
   progress/reveal, code copying, glossary hover/focus/tap explanations,
   tab selection, modal/popover focus, filtering, switches, and bounded counters. Interaction instances keep state in their own semantic DOM
   subtree, so repeated components do not share accidental state.
+- `src/browser/review-workspace.ts` is a cohesive package-owned controller over the shared review contract.
+  It parses the inert manifest once, creates bounded target affordances, owns in-memory reviewer feedback and
+  page/target verdicts, validates exact-revision imports, and exports canonical JSON through a revoked local
+  object URL. It never evaluates or injects feedback as HTML, writes storage, starts a service, or performs a
+  network request.
 - `src/core/prepare-report.ts` owns the shared side-effect-free preparation used by building, validation,
   and inspection: source/render work, registry-owned output selection, package browser assets, size
   accounting, content hashing, observed source features, and prepared directory resources. Package browser
@@ -228,6 +233,19 @@ paths. Its report revision covers the confined entry, manifest, expanded partial
 bytes, review/source-contract versions, target-algorithm version, and canonical target inventory; it is
 independent of output destination and format. A 500-target and 750,000-byte manifest limit bounds
 artifact/runtime input; review files are limited separately before JSON parsing.
+
+When at least one target exists, the shared document shell includes one Review entry and one native review
+dialog. Normal reading exposes no target controls. Review mode creates one button sibling per actual DOM
+target; tight-list paragraphs that do not render their own element are represented by the containing list,
+so manifest and DOM inventories remain equal. Desktop opens the dialog non-modally as a fixed rail and
+reserves page width; mobile opens the same dialog modally as a bottom sheet. Close returns focus to the exact
+opener, while Exit removes all review affordances. State remains in memory until explicit canonical import or
+download.
+
+Feedback kinds are comment, question, change request, and blocker. Each target may own one independent
+approve/revise/reject response; the page verdict remains separate. Negative verdicts require rationale.
+Page approval cannot export while a blocker or negative target verdict remains. Unit-2 import is an exact
+revision resume operation: stale or foreign reviews are rejected without changing current state.
 
 `scrollProgress` defaults to false. In normal motion, an enabled page installs one passive document scroll
 listener and one resize listener, coalesces updates through one animation frame, and changes one decorative

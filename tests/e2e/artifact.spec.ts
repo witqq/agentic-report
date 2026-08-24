@@ -562,7 +562,7 @@ test('desktop navigation has one total current state and a non-modal session col
     await expect(navigation.locator('a')).toHaveCount(3);
     await expect(navigation).not.toContainText('Alpha detail');
     await expect(page.locator('[role="menu"]')).toHaveCount(0);
-    await expect(page.locator('[aria-live]')).toHaveCount(0);
+    await expect(navigation.locator('[aria-live]')).toHaveCount(0);
     await expectCurrentNavigation(page, 'alpha');
 
     expect(

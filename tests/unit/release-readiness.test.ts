@@ -48,7 +48,7 @@ describe('release readiness', () => {
         readonly entry: string;
       }[];
     };
-    expect(manifest.examples).toHaveLength(15);
+    expect(manifest.examples).toHaveLength(16);
     for (const example of manifest.examples) {
       const source = await readFile(path.resolve('examples', example.path, example.entry), 'utf8');
       expect(fictionalMarkerIssue(source), example.id).toBeUndefined();

@@ -140,6 +140,11 @@ describe('report analysis', () => {
       buildReport({ input: workspace, output: directoryOutput, format: 'directory' }),
     ]);
     const singleManifest = await embeddedManifest(singleOutput);
+    const singleHtml = await readFile(singleOutput, 'utf8');
+    const renderedTargetIds = [...singleHtml.matchAll(/\bdata-review-target="([^"]+)"/gu)]
+      .map((match) => match[1] ?? '')
+      .sort();
+    expect(renderedTargetIds).toEqual(singleManifest.targets.map((target) => target.id).sort());
     const serializedManifest = JSON.stringify(singleManifest);
     expect(serializedManifest).not.toContain(workspace);
     expect(serializedManifest).not.toMatch(/Entry secret context|Equal evidence/u);
@@ -475,6 +480,10 @@ async function reviewWorkspace(prefix: string): Promise<string> {
       '{{include: partials/evidence.md}}',
       '',
       ':asset[Evidence]{src="asset.txt"}',
+      '',
+      '```ts',
+      "const handoff = 'review.json';",
+      '```',
       '',
       ':::section{title="Launch" id="launch"}',
       'Stable section body.',

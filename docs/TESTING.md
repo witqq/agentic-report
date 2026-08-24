@@ -60,8 +60,11 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   containment, and produce inspected captures. Dedicated semantic-tabs coverage builds every current
   tab-bearing starter, example, and fixture for desktop and mobile `file://` artifacts; it asserts readable
   non-shrinking single-line labels, list-owned overflow where needed, document containment, and pointer and
-  keyboard selection and focus. A local SVG must complete with non-zero intrinsic width in both embedded and rewritten hashed
-  forms. The current suite does not cover browser behavior for downloadable assets or local fonts,
+  keyboard selection and focus. Dedicated Review Workspace coverage builds both formats, exercises clean
+  enter/exit, desktop/mobile dialog semantics, equal-text target isolation, feedback editing, independent
+  block verdicts, page approval gating, byte-equal download, exact import and stale rejection, and produces
+  the required visually inspected state captures. A local SVG must complete with non-zero intrinsic width in
+  both embedded and rewritten hashed forms. The current suite does not cover browser behavior for downloadable assets or local fonts,
   axe/screen-reader evidence or difficult-content reflow beyond the authored fixtures.
 - `pack:check` builds an npm tarball, checks its exact release allowlist, metadata, license, types, exports,
   engine, installed CLI version and supported-runtime behavior, CLI shebang, file count, absence of private/temporary paths,

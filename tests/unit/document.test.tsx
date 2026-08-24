@@ -27,6 +27,11 @@ const baseOptions = {
   navigation: [],
   contentSecurityPolicy: "default-src 'none'",
   styles: { inline: ':root{}' },
+  reviewManifest: {
+    contractVersion: 1,
+    reportRevision: `sha256:${'a'.repeat(64)}`,
+    targets: [],
+  },
 } as const satisfies Omit<DocumentRenderOptions, 'runtime'>;
 
 describe('renderDocument runtime boundary', () => {
@@ -152,6 +157,35 @@ describe('renderDocument runtime boundary', () => {
     expect(html).not.toContain('autofocus=""');
     expect(html.match(/aria-current="location"/gu)).toHaveLength(1);
     expect(html.match(/data-navigation="true"/gu)).toHaveLength(1);
+  });
+
+  it('renders a collision-free labelled Review Workspace only when targets exist', () => {
+    const html = renderDocument({
+      ...inlineOptions,
+      contentHtml: '<p id="report-review-dialog" data-review-target="rt-target">Review target</p>',
+      reviewManifest: {
+        contractVersion: 1,
+        reportRevision: `sha256:${'b'.repeat(64)}`,
+        targets: [
+          {
+            id: 'rt-target',
+            kind: 'markdown:paragraph',
+            fingerprint: `sha256:${'c'.repeat(64)}`,
+            source: { file: 'report.md', line: 1, column: 1, endLine: 1, endColumn: 14 },
+          },
+        ],
+      },
+    });
+
+    expect(html).toContain('class="review-toggle"');
+    expect(html).toContain('aria-controls="report-review-dialog-2"');
+    expect(html).toContain(
+      'class="review-dialog" id="report-review-dialog-2" aria-labelledby="report-review-dialog-title"',
+    );
+    expect(html).toContain('data-review-target-editor="true" hidden=""');
+    expect(html).toContain('data-review-import="true"');
+    expect(html).toContain('data-review-export="true"');
+    expect(renderDocument(inlineOptions)).not.toContain('data-review-toggle');
   });
 });
 

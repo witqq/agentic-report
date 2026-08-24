@@ -52,6 +52,22 @@ runtime truth.
 
 :::::
 
+::::section{title="Review and return feedback" id="review" nav="Review" width="standard" align="start" tone="accent" reveal="true"}
+
+Generated pages include a local Review Workspace. A reader can attach comments or blockers to exact blocks,
+set independent block and overall verdicts, and download deterministic `review.json`. Desktop uses a
+non-modal rail; mobile uses a modal sheet. No feedback is uploaded or stored in an account.
+
+An agent resolves the downloaded review against the current source with:
+
+```sh
+agentic-report review ./review.json ./my-page --json
+```
+
+The result names exact, changed, missing, or ambiguous entry/partial targets without rewriting Markdown.
+
+::::
+
 ::::section{title="Output and operation" id="output" nav="Output" width="standard" align="start" tone="soft" reveal="true"}
 
 - `single-file` is the default: one portable HTML file with embedded local resources and runtime.

@@ -7,11 +7,10 @@ import {
   parseReviewArtifact,
   ReviewContractError,
   REVIEW_CONTRACT_VERSION,
+  MAX_REVIEW_FILE_BYTES,
 } from '../review/contract.js';
 import { resolveLocalPath } from '../source/load-source.js';
 import { prepareReport } from './prepare-report.js';
-
-const MAX_REVIEW_FILE_BYTES = 3_000_000;
 
 export async function inspectReview(options: InspectReviewOptions): Promise<InspectReviewResult> {
   const parsedOptions = validateOptions(options);

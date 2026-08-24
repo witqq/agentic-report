@@ -2,6 +2,7 @@ import './document.css';
 
 import { COPY_ICON_PATH } from '../iconography.js';
 import { PAGE_MOTION_POLICY } from '../page-motion.js';
+import { installReviewWorkspace } from './review-workspace.js';
 
 const root = document.documentElement;
 root.style.setProperty(
@@ -16,6 +17,7 @@ const modalOpeners = new WeakMap<HTMLDialogElement, HTMLButtonElement>();
 const navigationController = createNavigationController();
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const motionController = createMotionController(reducedMotion);
+installReviewWorkspace();
 
 reducedMotion.addEventListener('change', () => motionController.sync());
 

@@ -166,6 +166,12 @@ normalizes human text to Unicode NFC, then produces canonical newline-terminated
 random value. A changed or ambiguous target is never applied automatically; inspect its reported source
 state and edit the Markdown explicitly.
 
+The generated page itself provides Review Workspace. The reader selects `Review`, chooses a block, records
+feedback or a block verdict, selects an optional overall verdict, and downloads `review.json`. Desktop uses a
+non-modal rail; mobile uses a modal sheet. A downloaded review can be imported into a fresh copy of the exact
+same report revision. Importing a stale revision is intentionally refused; use the CLI source-binding result
+to inspect stale feedback.
+
 ## Minimal source
 
 ```text

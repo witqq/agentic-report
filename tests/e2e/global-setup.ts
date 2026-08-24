@@ -92,6 +92,7 @@ export default async function globalSetup(): Promise<void> {
   ] as const;
   const presetFixtures = ['studio', 'editorial', 'signal'] as const;
   const navigationSource = path.join(fixtureRoot, 'navigation-source');
+  const reviewSource = path.join(fixtureRoot, 'review-source');
   const layoutExamples = [
     'layout-document',
     'layout-dashboard',
@@ -179,6 +180,29 @@ export default async function globalSetup(): Promise<void> {
       'This valid target follows every eligible section.',
     ].join('\n\n'),
   );
+  await mkdir(reviewSource, { recursive: true });
+  await writeFile(
+    path.join(reviewSource, 'report.md'),
+    [
+      '---',
+      'title: Review Workspace fixture',
+      'language: en',
+      'layout: document',
+      'theme: light',
+      'preset: studio',
+      '---',
+      '# Review Workspace fixture',
+      ':::section{title="Alpha evidence" id="alpha" nav="Alpha"}',
+      'Shared evidence statement.',
+      ':::',
+      ':::section{title="Beta evidence" id="beta" nav="Beta" tone="soft"}',
+      'Shared evidence statement.',
+      ':::',
+      ':::section{title="Decision summary" id="summary" nav="Summary"}',
+      'The reviewer exports a local structured handoff.',
+      ':::',
+    ].join('\n\n'),
+  );
   await Promise.all([
     buildReport({ input: source, output: singleOutput }),
     buildReport({
@@ -218,6 +242,15 @@ export default async function globalSetup(): Promise<void> {
     buildReport({
       input: navigationSource,
       output: path.join(fixtureRoot, 'navigation.html'),
+    }),
+    buildReport({
+      input: reviewSource,
+      output: path.join(fixtureRoot, 'review.html'),
+    }),
+    buildReport({
+      input: reviewSource,
+      output: path.join(fixtureRoot, 'review-directory'),
+      format: 'directory',
     }),
     buildReport({
       input: navigationSource,

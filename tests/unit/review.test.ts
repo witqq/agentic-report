@@ -82,6 +82,52 @@ describe('versioned review protocol', () => {
     ).toThrowError(/does not satisfy the review contract/u);
   });
 
+  it('owns target-verdict uniqueness and page approval consistency in the shared domain', () => {
+    const target = fixtureTarget('rt-target', `sha256:${'a'.repeat(64)}`);
+    const base = {
+      contractVersion: 1,
+      report: { revision: `sha256:${'b'.repeat(64)}` },
+    } as const;
+    expect(() =>
+      parseReviewArtifact({
+        ...base,
+        responses: [
+          { id: 'verdict-a', kind: 'verdict', target, verdict: 'approve' },
+          { id: 'verdict-b', kind: 'verdict', target, verdict: 'revise', rationale: 'Revise.' },
+        ],
+      }),
+    ).toThrowError(/does not satisfy the review contract/u);
+    expect(() =>
+      serializeReviewArtifact({
+        ...base,
+        pageVerdict: { verdict: 'approve' },
+        responses: [{ id: 'blocker-a', kind: 'blocker', target, message: 'Blocked.' }],
+      }),
+    ).toThrowError(/does not satisfy the review contract/u);
+    expect(() =>
+      serializeReviewArtifact({
+        ...base,
+        pageVerdict: { verdict: 'approve' },
+        responses: [
+          {
+            id: 'verdict-a',
+            kind: 'verdict',
+            target,
+            verdict: 'revise',
+            rationale: 'Revise this block.',
+          },
+        ],
+      }),
+    ).toThrowError(/does not satisfy the review contract/u);
+    expect(
+      serializeReviewArtifact({
+        ...base,
+        pageVerdict: { verdict: 'approve' },
+        responses: [{ id: 'verdict-a', kind: 'verdict', target, verdict: 'approve' }],
+      }),
+    ).toContain('"verdict":"approve"');
+  });
+
   it('bounds diagnostics for a hostile wide review object', () => {
     const hostile = Object.fromEntries(
       Array.from({ length: 1_000 }, (_, index) => [`unexpected-${index}`, index]),
@@ -171,6 +217,20 @@ describe('versioned review protocol', () => {
     ]);
 
     expect(second.reportRevision).not.toBe(first.reportRevision);
+  });
+
+  it('keeps the package-owned Review Workspace within its runtime boundary and byte budgets', async () => {
+    const [runtime, styles, source] = await Promise.all([
+      readFile(path.resolve('dist/browser/runtime.js')),
+      readFile(path.resolve('dist/browser/document.css')),
+      readFile(path.resolve('src/browser/review-workspace.ts'), 'utf8'),
+    ]);
+
+    expect(runtime.byteLength).toBeLessThanOrEqual(34_000);
+    expect(styles.byteLength).toBeLessThanOrEqual(43_000);
+    expect(source).not.toMatch(
+      /\.innerHTML|localStorage|sessionStorage|\bfetch\s*\(|XMLHttpRequest|WebSocket/u,
+    );
   });
 
   it('distinguishes changed stable targets, missing targets, and ambiguous equal fingerprints', () => {
