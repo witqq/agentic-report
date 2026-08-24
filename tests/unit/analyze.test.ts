@@ -230,6 +230,63 @@ describe('report analysis', () => {
     });
   });
 
+  it('enforces typed requirement ownership and approval through public review inspection', async () => {
+    const workspace = await reviewWorkspace('analysis-typed-review');
+    const output = path.join(workspace, 'report.html');
+    await buildReport({ input: workspace, output });
+    const manifest = await embeddedManifest(output);
+    expect(manifest.requirements?.decisions).toHaveLength(1);
+    await writeFile(
+      path.join(workspace, 'review.json'),
+      serializeReviewArtifact({
+        contractVersion: 1,
+        report: { revision: manifest.reportRevision },
+        pageVerdict: { verdict: 'approve' },
+        responses: [],
+      }),
+    );
+    await expect(inspectReview({ input: workspace, review: 'review.json' })).rejects.toMatchObject({
+      diagnostic: { code: 'REVIEW_REQUIREMENTS_INVALID' },
+    });
+    const decisionRequirement = manifest.requirements?.decisions[0];
+    const checklistRequirement = manifest.requirements?.checklists[0];
+    const decisionTarget = manifest.targets.find(
+      (target) => target.id === decisionRequirement?.targetId,
+    );
+    const checklistTarget = manifest.targets.find(
+      (target) => target.id === checklistRequirement?.targetId,
+    );
+    if (decisionTarget === undefined || checklistTarget === undefined)
+      throw new Error('Missing typed targets');
+    await writeFile(
+      path.join(workspace, 'review.json'),
+      serializeReviewArtifact({
+        contractVersion: 1,
+        report: { revision: manifest.reportRevision },
+        pageVerdict: { verdict: 'approve' },
+        responses: [
+          { id: 'decision-a', kind: 'decision', target: decisionTarget, optionId: 'ship' },
+          {
+            id: 'checklist-a',
+            kind: 'checklist',
+            target: checklistTarget,
+            items: [{ itemId: 'owner', status: 'checked' }],
+          },
+        ],
+      }),
+    );
+    const entry = path.join(workspace, 'report.md');
+    await writeFile(
+      entry,
+      `${await readFile(entry, 'utf8')}\n:::decision{title="New gate" id="new-gate" required=true}\n::decision-option{id="continue" label="Continue"}\n:::\n`,
+    );
+    await expect(inspectReview({ input: workspace, review: 'review.json' })).resolves.toMatchObject(
+      {
+        reportStatus: 'stale',
+      },
+    );
+  });
+
   it('classifies malformed, invalid, oversized, missing, and hostile-option review inputs without mutation', async () => {
     const workspace = await reviewWorkspace('analysis-review-failures');
     const sentinel = path.join(workspace, 'report.html');
@@ -487,6 +544,15 @@ async function reviewWorkspace(prefix: string): Promise<string> {
       '',
       ':::section{title="Launch" id="launch"}',
       'Stable section body.',
+      ':::',
+      '',
+      ':::decision{title="Release" id="release" required=true}',
+      '::decision-option{id="ship" label="Ship"}',
+      '::decision-option{id="hold" label="Hold"}',
+      ':::',
+      '',
+      ':::checklist{title="Gates" id="gates"}',
+      '::check-item{id="owner" label="Owner" required=true}',
       ':::',
       '',
     ].join('\n'),

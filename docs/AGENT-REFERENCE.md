@@ -172,6 +172,23 @@ non-modal rail; mobile uses a modal sheet. A downloaded review can be imported i
 same report revision. Importing a stale revision is intentionally refused; use the CLI source-binding result
 to inspect stale feedback.
 
+Typed review controls are declarative and keep legacy decisions static:
+
+```md
+:::decision{title="Release path" id="release-path" required=true}
+::decision-option{id="ship" label="Ship now"}
+::decision-option{id="hold" label="Hold release"}
+:::
+
+:::checklist{title="Release gates" id="release-gates"}
+::check-item{id="owner" label="Owner assigned" required=true}
+::check-item{id="notes" label="Notes attached"}
+:::
+```
+
+Required open/deferred decisions and unchecked required items block approval. A not-applicable checklist
+state requires a bounded note. Stable component and child identities, not labels, own the exported response.
+
 ## Minimal source
 
 ```text

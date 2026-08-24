@@ -201,6 +201,18 @@ export default async function globalSetup(): Promise<void> {
       ':::section{title="Decision summary" id="summary" nav="Summary"}',
       'The reviewer exports a local structured handoff.',
       ':::',
+      ':::decision{title="Release path" id="release-path" required=true}',
+      '::decision-option{id="ship" label="Ship now"}',
+      '::decision-option{id="hold" label="Hold release"}',
+      ':::',
+      ':::checklist{title="Release gates" id="release-gates"}',
+      '::check-item{id="owner" label="Owner assigned" required=true}',
+      '::check-item{id="notes" label="Notes attached"}',
+      ':::',
+      ':::decision{title="Alternate path" id="alternate-path"}',
+      '::decision-option{id="ship-alt" label="Ship now"}',
+      '::decision-option{id="hold-alt" label="Hold release"}',
+      ':::',
     ].join('\n\n'),
   );
   await Promise.all([

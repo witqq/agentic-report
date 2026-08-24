@@ -22,6 +22,104 @@ const formats = [
 ] as const;
 
 for (const format of formats) {
+  test(`${format.name} typed decisions and checklists gate canonical approval`, async ({
+    page,
+  }, testInfo) => {
+    await mkdir(captureRoot, { recursive: true });
+    await page.goto(format.url);
+    await page.getByRole('button', { name: 'Review', exact: true }).click();
+    const decisions = page.locator('[data-review-decision]');
+    const decision = decisions.first();
+    const owner = page.locator('[data-review-checklist][data-review-checklist-item="owner"]');
+    await expect(decisions).toHaveCount(2);
+    await expect(decision).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Release path decision state' })).toBeVisible();
+    await expect(
+      page.getByRole('textbox', { name: 'Release path decision rationale' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('combobox', { name: 'Owner assigned checklist status (required)' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('textbox', { name: 'Owner assigned checklist note' }),
+    ).toBeVisible();
+    await decision.focus();
+    await page.keyboard.press('Tab');
+    await expect(
+      page.getByRole('textbox', { name: 'Release path decision rationale' }),
+    ).toBeFocused();
+    const componentSection = page.locator('[data-review-components]');
+    const identity = `${format.name}-${testInfo.project.name}`;
+    await componentSection.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: path.join(captureRoot, `${identity}-typed-unresolved-light.png`),
+    });
+    await page.locator('[data-review-page-verdict]').selectOption('approve');
+    await page.getByRole('button', { name: 'Export review.json' }).click();
+    await expect(page.locator('[data-review-error]')).toContainText('required decisions');
+
+    await decision.selectOption('deferred');
+    await page.getByRole('button', { name: 'Export review.json' }).click();
+    await expect(page.locator('[data-review-error]')).toContainText('open or deferred');
+    await componentSection.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: path.join(captureRoot, `${identity}-typed-deferred-light.png`),
+    });
+
+    await decision.selectOption('ship');
+    await page
+      .locator('[data-review-decision-rationale]')
+      .first()
+      .fill('Evidence supports shipping.');
+    await expect(decisions.nth(1)).toHaveValue('');
+    await page.getByRole('button', { name: 'Export review.json' }).click();
+    await expect(page.locator('[data-review-error]')).toContainText('required checklist');
+
+    await owner.selectOption('checked');
+    const notes = page.locator('[data-review-checklist][data-review-checklist-item="notes"]');
+    await notes.selectOption('not-applicable');
+    await page.getByRole('button', { name: 'Export review.json' }).click();
+    await expect(page.locator('[data-review-error]')).toContainText(
+      'required when status is not-applicable',
+    );
+    await page
+      .locator('[data-review-checklist-note][data-review-checklist-item="notes"]')
+      .fill('Not used for this release.');
+    await componentSection.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: path.join(captureRoot, `${identity}-typed-complete-light.png`),
+    });
+    const bytes = await downloadedReview(page);
+    const artifact = JSON.parse(bytes.toString('utf8')) as {
+      readonly pageVerdict?: { readonly verdict?: string };
+      readonly responses?: readonly { readonly kind?: string; readonly optionId?: string }[];
+    };
+    expect(artifact.pageVerdict?.verdict).toBe('approve');
+    expect(artifact.responses?.find((response) => response.kind === 'decision')?.optionId).toBe(
+      'ship',
+    );
+    await page.reload();
+    await page.getByRole('button', { name: 'Review', exact: true }).click();
+    await page.locator('[data-review-import]').setInputFiles({
+      name: 'typed-review.json',
+      mimeType: 'application/json',
+      buffer: bytes,
+    });
+    await expect(page.locator('[data-review-decision]').first()).toHaveValue('ship');
+    await expect(page.locator('[data-review-decision-rationale]').first()).toHaveValue(
+      'Evidence supports shipping.',
+    );
+    await expect(
+      page.locator('[data-review-checklist][data-review-checklist-item="owner"]'),
+    ).toHaveValue('checked');
+    await expect(
+      page.locator('[data-review-checklist][data-review-checklist-item="notes"]'),
+    ).toHaveValue('not-applicable');
+    await expect(
+      page.locator('[data-review-checklist-note][data-review-checklist-item="notes"]'),
+    ).toHaveValue('Not used for this release.');
+  });
+
   test(`${format.name} Review Workspace enforces shared Unicode code-point limits`, async ({
     page,
   }, testInfo) => {
@@ -322,6 +420,10 @@ for (const format of formats) {
     await page.getByRole('button', { name: 'Close', exact: true }).click();
     await activate(targetControl(sharedParagraphs.nth(1)), testInfo.project.name);
     await page.locator('[data-review-target-verdict]').selectOption('approve');
+    await page.locator('[data-review-decision]').first().selectOption('ship');
+    await page
+      .locator('[data-review-checklist][data-review-checklist-item="owner"]')
+      .selectOption('checked');
     await page.locator('[data-review-page-verdict]').selectOption('approve');
     const approvedBytes = await downloadedReview(page);
     const approved = JSON.parse(approvedBytes.toString('utf8')) as {

@@ -247,6 +247,12 @@ approve/revise/reject response; the page verdict remains separate. Negative verd
 Page approval cannot export while a blocker or negative target verdict remains. Unit-2 import is an exact
 revision resume operation: stale or foreign reviews are rejected without changing current state.
 
+Typed decision/checklist requirements are collected from the authored AST beside review targets and carried
+in the same inert manifest. The registry owns component/option/item IDs and closed nesting. The shared domain
+validates response ownership, option/item inventories, duplicate responses, and approval gates for both
+browser and Node review consumption. Browser code renders native named controls and stores their state only
+as canonical decision/checklist responses; legacy Markdown-only decisions produce no requirements.
+
 `scrollProgress` defaults to false. In normal motion, an enabled page installs one passive document scroll
 listener and one resize listener, coalesces updates through one animation frame, and changes one decorative
 `scaleX()` transform. A section with `reveal=true` is observed once and uses only opacity plus a 12-pixel,

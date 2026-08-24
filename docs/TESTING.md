@@ -63,7 +63,9 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   keyboard selection and focus. Dedicated Review Workspace coverage builds both formats, exercises clean
   enter/exit, desktop/mobile dialog semantics, equal-text target isolation, feedback editing, independent
   block verdicts, page approval gating, byte-equal download, exact import and stale rejection, and produces
-  the required visually inspected state captures. A local SVG must complete with non-zero intrinsic width in
+  the required visually inspected state captures. Typed review cases also distinguish legacy decisions,
+  repeated equal labels, open/deferred state, required decision/checklist gates, explained not-applicable
+  notes, canonical reload/import, and dense mobile containment. A local SVG must complete with non-zero intrinsic width in
   both embedded and rewritten hashed forms. The current suite does not cover browser behavior for downloadable assets or local fonts,
   axe/screen-reader evidence or difficult-content reflow beyond the authored fixtures.
 - `pack:check` builds an npm tarball, checks its exact release allowlist, metadata, license, types, exports,

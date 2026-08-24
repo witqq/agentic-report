@@ -13,6 +13,7 @@ import {
 import { interpretDirectiveAttributes } from '../authoring/schemas.js';
 import type { SourceMapSegment } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
+import { MAX_REVIEW_RESPONSES } from '../review/contract.js';
 import { resolveSourceLocation } from '../source/source-map.js';
 import { decorativeIcon } from './icons.js';
 import { enhanceVisualization } from './visualizations.js';
@@ -149,8 +150,96 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
     }
     validateVisualizationData(tree, attributesByNode, options);
     validateActionGroups(tree, options);
+    validateTypedReviewComponents(tree, attributesByNode, options);
     validateUnmarkedGlossaryTerms(tree, [...glossaryByKey.values()], options);
   };
+
+function validateTypedReviewComponents(
+  tree: MdastRoot,
+  attributesByNode: WeakMap<object, Readonly<Record<string, string | number | boolean>>>,
+  options: DirectivePluginOptions,
+): void {
+  visit(tree, (candidate) => {
+    if (
+      !isDirectiveNode(candidate) ||
+      (candidate.name !== 'decision' && candidate.name !== 'checklist')
+    )
+      return;
+    const childName = candidate.name === 'decision' ? 'decision-option' : 'check-item';
+    const children = (candidate.children ?? []).filter(
+      (child): child is DirectiveNode => isDirectiveNode(child) && child.name === childName,
+    );
+    if (candidate.name === 'decision' && children.length === 0) return;
+    if ((candidate.children ?? []).length !== children.length) {
+      throw attachDirectiveSource(
+        directiveError(
+          candidate,
+          'INVALID_DIRECTIVE_PLACEMENT',
+          `${candidate.name} cannot mix Markdown content with ${childName} children.`,
+          candidate.name === 'decision'
+            ? 'Use Markdown-only legacy decision content or direct decision-option children, not both.'
+            : 'Use only direct check-item children inside checklist.',
+        ),
+        candidate,
+        options,
+      );
+    }
+    if (children.length > MAX_REVIEW_RESPONSES) {
+      throw attachDirectiveSource(
+        directiveError(
+          candidate,
+          'INVALID_DIRECTIVE_PLACEMENT',
+          `${candidate.name} exceeds the ${MAX_REVIEW_RESPONSES}-child review limit.`,
+          `Split this ${candidate.name} into smaller components.`,
+        ),
+        candidate,
+        options,
+      );
+    }
+    const values = attributesByNode.get(candidate) ?? {};
+    if (candidate.name === 'decision' && typeof values.id !== 'string') {
+      throw attachDirectiveSource(
+        directiveError(
+          candidate,
+          'INVALID_DIRECTIVE_ATTRIBUTE',
+          'A typed decision requires a stable id.',
+          'Add id="..." to the decision or remove its decision-option children.',
+        ),
+        candidate,
+        options,
+      );
+    }
+    if (children.length === 0) {
+      throw attachDirectiveSource(
+        directiveError(
+          candidate,
+          'INVALID_DIRECTIVE_PLACEMENT',
+          `${candidate.name} must contain at least one ${childName}.`,
+          `Add a ${childName} text directive directly inside ${candidate.name}.`,
+        ),
+        candidate,
+        options,
+      );
+    }
+    const ids = new Set<string>();
+    for (const child of children) {
+      const id = String(attributesByNode.get(child)?.id ?? '');
+      if (ids.has(id)) {
+        throw attachDirectiveSource(
+          directiveError(
+            child,
+            'INVALID_DIRECTIVE_ATTRIBUTE',
+            `${candidate.name} child id is duplicated: ${id}.`,
+            `Use a unique id inside this ${candidate.name}.`,
+          ),
+          child,
+          options,
+        );
+      }
+      ids.add(id);
+    }
+  });
+}
 
 function normalizeSectionAttributes(
   node: DirectiveNode,
@@ -1461,6 +1550,10 @@ function allowedDirectiveChildren(
       return ['tab'];
     case 'action-directives':
       return ['action'];
+    case 'decision-option-directives':
+      return ['decision-option'];
+    case 'check-item-directives':
+      return ['check-item'];
     case 'series-directives':
       return ['series'];
     case 'point-directives':

@@ -31,3 +31,13 @@ The reviewer should record an overall verdict only after resolving every blocker
 
 The exported review is local, deterministic, and descriptive; it is not an authenticated signature.
 :::
+
+:::decision{title="Release path" id="release-path" required=true}
+::decision-option{id="ship" label="Ship this candidate"}
+::decision-option{id="hold" label="Hold for revision"}
+:::
+
+:::checklist{title="Release gates" id="release-gates"}
+::check-item{id="owner" label="Accountable owner assigned" required=true}
+::check-item{id="notes" label="Reviewer notes attached"}
+:::

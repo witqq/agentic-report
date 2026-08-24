@@ -4,6 +4,7 @@ import type { InspectReviewOptions, InspectReviewResult } from '../contracts.js'
 import { AgenticReportError, sanitizeTransportValue } from '../diagnostics.js';
 import { bindReviewArtifact } from '../review/binding.js';
 import {
+  assertReviewRequirements,
   parseReviewArtifact,
   ReviewContractError,
   REVIEW_CONTRACT_VERSION,
@@ -21,6 +22,21 @@ export async function inspectReview(options: InspectReviewOptions): Promise<Insp
     'REVIEW_OUTSIDE_SOURCE',
   );
   const review = await readReviewArtifact(reviewPath);
+  if (review.report.revision === prepared.reviewManifest.reportRevision) {
+    try {
+      assertReviewRequirements(
+        review,
+        prepared.reviewManifest.requirements ?? { decisions: [], checklists: [] },
+      );
+    } catch (error) {
+      throw new AgenticReportError({
+        level: 'error',
+        code: 'REVIEW_REQUIREMENTS_INVALID',
+        message: error instanceof Error ? error.message : 'Review requirements are invalid.',
+        remediation: 'Resolve typed decisions and checklists against the current report.',
+      });
+    }
+  }
   const bound = bindReviewArtifact(review, prepared.reviewManifest);
   return sanitizeTransportValue({
     contractVersion: REVIEW_CONTRACT_VERSION,

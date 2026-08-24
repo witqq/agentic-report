@@ -36,6 +36,10 @@ npx --yes agentic-report review review.json ./my-page --json
 Review import/export is local and exact-revision bound; it is not an account, signature, or collaboration
 service.
 
+Typed `decision-option` and `check-item` directives use stable IDs. Required open/deferred decisions and
+unchecked required items block approval; not-applicable requires a bounded note. Discover the exact grammar
+from `describe --json` or the generated source schema rather than inventing controls.
+
 Use the pinned form for repeatable agent work. Use the unpinned form only when intentionally accepting the
 registry's current `latest` release.
 

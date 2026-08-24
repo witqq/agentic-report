@@ -8,6 +8,11 @@ metadata:
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run.
 ---
 
+When a page needs bounded human choices, use registry-owned typed `decision`/`decision-option` and
+`checklist`/`check-item` syntax with stable IDs. Keep legacy prose-only decisions static. Required
+open/deferred decisions and unchecked required checklist items block approval; not-applicable requires a
+bounded note. Review state is local deterministic `review.json`; never imply an account or signature.
+
 # agentic-report
 
 Create a local declarative source, verify it, and hand the user a finished interactive HTML artifact.

@@ -102,6 +102,10 @@ missing, and ambiguous targets remain explicit; the command never rewrites sourc
 
 In the generated page, `Review` opens the local Review Workspace. Readers can comment on blocks, set
 independent block and overall `approve`/`revise`/`reject` verdicts, and download deterministic `review.json`.
+Typed decisions use stable `decision-option` children and support selected, open, or deferred responses;
+typed checklists expose required/optional checked, unchecked, and explained not-applicable states. Required
+unresolved responses block page approval through the same shared review contract. Existing Markdown-only
+`decision` blocks remain static.
 Desktop uses a non-modal rail; mobile uses a modal sheet. State leaves the page only through explicit local
 import/export—there is no account, backend, network sync, or authenticated signature.
 

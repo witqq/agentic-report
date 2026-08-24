@@ -262,6 +262,10 @@ export function renderDocument(options: DocumentRenderOptions): string {
                   <p data-review-empty>No responses yet.</p>
                   <ol className="review-response-list" data-review-response-list />
                 </section>
+                <section className="review-form-section" data-review-components hidden>
+                  <h3>Decisions and checklists</h3>
+                  <div data-review-component-list />
+                </section>
               </div>
               <footer className="review-panel-footer">
                 <label className="review-file-action">

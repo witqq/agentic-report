@@ -76,6 +76,7 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
     source.sourceRoot,
     [...source.sourceDigests, ...markdown.resourceDigests],
     markdown.reviewTargets,
+    markdown.reviewRequirements,
   );
   if (collisionTargetPath !== undefined) {
     await assertOutputDoesNotCollide(collisionTargetPath, [

@@ -16,12 +16,17 @@ import {
   REVIEW_CONTRACT_VERSION,
   type ReviewTargetManifest,
   type ReviewTargetReference,
+  type ReviewRequirements,
 } from './contract.js';
 
 interface ReviewTargetPluginOptions {
   readonly sourceRoot: string;
   readonly sourceMap: readonly SourceMapSegment[];
   readonly targets: ReviewTargetReference[];
+  readonly requirements?: {
+    decisions: ReviewRequirements['decisions'][number][];
+    checklists: ReviewRequirements['checklists'][number][];
+  };
 }
 
 type PositionedNode = {
@@ -104,6 +109,7 @@ export const remarkReviewTargets: Plugin<[ReviewTargetPluginOptions], Root> =
         },
       };
       options.targets.push(target);
+      collectRequirement(node, target.id, options.requirements);
       if (options.targets.length > MAX_REVIEW_TARGETS) {
         throw reviewTargetError(
           'REVIEW_TARGET_LIMIT_EXCEEDED',
@@ -187,6 +193,7 @@ export async function createReviewTargetManifest(
   sourceRoot: string,
   sourceDigests: readonly SourceDigest[],
   targets: readonly ReviewTargetReference[],
+  requirements?: ReviewRequirements,
 ): Promise<ReviewTargetManifest> {
   const canonicalTargets = [...targets].sort((left, right) => compare(left.id, right.id));
   const reportRevision = createReportRevision(sourceRoot, sourceDigests, canonicalTargets);
@@ -194,6 +201,7 @@ export async function createReviewTargetManifest(
     contractVersion: REVIEW_CONTRACT_VERSION,
     reportRevision,
     targets: canonicalTargets,
+    ...(requirements === undefined ? {} : { requirements }),
   };
   const serializedBytes = Buffer.byteLength(JSON.stringify(manifest));
   if (serializedBytes > MAX_REVIEW_MANIFEST_BYTES) {
@@ -207,6 +215,53 @@ export async function createReviewTargetManifest(
     });
   }
   return manifest;
+}
+
+function collectRequirement(
+  node: PositionedNode,
+  targetId: string,
+  requirements: ReviewTargetPluginOptions['requirements'],
+): void {
+  if (requirements === undefined || node.type !== 'containerDirective') return;
+  const children =
+    (node as PositionedNode & { readonly children?: readonly PositionedNode[] }).children ?? [];
+  if (node.name === 'decision') {
+    const options = children
+      .filter((child) => child.name === 'decision-option')
+      .map((child) => child.attributes?.id)
+      .filter((id): id is string => typeof id === 'string');
+    if (options.length > 0)
+      requirements.decisions.push({
+        targetId,
+        required: node.attributes?.required === 'true',
+        optionIds: options,
+        ...(typeof node.attributes?.title === 'string' ? { title: node.attributes.title } : {}),
+        optionLabels: Object.fromEntries(
+          children
+            .filter(
+              (child) =>
+                child.name === 'decision-option' && typeof child.attributes?.id === 'string',
+            )
+            .map((child) => [
+              child.attributes?.id ?? '',
+              child.attributes?.label ?? child.attributes?.id ?? '',
+            ]),
+        ),
+      });
+  }
+  if (node.name === 'checklist') {
+    requirements.checklists.push({
+      targetId,
+      ...(typeof node.attributes?.title === 'string' ? { title: node.attributes.title } : {}),
+      items: children
+        .filter((child) => child.name === 'check-item')
+        .map((child) => ({
+          itemId: child.attributes?.id ?? '',
+          required: child.attributes?.required === 'true',
+          ...(typeof child.attributes?.label === 'string' ? { label: child.attributes.label } : {}),
+        })),
+    });
+  }
 }
 
 export function createReportRevision(

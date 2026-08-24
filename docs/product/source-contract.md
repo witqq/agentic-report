@@ -179,7 +179,14 @@ The directive vocabulary is:
 - `actions` and directly nested leaf `action`: responsive ordinary link group; every action requires a
   visible label and safe `href` and may select `primary`, `secondary`, or `quiet` emphasis;
 - `callout`: emphasized finding with optional `title` and lowercase `kind`;
-- `decision`: decision or branch container with optional `title`;
+- `decision`: legacy static Markdown decision with optional `title`, or typed decision with stable `id`,
+  optional `required`, and directly nested leaf `decision-option` values with stable `id` and `label`;
+- `checklist`: typed checklist with required `title` and stable `id`, containing directly nested leaf
+  `check-item` values with stable `id`, visible `label`, and optional `required` gate;
+
+Typed component, option, and item inventories are bounded to 500 at source and manifest boundaries. Mixed
+Markdown plus typed children is invalid; use a Markdown-only legacy decision or a closed typed component.
+
 - `cards` and nested `card`: responsive content grid;
 - `steps`: styled process container whose authored Markdown supplies the ordered or explanatory content;
 - `glossary`: reusable definition with required stable `key` and canonical `term` text;

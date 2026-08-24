@@ -37,6 +37,7 @@ export interface ReviewTargetManifest {
   readonly contractVersion: typeof REVIEW_CONTRACT_VERSION;
   readonly reportRevision: string;
   readonly targets: readonly ReviewTargetReference[];
+  readonly requirements?: ReviewRequirements;
 }
 
 export interface ReviewVerdictValue {
@@ -98,6 +99,100 @@ export interface ReviewTextConstraint {
   readonly truncated: boolean;
 }
 
+export interface ReviewDecisionRequirement {
+  readonly targetId: string;
+  readonly required: boolean;
+  readonly optionIds: readonly string[];
+  readonly title?: string;
+  readonly optionLabels?: Readonly<Record<string, string>>;
+}
+
+export interface ReviewChecklistRequirement {
+  readonly targetId: string;
+  readonly title?: string;
+  readonly items: readonly {
+    readonly itemId: string;
+    readonly required: boolean;
+    readonly label?: string;
+  }[];
+}
+
+export interface ReviewRequirements {
+  readonly decisions: readonly ReviewDecisionRequirement[];
+  readonly checklists: readonly ReviewChecklistRequirement[];
+}
+
+export function assertReviewRequirements(
+  artifact: ReviewArtifact,
+  requirements: ReviewRequirements,
+): void {
+  for (const response of artifact.responses) {
+    if (
+      response.kind === 'decision' &&
+      !requirements.decisions.some((decision) => decision.targetId === response.target.id)
+    )
+      throw new Error('Decision response does not belong to a current decision.');
+    if (
+      response.kind === 'checklist' &&
+      !requirements.checklists.some((checklist) => checklist.targetId === response.target.id)
+    )
+      throw new Error('Checklist response does not belong to a current checklist.');
+  }
+  for (const decision of requirements.decisions) {
+    const responses = artifact.responses.filter(
+      (candidate): candidate is ReviewDecisionResponse =>
+        candidate.kind === 'decision' && candidate.target.id === decision.targetId,
+    );
+    if (responses.length > 1)
+      throw new Error('Review contains more than one response for a decision.');
+    const response = responses[0];
+    if (
+      response !== undefined &&
+      !['open', 'deferred', ...decision.optionIds].includes(response.optionId)
+    ) {
+      throw new Error('Review contains an unknown decision option.');
+    }
+    if (
+      artifact.pageVerdict?.verdict === 'approve' &&
+      decision.required &&
+      response === undefined
+    ) {
+      throw new Error('Resolve required decisions before approving the report.');
+    }
+    if (
+      artifact.pageVerdict?.verdict === 'approve' &&
+      decision.required &&
+      (response?.optionId === 'open' || response?.optionId === 'deferred')
+    ) {
+      throw new Error('Resolve open or deferred required decisions before approving the report.');
+    }
+  }
+  for (const checklist of requirements.checklists) {
+    const responses = artifact.responses.filter(
+      (candidate): candidate is ReviewChecklistResponse =>
+        candidate.kind === 'checklist' && candidate.target.id === checklist.targetId,
+    );
+    if (responses.length > 1)
+      throw new Error('Review contains more than one response for a checklist.');
+    const response = responses[0];
+    if (
+      response?.items.some(
+        (item) => !checklist.items.some((current) => current.itemId === item.itemId),
+      )
+    ) {
+      throw new Error('Review contains an unknown checklist item.');
+    }
+    if (artifact.pageVerdict?.verdict !== 'approve') continue;
+    const unresolved = checklist.items.some((item) => {
+      if (!item.required) return false;
+      const state = response?.items.find((candidate) => candidate.itemId === item.itemId);
+      return state === undefined || state.status === 'unchecked';
+    });
+    if (unresolved)
+      throw new Error('Complete required checklist items before approving the report.');
+  }
+}
+
 export function constrainReviewText(value: string, maximum: number): ReviewTextConstraint {
   const normalized = value.normalize('NFC');
   const leadingWhitespace = /^\s*/u.exec(normalized)?.[0] ?? '';
@@ -133,7 +228,7 @@ export function parseReviewTargetManifest(input: unknown): ReviewTargetManifest 
   const issues: ReviewContractIssue[] = [];
   const record = requireRecord(input, '$', issues);
   if (record === undefined) throw new ReviewContractError(issues);
-  exactKeys(record, ['contractVersion', 'reportRevision', 'targets'], '$', issues);
+  exactKeys(record, ['contractVersion', 'reportRevision', 'targets', 'requirements'], '$', issues);
   if (record.contractVersion !== REVIEW_CONTRACT_VERSION) {
     issue(issues, '$.contractVersion', 'must equal 1');
   }
@@ -161,8 +256,127 @@ export function parseReviewTargetManifest(input: unknown): ReviewTargetManifest 
     'stable key',
     issues,
   );
+  const requirements = parseReviewRequirements(record.requirements, '$.requirements', issues);
   if (reportRevision === undefined || issues.length > 0) throw new ReviewContractError(issues);
-  return { contractVersion: REVIEW_CONTRACT_VERSION, reportRevision, targets };
+  return {
+    contractVersion: REVIEW_CONTRACT_VERSION,
+    reportRevision,
+    targets,
+    ...(requirements === undefined ? {} : { requirements }),
+  };
+}
+
+function parseReviewRequirements(
+  input: unknown,
+  path: string,
+  issues: ReviewContractIssue[],
+): ReviewRequirements | undefined {
+  if (input === undefined) return undefined;
+  const record = requireRecord(input, path, issues);
+  if (record === undefined) return undefined;
+  exactKeys(record, ['decisions', 'checklists'], path, issues);
+  const decisions: ReviewDecisionRequirement[] = [];
+  const checklists: ReviewChecklistRequirement[] = [];
+  if (!Array.isArray(record.decisions)) issue(issues, `${path}.decisions`, 'must be an array');
+  else if (record.decisions.length > MAX_REVIEW_RESPONSES)
+    issue(issues, `${path}.decisions`, `must contain at most ${MAX_REVIEW_RESPONSES} decisions`);
+  else
+    for (const [index, value] of record.decisions.entries()) {
+      const item = requireRecord(value, `${path}.decisions[${index}]`, issues);
+      if (item === undefined) continue;
+      exactKeys(
+        item,
+        ['targetId', 'required', 'optionIds', 'title', 'optionLabels'],
+        `${path}.decisions[${index}]`,
+        issues,
+      );
+      const targetId = identifier(item.targetId, `${path}.decisions[${index}].targetId`, issues);
+      if (typeof item.required !== 'boolean')
+        issue(issues, `${path}.decisions[${index}].required`, 'must be boolean');
+      if (!Array.isArray(item.optionIds))
+        issue(issues, `${path}.decisions[${index}].optionIds`, 'must be an array');
+      else if (item.optionIds.length > MAX_REVIEW_RESPONSES)
+        issue(
+          issues,
+          `${path}.decisions[${index}].optionIds`,
+          `must contain at most ${MAX_REVIEW_RESPONSES} options`,
+        );
+      else {
+        const optionIds = item.optionIds
+          .map((option, optionIndex) =>
+            identifier(option, `${path}.decisions[${index}].optionIds[${optionIndex}]`, issues),
+          )
+          .filter((option): option is string => option !== undefined);
+        if (targetId !== undefined && typeof item.required === 'boolean')
+          decisions.push({
+            targetId,
+            required: item.required,
+            optionIds,
+            ...(typeof item.title === 'string' ? { title: item.title } : {}),
+            ...(isPlainRecord(item.optionLabels)
+              ? { optionLabels: item.optionLabels as Readonly<Record<string, string>> }
+              : {}),
+          });
+      }
+    }
+  if (!Array.isArray(record.checklists)) issue(issues, `${path}.checklists`, 'must be an array');
+  else if (record.checklists.length > MAX_REVIEW_RESPONSES)
+    issue(issues, `${path}.checklists`, `must contain at most ${MAX_REVIEW_RESPONSES} checklists`);
+  else
+    for (const [index, value] of record.checklists.entries()) {
+      const item = requireRecord(value, `${path}.checklists[${index}]`, issues);
+      if (item === undefined) continue;
+      exactKeys(item, ['targetId', 'items', 'title'], `${path}.checklists[${index}]`, issues);
+      const targetId = identifier(item.targetId, `${path}.checklists[${index}].targetId`, issues);
+      const items: Array<{ itemId: string; required: boolean }> = [];
+      if (!Array.isArray(item.items))
+        issue(issues, `${path}.checklists[${index}].items`, 'must be an array');
+      else if (item.items.length > MAX_REVIEW_RESPONSES)
+        issue(
+          issues,
+          `${path}.checklists[${index}].items`,
+          `must contain at most ${MAX_REVIEW_RESPONSES} items`,
+        );
+      else
+        for (const [itemIndex, value] of item.items.entries()) {
+          const child = requireRecord(
+            value,
+            `${path}.checklists[${index}].items[${itemIndex}]`,
+            issues,
+          );
+          if (child === undefined) continue;
+          exactKeys(
+            child,
+            ['itemId', 'required', 'label'],
+            `${path}.checklists[${index}].items[${itemIndex}]`,
+            issues,
+          );
+          const itemId = identifier(
+            child.itemId,
+            `${path}.checklists[${index}].items[${itemIndex}].itemId`,
+            issues,
+          );
+          if (typeof child.required !== 'boolean')
+            issue(
+              issues,
+              `${path}.checklists[${index}].items[${itemIndex}].required`,
+              'must be boolean',
+            );
+          if (itemId !== undefined && typeof child.required === 'boolean')
+            items.push({
+              itemId,
+              required: child.required,
+              ...(typeof child.label === 'string' ? { label: child.label } : {}),
+            });
+        }
+      if (targetId !== undefined)
+        checklists.push({
+          targetId,
+          items,
+          ...(typeof item.title === 'string' ? { title: item.title } : {}),
+        });
+    }
+  return { decisions, checklists };
 }
 
 export function serializeReviewArtifact(input: ReviewArtifact): string {
@@ -465,7 +679,17 @@ function exactKeys(
   }
   for (const key of allowed) {
     if (
-      !['reviewer', 'pageVerdict', 'stableKey', 'rationale', 'note'].includes(key) &&
+      ![
+        'reviewer',
+        'pageVerdict',
+        'stableKey',
+        'rationale',
+        'note',
+        'requirements',
+        'title',
+        'optionLabels',
+        'label',
+      ].includes(key) &&
       !Object.hasOwn(value, key)
     ) {
       issue(issues, `${path}.${key}`, 'is required');

@@ -147,7 +147,7 @@
       "handoffs": ["semantic-document"]
     },
     "decision": {
-      "description": "Decision or product-development branch containing Markdown.",
+      "description": "Static Markdown decision or typed decision containing decision-option directives.",
       "forms": ["container"],
       "attributes": {
         "title": {
@@ -157,14 +157,122 @@
           "maxLength": 200,
           "required": false,
           "description": "Visible title."
+        },
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": false,
+          "description": "Stable identity required when decision options are authored."
+        },
+        "required": {
+          "kind": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Requires a selected, open, or deferred response."
         }
       },
-      "children": "markdown",
+      "children": "decision-option-directives",
       "placement": {},
       "resource": "none",
       "runtime": "none",
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
-      "handoffs": ["semantic-document"]
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "decision-option": {
+      "description": "One labelled option inside a typed decision.",
+      "forms": ["leaf"],
+      "attributes": {
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Stable option identity."
+        },
+        "label": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": true,
+          "description": "Visible option label."
+        }
+      },
+      "children": "label-or-generated-label",
+      "placement": { "requiredParent": "decision" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "checklist": {
+      "description": "Typed review checklist containing stable check-item directives.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": true,
+          "description": "Visible title."
+        },
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Stable checklist identity."
+        }
+      },
+      "children": "check-item-directives",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "check-item": {
+      "description": "One labelled required or optional checklist item.",
+      "forms": ["leaf"],
+      "attributes": {
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Stable checklist item identity."
+        },
+        "label": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": true,
+          "description": "Visible checklist item label."
+        },
+        "required": {
+          "kind": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Blocks approval while unchecked."
+        }
+      },
+      "children": "label-or-generated-label",
+      "placement": { "requiredParent": "checklist" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
     },
     "cards": {
       "description": "Responsive grid, normally containing card directives.",

@@ -460,7 +460,7 @@
     },
     {
       "name": "decision",
-      "description": "Decision or product-development branch containing Markdown.",
+      "description": "Static Markdown decision or typed decision containing decision-option directives.",
       "forms": ["container"],
       "attributes": [
         {
@@ -475,18 +475,182 @@
           },
           "renderProperty": "dataDirectiveTitle",
           "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "id",
+          "description": "Stable identity required when decision options are authored.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "renderProperty": "dataId",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "required",
+          "description": "Requires a selected, open, or deferred response.",
+          "required": false,
+          "default": false,
+          "constraint": { "kind": "boolean" },
+          "renderProperty": "dataRequired",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
         }
       ],
-      "children": "markdown",
+      "children": "decision-option-directives",
       "placement": {},
       "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
       "sanitizer": {
         "tagName": "section",
         "className": "semantic-decision",
-        "properties": ["dataSemantic", "dataDirectiveTitle"]
+        "properties": ["dataSemantic", "dataDirectiveTitle", "dataId", "dataRequired"]
       },
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
-      "handoffs": ["semantic-document"]
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    {
+      "name": "decision-option",
+      "description": "One labelled option inside a typed decision.",
+      "forms": ["leaf"],
+      "attributes": [
+        {
+          "name": "id",
+          "description": "Stable option identity.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "renderProperty": "dataId",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "label",
+          "description": "Visible option label.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataLabel",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "label-or-generated-label",
+      "placement": { "requiredParent": "decision" },
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "span",
+        "className": "semantic-decision-option",
+        "properties": ["dataSemantic", "dataId", "dataLabel"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    {
+      "name": "checklist",
+      "description": "Typed review checklist containing stable check-item directives.",
+      "forms": ["container"],
+      "attributes": [
+        {
+          "name": "title",
+          "description": "Visible title.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "renderProperty": "dataDirectiveTitle",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "id",
+          "description": "Stable checklist identity.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "renderProperty": "dataId",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "check-item-directives",
+      "placement": {},
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "section",
+        "className": "semantic-checklist",
+        "properties": ["dataSemantic", "dataDirectiveTitle", "dataId"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    {
+      "name": "check-item",
+      "description": "One labelled required or optional checklist item.",
+      "forms": ["leaf"],
+      "attributes": [
+        {
+          "name": "id",
+          "description": "Stable checklist item identity.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "renderProperty": "dataId",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "label",
+          "description": "Visible checklist item label.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataLabel",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "required",
+          "description": "Blocks approval while unchecked.",
+          "required": false,
+          "default": false,
+          "constraint": { "kind": "boolean" },
+          "renderProperty": "dataRequired",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "label-or-generated-label",
+      "placement": { "requiredParent": "checklist" },
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "span",
+        "className": "semantic-check-item",
+        "properties": ["dataSemantic", "dataId", "dataLabel", "dataRequired"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
     },
     {
       "name": "cards",

@@ -13,6 +13,7 @@ import {
   type ReviewTargetReference,
 } from '../../src/index.js';
 import { bindReviewArtifact } from '../../src/review/binding.js';
+import { assertReviewRequirements } from '../../src/review/contract.js';
 import { createReviewTargetManifest } from '../../src/review/targets.js';
 
 describe('versioned review protocol', () => {
@@ -128,6 +129,71 @@ describe('versioned review protocol', () => {
     ).toContain('"verdict":"approve"');
   });
 
+  it('gates required decisions and checklist items through the shared response model', () => {
+    const decision = fixtureTarget('rt-decision', `sha256:${'a'.repeat(64)}`);
+    const checklist = fixtureTarget('rt-checklist', `sha256:${'b'.repeat(64)}`);
+    const requirements = {
+      decisions: [{ targetId: decision.id, required: true, optionIds: ['ship', 'hold'] }],
+      checklists: [{ targetId: checklist.id, items: [{ itemId: 'owner', required: true }] }],
+    } as const;
+    const artifact = (responses: ReviewArtifact['responses']): ReviewArtifact => ({
+      contractVersion: 1,
+      report: { revision: `sha256:${'c'.repeat(64)}` },
+      pageVerdict: { verdict: 'approve' },
+      responses,
+    });
+    expect(() => assertReviewRequirements(artifact([]), requirements)).toThrow(
+      /required decisions/u,
+    );
+    expect(() =>
+      assertReviewRequirements(
+        artifact([{ id: 'decision-a', kind: 'decision', target: decision, optionId: 'unknown' }]),
+        requirements,
+      ),
+    ).toThrow(/unknown decision option/u);
+    expect(() =>
+      assertReviewRequirements(
+        artifact([{ id: 'decision-a', kind: 'decision', target: checklist, optionId: 'ship' }]),
+        requirements,
+      ),
+    ).toThrow(/does not belong/u);
+    expect(() =>
+      assertReviewRequirements(
+        artifact([
+          { id: 'decision-a', kind: 'decision', target: decision, optionId: 'ship' },
+          { id: 'decision-b', kind: 'decision', target: decision, optionId: 'hold' },
+        ]),
+        requirements,
+      ),
+    ).toThrow(/more than one response/u);
+    expect(() =>
+      assertReviewRequirements(
+        artifact([{ id: 'decision-a', kind: 'decision', target: decision, optionId: 'deferred' }]),
+        requirements,
+      ),
+    ).toThrow(/open or deferred/u);
+    expect(() =>
+      assertReviewRequirements(
+        artifact([{ id: 'decision-a', kind: 'decision', target: decision, optionId: 'ship' }]),
+        requirements,
+      ),
+    ).toThrow(/checklist/u);
+    expect(() =>
+      assertReviewRequirements(
+        artifact([
+          { id: 'decision-a', kind: 'decision', target: decision, optionId: 'ship' },
+          {
+            id: 'checklist-a',
+            kind: 'checklist',
+            target: checklist,
+            items: [{ itemId: 'owner', status: 'checked' }],
+          },
+        ]),
+        requirements,
+      ),
+    ).not.toThrow();
+  });
+
   it('bounds diagnostics for a hostile wide review object', () => {
     const hostile = Object.fromEntries(
       Array.from({ length: 1_000 }, (_, index) => [`unexpected-${index}`, index]),
@@ -226,8 +292,8 @@ describe('versioned review protocol', () => {
       readFile(path.resolve('src/browser/review-workspace.ts'), 'utf8'),
     ]);
 
-    expect(runtime.byteLength).toBeLessThanOrEqual(34_000);
-    expect(styles.byteLength).toBeLessThanOrEqual(43_000);
+    expect(runtime.byteLength).toBeLessThanOrEqual(42_000);
+    expect(styles.byteLength).toBeLessThanOrEqual(44_000);
     expect(source).not.toMatch(
       /\.innerHTML|localStorage|sessionStorage|\bfetch\s*\(|XMLHttpRequest|WebSocket/u,
     );

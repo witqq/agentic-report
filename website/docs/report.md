@@ -58,6 +58,10 @@ Generated pages include a local Review Workspace. A reader can attach comments o
 set independent block and overall verdicts, and download deterministic `review.json`. Desktop uses a
 non-modal rail; mobile uses a modal sheet. No feedback is uploaded or stored in an account.
 
+Authors may add stable typed decision options and required/optional checklist items. Reviewers can select,
+leave open, defer, check, or explain not-applicable state. Unresolved required controls block approval, and
+the same canonical JSON resumes locally. Markdown-only decisions remain static.
+
 An agent resolves the downloaded review against the current source with:
 
 ```sh

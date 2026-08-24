@@ -4,11 +4,14 @@ import {
   MAX_REVIEW_TEXT_LENGTH,
   REVIEW_CONTRACT_VERSION,
   ReviewContractError,
+  assertReviewRequirements,
   constrainReviewText,
   parseReviewArtifact,
   parseReviewTargetManifest,
   serializeReviewArtifact,
   type ReviewArtifact,
+  type ReviewChecklistResponse,
+  type ReviewDecisionResponse,
   type ReviewFeedbackKind,
   type ReviewFeedbackResponse,
   type ReviewResponse,
@@ -47,6 +50,8 @@ interface ReviewElements {
   readonly empty: HTMLElement;
   readonly importInput: HTMLInputElement;
   readonly exportButton: HTMLButtonElement;
+  readonly componentSection: HTMLElement;
+  readonly componentList: HTMLElement;
 }
 
 interface TargetDom {
@@ -94,6 +99,7 @@ function createReviewController(
   let editingResponseId: string | undefined;
   let panelOpener: HTMLButtonElement = elements.toggle;
   let limitErrorElement: HTMLInputElement | HTMLTextAreaElement | undefined;
+  const requirements = manifest.requirements ?? { decisions: [], checklists: [] };
 
   installCodePointLimit(elements.reviewer, MAX_REVIEW_NAME_LENGTH, 'Reviewer name');
   for (const textarea of [
@@ -180,6 +186,8 @@ function createReviewController(
   });
   elements.importInput.addEventListener('change', () => void importReview());
   elements.exportButton.addEventListener('click', () => exportReview());
+  elements.componentList.addEventListener('change', (event) => updateComponent(event));
+  elements.componentList.addEventListener('input', (event) => updateComponent(event));
 
   render();
 
@@ -332,6 +340,7 @@ function createReviewController(
         return;
       }
       validateImportedTargets(imported, manifest);
+      assertReviewRequirements(imported, requirements);
       artifact = imported;
       selectedTargetId = undefined;
       clearFeedbackEditor();
@@ -345,6 +354,7 @@ function createReviewController(
   function exportReview(): void {
     try {
       const serialized = serializeReviewArtifact(artifact);
+      assertReviewRequirements(artifact, requirements);
       const url = URL.createObjectURL(
         new Blob([serialized], { type: 'application/json;charset=utf-8' }),
       );
@@ -369,6 +379,7 @@ function createReviewController(
     elements.pageRationaleField.hidden = !requiresRationale(artifact.pageVerdict?.verdict);
     renderTargetEditor();
     renderResponses();
+    renderComponents();
     renderSummary();
     syncTargetControls();
   }
@@ -429,9 +440,153 @@ function createReviewController(
         response.kind === 'blocker' ||
         (response.kind === 'verdict' && response.verdict !== 'approve'),
     ).length;
-    elements.summary.textContent = `${feedback} feedback · ${verdicts} block verdicts · ${blockers} blocking`;
+    const decisions = artifact.responses.filter((response) => response.kind === 'decision').length;
+    const checklists = artifact.responses.filter(
+      (response) => response.kind === 'checklist',
+    ).length;
+    elements.summary.textContent = `${feedback} feedback · ${verdicts} block verdicts · ${blockers} blocking · ${decisions} decisions · ${checklists} checklists`;
     elements.toggleCount.hidden = artifact.responses.length === 0;
     elements.toggleCount.textContent = String(artifact.responses.length);
+  }
+
+  function renderComponents(): void {
+    elements.componentSection.hidden =
+      requirements.decisions.length === 0 && requirements.checklists.length === 0;
+    elements.componentList.replaceChildren();
+    for (const decision of requirements.decisions) {
+      const response = artifact.responses.find(
+        (candidate): candidate is ReviewDecisionResponse =>
+          candidate.kind === 'decision' && candidate.target.id === decision.targetId,
+      );
+      const field = document.createElement('fieldset');
+      field.className = 'review-component';
+      const legend = document.createElement('legend');
+      legend.textContent = `${decision.title ?? 'Decision'}${decision.required ? ' · required' : ' · optional'}`;
+      field.append(legend);
+      const select = document.createElement('select');
+      select.dataset.reviewDecision = decision.targetId;
+      const decisionTitle = decision.title ?? 'Decision';
+      select.setAttribute('aria-label', `${decisionTitle} decision state`);
+      appendOption(select, '', 'Unanswered');
+      appendOption(select, 'open', 'Open');
+      appendOption(select, 'deferred', 'Deferred');
+      for (const optionId of decision.optionIds) {
+        appendOption(select, optionId, decision.optionLabels?.[optionId] ?? optionId);
+      }
+      select.value = response?.optionId ?? '';
+      field.append(select);
+      const rationale = document.createElement('textarea');
+      rationale.dataset.reviewDecisionRationale = decision.targetId;
+      rationale.placeholder = 'Optional rationale';
+      rationale.setAttribute('aria-label', `${decisionTitle} decision rationale`);
+      rationale.value = response?.rationale ?? '';
+      installCodePointLimit(rationale, MAX_REVIEW_TEXT_LENGTH, 'Decision rationale');
+      field.append(rationale);
+      elements.componentList.append(field);
+    }
+    for (const checklist of requirements.checklists) {
+      const response = artifact.responses.find(
+        (candidate): candidate is ReviewChecklistResponse =>
+          candidate.kind === 'checklist' && candidate.target.id === checklist.targetId,
+      );
+      const field = document.createElement('fieldset');
+      field.className = 'review-component';
+      const legend = document.createElement('legend');
+      legend.textContent = checklist.title ?? 'Checklist';
+      field.append(legend);
+      for (const item of checklist.items) {
+        const row = document.createElement('label');
+        const itemLabel = item.label ?? item.itemId;
+        row.textContent = `${itemLabel}${item.required ? ' · required' : ' · optional'}`;
+        const select = document.createElement('select');
+        select.dataset.reviewChecklist = checklist.targetId;
+        select.dataset.reviewChecklistItem = item.itemId;
+        select.setAttribute(
+          'aria-label',
+          `${itemLabel} checklist status${item.required ? ' (required)' : ' (optional)'}`,
+        );
+        appendOption(select, 'unchecked', 'Unchecked');
+        appendOption(select, 'checked', 'Checked');
+        appendOption(select, 'not-applicable', 'Not applicable');
+        const current = response?.items.find((candidate) => candidate.itemId === item.itemId);
+        select.value = current?.status ?? 'unchecked';
+        const note = document.createElement('textarea');
+        note.dataset.reviewChecklistNote = checklist.targetId;
+        note.dataset.reviewChecklistItem = item.itemId;
+        note.placeholder = 'Note (required for not applicable)';
+        note.setAttribute('aria-label', `${itemLabel} checklist note`);
+        note.value = current?.note ?? '';
+        installCodePointLimit(note, MAX_REVIEW_TEXT_LENGTH, 'Checklist note');
+        row.append(select, note);
+        field.append(row);
+      }
+      elements.componentList.append(field);
+    }
+  }
+
+  function updateComponent(event: Event): void {
+    const element = event.target;
+    if (!(element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement)) return;
+    const decisionId = element.dataset.reviewDecision ?? element.dataset.reviewDecisionRationale;
+    if (decisionId !== undefined) {
+      const select = elements.componentList.querySelector<HTMLSelectElement>(
+        `[data-review-decision="${CSS.escape(decisionId)}"]`,
+      );
+      const rationale = elements.componentList.querySelector<HTMLTextAreaElement>(
+        `[data-review-decision-rationale="${CSS.escape(decisionId)}"]`,
+      );
+      const retained = artifact.responses.filter(
+        (candidate) => !(candidate.kind === 'decision' && candidate.target.id === decisionId),
+      );
+      if (select?.value === '') artifact = { ...artifact, responses: retained };
+      else {
+        const target = manifestTarget(manifest, decisionId);
+        if (target !== undefined)
+          artifact = {
+            ...artifact,
+            responses: [
+              ...retained,
+              {
+                id: `decision-${decisionId}`,
+                kind: 'decision',
+                target,
+                optionId: select?.value ?? 'open',
+                ...(normalizeText(rationale?.value ?? '') === ''
+                  ? {}
+                  : { rationale: normalizeText(rationale?.value ?? '') }),
+              },
+            ],
+          };
+      }
+      renderSummary();
+      return;
+    }
+    const checklistId = element.dataset.reviewChecklist ?? element.dataset.reviewChecklistNote;
+    if (checklistId === undefined) return;
+    const requirement = requirements.checklists.find((item) => item.targetId === checklistId);
+    const target = manifestTarget(manifest, checklistId);
+    if (requirement === undefined || target === undefined) return;
+    const items = requirement.items.map((item) => {
+      const status = elements.componentList.querySelector<HTMLSelectElement>(
+        `[data-review-checklist="${CSS.escape(checklistId)}"][data-review-checklist-item="${CSS.escape(item.itemId)}"]`,
+      )?.value as 'checked' | 'unchecked' | 'not-applicable';
+      const note = normalizeText(
+        elements.componentList.querySelector<HTMLTextAreaElement>(
+          `[data-review-checklist-note="${CSS.escape(checklistId)}"][data-review-checklist-item="${CSS.escape(item.itemId)}"]`,
+        )?.value ?? '',
+      );
+      return { itemId: item.itemId, status, ...(note === '' ? {} : { note }) };
+    });
+    artifact = {
+      ...artifact,
+      responses: [
+        ...artifact.responses.filter(
+          (candidate) => !(candidate.kind === 'checklist' && candidate.target.id === checklistId),
+        ),
+        { id: `checklist-${checklistId}`, kind: 'checklist', target, items },
+      ],
+    };
+    renderSummary();
   }
 
   function syncTargetControls(): void {
@@ -528,10 +683,19 @@ function collectElements(toggle: HTMLButtonElement): ReviewElements | undefined 
     empty: document.querySelector<HTMLElement>('[data-review-empty]'),
     importInput: document.querySelector<HTMLInputElement>('[data-review-import]'),
     exportButton: document.querySelector<HTMLButtonElement>('[data-review-export]'),
+    componentSection: document.querySelector<HTMLElement>('[data-review-components]'),
+    componentList: document.querySelector<HTMLElement>('[data-review-component-list]'),
   };
   return Object.values(values).some((value) => value === null)
     ? undefined
     : (values as ReviewElements);
+}
+
+function appendOption(select: HTMLSelectElement, value: string, label: string): void {
+  const option = document.createElement('option');
+  option.value = value;
+  option.textContent = label;
+  select.append(option);
 }
 
 function collectTargetDom(
