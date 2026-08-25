@@ -1,5 +1,5 @@
 {
-  "serviceName": "agentic-report-site",
+  "serviceName": "agentic-report",
   "dockerComposePath": "docker-compose.remote.yml",
   "dockerfile": "Dockerfile",
   "buildContext": ".",
