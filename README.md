@@ -176,7 +176,8 @@ agentic-report build ./website/landing --format directory --output ./landing-dir
 ```
 
 [`website/routes.json`](website/routes.json) is the deployment-route authority. It gives every internal
-landing destination one relative URL, canonical repository source, owner, and readiness state. Each example
+landing destination one relative URL, canonical repository source, route kind, and an optional confined
+prior-review sidecar for a page build. Each example
 card points to a separately publishable live page and a separately retrievable Markdown source; screenshots
 are previews, not substitutes for the published demos. Static site assembly resolves these declarations
 without adding a client router or a second authoring framework.

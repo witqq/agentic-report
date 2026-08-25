@@ -41,14 +41,14 @@ describe('release readiness', () => {
     if (publish === undefined) throw new Error('Release publish section is missing.');
 
     expect(publish).toContain(
-      'release_asset_url="https://github.com/witqq/agentic-report/releases/download/v0.3.2/agentic-report-0.3.2.tgz"',
+      'release_asset_url="https://github.com/witqq/agentic-report/releases/download/v0.3.3/agentic-report-0.3.3.tgz"',
     );
     expect(publish).toContain(
-      'gh workflow run publish-npm.yml --ref main -f tag=v0.3.2 -f sha256="$candidate_sha256"',
+      'gh workflow run publish-npm.yml --ref main -f tag=v0.3.3 -f sha256="$candidate_sha256"',
     );
     expect(publish).toContain('gh run watch "<databaseId>" --interval 10 --exit-status');
     expect(publish).toContain('shasum -a 256');
-    expect(publish).toContain('npm view agentic-report@0.3.2 --json');
+    expect(publish).toContain('npm view agentic-report@0.3.3 --json');
     expect(publish).toContain('Inspect the complete unauthenticated version document');
     expect(publish).toContain('Stop on any mismatch or sensitive value.');
     expect(
@@ -58,6 +58,10 @@ describe('release readiness', () => {
         .filter((line) => line.startsWith('npm publish ')),
     ).toEqual([]);
     expect(runbook).toContain('`[Made with Moira](https://moira-mcp.com/)`.');
+    expect(runbook).toContain(
+      'workspace roots must remain distinct, and neither may contain a checkout link or local tarball.\n\n## Deploy and accept the site',
+    );
+    expect(runbook).not.toContain('local tarball. Published');
   });
 
   it('labels every packaged example as fictional before its first evidence claims', async () => {
@@ -120,7 +124,7 @@ describe('release readiness', () => {
     expect(setup).toContain('find "$pinned_cache" -mindepth 1 -print -quit');
     expect(setup).toContain('find "$latest_cache" -mindepth 1 -print -quit');
     for (const block of [pinned, latest]) {
-      expect(block).toContain('view agentic-report@0.3.2 --json > ./npm-version.json');
+      expect(block).toContain('view agentic-report@0.3.3 --json > ./npm-version.json');
       expect(block).toContain('cat ./npm-version.json');
     }
     const pinnedCommands = registryCommands(pinned);
@@ -140,7 +144,7 @@ describe('release readiness', () => {
     expect(
       pinnedCommands
         .filter((line) => line.includes('"$release_npx"'))
-        .every((line) => line.includes('agentic-report@0.3.2')),
+        .every((line) => line.includes('agentic-report@0.3.3')),
     ).toBe(true);
     expect(
       latestCommands

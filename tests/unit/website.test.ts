@@ -29,6 +29,14 @@ const readRoutes = async (): Promise<RouteManifest> =>
 const sha256 = (value: Buffer | string): string => createHash('sha256').update(value).digest('hex');
 
 describe('public landing product proof', () => {
+  it('documents only durable public route fields', async () => {
+    const readme = await readFile(path.join(repositoryRoot, 'README.md'), 'utf8');
+    expect(readme).toContain(
+      'one relative URL, canonical repository source, route kind, and an optional confined',
+    );
+    expect(readme).not.toMatch(/routes\.json[^\n]*owner|owner, and readiness state/u);
+  });
+
   it('keeps the accepted promise, section order, page types, and qualified boundaries explicit', async () => {
     const source = await readLanding();
     const normalizedSource = source.replace(/\s+/gu, ' ');
