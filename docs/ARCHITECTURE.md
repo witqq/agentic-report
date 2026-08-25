@@ -109,18 +109,20 @@ claims the destination exclusively and creates files without overwrite. A later 
 destination incomplete; init reports it and never deletes or rolls back destination content. The CLI
 exposes the same operation as `init <destination> [--starter <id>] [--json]`. The root also exposes
 `validateReport()` and `inspectReport()`; CLI `validate` and `inspect` adapt them with the same
-optional format override. Both run production preparation without output publication. Validation reports
+optional format and confined prior-review overrides. Both run production preparation without output publication. Validation reports
 project/entry identity, format, runtime placement, and warnings. Inspection adds relative source inventory,
 observed directives/resources, and a registry-derived authoring catalog.
 
 The ESM root also exposes `inspectReview({ input, review })`, the review contract types, and defensive
 parse/serialize functions. CLI `review <review> [input] [--json]` adapts the same read-only resolution. The
-review path is a relative local reference confined under the report source root. Exact report revisions
-resolve recorded targets; stale revisions resolve only a stable explicit identity or a unique matching
-fingerprint in the same source file. A unique cross-file fingerprint is treated as a move only after the
-previous source file disappears from the current target graph, preventing equal text elsewhere from
-impersonating content changed in a still-present file. Changed, missing, and ambiguous targets remain
-explicit and never trigger source mutation.
+review path is a dedicated relative local reference confined under the report source root; canonical path
+and device/inode identity prevent it from aliasing loaded source/resource or output identities. Exact report revisions
+resolve recorded targets. Stale revisions resolve a stable explicit identity first, then a unique target at
+the same authored source origin (file, line, and column); a changed fingerprint at that origin is reported as
+changed. Only when the original origin is absent may a unique matching fingerprint in the same source file
+resolve the response. A unique cross-file fingerprint is treated as a move only after the previous source
+file disappears from the current target graph. This prevents equal text elsewhere from impersonating edited
+content. Changed, missing, and ambiguous targets remain explicit and never trigger source mutation.
 
 Six package-owned starter trees are ordinary buildable examples carrying registry `starter` metadata:
 the default report tree (canonical ID `basic`, alias `report`), `research`, `architecture`, `tutorial`,
@@ -252,6 +254,11 @@ in the same inert manifest. The registry owns component/option/item IDs and clos
 validates response ownership, option/item inventories, duplicate responses, and approval gates for both
 browser and Node review consumption. Browser code renders native named controls and stores their state only
 as canonical decision/checklist responses; legacy Markdown-only decisions produce no requirements.
+
+An optional confined prior-review sidecar enters common preparation before publication. Preparation embeds
+the parsed artifact plus shared exact/changed/missing/ambiguous bindings; it never embeds the sidecar path.
+Exact revisions resume current state. Stale responses render as prior evidence and cannot carry page approval
+forward. Invalid or colliding input fails before authoritative output replacement.
 
 `scrollProgress` defaults to false. In normal motion, an enabled page installs one passive document scroll
 listener and one resize listener, coalesces updates through one animation frame, and changes one decorative

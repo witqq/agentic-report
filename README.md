@@ -89,7 +89,7 @@ aliases from the same registry metadata. The immediate parent must already be an
 before the destination is created exclusively; files use no-overwrite creation. A later failure is reported
 and may leave the new destination incomplete for explicit inspection and removal. The initializer never
 deletes or rolls back destination content.
-The ESM `validateReport({ input, format? })` and `inspectReport({ input, format? })` operations run the
+The ESM `validateReport({ input, format?, review? })` and `inspectReport({ input, format?, review? })` operations run the
 same production preparation as `buildReport()` without publishing an artifact. Validation returns the
 resolved project, entry, format, runtime placement, and warnings. Inspection additionally returns relative
 source-file inventory, observed directives and local-resource occurrence counts, and the registry-derived
@@ -106,6 +106,10 @@ Typed decisions use stable `decision-option` children and support selected, open
 typed checklists expose required/optional checked, unchecked, and explained not-applicable states. Required
 unresolved responses block page approval through the same shared review contract. Existing Markdown-only
 `decision` blocks remain static.
+
+Pass `--review review.json` to `build`, `validate`, or `inspect` to consume a confined prior sidecar. Exact
+revisions resume current state; stale responses remain prior exact/changed/missing/ambiguous evidence and
+never carry page approval forward automatically.
 Desktop uses a non-modal rail; mobile uses a modal sheet. State leaves the page only through explicit local
 import/export—there is no account, backend, network sync, or authenticated signature.
 

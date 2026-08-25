@@ -39,6 +39,7 @@ interface BuildCommandOptions {
   readonly output?: string;
   readonly format?: OutputFormat;
   readonly json?: boolean;
+  readonly review?: string;
 }
 
 interface InitCommandOptions {
@@ -49,6 +50,7 @@ interface InitCommandOptions {
 interface AnalysisCommandOptions {
   readonly format?: OutputFormat;
   readonly json?: boolean;
+  readonly review?: string;
 }
 
 interface ReviewCommandOptions {
@@ -99,6 +101,7 @@ program
   .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
   .option('-o, --output <path>', 'Output HTML file or directory')
   .option('--format <format>', 'single-file or directory', parseFormat)
+  .option('--review <path>', 'Confined prior review JSON sidecar')
   .option('--json', 'Emit NDJSON suitable for agents')
   .action(async (input: string, commandOptions: BuildCommandOptions) => {
     try {
@@ -106,6 +109,7 @@ program
         input,
         ...(commandOptions.output === undefined ? {} : { output: commandOptions.output }),
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
+        ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
       });
       writeSuccess(result, invocationRunId, commandOptions.json === true);
     } catch (error) {
@@ -122,12 +126,14 @@ program
   )
   .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
   .option('--format <format>', 'single-file or directory', parseFormat)
+  .option('--review <path>', 'Confined prior review JSON sidecar')
   .option('--json', 'Emit NDJSON suitable for agents')
   .action(async (input: string, commandOptions: AnalysisCommandOptions) => {
     try {
       const result = await validateReport({
         input,
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
+        ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
       });
       writeValidateSuccess(result, invocationRunId, commandOptions.json === true);
     } catch (error) {
@@ -142,12 +148,14 @@ program
   .description('Inspect source usage and the available authoring catalog without writing output.')
   .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
   .option('--format <format>', 'single-file or directory', parseFormat)
+  .option('--review <path>', 'Confined prior review JSON sidecar')
   .option('--json', 'Emit NDJSON suitable for agents')
   .action(async (input: string, commandOptions: AnalysisCommandOptions) => {
     try {
       const result = await inspectReport({
         input,
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
+        ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
       });
       writeInspectSuccess(result, invocationRunId, commandOptions.json === true);
     } catch (error) {

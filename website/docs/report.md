@@ -70,6 +70,9 @@ agentic-report review ./review.json ./my-page --json
 
 The result names exact, changed, missing, or ambiguous entry/partial targets without rewriting Markdown.
 
+Use `build --review review.json` for a follow-up artifact. Exact state resumes; stale feedback is labelled
+prior exact/changed/missing/ambiguous evidence until the reviewer completes and exports the new revision.
+
 ::::
 
 ::::section{title="Output and operation" id="output" nav="Output" width="standard" align="start" tone="soft" reveal="true"}

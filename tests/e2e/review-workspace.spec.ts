@@ -21,6 +21,69 @@ const formats = [
   },
 ] as const;
 
+for (const priorFormat of [
+  { name: 'single-file', exact: 'review-prior.html', stale: 'review-stale.html' },
+  {
+    name: 'directory',
+    exact: 'review-prior-directory/index.html',
+    stale: 'review-stale-directory/index.html',
+  },
+] as const) {
+  test(`${priorFormat.name} exact prior review resumes typed state from the compiler sidecar`, async ({
+    page,
+  }, testInfo) => {
+    await mkdir(captureRoot, { recursive: true });
+    await page.goto(pathToFileURL(path.join(generatedRoot, priorFormat.exact)).href);
+    await page.locator('[data-review-toggle]').click();
+    await expect(page.locator('[data-review-decision]').first()).toHaveValue('ship');
+    await expect(
+      page.locator('[data-review-checklist][data-review-checklist-item="owner"]'),
+    ).toHaveValue('checked');
+    await page.screenshot({
+      path: path.join(captureRoot, `${priorFormat.name}-${testInfo.project.name}-prior-exact.png`),
+    });
+  });
+
+  test(`${priorFormat.name} stale prior review remains labelled prior evidence without current approval`, async ({
+    page,
+  }, testInfo) => {
+    await mkdir(captureRoot, { recursive: true });
+    await page.goto(pathToFileURL(path.join(generatedRoot, priorFormat.stale)).href);
+    await page.locator('[data-review-toggle]').click();
+    await expect(page.locator('[data-review-response-list]')).toContainText(
+      'Prior · changed · comment · Revisit changed evidence.',
+    );
+    await expect(page.locator('[data-review-page-verdict]')).toHaveValue('');
+    await page.screenshot({
+      path: path.join(captureRoot, `${priorFormat.name}-${testInfo.project.name}-prior-stale.png`),
+    });
+    if (testInfo.project.name.startsWith('mobile')) {
+      await page.getByRole('button', { name: 'Close', exact: true }).click();
+    }
+    const changedParagraph = page
+      .locator('p[data-review-target]')
+      .filter({ hasText: 'Changed evidence statement.' });
+    await activate(targetControl(changedParagraph), testInfo.project.name);
+    await page.locator('[data-review-feedback-message]').fill('Re-reviewed current evidence.');
+    await page.getByRole('button', { name: 'Add feedback' }).click();
+    await page.locator('[data-review-decision]').first().selectOption('ship');
+    await page
+      .locator('[data-review-checklist][data-review-checklist-item="owner"]')
+      .selectOption('checked');
+    await page.locator('[data-review-page-verdict]').selectOption('approve');
+    const nextReview = await downloadedReview(page);
+    await page.reload();
+    await page.locator('[data-review-toggle]').click();
+    await page.locator('[data-review-import]').setInputFiles({
+      name: 'next-review.json',
+      mimeType: 'application/json',
+      buffer: nextReview,
+    });
+    await expect(page.locator('[data-review-page-verdict]')).toHaveValue('approve');
+    expect(await downloadedReview(page)).toEqual(nextReview);
+  });
+}
+
 for (const format of formats) {
   test(`${format.name} typed decisions and checklists gate canonical approval`, async ({
     page,

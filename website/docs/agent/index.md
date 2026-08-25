@@ -40,6 +40,9 @@ Typed `decision-option` and `check-item` directives use stable IDs. Required ope
 unchecked required items block approval; not-applicable requires a bounded note. Discover the exact grammar
 from `describe --json` or the generated source schema rather than inventing controls.
 
+For a repeat review, pass the prior local artifact with `build --review review.json`. Never copy a prior page
+approval into changed content; inspect bindings, resolve current gates, and export the next revision.
+
 Use the pinned form for repeatable agent work. Use the unpinned form only when intentionally accepting the
 registry's current `latest` release.
 

@@ -55,6 +55,19 @@ function bindTarget(
     }
   }
 
+  const sameOrigin = currentTargets.filter(
+    (target) => target.kind === prior.kind && equivalentSourceStart(target, prior),
+  );
+  if (sameOrigin.length === 1) {
+    const target = sameOrigin[0];
+    if (target === undefined) return { binding: 'missing' };
+    return {
+      binding: target.fingerprint === prior.fingerprint ? 'exact' : 'changed',
+      currentTarget: target,
+    };
+  }
+  if (sameOrigin.length > 1) return { binding: 'ambiguous' };
+
   const sameFile = currentTargets.filter(
     (target) =>
       target.kind === prior.kind &&
@@ -70,9 +83,7 @@ function bindTarget(
   if (sameFile.length > 1) return { binding: 'ambiguous' };
 
   if (currentTargets.some((target) => target.source.file === prior.source.file)) {
-    return sameId === undefined
-      ? { binding: 'missing' }
-      : { binding: 'changed', currentTarget: sameId };
+    return { binding: 'missing' };
   }
 
   const sameContent = currentTargets.filter(
@@ -85,9 +96,7 @@ function bindTarget(
       : { binding: 'exact', currentTarget: target };
   }
   if (sameContent.length > 1) return { binding: 'ambiguous' };
-  return sameId === undefined
-    ? { binding: 'missing' }
-    : { binding: 'changed', currentTarget: sameId };
+  return { binding: 'missing' };
 }
 
 function equivalentTarget(left: ReviewTargetReference, right: ReviewTargetReference): boolean {
@@ -95,10 +104,24 @@ function equivalentTarget(left: ReviewTargetReference, right: ReviewTargetRefere
     left.kind === right.kind &&
     left.fingerprint === right.fingerprint &&
     left.stableKey === right.stableKey &&
+    equivalentSource(left, right)
+  );
+}
+
+function equivalentSource(left: ReviewTargetReference, right: ReviewTargetReference): boolean {
+  return (
     left.source.file === right.source.file &&
     left.source.line === right.source.line &&
     left.source.column === right.source.column &&
     left.source.endLine === right.source.endLine &&
     left.source.endColumn === right.source.endColumn
+  );
+}
+
+function equivalentSourceStart(left: ReviewTargetReference, right: ReviewTargetReference): boolean {
+  return (
+    left.source.file === right.source.file &&
+    left.source.line === right.source.line &&
+    left.source.column === right.source.column
   );
 }

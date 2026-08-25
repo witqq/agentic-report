@@ -20,6 +20,7 @@ import {
   type ReviewVerdict,
   type ReviewVerdictResponse,
 } from '../review/contract.js';
+import type { ResolvedReviewArtifact } from '../review/binding.js';
 
 const REVIEW_DOWNLOAD_NAME = 'review.json';
 const mobileReview = window.matchMedia('(max-width: 56.99rem)');
@@ -85,15 +86,21 @@ export function installReviewWorkspace(): void {
     elements.toggleLabel.textContent = 'Review unavailable';
     return;
   }
-  createReviewController(manifest, targetDom, elements);
+  const prior = readPriorReview();
+  createReviewController(manifest, targetDom, elements, prior);
 }
 
 function createReviewController(
   manifest: ReviewTargetManifest,
   targets: ReadonlyMap<string, TargetDom>,
   elements: ReviewElements,
+  prior:
+    { readonly artifact: ReviewArtifact; readonly resolved: ResolvedReviewArtifact } | undefined,
 ): void {
-  let artifact = emptyArtifact(manifest.reportRevision);
+  let artifact =
+    prior?.resolved.reportStatus === 'exact'
+      ? parseReviewArtifact(prior.artifact)
+      : emptyArtifact(manifest.reportRevision);
   let active = false;
   let selectedTargetId: string | undefined;
   let editingResponseId: string | undefined;
@@ -430,6 +437,15 @@ function createReviewController(
       item.append(body, actions);
       elements.responseList.append(item);
     }
+    if (prior?.resolved.reportStatus === 'stale') {
+      for (const priorResponse of prior.resolved.responses) {
+        const item = document.createElement('li');
+        item.className = 'review-response';
+        item.textContent = `Prior · ${priorResponse.binding} · ${responseLabel(priorResponse.response)} · ${responseText(priorResponse.response)}`;
+        elements.responseList.append(item);
+      }
+      elements.empty.hidden = false;
+    }
   }
 
   function renderSummary(): void {
@@ -650,6 +666,20 @@ function createReviewController(
     elements.error.hidden = true;
     elements.error.textContent = '';
     document.documentElement.removeAttribute('data-review-invalid');
+  }
+}
+
+function readPriorReview():
+  { readonly artifact: ReviewArtifact; readonly resolved: ResolvedReviewArtifact } | undefined {
+  const template = document.querySelector<HTMLTemplateElement>('template[data-prior-review]');
+  if (template === null) return undefined;
+  try {
+    return JSON.parse(template.content.textContent ?? '') as {
+      readonly artifact: ReviewArtifact;
+      readonly resolved: ResolvedReviewArtifact;
+    };
+  } catch {
+    return undefined;
   }
 }
 

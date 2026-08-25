@@ -177,6 +177,12 @@ Separate gates, evidence, alternatives, conditions, and reversibility. Use the e
 `architecture` starter; the [fictional vendor decision](examples/vendor-decision/index.html) is the proof,
 not a made-up seventh starter.
 :::
+:::card{title="Review and re-review"}
+Collect typed feedback, decisions, and checklist gates locally, then rebuild against the prior handoff.
+[Open the fictional review workspace](examples/review-workspace/index.html) ·
+[View its revised declarative source](examples/review-workspace/report.md) ·
+[Inspect the fictional prior handoff](examples/review-workspace/prior-review.json).
+:::
 :::card{title="Landing"}
 Build a restrained proof-first product or project page with the same public engine. Start with `landing`.
 :::

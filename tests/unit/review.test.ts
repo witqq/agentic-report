@@ -322,16 +322,40 @@ describe('versioned review protocol', () => {
       id: 'rt-duplicate-b',
       source: { ...priorGenerated.source, file: 'b.md' },
     };
+    const priorBound = {
+      ...fixtureTarget('rt-bound', `sha256:${'1'.repeat(64)}`),
+      source: { file: 'report.md', line: 10, column: 1, endLine: 10, endColumn: 8 },
+    };
+    const changedBound = {
+      ...priorBound,
+      id: 'rt-bound-current',
+      fingerprint: `sha256:${'2'.repeat(64)}`,
+      source: { ...priorBound.source, endColumn: priorBound.source.endColumn + 1 },
+    };
+    const equalTextElsewhere = {
+      ...priorBound,
+      id: 'rt-equal-elsewhere',
+      source: { ...priorBound.source, line: 11, endLine: 11 },
+    };
     const artifact: ReviewArtifact = {
       contractVersion: 1,
       report: { revision: `sha256:${'d'.repeat(64)}` },
       responses: [
+        {
+          id: 'bound-response',
+          kind: 'comment',
+          target: priorBound,
+          message: 'Do not move this response.',
+        },
         { id: 'stable-response', kind: 'comment', target: priorStable, message: 'Changed' },
         { id: 'ambiguous-response', kind: 'comment', target: priorGenerated, message: 'Ambiguous' },
         {
           id: 'missing-response',
           kind: 'comment',
-          target: fixtureTarget('rt-missing', `sha256:${'e'.repeat(64)}`),
+          target: {
+            ...fixtureTarget('rt-missing', `sha256:${'e'.repeat(64)}`),
+            source: { file: 'missing.md', line: 1, column: 1, endLine: 1, endColumn: 8 },
+          },
           message: 'Missing',
         },
       ],
@@ -339,9 +363,10 @@ describe('versioned review protocol', () => {
     const manifest: ReviewTargetManifest = {
       contractVersion: 1,
       reportRevision: `sha256:${'f'.repeat(64)}`,
-      targets: [currentStable, duplicateOne, duplicateTwo],
+      targets: [changedBound, equalTextElsewhere, currentStable, duplicateOne, duplicateTwo],
     };
     expect(bindReviewArtifact(artifact, manifest).responses.map((item) => item.binding)).toEqual([
+      'changed',
       'changed',
       'ambiguous',
       'missing',

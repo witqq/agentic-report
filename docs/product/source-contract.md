@@ -59,7 +59,7 @@ Six trees are packaged: report (`report`, with stable canonical ID `basic`), `re
 `tutorial`, `dashboard`, and `landing`. The report tree is the default and every registry entry is
 `report.md`. A starter is also a buildable example; there is no separate generator contract.
 
-The ESM `validateReport({ input, format? })` and `inspectReport({ input, format? })` operations use the
+The ESM `validateReport({ input, format?, review? })` and `inspectReport({ input, format?, review? })` operations use the
 production source and render preparation without output publication. CLI `validate [input] [--format
 <format>] [--json]` and `inspect [input] [--format <format>] [--json]` are adapters of the same
 functions. Validation reports resolved project/entry identity, output format, derived runtime placement,
@@ -100,13 +100,14 @@ const result = await inspectReview({ input: './my-report', review: 'review.json'
 ```
 
 The review path is resolved relative to the prepared source root and cannot be absolute, traverse outside,
-or escape through a symlink. An exact bound revision requires the exact target identity and fingerprint. For
-a stale revision, an explicit stable key may resolve changed content; otherwise only one matching kind and
-fingerprint resolves within the same source file. A unique cross-file match is considered a move only when
-the previous source file no longer contributes any current review target; content changed in a still-present
-file cannot bind to an equal block elsewhere. Zero matches return `missing`, multiple matches return
-`ambiguous`, and a stable target whose fingerprint changed returns `changed`. The operation does not rewrite
-Markdown or publish output.
+escape through a symlink, or alias an entry, manifest, included partial, referenced local resource, or
+output identity by canonical path or hard link. An exact bound revision requires the exact target identity and fingerprint. For
+a stale revision, an explicit stable key resolves first. Otherwise a unique target at the same authored
+source origin (file, line, and column) resolves there; a changed fingerprint returns `changed` even when an
+equal block exists elsewhere. Fingerprint relocation is considered only after the original origin is absent.
+A unique cross-file match is considered a move only when the previous source file no longer contributes any
+current review target. Zero matches return `missing` and multiple matches return `ambiguous`. The operation
+does not rewrite Markdown or publish output.
 Structured feedback is bounded and credential-sanitized before CLI/ESM transport; surrounding source and
 complete input files are never returned.
 
@@ -186,6 +187,10 @@ The directive vocabulary is:
 
 Typed component, option, and item inventories are bounded to 500 at source and manifest boundaries. Mixed
 Markdown plus typed children is invalid; use a Markdown-only legacy decision or a closed typed component.
+
+`build`, `validate`, and `inspect` accept an optional confined prior-review sidecar. Exact revisions restore
+current state. Stale bindings expose exact, changed, missing, or ambiguous prior responses without treating a
+prior page approval as current. Invalid sidecars fail before authoritative output replacement.
 
 - `cards` and nested `card`: responsive content grid;
 - `steps`: styled process container whose authored Markdown supplies the ordered or explanatory content;

@@ -760,6 +760,63 @@ if (
 ) {
   throw new Error('Installed CLI did not resolve and sanitize the review artifact.');
 }
+for (const command of ['validate', 'inspect'] as const) {
+  const result = await runCandidateNpx(
+    [command, firstUseProject, '--review', 'review.json', '--json'],
+    consumerDirectory,
+  );
+  const record = requireSingleNdjsonRecord(result, `installed ${command} prior-review result`);
+  if (result.exitCode !== 0 || result.stderr !== '' || record.type !== 'result') {
+    throw new Error(`Installed CLI did not forward prior review through ${command}.`);
+  }
+}
+const { stdout: installedPriorEsmOutput } = await execFileAsync(
+  process.execPath,
+  [
+    '--input-type=module',
+    '-e',
+    "import {inspectReport,validateReport} from 'agentic-report'; const input=process.argv[1]; console.log(JSON.stringify({validate:await validateReport({input,review:'review.json'}),inspect:await inspectReport({input,review:'review.json'})}));",
+    firstUseProject,
+  ],
+  { cwd: consumerDirectory },
+);
+const installedPriorEsm = requireRecord(
+  JSON.parse(installedPriorEsmOutput),
+  'installed ESM prior-review result',
+);
+requireRecord(installedPriorEsm.validate, 'installed ESM prior validate result');
+requireRecord(installedPriorEsm.inspect, 'installed ESM prior inspect result');
+
+const installedPriorSingle = path.join(firstUseProject, 'built-prior.html');
+await execFileAsync(
+  binary,
+  ['build', firstUseProject, '--output', installedPriorSingle, '--review', 'review.json'],
+  { cwd: consumerDirectory },
+);
+const installedPriorDirectory = path.join(firstUseProject, 'built-prior-directory');
+await execFileAsync(
+  binary,
+  [
+    'build',
+    firstUseProject,
+    '--format',
+    'directory',
+    '--output',
+    installedPriorDirectory,
+    '--review',
+    'review.json',
+  ],
+  { cwd: consumerDirectory },
+);
+for (const output of [installedPriorSingle, path.join(installedPriorDirectory, 'index.html')]) {
+  const html = await readFile(output, 'utf8');
+  if (
+    !html.includes('data-prior-review="true"') ||
+    !html.includes('&quot;reportStatus&quot;:&quot;exact&quot;')
+  ) {
+    throw new Error('Installed package build did not embed exact prior-review state.');
+  }
+}
 const repeatedFirstUseOutput = path.join(firstUseProject, 'built-again.html');
 await execFileAsync(binary, ['build', firstUseProject, '--output', repeatedFirstUseOutput], {
   cwd: consumerDirectory,
@@ -848,8 +905,12 @@ if (
   throw new Error('Independent installed CLI processes produced different directory trees.');
 }
 const candidateBrowserEvidence = await inspectCandidateArtifacts([
-  { format: 'single-file', path: firstUseOutput },
-  { format: 'directory', path: path.join(directoryJourneyOutput, 'index.html') },
+  { format: 'single-file', path: installedPriorSingle, expectReviewResponses: true },
+  {
+    format: 'directory',
+    path: path.join(installedPriorDirectory, 'index.html'),
+    expectReviewResponses: true,
+  },
 ]);
 
 const shadowDirectory = path.join(consumerDirectory, 'cwd-shadow');
@@ -1402,7 +1463,11 @@ async function pathExists(candidate: string): Promise<boolean> {
 }
 
 async function inspectCandidateArtifacts(
-  artifacts: readonly { readonly format: 'single-file' | 'directory'; readonly path: string }[],
+  artifacts: readonly {
+    readonly format: 'single-file' | 'directory';
+    readonly path: string;
+    readonly expectReviewResponses?: boolean;
+  }[],
 ): Promise<readonly Readonly<Record<string, unknown>>[]> {
   const browser = await chromium.launch();
   try {
@@ -1436,6 +1501,7 @@ async function inspectCandidateArtifacts(
       const reviewDialog = page.locator('[data-review-dialog]');
       const reviewOpen = await reviewDialog.getAttribute('open');
       const reviewTargets = await page.locator('[data-review-target-control]:visible').count();
+      const reviewResponses = await page.locator('[data-review-response-list] li').count();
       const reviewModal = await reviewDialog.evaluate((element) => element.matches(':modal'));
       await page.locator('[data-review-exit]').click();
       const observed = await page.evaluate(() => ({
@@ -1451,6 +1517,7 @@ async function inspectCandidateArtifacts(
         themeBefore === themeAfter ||
         reviewOpen === null ||
         reviewTargets === 0 ||
+        (artifact.expectReviewResponses === true && reviewResponses === 0) ||
         reviewModal !== (artifact.format === 'directory')
       ) {
         throw new Error(
@@ -1464,6 +1531,7 @@ async function inspectCandidateArtifacts(
         themeBefore,
         themeAfter,
         reviewTargets,
+        reviewResponses,
         reviewModal,
         ...observed,
       });

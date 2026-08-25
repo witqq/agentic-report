@@ -16,6 +16,7 @@ interface SiteRoute {
   readonly id: string;
   readonly href: string;
   readonly source: string;
+  readonly review?: string;
   readonly kind: 'page' | 'copy' | 'generated';
   readonly owner: 'unit-4' | 'unit-5';
   readonly state: 'staged-ready';
@@ -273,6 +274,21 @@ describe('deterministic public site staging', () => {
       expect(source, route.href).not.toContain('data-site-attribution');
     }
     expect(await readFile(standalonePage, 'utf8')).not.toContain('data-site-attribution');
+  });
+
+  it('stages the public repeat-review route with its declared prior handoff', async () => {
+    const html = await readFile(
+      path.join(firstSite, 'examples/review-workspace/index.html'),
+      'utf8',
+    );
+    expect(html).toContain('data-prior-review="true"');
+    expect(html).toContain('&quot;reportStatus&quot;:&quot;stale&quot;');
+    expect(html).toContain('Recheck activation after the cohort revision.');
+    expect(
+      await readFile(path.join(firstSite, 'examples/review-workspace/prior-review.json')),
+    ).toEqual(
+      await readFile(path.join(repositoryRoot, 'examples/review-workspace/prior-review.json')),
+    );
   });
 
   it('copies direct documentation and skill bytes and records every staged hash', async () => {

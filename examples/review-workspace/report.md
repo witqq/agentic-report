@@ -14,8 +14,11 @@ preset: studio
 
 Open **Review** to comment on any block, record independent block verdicts, and export a local `review.json` handoff.
 
+After editing this source, rebuild with `--review review.json` to display truthful prior bindings and complete
+the next review round without a server or automatic Markdown rewriting.
+
 :::section{title="Activation evidence" id="activation" nav="Activation" tone="soft"}
-Activation reached **63%** in the observed cohort.
+Activation reached **68%** in the revised cohort.
 
 The evidence is ready for a reviewer to confirm or return for revision.
 :::

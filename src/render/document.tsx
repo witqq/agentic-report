@@ -3,6 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { ReportManifest } from '../contracts.js';
 import { PACKAGE_ICON_PATHS, type PackageIconName } from '../iconography.js';
 import type { ReviewTargetManifest } from '../review/contract.js';
+import type { ResolvedReviewArtifact } from '../review/binding.js';
+import type { ReviewArtifact } from '../review/contract.js';
 
 export interface NavigationItem {
   readonly id: string;
@@ -21,6 +23,10 @@ export interface DocumentRenderOptions {
   readonly styles: { readonly inline?: string; readonly href?: string };
   readonly runtime: DocumentRuntime;
   readonly reviewManifest: ReviewTargetManifest;
+  readonly priorReview?: {
+    readonly artifact: ReviewArtifact;
+    readonly resolved: ResolvedReviewArtifact;
+  };
 }
 
 export type DocumentRuntime =
@@ -283,6 +289,9 @@ export function renderDocument(options: DocumentRenderOptions): string {
           </dialog>
         ) : null}
         <template data-review-manifest>{JSON.stringify(options.reviewManifest)}</template>
+        {options.priorReview === undefined ? null : (
+          <template data-prior-review>{JSON.stringify(options.priorReview)}</template>
+        )}
         {options.runtime.inline === undefined ? null : (
           // biome-ignore lint/security/noDangerouslySetInnerHtml: JavaScript is the package-owned Vite build artifact.
           <script dangerouslySetInnerHTML={{ __html: options.runtime.inline }} />

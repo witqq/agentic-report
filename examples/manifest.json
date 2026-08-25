@@ -203,8 +203,12 @@
       "classes": ["work-report"],
       "files": [
         {
+          "path": "prior-review.json",
+          "sha256": "c503f2bd2db22f8b73abcf5e006f77af3ff24cc3459ac0224044dfe27a57eb0a"
+        },
+        {
           "path": "report.md",
-          "sha256": "8320512c3d21e18cd4e476e4e362a7807e915c3b8b0bb5fe2af67807506192c0"
+          "sha256": "6ce1ae153831e1be36cf9ef5ef32444ef3ed2fc512d473017d1fcef9322c7a16"
         }
       ]
     },

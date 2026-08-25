@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { cp, mkdir, readFile, readdir, symlink, writeFile } from 'node:fs/promises';
+import { cp, link, mkdir, readFile, readdir, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
@@ -18,6 +18,7 @@ import {
   type ReviewTargetManifest,
   validateReport,
 } from '../../src/index.js';
+import { MAX_REVIEW_FILE_BYTES } from '../../src/review/contract.js';
 import { AgenticReportError } from '../../src/diagnostics.js';
 import { authoringRegistry } from '../../src/authoring/registry.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
@@ -212,7 +213,10 @@ describe('report analysis', () => {
     await writeFile(path.join(workspace, 'partials/evidence.md'), 'Changed evidence.\n');
     const targetStale = await inspectReview({ input: workspace, review: 'review.json' });
     expect(targetStale.reportRevision).not.toBe(resourceStale.reportRevision);
-    expect(targetStale.responses[0]).toMatchObject({ binding: 'missing' });
+    expect(targetStale.responses[0]).toMatchObject({
+      binding: 'changed',
+      currentTarget: { source: { file: 'partials/evidence.md', line: 1 } },
+    });
   });
 
   it('confines review files lexically and canonically before reading', async () => {
@@ -285,6 +289,150 @@ describe('report analysis', () => {
         reportStatus: 'stale',
       },
     );
+  });
+
+  it('prepares a confined prior review for exact and stale repeat-review builds', async () => {
+    const workspace = await reviewWorkspace('analysis-prior-review');
+    const first = path.join(workspace, 'first.html');
+    await buildReport({ input: workspace, output: first });
+    const manifest = await embeddedManifest(first);
+    const target = manifest.targets.find((candidate) => candidate.kind === 'markdown:paragraph');
+    if (target === undefined) throw new Error('Missing prior-review target');
+    await writeFile(
+      path.join(workspace, 'prior.json'),
+      serializeReviewArtifact({
+        contractVersion: 1,
+        report: { revision: manifest.reportRevision },
+        responses: [{ id: 'comment-a', kind: 'comment', target, message: 'Revisit this.' }],
+      }),
+    );
+    const exact = path.join(workspace, 'exact.html');
+    await buildReport({ input: workspace, output: exact, review: 'prior.json' });
+    expect(await readFile(exact, 'utf8')).toContain('data-prior-review="true"');
+    const entry = path.join(workspace, 'report.md');
+    await writeFile(entry, `${await readFile(entry, 'utf8')}\nChanged after review.\n`);
+    await expect(validateReport({ input: workspace, review: 'prior.json' })).resolves.toMatchObject(
+      {
+        format: 'single-file',
+      },
+    );
+    const stale = path.join(workspace, 'stale.html');
+    await buildReport({ input: workspace, output: stale, review: 'prior.json' });
+    expect(await readFile(stale, 'utf8')).toContain('&quot;reportStatus&quot;:&quot;stale&quot;');
+    const currentManifest = await embeddedManifest(stale);
+    const currentTarget = currentManifest.targets.find(
+      (candidate) => candidate.kind === 'markdown:paragraph',
+    );
+    if (currentTarget === undefined) throw new Error('Missing current-revision target');
+    await writeFile(
+      path.join(workspace, 'next.json'),
+      serializeReviewArtifact({
+        contractVersion: 1,
+        report: { revision: currentManifest.reportRevision },
+        responses: [
+          {
+            id: 'comment-next',
+            kind: 'comment',
+            target: currentTarget,
+            message: 'Current revision is ready.',
+          },
+        ],
+      }),
+    );
+    const nextA = path.join(workspace, 'next-a.html');
+    const nextB = path.join(workspace, 'next-b.html');
+    await buildReport({ input: workspace, output: nextA, review: 'next.json' });
+    await buildReport({ input: workspace, output: nextB, review: 'next.json' });
+    expect(await readFile(nextA)).toEqual(await readFile(nextB));
+    expect(await readFile(nextA, 'utf8')).toContain('&quot;reportStatus&quot;:&quot;exact&quot;');
+    const sentinel = path.join(workspace, 'sentinel.html');
+    await writeFile(sentinel, 'preserve authoritative output');
+    await writeFile(path.join(workspace, 'broken.json'), '{broken');
+    await expect(
+      buildReport({ input: workspace, output: sentinel, review: 'broken.json' }),
+    ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_ARTIFACT_INVALID' } });
+    expect(await readFile(sentinel, 'utf8')).toBe('preserve authoritative output');
+    await expect(
+      buildReport({ input: workspace, output: sentinel, review: 'prior.json' }),
+    ).resolves.toMatchObject({
+      outputPath: sentinel,
+    });
+    await expect(
+      validateReport({ input: workspace, review: '../outside.json' }),
+    ).rejects.toMatchObject({
+      diagnostic: { code: 'REVIEW_OUTSIDE_SOURCE' },
+    });
+    const outside = await createTestWorkspace('prior-outside');
+    workspaces.push(outside);
+    const outsideReview = path.join(outside, 'outside.json');
+    await writeFile(outsideReview, await readFile(path.join(workspace, 'prior.json')));
+    await symlink(outsideReview, path.join(workspace, 'prior-link.json'));
+    await expect(
+      inspectReport({ input: workspace, review: 'prior-link.json' }),
+    ).rejects.toMatchObject({
+      diagnostic: { code: 'REVIEW_OUTSIDE_SOURCE' },
+    });
+    const priorPath = path.join(workspace, 'prior.json');
+    const priorBytes = await readFile(priorPath);
+    await expect(
+      buildReport({ input: workspace, output: priorPath, review: 'prior.json' }),
+    ).rejects.toMatchObject({ diagnostic: { code: 'OUTPUT_COLLIDES_WITH_SOURCE' } });
+    expect(await readFile(priorPath)).toEqual(priorBytes);
+
+    const partialPath = path.join(workspace, 'partials/evidence.md');
+    const partialBytes = await readFile(partialPath);
+    const markdownReviewBytes = Buffer.concat([Buffer.from('    '), priorBytes]);
+    await writeFile(partialPath, markdownReviewBytes);
+    await expect(
+      buildReport({ input: workspace, output: sentinel, review: 'partials/evidence.md' }),
+    ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_COLLIDES_WITH_SOURCE' } });
+    expect(await readFile(partialPath)).toEqual(markdownReviewBytes);
+    await writeFile(partialPath, partialBytes);
+
+    const assetPath = path.join(workspace, 'asset.txt');
+    await writeFile(assetPath, priorBytes);
+    await link(assetPath, path.join(workspace, 'asset-review.json'));
+    await expect(
+      inspectReport({ input: workspace, review: 'asset-review.json' }),
+    ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_COLLIDES_WITH_SOURCE' } });
+    expect(await readFile(assetPath)).toEqual(priorBytes);
+
+    const entryAliasWorkspace = await createTestWorkspace('prior-entry-alias');
+    workspaces.push(entryAliasWorkspace);
+    await writeFile(path.join(entryAliasWorkspace, 'report.md'), markdownReviewBytes);
+    await expect(
+      validateReport({ input: entryAliasWorkspace, review: 'report.md' }),
+    ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_COLLIDES_WITH_SOURCE' } });
+
+    const directoryOwner = await createTestWorkspace('prior-directory-output');
+    workspaces.push(directoryOwner);
+    const directoryOutput = path.join(directoryOwner, 'artifact');
+    await buildReport({
+      input: workspace,
+      output: directoryOutput,
+      format: 'directory',
+      review: 'prior.json',
+    });
+    const directoryBeforeFailure = await hashTree(directoryOutput);
+    await writeFile(path.join(workspace, 'oversized.json'), 'x'.repeat(MAX_REVIEW_FILE_BYTES + 1));
+    await expect(
+      buildReport({
+        input: workspace,
+        output: directoryOutput,
+        format: 'directory',
+        review: 'oversized.json',
+      }),
+    ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_ARTIFACT_INVALID' } });
+    expect(await hashTree(directoryOutput)).toStrictEqual(directoryBeforeFailure);
+    const directoryRetry = path.join(directoryOwner, 'retry-artifact');
+    await expect(
+      buildReport({
+        input: workspace,
+        output: directoryRetry,
+        format: 'directory',
+        review: 'prior.json',
+      }),
+    ).resolves.toMatchObject({ outputPath: path.join(directoryRetry, 'index.html') });
   });
 
   it('classifies malformed, invalid, oversized, missing, and hostile-option review inputs without mutation', async () => {

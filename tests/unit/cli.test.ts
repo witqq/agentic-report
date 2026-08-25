@@ -77,9 +77,46 @@ describe('CLI transport', () => {
       type: 'result',
       contractVersion: 1,
       reportStatus: 'stale',
-      responses: [{ binding: 'missing', response: { message: 'token=[REDACTED]' } }],
+      responses: [{ binding: 'changed', response: { message: 'token=[REDACTED]' } }],
     });
     expect(result.stdout).not.toContain('private-value');
+  });
+
+  it('forwards prior-review input through the build CLI command', async () => {
+    const workspace = await createPriorReviewCliWorkspace('cli-build-prior-review');
+    const output = path.join(workspace, 'report.html');
+    const build = await runCli([
+      'build',
+      workspace,
+      '--output',
+      output,
+      '--review',
+      'prior.json',
+      '--json',
+    ]);
+    expect(build).toMatchObject({ exitCode: 0, stderr: '' });
+    expect(await readFile(output, 'utf8')).toContain('data-prior-review="true"');
+  });
+
+  it('forwards malformed prior-review input through the validate CLI command', async () => {
+    const workspace = await createPriorReviewCliWorkspace('cli-validate-prior-review');
+    await writeFile(path.join(workspace, 'broken.json'), '{broken');
+    const validate = await runCli(['validate', workspace, '--review', 'broken.json', '--json']);
+    expect(validate).toMatchObject({ exitCode: 1, stderr: '' });
+    expect(JSON.parse(validate.stdout)).toMatchObject({
+      type: 'diagnostic',
+      code: 'REVIEW_ARTIFACT_INVALID',
+    });
+  });
+
+  it('forwards escaped prior-review input through the inspect CLI command', async () => {
+    const workspace = await createPriorReviewCliWorkspace('cli-inspect-prior-review');
+    const inspect = await runCli(['inspect', workspace, '--review', '../outside.json', '--json']);
+    expect(inspect).toMatchObject({ exitCode: 1, stderr: '' });
+    expect(JSON.parse(inspect.stdout)).toMatchObject({
+      type: 'diagnostic',
+      code: 'REVIEW_OUTSIDE_SOURCE',
+    });
   });
 
   it('prints only a bounded human review summary', async () => {
@@ -111,7 +148,7 @@ describe('CLI transport', () => {
 
     expect(result).toEqual({
       exitCode: 0,
-      stdout: 'Review stale: 0 exact, 0 changed, 1 missing, 0 ambiguous\n',
+      stdout: 'Review stale: 0 exact, 1 changed, 0 missing, 0 ambiguous\n',
       stderr: '',
     });
     expect(result.stdout).not.toMatch(/human-private-value|Target paragraph/u);
@@ -657,6 +694,21 @@ async function createAnalysisWorkspace(prefix: string): Promise<{
   await mkdir(path.dirname(directorySentinel));
   await writeFile(directorySentinel, 'keep directory');
   return { workspace, singleSentinel, directorySentinel };
+}
+
+async function createPriorReviewCliWorkspace(prefix: string): Promise<string> {
+  const workspace = await createTestWorkspace(prefix);
+  workspaces.push(workspace);
+  await writeFile(path.join(workspace, 'report.md'), '# Review source\n\nTarget paragraph.\n');
+  await writeFile(
+    path.join(workspace, 'prior.json'),
+    serializeReviewArtifact({
+      contractVersion: 1,
+      report: { revision: `sha256:${'a'.repeat(64)}` },
+      responses: [],
+    }),
+  );
+  return workspace;
 }
 
 async function createCredentialAnalysisSource(

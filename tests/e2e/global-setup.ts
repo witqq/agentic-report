@@ -1,7 +1,7 @@
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { buildReport, listExamples } from '../../dist/node/index.js';
+import { buildReport, listExamples, serializeReviewArtifact } from '../../dist/node/index.js';
 import { stageSite } from '../../scripts/build-site.js';
 
 export default async function globalSetup(): Promise<void> {
@@ -318,6 +318,108 @@ export default async function globalSetup(): Promise<void> {
       format: 'directory',
     }),
   ]);
+  const reviewHtml = await readFile(path.join(fixtureRoot, 'review.html'), 'utf8');
+  const encodedManifest = /<template data-review-manifest="true">([\s\S]*?)<\/template>/u.exec(
+    reviewHtml,
+  )?.[1];
+  if (encodedManifest === undefined) throw new Error('Missing review fixture manifest');
+  const reviewManifest = JSON.parse(
+    encodedManifest
+      .replaceAll('&quot;', '"')
+      .replaceAll('&#x27;', "'")
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&amp;', '&'),
+  ) as {
+    reportRevision: string;
+    targets: Array<{
+      id: string;
+      kind: string;
+      fingerprint: string;
+      source: { file: string; line: number; column: number; endLine: number; endColumn: number };
+    }>;
+    requirements: {
+      decisions: Array<{ targetId: string }>;
+      checklists: Array<{ targetId: string }>;
+    };
+  };
+  const decisionTarget = reviewManifest.targets.find(
+    (target) => target.id === reviewManifest.requirements.decisions[0]?.targetId,
+  );
+  const checklistTarget = reviewManifest.targets.find(
+    (target) => target.id === reviewManifest.requirements.checklists[0]?.targetId,
+  );
+  const firstEvidenceLine =
+    (await readFile(path.join(reviewSource, 'report.md'), 'utf8'))
+      .split('\n')
+      .indexOf('Shared evidence statement.') + 1;
+  const changedParagraphTarget = reviewManifest.targets.find(
+    (target) =>
+      target.kind === 'markdown:paragraph' &&
+      target.source.file === 'report.md' &&
+      target.source.line === firstEvidenceLine,
+  );
+  if (
+    decisionTarget === undefined ||
+    checklistTarget === undefined ||
+    changedParagraphTarget === undefined
+  )
+    throw new Error('Missing repeat-review component targets');
+  await writeFile(
+    path.join(reviewSource, 'prior.json'),
+    serializeReviewArtifact({
+      contractVersion: 1,
+      report: { revision: reviewManifest.reportRevision },
+      responses: [
+        {
+          id: 'comment-prior',
+          kind: 'comment',
+          target: changedParagraphTarget,
+          message: 'Revisit changed evidence.',
+        },
+        { id: 'decision-prior', kind: 'decision', target: decisionTarget, optionId: 'ship' },
+        {
+          id: 'checklist-prior',
+          kind: 'checklist',
+          target: checklistTarget,
+          items: [
+            { itemId: 'owner', status: 'checked' },
+            { itemId: 'notes', status: 'unchecked' },
+          ],
+        },
+      ],
+    }),
+  );
+  await buildReport({
+    input: reviewSource,
+    output: path.join(fixtureRoot, 'review-prior.html'),
+    review: 'prior.json',
+  });
+  await buildReport({
+    input: reviewSource,
+    output: path.join(fixtureRoot, 'review-prior-directory'),
+    format: 'directory',
+    review: 'prior.json',
+  });
+  const reviewEntry = path.join(reviewSource, 'report.md');
+  await writeFile(
+    reviewEntry,
+    (await readFile(reviewEntry, 'utf8')).replace(
+      'Shared evidence statement.',
+      'Changed evidence statement.',
+    ),
+  );
+  await buildReport({
+    input: reviewSource,
+    output: path.join(fixtureRoot, 'review-stale.html'),
+    review: 'prior.json',
+  });
+  await buildReport({
+    input: reviewSource,
+    output: path.join(fixtureRoot, 'review-stale-directory'),
+    format: 'directory',
+    review: 'prior.json',
+  });
   const siteOutput = path.resolve('test-results/e2e-site');
   await rm(siteOutput, { recursive: true, force: true });
   await stageSite({

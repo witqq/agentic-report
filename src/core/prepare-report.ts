@@ -10,7 +10,14 @@ import {
 } from '../authoring/registry.js';
 import type { Diagnostic, OutputFormat, SourceDocument } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
-import type { ReviewTargetManifest } from '../review/contract.js';
+import {
+  MAX_REVIEW_FILE_BYTES,
+  assertReviewRequirements,
+  parseReviewArtifact,
+  type ReviewArtifact,
+  type ReviewTargetManifest,
+} from '../review/contract.js';
+import { bindReviewArtifact, type ResolvedReviewArtifact } from '../review/binding.js';
 import { createReviewTargetManifest } from '../review/targets.js';
 import { extractNavigation, renderDocument } from '../render/document.js';
 import {
@@ -18,13 +25,14 @@ import {
   type MarkdownRenderResult,
   type PreparedResourceFile,
 } from '../render/markdown.js';
-import { loadSource } from '../source/load-source.js';
+import { loadSource, resolveLocalPath } from '../source/load-source.js';
 
 export interface PrepareReportOptions {
   readonly input: string;
   readonly format?: OutputFormat;
   readonly output?: string;
   readonly publication?: true;
+  readonly review?: string;
 }
 
 export interface PreparedReport {
@@ -42,6 +50,10 @@ export interface PreparedReport {
   readonly observedResources: MarkdownRenderResult['observedResources'];
   readonly resourceSourceFiles: readonly string[];
   readonly reviewManifest: ReviewTargetManifest;
+  readonly priorReview?: {
+    readonly artifact: ReviewArtifact;
+    readonly resolved: ResolvedReviewArtifact;
+  };
 }
 
 export async function prepareReport(options: PrepareReportOptions): Promise<PreparedReport> {
@@ -78,10 +90,26 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
     markdown.reviewTargets,
     markdown.reviewRequirements,
   );
+  const priorReviewFile =
+    options.review === undefined
+      ? undefined
+      : await resolveLocalPath(source.sourceRoot, options.review, 'REVIEW_OUTSIDE_SOURCE');
+  if (priorReviewFile !== undefined) {
+    await assertPriorReviewDoesNotCollide(priorReviewFile, [
+      ...source.sourceFiles,
+      ...markdown.sourceFiles,
+    ]);
+  }
+  const priorReviewInput =
+    priorReviewFile === undefined
+      ? undefined
+      : await loadPriorReview(priorReviewFile, reviewManifest);
+  const priorReview = priorReviewInput?.payload;
   if (collisionTargetPath !== undefined) {
     await assertOutputDoesNotCollide(collisionTargetPath, [
       ...source.sourceFiles,
       ...markdown.sourceFiles,
+      ...(priorReviewInput === undefined ? [] : [priorReviewInput.file]),
     ]);
   }
   const warnings: Diagnostic[] = [...markdown.warnings];
@@ -129,6 +157,7 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
         ? { inline: inlineRuntime }
         : { src: requireAssetReference(external.scriptSrc, 'runtime script') },
     reviewManifest,
+    ...(priorReview === undefined ? {} : { priorReview }),
   });
 
   return {
@@ -146,7 +175,68 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
     observedResources: markdown.observedResources,
     resourceSourceFiles: markdown.sourceFiles,
     reviewManifest,
+    ...(priorReview === undefined ? {} : { priorReview }),
   };
+}
+
+async function loadPriorReview(
+  file: string,
+  manifest: ReviewTargetManifest,
+): Promise<{
+  readonly file: string;
+  readonly payload: {
+    readonly artifact: ReviewArtifact;
+    readonly resolved: ResolvedReviewArtifact;
+  };
+}> {
+  const info = await stat(file);
+  if (!info.isFile() || info.size > MAX_REVIEW_FILE_BYTES)
+    throw new AgenticReportError({
+      level: 'error',
+      code: 'REVIEW_ARTIFACT_INVALID',
+      message: 'Prior review must be an ordinary bounded JSON file.',
+      remediation: `Use a review file no larger than ${MAX_REVIEW_FILE_BYTES} bytes.`,
+    });
+  try {
+    const artifact = parseReviewArtifact(JSON.parse(await readFile(file, 'utf8')) as unknown);
+    if (artifact.report.revision === manifest.reportRevision)
+      assertReviewRequirements(
+        artifact,
+        manifest.requirements ?? { decisions: [], checklists: [] },
+      );
+    return { file, payload: { artifact, resolved: bindReviewArtifact(artifact, manifest) } };
+  } catch (error) {
+    throw new AgenticReportError({
+      level: 'error',
+      code: 'REVIEW_ARTIFACT_INVALID',
+      message: 'Prior review is not valid versioned review JSON.',
+      remediation: 'Use a review exported by Agentic Report.',
+      details: { cause: error instanceof Error ? error.name : 'unknown' },
+    });
+  }
+}
+
+async function assertPriorReviewDoesNotCollide(
+  priorReviewFile: string,
+  sourceFiles: readonly string[],
+): Promise<void> {
+  const priorStat = await stat(priorReviewFile, { bigint: true });
+  for (const sourceFile of sourceFiles) {
+    const sourceStat = await stat(sourceFile, { bigint: true });
+    if (
+      sourceFile === priorReviewFile ||
+      (sourceStat.dev === priorStat.dev && sourceStat.ino === priorStat.ino)
+    ) {
+      throw new AgenticReportError({
+        level: 'error',
+        code: 'REVIEW_COLLIDES_WITH_SOURCE',
+        message: `Prior review aliases a report source file: ${sourceFile}`,
+        remediation:
+          'Use a dedicated review JSON sidecar that is not an entry, manifest, partial, or local asset.',
+        details: { review: priorReviewFile, source: sourceFile },
+      });
+    }
+  }
 }
 
 export function validateRequestedFormat(value: unknown): OutputFormat | undefined {

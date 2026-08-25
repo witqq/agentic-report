@@ -26,6 +26,31 @@
       "state": "staged-ready"
     },
     {
+      "id": "example-review-workspace",
+      "href": "examples/review-workspace/index.html",
+      "source": "../examples/review-workspace",
+      "review": "prior-review.json",
+      "kind": "page",
+      "owner": "unit-4",
+      "state": "staged-ready"
+    },
+    {
+      "id": "source-review-workspace",
+      "href": "examples/review-workspace/report.md",
+      "source": "../examples/review-workspace/report.md",
+      "kind": "copy",
+      "owner": "unit-4",
+      "state": "staged-ready"
+    },
+    {
+      "id": "source-review-workspace-prior",
+      "href": "examples/review-workspace/prior-review.json",
+      "source": "../examples/review-workspace/prior-review.json",
+      "kind": "copy",
+      "owner": "unit-4",
+      "state": "staged-ready"
+    },
+    {
       "id": "example-vendor",
       "href": "examples/vendor-decision/index.html",
       "source": "../examples/vendor-decision",

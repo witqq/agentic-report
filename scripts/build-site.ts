@@ -27,6 +27,7 @@ interface SiteRoute {
   readonly id: string;
   readonly href: string;
   readonly source: string;
+  readonly review?: string;
   readonly kind: RouteKind;
   readonly owner: 'unit-4' | 'unit-5';
   readonly state: 'staged-ready';
@@ -154,11 +155,15 @@ const readRouteManifest = async (repositoryRoot: string): Promise<RouteManifest>
       typeof route.id !== 'string' ||
       typeof route.href !== 'string' ||
       typeof route.source !== 'string' ||
+      (route.review !== undefined && typeof route.review !== 'string') ||
       !['page', 'copy', 'generated'].includes(String(route.kind)) ||
       !['unit-4', 'unit-5'].includes(String(route.owner)) ||
       route.state !== 'staged-ready'
     ) {
       throw new Error(`Route ${index} is not a complete staged route declaration.`);
+    }
+    if (route.review !== undefined && route.kind !== 'page') {
+      throw new Error(`Route ${index} may use review only for a page build.`);
     }
     return route as unknown as SiteRoute;
   });
@@ -297,7 +302,11 @@ export const stageSite = async (options: StageSiteOptions): Promise<StagedSiteRe
       );
       await mkdir(path.dirname(target), { recursive: true });
       if (route.kind === 'page') {
-        await buildReport({ input: canonicalSource, output: target });
+        await buildReport({
+          input: canonicalSource,
+          output: target,
+          ...(route.review === undefined ? {} : { review: route.review }),
+        });
         const compiled = await readFile(target, 'utf8');
         await writeFile(target, addMoiraAttribution(compiled));
       } else {

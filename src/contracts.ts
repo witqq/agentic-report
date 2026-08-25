@@ -60,6 +60,7 @@ export interface BuildReportOptions {
   readonly input: string;
   readonly output?: string;
   readonly format?: OutputFormat;
+  readonly review?: string;
 }
 
 export interface BuildReportResult {
@@ -88,6 +89,7 @@ export interface InitProjectResult {
 export interface ValidateReportOptions {
   readonly input: string;
   readonly format?: OutputFormat;
+  readonly review?: string;
 }
 
 export interface ValidateReportResult {
@@ -102,6 +104,7 @@ export interface ValidateReportResult {
 export interface InspectReportOptions {
   readonly input: string;
   readonly format?: OutputFormat;
+  readonly review?: string;
 }
 
 export interface InspectReportResult {

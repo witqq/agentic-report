@@ -12,6 +12,9 @@ When a page needs bounded human choices, use registry-owned typed `decision`/`de
 `checklist`/`check-item` syntax with stable IDs. Keep legacy prose-only decisions static. Required
 open/deferred decisions and unchecked required checklist items block approval; not-applicable requires a
 bounded note. Review state is local deterministic `review.json`; never imply an account or signature.
+For a follow-up build, pass a confined prior artifact with `build --review review.json`; treat stale bindings
+as prior evidence, resolve current requirements, and export the next revision. Never rewrite Markdown or
+carry a stale page approval automatically.
 
 # agentic-report
 
