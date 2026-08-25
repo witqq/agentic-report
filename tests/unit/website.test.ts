@@ -8,9 +8,8 @@ interface SiteRoute {
   readonly id: string;
   readonly href: string;
   readonly source: string;
+  readonly review?: string;
   readonly kind: 'page' | 'copy' | 'generated';
-  readonly owner: 'unit-4' | 'unit-5';
-  readonly state: 'staged-ready';
 }
 
 interface RouteManifest {
@@ -200,18 +199,21 @@ describe('public landing product proof', () => {
     );
 
     for (const route of manifest.routes) {
+      expect(Object.keys(route).sort()).toEqual(
+        [
+          ...(route.review === undefined
+            ? ['id', 'href', 'kind', 'source']
+            : ['id', 'href', 'kind', 'review', 'source']),
+        ].sort(),
+      );
       expect(route.href).not.toMatch(/^(?:\/|[a-z]+:|\.\.?\/)/iu);
       expect(route.href).not.toMatch(/placeholder|todo|example\.com|\/Users\//iu);
-      expect(['unit-4', 'unit-5']).toContain(route.owner);
       expect(['page', 'copy', 'generated']).toContain(route.kind);
-      expect(route.state).toBe('staged-ready');
       expect(route.source.trim()).not.toBe('');
       expect(route.source).not.toMatch(/^(?:\/|[a-z][a-z0-9+.-]*:|[a-z]:[\\/])/iu);
       expect(route.source).not.toMatch(/placeholder|todo|example\.com|\/Users\//iu);
       if (route.kind !== 'generated') {
         expect(await stat(path.resolve(repositoryRoot, 'website', route.source))).toBeTruthy();
-      } else {
-        expect(route.owner).toBe('unit-5');
       }
     }
   });

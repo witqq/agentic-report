@@ -16,7 +16,7 @@
 
 Requires Node.js 24.18.0 or newer. The first npx run requires npm registry access. Start with:
 
-    npx --yes agentic-report@0.3.1 init ./my-page --starter landing --json
-    npx --yes agentic-report@0.3.1 validate ./my-page --json
-    npx --yes agentic-report@0.3.1 inspect ./my-page --json
-    npx --yes agentic-report@0.3.1 build ./my-page --output ./my-page.html --json
+    npx --yes agentic-report@0.3.2 init ./my-page --starter landing --json
+    npx --yes agentic-report@0.3.2 validate ./my-page --json
+    npx --yes agentic-report@0.3.2 inspect ./my-page --json
+    npx --yes agentic-report@0.3.2 build ./my-page --output ./my-page.html --json

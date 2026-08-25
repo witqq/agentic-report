@@ -57,8 +57,8 @@ contract:
 
 ```sh
 pnpm deploy:prod
-infra-tools status agentic-report-site --server witqq.ru --remote-dir /opt/agentic-report
-infra-tools logs agentic-report-site 100 --server witqq.ru --remote-dir /opt/agentic-report
+infra-tools status agentic-report --server witqq.ru --remote-dir /opt/agentic-report
+infra-tools logs agentic-report 100 --server witqq.ru --remote-dir /opt/agentic-report
 ```
 
 No environment file or application secret is required by this static service. Production execution remains
