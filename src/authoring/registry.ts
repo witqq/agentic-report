@@ -187,6 +187,8 @@ export interface DirectiveDefinition {
   readonly attributes: readonly DirectiveAttributeDefinition[];
   readonly children:
     | 'markdown'
+    | 'decision-option-directives'
+    | 'check-item-directives'
     | 'markdown-and-card-directives'
     | 'markdown-and-tab-directives'
     | 'action-directives'
@@ -566,6 +568,10 @@ export const authoringRegistry = {
       id: 'inspect',
       description: 'Inspect a valid project through the production preparation pipeline.',
     },
+    {
+      id: 'review',
+      description: 'Resolve a versioned review artifact to current Markdown source locations.',
+    },
   ],
   commands: [
     {
@@ -580,6 +586,10 @@ export const authoringRegistry = {
       id: 'inspect',
       description:
         'Inspect source usage and the available authoring catalog without writing output.',
+    },
+    {
+      id: 'review',
+      description: 'Resolve a confined review artifact without changing report sources.',
     },
     { id: 'build', description: 'Compile a source into a static artifact.' },
     { id: 'describe', description: 'Return the complete source contract.' },
@@ -695,6 +705,15 @@ export const authoringRegistry = {
       classes: ['interactive-component-catalog'],
     },
     {
+      id: 'review-workspace',
+      path: 'review-workspace',
+      entry: 'report.md',
+      title: 'Human review handoff example',
+      description:
+        'Offline report with repeated evidence blocks for comments, independent verdicts, and deterministic review export.',
+      classes: ['work-report'],
+    },
+    {
       id: 'visualization-catalog',
       path: 'visualization-catalog',
       entry: 'report.md',
@@ -738,7 +757,10 @@ export type DirectiveName = AuthoringRegistry['directives'][number]['name'];
 
 function semanticContainers() {
   return [
-    container('decision', 'Decision or product-development branch containing Markdown.'),
+    decisionDirective(),
+    decisionOptionDirective(),
+    checklistDirective(),
+    checkItemDirective(),
     container('cards', 'Responsive grid, normally containing card directives.', {
       handoffs: ['semantic-document'],
     }),
@@ -1209,7 +1231,7 @@ function booleanAttribute(
   };
 }
 
-function container<const Name extends 'decision' | 'cards' | 'card' | 'steps'>(
+function container<const Name extends 'cards' | 'card' | 'steps'>(
   name: Name,
   description: string,
   options: {
@@ -1243,6 +1265,101 @@ function container<const Name extends 'decision' | 'cards' | 'card' | 'steps'>(
     },
     security: { authorCode: false, rawHtml: false, localResourceOnly: false },
     handoffs: options.handoffs ?? ['semantic-document'],
+  };
+}
+
+function decisionDirective(): DirectiveDefinition & { readonly name: 'decision' } {
+  const attributes = [
+    titleAttribute,
+    optionalIdentityAttribute('id', 'Stable identity required when decision options are authored.'),
+    booleanAttribute('required', 'Requires a selected, open, or deferred response.', false),
+  ] as const;
+  return {
+    name: 'decision',
+    description:
+      'Static Markdown decision or typed decision containing decision-option directives.',
+    forms: ['container'],
+    attributes,
+    children: 'decision-option-directives',
+    placement: {},
+    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+    sanitizer: {
+      tagName: 'section',
+      className: 'semantic-decision',
+      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
+    },
+    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+    handoffs: ['semantic-document', 'reader-runtime'],
+  };
+}
+
+function decisionOptionDirective(): DirectiveDefinition & { readonly name: 'decision-option' } {
+  const attributes = [
+    identityAttribute('id', 'Stable option identity.'),
+    textAttribute('label', 'Visible option label.', true),
+  ] as const;
+  return {
+    name: 'decision-option',
+    description: 'One labelled option inside a typed decision.',
+    forms: ['leaf'],
+    attributes,
+    children: 'label-or-generated-label',
+    placement: { requiredParent: 'decision' },
+    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+    sanitizer: {
+      tagName: 'span',
+      className: 'semantic-decision-option',
+      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
+    },
+    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+    handoffs: ['semantic-document', 'reader-runtime'],
+  };
+}
+
+function checklistDirective(): DirectiveDefinition & { readonly name: 'checklist' } {
+  const attributes = [
+    requiredTitleAttribute(),
+    identityAttribute('id', 'Stable checklist identity.'),
+  ] as const;
+  return {
+    name: 'checklist',
+    description: 'Typed review checklist containing stable check-item directives.',
+    forms: ['container'],
+    attributes,
+    children: 'check-item-directives',
+    placement: {},
+    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+    sanitizer: {
+      tagName: 'section',
+      className: 'semantic-checklist',
+      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
+    },
+    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+    handoffs: ['semantic-document', 'reader-runtime'],
+  };
+}
+
+function checkItemDirective(): DirectiveDefinition & { readonly name: 'check-item' } {
+  const attributes = [
+    identityAttribute('id', 'Stable checklist item identity.'),
+    textAttribute('label', 'Visible checklist item label.', true),
+    booleanAttribute('required', 'Blocks approval while unchecked.', false),
+  ] as const;
+  return {
+    name: 'check-item',
+    description: 'One labelled required or optional checklist item.',
+    forms: ['leaf'],
+    attributes,
+    children: 'label-or-generated-label',
+    placement: { requiredParent: 'checklist' },
+    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+    sanitizer: {
+      tagName: 'span',
+      className: 'semantic-check-item',
+      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
+    },
+    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+    handoffs: ['semantic-document', 'reader-runtime'],
   };
 }
 

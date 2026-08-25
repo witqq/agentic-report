@@ -6,5 +6,6 @@ export default defineConfig({
   test: {
     include: canonicalUnitIncludes,
     exclude: testCollectionExcludes,
+    maxWorkers: 4,
   },
 });

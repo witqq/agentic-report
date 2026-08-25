@@ -22,6 +22,7 @@ export async function buildReport(options: BuildReportOptions): Promise<BuildRep
     input: options.input,
     ...(requestedFormat === undefined ? {} : { format: requestedFormat }),
     ...(options.output === undefined ? {} : { output: options.output }),
+    ...(options.review === undefined ? {} : { review: options.review }),
     publication: true,
   });
   const outputPath = requireOutputPath(prepared);

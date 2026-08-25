@@ -105,6 +105,12 @@ package; compilation and the generated page then run locally.
 4. Run `npx --yes agentic-report build ./my-page --output ./my-page.html --json`, then open the result through `file://`.
    :::
 
+:::callout{kind="success" title="Return structured feedback to the agent"}
+Select **Review** in the generated page to comment on exact blocks, set independent block and overall verdicts,
+and download deterministic `review.json`. The review stays local; use the CLI review command to map it back to
+the current Markdown or partial ranges.
+:::
+
 :::callout{kind="warning" title="The runtime is part of the artifact"}
 Authors do not write browser JavaScript, but normal generated pages are interactive and require the
 package-owned runtime. Disabled-JavaScript and runtime-failure parity are not product profiles.
@@ -170,6 +176,12 @@ Make operating signals, charts, filters, thresholds, and exceptions easy to scan
 Separate gates, evidence, alternatives, conditions, and reversibility. Use the existing `report` or
 `architecture` starter; the [fictional vendor decision](examples/vendor-decision/index.html) is the proof,
 not a made-up seventh starter.
+:::
+:::card{title="Review and re-review"}
+Collect typed feedback, decisions, and checklist gates locally, then rebuild against the prior handoff.
+[Open the fictional review workspace](examples/review-workspace/index.html) ·
+[View its revised declarative source](examples/review-workspace/report.md) ·
+[Inspect the fictional prior handoff](examples/review-workspace/prior-review.json).
 :::
 :::card{title="Landing"}
 Build a restrained proof-first product or project page with the same public engine. Start with `landing`.

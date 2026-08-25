@@ -195,6 +195,24 @@
       ]
     },
     {
+      "id": "review-workspace",
+      "path": "review-workspace",
+      "entry": "report.md",
+      "title": "Human review handoff example",
+      "description": "Offline report with repeated evidence blocks for comments, independent verdicts, and deterministic review export.",
+      "classes": ["work-report"],
+      "files": [
+        {
+          "path": "prior-review.json",
+          "sha256": "c503f2bd2db22f8b73abcf5e006f77af3ff24cc3459ac0224044dfe27a57eb0a"
+        },
+        {
+          "path": "report.md",
+          "sha256": "6ce1ae153831e1be36cf9ef5ef32444ef3ed2fc512d473017d1fcef9322c7a16"
+        }
+      ]
+    },
+    {
       "id": "visualization-catalog",
       "path": "visualization-catalog",
       "entry": "report.md",

@@ -8,6 +8,7 @@ import type { Locator, Page } from '@playwright/test';
 import { test, expect } from './fixtures.js';
 
 const generatedRoot = path.resolve('test-results/e2e-generated');
+const stagedSiteRoot = path.resolve('test-results/e2e-site');
 const artifactUrl = (name: string): string => pathToFileURL(path.join(generatedRoot, name)).href;
 
 const landingArtifacts = [
@@ -33,6 +34,25 @@ const expectLoaded = async (image: Locator): Promise<void> => {
 };
 
 const sha256 = (value: Buffer): string => createHash('sha256').update(value).digest('hex');
+
+test('public repeat-review route exposes the fictional changed prior handoff', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await page.goto(
+    pathToFileURL(path.join(stagedSiteRoot, 'examples/review-workspace/index.html')).href,
+  );
+  await page.getByRole('button', { name: 'Review', exact: true }).click();
+  await expect(page.locator('[data-review-response-list]')).toContainText(
+    'Prior · changed · comment · Recheck activation after the cohort revision.',
+  );
+  await expect(page.locator('[data-review-page-verdict]')).toHaveValue('');
+  await mkdir(path.resolve('test-results/captures/public-site'), { recursive: true });
+  await page.screenshot({
+    path: path.resolve('test-results/captures/public-site/repeat-review-desktop.png'),
+    fullPage: true,
+  });
+});
 
 const expectCompactFieldManualHeader = async (
   page: Page,
@@ -135,7 +155,7 @@ test('public landing has the exact proof-first contract in both output formats',
       expect(control.paddingRight, control.name).toBeLessThanOrEqual(13.2);
       expect(control.gap, control.name).toBe(6);
     }
-    await expect(page.locator('#page-types .semantic-card')).toHaveCount(7);
+    await expect(page.locator('#page-types .semantic-card')).toHaveCount(8);
     await expect(page.locator('#proof .semantic-card')).toHaveCount(2);
     await expect(
       page.getByRole('heading', { name: 'Verbatim declarative source', level: 3 }),

@@ -1,0 +1,19 @@
+{
+  "contractVersion": 1,
+  "report": {
+    "revision": "sha256:56b5a4e62ac068b05aeeb9d8c6790c910d9cb3630be17a70191bff79f20cc700"
+  },
+  "responses": [
+    {
+      "id": "activation-prior",
+      "kind": "comment",
+      "target": {
+        "id": "rt-20957d55f22a91b4d61c7c8bae36967b",
+        "kind": "markdown:paragraph",
+        "fingerprint": "sha256:7207b5ddb23f27c968d0d444ca0229fb1ec7bfbf6e7a9c354aabd0ce734439e1",
+        "source": { "file": "report.md", "line": 21, "column": 1, "endLine": 21, "endColumn": 51 }
+      },
+      "message": "Recheck activation after the cohort revision."
+    }
+  ]
+}

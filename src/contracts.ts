@@ -7,6 +7,7 @@ import {
   type ReportManifestInput,
 } from './authoring/schemas.js';
 import { OUTPUT_FORMATS, type PAGE_CONTRACT } from './authoring/registry.js';
+import type { ResolvedReviewResponse } from './review/binding.js';
 
 export const OutputFormatSchema = z.enum(OUTPUT_FORMATS);
 export const ReportManifestInputSchema = reportManifestInputSchema;
@@ -22,6 +23,12 @@ export interface SourceDocument {
   readonly markdown: string;
   readonly manifest: ReportManifest;
   readonly sourceMap: readonly SourceMapSegment[];
+  readonly sourceDigests: readonly SourceDigest[];
+}
+
+export interface SourceDigest {
+  readonly file: string;
+  readonly sha256: string;
 }
 
 export interface SourceLocation {
@@ -53,6 +60,7 @@ export interface BuildReportOptions {
   readonly input: string;
   readonly output?: string;
   readonly format?: OutputFormat;
+  readonly review?: string;
 }
 
 export interface BuildReportResult {
@@ -81,6 +89,7 @@ export interface InitProjectResult {
 export interface ValidateReportOptions {
   readonly input: string;
   readonly format?: OutputFormat;
+  readonly review?: string;
 }
 
 export interface ValidateReportResult {
@@ -95,6 +104,7 @@ export interface ValidateReportResult {
 export interface InspectReportOptions {
   readonly input: string;
   readonly format?: OutputFormat;
+  readonly review?: string;
 }
 
 export interface InspectReportResult {
@@ -127,4 +137,19 @@ export interface InspectReportResult {
     readonly page: typeof PAGE_CONTRACT;
   };
   readonly warnings: readonly Diagnostic[];
+}
+
+export interface InspectReviewOptions {
+  readonly input: string;
+  readonly review: string;
+}
+
+export interface InspectReviewResult {
+  readonly contractVersion: number;
+  readonly projectPath: string;
+  readonly entryPath: string;
+  readonly reportRevision: string;
+  readonly reviewedRevision: string;
+  readonly reportStatus: 'exact' | 'stale';
+  readonly responses: readonly ResolvedReviewResponse[];
 }

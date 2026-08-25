@@ -59,13 +59,78 @@ Six trees are packaged: report (`report`, with stable canonical ID `basic`), `re
 `tutorial`, `dashboard`, and `landing`. The report tree is the default and every registry entry is
 `report.md`. A starter is also a buildable example; there is no separate generator contract.
 
-The ESM `validateReport({ input, format? })` and `inspectReport({ input, format? })` operations use the
+The ESM `validateReport({ input, format?, review? })` and `inspectReport({ input, format?, review? })` operations use the
 production source and render preparation without output publication. CLI `validate [input] [--format
 <format>] [--json]` and `inspect [input] [--format <format>] [--json]` are adapters of the same
 functions. Validation reports resolved project/entry identity, output format, derived runtime placement,
 and warnings. Inspection also reports sorted relative source files, observed directives and local-resource
 occurrence counts, and the registry-derived command/format/starter/capability catalog. Both commands read
 and validate all resources required by the selected format but do not create or replace an output artifact.
+
+## Review protocol and source binding
+
+Every normal build embeds an inert version-1 review manifest in a `template` element. Container directives
+and ordinary Markdown blocks receive deterministic review-target identities. Each target records its kind,
+SHA-256 fingerprint, source-root-relative entry or partial path, and authored range. A section with an
+explicit `id` also receives a stable review key. The manifest never contains source bodies or absolute
+workstation paths.
+
+The manifest `reportRevision` is a SHA-256 identity over the complete confined local input graph used by the
+report—entry, metadata, expanded partials, and referenced local resources—plus the review/source-contract
+versions, target-algorithm version, and canonical target inventory. It is independent of output destination
+and `single-file` versus `directory`; `BuildReportResult.contentHash` remains the hash of the serialized
+output HTML and is a separate contract.
+
+A review artifact is strict versioned JSON with a bound report revision and at most 500 structured
+responses. It supports bounded feedback, target verdict, decision, and checklist response records so one
+contract can be consumed by the package-owned reader interface. Negative verdicts and not-applicable
+checklist values require explanations. Serialization orders records canonically and adds no clock or random
+field. Reviewer names, messages, rationales, and notes are trimmed and normalized to Unicode NFC before
+length validation, so canonically equivalent input produces identical bytes. Reviewer text is local
+potentially sensitive data and must be handled like report source.
+
+Use the read-only ESM operation or CLI adapter:
+
+```sh
+agentic-report review ./review.json ./my-report --json
+```
+
+```ts
+const result = await inspectReview({ input: './my-report', review: 'review.json' });
+```
+
+The review path is resolved relative to the prepared source root and cannot be absolute, traverse outside,
+escape through a symlink, or alias an entry, manifest, included partial, referenced local resource, or
+output identity by canonical path or hard link. An exact bound revision requires the exact target identity and fingerprint. For
+a stale revision, an explicit stable key resolves first. Otherwise a unique target at the same authored
+source origin (file, line, and column) resolves there; a changed fingerprint returns `changed` even when an
+equal block exists elsewhere. Fingerprint relocation is considered only after the original origin is absent.
+A unique cross-file match is considered a move only when the previous source file no longer contributes any
+current review target. Zero matches return `missing` and multiple matches return `ambiguous`. The operation
+does not rewrite Markdown or publish output.
+Structured feedback is bounded and credential-sanitized before CLI/ESM transport; surrounding source and
+complete input files are never returned.
+
+### Review Workspace reader interface
+
+When a report contains review targets, its topbar includes `Review`. The normal page remains clean until the
+reader activates that control. In review mode each actual block target receives a labelled button; selecting
+it opens the target editor. Tight-list paragraphs do not become separate targets because they render without
+their own paragraph element—the containing list remains reviewable.
+
+The interface supports reviewer name; comment, question, change request, and blocker feedback with add,
+edit, and remove actions; one independent `approve`, `revise`, or `reject` verdict per target; a separate
+optional page verdict and rationale; and canonical `review.json` download and exact-revision JSON import.
+
+`revise` and `reject` require rationale. An `approve` page verdict cannot export while blocker feedback or a
+target `revise`/`reject` remains. Drafts without a page verdict can export if the shared strict contract is
+otherwise valid. Import rejects oversized, malformed, unsupported, stale, foreign, or non-current targets
+without replacing the active review.
+
+Desktop uses a non-modal right rail and leaves the report interactive. Mobile uses a native modal bottom
+sheet; closing it returns focus to the topbar or target button that opened it, while `Exit review` hides every
+target control. Review state is session-only and never written to browser storage, URL, network, or report
+source. Reviewer identity is descriptive rather than authenticated.
 
 The root metadata value, `tokens`, and `output` must be objects; scalar and array shapes fail instead of being
 silently replaced by defaults. Validation diagnostics point to the actual manifest or frontmatter field
@@ -115,7 +180,18 @@ The directive vocabulary is:
 - `actions` and directly nested leaf `action`: responsive ordinary link group; every action requires a
   visible label and safe `href` and may select `primary`, `secondary`, or `quiet` emphasis;
 - `callout`: emphasized finding with optional `title` and lowercase `kind`;
-- `decision`: decision or branch container with optional `title`;
+- `decision`: legacy static Markdown decision with optional `title`, or typed decision with stable `id`,
+  optional `required`, and directly nested leaf `decision-option` values with stable `id` and `label`;
+- `checklist`: typed checklist with required `title` and stable `id`, containing directly nested leaf
+  `check-item` values with stable `id`, visible `label`, and optional `required` gate;
+
+Typed component, option, and item inventories are bounded to 500 at source and manifest boundaries. Mixed
+Markdown plus typed children is invalid; use a Markdown-only legacy decision or a closed typed component.
+
+`build`, `validate`, and `inspect` accept an optional confined prior-review sidecar. Exact revisions restore
+current state. Stale bindings expose exact, changed, missing, or ambiguous prior responses without treating a
+prior page approval as current. Invalid sidecars fail before authoritative output replacement.
+
 - `cards` and nested `card`: responsive content grid;
 - `steps`: styled process container whose authored Markdown supplies the ordered or explanatory content;
 - `glossary`: reusable definition with required stable `key` and canonical `term` text;

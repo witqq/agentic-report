@@ -53,6 +53,13 @@ describe('registry-driven semantic directives', () => {
       ':::decision{title="Decision"}',
       'Decision body.',
       ':::',
+      ':::decision{title="Typed decision" id="typed" required=true}',
+      '::decision-option{id="yes" label="Yes"}',
+      '::decision-option{id="no" label="No"}',
+      ':::',
+      ':::checklist{title="Typed checklist" id="checklist"}',
+      '::check-item{id="gate" label="Gate complete" required=true}',
+      ':::',
       '::::cards{title="Options"}',
       ':::card{title="One"}',
       'Card body.',
@@ -149,14 +156,14 @@ describe('registry-driven semantic directives', () => {
       workspace,
     );
 
-    expect(rendered.html).toContain(
-      '<section class="semantic-section" data-nav="Short proof" data-width="wide" data-align="center" data-tone="accent" data-reveal="true" data-semantic="section" id="proof" aria-labelledby="proof-title">',
+    expect(rendered.html).toMatch(
+      /<section class="semantic-section"[^>]*data-nav="Short proof"[^>]*data-width="wide"[^>]*data-align="center"[^>]*data-tone="accent"[^>]*data-reveal="true"[^>]*data-semantic="section"[^>]*id="proof"[^>]*aria-labelledby="proof-title">/u,
     );
     expect(rendered.html).toContain(
       '<h2 id="proof-title" class="semantic-section-title">Proof</h2>',
     );
     expect(rendered.html).toContain('id="proof-2" aria-labelledby="proof-2-title"');
-    expect(rendered.html).toContain('data-reveal="false" data-semantic="section" id="proof-2"');
+    expect(rendered.html).toMatch(/data-reveal="false" data-semantic="section"[^>]*id="proof-2"/u);
     expect(rendered.html).toMatch(
       /<a class="semantic-action" data-kind="primary" data-semantic="action" href="#proof"><svg class="package-icon" data-package-icon="arrow-right"[^>]*>.*<\/svg>Start here<\/a>/u,
     );
@@ -299,8 +306,11 @@ describe('registry-driven semantic directives', () => {
       const rendered = await render(testCase.source, workspace);
       const ids = [...rendered.html.matchAll(/\sid="([^"]+)"/gu)].map((match) => match[1]);
       expect(new Set(ids).size, testCase.label).toBe(ids.length);
-      expect(rendered.html, testCase.label).toContain(
-        `<section class="semantic-section" data-width="standard" data-align="start" data-tone="plain" data-reveal="false" data-semantic="section" id="${testCase.sectionId}"`,
+      expect(rendered.html, testCase.label).toMatch(
+        new RegExp(
+          `<section class="semantic-section"[^>]*data-width="standard"[^>]*data-align="start"[^>]*data-tone="plain"[^>]*data-reveal="false"[^>]*data-semantic="section"[^>]*id="${testCase.sectionId}"`,
+          'u',
+        ),
       );
       expect(rendered.html, testCase.label).toContain(`<dialog id="${testCase.componentId}"`);
       expect(rendered.html, testCase.label).toContain(
@@ -1344,6 +1354,64 @@ describe('registry-driven semantic directives', () => {
     }
   });
 
+  it('rejects ambiguous typed review component identities and keeps legacy decisions static', async () => {
+    const workspace = await trackedWorkspace('typed-review-components');
+    const legacy = await render(
+      '# Legacy\n\n:::decision{title="Static"}\nMarkdown only.\n:::',
+      workspace,
+    );
+    expect(legacy.html).toContain('class="semantic-decision"');
+    expect(legacy.html).not.toContain('semantic-decision-option');
+    await expect(
+      render(
+        '# Missing id\n\n:::decision{title="Typed"}\n::decision-option{id="one" label="One"}\n:::',
+        workspace,
+      ),
+    ).rejects.toMatchObject({ diagnostic: { code: 'INVALID_DIRECTIVE_ATTRIBUTE' } });
+    await expect(
+      render(
+        '# Duplicate\n\n:::checklist{title="Gates" id="gates"}\n::check-item{id="same" label="One"}\n::check-item{id="same" label="Two"}\n:::',
+        workspace,
+      ),
+    ).rejects.toMatchObject({ diagnostic: { code: 'INVALID_DIRECTIVE_ATTRIBUTE' } });
+    for (const mixed of [
+      ':::decision{title="Typed" id="typed"}\nMarkdown is not allowed here.\n::decision-option{id="one" label="One"}\n:::',
+      ':::checklist{title="Gates" id="gates"}\nMarkdown is not allowed here.\n::check-item{id="one" label="One"}\n:::',
+    ]) {
+      await expect(render(`# Mixed\n\n${mixed}`, workspace)).rejects.toMatchObject({
+        diagnostic: { code: 'INVALID_DIRECTIVE_PLACEMENT' },
+      });
+    }
+    await mkdir(path.join(workspace, 'partials'), { recursive: true });
+    const partial = path.join(workspace, 'partials', 'mixed.md');
+    await writeFile(
+      partial,
+      ':::decision{title="Typed" id="typed"}\nMixed partial prose.\n::decision-option{id="one" label="One"}\n:::\n',
+    );
+    await writeFile(
+      path.join(workspace, 'report.md'),
+      '---\ntitle: Mixed partial\n---\n# Mixed partial\n{{include: partials/mixed.md}}\n',
+    );
+    await expect(
+      buildReport({ input: workspace, output: path.join(workspace, 'out.html') }),
+    ).rejects.toMatchObject({
+      diagnostic: {
+        code: 'INVALID_DIRECTIVE_PLACEMENT',
+        source: { file: partial },
+      },
+    });
+    const excessive = Array.from(
+      { length: 501 },
+      (_, index) => `::decision-option{id="option-${index}" label="Option ${index}"}`,
+    ).join('\n');
+    await expect(
+      render(
+        `# Limit\n\n:::decision{title="Too many" id="too-many"}\n${excessive}\n:::`,
+        workspace,
+      ),
+    ).rejects.toMatchObject({ diagnostic: { code: 'INVALID_DIRECTIVE_PLACEMENT' } });
+  });
+
   it('maps invalid placement in an expanded partial to the authored partial range', async () => {
     const workspace = await trackedWorkspace('directive-partial-placement');
     await mkdir(path.join(workspace, 'partials'));
@@ -1652,7 +1720,7 @@ describe('six-class declarative registry corpus', () => {
     expect(allHtml).toContain('>Open retained data</a>');
     expect(allHtml).toContain('>Download private-data.json</a>');
     expect(allHtml).toContain('font-family:"Private Reader"');
-    expect(allHtml).toContain('<table>');
+    expect(allHtml).toContain('<table ');
     expect(allHtml).toContain('<th>Задача</th>');
   });
 });
@@ -1777,6 +1845,9 @@ function directiveInvocation(
   if (directive.name === 'actions') {
     return `:::actions${suffix}\n::action[Projection label]{href="#target"}\n:::`;
   }
+  if (directive.name === 'checklist') {
+    return `:::checklist${suffix}\n::check-item{id="gate" label="Gate"}\n:::`;
+  }
   const invocation =
     form === 'container'
       ? `:::${directive.name}${suffix}\nBody\n:::`
@@ -1878,7 +1949,11 @@ function nestedDirectiveInvocation(
   };
   const invocation =
     childInvocation ?? bareDirectiveInvocation(childContract, attributes(childContract));
-  return `::::${parent}${attributes(parentContract)}\n${invocation}\n::::`;
+  const parentAttributes =
+    parent === 'decision' && child === 'decision-option'
+      ? '{id="typed-decision"}'
+      : attributes(parentContract);
+  return `::::${parent}${parentAttributes}\n${invocation}\n::::`;
 }
 
 function bareDirectiveInvocation(directive: DirectiveDefinition, suffix?: string): string {
@@ -1957,6 +2032,10 @@ function assertRenderedAttribute(
     return;
   }
   if (attribute.name === 'label') {
+    if (directive.name === 'decision-option' || directive.name === 'check-item') {
+      expect(rendered.html).toContain(`data-label="${serialized}"`);
+      return;
+    }
     expect(rendered.html).toContain(`>${serialized}</button>`);
     return;
   }

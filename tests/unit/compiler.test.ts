@@ -468,7 +468,9 @@ describe('buildReport', () => {
       format: 'directory',
     });
     expect(result.outputPath).toBe(path.join(output, 'index.html'));
-    expect(await readFile(result.outputPath, 'utf8')).toContain('<h1 id="report">Report</h1>');
+    expect(await readFile(result.outputPath, 'utf8')).toMatch(
+      /<h1[^>]*id="report"[^>]*>Report<\/h1>/u,
+    );
   });
 
   it('removes a partially written directory stage and leaves a missing destination absent', async () => {

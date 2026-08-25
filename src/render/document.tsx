@@ -2,6 +2,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 import type { ReportManifest } from '../contracts.js';
 import { PACKAGE_ICON_PATHS, type PackageIconName } from '../iconography.js';
+import type { ReviewTargetManifest } from '../review/contract.js';
+import type { ResolvedReviewArtifact } from '../review/binding.js';
+import type { ReviewArtifact } from '../review/contract.js';
 
 export interface NavigationItem {
   readonly id: string;
@@ -19,6 +22,11 @@ export interface DocumentRenderOptions {
   readonly contentSecurityPolicy: string;
   readonly styles: { readonly inline?: string; readonly href?: string };
   readonly runtime: DocumentRuntime;
+  readonly reviewManifest: ReviewTargetManifest;
+  readonly priorReview?: {
+    readonly artifact: ReviewArtifact;
+    readonly resolved: ResolvedReviewArtifact;
+  };
 }
 
 export type DocumentRuntime =
@@ -27,6 +35,7 @@ export type DocumentRuntime =
 
 export function renderDocument(options: DocumentRenderOptions): string {
   const hasNavigation = options.navigation.length >= 2;
+  const hasReviewTargets = options.reviewManifest.targets.length > 0;
   const documentIdentity = compactDocumentIdentity(options.title);
   const usedIds = new Set(
     [...options.contentHtml.matchAll(/\sid="([^"]+)"/gu)].map((match) => match[1] ?? ''),
@@ -36,6 +45,11 @@ export function renderDocument(options: DocumentRenderOptions): string {
   const navigationHostId = allocateShellId('report-navigation-host', usedIds);
   const navigationDialogId = allocateShellId('report-navigation-dialog', usedIds);
   const navigationDialogTitleId = allocateShellId('report-navigation-dialog-title', usedIds);
+  const reviewDialogId = allocateShellId('report-review-dialog', usedIds);
+  const reviewDialogTitleId = allocateShellId('report-review-dialog-title', usedIds);
+  const reviewSummaryTitleId = allocateShellId('report-review-summary-title', usedIds);
+  const reviewTargetTitleId = allocateShellId('report-review-target-title', usedIds);
+  const reviewResponsesTitleId = allocateShellId('report-review-responses-title', usedIds);
   const markup = renderToStaticMarkup(
     <html
       lang={options.language}
@@ -99,6 +113,18 @@ export function renderDocument(options: DocumentRenderOptions): string {
               </span>
             ) : null}
           </div>
+          {hasReviewTargets ? (
+            <button
+              className="review-toggle"
+              type="button"
+              aria-controls={reviewDialogId}
+              aria-expanded="false"
+              data-review-toggle
+            >
+              <span data-review-toggle-label>Review</span>
+              <span className="review-toggle-count" data-review-toggle-count hidden />
+            </button>
+          ) : null}
           <button
             className="theme-toggle"
             type="button"
@@ -150,6 +176,122 @@ export function renderDocument(options: DocumentRenderOptions): string {
             </div>
           </dialog>
         ) : null}
+        {hasReviewTargets ? (
+          <dialog
+            className="review-dialog"
+            id={reviewDialogId}
+            aria-labelledby={reviewDialogTitleId}
+            data-review-dialog
+          >
+            <div className="review-panel">
+              <header className="review-panel-header">
+                <div>
+                  <p className="review-eyebrow">Review workspace</p>
+                  <h2 id={reviewDialogTitleId}>Review this report</h2>
+                </div>
+                <button type="button" className="review-close" data-review-close>
+                  Close
+                </button>
+              </header>
+              <div className="review-panel-body">
+                <p className="review-error" role="alert" data-review-error hidden />
+                <section className="review-form-section" aria-labelledby={reviewSummaryTitleId}>
+                  <h3 id={reviewSummaryTitleId}>Summary</h3>
+                  <output className="review-summary" aria-live="polite" data-review-summary>
+                    No responses yet
+                  </output>
+                  <label className="review-field">
+                    <span>Reviewer name</span>
+                    <input type="text" autoComplete="name" data-reviewer-name />
+                  </label>
+                  <label className="review-field">
+                    <span>Overall verdict</span>
+                    <select data-review-page-verdict>
+                      <option value="">Draft — no verdict</option>
+                      <option value="approve">Approve</option>
+                      <option value="revise">Revise</option>
+                      <option value="reject">Reject</option>
+                    </select>
+                  </label>
+                  <label className="review-field" data-review-page-rationale-field hidden>
+                    <span>Overall rationale</span>
+                    <textarea rows={3} data-review-page-rationale />
+                  </label>
+                </section>
+                <section
+                  className="review-form-section review-target-editor"
+                  aria-labelledby={reviewTargetTitleId}
+                  data-review-target-editor
+                  hidden
+                >
+                  <h3 id={reviewTargetTitleId}>Selected block</h3>
+                  <p className="review-target-label" data-review-target-label />
+                  <label className="review-field">
+                    <span>Block verdict</span>
+                    <select data-review-target-verdict>
+                      <option value="">No verdict</option>
+                      <option value="approve">Approve</option>
+                      <option value="revise">Revise</option>
+                      <option value="reject">Reject</option>
+                    </select>
+                  </label>
+                  <label className="review-field" data-review-target-rationale-field hidden>
+                    <span>Block rationale</span>
+                    <textarea rows={3} data-review-target-rationale />
+                  </label>
+                  <div className="review-field-row">
+                    <label className="review-field">
+                      <span>Feedback type</span>
+                      <select data-review-feedback-kind>
+                        <option value="comment">Comment</option>
+                        <option value="question">Question</option>
+                        <option value="change-request">Change request</option>
+                        <option value="blocker">Blocker</option>
+                      </select>
+                    </label>
+                  </div>
+                  <label className="review-field">
+                    <span>Feedback</span>
+                    <textarea rows={4} data-review-feedback-message />
+                  </label>
+                  <div className="review-inline-actions">
+                    <button type="button" className="review-primary" data-review-add-feedback>
+                      Add feedback
+                    </button>
+                    <button type="button" data-review-cancel-edit hidden>
+                      Cancel edit
+                    </button>
+                  </div>
+                </section>
+                <section className="review-form-section" aria-labelledby={reviewResponsesTitleId}>
+                  <h3 id={reviewResponsesTitleId}>Responses</h3>
+                  <p data-review-empty>No responses yet.</p>
+                  <ol className="review-response-list" data-review-response-list />
+                </section>
+                <section className="review-form-section" data-review-components hidden>
+                  <h3>Decisions and checklists</h3>
+                  <div data-review-component-list />
+                </section>
+              </div>
+              <footer className="review-panel-footer">
+                <label className="review-file-action">
+                  Import review
+                  <input type="file" accept="application/json,.json" data-review-import />
+                </label>
+                <button type="button" className="review-primary" data-review-export>
+                  Export review.json
+                </button>
+                <button type="button" data-review-exit>
+                  Exit review
+                </button>
+              </footer>
+            </div>
+          </dialog>
+        ) : null}
+        <template data-review-manifest>{JSON.stringify(options.reviewManifest)}</template>
+        {options.priorReview === undefined ? null : (
+          <template data-prior-review>{JSON.stringify(options.priorReview)}</template>
+        )}
         {options.runtime.inline === undefined ? null : (
           // biome-ignore lint/security/noDangerouslySetInnerHtml: JavaScript is the package-owned Vite build artifact.
           <script dangerouslySetInnerHTML={{ __html: options.runtime.inline }} />
@@ -212,12 +354,14 @@ export function extractNavigation(html: string): readonly NavigationItem[] {
   if (explicitSections.length > 0) {
     return explicitSections.length >= 2 ? explicitSections : [];
   }
-  const headingPattern = /<h2\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g;
-  const legacySections = [...html.matchAll(headingPattern)].map((match) => ({
-    depth: 2 as const,
-    id: match[1] ?? '',
-    label: stripMarkup(match[2] ?? ''),
-  }));
+  const headingPattern = /<h2\s+([^>]*)>([\s\S]*?)<\/h2>/g;
+  const legacySections = [...html.matchAll(headingPattern)]
+    .map((match) => ({
+      depth: 2 as const,
+      id: /\bid="([^"]+)"/u.exec(match[1] ?? '')?.[1] ?? '',
+      label: stripMarkup(match[2] ?? ''),
+    }))
+    .filter((item) => item.id.length > 0);
   return legacySections.length >= 2 ? legacySections : [];
 }
 

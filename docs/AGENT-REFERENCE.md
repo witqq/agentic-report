@@ -138,6 +138,61 @@ const validation = await validateReport({ input: './my-report' });
 const inspection = await inspectReport({ input: './my-report', format: 'directory' });
 ```
 
+## Resolve review feedback to source
+
+A generated report contains an inert review-target manifest bound to the local source graph. A versioned
+review artifact created for that report can be resolved without writing output or changing Markdown:
+
+```bash
+agentic-report review ./review.json ./my-report
+agentic-report review ./review.json ./my-report --json
+```
+
+The review path is relative to `./my-report` and must remain inside its canonical source root. JSON output
+contains the current and reviewed revisions plus each response with `exact`, `changed`, `missing`, or
+`ambiguous` binding and the current entry/partial range when resolved. Feedback fields are bounded and
+credential-sanitized; source bodies are not returned.
+
+The ESM equivalent is:
+
+```js
+import { inspectReview, parseReviewArtifact, serializeReviewArtifact } from 'agentic-report';
+
+const result = await inspectReview({ input: './my-report', review: 'review.json' });
+```
+
+`parseReviewArtifact()` enforces the closed version-1 schema. `serializeReviewArtifact()` trims and
+normalizes human text to Unicode NFC, then produces canonical newline-terminated JSON without a timestamp or
+random value. A changed or ambiguous target is never applied automatically; inspect its reported source
+state and edit the Markdown explicitly.
+
+The generated page itself provides Review Workspace. The reader selects `Review`, chooses a block, records
+feedback or a block verdict, selects an optional overall verdict, and downloads `review.json`. Desktop uses a
+non-modal rail; mobile uses a modal sheet. A downloaded review can be imported into a fresh copy of the exact
+same report revision. Importing a stale revision is intentionally refused; use the CLI source-binding result
+to inspect stale feedback.
+
+Typed review controls are declarative and keep legacy decisions static:
+
+```md
+:::decision{title="Release path" id="release-path" required=true}
+::decision-option{id="ship" label="Ship now"}
+::decision-option{id="hold" label="Hold release"}
+:::
+
+:::checklist{title="Release gates" id="release-gates"}
+::check-item{id="owner" label="Owner assigned" required=true}
+::check-item{id="notes" label="Notes attached"}
+:::
+```
+
+Required open/deferred decisions and unchecked required items block approval. A not-applicable checklist
+state requires a bounded note. Stable component and child identities, not labels, own the exported response.
+
+For a repeat review, run `agentic-report build ./my-page --review review.json --output revised.html`.
+The sidecar is confined to the source root and read before publication. Invalid input preserves existing
+output. Exact state resumes; stale bindings remain prior evidence until the reviewer resolves the new revision.
+
 ## Minimal source
 
 ```text

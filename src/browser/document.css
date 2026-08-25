@@ -358,6 +358,7 @@ a {
 }
 
 .nav-toggle,
+.review-toggle,
 .theme-toggle,
 .copy-code,
 .semantic-demo button,
@@ -400,6 +401,7 @@ a {
 }
 
 .nav-toggle:hover,
+.review-toggle:hover,
 .theme-toggle:hover,
 .copy-code:hover,
 .semantic-demo button:hover,
@@ -485,6 +487,304 @@ a {
   display: none;
 }
 
+.review-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.review-toggle-count {
+  min-width: 1.35rem;
+  border-radius: 999px;
+  padding: 0.05rem 0.35rem;
+  background: var(--color-accent);
+  color: var(--color-surface);
+  font-size: 0.75rem;
+  font-weight: 780;
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+.review-dialog[open] {
+  position: fixed;
+  z-index: 30;
+  top: 3.75rem;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  display: block;
+  width: min(25rem, 100%);
+  height: calc(100dvh - 3.75rem);
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  border-left: 1px solid var(--color-border);
+  padding: 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-raised);
+}
+
+.review-dialog::backdrop {
+  background: transparent;
+}
+
+.review-panel {
+  display: grid;
+  height: 100%;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.review-panel-header,
+.review-panel-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-color: var(--color-border);
+  padding: 0.85rem 1rem;
+}
+
+.review-panel-header {
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.review-eyebrow {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.review-panel-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem;
+  overscroll-behavior: contain;
+}
+
+.review-panel-footer {
+  flex-wrap: wrap;
+  border-top: 1px solid var(--color-border);
+}
+
+.review-close,
+.review-panel button,
+.review-file-action {
+  min-height: var(--control-height);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  padding: 0 var(--control-inline-padding);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.review-panel button:hover,
+.review-file-action:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.review-panel button.review-primary {
+  border-color: var(--color-accent-strong);
+  background: var(--color-accent);
+  color: var(--color-surface);
+  font-weight: 760;
+}
+
+.review-file-action {
+  display: inline-flex;
+  align-items: center;
+}
+
+.review-file-action input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.review-file-action:focus-within {
+  outline: 0.2rem solid var(--color-focus);
+  outline-offset: 0.18rem;
+}
+
+.review-form-section + .review-form-section {
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 1rem;
+}
+
+.review-summary,
+.review-target-label {
+  display: block;
+  margin: 0 0 0.85rem;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+}
+
+.review-target-label {
+  overflow-wrap: anywhere;
+}
+
+.review-field {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 680;
+}
+
+.review-field :is(input, select, textarea) {
+  width: 100%;
+  min-height: var(--input-height);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-small);
+  padding: 0.55rem 0.65rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 450;
+}
+
+.review-field textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.review-inline-actions,
+.review-response-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.review-error {
+  margin: 0 0 1rem;
+  border: 1px solid var(--color-editorial-marker, var(--visual-3));
+  border-radius: var(--radius-small);
+  padding: 0.7rem;
+  background: color-mix(in srgb, var(--visual-3) 12%, var(--color-surface));
+  color: var(--color-text);
+  font-weight: 680;
+}
+
+.review-response-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-response {
+  display: grid;
+  gap: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  padding: 0.65rem;
+  background: var(--color-surface-raised);
+}
+
+.review-response-kind {
+  color: var(--color-accent-strong);
+  font-size: 0.72rem;
+  font-weight: 780;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.review-component-list,
+[data-review-component-list] {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.review-component {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  padding: 0.75rem;
+  background: var(--color-surface-raised);
+}
+
+.review-component legend {
+  padding: 0 0.25rem;
+  font-weight: 760;
+}
+
+.review-component label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 680;
+}
+
+.review-component :is(select, textarea) {
+  width: 100%;
+  min-height: var(--input-height);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-small);
+  padding: 0.5rem 0.6rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.review-component textarea {
+  min-height: 4rem;
+  resize: vertical;
+}
+
+.review-target-control {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: fit-content;
+  min-height: var(--control-height);
+  margin: 0.45rem 0 0.35rem auto;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-small);
+  padding: 0 var(--control-inline-padding);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+:root[data-review-active] [data-review-target] {
+  transition: outline-color 120ms ease-out;
+}
+
+:root[data-review-active] [data-review-target]:hover,
+[data-review-target][data-review-selected] {
+  border-radius: var(--radius-small);
+  outline: 0.16rem solid var(--color-accent);
+  outline-offset: 0.28rem;
+}
+
+@media (min-width: 57rem) {
+  :root[data-review-open] .report-shell,
+  :root[data-review-open][data-layout='dashboard'] .report-shell,
+  :root[data-review-open][data-layout='landing'] .report-shell {
+    width: min(calc(100% - 25rem), var(--content-width));
+    margin-right: 25rem;
+  }
+}
+
 .scroll-progress {
   position: fixed;
   z-index: 21;
@@ -565,6 +865,25 @@ h3 {
 p,
 li {
   max-width: min(100%, var(--flow-measure, var(--reading-measure)));
+}
+
+.review-panel-header h2,
+.review-panel-header p {
+  margin: 0;
+}
+
+.review-panel-header h2 {
+  font-size: 1.15rem;
+}
+
+.review-form-section h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.review-response p {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
 }
 
 .report-content article > :is(h1, h2, h3, p, ul, ol, blockquote, hr) {
@@ -1726,6 +2045,37 @@ th {
       transform 220ms ease-out;
   }
 
+  .review-dialog[open] {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: min(48rem, calc(100dvh - 1rem));
+    max-height: min(48rem, calc(100dvh - 1rem));
+    margin: auto 0 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-large) var(--radius-large) 0 0;
+  }
+
+  .review-dialog::backdrop {
+    background: color-mix(in srgb, #070b13 72%, transparent);
+  }
+
+  .review-panel {
+    max-height: min(48rem, calc(100dvh - 1rem));
+  }
+
+  .review-panel-footer {
+    padding-bottom: max(0.85rem, env(safe-area-inset-bottom));
+  }
+
+  .review-target-control {
+    float: none;
+    width: 100%;
+    margin: 0.45rem 0;
+  }
+
   .nav-dialog::backdrop {
     background: color-mix(in srgb, #070b13 72%, transparent);
   }
@@ -1793,6 +2143,11 @@ th {
 
   @starting-style {
     .nav-dialog[open] {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+
+    .review-dialog[open] {
       opacity: 0;
       transform: translateY(12px);
     }

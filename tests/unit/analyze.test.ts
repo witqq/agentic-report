@@ -1,15 +1,24 @@
 import { createHash } from 'node:crypto';
-import { cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { cp, link, mkdir, readFile, readdir, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type {
   InspectReportOptions,
+  InspectReviewOptions,
   OutputFormat,
   ValidateReportOptions,
 } from '../../src/contracts.js';
-import { buildReport, inspectReport, validateReport } from '../../src/index.js';
+import {
+  buildReport,
+  inspectReport,
+  inspectReview,
+  serializeReviewArtifact,
+  type ReviewTargetManifest,
+  validateReport,
+} from '../../src/index.js';
+import { MAX_REVIEW_FILE_BYTES } from '../../src/review/contract.js';
 import { AgenticReportError } from '../../src/diagnostics.js';
 import { authoringRegistry } from '../../src/authoring/registry.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
@@ -80,6 +89,7 @@ describe('report analysis', () => {
           validate: 'Validate a project without writing an output artifact.',
           inspect:
             'Inspect source usage and the available authoring catalog without writing output.',
+          review: 'Resolve a confined review artifact without changing report sources.',
           build: 'Compile a source into a static artifact.',
           describe: 'Return the complete source contract.',
           schema: 'Return manifest, directive, or complete source JSON Schema.',
@@ -98,6 +108,7 @@ describe('report analysis', () => {
           init: 'Initialize a packaged declarative starter without overwriting user content.',
           validate: 'Validate a project through the production preparation pipeline.',
           inspect: 'Inspect a valid project through the production preparation pipeline.',
+          review: 'Resolve a versioned review artifact to current Markdown source locations.',
         },
         page: authoringRegistry.page,
       },
@@ -119,6 +130,374 @@ describe('report analysis', () => {
       observed: inspected.observed,
       sourceFiles: inspected.sourceFiles,
     });
+  });
+
+  it('embeds format-identical review targets and resolves exact partial feedback after resource changes', async () => {
+    const workspace = await reviewWorkspace('analysis-review-binding');
+    const singleOutput = path.join(workspace, 'report.html');
+    const directoryOutput = path.join(workspace, 'artifact');
+    await Promise.all([
+      buildReport({ input: workspace, output: singleOutput }),
+      buildReport({ input: workspace, output: directoryOutput, format: 'directory' }),
+    ]);
+    const singleManifest = await embeddedManifest(singleOutput);
+    const singleHtml = await readFile(singleOutput, 'utf8');
+    const renderedTargetIds = [...singleHtml.matchAll(/\bdata-review-target="([^"]+)"/gu)]
+      .map((match) => match[1] ?? '')
+      .sort();
+    expect(renderedTargetIds).toEqual(singleManifest.targets.map((target) => target.id).sort());
+    const serializedManifest = JSON.stringify(singleManifest);
+    expect(serializedManifest).not.toContain(workspace);
+    expect(serializedManifest).not.toMatch(/Entry secret context|Equal evidence/u);
+    expect(singleManifest).toStrictEqual(
+      await embeddedManifest(path.join(directoryOutput, 'index.html')),
+    );
+    const partialTarget = singleManifest.targets.find(
+      (target) =>
+        target.kind === 'markdown:paragraph' && target.source.file === 'partials/evidence.md',
+    );
+    if (partialTarget === undefined) throw new Error('Missing partial review target');
+    expect(singleManifest.targets).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'directive:section',
+          stableKey: 'directive:section:launch',
+        }),
+      ]),
+    );
+    await writeFile(
+      path.join(workspace, 'review.json'),
+      serializeReviewArtifact({
+        contractVersion: 1,
+        report: { revision: singleManifest.reportRevision },
+        responses: [
+          {
+            id: 'response-a',
+            kind: 'comment',
+            target: partialTarget,
+            message: 'token=private-value',
+          },
+        ],
+      }),
+    );
+
+    const exact = await inspectReview({ input: workspace, review: 'review.json' });
+    expect(exact).toMatchObject({
+      reportStatus: 'exact',
+      responses: [
+        {
+          binding: 'exact',
+          response: { message: 'token=[REDACTED]' },
+          currentTarget: { source: { file: 'partials/evidence.md', line: 1 } },
+        },
+      ],
+    });
+    expect(JSON.stringify(exact)).not.toMatch(/private-value|Entry secret context/u);
+
+    const entryPath = path.join(workspace, 'report.md');
+    await writeFile(entryPath, `${await readFile(entryPath, 'utf8')}\nUnrelated entry update.\n`);
+    const sourceStale = await inspectReview({ input: workspace, review: 'review.json' });
+    expect(sourceStale.reportRevision).not.toBe(singleManifest.reportRevision);
+    expect(sourceStale).toMatchObject({
+      reportStatus: 'stale',
+      responses: [
+        { binding: 'exact', currentTarget: { source: { file: 'partials/evidence.md' } } },
+      ],
+    });
+
+    await writeFile(path.join(workspace, 'asset.txt'), 'changed local resource\n');
+    const resourceStale = await inspectReview({ input: workspace, review: 'review.json' });
+    expect(resourceStale.reportRevision).not.toBe(sourceStale.reportRevision);
+    expect(resourceStale.responses[0]?.binding).toBe('exact');
+
+    await writeFile(path.join(workspace, 'partials/evidence.md'), 'Changed evidence.\n');
+    const targetStale = await inspectReview({ input: workspace, review: 'review.json' });
+    expect(targetStale.reportRevision).not.toBe(resourceStale.reportRevision);
+    expect(targetStale.responses[0]).toMatchObject({
+      binding: 'changed',
+      currentTarget: { source: { file: 'partials/evidence.md', line: 1 } },
+    });
+  });
+
+  it('confines review files lexically and canonically before reading', async () => {
+    const workspace = await reviewWorkspace('analysis-review-confinement');
+    const outside = await createTestWorkspace('analysis-review-outside');
+    workspaces.push(outside);
+    const outsideReview = path.join(outside, 'review.json');
+    await writeFile(outsideReview, '{}');
+    await expect(
+      inspectReview({ input: workspace, review: '../outside/review.json' }),
+    ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_OUTSIDE_SOURCE' } });
+    await symlink(outsideReview, path.join(workspace, 'review.json'));
+    await expect(inspectReview({ input: workspace, review: 'review.json' })).rejects.toMatchObject({
+      diagnostic: { code: 'REVIEW_OUTSIDE_SOURCE' },
+    });
+  });
+
+  it('enforces typed requirement ownership and approval through public review inspection', async () => {
+    const workspace = await reviewWorkspace('analysis-typed-review');
+    const output = path.join(workspace, 'report.html');
+    await buildReport({ input: workspace, output });
+    const manifest = await embeddedManifest(output);
+    expect(manifest.requirements?.decisions).toHaveLength(1);
+    await writeFile(
+      path.join(workspace, 'review.json'),
+      serializeReviewArtifact({
+        contractVersion: 1,
+        report: { revision: manifest.reportRevision },
+        pageVerdict: { verdict: 'approve' },
+        responses: [],
+      }),
+    );
+    await expect(inspectReview({ input: workspace, review: 'review.json' })).rejects.toMatchObject({
+      diagnostic: { code: 'REVIEW_REQUIREMENTS_INVALID' },
+    });
+    const decisionRequirement = manifest.requirements?.decisions[0];
+    const checklistRequirement = manifest.requirements?.checklists[0];
+    const decisionTarget = manifest.targets.find(
+      (target) => target.id === decisionRequirement?.targetId,
+    );
+    const checklistTarget = manifest.targets.find(
+      (target) => target.id === checklistRequirement?.targetId,
+    );
+    if (decisionTarget === undefined || checklistTarget === undefined)
+      throw new Error('Missing typed targets');
+    await writeFile(
+      path.join(workspace, 'review.json'),
+      serializeReviewArtifact({
+        contractVersion: 1,
+        report: { revision: manifest.reportRevision },
+        pageVerdict: { verdict: 'approve' },
+        responses: [
+          { id: 'decision-a', kind: 'decision', target: decisionTarget, optionId: 'ship' },
+          {
+            id: 'checklist-a',
+            kind: 'checklist',
+            target: checklistTarget,
+            items: [{ itemId: 'owner', status: 'checked' }],
+          },
+        ],
+      }),
+    );
+    const entry = path.join(workspace, 'report.md');
+    await writeFile(
+      entry,
+      `${await readFile(entry, 'utf8')}\n:::decision{title="New gate" id="new-gate" required=true}\n::decision-option{id="continue" label="Continue"}\n:::\n`,
+    );
+    await expect(inspectReview({ input: workspace, review: 'review.json' })).resolves.toMatchObject(
+      {
+        reportStatus: 'stale',
+      },
+    );
+  });
+
+  it('prepares a confined prior review for exact and stale repeat-review builds', async () => {
+    const workspace = await reviewWorkspace('analysis-prior-review');
+    const first = path.join(workspace, 'first.html');
+    await buildReport({ input: workspace, output: first });
+    const manifest = await embeddedManifest(first);
+    const target = manifest.targets.find((candidate) => candidate.kind === 'markdown:paragraph');
+    if (target === undefined) throw new Error('Missing prior-review target');
+    await writeFile(
+      path.join(workspace, 'prior.json'),
+      serializeReviewArtifact({
+        contractVersion: 1,
+        report: { revision: manifest.reportRevision },
+        responses: [{ id: 'comment-a', kind: 'comment', target, message: 'Revisit this.' }],
+      }),
+    );
+    const exact = path.join(workspace, 'exact.html');
+    await buildReport({ input: workspace, output: exact, review: 'prior.json' });
+    expect(await readFile(exact, 'utf8')).toContain('data-prior-review="true"');
+    const entry = path.join(workspace, 'report.md');
+    await writeFile(entry, `${await readFile(entry, 'utf8')}\nChanged after review.\n`);
+    await expect(validateReport({ input: workspace, review: 'prior.json' })).resolves.toMatchObject(
+      {
+        format: 'single-file',
+      },
+    );
+    const stale = path.join(workspace, 'stale.html');
+    await buildReport({ input: workspace, output: stale, review: 'prior.json' });
+    expect(await readFile(stale, 'utf8')).toContain('&quot;reportStatus&quot;:&quot;stale&quot;');
+    const currentManifest = await embeddedManifest(stale);
+    const currentTarget = currentManifest.targets.find(
+      (candidate) => candidate.kind === 'markdown:paragraph',
+    );
+    if (currentTarget === undefined) throw new Error('Missing current-revision target');
+    await writeFile(
+      path.join(workspace, 'next.json'),
+      serializeReviewArtifact({
+        contractVersion: 1,
+        report: { revision: currentManifest.reportRevision },
+        responses: [
+          {
+            id: 'comment-next',
+            kind: 'comment',
+            target: currentTarget,
+            message: 'Current revision is ready.',
+          },
+        ],
+      }),
+    );
+    const nextA = path.join(workspace, 'next-a.html');
+    const nextB = path.join(workspace, 'next-b.html');
+    await buildReport({ input: workspace, output: nextA, review: 'next.json' });
+    await buildReport({ input: workspace, output: nextB, review: 'next.json' });
+    expect(await readFile(nextA)).toEqual(await readFile(nextB));
+    expect(await readFile(nextA, 'utf8')).toContain('&quot;reportStatus&quot;:&quot;exact&quot;');
+    const sentinel = path.join(workspace, 'sentinel.html');
+    await writeFile(sentinel, 'preserve authoritative output');
+    await writeFile(path.join(workspace, 'broken.json'), '{broken');
+    await expect(
+      buildReport({ input: workspace, output: sentinel, review: 'broken.json' }),
+    ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_ARTIFACT_INVALID' } });
+    expect(await readFile(sentinel, 'utf8')).toBe('preserve authoritative output');
+    await expect(
+      buildReport({ input: workspace, output: sentinel, review: 'prior.json' }),
+    ).resolves.toMatchObject({
+      outputPath: sentinel,
+    });
+    await expect(
+      validateReport({ input: workspace, review: '../outside.json' }),
+    ).rejects.toMatchObject({
+      diagnostic: { code: 'REVIEW_OUTSIDE_SOURCE' },
+    });
+    const outside = await createTestWorkspace('prior-outside');
+    workspaces.push(outside);
+    const outsideReview = path.join(outside, 'outside.json');
+    await writeFile(outsideReview, await readFile(path.join(workspace, 'prior.json')));
+    await symlink(outsideReview, path.join(workspace, 'prior-link.json'));
+    await expect(
+      inspectReport({ input: workspace, review: 'prior-link.json' }),
+    ).rejects.toMatchObject({
+      diagnostic: { code: 'REVIEW_OUTSIDE_SOURCE' },
+    });
+    const priorPath = path.join(workspace, 'prior.json');
+    const priorBytes = await readFile(priorPath);
+    await expect(
+      buildReport({ input: workspace, output: priorPath, review: 'prior.json' }),
+    ).rejects.toMatchObject({ diagnostic: { code: 'OUTPUT_COLLIDES_WITH_SOURCE' } });
+    expect(await readFile(priorPath)).toEqual(priorBytes);
+
+    const partialPath = path.join(workspace, 'partials/evidence.md');
+    const partialBytes = await readFile(partialPath);
+    const markdownReviewBytes = Buffer.concat([Buffer.from('    '), priorBytes]);
+    await writeFile(partialPath, markdownReviewBytes);
+    await expect(
+      buildReport({ input: workspace, output: sentinel, review: 'partials/evidence.md' }),
+    ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_COLLIDES_WITH_SOURCE' } });
+    expect(await readFile(partialPath)).toEqual(markdownReviewBytes);
+    await writeFile(partialPath, partialBytes);
+
+    const assetPath = path.join(workspace, 'asset.txt');
+    await writeFile(assetPath, priorBytes);
+    await link(assetPath, path.join(workspace, 'asset-review.json'));
+    await expect(
+      inspectReport({ input: workspace, review: 'asset-review.json' }),
+    ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_COLLIDES_WITH_SOURCE' } });
+    expect(await readFile(assetPath)).toEqual(priorBytes);
+
+    const entryAliasWorkspace = await createTestWorkspace('prior-entry-alias');
+    workspaces.push(entryAliasWorkspace);
+    await writeFile(path.join(entryAliasWorkspace, 'report.md'), markdownReviewBytes);
+    await expect(
+      validateReport({ input: entryAliasWorkspace, review: 'report.md' }),
+    ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_COLLIDES_WITH_SOURCE' } });
+
+    const directoryOwner = await createTestWorkspace('prior-directory-output');
+    workspaces.push(directoryOwner);
+    const directoryOutput = path.join(directoryOwner, 'artifact');
+    await buildReport({
+      input: workspace,
+      output: directoryOutput,
+      format: 'directory',
+      review: 'prior.json',
+    });
+    const directoryBeforeFailure = await hashTree(directoryOutput);
+    await writeFile(path.join(workspace, 'oversized.json'), 'x'.repeat(MAX_REVIEW_FILE_BYTES + 1));
+    await expect(
+      buildReport({
+        input: workspace,
+        output: directoryOutput,
+        format: 'directory',
+        review: 'oversized.json',
+      }),
+    ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_ARTIFACT_INVALID' } });
+    expect(await hashTree(directoryOutput)).toStrictEqual(directoryBeforeFailure);
+    const directoryRetry = path.join(directoryOwner, 'retry-artifact');
+    await expect(
+      buildReport({
+        input: workspace,
+        output: directoryRetry,
+        format: 'directory',
+        review: 'prior.json',
+      }),
+    ).resolves.toMatchObject({ outputPath: path.join(directoryRetry, 'index.html') });
+  });
+
+  it('classifies malformed, invalid, oversized, missing, and hostile-option review inputs without mutation', async () => {
+    const workspace = await reviewWorkspace('analysis-review-failures');
+    const sentinel = path.join(workspace, 'report.html');
+    const reviewPath = path.join(workspace, 'review.json');
+    await writeFile(sentinel, 'preserve output');
+
+    await writeFile(reviewPath, '{not json');
+    await expect(inspectReview({ input: workspace, review: 'review.json' })).rejects.toMatchObject({
+      diagnostic: {
+        code: 'REVIEW_ARTIFACT_INVALID',
+        message: 'Review artifact is not valid JSON.',
+      },
+    });
+
+    await writeFile(reviewPath, JSON.stringify({ contractVersion: 1 }));
+    await expect(inspectReview({ input: workspace, review: 'review.json' })).rejects.toMatchObject({
+      diagnostic: {
+        code: 'REVIEW_ARTIFACT_INVALID',
+        details: { issues: expect.any(Array) },
+      },
+    });
+
+    await writeFile(reviewPath, 'x'.repeat(3_000_001));
+    await expect(inspectReview({ input: workspace, review: 'review.json' })).rejects.toMatchObject({
+      diagnostic: {
+        code: 'REVIEW_ARTIFACT_INVALID',
+        details: { maximumBytes: 3_000_000 },
+      },
+    });
+
+    await expect(inspectReview({ input: workspace, review: 'missing.json' })).rejects.toMatchObject(
+      {
+        diagnostic: { code: 'REVIEW_READ_FAILED' },
+      },
+    );
+    await expect(inspectReview(null as unknown as InspectReviewOptions)).rejects.toMatchObject({
+      diagnostic: { code: 'REVIEW_OPTIONS_INVALID' },
+    });
+    const accessorOptions = { review: 'review.json' } as Record<string, unknown>;
+    Object.defineProperty(accessorOptions, 'input', {
+      enumerable: true,
+      get: () => {
+        throw new Error('must not execute');
+      },
+    });
+    await expect(
+      inspectReview(accessorOptions as unknown as InspectReviewOptions),
+    ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_OPTIONS_INVALID' } });
+    await expect(readFile(sentinel, 'utf8')).resolves.toBe('preserve output');
+  });
+
+  it('rejects a report whose finite review target inventory exceeds the public bound', async () => {
+    const workspace = await createTestWorkspace('analysis-review-target-limit');
+    workspaces.push(workspace);
+    await writeFile(
+      path.join(workspace, 'report.md'),
+      ['# Target limit', ...Array.from({ length: 500 }, (_, index) => `Paragraph ${index}.`)].join(
+        '\n\n',
+      ),
+    );
+    await expect(
+      buildReport({ input: workspace, output: path.join(workspace, 'report.html') }),
+    ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_TARGET_LIMIT_EXCEEDED' } });
   });
 
   it('never publishes output and rejects an invalid format before source discovery', async () => {
@@ -285,4 +664,62 @@ async function hashTree(root: string): Promise<Readonly<Record<string, string>>>
 
 function compareNames(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
+}
+
+async function reviewWorkspace(prefix: string): Promise<string> {
+  const workspace = await createTestWorkspace(prefix);
+  workspaces.push(workspace);
+  await mkdir(path.join(workspace, 'partials'));
+  await writeFile(
+    path.join(workspace, 'report.md'),
+    [
+      '---',
+      'title: Review protocol',
+      '---',
+      '# Review protocol',
+      '',
+      'Entry secret context.',
+      '',
+      'Equal evidence.',
+      '',
+      '{{include: partials/evidence.md}}',
+      '',
+      ':asset[Evidence]{src="asset.txt"}',
+      '',
+      '```ts',
+      "const handoff = 'review.json';",
+      '```',
+      '',
+      ':::section{title="Launch" id="launch"}',
+      'Stable section body.',
+      ':::',
+      '',
+      ':::decision{title="Release" id="release" required=true}',
+      '::decision-option{id="ship" label="Ship"}',
+      '::decision-option{id="hold" label="Hold"}',
+      ':::',
+      '',
+      ':::checklist{title="Gates" id="gates"}',
+      '::check-item{id="owner" label="Owner" required=true}',
+      ':::',
+      '',
+    ].join('\n'),
+  );
+  await writeFile(path.join(workspace, 'partials/evidence.md'), 'Equal evidence.\n');
+  await writeFile(path.join(workspace, 'asset.txt'), 'local resource\n');
+  return workspace;
+}
+
+async function embeddedManifest(output: string): Promise<ReviewTargetManifest> {
+  const html = await readFile(output, 'utf8');
+  const encoded = /<template data-review-manifest="true">([\s\S]*?)<\/template>/u.exec(html)?.[1];
+  if (encoded === undefined) throw new Error('Missing embedded review manifest');
+  return JSON.parse(
+    encoded
+      .replaceAll('&quot;', '"')
+      .replaceAll('&#x27;', "'")
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&amp;', '&'),
+  ) as ReviewTargetManifest;
 }

@@ -18,6 +18,9 @@
     { "$ref": "#/$defs/action" },
     { "$ref": "#/$defs/callout" },
     { "$ref": "#/$defs/decision" },
+    { "$ref": "#/$defs/decision-option" },
+    { "$ref": "#/$defs/checklist" },
+    { "$ref": "#/$defs/check-item" },
     { "$ref": "#/$defs/cards" },
     { "$ref": "#/$defs/card" },
     { "$ref": "#/$defs/steps" },
@@ -174,8 +177,101 @@
               "type": "string",
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
               "description": "Visible title."
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Stable identity required when decision options are authored."
+            },
+            "required": {
+              "type": "boolean",
+              "description": "Requires a selected, open, or deferred response.",
+              "default": false
             }
           }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "decision-option": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "decision-option" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Stable option identity."
+            },
+            "label": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Visible option label."
+            }
+          },
+          "required": ["id", "label"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "checklist": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "checklist" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Stable checklist identity."
+            }
+          },
+          "required": ["title", "id"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "check-item": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "check-item" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Stable checklist item identity."
+            },
+            "label": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Visible checklist item label."
+            },
+            "required": {
+              "type": "boolean",
+              "description": "Blocks approval while unchecked.",
+              "default": false
+            }
+          },
+          "required": ["id", "label"]
         }
       },
       "required": ["name", "form", "attributes"]

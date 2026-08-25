@@ -10,6 +10,7 @@ import {
   getSourceContract,
   initProject,
   listExamples,
+  serializeReviewArtifact,
 } from '../../src/index.js';
 import { formatInstalledExamples } from '../../src/cli-examples.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
@@ -42,6 +43,115 @@ describe('CLI transport', () => {
       remediation: 'Install Node.js 24.18.0 or newer, then rerun the same command.',
       details: { currentVersion: '22.18.0', requiredEngine: '>=24.18.0' },
     });
+  });
+
+  it('resolves a confined review artifact through bounded sanitized NDJSON', async () => {
+    const workspace = await createTestWorkspace('cli-review');
+    workspaces.push(workspace);
+    await writeFile(path.join(workspace, 'report.md'), '# Review source\n\nTarget paragraph.\n');
+    await writeFile(
+      path.join(workspace, 'review.json'),
+      serializeReviewArtifact({
+        contractVersion: 1,
+        report: { revision: `sha256:${'a'.repeat(64)}` },
+        responses: [
+          {
+            id: 'response-a',
+            kind: 'comment',
+            target: {
+              id: 'rt-prior',
+              kind: 'markdown:paragraph',
+              fingerprint: `sha256:${'b'.repeat(64)}`,
+              source: { file: 'report.md', line: 3, column: 1, endLine: 3, endColumn: 18 },
+            },
+            message: 'token=private-value',
+          },
+        ],
+      }),
+    );
+
+    const result = await runCli(['review', 'review.json', workspace, '--json']);
+
+    expect(result).toMatchObject({ exitCode: 0, stderr: '' });
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      type: 'result',
+      contractVersion: 1,
+      reportStatus: 'stale',
+      responses: [{ binding: 'changed', response: { message: 'token=[REDACTED]' } }],
+    });
+    expect(result.stdout).not.toContain('private-value');
+  });
+
+  it('forwards prior-review input through the build CLI command', async () => {
+    const workspace = await createPriorReviewCliWorkspace('cli-build-prior-review');
+    const output = path.join(workspace, 'report.html');
+    const build = await runCli([
+      'build',
+      workspace,
+      '--output',
+      output,
+      '--review',
+      'prior.json',
+      '--json',
+    ]);
+    expect(build).toMatchObject({ exitCode: 0, stderr: '' });
+    expect(await readFile(output, 'utf8')).toContain('data-prior-review="true"');
+  });
+
+  it('forwards malformed prior-review input through the validate CLI command', async () => {
+    const workspace = await createPriorReviewCliWorkspace('cli-validate-prior-review');
+    await writeFile(path.join(workspace, 'broken.json'), '{broken');
+    const validate = await runCli(['validate', workspace, '--review', 'broken.json', '--json']);
+    expect(validate).toMatchObject({ exitCode: 1, stderr: '' });
+    expect(JSON.parse(validate.stdout)).toMatchObject({
+      type: 'diagnostic',
+      code: 'REVIEW_ARTIFACT_INVALID',
+    });
+  });
+
+  it('forwards escaped prior-review input through the inspect CLI command', async () => {
+    const workspace = await createPriorReviewCliWorkspace('cli-inspect-prior-review');
+    const inspect = await runCli(['inspect', workspace, '--review', '../outside.json', '--json']);
+    expect(inspect).toMatchObject({ exitCode: 1, stderr: '' });
+    expect(JSON.parse(inspect.stdout)).toMatchObject({
+      type: 'diagnostic',
+      code: 'REVIEW_OUTSIDE_SOURCE',
+    });
+  });
+
+  it('prints only a bounded human review summary', async () => {
+    const workspace = await createTestWorkspace('cli-review-human');
+    workspaces.push(workspace);
+    await writeFile(path.join(workspace, 'report.md'), '# Review source\n\nTarget paragraph.\n');
+    await writeFile(
+      path.join(workspace, 'review.json'),
+      serializeReviewArtifact({
+        contractVersion: 1,
+        report: { revision: `sha256:${'a'.repeat(64)}` },
+        responses: [
+          {
+            id: 'response-a',
+            kind: 'comment',
+            target: {
+              id: 'rt-prior',
+              kind: 'markdown:paragraph',
+              fingerprint: `sha256:${'b'.repeat(64)}`,
+              source: { file: 'report.md', line: 3, column: 1, endLine: 3, endColumn: 18 },
+            },
+            message: 'token=human-private-value',
+          },
+        ],
+      }),
+    );
+
+    const result = await runCli(['review', 'review.json', workspace]);
+
+    expect(result).toEqual({
+      exitCode: 0,
+      stdout: 'Review stale: 0 exact, 1 changed, 0 missing, 0 ambiguous\n',
+      stderr: '',
+    });
+    expect(result.stdout).not.toMatch(/human-private-value|Target paragraph/u);
   });
 
   it('serializes injected registry examples through the complete adapter used by the CLI action', async () => {
@@ -205,7 +315,9 @@ describe('CLI transport', () => {
     expect(build).toMatchObject({ exitCode: 0, stderr: '' });
     expect(JSON.parse(build.stdout)).toMatchObject({ type: 'result', outputPath: output });
     const html = await readFile(output, 'utf8');
-    expect(html).toContain('<h1 id="release-decision-report">Release decision report</h1>');
+    expect(html).toMatch(
+      /<h1[^>]*id="release-decision-report"[^>]*>Release decision report<\/h1>/u,
+    );
     expect(html).toContain('>Recommendation</p>');
     expect(html).toContain('>Download the evidence map</a>');
     expect(html).toContain('data-start="1"');
@@ -582,6 +694,21 @@ async function createAnalysisWorkspace(prefix: string): Promise<{
   await mkdir(path.dirname(directorySentinel));
   await writeFile(directorySentinel, 'keep directory');
   return { workspace, singleSentinel, directorySentinel };
+}
+
+async function createPriorReviewCliWorkspace(prefix: string): Promise<string> {
+  const workspace = await createTestWorkspace(prefix);
+  workspaces.push(workspace);
+  await writeFile(path.join(workspace, 'report.md'), '# Review source\n\nTarget paragraph.\n');
+  await writeFile(
+    path.join(workspace, 'prior.json'),
+    serializeReviewArtifact({
+      contractVersion: 1,
+      report: { revision: `sha256:${'a'.repeat(64)}` },
+      responses: [],
+    }),
+  );
+  return workspace;
 }
 
 async function createCredentialAnalysisSource(

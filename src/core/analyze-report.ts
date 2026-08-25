@@ -70,29 +70,42 @@ async function prepareAnalysis(options: ValidateReportOptions | InspectReportOpt
 function validateAnalysisOptions(options: ValidateReportOptions | InspectReportOptions): {
   readonly input: string;
   readonly format?: OutputFormat;
+  readonly review?: string;
 } {
   const value: unknown = options;
   if (!isRecord(value)) throw analysisOptionsError();
   try {
     const keys = Reflect.ownKeys(value);
-    if (!Object.hasOwn(value, 'input') || keys.some((key) => key !== 'input' && key !== 'format')) {
+    if (
+      !Object.hasOwn(value, 'input') ||
+      keys.some((key) => !['input', 'format', 'review'].includes(String(key)))
+    ) {
       throw analysisOptionsError();
     }
     const inputDescriptor = Object.getOwnPropertyDescriptor(value, 'input');
     const formatDescriptor = Object.getOwnPropertyDescriptor(value, 'format');
+    const reviewDescriptor = Object.getOwnPropertyDescriptor(value, 'review');
     if (
       inputDescriptor === undefined ||
       !('value' in inputDescriptor) ||
-      (formatDescriptor !== undefined && !('value' in formatDescriptor))
+      (formatDescriptor !== undefined && !('value' in formatDescriptor)) ||
+      (reviewDescriptor !== undefined && !('value' in reviewDescriptor))
     ) {
       throw analysisOptionsError();
     }
     const input: unknown = inputDescriptor.value;
+    const review: unknown = reviewDescriptor?.value;
     if (typeof input !== 'string' || input.trim().length === 0 || input.includes('\0')) {
       throw analysisOptionsError();
     }
     const format = validateRequestedFormat(formatDescriptor?.value);
-    return format === undefined ? { input } : { input, format };
+    if (review !== undefined && (typeof review !== 'string' || review.length === 0))
+      throw analysisOptionsError();
+    return {
+      input,
+      ...(format === undefined ? {} : { format }),
+      ...(review === undefined ? {} : { review }),
+    };
   } catch (error) {
     if (error instanceof AgenticReportError) throw error;
     throw analysisOptionsError();

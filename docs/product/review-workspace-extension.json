@@ -1,0 +1,29 @@
+{
+  "contractVersion": 1,
+  "id": "review-workspace",
+  "summary": "Adds a bounded offline review protocol, deterministic source targets, and read-only feedback binding for agent-to-human report handoff.",
+  "trustBoundary": {
+    "authorCode": "forbidden",
+    "callbacks": "forbidden",
+    "eval": "forbidden",
+    "dynamicImports": "forbidden",
+    "networkAccess": "forbidden",
+    "confinement": "source-root",
+    "offline": "required",
+    "deterministicSerialization": "required",
+    "cspCompatible": "required",
+    "packageOwnedRuntime": "required"
+  },
+  "evidence": {
+    "sourceGrammar": "Version-1 review JSON is a strict closed record with bounded response unions; compile-time targets come only from parsed container directives and ordinary Markdown blocks, with authored ranges and optional explicit section identity.",
+    "executionCapabilities": "The package-owned reader runtime creates bounded review controls, stores session state in memory, validates exact local imports, and downloads canonical JSON; it cannot rewrite Markdown, execute feedback, register callbacks, sync a network account, or grant verified authority.",
+    "confinement": "Review inspection first prepares the report source root, then resolves the relative review path through the existing URI-normalized lexical and canonical symlink confinement boundary before reading one ordinary bounded file.",
+    "offlineBehavior": "Build, embedded target discovery, review parsing, and source binding use local source files and package code only; both output formats retain normal file URL behavior and the review command starts no listener or network request.",
+    "deterministicSerialization": "Canonical serialization omits clocks and random values, sorts response and checklist identities, normalizes human text to Unicode NFC, and is byte-equal for equivalent state; report revision also binds the versioned canonical target projection.",
+    "cspAndRuntime": "The target manifest is escaped inert template text; package-owned controls use text/value DOM APIs, File text parsing, and a revoked local Blob object URL. No author script, innerHTML, storage, network, form submission, or new CSP source is added.",
+    "accessibility": "Normal mode exposes only one labelled Review entry. Target controls are native buttons; fields and alerts are labelled; desktop remains non-modal; mobile uses native modal focus containment; Close and Exit return focus and remove hidden controls from navigation.",
+    "byteAndPerformanceBudgets": "Repeat-review preparation adds 477 bytes to the accepted Unit 3 parity single-file artifact and no directory HTML bytes; runtime is 41.03 kB and stylesheet 42.39 kB before gzip, within failing 42/44 kB ceilings. Sidecar parsing and binding are bounded preparation work; browser initialization remains one manifest/prior-state pass with no scroll-time scan.",
+    "packageDependenciesAndLicenses": "No package or browser dependency is added; implementation uses existing Node crypto/filesystem APIs, unified traversal, React escaping, and the MIT-licensed package code already distributed by the project.",
+    "compatibility": "Existing Markdown, build, validate, inspect, output contentHash, single-file and directory contracts remain supported; review is an additive CLI and ESM surface, unsupported schema versions fail explicitly, and cross-file binding cannot impersonate changed content in a still-present source file."
+  }
+}

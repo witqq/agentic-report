@@ -11,11 +11,13 @@ import {
   type Diagnostic,
   type InitProjectResult,
   type InspectReportResult,
+  type InspectReviewResult,
   type OutputFormat,
   type ValidateReportResult,
 } from './contracts.js';
 import { inspectReport, validateReport } from './core/analyze-report.js';
 import { buildReport } from './core/compiler.js';
+import { inspectReview } from './core/inspect-review.js';
 import {
   exitCodeForDiagnostic,
   sanitizeDiagnostic,
@@ -37,6 +39,7 @@ interface BuildCommandOptions {
   readonly output?: string;
   readonly format?: OutputFormat;
   readonly json?: boolean;
+  readonly review?: string;
 }
 
 interface InitCommandOptions {
@@ -46,6 +49,11 @@ interface InitCommandOptions {
 
 interface AnalysisCommandOptions {
   readonly format?: OutputFormat;
+  readonly json?: boolean;
+  readonly review?: string;
+}
+
+interface ReviewCommandOptions {
   readonly json?: boolean;
 }
 
@@ -93,6 +101,7 @@ program
   .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
   .option('-o, --output <path>', 'Output HTML file or directory')
   .option('--format <format>', 'single-file or directory', parseFormat)
+  .option('--review <path>', 'Confined prior review JSON sidecar')
   .option('--json', 'Emit NDJSON suitable for agents')
   .action(async (input: string, commandOptions: BuildCommandOptions) => {
     try {
@@ -100,6 +109,7 @@ program
         input,
         ...(commandOptions.output === undefined ? {} : { output: commandOptions.output }),
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
+        ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
       });
       writeSuccess(result, invocationRunId, commandOptions.json === true);
     } catch (error) {
@@ -116,12 +126,14 @@ program
   )
   .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
   .option('--format <format>', 'single-file or directory', parseFormat)
+  .option('--review <path>', 'Confined prior review JSON sidecar')
   .option('--json', 'Emit NDJSON suitable for agents')
   .action(async (input: string, commandOptions: AnalysisCommandOptions) => {
     try {
       const result = await validateReport({
         input,
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
+        ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
       });
       writeValidateSuccess(result, invocationRunId, commandOptions.json === true);
     } catch (error) {
@@ -136,14 +148,33 @@ program
   .description('Inspect source usage and the available authoring catalog without writing output.')
   .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
   .option('--format <format>', 'single-file or directory', parseFormat)
+  .option('--review <path>', 'Confined prior review JSON sidecar')
   .option('--json', 'Emit NDJSON suitable for agents')
   .action(async (input: string, commandOptions: AnalysisCommandOptions) => {
     try {
       const result = await inspectReport({
         input,
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
+        ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
       });
       writeInspectSuccess(result, invocationRunId, commandOptions.json === true);
+    } catch (error) {
+      const diagnostic = toDiagnostic(error);
+      writeFailure(diagnostic, invocationRunId, commandOptions.json === true);
+      process.exitCode = exitCodeForDiagnostic(diagnostic);
+    }
+  });
+
+program
+  .command('review')
+  .description('Resolve a versioned review artifact against its current Markdown source.')
+  .argument('<review>', 'Confined relative review JSON path')
+  .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
+  .option('--json', 'Emit NDJSON suitable for agents')
+  .action(async (review: string, input: string, commandOptions: ReviewCommandOptions) => {
+    try {
+      const result = await inspectReview({ input, review });
+      writeReviewSuccess(result, invocationRunId, commandOptions.json === true);
     } catch (error) {
       const diagnostic = toDiagnostic(error);
       writeFailure(diagnostic, invocationRunId, commandOptions.json === true);
@@ -273,6 +304,23 @@ function writeInspectSuccess(result: InspectReportResult, runId: string, json: b
     return;
   }
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+}
+
+function writeReviewSuccess(result: InspectReviewResult, runId: string, json: boolean): void {
+  const sanitized = sanitizeTransportValue(result);
+  if (json) {
+    writeResultRecord(sanitized, runId);
+    return;
+  }
+  const counts = Object.fromEntries(
+    ['exact', 'changed', 'missing', 'ambiguous'].map((binding) => [
+      binding,
+      sanitized.responses.filter((response) => response.binding === binding).length,
+    ]),
+  );
+  process.stdout.write(
+    `Review ${sanitized.reportStatus}: ${counts.exact} exact, ${counts.changed} changed, ${counts.missing} missing, ${counts.ambiguous} ambiguous\n`,
+  );
 }
 
 function writeWarnings(warnings: readonly Diagnostic[], runId: string, json: boolean): void {
