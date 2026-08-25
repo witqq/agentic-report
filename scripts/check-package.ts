@@ -1304,7 +1304,6 @@ async function expectedTarballFiles(): Promise<string[]> {
   const expected = new Set([
     'package/package.json',
     'package/README.md',
-    'package/PRODUCT-REQUIREMENTS.md',
     'package/LICENSE',
     'package/THIRD_PARTY_NOTICES.md',
     'package/dist/browser/document.css',
@@ -1312,11 +1311,6 @@ async function expectedTarballFiles(): Promise<string[]> {
     ...[
       'AGENT-REFERENCE.md',
       'ARCHITECTURE.md',
-      'DEVELOPMENT.md',
-      'PROJECT_CHECKLIST.md',
-      'PUBLIC-SITE.md',
-      'RELEASE.md',
-      'TESTING.md',
       'generated/directives.schema.json',
       'generated/extension-proposal.schema.json',
       'generated/extension-proposal.template.json',

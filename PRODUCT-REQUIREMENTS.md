@@ -55,6 +55,12 @@
 - **`AR-AUTHOR-REVIEW-BINDING` — Обратная привязка к Markdown.** CLI и ESM API проверяют локальный
   review-артефакт и связывают ответы с точными диапазонами entry или partial. Изменённые, отсутствующие и
   неоднозначные цели не подменяются похожим текстом и возвращаются как отдельные состояния.
+- **`AR-AUTHOR-REVIEW-RECONCILIATION` — Повторный цикл ревью.** `build`, `validate` и `inspect` принимают
+  один необязательный локальный prior-review sidecar, ограниченный source root, размером и обычным JSON-
+  файлом, не совпадающий с исходником или output. Точная ревизия восстанавливает текущее состояние;
+  устаревшая показывает отдельные `exact/changed/missing/ambiguous` prior-ответы без переноса page approval и
+  без угадывания похожего текста. Ошибка не меняет существующий output и не отравляет исправленный повтор;
+  завершённое новое ревью экспортируется для следующей неизменённой сборки без семантического дрейфа.
 
 ## Шаблоны и визуальная система
 
@@ -89,6 +95,14 @@
   фиксирует `approve/revise/reject` для отдельных блоков и всей страницы, импортирует или экспортирует
   детерминированный `review.json`. Desktop использует немодальную боковую панель, mobile — нативный
   модальный sheet с корректным focus return.
+- **`AR-COMPONENT-REVIEW-DECISIONS` — Типизированные решения.** Additive decision controls используют
+  стабильные component/option identities и сохраняют legacy static decision. Required/optional решения имеют
+  состояния selected, open и deferred, ограниченный rationale и участвуют в общем approval gate; повторяющиеся
+  подписи не объединяют независимые экземпляры.
+- **`AR-COMPONENT-REVIEW-CHECKLISTS` — Типизированные чек-листы.** Стабильные item identities различают
+  required/optional и состояния checked, unchecked, explained not-applicable; notes ограничены. Нативные
+  именованные controls доступны с keyboard/touch, а незавершённые обязательные пункты и необъяснённый
+  not-applicable блокируют page approval через общий review-контракт.
 
 ## Сборка и результат
 
