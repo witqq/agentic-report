@@ -3,14 +3,14 @@
 Use Node.js 24.18.0 or newer. The first `npx` command needs npm registry and network access; the generated
 page itself opens locally through `file://` with its included package-owned browser runtime.
 
-For a reproducible 0.3.0 run, create a new landing-page source and keep the package version pinned through
+For a reproducible 0.3.1 run, create a new landing-page source and keep the package version pinned through
 validation, inspection, and build:
 
 ```sh
-npx --yes agentic-report@0.3.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.3.0 validate ./my-page --json
-npx --yes agentic-report@0.3.0 inspect ./my-page --json
-npx --yes agentic-report@0.3.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.3.1 init ./my-page --starter landing --json
+npx --yes agentic-report@0.3.1 validate ./my-page --json
+npx --yes agentic-report@0.3.1 inspect ./my-page --json
+npx --yes agentic-report@0.3.1 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Edit only the declarative source: Markdown, YAML frontmatter or the
@@ -62,9 +62,9 @@ registry's current `latest` release.
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.3.0 describe --json
-npx --yes agentic-report@0.3.0 schema --scope source
-npx --yes agentic-report@0.3.0 examples --json
+npx --yes agentic-report@0.3.1 describe --json
+npx --yes agentic-report@0.3.1 schema --scope source
+npx --yes agentic-report@0.3.1 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),
