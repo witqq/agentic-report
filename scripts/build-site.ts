@@ -29,8 +29,6 @@ interface SiteRoute {
   readonly source: string;
   readonly review?: string;
   readonly kind: RouteKind;
-  readonly owner: 'unit-4' | 'unit-5';
-  readonly state: 'staged-ready';
 }
 
 interface RouteManifest {
@@ -151,16 +149,16 @@ const readRouteManifest = async (repositoryRoot: string): Promise<RouteManifest>
   }
   const routes = record.routes.map((value, index): SiteRoute => {
     const route = requireObject(value, `route ${index}`);
+    const allowedKeys = new Set(['id', 'href', 'source', 'review', 'kind']);
     if (
+      Object.keys(route).some((key) => !allowedKeys.has(key)) ||
       typeof route.id !== 'string' ||
       typeof route.href !== 'string' ||
       typeof route.source !== 'string' ||
       (route.review !== undefined && typeof route.review !== 'string') ||
-      !['page', 'copy', 'generated'].includes(String(route.kind)) ||
-      !['unit-4', 'unit-5'].includes(String(route.owner)) ||
-      route.state !== 'staged-ready'
+      !['page', 'copy', 'generated'].includes(String(route.kind))
     ) {
-      throw new Error(`Route ${index} is not a complete staged route declaration.`);
+      throw new Error(`Route ${index} is not a complete public route declaration.`);
     }
     if (route.review !== undefined && route.kind !== 'page') {
       throw new Error(`Route ${index} may use review only for a page build.`);

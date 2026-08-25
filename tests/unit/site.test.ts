@@ -18,8 +18,6 @@ interface SiteRoute {
   readonly source: string;
   readonly review?: string;
   readonly kind: 'page' | 'copy' | 'generated';
-  readonly owner: 'unit-4' | 'unit-5';
-  readonly state: 'staged-ready';
 }
 
 interface ReleaseFile {
@@ -92,16 +90,12 @@ const fixtureSkillRoute: SiteRoute = {
   href: 'skills/agentic-report/SKILL.md',
   source: '../skills/agentic-report/SKILL.md',
   kind: 'copy',
-  owner: 'unit-5',
-  state: 'staged-ready',
 };
 const fixtureReleaseRoute: SiteRoute = {
   id: 'release',
   href: 'release.json',
   source: 'generated',
   kind: 'generated',
-  owner: 'unit-5',
-  state: 'staged-ready',
 };
 const baseFixtureRoutes: readonly SiteRoute[] = [fixtureSkillRoute, fixtureReleaseRoute];
 
@@ -121,13 +115,13 @@ const createSiteFixture = async (
     path.join(root, 'package.json'),
     `${JSON.stringify({
       name: 'agentic-report',
-      version: options.packageVersion ?? '0.3.1',
+      version: options.packageVersion ?? '0.3.2',
       engines: { node: '>=24.18.0' },
     })}\n`,
   );
   await writeFile(
     path.join(root, 'skills/agentic-report/SKILL.md'),
-    `---\nname: agentic-report\nlicense: MIT\nmetadata:\n  version: '${options.skillVersion ?? '0.3.1'}'\n  compatibility: Requires Node.js 24.18.0 or newer.\n---\n\n# Fixture skill\n`,
+    `---\nname: agentic-report\nlicense: MIT\nmetadata:\n  version: '${options.skillVersion ?? '0.3.2'}'\n  compatibility: Requires Node.js 24.18.0 or newer.\n---\n\n# Fixture skill\n`,
   );
   await writeFile(
     path.join(root, 'website/routes.json'),
@@ -298,11 +292,11 @@ describe('deterministic public site staging', () => {
       contractVersion: 1,
       package: {
         name: 'agentic-report',
-        version: '0.3.1',
+        version: '0.3.2',
         engines: { node: '>=24.18.0' },
       },
       sourceRevision: revision,
-      skill: { version: '0.3.1', license: 'MIT' },
+      skill: { version: '0.3.2', license: 'MIT' },
     });
     expect(release.routes).toHaveLength(routes.length - 1);
     const actualFiles = (await listFiles(firstSite)).filter((file) => file !== 'release.json');
@@ -377,7 +371,7 @@ describe('deterministic public site staging', () => {
       license: 'MIT',
       metadata: { version: packageMetadata.version, homepage: packageMetadata.homepage },
     });
-    expect(packageMetadata.version).toBe('0.3.1');
+    expect(packageMetadata.version).toBe('0.3.2');
     expect(skillFrontmatter.metadata.compatibility).toContain('Node.js 24.18.0 or newer');
     expect(packageMetadata.engines.node).toBe('>=24.18.0');
     for (const plugin of [openAiPlugin, claudePlugin]) {
@@ -397,7 +391,7 @@ describe('deterministic public site staging', () => {
       }),
     ]);
     expect(skillSource).toContain(
-      'npx --yes agentic-report@0.3.1 build ./my-page --output ./my-page.html --json',
+      'npx --yes agentic-report@0.3.2 build ./my-page --output ./my-page.html --json',
     );
     expect(skillSource).toContain('Do not deploy, publish, use credentials');
     for (const [publicSource, source] of [
@@ -440,6 +434,11 @@ describe('deterministic public site staging', () => {
       readonly prepare?: (root: string) => Promise<void>;
     }[] = [
       {
+        name: 'route-workflow-field',
+        route: { ...fixtureSkillRoute, owner: 'unit-5' } as SiteRoute,
+        expected: /not a complete public route declaration/u,
+      },
+      {
         name: 'route-escape',
         route: { ...fixtureSkillRoute, href: '../escaped.md' },
         expected: /href escapes its root/u,
@@ -467,8 +466,6 @@ describe('deterministic public site staging', () => {
           href: 'external/index.html',
           source: 'external-page',
           kind: 'page',
-          owner: 'unit-5',
-          state: 'staged-ready',
         },
         expected: /source resolves outside the repository root/u,
         prepare: async (root) => {
