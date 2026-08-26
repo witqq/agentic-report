@@ -115,13 +115,13 @@ const createSiteFixture = async (
     path.join(root, 'package.json'),
     `${JSON.stringify({
       name: 'agentic-report',
-      version: options.packageVersion ?? '0.3.4',
+      version: options.packageVersion ?? '0.3.5',
       engines: { node: '>=24.18.0' },
     })}\n`,
   );
   await writeFile(
     path.join(root, 'skills/agentic-report/SKILL.md'),
-    `---\nname: agentic-report\nlicense: MIT\nmetadata:\n  version: '${options.skillVersion ?? '0.3.4'}'\n  compatibility: Requires Node.js 24.18.0 or newer.\n---\n\n# Fixture skill\n`,
+    `---\nname: agentic-report\nlicense: MIT\nmetadata:\n  version: '${options.skillVersion ?? '0.3.5'}'\n  compatibility: Requires Node.js 24.18.0 or newer.\n---\n\n# Fixture skill\n`,
   );
   await writeFile(
     path.join(root, 'website/routes.json'),
@@ -293,11 +293,11 @@ describe('deterministic public site staging', () => {
       contractVersion: 1,
       package: {
         name: 'agentic-report',
-        version: '0.3.4',
+        version: '0.3.5',
         engines: { node: '>=24.18.0' },
       },
       sourceRevision: revision,
-      skill: { version: '0.3.4', license: 'MIT' },
+      skill: { version: '0.3.5', license: 'MIT' },
     });
     expect(release.routes).toHaveLength(routes.length - 1);
     const actualFiles = (await listFiles(firstSite)).filter((file) => file !== 'release.json');
@@ -372,7 +372,7 @@ describe('deterministic public site staging', () => {
       license: 'MIT',
       metadata: { version: packageMetadata.version, homepage: packageMetadata.homepage },
     });
-    expect(packageMetadata.version).toBe('0.3.4');
+    expect(packageMetadata.version).toBe('0.3.5');
     expect(skillFrontmatter.metadata.compatibility).toContain('Node.js 24.18.0 or newer');
     expect(packageMetadata.engines.node).toBe('>=24.18.0');
     for (const plugin of [openAiPlugin, claudePlugin]) {
@@ -392,7 +392,7 @@ describe('deterministic public site staging', () => {
       }),
     ]);
     expect(skillSource).toContain(
-      'npx --yes agentic-report@0.3.4 build ./my-page --output ./my-page.html --json',
+      'npx --yes agentic-report@0.3.5 build ./my-page --output ./my-page.html --json',
     );
     expect(skillSource).toContain('Do not deploy, publish, use credentials');
     for (const [publicSource, source] of [

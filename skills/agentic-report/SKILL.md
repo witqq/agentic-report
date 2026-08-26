@@ -3,7 +3,7 @@ name: agentic-report
 description: Create, validate, inspect, or build polished local interactive reports, research pages, architecture pages, tutorials, dashboards, decisions, and landing pages from declarative Markdown. Use for static agent-to-human page handoff; do not use for hosted apps, live collaboration, deployment, publication, or bespoke frontend development.
 license: MIT
 metadata:
-  version: '0.3.4'
+  version: '0.3.5'
   homepage: https://agentic-report.witqq.dev/
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run.
 ---
@@ -35,10 +35,10 @@ Create a local declarative source, verify it, and hand the user a finished inter
 Use the release pinned in this skill:
 
 ```sh
-npx --yes agentic-report@0.3.4 init ./my-page --starter landing --json
-npx --yes agentic-report@0.3.4 validate ./my-page --json
-npx --yes agentic-report@0.3.4 inspect ./my-page --json
-npx --yes agentic-report@0.3.4 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.3.5 init ./my-page --starter landing --json
+npx --yes agentic-report@0.3.5 validate ./my-page --json
+npx --yes agentic-report@0.3.5 inspect ./my-page --json
+npx --yes agentic-report@0.3.5 build ./my-page --output ./my-page.html --json
 ```
 
 Choose a different starter or destination name when the task requires it. `init` requires an absent
