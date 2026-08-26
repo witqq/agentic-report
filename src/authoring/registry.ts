@@ -710,7 +710,7 @@ export const authoringRegistry = {
       entry: 'report.md',
       title: 'Human review handoff example',
       description:
-        'Offline report with repeated evidence blocks for comments, independent verdicts, and deterministic review export.',
+        'Offline report with repeated evidence blocks for fragment threads, user/agent messages, resolution, and deterministic review export.',
       classes: ['work-report'],
     },
     {
@@ -1272,7 +1272,7 @@ function decisionDirective(): DirectiveDefinition & { readonly name: 'decision' 
   const attributes = [
     titleAttribute,
     optionalIdentityAttribute('id', 'Stable identity required when decision options are authored.'),
-    booleanAttribute('required', 'Requires a selected, open, or deferred response.', false),
+    booleanAttribute('required', 'Marks this decision as required in the static document.', false),
   ] as const;
   return {
     name: 'decision',
@@ -1323,7 +1323,7 @@ function checklistDirective(): DirectiveDefinition & { readonly name: 'checklist
   ] as const;
   return {
     name: 'checklist',
-    description: 'Typed review checklist containing stable check-item directives.',
+    description: 'Static structured checklist containing stable check-item directives.',
     forms: ['container'],
     attributes,
     children: 'check-item-directives',
@@ -1343,7 +1343,7 @@ function checkItemDirective(): DirectiveDefinition & { readonly name: 'check-ite
   const attributes = [
     identityAttribute('id', 'Stable checklist item identity.'),
     textAttribute('label', 'Visible checklist item label.', true),
-    booleanAttribute('required', 'Blocks approval while unchecked.', false),
+    booleanAttribute('required', 'Marks this item as required in the static document.', false),
   ] as const;
   return {
     name: 'check-item',

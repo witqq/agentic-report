@@ -107,7 +107,7 @@ equal block exists elsewhere. Fingerprint relocation is considered only after th
 A unique cross-file match is considered a move only when the previous source file no longer contributes any
 current review target. Zero matches return `missing` and multiple matches return `ambiguous`. The operation
 does not rewrite Markdown or publish output.
-Structured feedback is bounded and credential-sanitized before CLI/ESM transport; surrounding source and
+Structured thread and message fields are bounded and credential-sanitized before CLI/ESM transport; surrounding source and
 complete input files are never returned.
 
 ### Review Workspace reader interface
@@ -177,15 +177,15 @@ The directive vocabulary is:
 - `callout`: emphasized finding with optional `title` and lowercase `kind`;
 - `decision`: legacy static Markdown decision with optional `title`, or typed decision with stable `id`,
   optional `required`, and directly nested leaf `decision-option` values with stable `id` and `label`;
-- `checklist`: typed checklist with required `title` and stable `id`, containing directly nested leaf
-  `check-item` values with stable `id`, visible `label`, and optional `required` gate;
+- `checklist`: static structured checklist with required `title` and stable `id`, containing directly nested
+  leaf `check-item` values with stable `id`, visible `label`, and optional authored `required` marker;
 
 Typed component, option, and item inventories are bounded to 500 at source and manifest boundaries. Mixed
 Markdown plus typed children is invalid; use a Markdown-only legacy decision or a closed typed component.
 
 `build`, `validate`, and `inspect` accept an optional confined prior-review sidecar. Exact revisions restore
-current state. Stale bindings expose exact, changed, missing, or ambiguous prior responses without treating a
-prior page approval as current. Invalid sidecars fail before authoritative output replacement.
+current state. Stale bindings expose exact, changed, missing, or ambiguous prior thread segments without
+rewriting their historical targets. Invalid sidecars fail before authoritative output replacement.
 
 - `cards` and nested `card`: responsive content grid;
 - `steps`: styled process container whose authored Markdown supplies the ordered or explanatory content;

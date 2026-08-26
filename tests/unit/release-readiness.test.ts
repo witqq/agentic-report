@@ -36,6 +36,41 @@ describe('release readiness', () => {
     expect(requirements).not.toContain('AR-COMPONENT-REVIEW-CHECKLISTS');
   });
 
+  it('keeps static checklist metadata independent from review approval', async () => {
+    const [architecture, sourceContract, registry, requirements, extension] = await Promise.all([
+      readFile(path.resolve('docs/ARCHITECTURE.md'), 'utf8'),
+      readFile(path.resolve('docs/product/source-contract.md'), 'utf8'),
+      readFile(path.resolve('src/authoring/registry.ts'), 'utf8'),
+      readFile(path.resolve('PRODUCT-REQUIREMENTS.md'), 'utf8'),
+      readFile(path.resolve('docs/product/review-workspace-extension.json'), 'utf8'),
+    ]);
+    expect(architecture).toContain('owns in-memory discussion threads');
+    expect(sourceContract).toContain('optional authored `required` marker');
+    expect(sourceContract).toContain('prior thread segments');
+    expect(registry).toContain('Marks this item as required in the static document.');
+    expect(registry).toContain('Marks this decision as required in the static document.');
+    expect(registry).toContain('Static structured checklist');
+    expect(registry).toContain('fragment threads, user/agent messages, resolution');
+    expect(architecture).toContain('binds its threads and revision segments');
+    expect(architecture).toContain('resolve the thread segment');
+    expect(sourceContract).toContain('Structured thread and message fields');
+    expect(requirements).toContain('поля тредов и сообщений');
+    expect(extension).toContain('revision-segment binding');
+    for (const retired of [
+      'Blocks approval while unchecked.',
+      'Requires a selected, open, or deferred response.',
+      'Typed review checklist',
+      'independent verdicts',
+      'structured responses',
+      'resolve the response',
+      'read-only feedback binding',
+    ]) {
+      expect(
+        `${registry}\n${architecture}\n${sourceContract}\n${requirements}\n${extension}`,
+      ).not.toContain(retired);
+    }
+  });
+
   it('targets a real Compose service and its declared health container', async () => {
     const deploy = JSON.parse(await readFile(path.resolve('.deploy-config.json'), 'utf8')) as {
       readonly serviceName?: string;

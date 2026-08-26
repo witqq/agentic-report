@@ -171,7 +171,7 @@
           "kind": "boolean",
           "required": false,
           "default": false,
-          "description": "Requires a selected, open, or deferred response."
+          "description": "Marks this decision as required in the static document."
         }
       },
       "children": "decision-option-directives",
@@ -211,7 +211,7 @@
       "handoffs": ["semantic-document", "reader-runtime"]
     },
     "checklist": {
-      "description": "Typed review checklist containing stable check-item directives.",
+      "description": "Static structured checklist containing stable check-item directives.",
       "forms": ["container"],
       "attributes": {
         "title": {
@@ -264,7 +264,7 @@
           "kind": "boolean",
           "required": false,
           "default": false,
-          "description": "Blocks approval while unchecked."
+          "description": "Marks this item as required in the static document."
         }
       },
       "children": "label-or-generated-label",

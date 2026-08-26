@@ -1,7 +1,7 @@
 {
   "contractVersion": 1,
   "id": "review-workspace",
-  "summary": "Adds a bounded offline review protocol, deterministic source targets, and read-only feedback binding for agent-to-human report handoff.",
+  "summary": "Adds a bounded offline thread protocol, deterministic source targets, and revision-segment binding for agent-to-human report handoff.",
   "trustBoundary": {
     "authorCode": "forbidden",
     "callbacks": "forbidden",

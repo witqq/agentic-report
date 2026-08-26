@@ -149,8 +149,8 @@ agentic-report review ./review.json ./my-report --json
 ```
 
 The review path is relative to `./my-report` and must remain inside its canonical source root. JSON output
-contains the current and reviewed revisions plus each response with `exact`, `changed`, `missing`, or
-`ambiguous` binding and the current entry/partial range when resolved. Feedback fields are bounded and
+contains the current and reviewed revisions plus each thread and revision segment with `exact`, `changed`,
+`missing`, or `ambiguous` binding and the current entry/partial range when resolved. Message fields are bounded and
 credential-sanitized; source bodies are not returned.
 
 The ESM equivalent is:
