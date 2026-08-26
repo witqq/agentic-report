@@ -302,7 +302,7 @@
               },
               "required": {
                 "type": "boolean",
-                "description": "Requires a selected, open, or deferred response.",
+                "description": "Marks this decision as required in the static document.",
                 "default": false
               }
             }
@@ -384,7 +384,7 @@
               },
               "required": {
                 "type": "boolean",
-                "description": "Blocks approval while unchecked.",
+                "description": "Marks this item as required in the static document.",
                 "default": false
               }
             },
@@ -1317,7 +1317,7 @@
               },
               "required": {
                 "type": "boolean",
-                "description": "Requires a selected, open, or deferred response.",
+                "description": "Marks this decision as required in the static document.",
                 "default": false
               }
             }
@@ -1399,7 +1399,7 @@
               },
               "required": {
                 "type": "boolean",
-                "description": "Blocks approval while unchecked.",
+                "description": "Marks this item as required in the static document.",
                 "default": false
               }
             },

@@ -69,7 +69,7 @@ and validate all resources required by the selected format but do not create or 
 
 ## Review protocol and source binding
 
-Every normal build embeds an inert version-1 review manifest in a `template` element. Container directives
+Every normal build embeds an inert version-2 review manifest in a `template` element. Container directives
 and ordinary Markdown blocks receive deterministic review-target identities. Each target records its kind,
 SHA-256 fingerprint, source-root-relative entry or partial path, and authored range. A section with an
 explicit `id` also receives a stable review key. The manifest never contains source bodies or absolute
@@ -81,13 +81,12 @@ versions, target-algorithm version, and canonical target inventory. It is indepe
 and `single-file` versus `directory`; `BuildReportResult.contentHash` remains the hash of the serialized
 output HTML and is a separate contract.
 
-A review artifact is strict versioned JSON with a bound report revision and at most 500 structured
-responses. It supports bounded feedback, target verdict, decision, and checklist response records so one
-contract can be consumed by the package-owned reader interface. Negative verdicts and not-applicable
-checklist values require explanations. Serialization orders records canonically and adds no clock or random
-field. Reviewer names, messages, rationales, and notes are trimmed and normalized to Unicode NFC before
-length validation, so canonically equivalent input produces identical bytes. Reviewer text is local
-potentially sensitive data and must be handled like report source.
+A review artifact is strict version-2 JSON with a bound report revision, at most 500 target threads and at
+most 500 messages. Each thread owns ordered revision segments; every segment binds one report revision and
+target to its messages and resolved boolean. Changed continuation appends a current segment while historical
+segments remain immutable. Serialization sorts thread identities while preserving segment and conversational message order and adds no clock or random field. Messages
+are trimmed and normalized to Unicode NFC before length validation, so canonically equivalent input produces
+identical bytes. Review text is local potentially sensitive data and must be handled like report source.
 
 Use the read-only ESM operation or CLI adapter:
 
@@ -108,7 +107,7 @@ equal block exists elsewhere. Fingerprint relocation is considered only after th
 A unique cross-file match is considered a move only when the previous source file no longer contributes any
 current review target. Zero matches return `missing` and multiple matches return `ambiguous`. The operation
 does not rewrite Markdown or publish output.
-Structured feedback is bounded and credential-sanitized before CLI/ESM transport; surrounding source and
+Structured thread and message fields are bounded and credential-sanitized before CLI/ESM transport; surrounding source and
 complete input files are never returned.
 
 ### Review Workspace reader interface
@@ -118,19 +117,15 @@ reader activates that control. In review mode each actual block target receives 
 it opens the target editor. Tight-list paragraphs do not become separate targets because they render without
 their own paragraph element—the containing list remains reviewable.
 
-The interface supports reviewer name; comment, question, change request, and blocker feedback with add,
-edit, and remove actions; one independent `approve`, `revise`, or `reject` verdict per target; a separate
-optional page verdict and rationale; and canonical `review.json` download and exact-revision JSON import.
-
-`revise` and `reject` require rationale. An `approve` page verdict cannot export while blocker feedback or a
-target `revise`/`reject` remains. Drafts without a page verdict can export if the shared strict contract is
-otherwise valid. Import rejects oversized, malformed, unsupported, stale, foreign, or non-current targets
-without replacing the active review.
+The interface supports one thread per target, ordered user and agent messages, message editing, and
+resolved/reopened state. A compact target indicator opens the thread and a separate control resolves it.
+Canonical version-2 `review.json` download and exact-revision import preserve the full conversation. Import
+rejects oversized, malformed, version-1, stale, foreign, or non-current targets without replacing active state.
 
 Desktop uses a non-modal right rail and leaves the report interactive. Mobile uses a native modal bottom
 sheet; closing it returns focus to the topbar or target button that opened it, while `Exit review` hides every
 target control. Review state is session-only and never written to browser storage, URL, network, or report
-source. Reviewer identity is descriptive rather than authenticated.
+source. Message authorship is descriptive rather than authenticated.
 
 The root metadata value, `tokens`, and `output` must be objects; scalar and array shapes fail instead of being
 silently replaced by defaults. Validation diagnostics point to the actual manifest or frontmatter field
@@ -182,15 +177,15 @@ The directive vocabulary is:
 - `callout`: emphasized finding with optional `title` and lowercase `kind`;
 - `decision`: legacy static Markdown decision with optional `title`, or typed decision with stable `id`,
   optional `required`, and directly nested leaf `decision-option` values with stable `id` and `label`;
-- `checklist`: typed checklist with required `title` and stable `id`, containing directly nested leaf
-  `check-item` values with stable `id`, visible `label`, and optional `required` gate;
+- `checklist`: static structured checklist with required `title` and stable `id`, containing directly nested
+  leaf `check-item` values with stable `id`, visible `label`, and optional authored `required` marker;
 
 Typed component, option, and item inventories are bounded to 500 at source and manifest boundaries. Mixed
 Markdown plus typed children is invalid; use a Markdown-only legacy decision or a closed typed component.
 
 `build`, `validate`, and `inspect` accept an optional confined prior-review sidecar. Exact revisions restore
-current state. Stale bindings expose exact, changed, missing, or ambiguous prior responses without treating a
-prior page approval as current. Invalid sidecars fail before authoritative output replacement.
+current state. Stale bindings expose exact, changed, missing, or ambiguous prior thread segments without
+rewriting their historical targets. Invalid sidecars fail before authoritative output replacement.
 
 - `cards` and nested `card`: responsive content grid;
 - `steps`: styled process container whose authored Markdown supplies the ordered or explanatory content;

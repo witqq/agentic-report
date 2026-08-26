@@ -492,7 +492,7 @@
         },
         {
           "name": "required",
-          "description": "Requires a selected, open, or deferred response.",
+          "description": "Marks this decision as required in the static document.",
           "required": false,
           "default": false,
           "constraint": { "kind": "boolean" },
@@ -557,7 +557,7 @@
     },
     {
       "name": "checklist",
-      "description": "Typed review checklist containing stable check-item directives.",
+      "description": "Static structured checklist containing stable check-item directives.",
       "forms": ["container"],
       "attributes": [
         {
@@ -633,7 +633,7 @@
         },
         {
           "name": "required",
-          "description": "Blocks approval while unchecked.",
+          "description": "Marks this item as required in the static document.",
           "required": false,
           "default": false,
           "constraint": { "kind": "boolean" },
@@ -1834,7 +1834,7 @@
       "path": "review-workspace",
       "entry": "report.md",
       "title": "Human review handoff example",
-      "description": "Offline report with repeated evidence blocks for comments, independent verdicts, and deterministic review export.",
+      "description": "Offline report with repeated evidence blocks for fragment threads, user/agent messages, resolution, and deterministic review export.",
       "classes": ["work-report"]
     },
     {

@@ -12,8 +12,8 @@ import type { Diagnostic, OutputFormat, SourceDocument } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
 import {
   MAX_REVIEW_FILE_BYTES,
-  assertReviewRequirements,
   parseReviewArtifact,
+  ReviewContractError,
   type ReviewArtifact,
   type ReviewTargetManifest,
 } from '../review/contract.js';
@@ -88,7 +88,6 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
     source.sourceRoot,
     [...source.sourceDigests, ...markdown.resourceDigests],
     markdown.reviewTargets,
-    markdown.reviewRequirements,
   );
   const priorReviewFile =
     options.review === undefined
@@ -199,18 +198,19 @@ async function loadPriorReview(
     });
   try {
     const artifact = parseReviewArtifact(JSON.parse(await readFile(file, 'utf8')) as unknown);
-    if (artifact.report.revision === manifest.reportRevision)
-      assertReviewRequirements(
-        artifact,
-        manifest.requirements ?? { decisions: [], checklists: [] },
-      );
     return { file, payload: { artifact, resolved: bindReviewArtifact(artifact, manifest) } };
   } catch (error) {
     throw new AgenticReportError({
       level: 'error',
-      code: 'REVIEW_ARTIFACT_INVALID',
-      message: 'Prior review is not valid versioned review JSON.',
-      remediation: 'Use a review exported by Agentic Report.',
+      code:
+        error instanceof ReviewContractError && error.unsupportedVersion
+          ? 'REVIEW_VERSION_UNSUPPORTED'
+          : 'REVIEW_ARTIFACT_INVALID',
+      message:
+        error instanceof ReviewContractError
+          ? error.message
+          : 'Prior review is not valid versioned review JSON.',
+      remediation: 'Use a version-2 thread review exported by Agentic Report.',
       details: { cause: error instanceof Error ? error.name : 'unknown' },
     });
   }

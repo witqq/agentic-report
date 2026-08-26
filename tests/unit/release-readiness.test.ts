@@ -24,14 +24,50 @@ describe('release readiness', () => {
       'AR-AUTHOR-REVIEW-BINDING',
       'AR-AUTHOR-REVIEW-RECONCILIATION',
       'AR-COMPONENT-REVIEW-WORKSPACE',
-      'AR-COMPONENT-REVIEW-DECISIONS',
-      'AR-COMPONENT-REVIEW-CHECKLISTS',
-      'selected, open и deferred',
-      'checked, unchecked, explained not-applicable',
+      '`review.json` версии 2',
+      'сообщениями пользователя',
+      'resolved или reopened',
       '`exact/changed/missing/ambiguous`',
-      'без переноса page approval',
+      'Формальные verdict, approval gate и review-чек-листы не входят',
     ]) {
       expect(requirements, required).toContain(required);
+    }
+    expect(requirements).not.toContain('AR-COMPONENT-REVIEW-DECISIONS');
+    expect(requirements).not.toContain('AR-COMPONENT-REVIEW-CHECKLISTS');
+  });
+
+  it('keeps static checklist metadata independent from review approval', async () => {
+    const [architecture, sourceContract, registry, requirements, extension] = await Promise.all([
+      readFile(path.resolve('docs/ARCHITECTURE.md'), 'utf8'),
+      readFile(path.resolve('docs/product/source-contract.md'), 'utf8'),
+      readFile(path.resolve('src/authoring/registry.ts'), 'utf8'),
+      readFile(path.resolve('PRODUCT-REQUIREMENTS.md'), 'utf8'),
+      readFile(path.resolve('docs/product/review-workspace-extension.json'), 'utf8'),
+    ]);
+    expect(architecture).toContain('owns in-memory discussion threads');
+    expect(sourceContract).toContain('optional authored `required` marker');
+    expect(sourceContract).toContain('prior thread segments');
+    expect(registry).toContain('Marks this item as required in the static document.');
+    expect(registry).toContain('Marks this decision as required in the static document.');
+    expect(registry).toContain('Static structured checklist');
+    expect(registry).toContain('fragment threads, user/agent messages, resolution');
+    expect(architecture).toContain('binds its threads and revision segments');
+    expect(architecture).toContain('resolve the thread segment');
+    expect(sourceContract).toContain('Structured thread and message fields');
+    expect(requirements).toContain('поля тредов и сообщений');
+    expect(extension).toContain('revision-segment binding');
+    for (const retired of [
+      'Blocks approval while unchecked.',
+      'Requires a selected, open, or deferred response.',
+      'Typed review checklist',
+      'independent verdicts',
+      'structured responses',
+      'resolve the response',
+      'read-only feedback binding',
+    ]) {
+      expect(
+        `${registry}\n${architecture}\n${sourceContract}\n${requirements}\n${extension}`,
+      ).not.toContain(retired);
     }
   });
 
@@ -59,14 +95,14 @@ describe('release readiness', () => {
     if (publish === undefined) throw new Error('Release publish section is missing.');
 
     expect(publish).toContain(
-      'release_asset_url="https://github.com/witqq/agentic-report/releases/download/v0.3.4/agentic-report-0.3.4.tgz"',
+      'release_asset_url="https://github.com/witqq/agentic-report/releases/download/v0.3.5/agentic-report-0.3.5.tgz"',
     );
     expect(publish).toContain(
-      'gh workflow run publish-npm.yml --ref main -f tag=v0.3.4 -f sha256="$candidate_sha256"',
+      'gh workflow run publish-npm.yml --ref main -f tag=v0.3.5 -f sha256="$candidate_sha256"',
     );
     expect(publish).toContain('gh run watch "<databaseId>" --interval 10 --exit-status');
     expect(publish).toContain('shasum -a 256');
-    expect(publish).toContain('npm view agentic-report@0.3.4 --json');
+    expect(publish).toContain('npm view agentic-report@0.3.5 --json');
     expect(publish).toContain('Inspect the complete unauthenticated version document');
     expect(publish).toContain('Stop on any mismatch or sensitive value.');
     expect(
@@ -142,7 +178,7 @@ describe('release readiness', () => {
     expect(setup).toContain('find "$pinned_cache" -mindepth 1 -print -quit');
     expect(setup).toContain('find "$latest_cache" -mindepth 1 -print -quit');
     for (const block of [pinned, latest]) {
-      expect(block).toContain('view agentic-report@0.3.4 --json > ./npm-version.json');
+      expect(block).toContain('view agentic-report@0.3.5 --json > ./npm-version.json');
       expect(block).toContain('cat ./npm-version.json');
     }
     const pinnedCommands = registryCommands(pinned);
@@ -162,7 +198,7 @@ describe('release readiness', () => {
     expect(
       pinnedCommands
         .filter((line) => line.includes('"$release_npx"'))
-        .every((line) => line.includes('agentic-report@0.3.4')),
+        .every((line) => line.includes('agentic-report@0.3.5')),
     ).toBe(true);
     expect(
       latestCommands

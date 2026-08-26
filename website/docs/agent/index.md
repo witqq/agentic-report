@@ -3,14 +3,14 @@
 Use Node.js 24.18.0 or newer. The first `npx` command needs npm registry and network access; the generated
 page itself opens locally through `file://` with its included package-owned browser runtime.
 
-For a reproducible 0.3.4 run, create a new landing-page source and keep the package version pinned through
+For a reproducible 0.3.5 run, create a new landing-page source and keep the package version pinned through
 validation, inspection, and build:
 
 ```sh
-npx --yes agentic-report@0.3.4 init ./my-page --starter landing --json
-npx --yes agentic-report@0.3.4 validate ./my-page --json
-npx --yes agentic-report@0.3.4 inspect ./my-page --json
-npx --yes agentic-report@0.3.4 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.3.5 init ./my-page --starter landing --json
+npx --yes agentic-report@0.3.5 validate ./my-page --json
+npx --yes agentic-report@0.3.5 inspect ./my-page --json
+npx --yes agentic-report@0.3.5 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Edit only the declarative source: Markdown, YAML frontmatter or the
@@ -26,22 +26,20 @@ npx --yes agentic-report inspect ./my-page --json
 npx --yes agentic-report build ./my-page --output ./my-page.html --json
 ```
 
-Open the generated page and select **Review** when the human needs to return structured feedback. After the
+Open the generated page and select **Review** when the human needs to discuss exact fragments. After the
 reader downloads `review.json`, map it back to the authored files with:
 
 ```sh
 npx --yes agentic-report review review.json ./my-page --json
 ```
 
-Review import/export is local and exact-revision bound; it is not an account, signature, or collaboration
-service.
-
-Typed `decision-option` and `check-item` directives use stable IDs. Required open/deferred decisions and
-unchecked required items block approval; not-applicable requires a bounded note. Discover the exact grammar
-from `describe --json` or the generated source schema rather than inventing controls.
+Review version 2 stores ordered user/agent messages and resolved state in one local sidecar; it is not an
+account, signature, or hosted collaboration service. Decision/checklist directives remain document content.
 
 For a repeat review, pass the prior local artifact with `build --review review.json`. Never copy a prior page
-approval into changed content; inspect bindings, resolve current gates, and export the next revision.
+thread into changed content; inspect bindings, continue the current discussion, and export the next revision.
+The sidecar keeps immutable historical revision segments and one editable current segment per thread, so the
+complete conversation remains in one file without rewriting old target identities.
 
 Use the pinned form for repeatable agent work. Use the unpinned form only when intentionally accepting the
 registry's current `latest` release.
@@ -62,9 +60,9 @@ registry's current `latest` release.
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.3.4 describe --json
-npx --yes agentic-report@0.3.4 schema --scope source
-npx --yes agentic-report@0.3.4 examples --json
+npx --yes agentic-report@0.3.5 describe --json
+npx --yes agentic-report@0.3.5 schema --scope source
+npx --yes agentic-report@0.3.5 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),

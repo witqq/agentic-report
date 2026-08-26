@@ -149,8 +149,8 @@ agentic-report review ./review.json ./my-report --json
 ```
 
 The review path is relative to `./my-report` and must remain inside its canonical source root. JSON output
-contains the current and reviewed revisions plus each response with `exact`, `changed`, `missing`, or
-`ambiguous` binding and the current entry/partial range when resolved. Feedback fields are bounded and
+contains the current and reviewed revisions plus each thread and revision segment with `exact`, `changed`,
+`missing`, or `ambiguous` binding and the current entry/partial range when resolved. Message fields are bounded and
 credential-sanitized; source bodies are not returned.
 
 The ESM equivalent is:
@@ -161,16 +161,17 @@ import { inspectReview, parseReviewArtifact, serializeReviewArtifact } from 'age
 const result = await inspectReview({ input: './my-report', review: 'review.json' });
 ```
 
-`parseReviewArtifact()` enforces the closed version-1 schema. `serializeReviewArtifact()` trims and
+`parseReviewArtifact()` enforces the closed version-2 thread schema. `serializeReviewArtifact()` trims and
 normalizes human text to Unicode NFC, then produces canonical newline-terminated JSON without a timestamp or
 random value. A changed or ambiguous target is never applied automatically; inspect its reported source
 state and edit the Markdown explicitly.
 
-The generated page itself provides Review Workspace. The reader selects `Review`, chooses a block, records
-feedback or a block verdict, selects an optional overall verdict, and downloads `review.json`. Desktop uses a
-non-modal rail; mobile uses a modal sheet. A downloaded review can be imported into a fresh copy of the exact
-same report revision. Importing a stale revision is intentionally refused; use the CLI source-binding result
-to inspect stale feedback.
+The generated page itself provides Review Workspace. The reader selects `Review`, opens a block thread,
+adds or edits messages, reads agent replies, resolves or reopens the thread, and downloads all threads in
+`review.json`. Desktop uses a non-modal rail; mobile uses a modal sheet. Exact state imports directly;
+stale threads remain prior evidence through the build sidecar and CLI binding result. Continuing a changed
+target appends a current revision segment to the same thread; the next export retains every historical
+message and resolution state in one sidecar.
 
 Typed review controls are declarative and keep legacy decisions static:
 
@@ -186,8 +187,7 @@ Typed review controls are declarative and keep legacy decisions static:
 :::
 ```
 
-Required open/deferred decisions and unchecked required items block approval. A not-applicable checklist
-state requires a bounded note. Stable component and child identities, not labels, own the exported response.
+These directives remain static report content; Review Workspace does not turn them into approval controls.
 
 For a repeat review, run `agentic-report build ./my-page --review review.json --output revised.html`.
 The sidecar is confined to the source root and read before publication. Invalid input preserves existing

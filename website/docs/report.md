@@ -54,13 +54,10 @@ runtime truth.
 
 ::::section{title="Review and return feedback" id="review" nav="Review" width="standard" align="start" tone="accent" reveal="true"}
 
-Generated pages include a local Review Workspace. A reader can attach comments or blockers to exact blocks,
-set independent block and overall verdicts, and download deterministic `review.json`. Desktop uses a
-non-modal rail; mobile uses a modal sheet. No feedback is uploaded or stored in an account.
-
-Authors may add stable typed decision options and required/optional checklist items. Reviewers can select,
-leave open, defer, check, or explain not-applicable state. Unresolved required controls block approval, and
-the same canonical JSON resumes locally. Markdown-only decisions remain static.
+Generated pages include a local Review Workspace. A reader opens a discussion thread on an exact block,
+adds or edits messages, reads agent replies, resolves or reopens the thread, and downloads deterministic
+version-2 `review.json`. Desktop uses a non-modal rail; mobile uses a modal sheet. Nothing is uploaded or
+stored in an account; ordinary decisions and checklists remain static report content.
 
 An agent resolves the downloaded review against the current source with:
 
@@ -70,8 +67,9 @@ agentic-report review ./review.json ./my-page --json
 
 The result names exact, changed, missing, or ambiguous entry/partial targets without rewriting Markdown.
 
-Use `build --review review.json` for a follow-up artifact. Exact state resumes; stale feedback is labelled
-prior exact/changed/missing/ambiguous evidence until the reviewer completes and exports the new revision.
+Use `build --review review.json` for a follow-up artifact. Exact state resumes; stale threads are labelled
+prior exact/changed/missing/ambiguous evidence. Continuing a changed fragment appends a current revision
+segment to the same exported thread, retaining every prior user/agent message and resolution state.
 
 ::::
 

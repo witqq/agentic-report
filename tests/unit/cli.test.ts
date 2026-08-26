@@ -52,19 +52,25 @@ describe('CLI transport', () => {
     await writeFile(
       path.join(workspace, 'review.json'),
       serializeReviewArtifact({
-        contractVersion: 1,
+        contractVersion: 2,
         report: { revision: `sha256:${'a'.repeat(64)}` },
-        responses: [
+        threads: [
           {
-            id: 'response-a',
-            kind: 'comment',
-            target: {
-              id: 'rt-prior',
-              kind: 'markdown:paragraph',
-              fingerprint: `sha256:${'b'.repeat(64)}`,
-              source: { file: 'report.md', line: 3, column: 1, endLine: 3, endColumn: 18 },
-            },
-            message: 'token=private-value',
+            id: 'thread-a',
+            segments: [
+              {
+                id: 'segment-a',
+                reportRevision: `sha256:${'a'.repeat(64)}`,
+                target: {
+                  id: 'rt-prior',
+                  kind: 'markdown:paragraph',
+                  fingerprint: `sha256:${'b'.repeat(64)}`,
+                  source: { file: 'report.md', line: 3, column: 1, endLine: 3, endColumn: 18 },
+                },
+                resolved: false,
+                messages: [{ id: 'message-a', author: 'user', message: 'token=private-value' }],
+              },
+            ],
           },
         ],
       }),
@@ -75,9 +81,14 @@ describe('CLI transport', () => {
     expect(result).toMatchObject({ exitCode: 0, stderr: '' });
     expect(JSON.parse(result.stdout)).toMatchObject({
       type: 'result',
-      contractVersion: 1,
+      contractVersion: 2,
       reportStatus: 'stale',
-      responses: [{ binding: 'changed', response: { message: 'token=[REDACTED]' } }],
+      threads: [
+        {
+          binding: 'changed',
+          thread: { segments: [{ messages: [{ message: 'token=[REDACTED]' }] }] },
+        },
+      ],
     });
     expect(result.stdout).not.toContain('private-value');
   });
@@ -126,19 +137,27 @@ describe('CLI transport', () => {
     await writeFile(
       path.join(workspace, 'review.json'),
       serializeReviewArtifact({
-        contractVersion: 1,
+        contractVersion: 2,
         report: { revision: `sha256:${'a'.repeat(64)}` },
-        responses: [
+        threads: [
           {
-            id: 'response-a',
-            kind: 'comment',
-            target: {
-              id: 'rt-prior',
-              kind: 'markdown:paragraph',
-              fingerprint: `sha256:${'b'.repeat(64)}`,
-              source: { file: 'report.md', line: 3, column: 1, endLine: 3, endColumn: 18 },
-            },
-            message: 'token=human-private-value',
+            id: 'thread-a',
+            segments: [
+              {
+                id: 'segment-a',
+                reportRevision: `sha256:${'a'.repeat(64)}`,
+                target: {
+                  id: 'rt-prior',
+                  kind: 'markdown:paragraph',
+                  fingerprint: `sha256:${'b'.repeat(64)}`,
+                  source: { file: 'report.md', line: 3, column: 1, endLine: 3, endColumn: 18 },
+                },
+                resolved: false,
+                messages: [
+                  { id: 'message-a', author: 'user', message: 'token=human-private-value' },
+                ],
+              },
+            ],
           },
         ],
       }),
@@ -703,9 +722,9 @@ async function createPriorReviewCliWorkspace(prefix: string): Promise<string> {
   await writeFile(
     path.join(workspace, 'prior.json'),
     serializeReviewArtifact({
-      contractVersion: 1,
+      contractVersion: 2,
       report: { revision: `sha256:${'a'.repeat(64)}` },
-      responses: [],
+      threads: [],
     }),
   );
   return workspace;

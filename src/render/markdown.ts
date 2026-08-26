@@ -24,12 +24,7 @@ import type { Diagnostic, OutputFormat, SourceDigest, SourceMapSegment } from '.
 import { AgenticReportError } from '../diagnostics.js';
 import { resolveLocalPath } from '../source/load-source.js';
 import { resolveSourceLocation } from '../source/source-map.js';
-import type {
-  ReviewChecklistRequirement,
-  ReviewDecisionRequirement,
-  ReviewRequirements,
-  ReviewTargetReference,
-} from '../review/contract.js';
+import type { ReviewTargetReference } from '../review/contract.js';
 import { rehypeReviewTargets, remarkReviewTargets } from '../review/targets.js';
 import { rehypeEnhanceDirectives, remarkSemanticDirectives } from './directives.js';
 
@@ -57,7 +52,6 @@ export interface MarkdownRenderResult {
   readonly resourceDigests: readonly SourceDigest[];
   readonly observedDirectives: readonly string[];
   readonly reviewTargets: readonly ReviewTargetReference[];
-  readonly reviewRequirements: ReviewRequirements;
   readonly observedResources: {
     readonly images: number;
     readonly downloads: number;
@@ -193,10 +187,6 @@ export async function renderMarkdown(
   };
   const observedDirectives = new Set<string>();
   const reviewTargets: ReviewTargetReference[] = [];
-  const reviewRequirements: {
-    decisions: ReviewDecisionRequirement[];
-    checklists: ReviewChecklistRequirement[];
-  } = { decisions: [], checklists: [] };
   const result = await unified()
     .use(remarkParse)
     .use(remarkGfm)
@@ -210,7 +200,6 @@ export async function renderMarkdown(
       sourceRoot: options.sourceRoot,
       sourceMap: options.sourceMap,
       targets: reviewTargets,
-      requirements: reviewRequirements,
     })
     .use(remarkRehype)
     .use(rehypeSanitize, semanticSanitizeSchema)
@@ -246,7 +235,6 @@ export async function renderMarkdown(
       .sort((left, right) => compareNames(left.file, right.file)),
     observedDirectives: [...observedDirectives].sort(compareNames),
     reviewTargets,
-    reviewRequirements,
     observedResources: collector.observedResources,
   };
 }

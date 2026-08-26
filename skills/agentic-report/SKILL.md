@@ -3,18 +3,17 @@ name: agentic-report
 description: Create, validate, inspect, or build polished local interactive reports, research pages, architecture pages, tutorials, dashboards, decisions, and landing pages from declarative Markdown. Use for static agent-to-human page handoff; do not use for hosted apps, live collaboration, deployment, publication, or bespoke frontend development.
 license: MIT
 metadata:
-  version: '0.3.4'
+  version: '0.3.5'
   homepage: https://agentic-report.witqq.dev/
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run.
 ---
 
-When a page needs bounded human choices, use registry-owned typed `decision`/`decision-option` and
-`checklist`/`check-item` syntax with stable IDs. Keep legacy prose-only decisions static. Required
-open/deferred decisions and unchecked required checklist items block approval; not-applicable requires a
-bounded note. Review state is local deterministic `review.json`; never imply an account or signature.
-For a follow-up build, pass a confined prior artifact with `build --review review.json`; treat stale bindings
-as prior evidence, resolve current requirements, and export the next revision. Never rewrite Markdown or
-carry a stale page approval automatically.
+Use Review Workspace for local fragment discussion threads: ordered user/agent messages, editing and
+resolved/reopened state exported together as deterministic version-2 `review.json`. Never imply an account
+or signature. For a follow-up build, pass a confined prior artifact with `build --review review.json`; treat
+stale bindings as immutable prior revision segments, append a current segment when continuing a changed
+fragment, and export the next revision. Never rewrite Markdown. Ordinary typed
+`decision`/`decision-option` and `checklist`/`check-item` syntax remains static report content.
 
 # agentic-report
 
@@ -36,10 +35,10 @@ Create a local declarative source, verify it, and hand the user a finished inter
 Use the release pinned in this skill:
 
 ```sh
-npx --yes agentic-report@0.3.4 init ./my-page --starter landing --json
-npx --yes agentic-report@0.3.4 validate ./my-page --json
-npx --yes agentic-report@0.3.4 inspect ./my-page --json
-npx --yes agentic-report@0.3.4 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.3.5 init ./my-page --starter landing --json
+npx --yes agentic-report@0.3.5 validate ./my-page --json
+npx --yes agentic-report@0.3.5 inspect ./my-page --json
+npx --yes agentic-report@0.3.5 build ./my-page --output ./my-page.html --json
 ```
 
 Choose a different starter or destination name when the task requires it. `init` requires an absent

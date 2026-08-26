@@ -38,7 +38,9 @@ export {
   serializeReviewArtifact,
   type ReviewArtifact,
   type ReviewBinding,
-  type ReviewResponse,
+  type ReviewMessage,
+  type ReviewThread,
+  type ReviewThreadSegment,
   type ReviewTargetManifest,
   type ReviewTargetReference,
 } from './review/contract.js';

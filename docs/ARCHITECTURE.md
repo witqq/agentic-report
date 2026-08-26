@@ -74,9 +74,9 @@ Markdown + metadata + local assets + partials + semantic directives
   tab selection, modal/popover focus, filtering, switches, and bounded counters. Interaction instances keep state in their own semantic DOM
   subtree, so repeated components do not share accidental state.
 - `src/browser/review-workspace.ts` is a cohesive package-owned controller over the shared review contract.
-  It parses the inert manifest once, creates bounded target affordances, owns in-memory reviewer feedback and
-  page/target verdicts, validates exact-revision imports, and exports canonical JSON through a revoked local
-  object URL. It never evaluates or injects feedback as HTML, writes storage, starts a service, or performs a
+  It parses the inert manifest once, creates bounded target affordances, owns in-memory discussion threads,
+  ordered user/agent messages and segment-local resolution, validates exact-revision imports, and exports
+  canonical JSON through a revoked local object URL. It never evaluates or injects messages as HTML, writes storage, starts a service, or performs a
   network request.
 - `src/core/prepare-report.ts` owns the shared side-effect-free preparation used by building, validation,
   and inspection: source/render work, registry-owned output selection, package browser assets, size
@@ -86,7 +86,7 @@ Markdown + metadata + local assets + partials + semantic directives
   `src/core/analyze-report.ts` projects the same preparation into compact validation and inspection
   results without output publication.
 - `src/core/inspect-review.ts` reads one strictly bounded review JSON file confined under the prepared
-  source root, validates it, binds its structured responses to the current target manifest, and returns a
+  source root, validates it, binds its threads and revision segments to the current target manifest, and returns a
   centrally sanitized result without publishing output or editing Markdown.
 - `src/cli.ts` adapts initialization, building, validation, inspection, review binding, and discovery to human text or
   agent-oriented NDJSON. The executable reads its version from the installed package metadata rather than
@@ -120,7 +120,7 @@ and device/inode identity prevent it from aliasing loaded source/resource or out
 resolve recorded targets. Stale revisions resolve a stable explicit identity first, then a unique target at
 the same authored source origin (file, line, and column); a changed fingerprint at that origin is reported as
 changed. Only when the original origin is absent may a unique matching fingerprint in the same source file
-resolve the response. A unique cross-file fingerprint is treated as a move only after the previous source
+resolve the thread segment. A unique cross-file fingerprint is treated as a move only after the previous source
 file disappears from the current target graph. This prevents equal text elsewhere from impersonating edited
 content. Changed, missing, and ambiguous targets remain explicit and never trigger source mutation.
 
@@ -244,21 +244,17 @@ reserves page width; mobile opens the same dialog modally as a bottom sheet. Clo
 opener, while Exit removes all review affordances. State remains in memory until explicit canonical import or
 download.
 
-Feedback kinds are comment, question, change request, and blocker. Each target may own one independent
-approve/revise/reject response; the page verdict remains separate. Negative verdicts require rationale.
-Page approval cannot export while a blocker or negative target verdict remains. Unit-2 import is an exact
-revision resume operation: stale or foreign reviews are rejected without changing current state.
-
-Typed decision/checklist requirements are collected from the authored AST beside review targets and carried
-in the same inert manifest. The registry owns component/option/item IDs and closed nesting. The shared domain
-validates response ownership, option/item inventories, duplicate responses, and approval gates for both
-browser and Node review consumption. Browser code renders native named controls and stores their state only
-as canonical decision/checklist responses; legacy Markdown-only decisions produce no requirements.
+Review protocol version 2 stores discussion threads as ordered revision segments. Each segment owns its
+report revision, source target, ordered user/agent messages and resolved flag. A changed continuation appends
+a current segment without rewriting historical targets or messages. Equivalent artifacts serialize deterministically without clocks or random IDs.
+The browser can edit messages and resolve or reopen a thread; ordinary decision/checklist directives remain
+static report content and create no review requirements or approval gates. Version-1 formal review files fail
+at the version boundary without changing current state.
 
 An optional confined prior-review sidecar enters common preparation before publication. Preparation embeds
 the parsed artifact plus shared exact/changed/missing/ambiguous bindings; it never embeds the sidecar path.
-Exact revisions resume current state. Stale responses render as prior evidence and cannot carry page approval
-forward. Invalid or colliding input fails before authoritative output replacement.
+Exact revisions resume current state. Stale threads render as prior evidence. Invalid or colliding input fails
+before authoritative output replacement.
 
 `scrollProgress` defaults to false. In normal motion, an enabled page installs one passive document scroll
 listener and one resize listener, coalesces updates through one animation frame, and changes one decorative
@@ -312,7 +308,7 @@ browser runtime, or a separate release-validation subsystem.
 - Template partials are Markdown text; directives are allowlisted data; neither can execute author code.
 - Generated documents receive a Content Security Policy matching their output format and package runtime.
 - Review metadata is inert escaped markup; review inspection reads only a confined ordinary bounded JSON
-  file, rejects unknown fields and unsupported versions, and never evaluates feedback.
+  file, rejects unknown fields and unsupported versions, and never evaluates thread messages.
 - Package-owned inline JavaScript escapes HTML script terminators before insertion and CSP hashing.
 - Unexpected internal errors are projected without causes or source bodies. Expected diagnostics and
   public transport results retain actionable structure while centrally replacing recognized
