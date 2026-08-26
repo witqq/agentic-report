@@ -168,14 +168,20 @@ describe('report analysis', () => {
     await writeFile(
       path.join(workspace, 'review.json'),
       serializeReviewArtifact({
-        contractVersion: 1,
+        contractVersion: 2,
         report: { revision: singleManifest.reportRevision },
-        responses: [
+        threads: [
           {
-            id: 'response-a',
-            kind: 'comment',
-            target: partialTarget,
-            message: 'token=private-value',
+            id: 'thread-a',
+            segments: [
+              {
+                id: 'segment-a',
+                reportRevision: singleManifest.reportRevision,
+                target: partialTarget,
+                resolved: false,
+                messages: [{ id: 'message-a', author: 'user', message: 'token=private-value' }],
+              },
+            ],
           },
         ],
       }),
@@ -184,10 +190,10 @@ describe('report analysis', () => {
     const exact = await inspectReview({ input: workspace, review: 'review.json' });
     expect(exact).toMatchObject({
       reportStatus: 'exact',
-      responses: [
+      threads: [
         {
           binding: 'exact',
-          response: { message: 'token=[REDACTED]' },
+          thread: { segments: [{ messages: [{ message: 'token=[REDACTED]' }] }] },
           currentTarget: { source: { file: 'partials/evidence.md', line: 1 } },
         },
       ],
@@ -200,20 +206,18 @@ describe('report analysis', () => {
     expect(sourceStale.reportRevision).not.toBe(singleManifest.reportRevision);
     expect(sourceStale).toMatchObject({
       reportStatus: 'stale',
-      responses: [
-        { binding: 'exact', currentTarget: { source: { file: 'partials/evidence.md' } } },
-      ],
+      threads: [{ binding: 'exact', currentTarget: { source: { file: 'partials/evidence.md' } } }],
     });
 
     await writeFile(path.join(workspace, 'asset.txt'), 'changed local resource\n');
     const resourceStale = await inspectReview({ input: workspace, review: 'review.json' });
     expect(resourceStale.reportRevision).not.toBe(sourceStale.reportRevision);
-    expect(resourceStale.responses[0]?.binding).toBe('exact');
+    expect(resourceStale.threads[0]?.binding).toBe('exact');
 
     await writeFile(path.join(workspace, 'partials/evidence.md'), 'Changed evidence.\n');
     const targetStale = await inspectReview({ input: workspace, review: 'review.json' });
     expect(targetStale.reportRevision).not.toBe(resourceStale.reportRevision);
-    expect(targetStale.responses[0]).toMatchObject({
+    expect(targetStale.threads[0]).toMatchObject({
       binding: 'changed',
       currentTarget: { source: { file: 'partials/evidence.md', line: 1 } },
     });
@@ -234,47 +238,55 @@ describe('report analysis', () => {
     });
   });
 
-  it('enforces typed requirement ownership and approval through public review inspection', async () => {
+  it('keeps typed decision and checklist directives as static review targets without approval requirements', async () => {
     const workspace = await reviewWorkspace('analysis-typed-review');
     const output = path.join(workspace, 'report.html');
     await buildReport({ input: workspace, output });
     const manifest = await embeddedManifest(output);
-    expect(manifest.requirements?.decisions).toHaveLength(1);
-    await writeFile(
-      path.join(workspace, 'review.json'),
-      serializeReviewArtifact({
-        contractVersion: 1,
-        report: { revision: manifest.reportRevision },
-        pageVerdict: { verdict: 'approve' },
-        responses: [],
-      }),
-    );
-    await expect(inspectReview({ input: workspace, review: 'review.json' })).rejects.toMatchObject({
-      diagnostic: { code: 'REVIEW_REQUIREMENTS_INVALID' },
-    });
-    const decisionRequirement = manifest.requirements?.decisions[0];
-    const checklistRequirement = manifest.requirements?.checklists[0];
-    const decisionTarget = manifest.targets.find(
-      (target) => target.id === decisionRequirement?.targetId,
-    );
+    expect(JSON.stringify(manifest)).not.toContain('requirements');
+    const decisionTarget = manifest.targets.find((target) => target.kind === 'directive:decision');
     const checklistTarget = manifest.targets.find(
-      (target) => target.id === checklistRequirement?.targetId,
+      (target) => target.kind === 'directive:checklist',
     );
     if (decisionTarget === undefined || checklistTarget === undefined)
       throw new Error('Missing typed targets');
     await writeFile(
       path.join(workspace, 'review.json'),
       serializeReviewArtifact({
-        contractVersion: 1,
+        contractVersion: 2,
         report: { revision: manifest.reportRevision },
-        pageVerdict: { verdict: 'approve' },
-        responses: [
-          { id: 'decision-a', kind: 'decision', target: decisionTarget, optionId: 'ship' },
+        threads: [
           {
-            id: 'checklist-a',
-            kind: 'checklist',
-            target: checklistTarget,
-            items: [{ itemId: 'owner', status: 'checked' }],
+            id: 'thread-decision',
+            segments: [
+              {
+                id: 'segment-decision',
+                reportRevision: manifest.reportRevision,
+                target: decisionTarget,
+                resolved: false,
+                messages: [
+                  { id: 'message-decision', author: 'user', message: 'Discuss this decision.' },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'thread-checklist',
+            segments: [
+              {
+                id: 'segment-checklist',
+                reportRevision: manifest.reportRevision,
+                target: checklistTarget,
+                resolved: true,
+                messages: [
+                  {
+                    id: 'message-checklist',
+                    author: 'agent',
+                    message: 'Checklist remains document content.',
+                  },
+                ],
+              },
+            ],
           },
         ],
       }),
@@ -301,9 +313,22 @@ describe('report analysis', () => {
     await writeFile(
       path.join(workspace, 'prior.json'),
       serializeReviewArtifact({
-        contractVersion: 1,
+        contractVersion: 2,
         report: { revision: manifest.reportRevision },
-        responses: [{ id: 'comment-a', kind: 'comment', target, message: 'Revisit this.' }],
+        threads: [
+          {
+            id: 'thread-a',
+            segments: [
+              {
+                id: 'segment-a',
+                reportRevision: manifest.reportRevision,
+                target,
+                resolved: false,
+                messages: [{ id: 'message-a', author: 'user', message: 'Revisit this.' }],
+              },
+            ],
+          },
+        ],
       }),
     );
     const exact = path.join(workspace, 'exact.html');
@@ -327,14 +352,22 @@ describe('report analysis', () => {
     await writeFile(
       path.join(workspace, 'next.json'),
       serializeReviewArtifact({
-        contractVersion: 1,
+        contractVersion: 2,
         report: { revision: currentManifest.reportRevision },
-        responses: [
+        threads: [
           {
-            id: 'comment-next',
-            kind: 'comment',
-            target: currentTarget,
-            message: 'Current revision is ready.',
+            id: 'thread-next',
+            segments: [
+              {
+                id: 'segment-next',
+                reportRevision: currentManifest.reportRevision,
+                target: currentTarget,
+                resolved: false,
+                messages: [
+                  { id: 'message-next', author: 'user', message: 'Current revision is ready.' },
+                ],
+              },
+            ],
           },
         ],
       }),
@@ -449,7 +482,7 @@ describe('report analysis', () => {
       },
     });
 
-    await writeFile(reviewPath, JSON.stringify({ contractVersion: 1 }));
+    await writeFile(reviewPath, JSON.stringify({ contractVersion: 2 }));
     await expect(inspectReview({ input: workspace, review: 'review.json' })).rejects.toMatchObject({
       diagnostic: {
         code: 'REVIEW_ARTIFACT_INVALID',

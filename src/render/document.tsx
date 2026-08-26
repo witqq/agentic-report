@@ -47,9 +47,8 @@ export function renderDocument(options: DocumentRenderOptions): string {
   const navigationDialogTitleId = allocateShellId('report-navigation-dialog-title', usedIds);
   const reviewDialogId = allocateShellId('report-review-dialog', usedIds);
   const reviewDialogTitleId = allocateShellId('report-review-dialog-title', usedIds);
-  const reviewSummaryTitleId = allocateShellId('report-review-summary-title', usedIds);
   const reviewTargetTitleId = allocateShellId('report-review-target-title', usedIds);
-  const reviewResponsesTitleId = allocateShellId('report-review-responses-title', usedIds);
+  const reviewThreadTitleId = allocateShellId('report-review-thread-title', usedIds);
   const markup = renderToStaticMarkup(
     <html
       lang={options.language}
@@ -195,82 +194,44 @@ export function renderDocument(options: DocumentRenderOptions): string {
               </header>
               <div className="review-panel-body">
                 <p className="review-error" role="alert" data-review-error hidden />
-                <section className="review-form-section" aria-labelledby={reviewSummaryTitleId}>
-                  <h3 id={reviewSummaryTitleId}>Summary</h3>
-                  <output className="review-summary" aria-live="polite" data-review-summary>
-                    No responses yet
-                  </output>
-                  <label className="review-field">
-                    <span>Reviewer name</span>
-                    <input type="text" autoComplete="name" data-reviewer-name />
-                  </label>
-                  <label className="review-field">
-                    <span>Overall verdict</span>
-                    <select data-review-page-verdict>
-                      <option value="">Draft — no verdict</option>
-                      <option value="approve">Approve</option>
-                      <option value="revise">Revise</option>
-                      <option value="reject">Reject</option>
-                    </select>
-                  </label>
-                  <label className="review-field" data-review-page-rationale-field hidden>
-                    <span>Overall rationale</span>
-                    <textarea rows={3} data-review-page-rationale />
-                  </label>
-                </section>
+                <output className="review-summary" aria-live="polite" data-review-summary>
+                  No discussion threads yet
+                </output>
                 <section
                   className="review-form-section review-target-editor"
                   aria-labelledby={reviewTargetTitleId}
                   data-review-target-editor
                   hidden
                 >
-                  <h3 id={reviewTargetTitleId}>Selected block</h3>
+                  <h3 id={reviewTargetTitleId}>Discussion for selected block</h3>
                   <p className="review-target-label" data-review-target-label />
+                  <ol
+                    className="review-response-list"
+                    aria-labelledby={reviewThreadTitleId}
+                    data-review-thread-messages
+                  />
+                  <p id={reviewThreadTitleId} data-review-thread-empty>
+                    No messages yet.
+                  </p>
                   <label className="review-field">
-                    <span>Block verdict</span>
-                    <select data-review-target-verdict>
-                      <option value="">No verdict</option>
-                      <option value="approve">Approve</option>
-                      <option value="revise">Revise</option>
-                      <option value="reject">Reject</option>
-                    </select>
-                  </label>
-                  <label className="review-field" data-review-target-rationale-field hidden>
-                    <span>Block rationale</span>
-                    <textarea rows={3} data-review-target-rationale />
-                  </label>
-                  <div className="review-field-row">
-                    <label className="review-field">
-                      <span>Feedback type</span>
-                      <select data-review-feedback-kind>
-                        <option value="comment">Comment</option>
-                        <option value="question">Question</option>
-                        <option value="change-request">Change request</option>
-                        <option value="blocker">Blocker</option>
-                      </select>
-                    </label>
-                  </div>
-                  <label className="review-field">
-                    <span>Feedback</span>
-                    <textarea rows={4} data-review-feedback-message />
+                    <span>New message</span>
+                    <textarea rows={4} data-review-message />
                   </label>
                   <div className="review-inline-actions">
-                    <button type="button" className="review-primary" data-review-add-feedback>
-                      Add feedback
+                    <button type="button" className="review-primary" data-review-add-message>
+                      Add message
                     </button>
-                    <button type="button" data-review-cancel-edit hidden>
+                    <button type="button" data-review-cancel-message-edit hidden>
                       Cancel edit
+                    </button>
+                    <button type="button" data-review-resolve-thread hidden>
+                      Resolve thread
                     </button>
                   </div>
                 </section>
-                <section className="review-form-section" aria-labelledby={reviewResponsesTitleId}>
-                  <h3 id={reviewResponsesTitleId}>Responses</h3>
-                  <p data-review-empty>No responses yet.</p>
-                  <ol className="review-response-list" data-review-response-list />
-                </section>
-                <section className="review-form-section" data-review-components hidden>
-                  <h3>Decisions and checklists</h3>
-                  <div data-review-component-list />
+                <section className="review-form-section" data-review-prior-section hidden>
+                  <h3>Threads from the previous revision</h3>
+                  <ol className="review-response-list" data-review-prior-list />
                 </section>
               </div>
               <footer className="review-panel-footer">

@@ -106,8 +106,8 @@ package; compilation and the generated page then run locally.
    :::
 
 :::callout{kind="success" title="Return structured feedback to the agent"}
-Select **Review** in the generated page to comment on exact blocks, set independent block and overall verdicts,
-and download deterministic `review.json`. The review stays local; use the CLI review command to map it back to
+Select **Review** in the generated page to open threads on exact blocks, exchange user/agent messages,
+resolve or reopen them, and download deterministic `review.json`. The review stays local; use the CLI review command to map it back to
 the current Markdown or partial ranges.
 :::
 
@@ -178,7 +178,7 @@ Separate gates, evidence, alternatives, conditions, and reversibility. Use the e
 not a made-up seventh starter.
 :::
 :::card{title="Review and re-review"}
-Collect typed feedback, decisions, and checklist gates locally, then rebuild against the prior handoff.
+Collect fragment discussion threads locally, then rebuild against the prior handoff.
 [Open the fictional review workspace](examples/review-workspace/index.html) ·
 [View its revised declarative source](examples/review-workspace/report.md) ·
 [Inspect the fictional prior handoff](examples/review-workspace/prior-review.json).

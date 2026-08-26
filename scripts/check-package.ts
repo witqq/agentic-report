@@ -727,14 +727,26 @@ const installedReviewPath = path.join(firstUseProject, 'review.json');
 await writeFile(
   installedReviewPath,
   `${JSON.stringify({
-    contractVersion: 1,
+    contractVersion: 2,
     report: { revision: reviewManifest.reportRevision },
-    responses: [
+    threads: [
       {
-        id: 'response-a',
-        kind: 'comment',
-        target: reviewTarget,
-        message: 'token=installed-private-value',
+        id: 'thread-a',
+        segments: [
+          {
+            id: 'segment-a',
+            reportRevision: reviewManifest.reportRevision,
+            target: reviewTarget,
+            resolved: false,
+            messages: [
+              {
+                id: 'message-a',
+                author: 'user',
+                message: 'token=installed-private-value',
+              },
+            ],
+          },
+        ],
       },
     ],
   })}\n`,
@@ -753,8 +765,8 @@ if (
   installedReview.stderr !== '' ||
   installedReviewRecord.type !== 'result' ||
   installedReviewRecord.reportStatus !== 'exact' ||
-  !Array.isArray(installedReviewRecord.responses) ||
-  installedReviewRecord.responses.length !== 1 ||
+  !Array.isArray(installedReviewRecord.threads) ||
+  installedReviewRecord.threads.length !== 1 ||
   installedReview.stdout.includes('installed-private-value') ||
   !installedReview.stdout.includes('token=[REDACTED]')
 ) {
@@ -905,11 +917,11 @@ if (
   throw new Error('Independent installed CLI processes produced different directory trees.');
 }
 const candidateBrowserEvidence = await inspectCandidateArtifacts([
-  { format: 'single-file', path: installedPriorSingle, expectReviewResponses: true },
+  { format: 'single-file', path: installedPriorSingle, expectReviewThreads: true },
   {
     format: 'directory',
     path: path.join(installedPriorDirectory, 'index.html'),
-    expectReviewResponses: true,
+    expectReviewThreads: true,
   },
 ]);
 
@@ -1460,7 +1472,7 @@ async function inspectCandidateArtifacts(
   artifacts: readonly {
     readonly format: 'single-file' | 'directory';
     readonly path: string;
-    readonly expectReviewResponses?: boolean;
+    readonly expectReviewThreads?: boolean;
   }[],
 ): Promise<readonly Readonly<Record<string, unknown>>[]> {
   const browser = await chromium.launch();
@@ -1493,9 +1505,12 @@ async function inspectCandidateArtifacts(
       }
       await reviewToggle.click();
       const reviewDialog = page.locator('[data-review-dialog]');
+      if ((await reviewDialog.getAttribute('open')) === null) await reviewToggle.click();
       const reviewOpen = await reviewDialog.getAttribute('open');
       const reviewTargets = await page.locator('[data-review-target-control]:visible').count();
-      const reviewResponses = await page.locator('[data-review-response-list] li').count();
+      const reviewThreads = await page
+        .locator('[data-review-thread-state="open"], [data-review-thread-state="resolved"]')
+        .count();
       const reviewModal = await reviewDialog.evaluate((element) => element.matches(':modal'));
       await page.locator('[data-review-exit]').click();
       const observed = await page.evaluate(() => ({
@@ -1511,7 +1526,7 @@ async function inspectCandidateArtifacts(
         themeBefore === themeAfter ||
         reviewOpen === null ||
         reviewTargets === 0 ||
-        (artifact.expectReviewResponses === true && reviewResponses === 0) ||
+        (artifact.expectReviewThreads === true && reviewThreads === 0) ||
         reviewModal !== (artifact.format === 'directory')
       ) {
         throw new Error(
@@ -1525,7 +1540,7 @@ async function inspectCandidateArtifacts(
         themeBefore,
         themeAfter,
         reviewTargets,
-        reviewResponses,
+        reviewResponses: reviewThreads,
         reviewModal,
         ...observed,
       });

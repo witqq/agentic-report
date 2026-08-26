@@ -244,21 +244,17 @@ reserves page width; mobile opens the same dialog modally as a bottom sheet. Clo
 opener, while Exit removes all review affordances. State remains in memory until explicit canonical import or
 download.
 
-Feedback kinds are comment, question, change request, and blocker. Each target may own one independent
-approve/revise/reject response; the page verdict remains separate. Negative verdicts require rationale.
-Page approval cannot export while a blocker or negative target verdict remains. Unit-2 import is an exact
-revision resume operation: stale or foreign reviews are rejected without changing current state.
-
-Typed decision/checklist requirements are collected from the authored AST beside review targets and carried
-in the same inert manifest. The registry owns component/option/item IDs and closed nesting. The shared domain
-validates response ownership, option/item inventories, duplicate responses, and approval gates for both
-browser and Node review consumption. Browser code renders native named controls and stores their state only
-as canonical decision/checklist responses; legacy Markdown-only decisions produce no requirements.
+Review protocol version 2 stores discussion threads as ordered revision segments. Each segment owns its
+report revision, source target, ordered user/agent messages and resolved flag. A changed continuation appends
+a current segment without rewriting historical targets or messages. Equivalent artifacts serialize deterministically without clocks or random IDs.
+The browser can edit messages and resolve or reopen a thread; ordinary decision/checklist directives remain
+static report content and create no review requirements or approval gates. Version-1 formal review files fail
+at the version boundary without changing current state.
 
 An optional confined prior-review sidecar enters common preparation before publication. Preparation embeds
 the parsed artifact plus shared exact/changed/missing/ambiguous bindings; it never embeds the sidecar path.
-Exact revisions resume current state. Stale responses render as prior evidence and cannot carry page approval
-forward. Invalid or colliding input fails before authoritative output replacement.
+Exact revisions resume current state. Stale threads render as prior evidence. Invalid or colliding input fails
+before authoritative output replacement.
 
 `scrollProgress` defaults to false. In normal motion, an enabled page installs one passive document scroll
 listener and one resize listener, coalesces updates through one animation frame, and changes one decorative

@@ -7,7 +7,7 @@ import {
   type ReportManifestInput,
 } from './authoring/schemas.js';
 import { OUTPUT_FORMATS, type PAGE_CONTRACT } from './authoring/registry.js';
-import type { ResolvedReviewResponse } from './review/binding.js';
+import type { ResolvedReviewThread } from './review/binding.js';
 
 export const OutputFormatSchema = z.enum(OUTPUT_FORMATS);
 export const ReportManifestInputSchema = reportManifestInputSchema;
@@ -151,5 +151,5 @@ export interface InspectReviewResult {
   readonly reportRevision: string;
   readonly reviewedRevision: string;
   readonly reportStatus: 'exact' | 'stale';
-  readonly responses: readonly ResolvedReviewResponse[];
+  readonly threads: readonly ResolvedReviewThread[];
 }

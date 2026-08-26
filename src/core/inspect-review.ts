@@ -4,7 +4,6 @@ import type { InspectReviewOptions, InspectReviewResult } from '../contracts.js'
 import { AgenticReportError, sanitizeTransportValue } from '../diagnostics.js';
 import { bindReviewArtifact } from '../review/binding.js';
 import {
-  assertReviewRequirements,
   parseReviewArtifact,
   ReviewContractError,
   REVIEW_CONTRACT_VERSION,
@@ -22,21 +21,6 @@ export async function inspectReview(options: InspectReviewOptions): Promise<Insp
     'REVIEW_OUTSIDE_SOURCE',
   );
   const review = await readReviewArtifact(reviewPath);
-  if (review.report.revision === prepared.reviewManifest.reportRevision) {
-    try {
-      assertReviewRequirements(
-        review,
-        prepared.reviewManifest.requirements ?? { decisions: [], checklists: [] },
-      );
-    } catch (error) {
-      throw new AgenticReportError({
-        level: 'error',
-        code: 'REVIEW_REQUIREMENTS_INVALID',
-        message: error instanceof Error ? error.message : 'Review requirements are invalid.',
-        remediation: 'Resolve typed decisions and checklists against the current report.',
-      });
-    }
-  }
   const bound = bindReviewArtifact(review, prepared.reviewManifest);
   return sanitizeTransportValue({
     contractVersion: REVIEW_CONTRACT_VERSION,
@@ -45,7 +29,7 @@ export async function inspectReview(options: InspectReviewOptions): Promise<Insp
     reportRevision: prepared.reviewManifest.reportRevision,
     reviewedRevision: review.report.revision,
     reportStatus: bound.reportStatus,
-    responses: bound.responses,
+    threads: bound.threads,
   });
 }
 
@@ -91,9 +75,11 @@ async function readReviewArtifact(reviewPath: string) {
     if (error instanceof ReviewContractError) {
       throw new AgenticReportError({
         level: 'error',
-        code: 'REVIEW_ARTIFACT_INVALID',
-        message: 'Review artifact does not satisfy the versioned review contract.',
-        remediation: 'Regenerate the review from the bound report or fix the reported fields.',
+        code: error.unsupportedVersion ? 'REVIEW_VERSION_UNSUPPORTED' : 'REVIEW_ARTIFACT_INVALID',
+        message: error.message,
+        remediation: error.unsupportedVersion
+          ? 'Export a version-2 thread review from the current report.'
+          : 'Regenerate the review from the bound report or fix the reported fields.',
         source: { file: reviewPath },
         details: { issues: error.issues },
       });

@@ -277,7 +277,8 @@ describe('deterministic public site staging', () => {
     );
     expect(html).toContain('data-prior-review="true"');
     expect(html).toContain('&quot;reportStatus&quot;:&quot;stale&quot;');
-    expect(html).toContain('Recheck activation after the cohort revision.');
+    expect(html).toContain('Explain why this evidence supports the release conclusion.');
+    expect(html).toContain('Added the missing comparison and linked it to the conclusion.');
     expect(
       await readFile(path.join(firstSite, 'examples/review-workspace/prior-review.json')),
     ).toEqual(

@@ -97,19 +97,17 @@ command/format/starter/capability catalog.
 
 Generated pages also carry an inert deterministic review-target manifest. Use
 `inspectReview({ input, review })` or `agentic-report review <review> [input] --json` to validate a confined
-versioned `review.json` and resolve each response to the current Markdown or partial range. Stale, changed,
+version-2 `review.json` and resolve each discussion thread to the current Markdown or partial range. Stale, changed,
 missing, and ambiguous targets remain explicit; the command never rewrites source.
 
-In the generated page, `Review` opens the local Review Workspace. Readers can comment on blocks, set
-independent block and overall `approve`/`revise`/`reject` verdicts, and download deterministic `review.json`.
-Typed decisions use stable `decision-option` children and support selected, open, or deferred responses;
-typed checklists expose required/optional checked, unchecked, and explained not-applicable states. Required
-unresolved responses block page approval through the same shared review contract. Existing Markdown-only
-`decision` blocks remain static.
+In the generated page, `Review` opens a local discussion layer. Readers open a thread on an exact block,
+accumulate and edit messages, read agent replies, resolve or reopen the thread, and download all threads as
+deterministic `review.json`. Ordinary `decision` and `checklist` directives remain static report content.
 
 Pass `--review review.json` to `build`, `validate`, or `inspect` to consume a confined prior sidecar. Exact
-revisions resume current state; stale responses remain prior exact/changed/missing/ambiguous evidence and
-never carry page approval forward automatically.
+revisions resume current state; stale threads remain prior exact/changed/missing/ambiguous evidence. Continuing
+a changed target appends a current revision segment to the same thread, so prior messages and resolution stay
+in the one exported sidecar instead of being copied onto a different source target.
 Desktop uses a non-modal rail; mobile uses a modal sheet. State leaves the page only through explicit local
 import/export—there is no account, backend, network sync, or authenticated signature.
 

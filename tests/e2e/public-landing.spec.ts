@@ -42,11 +42,13 @@ test('public repeat-review route exposes the fictional changed prior handoff', a
   await page.goto(
     pathToFileURL(path.join(stagedSiteRoot, 'examples/review-workspace/index.html')).href,
   );
-  await page.getByRole('button', { name: 'Review', exact: true }).click();
-  await expect(page.locator('[data-review-response-list]')).toContainText(
-    'Prior · changed · comment · Recheck activation after the cohort revision.',
+  await page.locator('[data-review-toggle]').click();
+  await expect(page.locator('[data-review-prior-section]')).toContainText(
+    'Prior · changed · unresolved',
   );
-  await expect(page.locator('[data-review-page-verdict]')).toHaveValue('');
+  await expect(page.locator('[data-review-prior-section]')).toContainText(
+    'Explain why this evidence supports the release conclusion.',
+  );
   await mkdir(path.resolve('test-results/captures/public-site'), { recursive: true });
   await page.screenshot({
     path: path.resolve('test-results/captures/public-site/repeat-review-desktop.png'),

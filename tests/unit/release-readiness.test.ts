@@ -24,15 +24,16 @@ describe('release readiness', () => {
       'AR-AUTHOR-REVIEW-BINDING',
       'AR-AUTHOR-REVIEW-RECONCILIATION',
       'AR-COMPONENT-REVIEW-WORKSPACE',
-      'AR-COMPONENT-REVIEW-DECISIONS',
-      'AR-COMPONENT-REVIEW-CHECKLISTS',
-      'selected, open и deferred',
-      'checked, unchecked, explained not-applicable',
+      '`review.json` версии 2',
+      'сообщениями пользователя',
+      'resolved или reopened',
       '`exact/changed/missing/ambiguous`',
-      'без переноса page approval',
+      'Формальные verdict, approval gate и review-чек-листы не входят',
     ]) {
       expect(requirements, required).toContain(required);
     }
+    expect(requirements).not.toContain('AR-COMPONENT-REVIEW-DECISIONS');
+    expect(requirements).not.toContain('AR-COMPONENT-REVIEW-CHECKLISTS');
   });
 
   it('targets a real Compose service and its declared health container', async () => {

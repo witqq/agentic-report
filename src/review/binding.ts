@@ -1,20 +1,27 @@
 import type {
   ReviewArtifact,
   ReviewBinding,
-  ReviewResponse,
+  ReviewThread,
+  ReviewThreadSegment,
   ReviewTargetManifest,
   ReviewTargetReference,
 } from './contract.js';
 
-export interface ResolvedReviewResponse {
-  readonly response: ReviewResponse;
+export interface ResolvedReviewThread {
+  readonly thread: ReviewThread;
+  readonly binding: ReviewBinding;
+  readonly currentTarget?: ReviewTargetReference;
+  readonly segments: readonly ResolvedReviewSegment[];
+}
+export interface ResolvedReviewSegment {
+  readonly segment: ReviewThreadSegment;
   readonly binding: ReviewBinding;
   readonly currentTarget?: ReviewTargetReference;
 }
 
 export interface ResolvedReviewArtifact {
   readonly reportStatus: 'exact' | 'stale';
-  readonly responses: readonly ResolvedReviewResponse[];
+  readonly threads: readonly ResolvedReviewThread[];
 }
 
 export function bindReviewArtifact(
@@ -24,10 +31,23 @@ export function bindReviewArtifact(
   const reportStatus = artifact.report.revision === manifest.reportRevision ? 'exact' : 'stale';
   return {
     reportStatus,
-    responses: artifact.responses.map((response) => ({
-      response,
-      ...bindTarget(response.target, manifest.targets, reportStatus),
-    })),
+    threads: artifact.threads.map((thread) => {
+      const segments = thread.segments.map((segment) => ({
+        segment,
+        ...bindTarget(
+          segment.target,
+          manifest.targets,
+          segment.reportRevision === manifest.reportRevision ? 'exact' : 'stale',
+        ),
+      }));
+      const latest = segments.at(-1);
+      return {
+        thread,
+        binding: latest?.binding ?? 'missing',
+        ...(latest?.currentTarget === undefined ? {} : { currentTarget: latest.currentTarget }),
+        segments,
+      };
+    }),
   };
 }
 

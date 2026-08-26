@@ -26,22 +26,20 @@ npx --yes agentic-report inspect ./my-page --json
 npx --yes agentic-report build ./my-page --output ./my-page.html --json
 ```
 
-Open the generated page and select **Review** when the human needs to return structured feedback. After the
+Open the generated page and select **Review** when the human needs to discuss exact fragments. After the
 reader downloads `review.json`, map it back to the authored files with:
 
 ```sh
 npx --yes agentic-report review review.json ./my-page --json
 ```
 
-Review import/export is local and exact-revision bound; it is not an account, signature, or collaboration
-service.
-
-Typed `decision-option` and `check-item` directives use stable IDs. Required open/deferred decisions and
-unchecked required items block approval; not-applicable requires a bounded note. Discover the exact grammar
-from `describe --json` or the generated source schema rather than inventing controls.
+Review version 2 stores ordered user/agent messages and resolved state in one local sidecar; it is not an
+account, signature, or hosted collaboration service. Decision/checklist directives remain document content.
 
 For a repeat review, pass the prior local artifact with `build --review review.json`. Never copy a prior page
-approval into changed content; inspect bindings, resolve current gates, and export the next revision.
+thread into changed content; inspect bindings, continue the current discussion, and export the next revision.
+The sidecar keeps immutable historical revision segments and one editable current segment per thread, so the
+complete conversation remains in one file without rewriting old target identities.
 
 Use the pinned form for repeatable agent work. Use the unpinned form only when intentionally accepting the
 registry's current `latest` release.

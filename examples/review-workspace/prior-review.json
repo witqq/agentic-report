@@ -1,19 +1,42 @@
 {
-  "contractVersion": 1,
+  "contractVersion": 2,
   "report": {
-    "revision": "sha256:56b5a4e62ac068b05aeeb9d8c6790c910d9cb3630be17a70191bff79f20cc700"
+    "revision": "sha256:c0063831f63a86b3df43dc2565bf540f12a16805307cb41b521e36774c814c6f"
   },
-  "responses": [
+  "threads": [
     {
-      "id": "activation-prior",
-      "kind": "comment",
-      "target": {
-        "id": "rt-20957d55f22a91b4d61c7c8bae36967b",
-        "kind": "markdown:paragraph",
-        "fingerprint": "sha256:7207b5ddb23f27c968d0d444ca0229fb1ec7bfbf6e7a9c354aabd0ce734439e1",
-        "source": { "file": "report.md", "line": 21, "column": 1, "endLine": 21, "endColumn": 51 }
-      },
-      "message": "Recheck activation after the cohort revision."
+      "id": "thread-release-evidence",
+      "segments": [
+        {
+          "id": "segment-release-evidence",
+          "reportRevision": "sha256:c0063831f63a86b3df43dc2565bf540f12a16805307cb41b521e36774c814c6f",
+          "target": {
+            "id": "rt-0ffe8425ce76a87b992ed06963840030",
+            "kind": "markdown:paragraph",
+            "fingerprint": "sha256:9218d203e1c97151f662d0878aebbe311be61468620088290e0a54d710a97350",
+            "source": {
+              "file": "report.md",
+              "line": 29,
+              "column": 1,
+              "endLine": 29,
+              "endColumn": 102
+            }
+          },
+          "resolved": false,
+          "messages": [
+            {
+              "id": "message-user-1",
+              "author": "user",
+              "message": "Explain why this evidence supports the release conclusion."
+            },
+            {
+              "id": "message-agent-2",
+              "author": "agent",
+              "message": "Added the missing comparison and linked it to the conclusion."
+            }
+          ]
+        }
+      ]
     }
   ]
 }

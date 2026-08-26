@@ -315,7 +315,7 @@ function writeReviewSuccess(result: InspectReviewResult, runId: string, json: bo
   const counts = Object.fromEntries(
     ['exact', 'changed', 'missing', 'ambiguous'].map((binding) => [
       binding,
-      sanitized.responses.filter((response) => response.binding === binding).length,
+      sanitized.threads.filter((thread) => thread.binding === binding).length,
     ]),
   );
   process.stdout.write(

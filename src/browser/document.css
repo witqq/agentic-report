@@ -752,6 +752,7 @@ a {
   z-index: 1;
   display: flex;
   width: fit-content;
+  min-width: var(--control-height);
   min-height: var(--control-height);
   margin: 0.45rem 0 0.35rem auto;
   border: 1px solid var(--color-accent);
@@ -763,6 +764,31 @@ a {
   font-size: 0.78rem;
   font-weight: 720;
   cursor: pointer;
+}
+
+.review-target-resolve {
+  float: right;
+  min-width: var(--control-height);
+  min-height: var(--control-height);
+  margin: 0.45rem 0 0.35rem 0.4rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-small);
+  padding: 0 var(--control-inline-padding);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.review-target-control[data-review-thread-state='open'] {
+  box-shadow: 0 0 0 0.16rem color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+.review-target-control[data-review-thread-state='resolved'] {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
 }
 
 :root[data-review-active] [data-review-target] {
@@ -2074,6 +2100,12 @@ th {
     float: none;
     width: 100%;
     margin: 0.45rem 0;
+  }
+
+  .review-target-resolve {
+    float: none;
+    width: 100%;
+    margin: 0.35rem 0;
   }
 
   .nav-dialog::backdrop {

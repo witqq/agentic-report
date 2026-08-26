@@ -338,17 +338,7 @@ export default async function globalSetup(): Promise<void> {
       fingerprint: string;
       source: { file: string; line: number; column: number; endLine: number; endColumn: number };
     }>;
-    requirements: {
-      decisions: Array<{ targetId: string }>;
-      checklists: Array<{ targetId: string }>;
-    };
   };
-  const decisionTarget = reviewManifest.targets.find(
-    (target) => target.id === reviewManifest.requirements.decisions[0]?.targetId,
-  );
-  const checklistTarget = reviewManifest.targets.find(
-    (target) => target.id === reviewManifest.requirements.checklists[0]?.targetId,
-  );
   const firstEvidenceLine =
     (await readFile(path.join(reviewSource, 'report.md'), 'utf8'))
       .split('\n')
@@ -359,32 +349,26 @@ export default async function globalSetup(): Promise<void> {
       target.source.file === 'report.md' &&
       target.source.line === firstEvidenceLine,
   );
-  if (
-    decisionTarget === undefined ||
-    checklistTarget === undefined ||
-    changedParagraphTarget === undefined
-  )
-    throw new Error('Missing repeat-review component targets');
+  if (changedParagraphTarget === undefined) throw new Error('Missing repeat-review target');
   await writeFile(
     path.join(reviewSource, 'prior.json'),
     serializeReviewArtifact({
-      contractVersion: 1,
+      contractVersion: 2,
       report: { revision: reviewManifest.reportRevision },
-      responses: [
+      threads: [
         {
-          id: 'comment-prior',
-          kind: 'comment',
-          target: changedParagraphTarget,
-          message: 'Revisit changed evidence.',
-        },
-        { id: 'decision-prior', kind: 'decision', target: decisionTarget, optionId: 'ship' },
-        {
-          id: 'checklist-prior',
-          kind: 'checklist',
-          target: checklistTarget,
-          items: [
-            { itemId: 'owner', status: 'checked' },
-            { itemId: 'notes', status: 'unchecked' },
+          id: 'thread-prior',
+          segments: [
+            {
+              id: 'segment-prior',
+              reportRevision: reviewManifest.reportRevision,
+              target: changedParagraphTarget,
+              resolved: false,
+              messages: [
+                { id: 'message-user', author: 'user', message: 'Revisit changed evidence.' },
+                { id: 'message-agent', author: 'agent', message: 'Added supporting context.' },
+              ],
+            },
           ],
         },
       ],
@@ -409,6 +393,33 @@ export default async function globalSetup(): Promise<void> {
       'Changed evidence statement.',
     ),
   );
+  const staleBase = path.join(fixtureRoot, 'review-stale-base.html');
+  await buildReport({ input: reviewSource, output: staleBase });
+  const staleHtml = await readFile(staleBase, 'utf8');
+  const staleEncoded = /<template data-review-manifest="true">([\s\S]*?)<\/template>/u.exec(
+    staleHtml,
+  )?.[1];
+  if (staleEncoded === undefined) throw new Error('Missing stale review fixture manifest');
+  const staleManifest = JSON.parse(
+    staleEncoded
+      .replaceAll('&quot;', '"')
+      .replaceAll('&#x27;', "'")
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&amp;', '&'),
+  ) as typeof reviewManifest;
+  const currentChangedTarget = staleManifest.targets.find(
+    (target) =>
+      target.kind === 'markdown:paragraph' &&
+      target.source.file === 'report.md' &&
+      target.source.line === firstEvidenceLine,
+  );
+  if (currentChangedTarget === undefined) throw new Error('Missing current changed target');
+  const adversarialPrior = JSON.parse(
+    await readFile(path.join(reviewSource, 'prior.json'), 'utf8'),
+  );
+  adversarialPrior.threads[0].segments[0].id = `segment-${currentChangedTarget.id}-1`;
+  await writeFile(path.join(reviewSource, 'prior.json'), serializeReviewArtifact(adversarialPrior));
   await buildReport({
     input: reviewSource,
     output: path.join(fixtureRoot, 'review-stale.html'),
