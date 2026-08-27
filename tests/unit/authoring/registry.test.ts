@@ -30,6 +30,7 @@ describe('authoring registry', () => {
       'section',
       'actions',
       'action',
+      'source-link',
       'callout',
       'decision',
       'decision-option',

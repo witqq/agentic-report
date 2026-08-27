@@ -346,6 +346,8 @@ Content may contain ordinary Markdown.
 ::action[Open related evidence]{href="evidence.html" kind="secondary"}
 ::action[Project home]{href="https://example.com/project" kind="quiet"}
 :::
+
+Inspect :source-link{label="src/render/directives.ts:42" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42"}.
 ::::
 
 :::decision{title="Output choice"}
@@ -470,6 +472,16 @@ primary links.
 are same-page anchors, relative paths, HTTP(S), and `mailto:`. `javascript:`, `data:`, `file:`, absolute
 local paths, and protocol-relative URLs fail validation. `kind` is `primary`, `secondary`, or `quiet` and
 changes package styling only; the output remains an ordinary anchor with no callback or form behavior.
+
+`source-link` is an inline labelled address for an external local editor helper. Its `href` is deliberately
+narrower than an action: `http://127.0.0.1:<port>/open?path=<absolute-path>&line=<positive-line>`, with an
+absolute path beginning with `/` or encoded `%2F`. The compiler emits a native `target="_blank"` link with
+`noopener noreferrer`, so the report remains open regardless of an empty helper response. It never requests
+the helper itself, checks the editor, reads the addressed path, or relaxes CSP. Use a short authored
+`path:line` label and percent-encode the full absolute path in the URL. The full path remains recoverable from
+the generated HTML and makes the link workstation-specific; do not include sensitive directory names, and
+remove or replace these links before public distribution when that disclosure or machine binding is not
+acceptable.
 
 `asset.src` and `font.src` must resolve to existing files under the canonical source root. The first font
 directive becomes the document font; later directives register additional faces. The text form uses its

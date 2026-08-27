@@ -35,6 +35,7 @@ export default async function globalSetup(): Promise<void> {
       '![Runtime placement](runtime-placement.svg)',
       '### Static path',
       'Choose a self-contained output when portability is the priority.',
+      'Inspect :source-link{label="src/render/directives.ts:42" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42"}.',
       '```ts',
       "const output = 'single-file';",
       '```',

@@ -164,6 +164,7 @@ export type DirectiveForm = 'container' | 'leaf' | 'text';
 export type DirectiveAttributeDiagnosticCode =
   | 'INVALID_DIRECTIVE_ATTRIBUTE'
   | 'INVALID_DIRECTIVE_LINK'
+  | 'INVALID_SOURCE_LINK'
   | 'INVALID_DIRECTIVE_PATH'
   | 'INVALID_FONT_FAMILY';
 
@@ -427,6 +428,7 @@ export const authoringRegistry = {
     sectionDirective(),
     actionsDirective(),
     actionDirective(),
+    sourceLinkDirective(),
     {
       name: 'callout',
       description: 'Emphasized finding or notice containing Markdown.',
@@ -864,6 +866,30 @@ function actionDirective(): DirectiveDefinition {
   };
 }
 
+function sourceLinkDirective(): DirectiveDefinition {
+  const attributes = [
+    textAttribute('label', 'Short visible source path and line.', true),
+    sourceLinkAttribute(),
+  ] as const;
+  return {
+    name: 'source-link',
+    description:
+      'Source location opened through an explicit IPv4 loopback editor helper without replacing the report page.',
+    forms: ['text'],
+    attributes,
+    children: 'none',
+    placement: {},
+    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+    sanitizer: {
+      tagName: 'a',
+      className: 'semantic-source-link',
+      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
+    },
+    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+    handoffs: ['semantic-document'],
+  };
+}
+
 function interactiveDirectives(): readonly DirectiveDefinition[] {
   return [
     interactiveContainer('glossary', 'Reusable glossary definition containing Markdown.', {
@@ -1143,6 +1169,24 @@ function linkAttribute(): DirectiveAttributeDefinition {
     },
     renderProperty: 'dataHref',
     invalidDiagnostic: 'INVALID_DIRECTIVE_LINK',
+  };
+}
+
+function sourceLinkAttribute(): DirectiveAttributeDefinition {
+  return {
+    name: 'href',
+    description: 'IPv4 loopback editor-helper URL with an absolute path and positive source line.',
+    required: true,
+    constraint: {
+      kind: 'string',
+      normalization: 'trim',
+      minLength: 1,
+      maxLength: 1000,
+      pattern:
+        '^http://127\\.0\\.0\\.1:(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])/open\\?path=(?:%2[Ff]|/)[^\\s<>&#]+&line=[1-9][0-9]{0,8}$',
+    },
+    renderProperty: 'dataHref',
+    invalidDiagnostic: 'INVALID_SOURCE_LINK',
   };
 }
 

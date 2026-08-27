@@ -3,13 +3,13 @@
     "result": {
       "outputPath": "<single>",
       "format": "single-file",
-      "bytes": 82168,
+      "bytes": 82797,
       "embeddedAssets": 6,
       "externalAssets": 0,
-      "contentHash": "3fdc718faeb6432c1971fef45029098cf53f835fbf7b3bfa6c7fa532fa0d624d",
+      "contentHash": "386d965ec548468eb8e7c6e8c03389fd3d5b2375aeeee6d3876b48c2650a02d5",
       "warnings": []
     },
-    "sha256": "3fdc718faeb6432c1971fef45029098cf53f835fbf7b3bfa6c7fa532fa0d624d"
+    "sha256": "386d965ec548468eb8e7c6e8c03389fd3d5b2375aeeee6d3876b48c2650a02d5"
   },
   "directory": {
     "result": {
@@ -18,16 +18,16 @@
       "bytes": 9448,
       "embeddedAssets": 0,
       "externalAssets": 6,
-      "contentHash": "2f629e2ed8abcaa0e830dc9e7f4dc95056ab12da1c5c60f9b422c47e324914af",
+      "contentHash": "491a6f5ff8e6e292f6190e52440bd38e5a283e616ed33763c34e2a8eccd47e18",
       "warnings": []
     },
     "tree": {
       "assets/data.b5a2226aa8dc.json": "b5a2226aa8dc989b18f2db6775a56448e7cdbe706e17e07d5110a43ef106b4d7",
       "assets/diagram.56b7b89f0860.svg": "56b7b89f0860520e4c8e1333aba1bbaa9b1e4711026a752b848fbf6190398c5f",
-      "assets/document.89b7a339c450.css": "89b7a339c4509c23e280228c024b8bc0ef45e93b263c9f345e8b4c25766d37c5",
+      "assets/document.2673ed8047bf.css": "2673ed8047bf24c6b5f33a58b9e76038d6f6024aabede03188c743e56a8a84fb",
       "assets/report.8c8ee5dd216c.woff2": "8c8ee5dd216cadd374fdce346b787ea7bf1d0ed7000f45c87de79edd68bdf7be",
       "assets/runtime.3c3974317188.js": "3c39743171889e4a4d636a9e5b2c30890188747ccf7aa9739f7c1283271009b1",
-      "index.html": "2f629e2ed8abcaa0e830dc9e7f4dc95056ab12da1c5c60f9b422c47e324914af"
+      "index.html": "491a6f5ff8e6e292f6190e52440bd38e5a283e616ed33763c34e2a8eccd47e18"
     }
   }
 }

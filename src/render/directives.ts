@@ -80,7 +80,17 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
                 claimedAuthoredSectionIds,
               )
             : interpretation.values;
-        if (directive.name === 'action') requireActionLabel(node);
+        if (directive.name === 'action') {
+          requireActionLabel(node);
+        }
+        if (directive.name === 'source-link' && (node.children ?? []).length > 0) {
+          throw directiveError(
+            node,
+            'INVALID_DIRECTIVE_PLACEMENT',
+            'source-link accepts its visible label only through the label attribute.',
+            'Use :source-link{label="Short path:line" href="..."}.',
+          );
+        }
         attributesByNode.set(node, values);
         if (directive.name === 'glossary') {
           const key = String(interpretation.values.key);
@@ -1016,6 +1026,10 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
         enhanceAction(node);
         return;
       }
+      if (semantic === 'source-link') {
+        enhanceSourceLink(node);
+        return;
+      }
       if (semantic !== undefined && ['chart', 'diagram', 'timeline'].includes(semantic)) {
         instance += 1;
         enhanceVisualization(node, semantic, instance, allocateId);
@@ -1204,6 +1218,19 @@ function enhanceAction(node: Element): void {
   if (href === undefined) throw new Error('Validated action is missing its href.');
   node.properties.href = href;
   node.children.unshift(decorativeIcon('arrow-right'));
+}
+
+function enhanceSourceLink(node: Element): void {
+  const label = takeStringProperty(node, 'dataLabel');
+  const href = takeStringProperty(node, 'dataHref');
+  if (label === undefined || href === undefined) {
+    throw new Error('Validated source-link is missing its label or href.');
+  }
+  node.properties.href = href;
+  node.properties.target = '_blank';
+  node.properties.rel = ['noopener', 'noreferrer'];
+  node.properties.dataSourceLink = '';
+  node.children = [decorativeIcon('arrow-right'), { type: 'text', value: label }];
 }
 
 function hastText(node: Element): string {
@@ -1648,6 +1675,9 @@ function requiredAttributeRemediation(attribute: DirectiveAttributeDefinition): 
   if (attribute.invalidDiagnostic === 'INVALID_FONT_FAMILY') {
     return 'Add {family="Readable font name"} to the directive.';
   }
+  if (attribute.invalidDiagnostic === 'INVALID_SOURCE_LINK') {
+    return 'Add {href="http://127.0.0.1:PORT/open?path=%2Fabsolute%2Fpath&line=42"}.';
+  }
   if (attribute.invalidDiagnostic === 'INVALID_DIRECTIVE_LINK') {
     return `Add {${attribute.name}="#anchor"} or another safe link target to the directive.`;
   }
@@ -1664,6 +1694,9 @@ function invalidAttributeMessage(
   if (attribute.invalidDiagnostic === 'INVALID_FONT_FAMILY') {
     return 'font.family contains unsupported characters.';
   }
+  if (attribute.invalidDiagnostic === 'INVALID_SOURCE_LINK') {
+    return `${directiveName}.href must be an IPv4 loopback editor-helper URL with an absolute path and positive line.`;
+  }
   if (attribute.invalidDiagnostic === 'INVALID_DIRECTIVE_LINK') {
     return `${directiveName}.${attribute.name} must be a safe same-page, relative, HTTP(S), or email target.`;
   }
@@ -1679,6 +1712,9 @@ function invalidAttributeRemediation(attribute: DirectiveAttributeDefinition): s
   }
   if (attribute.invalidDiagnostic === 'INVALID_FONT_FAMILY') {
     return 'Use 1-80 letters, numbers, spaces, underscores, or hyphens.';
+  }
+  if (attribute.invalidDiagnostic === 'INVALID_SOURCE_LINK') {
+    return 'Use http://127.0.0.1:PORT/open?path=%2Fabsolute%2Fpath&line=LINE.';
   }
   if (attribute.invalidDiagnostic === 'INVALID_DIRECTIVE_LINK') {
     return 'Use #anchor, a relative path, https:// or http:// URL, or mailto: address.';

@@ -58,7 +58,8 @@ Markdown + metadata + local assets + partials + semantic directives
 - `src/render/directives.ts` maps the documented, allowlisted directive vocabulary to semantic HAST.
   Unknown directives, invalid attributes/nesting, unresolved glossary references, duplicate definitions,
   and unmarked occurrences of registered glossary terms fail with authored-range diagnostics. Compile-time
-  enhancement creates labelled top-level sections, ordinary safe action links, native disclosures, and
+  enhancement creates labelled top-level sections, ordinary safe action links, bounded loopback
+  source-location links that preserve the report browsing context, native disclosures, and
   accessible package-owned tabs, dialogs, popovers, filters, switches, and bounded counters without
   accepting author code.
 - `src/render/visualizations.ts` projects validated chart series/points, diagram nodes/edges, and timeline
@@ -159,6 +160,12 @@ headings. H3 and component IDs remain owned descendant hash targets but do not b
 `actions` accepts only direct `action` children. Each action becomes an ordinary anchor after
 its same-page, relative, HTTP(S), or mail target passes the closed registry constraint; executable,
 local-file, absolute-path, and protocol-relative targets are rejected.
+The inline `source-link` directive is narrower: it accepts only an explicit IPv4-loopback `/open` helper
+URL carrying an absolute path and positive line. The compiled protected anchor opens a separate browsing
+context, so helper response status cannot replace the `file://` report. The package does not request the
+helper, read the addressed source file, add a CSP source, or install browser behavior for the link. The
+authored absolute path remains serialized in the HTML: the optional link is workstation-specific and can
+disclose local directory names when an artifact is shared.
 
 Partial expansion produces a compact offset source map. Markdown AST positions resolve through that map,
 so diagnostics from entry content and nested partials identify the original authored file and range rather

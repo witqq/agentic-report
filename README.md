@@ -35,7 +35,7 @@ also contain:
 - `agentic-report.yaml`, `agentic-report.yml`, or `agentic-report.json`;
 - local images referenced by relative paths;
 - Markdown partials included as `{{include: partials/summary.md}}`;
-- semantic directives for labelled page sections, action links, content, interactions, compile-time
+- semantic directives for labelled page sections, action and source-location links, content, interactions, compile-time
   charts/diagrams/timelines, safe built-in demos, downloads, and fonts.
 
 Example:
@@ -69,11 +69,16 @@ The compiler owns responsive layout and navigation.
 ::action[Review the decision]{href="#decision" kind="primary"}
 ::action[Open the evidence]{href="evidence.html" kind="secondary"}
 :::
+
+Inspect :source-link{label="src/render/directives.ts:42" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42"}.
 ::::
 ```
 
 See [`docs/product/source-contract.md`](docs/product/source-contract.md) for the complete declarative
 source contract.
+`source-link` is an optional local-workstation integration: its full absolute path remains in the generated
+HTML even though the page shows a short label. Remove or replace it before public distribution when local
+directory disclosure or machine-specific links are not acceptable.
 
 Agents can retrieve the same closed contract through `getSourceContract()`,
 `getAuthoringSchema('manifest' | 'directives' | 'source')`, and `listExamples()` from the ESM API. Checked

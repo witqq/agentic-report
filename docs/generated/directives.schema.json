@@ -16,6 +16,7 @@
     { "$ref": "#/$defs/section" },
     { "$ref": "#/$defs/actions" },
     { "$ref": "#/$defs/action" },
+    { "$ref": "#/$defs/source-link" },
     { "$ref": "#/$defs/callout" },
     { "$ref": "#/$defs/decision" },
     { "$ref": "#/$defs/decision-option" },
@@ -133,6 +134,32 @@
             }
           },
           "required": ["href"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "source-link": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "source-link" },
+        "form": { "type": "string", "enum": ["text"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Short visible source path and line."
+            },
+            "href": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:http://127\\.0\\.0\\.1:(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])/open\\?path=(?:%2[Ff]|/)[^\\s<>&#]+&line=[1-9][0-9]{0,8})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,998}\\S))\\s*$",
+              "description": "IPv4 loopback editor-helper URL with an absolute path and positive source line."
+            }
+          },
+          "required": ["label", "href"]
         }
       },
       "required": ["name", "form", "attributes"]

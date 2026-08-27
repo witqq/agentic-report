@@ -174,6 +174,8 @@ The directive vocabulary is:
   label, closed `width`, `align`, and `tone` choices, and optional boolean `reveal`;
 - `actions` and directly nested leaf `action`: responsive ordinary link group; every action requires a
   visible label and safe `href` and may select `primary`, `secondary`, or `quiet` emphasis;
+- `source-link`: inline source-location link with a short visible label and a bounded IPv4-loopback editor
+  helper URL containing an absolute path and positive line;
 - `callout`: emphasized finding with optional `title` and lowercase `kind`;
 - `decision`: legacy static Markdown decision with optional `title`, or typed decision with stable `id`,
   optional `required`, and directly nested leaf `decision-option` values with stable `id` and `label`;
@@ -238,6 +240,18 @@ same-page `#anchor`, a relative target, HTTP(S), or `mailto:`. Executable scheme
 part of the contract. Output is an ordinary keyboard-operable anchor; action emphasis is package-owned
 styling and adds no runtime behavior.
 
+Use `:source-link{label="src/render/directives.ts:42" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42"}`
+for an address that a reader opens repeatedly while following code. The visible label is authored and may
+stay short; `href` must use literal host `127.0.0.1`, a port from 1 through 65535, `/open`, a `path` value
+beginning with `/` or encoded `%2F`, and a positive `line`. The output is a native link in a protected
+separate browsing context. The report page therefore remains in place for either an empty 200 or 204 helper
+response. The package never contacts the helper during build, validation, inspection, or page startup, does
+not verify that the external helper opened an editor, and adds no network CSP capability.
+The full absolute path is still present in the generated HTML even though only the short label is visible.
+Treat a page containing `source-link` as workstation-specific. Do not put credentials or sensitive directory
+names in the path, and remove or replace source links before public distribution when revealing the local
+path is unacceptable or the recipient does not share the same filesystem layout.
+
 Top-level visuals require `title` and `description`. A chart accepts 1–6 `series`; each series accepts 1–12
 leaf `point` values, and every series must use the same unique labels in the same order. Values are finite
 decimal numbers between `-999999999` and `999999999`, with at most four decimal places. Pie charts require
@@ -280,6 +294,8 @@ All state is local to the generated component instance. Browser behavior is pack
 
 `actions`/`action` does not appear in the stateful table because it is an ordinary group of links. Native
 anchor focus, Enter activation, URL behavior, and browser history apply without a package event handler.
+`source-link` is also a native anchor without a package event handler; its protected separate browsing
+context and loopback-only grammar are compile-time link contracts rather than reader state.
 
 ## Page navigation and motion
 

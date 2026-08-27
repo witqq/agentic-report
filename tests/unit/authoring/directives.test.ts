@@ -47,6 +47,7 @@ describe('registry-driven semantic directives', () => {
       '::action[Primary action]{href="#semantic-section" kind="primary"}',
       ':::',
       '::::',
+      ':source-link{label="src/render/directives.ts:42" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42"}',
       ':::callout{title="  Notice  "}',
       'Callout body.',
       ':::',
@@ -252,6 +253,59 @@ describe('registry-driven semantic directives', () => {
         testCase.label,
       ).rejects.toMatchObject({ diagnostic: { code: testCase.code } });
     }
+  });
+
+  it('renders bounded source links in a protected browsing context and rejects non-helper targets', async () => {
+    const workspace = await trackedWorkspace('source-link');
+    const href =
+      'http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42';
+    const rendered = await render(
+      `# Source location\nOpen :source-link{label="src/render/directives.ts:42" href="${href}"} in the editor.\n`,
+      workspace,
+    );
+
+    expect(rendered.html).toContain('class="semantic-source-link"');
+    expect(rendered.html).toContain('data-semantic="source-link"');
+    expect(rendered.html).toContain(`href="${href.replace('&', '&#x26;')}"`);
+    expect(rendered.html).toContain('target="_blank"');
+    expect(rendered.html).toContain('rel="noopener noreferrer"');
+    expect(rendered.html).toContain('data-source-link=""');
+    expect(rendered.html).toContain('data-package-icon="arrow-right"');
+    expect(rendered.html).toContain('src/render/directives.ts:42</a>');
+    expect(rendered.html).not.toContain('/workspace/agentic-report/src/render/directives.ts</a>');
+
+    const maximumPortHref = href.replace(':7789/', ':65535/');
+    const maximumPort = await render(
+      `# Maximum port\n:source-link{label="file.ts:42" href="${maximumPortHref}"}\n`,
+      workspace,
+    );
+    expect(maximumPort.html).toContain(`href="${maximumPortHref.replace('&', '&#x26;')}"`);
+
+    const invalidTargets = [
+      'https://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42',
+      'http://localhost:7789/open?path=%2Fworkspace%2Ffile.ts&line=42',
+      'http://192.0.2.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42',
+      'http://127.0.0.1:65536/open?path=%2Fworkspace%2Ffile.ts&line=42',
+      'http://127.0.0.1:7789/open?path=relative%2Ffile.ts&line=42',
+      'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=0',
+      'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts',
+      'javascript:alert(1)',
+    ] as const;
+    for (const target of invalidTargets) {
+      await expect(
+        render(`# Invalid\n:source-link{label="file.ts:42" href="${target}"}\n`, workspace),
+        target,
+      ).rejects.toMatchObject({ diagnostic: { code: 'INVALID_SOURCE_LINK' } });
+    }
+    await expect(
+      render(`# Invalid\n:source-link{href="${href}"}\n`, workspace),
+    ).rejects.toMatchObject({ diagnostic: { code: 'DIRECTIVE_ATTRIBUTE_REQUIRED' } });
+    await expect(
+      render(
+        `# Invalid\n:source-link[not allowed]{label="file.ts:42" href="${href}"}\n`,
+        workspace,
+      ),
+    ).rejects.toMatchObject({ diagnostic: { code: 'INVALID_DIRECTIVE_PLACEMENT' } });
   });
 
   it('reserves explicit section ids and allocates every generated document id page-wide', async () => {
@@ -1797,6 +1851,9 @@ function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
   if (attribute.name === 'kind' && attribute.constraint.kind === 'string') return 'warning';
   if (attribute.constraint.kind === 'enum') return attribute.constraint.values.at(-1) ?? '';
   if (attribute.name === 'family') return 'Reader Sans';
+  if (attribute.invalidDiagnostic === 'INVALID_SOURCE_LINK') {
+    return 'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42';
+  }
   if (attribute.name === 'href') return '#valid-target';
   if (['key', 'id', 'from', 'to'].includes(attribute.name)) return 'valid-key';
   return 'Valid title';
@@ -1815,6 +1872,9 @@ function renderedAttributeValue(attribute: DirectiveAttributeDefinition): string
   if (attribute.name === 'kind' && attribute.constraint.kind === 'string') return 'warning';
   if (attribute.constraint.kind === 'enum') return attribute.constraint.values.at(-1) ?? '';
   if (attribute.name === 'family') return 'Reader Sans';
+  if (attribute.invalidDiagnostic === 'INVALID_SOURCE_LINK') {
+    return 'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42';
+  }
   if (attribute.name === 'href') return '#valid-target';
   if (['key', 'id', 'from', 'to'].includes(attribute.name)) return 'valid-key';
   return 'T';
@@ -1848,6 +1908,7 @@ function directiveInvocation(
   if (directive.name === 'checklist') {
     return `:::checklist${suffix}\n::check-item{id="gate" label="Gate"}\n:::`;
   }
+  if (directive.name === 'source-link') return `:source-link${suffix}`;
   const invocation =
     form === 'container'
       ? `:::${directive.name}${suffix}\nBody\n:::`
@@ -1968,6 +2029,7 @@ function bareDirectiveInvocation(directive: DirectiveDefinition, suffix?: string
   if (directive.name === 'actions') {
     return `:::actions${attributes}\n::action[Label]{href="#target"}\n:::`;
   }
+  if (directive.name === 'source-link') return `:source-link${attributes}`;
   if (directive.forms.includes('container')) return `:::${directive.name}${attributes}\nBody\n:::`;
   if (directive.forms.includes('leaf')) {
     return directive.name === 'action'
@@ -2023,6 +2085,17 @@ function assertRenderedAttribute(
   if (directive.name === 'action' && attribute.name === 'href') {
     expect(rendered.html).toContain(`href="${serialized}"`);
     expect(rendered.html).not.toContain('data-href=');
+    return;
+  }
+  if (directive.name === 'source-link' && attribute.name === 'href') {
+    expect(rendered.html).toContain('class="semantic-source-link"');
+    expect(rendered.html).toContain('target="_blank"');
+    expect(rendered.html).toContain('rel="noopener noreferrer"');
+    expect(rendered.html).not.toContain('data-href=');
+    return;
+  }
+  if (directive.name === 'source-link' && attribute.name === 'label') {
+    expect(rendered.html).toContain(`>${serialized}</a>`);
     return;
   }
   if (attribute.name === 'open') {

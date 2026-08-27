@@ -74,6 +74,55 @@ const defaultMotionArtifacts = [
   { format: 'directory', url: directoryArtifactUrl },
 ] as const;
 
+for (const artifact of defaultMotionArtifacts) {
+  test(`${artifact.format} source link opens the loopback helper without replacing the file report`, async ({
+    page,
+  }, testInfo) => {
+    const helperUrl =
+      'http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42';
+    await page.context().route('http://127.0.0.1:7789/**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'text/plain', body: '' });
+    });
+    await page.goto(artifact.url);
+    const reportUrl = page.url();
+    const link = page.getByRole('link', { name: 'src/render/directives.ts:42' });
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute('href', helperUrl);
+    await expect(link).toHaveAttribute('target', '_blank');
+    await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(await link.evaluate((element) => getComputedStyle(element).fontFamily)).toContain(
+      'SFMono-Regular',
+    );
+
+    const capturePath = path.resolve(
+      'test-results/captures/source-link',
+      `${artifact.format}-${testInfo.project.name}.png`,
+    );
+    await mkdir(path.dirname(capturePath), { recursive: true });
+    await page.screenshot({ path: capturePath });
+
+    const popupPromise = page.waitForEvent('popup');
+    if (artifact.format === 'single-file' && testInfo.project.name === 'desktop-chromium') {
+      expect(await link.evaluate((element) => element.tabIndex)).toBe(0);
+      await link.focus();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      await expect(link).toBeFocused();
+      expect(
+        await link.evaluate((element) => Number.parseFloat(getComputedStyle(element).outlineWidth)),
+      ).toBeGreaterThan(0);
+      await page.keyboard.press('Enter');
+    } else if (testInfo.project.name.startsWith('mobile')) await link.tap();
+    else await link.click();
+    const popup = await popupPromise;
+    await popup.waitForLoadState();
+    expect(popup.url()).toBe(helperUrl);
+    await popup.close();
+    expect(page.url()).toBe(reportUrl);
+    await expect(page.getByRole('heading', { name: 'Architecture report' })).toBeVisible();
+  });
+}
+
 const presetShowcases = [
   {
     name: 'landing',

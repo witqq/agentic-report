@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { parse as parseYaml } from 'yaml';
 
 import { inspectExecutableSearch } from '../../scripts/package-provenance.ts';
+import { validateExtensionProposal } from '../../src/authoring/extension-gate.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
 
 const workspaces: string[] = [];
@@ -17,6 +18,16 @@ afterEach(async () => {
 });
 
 describe('release readiness', () => {
+  it('ships accepted evidence for every product extension proposal', async () => {
+    for (const file of [
+      'docs/product/review-workspace-extension.json',
+      'docs/product/source-link-extension.json',
+    ]) {
+      const proposal = JSON.parse(await readFile(path.resolve(file), 'utf8')) as unknown;
+      expect(validateExtensionProposal(proposal), file).toEqual({ accepted: true, issues: [] });
+    }
+  });
+
   it('keeps all shipped review pillars in normative product requirements', async () => {
     const requirements = await readFile(path.resolve('PRODUCT-REQUIREMENTS.md'), 'utf8');
     for (const required of [

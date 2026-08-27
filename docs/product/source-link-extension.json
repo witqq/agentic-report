@@ -1,0 +1,29 @@
+{
+  "contractVersion": 1,
+  "id": "source-location-link",
+  "summary": "Adds an explicit source-location link that opens a bounded loopback editor helper without replacing the generated report page.",
+  "trustBoundary": {
+    "authorCode": "forbidden",
+    "callbacks": "forbidden",
+    "eval": "forbidden",
+    "dynamicImports": "forbidden",
+    "networkAccess": "forbidden",
+    "confinement": "source-root",
+    "offline": "required",
+    "deterministicSerialization": "required",
+    "cspCompatible": "required",
+    "packageOwnedRuntime": "required"
+  },
+  "evidence": {
+    "sourceGrammar": "The text directive requires a visible short label and one closed IPv4-loopback helper URL with an absolute encoded path and positive line. Invalid schemes, hosts, paths, lines, forms, and attributes fail with authored-range diagnostics and appear in generated discovery and schemas.",
+    "executionCapabilities": "Compilation emits an ordinary protected anchor in a separate browsing context. The package does not request the helper, read the addressed file, inspect the editor, start a listener, register a callback, or add browser runtime behavior.",
+    "confinement": "The source path remains inert percent-encoded URL data and is never passed to package filesystem APIs. Existing source and output confinement remains unchanged; the only accepted host is the literal IPv4 loopback address. The absolute path is still serialized into HTML and can disclose local directory names when shared.",
+    "offlineBehavior": "Compilation, validation, inspection, schema discovery, and file-URL reading require no network access. A reader may explicitly activate the resulting link to an independently installed local helper; no package operation performs that activation.",
+    "deterministicSerialization": "The validated authored label and helper URL are serialized by the existing deterministic Markdown and document pipeline, with no clock, random value, environment-derived string, response data, or network-dependent branch.",
+    "cspAndRuntime": "The result is a native anchor using target blank plus noopener and noreferrer. It needs no connect-src, frame-src, inline handler, script change, form, iframe, fetch, raw HTML, or new package browser capability.",
+    "accessibility": "The authored short path and line remain the native link accessible name, the package icon is decorative, focus uses the existing visible focus contract, and trusted keyboard or pointer activation follows native anchor behavior without hiding the report page.",
+    "byteAndPerformanceBudgets": "The capability adds one bounded directive record, a small compile-time enhancement, and shared CSS. It installs no listener, observer, timer, network client, parser dependency, or per-scroll work and remains within existing package checks.",
+    "packageDependenciesAndLicenses": "No dependency or license is added. Rendering reuses the project registry, remark and HAST pipeline, React document shell, package stylesheet, and the already distributed MIT-licensed decorative icon path.",
+    "compatibility": "Existing Markdown links and directives retain their behavior. The source-link directive is additive within source-contract major 1, both output formats serialize the same protected anchor, and CLI, ESM, CSP, review, output, and runtime contracts remain unchanged. The link is workstation-specific; authors must remove or replace it before public distribution when exposing the absolute path or machine binding is unacceptable."
+  }
+}

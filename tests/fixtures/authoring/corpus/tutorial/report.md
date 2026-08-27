@@ -9,6 +9,8 @@ theme: system
 
 Corpus class: tutorial
 
+Inspect :source-link{label="src/render/directives.ts:42" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42"}.
+
 :::steps{title="Build locally"}
 
 1. Write Markdown.
