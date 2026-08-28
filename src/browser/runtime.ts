@@ -16,6 +16,12 @@ root.style.setProperty(
   `${PAGE_MOTION_POLICY.sectionReveal.translationPx}px`,
 );
 const modalOpeners = new WeakMap<HTMLDialogElement, HTMLButtonElement>();
+const glossaryPortals = new Map<
+  HTMLElement,
+  { readonly panel: HTMLElement; readonly placeholder: Comment }
+>();
+const glossaryPortalOwners = new WeakMap<HTMLElement, HTMLElement>();
+const pendingPopoverCloses = new Map<HTMLElement, number>();
 const navigationController = createNavigationController();
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const motionController = createMotionController(reducedMotion);
@@ -149,7 +155,7 @@ document.addEventListener('keydown', (event) => {
     return;
   }
   if (event.key === 'Escape') {
-    const popover = target.closest<HTMLElement>('[data-popover]');
+    const popover = popoverOwner(target);
     if (popover !== null) closePopover(popover, true);
   }
 });
@@ -163,37 +169,43 @@ document.addEventListener('input', (event) => {
 
 document.addEventListener('pointerover', (event) => {
   if (!(event.target instanceof Element)) return;
-  const glossary = event.target.closest<HTMLElement>('[data-glossary-reference]');
-  if (glossary !== null) openPopover(glossary);
+  const glossary = glossaryOwner(event.target);
+  if (glossary !== null) {
+    cancelScheduledPopoverClose(glossary);
+    openPopover(glossary);
+  }
 });
 
 document.addEventListener('pointerout', (event) => {
   if (!(event.target instanceof Element)) return;
-  const glossary = event.target.closest<HTMLElement>('[data-glossary-reference]');
+  const glossary = glossaryOwner(event.target);
   if (
     glossary !== null &&
-    !(event.relatedTarget instanceof Node && glossary.contains(event.relatedTarget)) &&
-    !glossary.contains(document.activeElement)
+    !popoverContains(glossary, event.relatedTarget) &&
+    !popoverContains(glossary, document.activeElement)
   ) {
-    closePopover(glossary, false);
+    schedulePopoverClose(glossary);
   }
 });
 
 document.addEventListener('focusin', (event) => {
   if (!(event.target instanceof Element)) return;
-  const glossary = event.target.closest<HTMLElement>('[data-glossary-reference]');
-  if (glossary !== null) openPopover(glossary);
+  const glossary = glossaryOwner(event.target);
+  if (glossary !== null) {
+    cancelScheduledPopoverClose(glossary);
+    openPopover(glossary);
+  }
 });
 
 document.addEventListener('focusout', (event) => {
   if (!(event.target instanceof Element)) return;
-  const glossary = event.target.closest<HTMLElement>('[data-glossary-reference]');
+  const glossary = glossaryOwner(event.target);
   if (
     glossary !== null &&
-    !(event.relatedTarget instanceof Node && glossary.contains(event.relatedTarget)) &&
+    !popoverContains(glossary, event.relatedTarget) &&
     !glossary.matches(':hover')
   ) {
-    closePopover(glossary, false);
+    schedulePopoverClose(glossary);
   }
 });
 
@@ -672,25 +684,140 @@ function tabControls(control: HTMLButtonElement): HTMLButtonElement[] {
 
 function closePopoversOutside(target: Element): void {
   for (const popover of document.querySelectorAll<HTMLElement>('[data-popover]')) {
-    if (!popover.contains(target)) closePopover(popover, false);
+    if (!popoverContains(popover, target)) closePopover(popover, false);
   }
 }
 
 function openPopover(popover: HTMLElement): void {
+  cancelScheduledPopoverClose(popover);
   const trigger = popover.querySelector<HTMLElement>('[data-popover-trigger]');
-  const panel = popover.querySelector<HTMLElement>('[data-popover-panel]');
+  const panel = popoverPanel(popover, trigger);
   if (trigger === null || panel === null || !panel.hidden) return;
+  if (popover.matches('.semantic-code-term')) portalGlossaryPanel(popover, panel);
   panel.hidden = false;
   trigger.setAttribute('aria-expanded', 'true');
+  positionGlossaryPortal(popover);
 }
 
 function closePopover(popover: HTMLElement, restoreFocus: boolean): void {
+  cancelScheduledPopoverClose(popover);
   const trigger = popover.querySelector<HTMLElement>('[data-popover-trigger]');
-  const panel = popover.querySelector<HTMLElement>('[data-popover-panel]');
+  const panel = popoverPanel(popover, trigger);
   if (trigger === null || panel === null || panel.hidden) return;
   panel.hidden = true;
   trigger.setAttribute('aria-expanded', 'false');
+  restoreGlossaryPanel(popover);
   if (restoreFocus) trigger.focus();
+}
+
+function schedulePopoverClose(popover: HTMLElement): void {
+  cancelScheduledPopoverClose(popover);
+  const timeout = window.setTimeout(() => {
+    pendingPopoverCloses.delete(popover);
+    const portal = glossaryPortals.get(popover);
+    if (
+      popover.matches(':hover') ||
+      portal?.panel.matches(':hover') === true ||
+      popoverContains(popover, document.activeElement)
+    ) {
+      return;
+    }
+    closePopover(popover, false);
+  }, 100);
+  pendingPopoverCloses.set(popover, timeout);
+}
+
+function cancelScheduledPopoverClose(popover: HTMLElement): void {
+  const timeout = pendingPopoverCloses.get(popover);
+  if (timeout === undefined) return;
+  window.clearTimeout(timeout);
+  pendingPopoverCloses.delete(popover);
+}
+
+function popoverPanel(popover: HTMLElement, trigger: HTMLElement | null): HTMLElement | null {
+  const controlled = trigger?.getAttribute('aria-controls');
+  if (controlled !== null && controlled !== undefined) {
+    const panel = document.getElementById(controlled);
+    if (panel instanceof HTMLElement && panel.matches('[data-popover-panel]')) return panel;
+  }
+  return popover.querySelector<HTMLElement>('[data-popover-panel]');
+}
+
+function popoverOwner(target: Element): HTMLElement | null {
+  const direct = target.closest<HTMLElement>('[data-popover]');
+  if (direct !== null) return direct;
+  const panel = target.closest<HTMLElement>('[data-glossary-portal]');
+  return panel === null ? null : (glossaryPortalOwners.get(panel) ?? null);
+}
+
+function glossaryOwner(target: Element): HTMLElement | null {
+  const direct = target.closest<HTMLElement>('[data-glossary-reference]');
+  if (direct !== null) return direct;
+  const panel = target.closest<HTMLElement>('[data-glossary-portal]');
+  return panel === null ? null : (glossaryPortalOwners.get(panel) ?? null);
+}
+
+function popoverContains(popover: HTMLElement, target: EventTarget | null): boolean {
+  if (!(target instanceof Node)) return false;
+  if (popover.contains(target)) return true;
+  return glossaryPortals.get(popover)?.panel.contains(target) === true;
+}
+
+function portalGlossaryPanel(popover: HTMLElement, panel: HTMLElement): void {
+  if (glossaryPortals.has(popover)) return;
+  const placeholder = document.createComment('agentic-report glossary portal');
+  panel.replaceWith(placeholder);
+  document.body.append(panel);
+  panel.dataset.glossaryPortal = '';
+  glossaryPortals.set(popover, { panel, placeholder });
+  glossaryPortalOwners.set(panel, popover);
+  if (glossaryPortals.size === 1) {
+    window.addEventListener('resize', positionGlossaryPortals);
+    document.addEventListener('scroll', positionGlossaryPortals, true);
+  }
+}
+
+function restoreGlossaryPanel(popover: HTMLElement): void {
+  const portal = glossaryPortals.get(popover);
+  if (portal === undefined) return;
+  portal.placeholder.replaceWith(portal.panel);
+  portal.panel.removeAttribute('data-glossary-portal');
+  portal.panel.style.removeProperty('inset');
+  portal.panel.style.removeProperty('top');
+  portal.panel.style.removeProperty('left');
+  portal.panel.style.removeProperty('width');
+  glossaryPortals.delete(popover);
+  glossaryPortalOwners.delete(portal.panel);
+  if (glossaryPortals.size === 0) {
+    window.removeEventListener('resize', positionGlossaryPortals);
+    document.removeEventListener('scroll', positionGlossaryPortals, true);
+  }
+}
+
+function positionGlossaryPortals(): void {
+  for (const popover of glossaryPortals.keys()) positionGlossaryPortal(popover);
+}
+
+function positionGlossaryPortal(popover: HTMLElement): void {
+  const portal = glossaryPortals.get(popover);
+  const trigger = popover.querySelector<HTMLElement>('[data-glossary-trigger]');
+  if (portal === undefined || trigger === null || portal.panel.hidden) return;
+  const margin = 16;
+  const triggerRect = trigger.getBoundingClientRect();
+  portal.panel.style.inset = 'auto';
+  portal.panel.style.width = `${Math.min(448, window.innerWidth - margin * 2)}px`;
+  const panelRect = portal.panel.getBoundingClientRect();
+  const below = window.innerHeight - triggerRect.bottom;
+  const placeBelow = below >= panelRect.height || below >= triggerRect.top;
+  const top = placeBelow
+    ? Math.min(triggerRect.bottom, window.innerHeight - panelRect.height - margin)
+    : Math.max(margin, triggerRect.top - panelRect.height);
+  const left = Math.min(
+    Math.max(margin, triggerRect.left),
+    window.innerWidth - panelRect.width - margin,
+  );
+  portal.panel.style.top = `${Math.max(margin, top)}px`;
+  portal.panel.style.left = `${Math.max(margin, left)}px`;
 }
 
 function applyFilter(input: HTMLInputElement): void {

@@ -1672,7 +1672,8 @@ th {
 }
 
 .semantic-popover [data-popover-panel],
-.semantic-term [data-glossary-panel] {
+.semantic-term [data-glossary-panel],
+[data-glossary-portal] {
   position: absolute;
   z-index: 15;
   top: calc(100% - 0.5rem);
@@ -1693,7 +1694,8 @@ th {
   font-weight: 400;
 }
 
-.semantic-code-term [data-glossary-panel] {
+.semantic-code-term [data-glossary-panel],
+[data-glossary-portal] {
   position: fixed;
   inset: auto 1rem 1rem auto;
   width: min(28rem, calc(100vw - 2rem));
@@ -1705,7 +1707,8 @@ th {
   white-space: normal;
 }
 
-.semantic-term [data-glossary-panel] .semantic-title {
+.semantic-term [data-glossary-panel] .semantic-title,
+[data-glossary-portal] .semantic-title {
   display: block;
 }
 
@@ -1719,7 +1722,8 @@ th {
   font-weight: 700;
 }
 
-.semantic-term [data-glossary-panel][hidden] {
+.semantic-term [data-glossary-panel][hidden],
+[data-glossary-portal][hidden] {
   display: none;
 }
 
