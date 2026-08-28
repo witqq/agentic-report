@@ -25,6 +25,7 @@ import { interpretDirectiveAttributes } from '../../../src/authoring/schemas.js'
 import { buildReport } from '../../../src/core/compiler.js';
 import { AgenticReportError } from '../../../src/diagnostics.js';
 import { getAuthoringSchema, getSourceContract } from '../../../src/discovery.js';
+import { parseCodeTermMetadata } from '../../../src/render/directives.js';
 import { projectSemanticSanitizeSchema, renderMarkdown } from '../../../src/render/markdown.js';
 import { createTestWorkspace, removeTestWorkspace } from '../../helpers/workspace.js';
 
@@ -47,6 +48,7 @@ describe('registry-driven semantic directives', () => {
       '::action[Primary action]{href="#semantic-section" kind="primary"}',
       ':::',
       '::::',
+      ':source-link{label="src/render/directives.ts:42" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42"}',
       ':::callout{title="  Notice  "}',
       'Callout body.',
       ':::',
@@ -100,8 +102,10 @@ describe('registry-driven semantic directives', () => {
       ':::',
       '::::',
       ':::diagram{title="Flow" description="Source becomes output." direction="right"}',
-      '::node{id="source" label="Source" kind="accent"}',
-      '::node{id="output" label="Output" kind="success"}',
+      '::group{id="input" label="Input"}',
+      '::group{id="result" label="Result"}',
+      '::node{id="source" label="Source" group="input" kind="accent"}',
+      '::node{id="output" label="Output" group="result" kind="success"}',
       '::edge{from="source" to="output" label="compile"}',
       ':::',
       '::::timeline{title="Delivery" description="Two delivery phases."}',
@@ -252,6 +256,59 @@ describe('registry-driven semantic directives', () => {
         testCase.label,
       ).rejects.toMatchObject({ diagnostic: { code: testCase.code } });
     }
+  });
+
+  it('renders bounded source links in a protected browsing context and rejects non-helper targets', async () => {
+    const workspace = await trackedWorkspace('source-link');
+    const href =
+      'http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42';
+    const rendered = await render(
+      `# Source location\nOpen :source-link{label="src/render/directives.ts:42" href="${href}"} in the editor.\n`,
+      workspace,
+    );
+
+    expect(rendered.html).toContain('class="semantic-source-link"');
+    expect(rendered.html).toContain('data-semantic="source-link"');
+    expect(rendered.html).toContain(`href="${href.replace('&', '&#x26;')}"`);
+    expect(rendered.html).toContain('target="_blank"');
+    expect(rendered.html).toContain('rel="noopener noreferrer"');
+    expect(rendered.html).toContain('data-source-link=""');
+    expect(rendered.html).toContain('data-package-icon="arrow-right"');
+    expect(rendered.html).toContain('src/render/directives.ts:42</a>');
+    expect(rendered.html).not.toContain('/workspace/agentic-report/src/render/directives.ts</a>');
+
+    const maximumPortHref = href.replace(':7789/', ':65535/');
+    const maximumPort = await render(
+      `# Maximum port\n:source-link{label="file.ts:42" href="${maximumPortHref}"}\n`,
+      workspace,
+    );
+    expect(maximumPort.html).toContain(`href="${maximumPortHref.replace('&', '&#x26;')}"`);
+
+    const invalidTargets = [
+      'https://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42',
+      'http://localhost:7789/open?path=%2Fworkspace%2Ffile.ts&line=42',
+      'http://192.0.2.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42',
+      'http://127.0.0.1:65536/open?path=%2Fworkspace%2Ffile.ts&line=42',
+      'http://127.0.0.1:7789/open?path=relative%2Ffile.ts&line=42',
+      'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=0',
+      'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts',
+      'javascript:alert(1)',
+    ] as const;
+    for (const target of invalidTargets) {
+      await expect(
+        render(`# Invalid\n:source-link{label="file.ts:42" href="${target}"}\n`, workspace),
+        target,
+      ).rejects.toMatchObject({ diagnostic: { code: 'INVALID_SOURCE_LINK' } });
+    }
+    await expect(
+      render(`# Invalid\n:source-link{href="${href}"}\n`, workspace),
+    ).rejects.toMatchObject({ diagnostic: { code: 'DIRECTIVE_ATTRIBUTE_REQUIRED' } });
+    await expect(
+      render(
+        `# Invalid\n:source-link[not allowed]{label="file.ts:42" href="${href}"}\n`,
+        workspace,
+      ),
+    ).rejects.toMatchObject({ diagnostic: { code: 'INVALID_DIRECTIVE_PLACEMENT' } });
   });
 
   it('reserves explicit section ids and allocates every generated document id page-wide', async () => {
@@ -471,8 +528,9 @@ describe('registry-driven semantic directives', () => {
     );
 
     expect(rendered.html).toContain('data-term-reference="shared-concept" data-popover=""');
-    expect(rendered.html).not.toContain('Authored alias');
-    expect(rendered.html.match(/>Shared concept<\/button>/gu)).toHaveLength(2);
+    expect(rendered.html).toContain('>Authored alias</button>');
+    expect(rendered.html.match(/>Shared concept<\/button>/gu)).toHaveLength(1);
+    expect(rendered.html.match(/>Shared concept<\/span>/gu)).toHaveLength(2);
     expect(rendered.html).toContain(
       '<button type="button" aria-controls="glossary-reference-1" aria-expanded="false"',
     );
@@ -503,6 +561,207 @@ describe('registry-driven semantic directives', () => {
     expect(rendered.html).toContain('placeholder="Search entries"');
     expect(rendered.html).toContain('role="switch" aria-checked="true"');
     expect(rendered.html).not.toMatch(/onclick|onkeydown|<script/u);
+  });
+
+  it('preserves authored term forms and annotates first highlighted code occurrences in an appendix-backed glossary', async () => {
+    const workspace = await trackedWorkspace('directive-code-glossary');
+    const rendered = await render(
+      [
+        '# Code glossary',
+        'Traversal continues through :term[concepts]{key="concept"}.',
+        '## Code',
+        '```typescript terms="own-field,node-type"',
+        '@d.def(Node) accessor child!: Node;',
+        '@d.def(Node) accessor sibling!: Node;',
+        '<script>globalThis.executed = true;</script>',
+        '```',
+        '## Detail',
+        'Definitions follow outside the primary route.',
+        ':::glossary{key="concept" term="concept"}',
+        'Canonical prose definition.',
+        ':::',
+        ':::glossary{key="own-field" term="@d.def" placement="appendix"}',
+        'Field ownership decorator.',
+        ':::',
+        ':::glossary{key="node-type" term="Node" placement="appendix"}',
+        'Canonical node type.',
+        ':::',
+      ].join('\n'),
+      workspace,
+    );
+
+    expect(rendered.html).toContain('>concepts</button>');
+    expect(rendered.html).toContain('>concept</span>');
+    expect(rendered.html.match(/data-term-reference="own-field"/gu)).toHaveLength(1);
+    expect(rendered.html.match(/data-term-reference="node-type"/gu)).toHaveLength(1);
+    expect(rendered.html.match(/class="semantic-term semantic-code-term"/gu)).toHaveLength(2);
+    expect(rendered.html).toMatch(
+      /data-term-reference="own-field"[\s\S]*?<button[^>]*>[\s\S]*?--shiki-light/u,
+    );
+    expect(rendered.html).toMatch(
+      /data-term-reference="own-field"[\s\S]*?<button[^>]*>[\s\S]*?--shiki-dark/u,
+    );
+    expect(rendered.html).toContain('&#x3C;');
+    expect(rendered.html).toContain('globalThis.executed');
+    expect(rendered.html).not.toContain('<script>globalThis.executed = true;</script>');
+    expect(rendered.html).toContain(
+      '<aside id="glossary-appendix" class="semantic-glossary-appendix"',
+    );
+    expect(rendered.html).toContain('data-navigation-exclude=""');
+    expect(rendered.html.indexOf('id="glossary-own-field"')).toBeGreaterThan(
+      rendered.html.indexOf('data-glossary-appendix=""'),
+    );
+    expect(rendered.html.indexOf('id="glossary-node-type"')).toBeGreaterThan(
+      rendered.html.indexOf('id="glossary-own-field"'),
+    );
+    expect(rendered.html).toContain('href="#glossary-own-field"');
+    expect(rendered.observedDirectives).toContain('term');
+    expect(rendered.reviewTargets.filter((target) => target.kind === 'markdown:code')).toHaveLength(
+      1,
+    );
+    const movedDefinitionTarget = rendered.reviewTargets.find(
+      (target) => target.kind === 'directive:glossary' && target.source.line === 14,
+    )?.id;
+    expect(movedDefinitionTarget).toBeTypeOf('string');
+    expect(rendered.html).toContain(`data-review-target="${movedDefinitionTarget}"`);
+    expect(rendered.html.match(/data-review-target=/gu)).toHaveLength(
+      rendered.reviewTargets.length,
+    );
+  });
+
+  it('rejects malformed, unresolved, missing and overlapping code term metadata at the code block', async () => {
+    const workspace = await trackedWorkspace('directive-code-glossary-errors');
+    const cases = [
+      {
+        name: 'malformed metadata',
+        code: 'INVALID_CODE_TERM_METADATA',
+        source: '```ts terms=own-field\n@d.def(Node)\n```',
+        definitions: ':::glossary{key="own-field" term="@d.def"}\nDefinition.\n:::',
+      },
+      {
+        name: 'metadata mixed with another field',
+        code: 'INVALID_CODE_TERM_METADATA',
+        source: '```ts terms="own-field" title="Code"\n@d.def(Node)\n```',
+        definitions: ':::glossary{key="own-field" term="@d.def"}\nDefinition.\n:::',
+      },
+      {
+        name: 'duplicate key',
+        code: 'INVALID_CODE_TERM_METADATA',
+        source: '```ts terms="own-field,own-field"\n@d.def(Node)\n```',
+        definitions: ':::glossary{key="own-field" term="@d.def"}\nDefinition.\n:::',
+      },
+      {
+        name: 'unknown key',
+        code: 'UNKNOWN_GLOSSARY_TERM',
+        source: '```ts terms="unknown"\n@d.def(Node)\n```',
+        definitions: ':::glossary{key="own-field" term="@d.def"}\nDefinition.\n:::',
+      },
+      {
+        name: 'canonical text missing',
+        code: 'CODE_TERM_NOT_FOUND',
+        source: '```ts terms="own-field"\nplain code\n```',
+        definitions: ':::glossary{key="own-field" term="@d.def"}\nDefinition.\n:::',
+      },
+      {
+        name: 'overlapping canonical terms',
+        code: 'OVERLAPPING_CODE_TERMS',
+        source: '```ts terms="decorator,member"\n@d.def(Node)\n```',
+        definitions: [
+          ':::glossary{key="decorator" term="@d.def"}',
+          'Definition.',
+          ':::',
+          ':::glossary{key="member" term="def"}',
+          'Definition.',
+          ':::',
+        ].join('\n'),
+      },
+    ] as const;
+    for (const testCase of cases) {
+      await expect(
+        render(`# Invalid code terms\n${testCase.source}\n${testCase.definitions}\n`, workspace),
+        testCase.name,
+      ).rejects.toMatchObject({
+        diagnostic: {
+          code: testCase.code,
+          source: { file: path.join(workspace, 'report.md'), line: 2, column: 1 },
+        },
+      });
+    }
+  });
+
+  it('bounds the closed code term metadata grammar without interpreting unrelated fence metadata', () => {
+    const contract = authoringRegistry.source.codeFenceMetadata.terms;
+    const maximumKeys = Array.from(
+      { length: contract.maxItems },
+      (_, index) => `term-${index + 1}`,
+    );
+    expect(parseCodeTermMetadata(`terms="${maximumKeys.join(contract.separator)}"`)).toEqual({
+      kind: 'valid',
+      keys: maximumKeys,
+    });
+    expect(
+      parseCodeTermMetadata(
+        `terms="${[...maximumKeys, `term-${contract.maxItems + 1}`].join(contract.separator)}"`,
+      ),
+    ).toMatchObject({ kind: 'invalid' });
+    expect(parseCodeTermMetadata('terms=""')).toMatchObject({ kind: 'invalid' });
+    expect(parseCodeTermMetadata('terms="Uppercase"')).toMatchObject({ kind: 'invalid' });
+    expect(parseCodeTermMetadata('title="terms remain ordinary text"')).toEqual({ kind: 'none' });
+    expect(getSourceContract().source.codeFenceMetadata.terms).toEqual(contract);
+    expect(contract.itemConstraint).toEqual(
+      authoringRegistry.directives
+        .find((directive) => directive.name === 'glossary')
+        ?.attributes.find((attribute) => attribute.name === 'key')?.constraint,
+    );
+  });
+
+  it('rejects appendix extraction from a nested authored container', async () => {
+    const workspace = await trackedWorkspace('directive-glossary-nested-appendix');
+    await expect(
+      render(
+        [
+          '# Nested appendix',
+          '::::callout{title="Parent"}',
+          ':::glossary{key="nested" term="Nested" placement="appendix"}',
+          'Definition.',
+          ':::',
+          '::::',
+        ].join('\n'),
+        workspace,
+      ),
+    ).rejects.toMatchObject({
+      diagnostic: {
+        code: 'INVALID_DIRECTIVE_PLACEMENT',
+        source: { file: path.join(workspace, 'report.md'), line: 3, column: 1 },
+      },
+    });
+  });
+
+  it('maps code term metadata failures to the authored partial range', async () => {
+    const workspace = await trackedWorkspace('directive-code-glossary-partial');
+    const partialFile = path.join(workspace, 'partials', 'code.md');
+    const markdown = '```ts terms="unknown"\n@d.def(Node)\n```';
+    await expect(
+      renderMarkdown(markdown, {
+        sourceRoot: workspace,
+        format: 'single-file',
+        sourceMap: [
+          {
+            generatedStart: 0,
+            generatedEnd: markdown.length,
+            sourceFile: partialFile,
+            sourceStart: 0,
+            sourceText: markdown,
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      diagnostic: {
+        code: 'UNKNOWN_GLOSSARY_TERM',
+        source: { file: partialFile, line: 1, column: 1, endLine: 3, endColumn: 4 },
+        details: { key: 'unknown' },
+      },
+    });
   });
 
   it('validates visualization records and emits deterministic accessible markup', async () => {
@@ -540,7 +799,9 @@ describe('registry-driven semantic directives', () => {
       'Two aligned series. Data: One, A: 1.5; One, B: 2; Two, A: 2.5; Two, B: 3.',
     );
     expect(first.html).toContain('data-node-id="a"');
-    expect(first.html).toContain('A validated edge. Nodes: a: A; b: B. Connections: a to b: next.');
+    expect(first.html).toContain(
+      'A validated edge. Groups: none. Nodes: a: A; b: B. Connections: a to b: next.',
+    );
     expect(first.html).not.toMatch(/class="semantic-(?:point|node)[^"]*"[^>]*role=/u);
     expect(first.html).toContain('class="semantic-event visualization-timeline-event');
     expect(first.html.match(/class="semantic-series"/gu)).toHaveLength(2);
@@ -575,7 +836,7 @@ describe('registry-driven semantic directives', () => {
       workspace,
     );
     expect(labelledDiagram.html).toContain(
-      `Complete edge data. Nodes: a: A; b: B. Connections: a to b: ${longEdgeLabel}.`,
+      `Complete edge data. Groups: none. Nodes: a: A; b: B. Connections: a to b: ${longEdgeLabel}.`,
     );
     expect(labelledDiagram.html).toContain('>12345678901234567890🛰…</text>');
     expect(labelledDiagram.html).not.toContain('\uFFFD');
@@ -744,7 +1005,7 @@ describe('registry-driven semantic directives', () => {
         line: 2,
         source: [
           ':::diagram{title="Crowded" description="Too many nodes."}',
-          ...repeatedNodes(13),
+          ...repeatedNodes(21),
           ':::',
         ],
       },
@@ -755,7 +1016,7 @@ describe('registry-driven semantic directives', () => {
           ':::diagram{title="Crowded" description="Too many edges."}',
           '::node{id="a" label="A"}',
           '::node{id="b" label="B"}',
-          ...repeatedEdges(21),
+          ...repeatedEdges(41),
           ':::',
         ],
       },
@@ -786,6 +1047,192 @@ describe('registry-driven semantic directives', () => {
           ':::diagram{title="Loop" description="Self edge."}',
           '::node{id="a" label="A"}',
           '::edge{from="a" to="a"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'grouped flow with only one group',
+        line: 2,
+        source: [
+          ':::diagram{title="One group" description="Unsupported group count."}',
+          '::group{id="only" label="Only"}',
+          '::node{id="a" label="A" group="only"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'grouped flow above the group limit',
+        line: 2,
+        source: [
+          ':::diagram{title="Four groups" description="Unsupported group count."}',
+          '::group{id="one" label="One"}',
+          '::group{id="two" label="Two"}',
+          '::group{id="three" label="Three"}',
+          '::group{id="four" label="Four"}',
+          '::node{id="a" label="A" group="one"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'grouped flow with duplicate group ids',
+        line: 2,
+        source: [
+          ':::diagram{title="Duplicate groups" description="Group ids are unique."}',
+          '::group{id="same" label="One"}',
+          '::group{id="same" label="Two"}',
+          '::node{id="a" label="A" group="same"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'grouped flow with unsupported down direction',
+        line: 2,
+        source: [
+          ':::diagram{title="Grouped down" description="Columns are rightward." direction="down"}',
+          '::group{id="one" label="One"}',
+          '::group{id="two" label="Two"}',
+          '::node{id="a" label="A" group="one"}',
+          '::node{id="b" label="B" group="two"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'grouped flow with an unassigned node',
+        line: 5,
+        source: [
+          ':::diagram{title="Unassigned" description="Every node needs membership."}',
+          '::group{id="one" label="One"}',
+          '::group{id="two" label="Two"}',
+          '::node{id="a" label="A"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'grouped flow with an unknown group',
+        line: 5,
+        source: [
+          ':::diagram{title="Unknown group" description="Missing membership target."}',
+          '::group{id="one" label="One"}',
+          '::group{id="two" label="Two"}',
+          '::node{id="a" label="A" group="missing"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'grouped flow with an empty group',
+        line: 4,
+        source: [
+          ':::diagram{title="Empty group" description="Every group needs a member."}',
+          '::group{id="one" label="One"}',
+          '::group{id="two" label="Two"}',
+          '::node{id="a" label="A" group="one"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence with flow direction',
+        line: 2,
+        source: [
+          ':::diagram{title="Sequence" description="Direction is inapplicable." type="sequence" direction="down"}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          '::edge{from="a" to="b" label="call"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence with explicit right direction',
+        line: 2,
+        source: [
+          ':::diagram{title="Sequence" description="Any explicit direction is inapplicable." type="sequence" direction="right"}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          '::edge{from="a" to="b" label="call"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence below the participant minimum',
+        line: 2,
+        source: [
+          ':::diagram{title="Sequence" description="One participant is insufficient." type="sequence"}',
+          '::node{id="a" label="A"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence below the message minimum',
+        line: 2,
+        source: [
+          ':::diagram{title="Sequence" description="A message is required." type="sequence"}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence with a group record',
+        line: 3,
+        source: [
+          ':::diagram{title="Sequence" description="Groups are flow-only." type="sequence"}',
+          '::group{id="flow" label="Flow group"}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          '::edge{from="a" to="b" label="call"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence participant with group membership',
+        line: 3,
+        source: [
+          ':::diagram{title="Sequence" description="Membership is flow-only." type="sequence"}',
+          '::node{id="a" label="A" group="flow"}',
+          '::node{id="b" label="B"}',
+          '::edge{from="a" to="b" label="call"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence self-message',
+        line: 5,
+        source: [
+          ':::diagram{title="Sequence" description="Self messages are unsupported." type="sequence"}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          '::edge{from="a" to="a" label="recursive call"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence without a message label',
+        line: 5,
+        source: [
+          ':::diagram{title="Sequence" description="Labels are required." type="sequence"}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          '::edge{from="a" to="b"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence above the participant limit',
+        line: 2,
+        source: [
+          ':::diagram{title="Sequence" description="Too many participants." type="sequence"}',
+          ...repeatedNodes(7),
+          '::edge{from="node-1" to="node-2" label="call"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence above the message limit',
+        line: 2,
+        source: [
+          ':::diagram{title="Sequence" description="Too many messages." type="sequence"}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          ...repeatedEdges(41),
           ':::',
         ],
       },
@@ -837,6 +1284,135 @@ describe('registry-driven semantic directives', () => {
     ).rejects.toMatchObject({ diagnostic: { code: 'INVALID_DIRECTIVE_ATTRIBUTE' } });
   });
 
+  it('renders bounded grouped flows and ordered sequence diagrams with complete accessible data', async () => {
+    const workspace = await trackedWorkspace('directive-large-diagrams');
+    const groupIds = ['source', 'compiler', 'reader'] as const;
+    const groupedNodes = Array.from({ length: 18 }, (_, index) => {
+      const group = groupIds[Math.floor(index / 6)] ?? groupIds[0];
+      return `::node{id="step-${index + 1}" label="Step ${index + 1} detail" group="${group}" kind="${index % 3 === 0 ? 'accent' : 'neutral'}"}`;
+    });
+    const groupedEdges = Array.from(
+      { length: 17 },
+      (_, index) =>
+        `::edge{from="step-${index + 1}" to="step-${index + 2}" label="handoff ${index + 1}"}`,
+    );
+    const groupedSource = [
+      '# Grouped flow',
+      ':::diagram{title="Code tour flow" description="Eighteen participants across three subsystems." type="flow"}',
+      '::group{id="source" label="Authentication and authorization services"}',
+      '::group{id="compiler" label="Compiler pipeline"}',
+      '::group{id="reader" label="Reader artifact"}',
+      ...groupedNodes,
+      ...groupedEdges,
+      '::edge{from="step-1" to="step-4" label="validated shortcut"}',
+      '::edge{from="step-5" to="step-17" label="evidence bypass"}',
+      '::edge{from="step-2" to="step-9" label="second subsystem handoff"}',
+      '::edge{from="step-18" to="step-3" label="reverse feedback"}',
+      ':::',
+    ].join('\n');
+    const firstGrouped = await render(groupedSource, workspace);
+    const secondGrouped = await render(groupedSource, workspace);
+    expect(secondGrouped.html).toBe(firstGrouped.html);
+    expect(firstGrouped.html).toContain('data-diagram-type="flow"');
+    expect(firstGrouped.html.match(/data-group-id=/gu)).toHaveLength(3);
+    expect(firstGrouped.html.match(/data-node-id=/gu)).toHaveLength(18);
+    expect(firstGrouped.html.match(/visualization-group-edge/gu)).toHaveLength(2);
+    expect(firstGrouped.html.match(/visualization-group-internal-edge/gu)).toHaveLength(1);
+    expect(firstGrouped.html.match(/visualization-group-outer-edge/gu)).toHaveLength(3);
+    expect(firstGrouped.html).toContain(
+      'Groups: source: Authentication and authorization services (step-1, step-2, step-3, step-4, step-5, step-6); compiler: Compiler pipeline (step-7, step-8, step-9, step-10, step-11, step-12); reader: Reader artifact (step-13, step-14, step-15, step-16, step-17, step-18).',
+    );
+    expect(firstGrouped.html).toContain('>Authentication and</text>');
+    expect(firstGrouped.html).toContain('>authorization services</text>');
+    expect(firstGrouped.html).toContain('viewBox="0 0 816 772"');
+
+    const sequenceSource = [
+      '# Sequence',
+      ':::diagram{title="Compile request" description="A request crosses four participants." type="sequence"}',
+      '::node{id="agent" label="Authoring agent"}',
+      '::node{id="loader" label="Source loader"}',
+      '::node{id="compiler" label="Compiler"}',
+      '::node{id="browser" label="Browser"}',
+      '::edge{from="agent" to="loader" label="load source"}',
+      '::edge{from="loader" to="compiler" label="validated graph"}',
+      '::edge{from="compiler" to="browser" label="write artifact"}',
+      '::edge{from="browser" to="agent" label="review result"}',
+      ':::',
+    ].join('\n');
+    const firstSequence = await render(sequenceSource, workspace);
+    const secondSequence = await render(sequenceSource, workspace);
+    expect(secondSequence.html).toBe(firstSequence.html);
+    expect(firstSequence.html).toContain('data-diagram-type="sequence"');
+    expect(firstSequence.html.match(/data-participant=/gu)).toHaveLength(4);
+    expect(firstSequence.html.match(/data-message-order=/gu)).toHaveLength(4);
+    expect(firstSequence.html).toContain(
+      'Messages in order: 1. agent to loader: load source; 2. loader to compiler: validated graph; 3. compiler to browser: write artifact; 4. browser to agent: review result.',
+    );
+
+    const maximumFlow = await render(
+      [
+        '# Maximum flow',
+        ':::diagram{title="Maximum flow" description="Twenty nodes remain supported."}',
+        ...Array.from(
+          { length: 20 },
+          (_, index) => `::node{id="maximum-${index + 1}" label="Maximum ${index + 1}"}`,
+        ),
+        ':::',
+      ].join('\n'),
+      workspace,
+    );
+    expect(maximumFlow.html.match(/data-node-id="maximum-/gu)).toHaveLength(20);
+
+    const maximumFlowEdges = await render(
+      [
+        '# Maximum flow edges',
+        ':::diagram{title="Maximum edges" description="Forty flow edges remain supported."}',
+        '::node{id="edge-a" label="A"}',
+        '::node{id="edge-b" label="B"}',
+        ...Array.from(
+          { length: 40 },
+          (_, index) => `::edge{from="edge-a" to="edge-b" label="Flow edge ${index + 1}"}`,
+        ),
+        ':::',
+      ].join('\n'),
+      workspace,
+    );
+    expect(maximumFlowEdges.html.match(/data-edge=/gu)).toHaveLength(40);
+
+    const minimumSequence = await render(
+      [
+        '# Minimum sequence',
+        ':::diagram{title="Minimum sequence" description="Two participants and one message." type="sequence"}',
+        '::node{id="minimum-a" label="A"}',
+        '::node{id="minimum-b" label="B"}',
+        '::edge{from="minimum-a" to="minimum-b" label="Only message"}',
+        ':::',
+      ].join('\n'),
+      workspace,
+    );
+    expect(minimumSequence.html.match(/data-participant=/gu)).toHaveLength(2);
+    expect(minimumSequence.html.match(/data-message-order=/gu)).toHaveLength(1);
+
+    const maximumSequence = await render(
+      [
+        '# Maximum sequence',
+        ':::diagram{title="Maximum sequence" description="Six participants and forty messages." type="sequence"}',
+        ...Array.from(
+          { length: 6 },
+          (_, index) => `::node{id="participant-${index + 1}" label="Participant ${index + 1}"}`,
+        ),
+        ...Array.from(
+          { length: 40 },
+          (_, index) =>
+            `::edge{from="participant-${(index % 6) + 1}" to="participant-${((index + 1) % 6) + 1}" label="Message ${index + 1}"}`,
+        ),
+        ':::',
+      ].join('\n'),
+      workspace,
+    );
+    expect(maximumSequence.html.match(/data-message-order=/gu)).toHaveLength(40);
+  });
+
   it('requires every registered glossary occurrence to use a reference without flagging excluded contexts', async () => {
     const workspace = await trackedWorkspace('directive-glossary');
     const accepted = await render(
@@ -854,6 +1430,19 @@ describe('registry-driven semantic directives', () => {
       workspace,
     );
     expect(accepted.html).toContain('data-term-reference="bounded-runtime"');
+
+    await expect(
+      render(
+        [
+          '# Predictable inflection boundary',
+          'Unmarked bounded runtimes are not claimed as morphologically checked.',
+          ':::glossary{key="bounded-runtime" term="bounded runtime"}',
+          'Definition.',
+          ':::',
+        ].join('\n'),
+        workspace,
+      ),
+    ).resolves.toMatchObject({ html: expect.stringContaining('bounded runtimes') });
 
     await expect(
       render(
@@ -1326,7 +1915,7 @@ describe('registry-driven semantic directives', () => {
     for (const directive of required) {
       const requiredParent = directive.placement.requiredParent;
       if (requiredParent === undefined) throw new Error('Required parent disappeared');
-      const valid = ['series', 'point', 'node', 'edge', 'event'].includes(directive.name)
+      const valid = ['series', 'point', 'group', 'node', 'edge', 'event'].includes(directive.name)
         ? visualizationInvocation(directive.name, {})
         : nestedDirectiveInvocation(requiredParent, directive.name);
       expect((await render(`# Valid parent\n${valid}\n`, workspace)).html).toMatch(
@@ -1797,8 +2386,11 @@ function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
   if (attribute.name === 'kind' && attribute.constraint.kind === 'string') return 'warning';
   if (attribute.constraint.kind === 'enum') return attribute.constraint.values.at(-1) ?? '';
   if (attribute.name === 'family') return 'Reader Sans';
+  if (attribute.invalidDiagnostic === 'INVALID_SOURCE_LINK') {
+    return 'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42';
+  }
   if (attribute.name === 'href') return '#valid-target';
-  if (['key', 'id', 'from', 'to'].includes(attribute.name)) return 'valid-key';
+  if (['key', 'id', 'group', 'from', 'to'].includes(attribute.name)) return 'valid-key';
   return 'Valid title';
 }
 
@@ -1815,8 +2407,11 @@ function renderedAttributeValue(attribute: DirectiveAttributeDefinition): string
   if (attribute.name === 'kind' && attribute.constraint.kind === 'string') return 'warning';
   if (attribute.constraint.kind === 'enum') return attribute.constraint.values.at(-1) ?? '';
   if (attribute.name === 'family') return 'Reader Sans';
+  if (attribute.invalidDiagnostic === 'INVALID_SOURCE_LINK') {
+    return 'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42';
+  }
   if (attribute.name === 'href') return '#valid-target';
-  if (['key', 'id', 'from', 'to'].includes(attribute.name)) return 'valid-key';
+  if (['key', 'id', 'group', 'from', 'to'].includes(attribute.name)) return 'valid-key';
   return 'T';
 }
 
@@ -1826,7 +2421,7 @@ function directiveInvocation(
   overrides: Readonly<Record<string, string>> = {},
 ): string {
   if (
-    ['chart', 'series', 'point', 'diagram', 'node', 'edge', 'timeline', 'event'].includes(
+    ['chart', 'series', 'point', 'diagram', 'group', 'node', 'edge', 'timeline', 'event'].includes(
       directive.name,
     )
   ) {
@@ -1848,6 +2443,7 @@ function directiveInvocation(
   if (directive.name === 'checklist') {
     return `:::checklist${suffix}\n::check-item{id="gate" label="Gate"}\n:::`;
   }
+  if (directive.name === 'source-link') return `:source-link${suffix}`;
   const invocation =
     form === 'container'
       ? `:::${directive.name}${suffix}\nBody\n:::`
@@ -1896,7 +2492,43 @@ function visualizationInvocation(
       ':::::',
     ].join('\n');
   }
-  if (target === 'diagram' || target === 'node') {
+  if (target === 'diagram') {
+    if (overrides.type === 'sequence') {
+      return [
+        `:::diagram{${attributes('diagram')}}`,
+        `::node{${attributes('node', { id: 'valid-key' })}}`,
+        `::node{${attributes('node', { id: 'second-key' })}}`,
+        `::edge{${attributes('edge', { from: 'valid-key', to: 'second-key', label: 'Message' })}}`,
+        ':::',
+      ].join('\n');
+    }
+    return [
+      `:::diagram{${attributes('diagram')}}`,
+      `::node{${attributes('node', { id: 'valid-key' })}}`,
+      ':::',
+    ].join('\n');
+  }
+  if (target === 'group') {
+    return [
+      `:::diagram{${attributes('diagram')}}`,
+      `::group{${attributes('group', { id: 'valid-key' })}}`,
+      '::group{id="second-key" label="Second"}',
+      `::node{${attributes('node', { id: 'node-one', group: 'valid-key' })}}`,
+      '::node{id="node-two" label="Second node" group="second-key"}',
+      ':::',
+    ].join('\n');
+  }
+  if (target === 'node') {
+    if ('group' in overrides) {
+      return [
+        `:::diagram{${attributes('diagram')}}`,
+        `::group{${attributes('group', { id: 'valid-key', label: 'First' })}}`,
+        '::group{id="second-key" label="Second"}',
+        `::node{${attributes('node', { id: 'node-one' })}}`,
+        '::node{id="node-two" label="Second node" group="second-key"}',
+        ':::',
+      ].join('\n');
+    }
     return [
       `:::diagram{${attributes('diagram')}}`,
       `::node{${attributes('node', { id: 'valid-key' })}}`,
@@ -1968,6 +2600,7 @@ function bareDirectiveInvocation(directive: DirectiveDefinition, suffix?: string
   if (directive.name === 'actions') {
     return `:::actions${attributes}\n::action[Label]{href="#target"}\n:::`;
   }
+  if (directive.name === 'source-link') return `:source-link${attributes}`;
   if (directive.forms.includes('container')) return `:::${directive.name}${attributes}\nBody\n:::`;
   if (directive.forms.includes('leaf')) {
     return directive.name === 'action'
@@ -1986,14 +2619,17 @@ function assertRenderedAttribute(
   if (expected === undefined) throw new Error(`Missing expected value for ${directive.name}`);
   const serialized = String(expected);
   if (
-    ['chart', 'series', 'point', 'diagram', 'node', 'edge', 'timeline', 'event'].includes(
+    ['chart', 'series', 'point', 'diagram', 'group', 'node', 'edge', 'timeline', 'event'].includes(
       directive.name,
     )
   ) {
     const visualExpectation: Readonly<Record<string, string>> = {
       'chart.type': `data-chart-type="${serialized}"`,
+      'diagram.type': `data-diagram-type="${serialized}"`,
       'diagram.direction': `data-diagram-direction="${serialized}"`,
+      'group.id': `data-group-id="${serialized}"`,
       'node.id': `data-node-id="${serialized}"`,
+      'node.group': `data-group="${serialized}"`,
       'node.kind': `visualization-node-${serialized}`,
       'edge.from': `data-from="${serialized}"`,
       'edge.to': `data-to="${serialized}"`,
@@ -2012,6 +2648,12 @@ function assertRenderedAttribute(
     expect(rendered.html).toContain(`>${serialized}</h3>`);
     return;
   }
+  if (directive.name === 'glossary' && attribute.name === 'placement') {
+    if (serialized === 'appendix') expect(rendered.html).toContain('data-glossary-appendix=""');
+    else expect(rendered.html).not.toContain('data-glossary-appendix=""');
+    expect(rendered.html).not.toContain('data-placement=');
+    return;
+  }
   if (directive.name === 'term' && attribute.name === 'key') {
     expect(rendered.html).toContain(`data-term-reference="${serialized}"`);
     return;
@@ -2023,6 +2665,17 @@ function assertRenderedAttribute(
   if (directive.name === 'action' && attribute.name === 'href') {
     expect(rendered.html).toContain(`href="${serialized}"`);
     expect(rendered.html).not.toContain('data-href=');
+    return;
+  }
+  if (directive.name === 'source-link' && attribute.name === 'href') {
+    expect(rendered.html).toContain('class="semantic-source-link"');
+    expect(rendered.html).toContain('target="_blank"');
+    expect(rendered.html).toContain('rel="noopener noreferrer"');
+    expect(rendered.html).not.toContain('data-href=');
+    return;
+  }
+  if (directive.name === 'source-link' && attribute.name === 'label') {
+    expect(rendered.html).toContain(`>${serialized}</a>`);
     return;
   }
   if (attribute.name === 'open') {

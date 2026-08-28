@@ -114,6 +114,36 @@ export type LayoutChoice = (typeof PAGE_CONTRACT.layouts)[number];
 export type ThemeChoice = (typeof PAGE_CONTRACT.themes)[number];
 export type PresetChoice = (typeof PAGE_PRESET_NAMES)[number];
 
+export const DIAGRAM_CONTRACT = {
+  defaultType: 'flow',
+  types: ['flow', 'sequence'],
+  flow: {
+    nodes: { minimum: 1, maximum: 20 },
+    edges: { maximum: 40 },
+    selfEdges: false,
+    groups: {
+      ungrouped: 0,
+      minimum: 2,
+      maximum: 3,
+      requireEveryNode: true,
+      direction: 'right',
+    },
+  },
+  sequence: {
+    participants: { minimum: 2, maximum: 6 },
+    messages: { minimum: 1, maximum: 40, labelRequired: true },
+    groups: false,
+    participantGroups: false,
+    direction: 'forbidden',
+    selfMessages: false,
+  },
+} as const;
+export type DiagramTypeChoice = (typeof DIAGRAM_CONTRACT.types)[number];
+
+export const REVIEW_TARGET_OWNERSHIP_CONTRACT = {
+  parentOwnedDirectives: ['series'],
+} as const;
+
 export type ConstraintDefinition =
   | {
       readonly kind: 'string';
@@ -138,6 +168,33 @@ export type ConstraintDefinition =
     }
   | { readonly kind: 'boolean' }
   | { readonly kind: 'enum'; readonly values: readonly string[] };
+
+export const REGISTRY_IDENTITY_CONSTRAINT = {
+  kind: 'string',
+  normalization: 'trim',
+  minLength: 1,
+  maxLength: 64,
+  pattern: '^[a-z][a-z0-9-]{0,63}$',
+} as const satisfies ConstraintDefinition;
+
+export interface CodeFenceMetadataDefinition {
+  readonly syntax: string;
+  readonly description: string;
+  readonly fieldExclusivity: 'only-field';
+  readonly quoting: 'double';
+  readonly separator: ',';
+  readonly minItems: number;
+  readonly maxItems: number;
+  readonly uniqueItems: true;
+  readonly itemConstraint: typeof REGISTRY_IDENTITY_CONSTRAINT;
+  readonly matching: {
+    readonly source: 'canonical-glossary-term';
+    readonly caseSensitive: true;
+    readonly occurrence: 'first';
+    readonly lineBoundary: 'reject';
+    readonly overlap: 'reject';
+  };
+}
 
 interface FieldDefinitionBase {
   readonly name: string;
@@ -164,6 +221,7 @@ export type DirectiveForm = 'container' | 'leaf' | 'text';
 export type DirectiveAttributeDiagnosticCode =
   | 'INVALID_DIRECTIVE_ATTRIBUTE'
   | 'INVALID_DIRECTIVE_LINK'
+  | 'INVALID_SOURCE_LINK'
   | 'INVALID_DIRECTIVE_PATH'
   | 'INVALID_FONT_FAMILY';
 
@@ -195,6 +253,7 @@ export interface DirectiveDefinition {
     | 'series-directives'
     | 'point-directives'
     | 'node-and-edge-directives'
+    | 'group-node-and-edge-directives'
     | 'event-directives'
     | 'label-or-generated-label'
     | 'none';
@@ -273,6 +332,7 @@ export interface AuthoringRegistryDefinition {
     readonly directiveSyntax: Readonly<
       Record<'container' | 'nestedContainer' | 'leaf' | 'text', string>
     >;
+    readonly codeFenceMetadata: Readonly<Record<'terms', CodeFenceMetadataDefinition>>;
     readonly resources: readonly [string, ...string[]];
   };
   readonly output: {
@@ -281,6 +341,7 @@ export interface AuthoringRegistryDefinition {
     readonly runtimePlacement: Readonly<Record<OutputFormatChoice, RuntimePlacement>>;
   };
   readonly page: typeof PAGE_CONTRACT;
+  readonly visualizations: { readonly diagram: typeof DIAGRAM_CONTRACT };
   readonly manifestFields: readonly [FieldDefinition, ...FieldDefinition[]];
   readonly directives: readonly [DirectiveDefinition, ...DirectiveDefinition[]];
   readonly capabilities: readonly [CapabilityDefinition, ...CapabilityDefinition[]];
@@ -324,10 +385,31 @@ export const authoringRegistry = {
       leaf: '::name{attributes}',
       text: ':name[label]{attributes}',
     },
+    codeFenceMetadata: {
+      terms: {
+        syntax: 'terms="key,other-key"',
+        description: 'Annotates exact first canonical glossary occurrences in one code fence.',
+        fieldExclusivity: 'only-field',
+        quoting: 'double',
+        separator: ',',
+        minItems: 1,
+        maxItems: 20,
+        uniqueItems: true,
+        itemConstraint: REGISTRY_IDENTITY_CONSTRAINT,
+        matching: {
+          source: 'canonical-glossary-term',
+          caseSensitive: true,
+          occurrence: 'first',
+          lineBoundary: 'reject',
+          overlap: 'reject',
+        },
+      },
+    },
     resources: ['local images', 'downloadable local assets', 'local fonts'],
   },
   output: OUTPUT_CONTRACT,
   page: PAGE_CONTRACT,
+  visualizations: { diagram: DIAGRAM_CONTRACT },
   manifestFields: [
     {
       name: 'contractVersion',
@@ -427,6 +509,7 @@ export const authoringRegistry = {
     sectionDirective(),
     actionsDirective(),
     actionDirective(),
+    sourceLinkDirective(),
     {
       name: 'callout',
       description: 'Emphasized finding or notice containing Markdown.',
@@ -864,12 +947,42 @@ function actionDirective(): DirectiveDefinition {
   };
 }
 
+function sourceLinkDirective(): DirectiveDefinition {
+  const attributes = [
+    textAttribute('label', 'Short visible source path and line.', true),
+    sourceLinkAttribute(),
+  ] as const;
+  return {
+    name: 'source-link',
+    description:
+      'Source location opened through an explicit IPv4 loopback editor helper without replacing the report page.',
+    forms: ['text'],
+    attributes,
+    children: 'none',
+    placement: {},
+    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+    sanitizer: {
+      tagName: 'a',
+      className: 'semantic-source-link',
+      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
+    },
+    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+    handoffs: ['semantic-document'],
+  };
+}
+
 function interactiveDirectives(): readonly DirectiveDefinition[] {
   return [
     interactiveContainer('glossary', 'Reusable glossary definition containing Markdown.', {
       attributes: [
         keyAttribute('Stable glossary definition key.'),
-        textAttribute('term', 'Canonical term text inserted at every reference.', true),
+        textAttribute('term', 'Canonical glossary identity and explanation title.', true),
+        enumAttribute(
+          'placement',
+          'Definition location in the authored flow or, for a top-level definition, one package-owned reference appendix.',
+          ['inline', 'appendix'],
+          'inline',
+        ),
       ],
       runtime: 'none',
     }),
@@ -978,14 +1091,31 @@ function visualizationDirectives(): readonly DirectiveDefinition[] {
       attributes: [
         requiredTitleAttribute(),
         descriptionAttribute(),
+        enumAttribute(
+          'type',
+          'Diagram form.',
+          DIAGRAM_CONTRACT.types,
+          DIAGRAM_CONTRACT.defaultType,
+        ),
         enumAttribute('direction', 'Flow direction.', ['right', 'down'], 'right'),
       ],
-      children: 'node-and-edge-directives',
+      children: 'group-node-and-edge-directives',
+    }),
+    visualizationContainer('group', 'One labelled subsystem group in a flow diagram.', {
+      attributes: [
+        identityAttribute('id', 'Unique group identity within the diagram.'),
+        textAttribute('label', 'Visible group label.', true),
+      ],
+      children: 'none',
+      requiredParent: 'diagram',
+      tagName: 'span',
+      forms: ['leaf'],
     }),
     visualizationContainer('node', 'One labelled node in a flow diagram.', {
       attributes: [
         identityAttribute('id', 'Unique node identity within the diagram.'),
         textAttribute('label', 'Visible node label.', true),
+        optionalIdentityAttribute('group', 'Optional subsystem group identity for this node.'),
         enumAttribute(
           'kind',
           'Package-owned node emphasis.',
@@ -1031,7 +1161,7 @@ function visualizationDirectives(): readonly DirectiveDefinition[] {
 }
 
 function visualizationContainer(
-  name: 'chart' | 'series' | 'point' | 'diagram' | 'node' | 'edge' | 'timeline' | 'event',
+  name: 'chart' | 'series' | 'point' | 'diagram' | 'group' | 'node' | 'edge' | 'timeline' | 'event',
   description: string,
   options: {
     readonly attributes: readonly DirectiveAttributeDefinition[];
@@ -1104,26 +1234,23 @@ function keyAttribute(description: string): DirectiveAttributeDefinition {
 }
 
 function identityAttribute(
-  name: 'key' | 'id' | 'from' | 'to',
+  name: 'key' | 'id' | 'group' | 'from' | 'to',
   description: string,
 ): DirectiveAttributeDefinition {
   return {
     name,
     description,
     required: true,
-    constraint: {
-      kind: 'string',
-      normalization: 'trim',
-      minLength: 1,
-      maxLength: 64,
-      pattern: '^[a-z][a-z0-9-]{0,63}$',
-    },
+    constraint: REGISTRY_IDENTITY_CONSTRAINT,
     renderProperty: attributeRenderProperty(name),
     invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
   };
 }
 
-function optionalIdentityAttribute(name: 'id', description: string): DirectiveAttributeDefinition {
+function optionalIdentityAttribute(
+  name: 'id' | 'group',
+  description: string,
+): DirectiveAttributeDefinition {
   return { ...identityAttribute(name, description), required: false };
 }
 
@@ -1143,6 +1270,24 @@ function linkAttribute(): DirectiveAttributeDefinition {
     },
     renderProperty: 'dataHref',
     invalidDiagnostic: 'INVALID_DIRECTIVE_LINK',
+  };
+}
+
+function sourceLinkAttribute(): DirectiveAttributeDefinition {
+  return {
+    name: 'href',
+    description: 'IPv4 loopback editor-helper URL with an absolute path and positive source line.',
+    required: true,
+    constraint: {
+      kind: 'string',
+      normalization: 'trim',
+      minLength: 1,
+      maxLength: 1000,
+      pattern:
+        '^http://127\\.0\\.0\\.1:(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])/open\\?path=(?:%2[Ff]|/)[^\\s<>&#]+&line=[1-9][0-9]{0,8}$',
+    },
+    renderProperty: 'dataHref',
+    invalidDiagnostic: 'INVALID_SOURCE_LINK',
   };
 }
 

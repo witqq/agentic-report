@@ -15,8 +15,12 @@ import {
   type ReviewThreadSegment,
 } from '../review/contract.js';
 import type { ResolvedReviewArtifact } from '../review/binding.js';
+import { packageStrings } from '../localization.js';
 
 const mobileReview = window.matchMedia('(max-width: 56.99rem)');
+const strings = packageStrings(document.documentElement.dataset.packageLocale);
+
+class ReaderImportError extends Error {}
 
 interface Elements {
   dialog: HTMLDialogElement;
@@ -64,7 +68,7 @@ export function installReviewWorkspace(): void {
     toggle.disabled = true;
     toggle.dataset.reviewUnavailable = '';
     const label = toggle.querySelector<HTMLElement>('[data-review-toggle-label]');
-    if (label) label.textContent = 'Review unavailable';
+    if (label) label.textContent = strings.reviewUnavailable;
   }
 }
 
@@ -168,7 +172,7 @@ function createController(
     const target = selected ? targets.get(selected)?.target : undefined;
     const text = normalize(el.message.value);
     if (!target || !text) {
-      showError('Enter a message for the selected block.');
+      showError(strings.enterMessage);
       return;
     }
     const existing = threadForTarget(target.id);
@@ -218,14 +222,14 @@ function createController(
     if (!message) return;
     editing = id;
     el.message.value = message.message;
-    el.add.textContent = 'Save message';
+    el.add.textContent = strings.saveMessage;
     el.cancel.hidden = false;
     el.message.focus();
   }
   function clearEditor(): void {
     editing = undefined;
     el.message.value = '';
-    el.add.textContent = 'Add message';
+    el.add.textContent = strings.addMessage;
     el.cancel.hidden = true;
   }
   function toggleResolved(id: string): void {
@@ -287,7 +291,7 @@ function createController(
     const openCount = artifact.threads.filter(
       (item) => currentSegment(item)?.resolved === false,
     ).length;
-    el.summary.textContent = `${artifact.threads.length} threads · ${openCount} unresolved`;
+    el.summary.textContent = strings.threadsSummary(artifact.threads.length, openCount);
     el.toggleCount.hidden = artifact.threads.length === 0;
     el.toggleCount.textContent = String(openCount);
     sync();
@@ -306,7 +310,7 @@ function createController(
         li.className = 'review-response';
         const body = document.createElement('div');
         const author = document.createElement('strong');
-        author.textContent = message.author === 'agent' ? 'Agent' : 'You';
+        author.textContent = message.author === 'agent' ? strings.agent : strings.you;
         const text = document.createElement('p');
         text.textContent = message.message;
         body.append(author, text);
@@ -314,7 +318,7 @@ function createController(
         if (segment.reportRevision === manifest.reportRevision) {
           const edit = document.createElement('button');
           edit.type = 'button';
-          edit.textContent = 'Edit';
+          edit.textContent = strings.edit;
           edit.dataset.reviewMessageEdit = message.id;
           li.append(edit);
         }
@@ -322,7 +326,7 @@ function createController(
       }
     const segment = thread === undefined ? undefined : currentSegment(thread);
     el.resolve.hidden = !segment;
-    el.resolve.textContent = segment?.resolved ? 'Reopen thread' : 'Resolve thread';
+    el.resolve.textContent = segment?.resolved ? strings.reopenThread : strings.resolveThread;
   }
   function renderTarget(item: TargetDom): void {
     const thread = threadForTarget(item.target.id);
@@ -338,7 +342,7 @@ function createController(
     item.quick.textContent = segment?.resolved ? '↻' : '✓';
     item.quick.setAttribute(
       'aria-label',
-      `${segment?.resolved ? 'Reopen' : 'Resolve'} thread for ${item.label}`,
+      strings.resolveFor(segment?.resolved === true, item.label),
     );
   }
   function renderPrior(): void {
@@ -350,9 +354,9 @@ function createController(
       const li = document.createElement('li');
       li.className = 'review-response';
       const latest = entry.thread.segments.at(-1);
-      li.textContent = `Prior · ${entry.binding} · ${latest?.resolved ? 'resolved' : 'unresolved'} · ${entry.thread.segments
+      li.textContent = `${strings.prior} · ${strings.reviewBinding(entry.binding)} · ${latest?.resolved ? strings.resolved : strings.unresolved} · ${entry.thread.segments
         .flatMap((part) => part.messages)
-        .map((item) => `${item.author}: ${item.message}`)
+        .map((item) => `${item.author === 'agent' ? strings.agent : strings.you}: ${item.message}`)
         .join(' / ')}`;
       el.priorList.append(li);
     }
@@ -361,9 +365,11 @@ function createController(
         const latest = thread.segments.at(-1);
         const li = document.createElement('li');
         li.className = 'review-response';
-        li.textContent = `Historical · ${latest?.resolved ? 'resolved' : 'unresolved'} · ${thread.segments
+        li.textContent = `${strings.historical} · ${latest?.resolved ? strings.resolved : strings.unresolved} · ${thread.segments
           .flatMap((part) => part.messages)
-          .map((item) => `${item.author}: ${item.message}`)
+          .map(
+            (item) => `${item.author === 'agent' ? strings.agent : strings.you}: ${item.message}`,
+          )
           .join(' / ')}`;
         el.priorList.append(li);
       }
@@ -376,10 +382,10 @@ function createController(
     const previous = artifact;
     try {
       if (file.size > MAX_REVIEW_FILE_BYTES)
-        throw new Error(`Review files must be no larger than ${MAX_REVIEW_FILE_BYTES} bytes.`);
+        throw new ReaderImportError(strings.fileTooLarge(MAX_REVIEW_FILE_BYTES));
       const imported = parseReviewArtifact(JSON.parse(await file.text()) as unknown);
       if (imported.report.revision !== manifest.reportRevision)
-        throw new Error('This review belongs to a different report revision.');
+        throw new ReaderImportError(strings.differentRevision);
       validateTargets(imported, manifest);
       artifact = imported;
       clearError();
@@ -388,10 +394,10 @@ function createController(
       artifact = previous;
       showError(
         error instanceof ReviewContractError && error.unsupportedVersion
-          ? 'Version 1 reviews are unsupported. Export a version-2 thread review.'
-          : error instanceof Error
+          ? strings.unsupportedReview
+          : error instanceof ReaderImportError
             ? error.message
-            : 'Review import failed.',
+            : strings.importFailed,
       );
       render();
     }
@@ -414,9 +420,9 @@ function createController(
     el.toggle.setAttribute('aria-expanded', String(el.dialog.open));
     el.toggleLabel.textContent = active
       ? el.dialog.open
-        ? 'Close review'
-        : 'Open review'
-      : 'Review';
+        ? strings.closeReview
+        : strings.openReview
+      : strings.review;
   }
   function showError(message: string): void {
     el.error.textContent = message;
@@ -468,7 +474,7 @@ function collectTargets(
     open.className = 'review-target-control';
     open.dataset.reviewTargetControl = target.id;
     open.hidden = true;
-    open.setAttribute('aria-label', `Open discussion for ${label}`);
+    open.setAttribute('aria-label', strings.openDiscussion(label));
     const quick = document.createElement('button');
     quick.type = 'button';
     quick.className = 'review-target-resolve';
@@ -499,14 +505,11 @@ function validateTargets(artifact: ReviewArtifact, manifest: ReviewTargetManifes
     const currentSegments = thread.segments.filter(
       (segment) => segment.reportRevision === artifact.report.revision,
     );
-    if (currentSegments.length > 1)
-      throw new Error('Imported review contains more than one current segment for a thread.');
+    if (currentSegments.length > 1) throw new ReaderImportError(strings.multipleCurrentSegments);
     for (const segment of currentSegments) {
       const current = manifest.targets.find((item) => item.id === segment.target.id);
       if (!current || JSON.stringify(current) !== JSON.stringify(segment.target))
-        throw new Error(
-          'Imported review contains a current target that is not part of this report revision.',
-        );
+        throw new ReaderImportError(strings.unknownCurrentTarget);
     }
   }
 }
@@ -526,5 +529,5 @@ function nextGeneratedId(base: string, occupied: ReadonlySet<string>): string {
 }
 function visibleLabel(target: ReviewTargetReference, element: HTMLElement): string {
   const excerpt = (element.textContent ?? '').replace(/\s+/gu, ' ').trim().slice(0, 80);
-  return excerpt || target.kind.replace(/^(?:markdown|directive):/u, '').replaceAll('-', ' ');
+  return excerpt || strings.reviewTargetFallback(target.kind);
 }

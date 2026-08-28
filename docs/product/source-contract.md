@@ -23,7 +23,11 @@ Frontmatter takes precedence. Supported fields are:
 - `title`: non-empty document title; when omitted, the first level-one heading or filename is used;
 - `description`: plain-text metadata description;
 - `language`: tag used on `<html lang>`; the current accepted subset is a 2–8 ASCII-letter primary tag
-  followed by optional 2–8 character ASCII alphanumeric subtags; default `und` means undetermined;
+  followed by optional 2–8 character ASCII alphanumeric subtags; default `und` means undetermined. `ru`
+  and its subtags select complete Russian package-owned reader chrome; `en`, `und`, and every unsupported
+  language select complete English chrome. The compiler never uses the browser or host locale, and it does
+  not translate authored Markdown or CLI diagnostics. Visible and accessible package-generated chart
+  numbers use the same selected locale;
 - `preset`: coordinated `studio`, `editorial`, or `signal` package-owned visual defaults;
 - `theme`: `system`, `light`, or `dark`;
 - `layout`: `document`, `dashboard`, `landing`, or `mixed`;
@@ -70,7 +74,8 @@ and validate all resources required by the selected format but do not create or 
 ## Review protocol and source binding
 
 Every normal build embeds an inert version-2 review manifest in a `template` element. Container directives
-and ordinary Markdown blocks receive deterministic review-target identities. Each target records its kind,
+that produce a final DOM owner and ordinary Markdown blocks receive deterministic review-target identities;
+structural chart `series` data is reviewed through its owning chart rather than a removed intermediate node. Each target records its kind,
 SHA-256 fingerprint, source-root-relative entry or partial path, and authored range. A section with an
 explicit `id` also receives a stable review key. The manifest never contains source bodies or absolute
 workstation paths.
@@ -174,6 +179,8 @@ The directive vocabulary is:
   label, closed `width`, `align`, and `tone` choices, and optional boolean `reveal`;
 - `actions` and directly nested leaf `action`: responsive ordinary link group; every action requires a
   visible label and safe `href` and may select `primary`, `secondary`, or `quiet` emphasis;
+- `source-link`: inline source-location link with a short visible label and a bounded IPv4-loopback editor
+  helper URL containing an absolute path and positive line;
 - `callout`: emphasized finding with optional `title` and lowercase `kind`;
 - `decision`: legacy static Markdown decision with optional `title`, or typed decision with stable `id`,
   optional `required`, and directly nested leaf `decision-option` values with stable `id` and `label`;
@@ -189,9 +196,11 @@ rewriting their historical targets. Invalid sidecars fail before authoritative o
 
 - `cards` and nested `card`: responsive content grid;
 - `steps`: styled process container whose authored Markdown supplies the ordered or explanatory content;
-- `glossary`: reusable definition with required stable `key` and canonical `term` text;
-- `term`: inline or standalone reference to a glossary `key`; output uses the canonical definition text,
-  opens a contextual explanation on hover, focus, or tap, and provides a link to the full definition;
+- `glossary`: reusable definition with required stable `key`, canonical `term` text, and optional
+  `placement="inline|appendix"`;
+- `term`: inline or standalone reference to a glossary `key`; an inline authored label remains the visible
+  grammatical form while the detached form uses canonical text; both open a contextual explanation on hover,
+  focus, or tap and link to the canonical full definition;
 - `disclosure`: native details block with required `title` and optional initial `open` state;
 - `tabs` and directly nested `tab`: keyboard-operable panels; each `tab` requires a visible `label`;
 - `modal`: modal dialog with required `title` and optional trigger label;
@@ -200,8 +209,8 @@ rewriting their historical targets. Invalid sidecars fail before authoritative o
 - `toggle`: switch-controlled content with required `label`, optional `title`, and `default` state;
 - `chart`, nested `series`, and nested leaf `point`: compile-time `bar`, `line`, or `pie` SVG from bounded
   labelled numeric values;
-- `diagram` with leaf `node` and `edge` children: compile-time directed flow SVG with validated node
-  identities and references;
+- `diagram` with leaf `group`, `node`, and `edge` children: compile-time grouped flow or ordered sequence SVG
+  with validated identities and references;
 - `timeline` and directly nested `event`: semantic ordered chronology; each event may contain Markdown;
 - `demo`: safe built-in counter with optional `title`, `start`, and `step`; it never evaluates author code;
 - `asset`: downloadable local resource with required `src`;
@@ -211,8 +220,8 @@ rewriting their historical targets. Invalid sidecars fail before authoritative o
 Container directives use `:::name ... :::`; nested containers use a longer outer fence. `asset` and
 `font` support leaf directives. An `action` uses the labelled leaf form
 `::action[Visible label]{href="#target" kind="primary"}`. Use
-`:term[Canonical term]{key="term-key"}` inside prose; the label marks
-the authored range, while output always uses the registered canonical text. The compatible standalone form
+`:term[authored form]{key="term-key"}` inside prose; the label is rendered exactly as the visible grammatical
+form while canonical text remains the explanation/definition title and unique identity. The compatible standalone form
 `::term{key="term-key"}` remains available when a detached reference is intentional. A `tab` must be a
 direct directive child of `tabs`, and other directive children are rejected there. Complete copyable examples
 are in
@@ -238,18 +247,39 @@ same-page `#anchor`, a relative target, HTTP(S), or `mailto:`. Executable scheme
 part of the contract. Output is an ordinary keyboard-operable anchor; action emphasis is package-owned
 styling and adds no runtime behavior.
 
+Use `:source-link{label="src/render/directives.ts:42" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42"}`
+for an address that a reader opens repeatedly while following code. The visible label is authored and may
+stay short; `href` must use literal host `127.0.0.1`, a port from 1 through 65535, `/open`, a `path` value
+beginning with `/` or encoded `%2F`, and a positive `line`. The output is a native link in a protected
+separate browsing context. The report page therefore remains in place for either an empty 200 or 204 helper
+response. The package never contacts the helper during build, validation, inspection, or page startup, does
+not verify that the external helper opened an editor, and adds no network CSP capability.
+The full absolute path is still present in the generated HTML even though only the short label is visible.
+Treat a page containing `source-link` as workstation-specific. Do not put credentials or sensitive directory
+names in the path, and remove or replace source links before public distribution when revealing the local
+path is unacceptable or the recipient does not share the same filesystem layout.
+
 Top-level visuals require `title` and `description`. A chart accepts 1–6 `series`; each series accepts 1–12
 leaf `point` values, and every series must use the same unique labels in the same order. Values are finite
 decimal numbers between `-999999999` and `999999999`, with at most four decimal places. Pie charts require
-one series, non-negative values, and at least one positive value. A diagram accepts 1–12 unique nodes and
-up to 20 edges; every edge must reference two distinct declared node IDs. `direction` is `right` or `down`.
+one series, non-negative values, and at least one positive value. `diagram.type` defaults to `flow`. A flow
+accepts 1–20 unique nodes and up to 40 edges; it is ungrouped or declares 2–3 non-empty groups and gives every
+node a declared group. Ungrouped flows accept `direction="right|down"`; grouped subsystem columns are
+rightward. A `sequence` accepts 2–6 node participants and 1–40
+labelled edge messages in authored order; group records, group membership, direction and self-messages fail.
+Every edge or message references two distinct declared node IDs.
+Grouped members use authored row order. Longer intra-group connections route through the group's inner gutter,
+and the first connection for an adjacent group pair uses its inter-column gutter. Non-adjacent connections and
+additional edges for an already-used pair receive distinct bottom-corridor lanes outside all groups; each lane
+increases the SVG viewBox height within the finite edge bound. Dense arbitrary graph optimization remains
+outside the bounded flow contract.
 A timeline accepts 1–20 direct events. Visual data containers reject prose as a direct child, while an
 event body accepts ordinary Markdown.
 
 The compiler emits responsive deterministic SVG for charts and diagrams and semantic HTML for timelines.
 Titles and descriptions are visible and label each atomic SVG image. The SVG accessible description also
-contains every complete series/point value or diagram node/connection label, including text shortened only
-in the visible plot. Values retain up to the supported four decimal places in observable text. Colors come
+contains every complete series/point value, flow group/member/node/connection, or sequence participant and
+ordered message, including text shortened only in the visible plot. Values retain up to the supported four decimal places in observable text. Colors come
 from package-owned theme variables. There is no visualization-time JavaScript, canvas, network request,
 author CSS, executable graph DSL, or separate behavior between `single-file` and `directory`.
 
@@ -259,6 +289,33 @@ canonical glossary term is registered, an ordinary prose occurrence must use
 code, and code blocks and reports the unmarked authored range with a valid inline replacement. This keeps
 terminology machine-checkable without splitting sentences or rewriting code samples.
 
+The occurrence validator deliberately recognizes only the exact canonical prose form. Explicitly marked
+labels such as `:term[атомам]{key="atom"}` are accepted as author-owned grammatical forms of the same key;
+unmarked inflected forms are not guessed or reported as checked.
+
+To explain code where a term first appears, use one closed fence field:
+
+````markdown
+```typescript terms="own-field,node-type"
+@d.def(Node) accessor child!: Node;
+@d.def(Node) accessor sibling!: Node;
+```
+````
+
+The value contains 1–20 unique comma-separated glossary keys. Every key must exist, and its canonical term
+must occur exactly and case-sensitively within one code line. The first occurrence for each key becomes the
+same keyboard/hover/tap glossary control; repeated occurrences remain ordinary highlighted code. First
+ranges may not overlap. Malformed metadata, unknown or duplicate keys, missing canonical text, multiline or
+overlapping matches fail at the authored code block. Other fences keep current behavior. The code remains
+escaped text, Shiki token colors are preserved, and copying excludes generated explanation panels.
+`getSourceContract().source.codeFenceMetadata.terms` exposes the quoted envelope, separator, item bounds,
+uniqueness, shared key constraint and exact-match policy as machine-readable discovery data.
+
+`glossary.placement` defaults to `inline`. On a top-level glossary definition, `appendix` moves the complete
+visible definition into one labelled package-owned glossary appendix after the authored reading flow, in definition order. A nested appendix definition fails instead of leaving its parent empty. The appendix heading is
+excluded from primary navigation, while every full-definition link and review target retains its stable ID
+and authored source range.
+
 The text form `:asset[Label]{src="path"}` uses the authored accessible label. The leaf form
 `::asset{src="path"}` is also valid and receives the deterministic visible label `Download <filename>`.
 
@@ -267,19 +324,21 @@ The text form `:asset[Label]{src="path"}` uses the authored accessible label. Th
 All state is local to the generated component instance. Browser behavior is package-owned, works through
 `file://` in both output formats, and never evaluates author content.
 
-| Primitive           | Initial state and semantic HTML                                                                                                                                                                        | Keyboard behavior                                                                                                                   | Pointer/touch behavior and limits                                                                                                                                 |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `glossary` + `term` | The definition is a visible labelled section with a stable `glossary-<key>` ID. Each term is a button controlling a closed labelled contextual `dialog`; its text comes from the canonical definition. | Focusing the term opens the explanation. `Escape` closes it and restores focus. The panel link navigates to the full definition.    | Hover or click/tap opens the explanation; leaving/clicking outside closes it. The panel link is the explicit route to the full Markdown definition.               |
-| `disclosure`        | Native `details`/`summary`; closed unless `open="true"`.                                                                                                                                               | Native summary activation with `Enter` or `Space`.                                                                                  | Click/tap the summary to toggle.                                                                                                                                  |
-| `tabs` + `tab`      | `tablist`, `tab`, and `tabpanel` roles; the first direct `tab` is selected and other panels are hidden. Each panel requires `label`; non-`tab` directive children are rejected.                        | `ArrowLeft`/`ArrowRight` select and focus adjacent tabs with wraparound; `Home`/`End` select the first/last tab.                    | Click/tap a tab to select its panel. State does not cross into another tabs instance.                                                                             |
-| `modal`             | Trigger button plus closed native `dialog` labelled by required `title`.                                                                                                                               | Activating the trigger opens the modal; native `Escape` closes it and restores focus to the opener. The Close button does the same. | Click/tap the trigger and Close button. Backdrop-click dismissal is not part of the contract.                                                                     |
-| `popover`           | Trigger button controls a closed non-modal labelled `dialog`.                                                                                                                                          | `Enter`/`Space` toggles the trigger. `Escape` closes an open panel and restores trigger focus.                                      | Click/tap toggles; clicking outside closes without moving focus.                                                                                                  |
-| `filter`            | Labelled search input plus polite live result count; the empty query shows every item.                                                                                                                 | Normal search-input editing.                                                                                                        | Input filters case-insensitively while typing. Only `li` elements in a direct authored `ul` or `ol` are filter targets; nested lists are not independent targets. |
-| `toggle`            | Button with `role="switch"` and a controlled panel; `default="off"` hides content, `on` shows it.                                                                                                      | Native button `Enter`/`Space` toggles `aria-checked` and panel visibility.                                                          | Click/tap toggles the same state. Instances are isolated.                                                                                                         |
-| `demo`              | Bounded numeric output starts at `start` (default `0`).                                                                                                                                                | Native Increment button activation adds `step` (default `1`).                                                                       | Click/tap performs the same package-owned increment; no author script is accepted.                                                                                |
+| Primitive           | Initial state and semantic HTML                                                                                                                                                                                                                                | Keyboard behavior                                                                                                                   | Pointer/touch behavior and limits                                                                                                                                 |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `glossary` + `term` | The inline or appendix definition is a visible labelled section with a stable `glossary-<key>` ID. Each prose/code term is a button controlling a closed labelled contextual `dialog`; prose may show an authored form while the dialog title stays canonical. | Focusing the term opens the explanation. `Escape` closes it and restores focus. The panel link navigates to the full definition.    | Hover or click/tap opens the explanation; leaving/clicking outside closes it. The panel link is the explicit route to the full Markdown definition.               |
+| `disclosure`        | Native `details`/`summary`; closed unless `open="true"`.                                                                                                                                                                                                       | Native summary activation with `Enter` or `Space`.                                                                                  | Click/tap the summary to toggle.                                                                                                                                  |
+| `tabs` + `tab`      | `tablist`, `tab`, and `tabpanel` roles; the first direct `tab` is selected and other panels are hidden. Each panel requires `label`; non-`tab` directive children are rejected.                                                                                | `ArrowLeft`/`ArrowRight` select and focus adjacent tabs with wraparound; `Home`/`End` select the first/last tab.                    | Click/tap a tab to select its panel. State does not cross into another tabs instance.                                                                             |
+| `modal`             | Trigger button plus closed native `dialog` labelled by required `title`.                                                                                                                                                                                       | Activating the trigger opens the modal; native `Escape` closes it and restores focus to the opener. The Close button does the same. | Click/tap the trigger and Close button. Backdrop-click dismissal is not part of the contract.                                                                     |
+| `popover`           | Trigger button controls a closed non-modal labelled `dialog`.                                                                                                                                                                                                  | `Enter`/`Space` toggles the trigger. `Escape` closes an open panel and restores trigger focus.                                      | Click/tap toggles; clicking outside closes without moving focus.                                                                                                  |
+| `filter`            | Labelled search input plus polite live result count; the empty query shows every item.                                                                                                                                                                         | Normal search-input editing.                                                                                                        | Input filters case-insensitively while typing. Only `li` elements in a direct authored `ul` or `ol` are filter targets; nested lists are not independent targets. |
+| `toggle`            | Button with `role="switch"` and a controlled panel; `default="off"` hides content, `on` shows it.                                                                                                                                                              | Native button `Enter`/`Space` toggles `aria-checked` and panel visibility.                                                          | Click/tap toggles the same state. Instances are isolated.                                                                                                         |
+| `demo`              | Bounded numeric output starts at `start` (default `0`).                                                                                                                                                                                                        | Native Increment button activation adds `step` (default `1`).                                                                       | Click/tap performs the same package-owned increment; no author script is accepted.                                                                                |
 
 `actions`/`action` does not appear in the stateful table because it is an ordinary group of links. Native
 anchor focus, Enter activation, URL behavior, and browser history apply without a package event handler.
+`source-link` is also a native anchor without a package event handler; its protected separate browsing
+context and loopback-only grammar are compile-time link contracts rather than reader state.
 
 ## Page navigation and motion
 

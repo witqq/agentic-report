@@ -78,6 +78,7 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
   ]);
   const inlineRuntime = escapeInlineScript(runtime);
   const markdown = await renderMarkdown(source.markdown, {
+    language: source.manifest.language,
     sourceRoot: source.sourceRoot,
     sourceMap: source.sourceMap,
     format,

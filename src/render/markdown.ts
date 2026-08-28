@@ -26,9 +26,14 @@ import { resolveLocalPath } from '../source/load-source.js';
 import { resolveSourceLocation } from '../source/source-map.js';
 import type { ReviewTargetReference } from '../review/contract.js';
 import { rehypeReviewTargets, remarkReviewTargets } from '../review/targets.js';
-import { rehypeEnhanceDirectives, remarkSemanticDirectives } from './directives.js';
+import {
+  parseCodeTermMetadata,
+  rehypeEnhanceDirectives,
+  remarkSemanticDirectives,
+} from './directives.js';
 
 export interface MarkdownRenderOptions {
+  readonly language?: string;
   readonly sourceRoot: string;
   readonly format: OutputFormat;
   readonly outputFilePath?: string;
@@ -207,13 +212,20 @@ export async function renderMarkdown(
     .use(rehypeShiki, {
       themes: { light: 'github-light', dark: 'github-dark' },
       defaultColor: false,
+      parseMetaString: (metaString) => {
+        const metadata = parseCodeTermMetadata(metaString);
+        return metadata.kind === 'valid' ? { dataCodeTerms: metadata.keys.join(',') } : undefined;
+      },
     })
     .use(rehypeReviewTargets, {
       sourceRoot: options.sourceRoot,
       sourceMap: options.sourceMap,
       targets: reviewTargets,
     })
-    .use(rehypeEnhanceDirectives, { sourceMap: options.sourceMap })
+    .use(rehypeEnhanceDirectives, {
+      sourceMap: options.sourceMap,
+      ...(options.language === undefined ? {} : { language: options.language }),
+    })
     .use(rehypeAssets, { ...options, collector })
     .use(rehypeStringify)
     .process(markdown);

@@ -1,22 +1,38 @@
-import type { Element, Root as HastRoot } from 'hast';
-import type { Root as MdastRoot } from 'mdast';
+import type { Element, ElementContent, Root as HastRoot } from 'hast';
+import type { Code, Root as MdastRoot } from 'mdast';
 import { decodeString } from 'micromark-util-decode-string';
 import type { Plugin } from 'unified';
 import { visit } from 'unist-util-visit';
 
 import {
   authoringRegistry,
+  DIAGRAM_CONTRACT,
   type DirectiveAttributeDefinition,
   type DirectiveDefinition,
   type DirectiveForm,
+  type CodeFenceMetadataDefinition,
 } from '../authoring/registry.js';
 import { interpretDirectiveAttributes } from '../authoring/schemas.js';
 import type { SourceMapSegment } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
+import { packageStrings, type PackageStrings } from '../localization.js';
 import { MAX_REVIEW_RESPONSES } from '../review/contract.js';
 import { resolveSourceLocation } from '../source/source-map.js';
 import { decorativeIcon } from './icons.js';
 import { enhanceVisualization } from './visualizations.js';
+
+interface SourcePosition {
+  readonly start: {
+    readonly line: number;
+    readonly column: number;
+    readonly offset?: number | undefined;
+  };
+  readonly end: {
+    readonly line: number;
+    readonly column: number;
+    readonly offset?: number | undefined;
+  };
+}
 
 interface DirectiveNode {
   readonly type: string;
@@ -27,10 +43,7 @@ interface DirectiveNode {
     hName?: string;
     hProperties?: Readonly<Record<string, string | string[]>>;
   };
-  readonly position?: {
-    readonly start: { readonly line: number; readonly column: number; readonly offset?: number };
-    readonly end: { readonly line: number; readonly column: number; readonly offset?: number };
-  };
+  readonly position?: SourcePosition | undefined;
 }
 
 interface DirectivePluginOptions {
@@ -41,18 +54,93 @@ interface DirectivePluginOptions {
 
 interface DirectiveEnhancementOptions {
   readonly sourceMap: readonly SourceMapSegment[];
+  readonly language?: string;
 }
 
 const directiveByName: ReadonlyMap<string, DirectiveDefinition> = new Map(
   authoringRegistry.directives.map((directive) => [directive.name, directive]),
 );
 const GENERATED_SECTION_ID_PREFIX = 'generated:';
+const CODE_TERM_FIELD = 'terms' as const;
+const CODE_TERM_METADATA = authoringRegistry.source.codeFenceMetadata.terms;
+const CODE_TERM_KEY_PATTERN = new RegExp(CODE_TERM_METADATA.itemConstraint.pattern, 'u');
+const CODE_TERM_ATTEMPT_PATTERN = new RegExp(`(?:^|\\s)${CODE_TERM_FIELD}(?:\\s*=|\\s|$)`, 'u');
+const CODE_TERM_EXACT_PATTERN = codeTermExactPattern(CODE_TERM_FIELD, CODE_TERM_METADATA);
+
+export type CodeTermMetadataResult =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'valid'; readonly keys: readonly string[] }
+  | { readonly kind: 'invalid'; readonly message: string; readonly remediation: string };
+
+export function parseCodeTermMetadata(meta: string | null | undefined): CodeTermMetadataResult {
+  if (meta === undefined || meta === null || !CODE_TERM_ATTEMPT_PATTERN.test(meta)) {
+    return { kind: 'none' };
+  }
+  const match = CODE_TERM_EXACT_PATTERN.exec(meta);
+  if (match === null) {
+    return {
+      kind: 'invalid',
+      message: `Code term metadata must contain only ${CODE_TERM_METADATA.syntax}.`,
+      remediation: 'Use one quoted comma-separated terms field or remove the code metadata.',
+    };
+  }
+  const keys = (match[1] ?? '').split(CODE_TERM_METADATA.separator).map((key) => key.trim());
+  if (
+    keys.length < CODE_TERM_METADATA.minItems ||
+    keys.some((key) => !CODE_TERM_KEY_PATTERN.test(key))
+  ) {
+    return {
+      kind: 'invalid',
+      message: 'Code term metadata contains an empty or invalid glossary key.',
+      remediation: 'Use lowercase glossary keys separated by commas.',
+    };
+  }
+  if (keys.length > CODE_TERM_METADATA.maxItems) {
+    return {
+      kind: 'invalid',
+      message: `Code term metadata supports at most ${CODE_TERM_METADATA.maxItems} keys.`,
+      remediation: 'Keep only terms that need an explanation in this code block.',
+    };
+  }
+  if (CODE_TERM_METADATA.uniqueItems && new Set(keys).size !== keys.length) {
+    return {
+      kind: 'invalid',
+      message: 'Code term metadata contains a duplicate glossary key.',
+      remediation: 'List each glossary key once per code block.',
+    };
+  }
+  return { kind: 'valid', keys };
+}
+
+function codeTermExactPattern(field: string, definition: CodeFenceMetadataDefinition): RegExp {
+  const quote = metadataQuote(definition.quoting);
+  switch (definition.fieldExclusivity) {
+    case 'only-field':
+      return new RegExp(`^\\s*${field}=${quote}([^${quote}]*)${quote}\\s*$`, 'u');
+    default:
+      return unsupportedCodeMetadataContract(definition.fieldExclusivity);
+  }
+}
+
+function metadataQuote(quoting: CodeFenceMetadataDefinition['quoting']): string {
+  switch (quoting) {
+    case 'double':
+      return '"';
+    default:
+      return unsupportedCodeMetadataContract(quoting);
+  }
+}
+
+function unsupportedCodeMetadataContract(value: never): never {
+  throw new Error(`Unsupported code metadata contract: ${JSON.stringify(value)}.`);
+}
 
 export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoot> =
   (options) => (tree) => {
     const glossaryByKey = new Map<string, GlossaryDefinition>();
     const glossaryTerms = new Map<string, GlossaryDefinition>();
     const termReferences: Array<{ readonly key: string; readonly node: DirectiveNode }> = [];
+    const codeTermBlocks: Array<{ readonly node: Code; readonly keys: readonly string[] }> = [];
     const attributesByNode = new WeakMap<
       object,
       Readonly<Record<string, string | number | boolean>>
@@ -60,6 +148,26 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
     const sectionIds = collectAuthoredSectionIds(tree);
     const claimedAuthoredSectionIds = new Set<string>();
     visit(tree, (node, _index, parent) => {
+      if (isCodeNode(node)) {
+        const metadata = parseCodeTermMetadata(node.meta);
+        if (metadata.kind === 'invalid') {
+          throw attachNodeSource(
+            new AgenticReportError({
+              level: 'error',
+              code: 'INVALID_CODE_TERM_METADATA',
+              message: metadata.message,
+              remediation: metadata.remediation,
+            }),
+            node,
+            options,
+          );
+        }
+        if (metadata.kind === 'valid') {
+          codeTermBlocks.push({ node, keys: metadata.keys });
+          options.observedDirectives?.add('term');
+        }
+        return;
+      }
       if (!isDirectiveNode(node)) {
         return;
       }
@@ -80,7 +188,29 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
                 claimedAuthoredSectionIds,
               )
             : interpretation.values;
-        if (directive.name === 'action') requireActionLabel(node);
+        if (directive.name === 'action') {
+          requireActionLabel(node);
+        }
+        if (
+          directive.name === 'glossary' &&
+          values.placement === 'appendix' &&
+          (!isTraversableNode(parent) || parent.type !== 'root')
+        ) {
+          throw directiveError(
+            node,
+            'INVALID_DIRECTIVE_PLACEMENT',
+            'A glossary definition placed in the appendix must be a top-level directive.',
+            'Move this appendix glossary outside lists, blockquotes, sections, and other directives.',
+          );
+        }
+        if (directive.name === 'source-link' && (node.children ?? []).length > 0) {
+          throw directiveError(
+            node,
+            'INVALID_DIRECTIVE_PLACEMENT',
+            'source-link accepts its visible label only through the label attribute.',
+            'Use :source-link{label="Short path:line" href="..."}.',
+          );
+        }
         attributesByNode.set(node, values);
         if (directive.name === 'glossary') {
           const key = String(interpretation.values.key);
@@ -102,7 +232,7 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
           termReferences.push({ key: String(interpretation.values.key), node });
         }
         options.observedDirectives?.add(directive.name);
-        node.data = renderDirective(directive, values);
+        node.data = renderDirective(directive, values, new Set(Object.keys(node.attributes ?? {})));
       } catch (error) {
         if (
           error instanceof AgenticReportError &&
@@ -148,6 +278,7 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
         );
       }
     }
+    validateCodeTermBlocks(codeTermBlocks, glossaryByKey, options);
     validateVisualizationData(tree, attributesByNode, options);
     validateActionGroups(tree, options);
     validateTypedReviewComponents(tree, attributesByNode, options);
@@ -394,19 +525,21 @@ function validateVisualizationData(
   }
 
   function validateDiagram(diagram: DirectiveNode): void {
-    const children = requireOnlyDirectiveChildren(diagram, ['node', 'edge']);
+    const children = requireOnlyDirectiveChildren(diagram, ['group', 'node', 'edge']);
+    const type = String(attributes(diagram).type);
+    const groups = children.filter((child) => child.name === 'group');
     const nodes = children.filter((child) => child.name === 'node');
     const edges = children.filter((child) => child.name === 'edge');
-    if (nodes.length < 1 || nodes.length > 12) {
-      fail(diagram, 'Diagrams require 1 to 12 nodes.', 'Add a node or split a large diagram.');
-    }
-    if (edges.length > 20) {
-      fail(diagram, 'Diagrams support at most 20 edges.', 'Split the diagram into smaller flows.');
-    }
     const ids = nodes.map((node) => String(attributes(node).id));
     if (new Set(ids).size !== ids.length) {
       fail(diagram, 'Diagram node ids must be unique.', 'Give every node a distinct id.');
     }
+    const groupIds = groups.map((group) => String(attributes(group).id));
+    if (new Set(groupIds).size !== groupIds.length) {
+      fail(diagram, 'Diagram group ids must be unique.', 'Give every group a distinct id.');
+    }
+    if (type === 'flow') validateFlowDiagram(diagram, groups, nodes, edges, groupIds);
+    else validateSequenceDiagram(diagram, groups, nodes, edges);
     const known = new Set(ids);
     for (const edge of edges) {
       const from = String(attributes(edge).from);
@@ -418,8 +551,150 @@ function validateVisualizationData(
           'Use ids declared by node directives in this diagram.',
         );
       }
-      if (from === to) {
-        fail(edge, 'Diagram self-edges are not supported.', 'Connect two distinct nodes.');
+      const selfConnectionAllowed =
+        type === 'sequence'
+          ? DIAGRAM_CONTRACT.sequence.selfMessages
+          : DIAGRAM_CONTRACT.flow.selfEdges;
+      if (from === to && !selfConnectionAllowed) {
+        fail(
+          edge,
+          type === 'sequence'
+            ? 'Sequence self-messages are not supported.'
+            : 'Diagram self-edges are not supported.',
+          'Connect two distinct nodes.',
+        );
+      }
+    }
+  }
+
+  function validateFlowDiagram(
+    diagram: DirectiveNode,
+    groups: readonly DirectiveNode[],
+    nodes: readonly DirectiveNode[],
+    edges: readonly DirectiveNode[],
+    groupIds: readonly string[],
+  ): void {
+    const contract = DIAGRAM_CONTRACT.flow;
+    if (nodes.length < contract.nodes.minimum || nodes.length > contract.nodes.maximum) {
+      fail(
+        diagram,
+        `Flow diagrams require ${contract.nodes.minimum} to ${contract.nodes.maximum} nodes.`,
+        'Add nodes or split a larger flow.',
+      );
+    }
+    if (edges.length > contract.edges.maximum) {
+      fail(
+        diagram,
+        `Flow diagrams support at most ${contract.edges.maximum} edges.`,
+        'Split the flow or remove non-essential connections.',
+      );
+    }
+    if (
+      groups.length !== contract.groups.ungrouped &&
+      (groups.length < contract.groups.minimum || groups.length > contract.groups.maximum)
+    ) {
+      fail(
+        diagram,
+        `Grouped flows require ${contract.groups.minimum} to ${contract.groups.maximum} groups.`,
+        'Remove all groups or declare the supported number of subsystem groups.',
+      );
+    }
+    if (groups.length > 0 && attributes(diagram).direction !== contract.groups.direction) {
+      fail(
+        diagram,
+        'Grouped flows support only rightward subsystem columns.',
+        'Use direction="right" or remove groups for an ungrouped down flow.',
+      );
+    }
+    const knownGroups = new Set(groupIds);
+    for (const node of nodes) {
+      const group = attributes(node).group;
+      if (groups.length === 0 && group !== undefined) {
+        fail(
+          node,
+          `Diagram node references an undeclared group: ${String(group)}.`,
+          'Declare the group or remove the group attribute.',
+        );
+      }
+      if (
+        groups.length > 0 &&
+        contract.groups.requireEveryNode &&
+        (group === undefined || !knownGroups.has(String(group)))
+      ) {
+        fail(
+          node,
+          group === undefined
+            ? 'Every node in a grouped flow requires a group.'
+            : `Diagram node references an unknown group: ${String(group)}.`,
+          'Reference one of the groups declared in this diagram.',
+        );
+      }
+    }
+    for (const group of groups) {
+      const id = String(attributes(group).id);
+      if (!nodes.some((node) => attributes(node).group === id)) {
+        fail(
+          group,
+          `Diagram group has no nodes: ${id}.`,
+          'Assign at least one node to this group.',
+        );
+      }
+    }
+  }
+
+  function validateSequenceDiagram(
+    diagram: DirectiveNode,
+    groups: readonly DirectiveNode[],
+    participants: readonly DirectiveNode[],
+    messages: readonly DirectiveNode[],
+  ): void {
+    const contract = DIAGRAM_CONTRACT.sequence;
+    if (!contract.groups && groups.length > 0) {
+      fail(
+        groups[0] ?? diagram,
+        'Sequence diagrams do not support subsystem groups.',
+        'Remove group directives and node group attributes.',
+      );
+    }
+    if (contract.direction === 'forbidden' && diagram.attributes?.direction !== undefined) {
+      fail(
+        diagram,
+        'Sequence diagrams do not accept a flow direction.',
+        'Remove the direction attribute from this sequence diagram.',
+      );
+    }
+    if (
+      participants.length < contract.participants.minimum ||
+      participants.length > contract.participants.maximum
+    ) {
+      fail(
+        diagram,
+        `Sequence diagrams require ${contract.participants.minimum} to ${contract.participants.maximum} participants.`,
+        'Adjust the number of node participants.',
+      );
+    }
+    if (
+      messages.length < contract.messages.minimum ||
+      messages.length > contract.messages.maximum
+    ) {
+      fail(
+        diagram,
+        `Sequence diagrams require ${contract.messages.minimum} to ${contract.messages.maximum} messages.`,
+        'Adjust the number of edge messages.',
+      );
+    }
+    for (const participant of participants) {
+      if (!contract.participantGroups && attributes(participant).group !== undefined) {
+        fail(
+          participant,
+          'Sequence participants do not accept a group.',
+          'Remove the group attribute.',
+        );
+      }
+    }
+    for (const message of messages) {
+      if (contract.messages.labelRequired && attributes(message).label === undefined) {
+        fail(message, 'Sequence messages require a label.', 'Add a label to this edge message.');
       }
     }
   }
@@ -476,6 +751,131 @@ interface GlossaryDefinition {
   readonly key: string;
   readonly term: string;
   readonly node: DirectiveNode;
+}
+
+function validateCodeTermBlocks(
+  blocks: readonly { readonly node: Code; readonly keys: readonly string[] }[],
+  glossaryByKey: ReadonlyMap<string, GlossaryDefinition>,
+  options: DirectivePluginOptions,
+): void {
+  for (const block of blocks) {
+    const ranges: Array<{
+      readonly key: string;
+      readonly term: string;
+      readonly start: number;
+      readonly end: number;
+    }> = [];
+    for (const key of block.keys) {
+      const definition = glossaryByKey.get(key);
+      if (definition === undefined) {
+        throw attachNodeSource(
+          new AgenticReportError({
+            level: 'error',
+            code: 'UNKNOWN_GLOSSARY_TERM',
+            message: `No glossary definition exists for code term key: ${key}.`,
+            remediation:
+              'Add a glossary definition with the same key or correct the code metadata.',
+            details: { key },
+          }),
+          block.node,
+          options,
+        );
+      }
+      const term = codeTermMatchText(definition, CODE_TERM_METADATA.matching.source);
+      const start = firstCodeTermIndex(block.node.value, term, CODE_TERM_METADATA.matching);
+      if (start === -1) {
+        throw attachNodeSource(
+          new AgenticReportError({
+            level: 'error',
+            code: 'CODE_TERM_NOT_FOUND',
+            message: `Code term ${key} does not occur as canonical text: ${term}.`,
+            remediation: 'Correct the key or include the exact canonical term in this code block.',
+            details: { key },
+          }),
+          block.node,
+          options,
+        );
+      }
+      const end = start + term.length;
+      if (
+        CODE_TERM_METADATA.matching.lineBoundary === 'reject' &&
+        block.node.value.slice(start, end).includes('\n')
+      ) {
+        throw attachNodeSource(
+          new AgenticReportError({
+            level: 'error',
+            code: 'INVALID_CODE_TERM_METADATA',
+            message: `Code term ${key} crosses a line boundary.`,
+            remediation: 'Use a glossary term that occurs within one code line.',
+            details: { key },
+          }),
+          block.node,
+          options,
+        );
+      }
+      ranges.push({ key, term, start, end });
+    }
+    const ordered = [...ranges].sort(
+      (left, right) => left.start - right.start || right.end - left.end,
+    );
+    for (let index = 1; index < ordered.length; index += 1) {
+      const previous = ordered[index - 1];
+      const current = ordered[index];
+      if (
+        CODE_TERM_METADATA.matching.overlap === 'reject' &&
+        previous !== undefined &&
+        current !== undefined &&
+        current.start < previous.end
+      ) {
+        throw attachNodeSource(
+          new AgenticReportError({
+            level: 'error',
+            code: 'OVERLAPPING_CODE_TERMS',
+            message: `Code terms ${previous.key} and ${current.key} overlap in their first occurrences.`,
+            remediation: 'Annotate only one of the overlapping glossary terms in this code block.',
+            details: { keys: [previous.key, current.key] },
+          }),
+          block.node,
+          options,
+        );
+      }
+    }
+  }
+}
+
+function codeTermMatchText(
+  definition: { readonly term: string },
+  source: CodeFenceMetadataDefinition['matching']['source'],
+): string {
+  switch (source) {
+    case 'canonical-glossary-term':
+      return definition.term;
+    default:
+      return unsupportedCodeMetadataContract(source);
+  }
+}
+
+function firstCodeTermIndex(
+  value: string,
+  term: string,
+  matching: CodeFenceMetadataDefinition['matching'],
+): number {
+  let searchableValue: string;
+  let searchableTerm: string;
+  switch (matching.caseSensitive) {
+    case true:
+      searchableValue = value;
+      searchableTerm = term;
+      break;
+    default:
+      return unsupportedCodeMetadataContract(matching.caseSensitive);
+  }
+  switch (matching.occurrence) {
+    case 'first':
+      return searchableValue.indexOf(searchableTerm);
+    default:
+      return unsupportedCodeMetadataContract(matching.occurrence);
+  }
 }
 
 interface TraversableNode {
@@ -835,6 +1235,14 @@ function attachDirectiveSource(
   node: DirectiveNode,
   options: DirectivePluginOptions,
 ): AgenticReportError {
+  return attachNodeSource(error, node, options);
+}
+
+function attachNodeSource(
+  error: AgenticReportError,
+  node: { readonly position?: SourcePosition | undefined },
+  options: DirectivePluginOptions,
+): AgenticReportError {
   const start = node.position?.start.offset;
   const end = node.position?.end.offset;
   if (start === undefined || end === undefined) return error;
@@ -976,6 +1384,7 @@ function skipQuotedValue(value: string, start: number, quote: '"' | "'"): number
 
 export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], HastRoot> =
   (options) => (tree) => {
+    const strings = packageStrings(options.language);
     const allocateId = createDocumentIdAllocator(tree, options);
     const glossary = new Map<
       string,
@@ -996,6 +1405,79 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
 
     let instance = 0;
     let glossaryReferenceInstance = 0;
+    const createGlossaryReference = (
+      key: string,
+      triggerChildren: ElementContent[],
+      classNames: readonly string[] = ['semantic-term'],
+    ): Element => {
+      const definition = glossary.get(key);
+      if (definition === undefined)
+        throw new Error(`Missing validated glossary definition: ${key}.`);
+      glossaryReferenceInstance += 1;
+      const panelId = allocateId(`glossary-reference-${glossaryReferenceInstance}`);
+      const panelTitleId = allocateId(`${panelId}-title`);
+      return {
+        type: 'element',
+        tagName: 'span',
+        properties: {
+          className: [...classNames],
+          dataTermReference: key,
+          dataPopover: '',
+          dataGlossaryReference: '',
+        },
+        children: [
+          {
+            type: 'element',
+            tagName: 'button',
+            properties: {
+              type: 'button',
+              ariaControls: [panelId],
+              ariaExpanded: 'false',
+              ariaHasPopup: 'dialog',
+              dataPopoverTrigger: '',
+              dataGlossaryTrigger: '',
+            },
+            children: triggerChildren,
+          },
+          {
+            type: 'element',
+            tagName: 'span',
+            properties: {
+              id: panelId,
+              role: 'dialog',
+              ariaLabelledBy: [panelTitleId],
+              hidden: '',
+              dataPopoverPanel: '',
+              dataGlossaryPanel: '',
+            },
+            children: [
+              {
+                type: 'element',
+                tagName: 'span',
+                properties: { id: panelTitleId, className: ['semantic-title'] },
+                children: [{ type: 'text', value: definition.term }],
+              },
+              {
+                type: 'element',
+                tagName: 'span',
+                properties: { className: ['semantic-glossary-explanation'] },
+                children: [{ type: 'text', value: definition.explanation }],
+              },
+              {
+                type: 'element',
+                tagName: 'a',
+                properties: {
+                  href: `#${definition.id}`,
+                  className: ['semantic-glossary-link'],
+                  dataGlossaryDefinitionLink: '',
+                },
+                children: [{ type: 'text', value: strings.viewFullDefinition }],
+              },
+            ],
+          },
+        ],
+      };
+    };
     visit(tree, 'element', (node: Element) => {
       if (
         node.tagName === 'a' &&
@@ -1004,8 +1486,12 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
       ) {
         node.children.push({
           type: 'text',
-          value: `Download ${assetLabel(node.properties.dataLocalAsset)}`,
+          value: strings.download(assetLabel(node.properties.dataLocalAsset)),
         });
+      }
+      const codeTermKeys = takeStringProperty(node, 'dataCodeTerms');
+      if (node.tagName === 'pre' && codeTermKeys !== undefined) {
+        enhanceCodeTerms(node, codeTermKeys.split(','), glossary, createGlossaryReference);
       }
       const semantic = stringProperty(node, 'dataSemantic');
       if (semantic === 'section') {
@@ -1016,121 +1502,274 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
         enhanceAction(node);
         return;
       }
+      if (semantic === 'source-link') {
+        enhanceSourceLink(node);
+        return;
+      }
       if (semantic !== undefined && ['chart', 'diagram', 'timeline'].includes(semantic)) {
         instance += 1;
-        enhanceVisualization(node, semantic, instance, allocateId);
+        enhanceVisualization(node, semantic, instance, allocateId, strings);
         return;
       }
       if (semantic === 'term') {
         const key = stringProperty(node, 'dataKey');
         const definition = key === undefined ? undefined : glossary.get(key);
         if (key !== undefined && definition !== undefined) {
-          glossaryReferenceInstance += 1;
-          const panelId = allocateId(`glossary-reference-${glossaryReferenceInstance}`);
-          const panelTitleId = allocateId(`${panelId}-title`);
-          node.tagName = 'span';
-          node.properties.dataTermReference = key;
-          node.properties.dataPopover = '';
-          node.properties.dataGlossaryReference = '';
-          node.children = [
-            {
-              type: 'element',
-              tagName: 'button',
-              properties: {
-                type: 'button',
-                ariaControls: [panelId],
-                ariaExpanded: 'false',
-                ariaHasPopup: 'dialog',
-                dataPopoverTrigger: '',
-                dataGlossaryTrigger: '',
-              },
-              children: [{ type: 'text', value: definition.term }],
-            },
-            {
-              type: 'element',
-              tagName: 'span',
-              properties: {
-                id: panelId,
-                role: 'dialog',
-                ariaLabelledBy: [panelTitleId],
-                hidden: '',
-                dataPopoverPanel: '',
-                dataGlossaryPanel: '',
-              },
-              children: [
-                {
-                  type: 'element',
-                  tagName: 'span',
-                  properties: { id: panelTitleId, className: ['semantic-title'] },
-                  children: [{ type: 'text', value: definition.term }],
-                },
-                {
-                  type: 'element',
-                  tagName: 'span',
-                  properties: { className: ['semantic-glossary-explanation'] },
-                  children: [{ type: 'text', value: definition.explanation }],
-                },
-                {
-                  type: 'element',
-                  tagName: 'a',
-                  properties: {
-                    href: `#${definition.id}`,
-                    className: ['semantic-glossary-link'],
-                    dataGlossaryDefinitionLink: '',
-                  },
-                  children: [{ type: 'text', value: 'View full definition' }],
-                },
-              ],
-            },
-          ];
-          delete node.properties.dataKey;
+          const authoredLabel = hastText(node) || definition.term;
+          const reference = createGlossaryReference(key, [{ type: 'text', value: authoredLabel }]);
+          node.tagName = reference.tagName;
+          node.properties = reference.properties;
+          node.children = reference.children;
         }
         return;
       }
       if (semantic === 'glossary') {
         const key = stringProperty(node, 'dataKey');
         const term = stringProperty(node, 'dataTerm');
+        const placement = takeStringProperty(node, 'dataPlacement') ?? 'inline';
         if (key !== undefined && term !== undefined) {
           node.properties.id = glossary.get(key)?.id ?? allocateId(`glossary-${key}`);
           node.children.unshift(semanticTitle(term));
+          if (placement === 'appendix') node.properties.dataGlossaryAppendixDefinition = '';
         }
         delete node.properties.dataKey;
         delete node.properties.dataTerm;
         return;
       }
       if (semantic === 'disclosure') {
-        enhanceDisclosure(node);
+        enhanceDisclosure(node, strings);
         return;
       }
       if (semantic === 'tabs') {
         instance += 1;
-        enhanceTabs(node, instance, allocateId);
+        enhanceTabs(node, instance, allocateId, strings);
         return;
       }
       if (semantic === 'modal') {
         instance += 1;
-        enhanceModal(node, instance, allocateId);
+        enhanceModal(node, instance, allocateId, strings);
         return;
       }
       if (semantic === 'popover') {
         instance += 1;
-        enhancePopover(node, instance, allocateId);
+        enhancePopover(node, instance, allocateId, strings);
         return;
       }
       if (semantic === 'filter') {
         instance += 1;
-        enhanceFilter(node, instance, allocateId);
+        enhanceFilter(node, instance, allocateId, strings);
         return;
       }
       if (semantic === 'toggle') {
         instance += 1;
-        enhanceToggle(node, instance, allocateId);
+        enhanceToggle(node, instance, allocateId, strings);
         return;
       }
       prependDirectiveTitle(node);
-      if ('dataDemoCounter' in node.properties) enhanceCounter(node);
+      if ('dataDemoCounter' in node.properties) enhanceCounter(node, strings);
     });
+    const appendixDefinitions = extractAppendixGlossaries(tree);
+    if (appendixDefinitions.length > 0) {
+      const appendixId = allocateId('glossary-appendix');
+      const titleId = allocateId(`${appendixId}-title`);
+      tree.children.push({
+        type: 'element',
+        tagName: 'aside',
+        properties: {
+          id: appendixId,
+          className: ['semantic-glossary-appendix'],
+          ariaLabelledBy: [titleId],
+          dataGlossaryAppendix: '',
+        },
+        children: [
+          {
+            type: 'element',
+            tagName: 'h2',
+            properties: {
+              id: titleId,
+              className: ['semantic-glossary-appendix-title'],
+              dataNavigationExclude: '',
+            },
+            children: [{ type: 'text', value: strings.glossary }],
+          },
+          ...appendixDefinitions,
+        ],
+      });
+    }
   };
+
+function enhanceCodeTerms(
+  pre: Element,
+  keys: readonly string[],
+  glossary: ReadonlyMap<
+    string,
+    { readonly term: string; readonly explanation: string; readonly id: string }
+  >,
+  createReference: (
+    key: string,
+    triggerChildren: ElementContent[],
+    classNames?: readonly string[],
+  ) => Element,
+): void {
+  const code = pre.children.find(
+    (child): child is Element => child.type === 'element' && child.tagName === 'code',
+  );
+  if (code === undefined) throw new Error('Highlighted code metadata is missing its code element.');
+  const lines = code.children.filter(
+    (child): child is Element => child.type === 'element' && hasClassName(child, 'line'),
+  );
+  const rangesByLine = new Map<
+    Element,
+    Array<{ readonly key: string; readonly start: number; readonly end: number }>
+  >();
+  for (const key of keys) {
+    const definition = glossary.get(key);
+    if (definition === undefined) throw new Error(`Missing validated code glossary key: ${key}.`);
+    const term = codeTermMatchText(definition, CODE_TERM_METADATA.matching.source);
+    let matched = false;
+    for (const line of lines) {
+      const start = firstCodeTermIndex(hastRawText(line), term, CODE_TERM_METADATA.matching);
+      if (start === -1) continue;
+      const ranges = rangesByLine.get(line) ?? [];
+      ranges.push({ key, start, end: start + term.length });
+      rangesByLine.set(line, ranges);
+      matched = true;
+      break;
+    }
+    if (!matched) throw new Error(`Highlighted code lost validated glossary term: ${key}.`);
+  }
+  for (const [line, ranges] of rangesByLine) {
+    for (const range of [...ranges].sort((left, right) => right.start - left.start)) {
+      const pieces = splitContentRange(line.children, range.start, range.end);
+      if (pieces.match.length === 0) {
+        throw new Error(`Highlighted code range is empty for glossary term: ${range.key}.`);
+      }
+      line.children = [
+        ...pieces.before,
+        createReference(range.key, pieces.match, ['semantic-term', 'semantic-code-term']),
+        ...pieces.after,
+      ];
+    }
+  }
+}
+
+function splitContentRange(
+  children: readonly ElementContent[],
+  start: number,
+  end: number,
+): {
+  readonly before: ElementContent[];
+  readonly match: ElementContent[];
+  readonly after: ElementContent[];
+} {
+  const before: ElementContent[] = [];
+  const match: ElementContent[] = [];
+  const after: ElementContent[] = [];
+  let offset = 0;
+  for (const child of children) {
+    const length = hastContentLength(child);
+    const childStart = offset;
+    const childEnd = offset + length;
+    offset = childEnd;
+    if (childEnd <= start) {
+      before.push(child);
+      continue;
+    }
+    if (childStart >= end) {
+      after.push(child);
+      continue;
+    }
+    const pieces = splitContentNode(
+      child,
+      Math.max(0, start - childStart),
+      Math.min(length, end - childStart),
+    );
+    before.push(...pieces.before);
+    match.push(...pieces.match);
+    after.push(...pieces.after);
+  }
+  return { before, match, after };
+}
+
+function splitContentNode(
+  node: ElementContent,
+  start: number,
+  end: number,
+): {
+  readonly before: ElementContent[];
+  readonly match: ElementContent[];
+  readonly after: ElementContent[];
+} {
+  if (node.type === 'text') {
+    return {
+      before:
+        node.value.slice(0, start).length === 0
+          ? []
+          : [{ ...node, value: node.value.slice(0, start) }],
+      match:
+        node.value.slice(start, end).length === 0
+          ? []
+          : [{ ...node, value: node.value.slice(start, end) }],
+      after: node.value.slice(end).length === 0 ? [] : [{ ...node, value: node.value.slice(end) }],
+    };
+  }
+  if (node.type !== 'element') {
+    return start === 0 && end > 0
+      ? { before: [], match: [node], after: [] }
+      : { before: [node], match: [], after: [] };
+  }
+  const pieces = splitContentRange(node.children, start, end);
+  return {
+    before: cloneElementPart(node, pieces.before),
+    match: cloneElementPart(node, pieces.match),
+    after: cloneElementPart(node, pieces.after),
+  };
+}
+
+function cloneElementPart(node: Element, children: ElementContent[]): ElementContent[] {
+  return children.length === 0 ? [] : [{ ...node, properties: { ...node.properties }, children }];
+}
+
+function hastContentLength(node: ElementContent): number {
+  if (node.type === 'text') return node.value.length;
+  if (node.type === 'element')
+    return node.children.reduce((total, child) => total + hastContentLength(child), 0);
+  return 0;
+}
+
+function hastRawText(node: Element): string {
+  const values: string[] = [];
+  const pending = [...node.children].reverse();
+  while (pending.length > 0) {
+    const child = pending.pop();
+    if (child?.type === 'text') values.push(child.value);
+    else if (child?.type === 'element') pending.push(...[...child.children].reverse());
+  }
+  return values.join('');
+}
+
+function hasClassName(node: Element, className: string): boolean {
+  const value = node.properties.className ?? node.properties.class;
+  return Array.isArray(value)
+    ? value.some((candidate) => candidate === className)
+    : typeof value === 'string' && value.split(/\s+/u).includes(className);
+}
+
+function extractAppendixGlossaries<Parent extends HastRoot | Element>(parent: Parent): Element[] {
+  const appendix: Element[] = [];
+  const retained: Array<Parent['children'][number]> = [];
+  for (const child of parent.children) {
+    if (child.type === 'element' && child.properties.dataGlossaryAppendixDefinition !== undefined) {
+      delete child.properties.dataGlossaryAppendixDefinition;
+      appendix.push(child);
+      continue;
+    }
+    if (child.type === 'element') appendix.push(...extractAppendixGlossaries(child));
+    retained.push(child);
+  }
+  parent.children = retained as Parent['children'];
+  return appendix;
+}
 
 function enhanceSection(node: Element, allocateId: (base: string) => string): void {
   const title = takeStringProperty(node, 'dataDirectiveTitle');
@@ -1206,6 +1845,19 @@ function enhanceAction(node: Element): void {
   node.children.unshift(decorativeIcon('arrow-right'));
 }
 
+function enhanceSourceLink(node: Element): void {
+  const label = takeStringProperty(node, 'dataLabel');
+  const href = takeStringProperty(node, 'dataHref');
+  if (label === undefined || href === undefined) {
+    throw new Error('Validated source-link is missing its label or href.');
+  }
+  node.properties.href = href;
+  node.properties.target = '_blank';
+  node.properties.rel = ['noopener', 'noreferrer'];
+  node.properties.dataSourceLink = '';
+  node.children = [decorativeIcon('arrow-right'), { type: 'text', value: label }];
+}
+
 function hastText(node: Element): string {
   const values: string[] = [];
   const pending = [...node.children].reverse();
@@ -1217,8 +1869,8 @@ function hastText(node: Element): string {
   return values.join(' ').replace(/\s+/gu, ' ').trim();
 }
 
-function enhanceDisclosure(node: Element): void {
-  const title = takeStringProperty(node, 'dataDirectiveTitle') ?? 'Details';
+function enhanceDisclosure(node: Element, strings: PackageStrings): void {
+  const title = takeStringProperty(node, 'dataDirectiveTitle') ?? strings.details;
   const open = takeStringProperty(node, 'dataOpen') === 'true';
   node.tagName = 'details';
   node.properties.dataDisclosure = '';
@@ -1231,7 +1883,12 @@ function enhanceDisclosure(node: Element): void {
   });
 }
 
-function enhanceTabs(node: Element, instance: number, allocateId: (base: string) => string): void {
+function enhanceTabs(
+  node: Element,
+  instance: number,
+  allocateId: (base: string) => string,
+  strings: PackageStrings,
+): void {
   const title = takeStringProperty(node, 'dataDirectiveTitle');
   const titleId = title === undefined ? undefined : allocateId(`tabs-${instance}-title`);
   const panels = node.children.filter(
@@ -1240,7 +1897,7 @@ function enhanceTabs(node: Element, instance: number, allocateId: (base: string)
   );
   const buttons: Element[] = [];
   panels.forEach((panel, index) => {
-    const label = takeStringProperty(panel, 'dataLabel') ?? `Tab ${index + 1}`;
+    const label = takeStringProperty(panel, 'dataLabel') ?? strings.tab(index + 1);
     const tabId = allocateId(`tabs-${instance}-tab-${index + 1}`);
     const panelId = allocateId(`tabs-${instance}-panel-${index + 1}`);
     panel.properties.id = panelId;
@@ -1273,7 +1930,7 @@ function enhanceTabs(node: Element, instance: number, allocateId: (base: string)
       properties: {
         role: 'tablist',
         ...(titleId === undefined
-          ? { ariaLabel: 'Content sections' }
+          ? { ariaLabel: strings.contentSections }
           : { ariaLabelledBy: [titleId] }),
         className: ['semantic-tab-list'],
       },
@@ -1283,9 +1940,14 @@ function enhanceTabs(node: Element, instance: number, allocateId: (base: string)
   ];
 }
 
-function enhanceModal(node: Element, instance: number, allocateId: (base: string) => string): void {
-  const title = takeStringProperty(node, 'dataDirectiveTitle') ?? 'Dialog';
-  const trigger = takeStringProperty(node, 'dataTrigger') ?? 'Open dialog';
+function enhanceModal(
+  node: Element,
+  instance: number,
+  allocateId: (base: string) => string,
+  strings: PackageStrings,
+): void {
+  const title = takeStringProperty(node, 'dataDirectiveTitle') ?? strings.dialog;
+  const trigger = takeStringProperty(node, 'dataTrigger') ?? strings.openDialog;
   const dialogId = allocateId(`modal-${instance}`);
   const titleId = allocateId(`${dialogId}-title`);
   const content = node.children;
@@ -1299,7 +1961,7 @@ function enhanceModal(node: Element, instance: number, allocateId: (base: string
       children: [
         semanticTitle(title, titleId),
         ...content,
-        actionButton('Close', { dataModalClose: '' }),
+        actionButton(strings.close, { dataModalClose: '' }),
       ],
     },
   ];
@@ -1309,9 +1971,10 @@ function enhancePopover(
   node: Element,
   instance: number,
   allocateId: (base: string) => string,
+  strings: PackageStrings,
 ): void {
-  const title = takeStringProperty(node, 'dataDirectiveTitle') ?? 'Details';
-  const trigger = takeStringProperty(node, 'dataTrigger') ?? 'Show details';
+  const title = takeStringProperty(node, 'dataDirectiveTitle') ?? strings.details;
+  const trigger = takeStringProperty(node, 'dataTrigger') ?? strings.showDetails;
   const panelId = allocateId(`popover-${instance}`);
   const titleId = allocateId(`${panelId}-title`);
   const content = node.children;
@@ -1342,9 +2005,10 @@ function enhanceFilter(
   node: Element,
   instance: number,
   allocateId: (base: string) => string,
+  strings: PackageStrings,
 ): void {
   const title = takeStringProperty(node, 'dataDirectiveTitle');
-  const placeholder = takeStringProperty(node, 'dataPlaceholder') ?? 'Filter items';
+  const placeholder = takeStringProperty(node, 'dataPlaceholder') ?? strings.filterItems;
   const inputId = allocateId(`filter-${instance}`);
   node.properties.dataFilter = '';
   node.children = [
@@ -1358,7 +2022,7 @@ function enhanceFilter(
           type: 'element',
           tagName: 'label',
           properties: { htmlFor: [inputId] },
-          children: [{ type: 'text', value: 'Filter' }],
+          children: [{ type: 'text', value: strings.filter }],
         },
         {
           type: 'element',
@@ -1382,9 +2046,10 @@ function enhanceToggle(
   node: Element,
   instance: number,
   allocateId: (base: string) => string,
+  strings: PackageStrings,
 ): void {
   const title = takeStringProperty(node, 'dataDirectiveTitle');
-  const label = takeStringProperty(node, 'dataLabel') ?? 'Toggle content';
+  const label = takeStringProperty(node, 'dataLabel') ?? strings.toggleContent;
   const active = takeStringProperty(node, 'dataDefault') === 'on';
   const panelId = allocateId(`toggle-${instance}`);
   const content = node.children;
@@ -1406,14 +2071,14 @@ function enhanceToggle(
   ];
 }
 
-function enhanceCounter(node: Element): void {
+function enhanceCounter(node: Element, strings: PackageStrings): void {
   const start = String(node.properties.dataStart ?? '0');
   node.children.push({
     type: 'element',
     tagName: 'div',
     properties: { className: ['semantic-demo-controls'] },
     children: [
-      actionButton('Increment', { dataDemoIncrement: '' }),
+      actionButton(strings.increment, { dataDemoIncrement: '' }),
       { type: 'text', value: ' ' },
       {
         type: 'element',
@@ -1490,6 +2155,10 @@ function isDirectiveNode(node: unknown): node is DirectiveNode {
   );
 }
 
+function isCodeNode(node: unknown): node is Code {
+  return typeof node === 'object' && node !== null && 'type' in node && node.type === 'code';
+}
+
 function requireDirectiveForm(node: DirectiveNode, directive: DirectiveDefinition): void {
   const form = directiveForm(node.type);
   if (form === undefined || !directive.forms.includes(form)) {
@@ -1560,6 +2229,8 @@ function allowedDirectiveChildren(
       return ['point'];
     case 'node-and-edge-directives':
       return ['node', 'edge'];
+    case 'group-node-and-edge-directives':
+      return ['group', 'node', 'edge'];
     case 'event-directives':
       return ['event'];
     case 'markdown':
@@ -1581,12 +2252,18 @@ function isTraversableNode(value: unknown): value is TraversableNode {
 function renderDirective(
   directive: DirectiveDefinition,
   values: Readonly<Record<string, string | number | boolean>>,
+  authoredAttributes: ReadonlySet<string>,
 ): NonNullable<DirectiveNode['data']> {
   const properties: Record<string, string | string[]> = {
     className: [directive.sanitizer.className],
   };
   for (const attribute of directive.attributes) {
     const value = values[attribute.name];
+    if (
+      !authoredAttributes.has(attribute.name) &&
+      LOCALIZED_DEFAULT_ATTRIBUTES.has(`${directive.name}.${attribute.name}`)
+    )
+      continue;
     if (value !== undefined) properties[attribute.renderProperty] = String(value);
   }
   switch (directive.behavior.renderer) {
@@ -1609,6 +2286,12 @@ function renderDirective(
   }
   return { hName: directive.sanitizer.tagName, hProperties: properties };
 }
+
+const LOCALIZED_DEFAULT_ATTRIBUTES = new Set([
+  'modal.trigger',
+  'popover.trigger',
+  'filter.placeholder',
+]);
 
 function directiveAttributeError(
   node: DirectiveNode,
@@ -1648,6 +2331,9 @@ function requiredAttributeRemediation(attribute: DirectiveAttributeDefinition): 
   if (attribute.invalidDiagnostic === 'INVALID_FONT_FAMILY') {
     return 'Add {family="Readable font name"} to the directive.';
   }
+  if (attribute.invalidDiagnostic === 'INVALID_SOURCE_LINK') {
+    return 'Add {href="http://127.0.0.1:PORT/open?path=%2Fabsolute%2Fpath&line=42"}.';
+  }
   if (attribute.invalidDiagnostic === 'INVALID_DIRECTIVE_LINK') {
     return `Add {${attribute.name}="#anchor"} or another safe link target to the directive.`;
   }
@@ -1664,6 +2350,9 @@ function invalidAttributeMessage(
   if (attribute.invalidDiagnostic === 'INVALID_FONT_FAMILY') {
     return 'font.family contains unsupported characters.';
   }
+  if (attribute.invalidDiagnostic === 'INVALID_SOURCE_LINK') {
+    return `${directiveName}.href must be an IPv4 loopback editor-helper URL with an absolute path and positive line.`;
+  }
   if (attribute.invalidDiagnostic === 'INVALID_DIRECTIVE_LINK') {
     return `${directiveName}.${attribute.name} must be a safe same-page, relative, HTTP(S), or email target.`;
   }
@@ -1679,6 +2368,9 @@ function invalidAttributeRemediation(attribute: DirectiveAttributeDefinition): s
   }
   if (attribute.invalidDiagnostic === 'INVALID_FONT_FAMILY') {
     return 'Use 1-80 letters, numbers, spaces, underscores, or hyphens.';
+  }
+  if (attribute.invalidDiagnostic === 'INVALID_SOURCE_LINK') {
+    return 'Use http://127.0.0.1:PORT/open?path=%2Fabsolute%2Fpath&line=LINE.';
   }
   if (attribute.invalidDiagnostic === 'INVALID_DIRECTIVE_LINK') {
     return 'Use #anchor, a relative path, https:// or http:// URL, or mailto: address.';

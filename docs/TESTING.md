@@ -33,6 +33,8 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   diagnostics, both output formats and their derived runtime placement, truthful discovery/schema defaults,
   declared Node.js floor comparison and below-floor diagnostic behavior,
   manifest/frontmatter provenance, entry/partial diagnostic source maps, source/output collision protection,
+  closed en/ru reader-locale resolution, unsupported/`und` English fallback, Russian count forms,
+  localized review binding/target fallbacks, and explicit-locale visualization number formatting,
   deterministic review-target manifests and local-input revisions, strict canonical review JSON,
   exact/changed/missing/ambiguous entry/partial binding, confined review paths, and sanitized review transport,
   exact serialized inline-size accounting, canonical and hard-link source/output collision protection,
@@ -52,7 +54,13 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   hash ownership without `IntersectionObserver`, desktop collapse,
   native-dialog mobile
   focus containment/return, normal/reduced-motion progress and one-time reveal, themes, visible focus,
-  locally scrolling wide tables, built-in demo and code-copy interactions, embedded single-file and
+  locally scrolling wide tables, protected loopback source-location links that preserve the report page,
+  authored glossary forms, first-only color-preserving code glossary references, clean code copying,
+  appendix navigation, 15–20-node grouped flows, ordered sequence messages, diagram geometry and accessible
+  descriptions, built-in demo interactions, input-derived Russian shell/runtime chrome, controlled copy
+  success/failure, localized filter counts, glossary/modal/popover/demo/visualization states, textless
+  review-target accessible labels, Russian Review Workspace add/edit/resolve/reopen/import states and stale
+  prior classifications, non-English-browser independence for unsupported/`und` fallback, embedded single-file and
   external directory runtimes, and representative architecture, tutorial, work-report, and landing-page
   artifacts. The document, dashboard, landing, and mixed examples are built and exercised through
   `file://` in desktop and mobile profiles, including their page data contract and local images. All six

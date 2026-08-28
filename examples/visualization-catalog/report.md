@@ -65,14 +65,55 @@ deterministic SVG or semantic HTML; the page performs no visualization-time netw
 
 ## Compilation flow
 
-:::diagram{title="Offline compilation flow" description="Validated local source moves through preparation and deterministic rendering into a portable artifact." direction="right"}
-::node{id="source" label="Declarative source" kind="accent"}
-::node{id="validate" label="Validate data" kind="neutral"}
-::node{id="render" label="Compile visuals" kind="success"}
-::node{id="artifact" label="Portable artifact" kind="accent"}
+:::diagram{title="Offline compilation flow" description="Fifteen participants across authoring, compilation, and artifact subsystems." type="flow"}
+::group{id="authoring" label="Authoring graph"}
+::group{id="compiler" label="Compiler pipeline"}
+::group{id="artifact" label="Portable artifact"}
+::node{id="source" label="Declarative source" group="authoring" kind="accent"}
+::node{id="partials" label="Markdown partials" group="authoring"}
+::node{id="assets" label="Local assets" group="authoring"}
+::node{id="manifest" label="Manifest metadata" group="authoring"}
+::node{id="review" label="Review sidecar" group="authoring"}
+::node{id="validate" label="Validate data" group="compiler"}
+::node{id="confine" label="Confine resources" group="compiler"}
+::node{id="highlight" label="Highlight code" group="compiler"}
+::node{id="render" label="Compile visuals" group="compiler" kind="success"}
+::node{id="serialize" label="Serialize output" group="compiler"}
+::node{id="html" label="Semantic HTML" group="artifact"}
+::node{id="styles" label="Package styles" group="artifact"}
+::node{id="runtime" label="Reader runtime" group="artifact"}
+::node{id="targets" label="Review targets" group="artifact"}
+::node{id="portable" label="Portable artifact" group="artifact" kind="accent"}
 ::edge{from="source" to="validate" label="parse"}
-::edge{from="validate" to="render" label="typed model"}
-::edge{from="render" to="artifact" label="HTML + SVG"}
+::edge{from="partials" to="validate" label="expand"}
+::edge{from="assets" to="confine" label="resolve"}
+::edge{from="manifest" to="validate" label="normalize"}
+::edge{from="review" to="targets" label="bind"}
+::edge{from="validate" to="confine" label="typed graph"}
+::edge{from="confine" to="highlight" label="safe source"}
+::edge{from="highlight" to="render" label="styled HAST"}
+::edge{from="render" to="serialize" label="semantic tree"}
+::edge{from="serialize" to="html" label="document"}
+::edge{from="serialize" to="styles" label="theme"}
+::edge{from="serialize" to="runtime" label="behavior"}
+::edge{from="serialize" to="targets" label="provenance"}
+::edge{from="html" to="portable" label="assemble"}
+::edge{from="styles" to="portable" label="package"}
+::edge{from="runtime" to="portable" label="interact"}
+::edge{from="targets" to="portable" label="review"}
+:::
+
+## Compile request sequence
+
+:::diagram{title="Compile request sequence" description="One offline build crosses four participants in authored message order." type="sequence"}
+::node{id="agent" label="Authoring agent"}
+::node{id="loader" label="Source loader"}
+::node{id="compiler" label="Compiler"}
+::node{id="browser" label="Browser"}
+::edge{from="agent" to="loader" label="load source"}
+::edge{from="loader" to="compiler" label="validated graph"}
+::edge{from="compiler" to="browser" label="write artifact"}
+::edge{from="browser" to="agent" label="review result"}
 :::
 
 ## Delivery path

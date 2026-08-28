@@ -134,6 +134,7 @@
         { "$ref": "#/$defs/section" },
         { "$ref": "#/$defs/actions" },
         { "$ref": "#/$defs/action" },
+        { "$ref": "#/$defs/source-link" },
         { "$ref": "#/$defs/callout" },
         { "$ref": "#/$defs/decision" },
         { "$ref": "#/$defs/decision-option" },
@@ -155,6 +156,7 @@
         { "$ref": "#/$defs/series" },
         { "$ref": "#/$defs/point" },
         { "$ref": "#/$defs/diagram" },
+        { "$ref": "#/$defs/group" },
         { "$ref": "#/$defs/node" },
         { "$ref": "#/$defs/edge" },
         { "$ref": "#/$defs/timeline" },
@@ -251,6 +253,32 @@
             }
           },
           "required": ["href"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "source-link": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "source-link" },
+        "form": { "type": "string", "enum": ["text"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Short visible source path and line."
+            },
+            "href": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:http://127\\.0\\.0\\.1:(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])/open\\?path=(?:%2[Ff]|/)[^\\s<>&#]+&line=[1-9][0-9]{0,8})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,998}\\S))\\s*$",
+              "description": "IPv4 loopback editor-helper URL with an absolute path and positive source line."
+            }
+          },
+          "required": ["label", "href"]
         }
       },
       "required": ["name", "form", "attributes"]
@@ -472,7 +500,13 @@
             "term": {
               "type": "string",
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
-              "description": "Canonical term text inserted at every reference."
+              "description": "Canonical glossary identity and explanation title."
+            },
+            "placement": {
+              "type": "string",
+              "enum": ["inline", "appendix"],
+              "description": "Definition location in the authored flow or, for a top-level definition, one package-owned reference appendix.",
+              "default": "inline"
             }
           },
           "required": ["key", "term"]
@@ -792,6 +826,12 @@
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,298}\\S))\\s*$",
               "description": "Meaningful plain-text description for the visual."
             },
+            "type": {
+              "type": "string",
+              "enum": ["flow", "sequence"],
+              "description": "Diagram form.",
+              "default": "flow"
+            },
             "direction": {
               "type": "string",
               "enum": ["right", "down"],
@@ -800,6 +840,32 @@
             }
           },
           "required": ["title", "description"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "group" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Unique group identity within the diagram."
+            },
+            "label": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Visible group label."
+            }
+          },
+          "required": ["id", "label"]
         }
       },
       "required": ["name", "form", "attributes"]
@@ -823,6 +889,11 @@
               "type": "string",
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
               "description": "Visible node label."
+            },
+            "group": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Optional subsystem group identity for this node."
             },
             "kind": {
               "type": "string",

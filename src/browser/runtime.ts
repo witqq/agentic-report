@@ -1,10 +1,12 @@
 import './document.css';
 
 import { COPY_ICON_PATH } from '../iconography.js';
+import { packageStrings } from '../localization.js';
 import { PAGE_MOTION_POLICY } from '../page-motion.js';
 import { installReviewWorkspace } from './review-workspace.js';
 
 const root = document.documentElement;
+const strings = packageStrings(root.dataset.packageLocale);
 root.style.setProperty(
   '--motion-reveal-duration',
   `${PAGE_MOTION_POLICY.sectionReveal.durationMs}ms`,
@@ -214,7 +216,7 @@ for (const block of document.querySelectorAll<HTMLElement>('pre')) {
   button.dataset.copyCode = '';
   const label = document.createElement('span');
   label.dataset.copyCodeLabel = '';
-  label.textContent = 'Copy';
+  label.textContent = strings.copy;
   button.append(createCopyIcon(), label);
   block.append(button);
 }
@@ -362,8 +364,11 @@ function createNavigationController(): NavigationController | undefined {
     navigation.hidden = !desktopExpanded;
     root.toggleAttribute('data-nav-collapsed', !desktopExpanded);
     toggle.setAttribute('aria-expanded', String(desktopExpanded));
-    toggle.setAttribute('aria-label', desktopExpanded ? 'Hide contents' : 'Show contents');
-    toggleLabel.textContent = desktopExpanded ? 'Hide contents' : 'Show contents';
+    toggle.setAttribute(
+      'aria-label',
+      desktopExpanded ? strings.hideContents : strings.showContents,
+    );
+    toggleLabel.textContent = desktopExpanded ? strings.hideContents : strings.showContents;
   };
 
   const applyViewport = (): void => {
@@ -387,8 +392,8 @@ function createNavigationController(): NavigationController | undefined {
     root.removeAttribute('data-nav-collapsed');
     toggle.setAttribute('aria-controls', dialog.id);
     toggle.setAttribute('aria-expanded', 'false');
-    toggle.setAttribute('aria-label', 'Open contents');
-    toggleLabel.textContent = 'Contents';
+    toggle.setAttribute('aria-label', strings.openContents);
+    toggleLabel.textContent = strings.contents;
   };
 
   const closeMobile = (restoreFocus: boolean): void => {
@@ -402,7 +407,7 @@ function createNavigationController(): NavigationController | undefined {
     dialog.showModal();
     setOutsideInert(true);
     toggle.setAttribute('aria-expanded', 'true');
-    toggle.setAttribute('aria-label', 'Close contents');
+    toggle.setAttribute('aria-label', strings.closeContents);
     close.focus();
   };
 
@@ -451,7 +456,7 @@ function createNavigationController(): NavigationController | undefined {
       updateDesktopState();
     } else {
       toggle.setAttribute('aria-expanded', 'false');
-      toggle.setAttribute('aria-label', 'Open contents');
+      toggle.setAttribute('aria-label', strings.openContents);
     }
     const target = focusAfterClose ?? toggle;
     focusAfterClose = undefined;
@@ -699,19 +704,24 @@ function applyFilter(input: HTMLInputElement): void {
     item.hidden = !item.textContent?.toLocaleLowerCase().includes(query);
     if (!item.hidden) visible += 1;
   }
-  if (output !== null) output.textContent = `${visible} ${visible === 1 ? 'item' : 'items'}`;
+  if (output !== null) output.textContent = strings.items(visible);
 }
 
 async function copyCode(button: HTMLButtonElement): Promise<void> {
-  const text = button.closest('pre')?.querySelector('code')?.textContent ?? '';
+  const code = button.closest('pre')?.querySelector('code');
+  const copy = code?.cloneNode(true);
+  if (copy instanceof HTMLElement) {
+    for (const panel of copy.querySelectorAll('[data-glossary-panel]')) panel.remove();
+  }
+  const text = copy?.textContent ?? '';
   const label = button.querySelector<HTMLElement>('[data-copy-code-label]') ?? button;
   try {
     await navigator.clipboard.writeText(text);
-    label.textContent = 'Copied';
+    label.textContent = strings.copied;
   } catch {
-    label.textContent = 'Copy unavailable';
+    label.textContent = strings.copyUnavailable;
   }
   window.setTimeout(() => {
-    label.textContent = 'Copy';
+    label.textContent = strings.copy;
   }, 1200);
 }

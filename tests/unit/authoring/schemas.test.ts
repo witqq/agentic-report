@@ -21,6 +21,7 @@ import { authoringRegistry } from '../../../src/authoring/registry.js';
 import type {
   AuthoringRegistryDefinition,
   ConstraintDefinition,
+  DirectiveAttributeDefinition,
   DirectiveDefinition,
   FieldDefinition,
 } from '../../../src/authoring/registry.js';
@@ -588,7 +589,7 @@ describe('authoring schema projections', () => {
       const attributes = Object.fromEntries(
         directive.attributes
           .filter((attribute) => attribute.required)
-          .map((attribute) => [attribute.name, validAttributeValue(attribute.constraint.kind)]),
+          .map((attribute) => [attribute.name, validAttributeValue(attribute)]),
       );
       for (const form of directive.forms) {
         const valid = accepted(`${directive.name}/${form}`, {
@@ -603,7 +604,7 @@ describe('authoring schema projections', () => {
         );
 
         for (const attribute of directive.attributes) {
-          for (const [value, expected] of attributeCases(attribute.constraint)) {
+          for (const [value, expected] of attributeCases(attribute)) {
             const fixture: ValidationFixture = {
               label: `${directive.name}/${form}.${attribute.name}=${String(value)}`,
               value: {
@@ -998,17 +999,36 @@ function safeParseManifestFromRegistry(
   }
 }
 
-function validAttributeValue(
-  kind: 'string' | 'integer' | 'number' | 'boolean' | 'enum',
-): string | number | boolean {
+function validAttributeValue(attribute: DirectiveAttributeDefinition): string | number | boolean {
+  if (attribute.invalidDiagnostic === 'INVALID_SOURCE_LINK') {
+    return 'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42';
+  }
+  const kind = attribute.constraint.kind;
   if (kind === 'integer' || kind === 'number') return 1;
   if (kind === 'boolean') return true;
   return 'value';
 }
 
 function attributeCases(
-  constraint: ConstraintDefinition,
+  attribute: DirectiveAttributeDefinition,
 ): readonly (readonly [unknown, boolean])[] {
+  if (attribute.invalidDiagnostic === 'INVALID_SOURCE_LINK') {
+    const valid = 'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42';
+    return [
+      [valid, true],
+      [`  ${valid}  `, true],
+      ['http://127.0.0.1:65535/open?path=%2Fworkspace%2Ffile.ts&line=42', true],
+      ['http://127.0.0.1:7789/open?path=relative.ts&line=42', false],
+      ['http://localhost:7789/open?path=%2Fworkspace%2Ffile.ts&line=42', false],
+      ['http://127.0.0.1:65536/open?path=%2Fworkspace%2Ffile.ts&line=42', false],
+      ['http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=0', false],
+      ['', false],
+      [1, false],
+      [null, false],
+      ['x'.repeat(1001), false],
+    ];
+  }
+  const constraint = attribute.constraint;
   switch (constraint.kind) {
     case 'string': {
       const valid = constraint.format === 'relative-local-path' ? 'assets/value.bin' : 'value';

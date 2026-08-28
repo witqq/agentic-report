@@ -35,6 +35,7 @@ export interface SourceContract {
     readonly runtimePlacement: typeof authoringRegistry.output.runtimePlacement;
   };
   readonly page: PublicPageContract;
+  readonly visualizations: typeof authoringRegistry.visualizations;
   readonly safety: readonly string[];
   readonly capabilities: Readonly<Record<string, string>>;
   readonly commands: Readonly<Record<string, string>>;
@@ -134,6 +135,7 @@ function createSourceContract(): SourceContract {
         precedence: ['selected-preset', 'explicit-tokens'],
       },
     },
+    visualizations: authoringRegistry.visualizations,
     safety: [
       'canonical source-root confinement',
       'local resources only',

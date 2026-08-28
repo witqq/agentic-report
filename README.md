@@ -35,12 +35,18 @@ also contain:
 - `agentic-report.yaml`, `agentic-report.yml`, or `agentic-report.json`;
 - local images referenced by relative paths;
 - Markdown partials included as `{{include: partials/summary.md}}`;
-- semantic directives for labelled page sections, action links, content, interactions, compile-time
+- semantic directives for labelled page sections, action and source-location links, authored/code glossary references, content, interactions, compile-time
   charts/diagrams/timelines, safe built-in demos, downloads, and fonts.
+
+Set frontmatter or manifest `language` to `ru` (including subtags such as `ru-RU`) for Russian
+package-owned reader controls, interaction states, accessibility labels, visualization descriptions, and
+Review Workspace. `en`, the default `und`, and unsupported languages use a complete English fallback. This
+choice comes only from the input; it does not follow the browser locale and never translates authored
+Markdown or CLI diagnostics.
 
 Example:
 
-```markdown
+````markdown
 ---
 title: Architecture options
 description: Decision report
@@ -69,11 +75,27 @@ The compiler owns responsive layout and navigation.
 ::action[Review the decision]{href="#decision" kind="primary"}
 ::action[Open the evidence]{href="evidence.html" kind="secondary"}
 :::
-::::
+
+Inspect :source-link{label="src/render/directives.ts:42" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42"}.
+
+Traversal continues through :term[concepts]{key="concept"}.
+
+```typescript terms="concept"
+const concept = compileSource();
 ```
+
+::::
+
+:::glossary{key="concept" term="concept" placement="appendix"}
+One canonical definition shared by prose forms and selected first code occurrences.
+:::
+````
 
 See [`docs/product/source-contract.md`](docs/product/source-contract.md) for the complete declarative
 source contract.
+`source-link` is an optional local-workstation integration: its full absolute path remains in the generated
+HTML even though the page shows a short label. Remove or replace it before public distribution when local
+directory disclosure or machine-specific links are not acceptable.
 
 Agents can retrieve the same closed contract through `getSourceContract()`,
 `getAuthoringSchema('manifest' | 'directives' | 'source')`, and `listExamples()` from the ESM API. Checked
@@ -120,6 +142,8 @@ numbered contents, and package-owned action icons. These are closed validated va
 `examples/layout-*` demonstrate every layout and are listed by
 `agentic-report examples --json`; `examples/interactive-catalog` and `examples/visualization-catalog`
 demonstrate the package-owned interaction and data primitives.
+The visualization catalog includes a 15-node grouped subsystem flow and an ordered compile-request sequence;
+both use the same bounded `diagram`/`group`/`node`/`edge` directives and compile offline.
 
 Authors may replace heading-only structure with top-level `section` directives. Each section owns a
 visible H2 and a stable anchor, plus closed reading/standard/wide tracks, start/center alignment, and

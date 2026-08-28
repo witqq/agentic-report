@@ -35,6 +35,7 @@ export default async function globalSetup(): Promise<void> {
       '![Runtime placement](runtime-placement.svg)',
       '### Static path',
       'Choose a self-contained output when portability is the priority.',
+      'Inspect :source-link{label="src/render/directives.ts:42" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42"}.',
       '```ts',
       "const output = 'single-file';",
       '```',
@@ -93,6 +94,11 @@ export default async function globalSetup(): Promise<void> {
   const presetFixtures = ['studio', 'editorial', 'signal'] as const;
   const navigationSource = path.join(fixtureRoot, 'navigation-source');
   const reviewSource = path.join(fixtureRoot, 'review-source');
+  const glossaryCodeSource = path.join(fixtureRoot, 'glossary-code-source');
+  const diagramTourSource = path.join(fixtureRoot, 'diagram-tour-source');
+  const russianChromeSource = path.join(fixtureRoot, 'russian-chrome-source');
+  const russianPriorSource = path.join(fixtureRoot, 'russian-prior-source');
+  const fallbackChromeSource = path.join(fixtureRoot, 'fallback-chrome-source');
   const layoutExamples = [
     'layout-document',
     'layout-dashboard',
@@ -105,6 +111,73 @@ export default async function globalSetup(): Promise<void> {
     'launch-readiness',
   ] as const;
   const starters = listExamples().filter((example) => example.starter !== undefined);
+  await mkdir(russianChromeSource, { recursive: true });
+  await writeFile(
+    path.join(russianChromeSource, 'report.md'),
+    [
+      '---',
+      'title: Русский интерфейс отчёта',
+      'language: ru-RU',
+      '---',
+      '# Русский интерфейс отчёта',
+      'Пакет локализует собственные элементы, но сохраняет авторский текст.',
+      '## Навигация',
+      '```ts',
+      "const locale = 'ru';",
+      '```',
+      ':::filter{title="Возможности"}',
+      '',
+      '- Копирование кода',
+      '- Поиск по списку',
+      ':::',
+      'Термин :term[Локус]{key="locus"} открывает пояснение.',
+      ':::modal{title="Проверка модального окна"}',
+      'Содержимое модального окна.',
+      ':::',
+      ':::popover{title="Контекстная справка"}',
+      'Содержимое контекстной справки.',
+      ':::',
+      ':::demo{title="Счётчик" start="1" step="1"}',
+      'Безопасное встроенное действие.',
+      ':::',
+      '::::chart{type="bar" title="Наблюдения" description="Два наблюдения."}',
+      ':::series{label="Результат"}',
+      '::point{label="А" value="1234.5"}',
+      '::point{label="Б" value="2"}',
+      ':::',
+      '::::',
+      ':::diagram{title="Поток" description="Два связанных узла." type="flow"}',
+      '::node{id="first" label="Первый"}',
+      '::node{id="second" label="Второй"}',
+      '::edge{from="first" to="second" label="переход"}',
+      ':::',
+      '',
+      '---',
+      '',
+      '## Обсуждение',
+      'Этот блок доступен для ревью.',
+      ':::glossary{key="locus" term="Локус" placement="appendix"}',
+      'Каноническое определение для проверки полного перехода.',
+      ':::',
+    ].join('\n'),
+  );
+  await mkdir(fallbackChromeSource, { recursive: true });
+  await writeFile(
+    path.join(fallbackChromeSource, 'report.md'),
+    [
+      '---',
+      'title: Deterministic fallback',
+      'language: und',
+      '---',
+      '# Deterministic fallback',
+      '## First section',
+      '```ts',
+      'const fallback = true;',
+      '```',
+      '## Second section',
+      'Authored content remains unchanged.',
+    ].join('\n'),
+  );
   for (const fixture of representativeSources) {
     const fixtureSource = path.join(fixtureRoot, `${fixture.name}-source`);
     await mkdir(fixtureSource, { recursive: true });
@@ -215,6 +288,89 @@ export default async function globalSetup(): Promise<void> {
       ':::',
     ].join('\n\n'),
   );
+  await mkdir(glossaryCodeSource, { recursive: true });
+  await writeFile(
+    path.join(glossaryCodeSource, 'report.md'),
+    [
+      '---',
+      'title: Code glossary fixture',
+      'language: en',
+      'layout: document',
+      'theme: light',
+      'preset: editorial',
+      '---',
+      '# Code glossary fixture',
+      '## Prose forms',
+      'Traversal continues through :term[concepts]{key="concept"}.',
+      '## Highlighted code',
+      '```typescript terms="own-field,node-type"',
+      '@d.def(Node) accessor child!: Node;',
+      '@d.def(Node) accessor sibling!: Node;',
+      '```',
+      '```typescript',
+      '@d.def(Node) accessor child!: Node;',
+      '@d.def(Node) accessor sibling!: Node;',
+      '```',
+      ':::glossary{key="concept" term="concept"}',
+      'Canonical prose definition.',
+      ':::',
+      ':::glossary{key="own-field" term="@d.def" placement="appendix"}',
+      'Field ownership decorator.',
+      ':::',
+      ':::glossary{key="node-type" term="Node" placement="appendix"}',
+      'Canonical node type.',
+      ':::',
+    ].join('\n'),
+  );
+  await mkdir(diagramTourSource, { recursive: true });
+  const diagramGroups = ['source', 'compiler', 'reader'] as const;
+  const diagramNodes = Array.from({ length: 18 }, (_, index) => {
+    const group = diagramGroups[Math.floor(index / 6)] ?? diagramGroups[0];
+    return `::node{id="step-${index + 1}" label="Step ${index + 1} detail" group="${group}" kind="${index % 3 === 0 ? 'accent' : 'neutral'}"}`;
+  });
+  const diagramEdges = Array.from(
+    { length: 17 },
+    (_, index) =>
+      `::edge{from="step-${index + 1}" to="step-${index + 2}" label="handoff ${index + 1}"}`,
+  );
+  await writeFile(
+    path.join(diagramTourSource, 'report.md'),
+    [
+      '---',
+      'title: Code tour diagrams',
+      'language: en',
+      'layout: document',
+      'theme: light',
+      'preset: editorial',
+      'tokens:',
+      '  width: wide',
+      '---',
+      '# Code tour diagrams',
+      '## Grouped flow',
+      ':::diagram{title="Code tour grouped flow" description="Eighteen participants across three subsystems." type="flow"}',
+      '::group{id="source" label="Authentication and authorization services"}',
+      '::group{id="compiler" label="Compiler pipeline"}',
+      '::group{id="reader" label="Reader artifact"}',
+      ...diagramNodes,
+      ...diagramEdges,
+      '::edge{from="step-1" to="step-4" label="validated shortcut"}',
+      '::edge{from="step-5" to="step-17" label="evidence bypass"}',
+      '::edge{from="step-2" to="step-9" label="second subsystem handoff"}',
+      '::edge{from="step-18" to="step-3" label="reverse feedback"}',
+      ':::',
+      '## Sequence',
+      ':::diagram{title="Compile request sequence" description="A request crosses four participants." type="sequence"}',
+      '::node{id="agent" label="Authoring agent"}',
+      '::node{id="loader" label="Source loader"}',
+      '::node{id="compiler" label="Compiler"}',
+      '::node{id="browser" label="Browser"}',
+      '::edge{from="agent" to="loader" label="load source"}',
+      '::edge{from="loader" to="compiler" label="validated graph"}',
+      '::edge{from="compiler" to="browser" label="write artifact"}',
+      '::edge{from="browser" to="agent" label="review result"}',
+      ':::',
+    ].join('\n'),
+  );
   await Promise.all([
     buildReport({ input: source, output: singleOutput }),
     buildReport({
@@ -262,6 +418,42 @@ export default async function globalSetup(): Promise<void> {
     buildReport({
       input: reviewSource,
       output: path.join(fixtureRoot, 'review-directory'),
+      format: 'directory',
+    }),
+    buildReport({
+      input: glossaryCodeSource,
+      output: path.join(fixtureRoot, 'glossary-code.html'),
+    }),
+    buildReport({
+      input: glossaryCodeSource,
+      output: path.join(fixtureRoot, 'glossary-code-directory'),
+      format: 'directory',
+    }),
+    buildReport({
+      input: diagramTourSource,
+      output: path.join(fixtureRoot, 'diagram-tour.html'),
+    }),
+    buildReport({
+      input: diagramTourSource,
+      output: path.join(fixtureRoot, 'diagram-tour-directory'),
+      format: 'directory',
+    }),
+    buildReport({
+      input: russianChromeSource,
+      output: path.join(fixtureRoot, 'russian-chrome.html'),
+    }),
+    buildReport({
+      input: russianChromeSource,
+      output: path.join(fixtureRoot, 'russian-chrome-directory'),
+      format: 'directory',
+    }),
+    buildReport({
+      input: fallbackChromeSource,
+      output: path.join(fixtureRoot, 'fallback-chrome.html'),
+    }),
+    buildReport({
+      input: fallbackChromeSource,
+      output: path.join(fixtureRoot, 'fallback-chrome-directory'),
       format: 'directory',
     }),
     buildReport({
@@ -318,6 +510,101 @@ export default async function globalSetup(): Promise<void> {
       format: 'directory',
     }),
   ]);
+  await mkdir(russianPriorSource, { recursive: true });
+  const russianPriorEntry = path.join(russianPriorSource, 'report.md');
+  await writeFile(
+    russianPriorEntry,
+    await readFile(path.join(russianChromeSource, 'report.md'), 'utf8'),
+  );
+  const russianPriorBase = path.join(fixtureRoot, 'russian-prior-base.html');
+  await buildReport({ input: russianPriorSource, output: russianPriorBase });
+  const russianPriorEncoded = /<template data-review-manifest="true">([\s\S]*?)<\/template>/u.exec(
+    await readFile(russianPriorBase, 'utf8'),
+  )?.[1];
+  if (russianPriorEncoded === undefined) throw new Error('Missing Russian prior manifest');
+  const russianPriorManifest = JSON.parse(
+    russianPriorEncoded
+      .replaceAll('&quot;', '"')
+      .replaceAll('&#x27;', "'")
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&amp;', '&'),
+  ) as {
+    reportRevision: string;
+    targets: Array<{
+      id: string;
+      kind: string;
+      fingerprint: string;
+      source: { file: string; line: number; column: number; endLine: number; endColumn: number };
+    }>;
+  };
+  const russianPriorSourceText = await readFile(russianPriorEntry, 'utf8');
+  const changedLine =
+    russianPriorSourceText
+      .split('\n')
+      .indexOf('Пакет локализует собственные элементы, но сохраняет авторский текст.') + 1;
+  const exactLine = russianPriorSourceText.split('\n').indexOf('## Навигация') + 1;
+  const changedTarget = russianPriorManifest.targets.find(
+    (target) => target.kind === 'markdown:paragraph' && target.source.line === changedLine,
+  );
+  const exactTarget = russianPriorManifest.targets.find(
+    (target) => target.kind === 'markdown:heading' && target.source.line === exactLine,
+  );
+  if (changedTarget === undefined || exactTarget === undefined)
+    throw new Error('Missing Russian prior targets');
+  await writeFile(
+    path.join(russianPriorSource, 'prior.json'),
+    serializeReviewArtifact({
+      contractVersion: 2,
+      report: { revision: russianPriorManifest.reportRevision },
+      threads: [
+        {
+          id: 'thread-russian-changed',
+          segments: [
+            {
+              id: 'segment-russian-changed',
+              reportRevision: russianPriorManifest.reportRevision,
+              target: changedTarget,
+              resolved: false,
+              messages: [{ id: 'message-russian-changed', author: 'user', message: 'Изменено.' }],
+            },
+          ],
+        },
+        {
+          id: 'thread-russian-exact',
+          segments: [
+            {
+              id: 'segment-russian-exact',
+              reportRevision: russianPriorManifest.reportRevision,
+              target: exactTarget,
+              resolved: true,
+              messages: [
+                { id: 'message-russian-exact', author: 'agent', message: 'Без изменений.' },
+              ],
+            },
+          ],
+        },
+      ],
+    }),
+  );
+  await writeFile(
+    russianPriorEntry,
+    russianPriorSourceText.replace(
+      'Пакет локализует собственные элементы, но сохраняет авторский текст.',
+      'Пакет локализует все собственные элементы и сохраняет авторский текст.',
+    ),
+  );
+  await buildReport({
+    input: russianPriorSource,
+    output: path.join(fixtureRoot, 'russian-prior.html'),
+    review: 'prior.json',
+  });
+  await buildReport({
+    input: russianPriorSource,
+    output: path.join(fixtureRoot, 'russian-prior-directory'),
+    format: 'directory',
+    review: 'prior.json',
+  });
   const reviewHtml = await readFile(path.join(fixtureRoot, 'review.html'), 'utf8');
   const encodedManifest = /<template data-review-manifest="true">([\s\S]*?)<\/template>/u.exec(
     reviewHtml,

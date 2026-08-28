@@ -1095,7 +1095,7 @@ th {
   color: inherit;
 }
 
-.semantic-section[data-tone='contrast'] a:not(.semantic-action) {
+.semantic-section[data-tone='contrast'] a:not(.semantic-action):not(.semantic-source-link) {
   color: inherit;
 }
 
@@ -1165,6 +1165,36 @@ th {
   filter: brightness(0.96);
 }
 
+.semantic-source-link {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: baseline;
+  gap: 0.3em;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  padding: 0.08em 0.38em;
+  background: var(--color-surface-raised);
+  color: var(--color-accent-strong);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 0.88em;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.semantic-source-link .package-icon {
+  display: block;
+  width: 0.85em;
+  height: 0.85em;
+  transform: rotate(-45deg);
+}
+
+.semantic-source-link:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
 @media (width <= 30rem) {
   .semantic-actions {
     display: grid;
@@ -1223,7 +1253,35 @@ th {
 }
 
 .visualization-diagram {
-  min-width: 52rem;
+  min-width: 0;
+}
+
+.visualization-group {
+  fill: color-mix(in srgb, var(--color-surface-raised) 78%, transparent);
+  stroke: var(--color-border-strong);
+  stroke-width: 2;
+}
+
+.visualization-group-label {
+  fill: var(--color-text);
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 780;
+}
+
+.visualization-sequence-lifeline {
+  stroke: var(--color-border-strong);
+  stroke-width: 1.5;
+  stroke-dasharray: 7 6;
+}
+
+.visualization-sequence-message {
+  stroke-width: 2.5;
+}
+
+.visualization-sequence-label {
+  fill: var(--color-text);
+  font-weight: 650;
 }
 
 .visualization-grid {
@@ -1445,6 +1503,10 @@ th {
   .visualization-svg {
     min-width: 31rem;
   }
+
+  .visualization-diagram {
+    min-width: 48rem;
+  }
 }
 
 .semantic-callout {
@@ -1502,6 +1564,17 @@ th {
   display: inline-block;
 }
 
+.semantic-code-term {
+  white-space: pre;
+}
+
+.semantic-code-term [data-glossary-trigger] {
+  padding: 0 0.08em;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
 .semantic-term [data-glossary-trigger] {
   border: 0;
   border-radius: var(--radius-small);
@@ -1517,6 +1590,21 @@ th {
 
 .semantic-glossary {
   border-left: 0.35rem solid var(--color-accent);
+}
+
+.semantic-glossary-appendix {
+  max-width: min(100%, var(--reading-measure));
+  margin-top: calc(3rem * var(--space-factor));
+  border-top: 2px solid var(--color-border-strong);
+  padding-top: var(--space-card);
+}
+
+.semantic-glossary-appendix-title {
+  margin-top: 0;
+}
+
+.semantic-glossary-appendix .semantic-glossary {
+  max-width: 100%;
 }
 
 .semantic-disclosure {
@@ -1605,6 +1693,18 @@ th {
   font-weight: 400;
 }
 
+.semantic-code-term [data-glossary-panel] {
+  position: fixed;
+  inset: auto 1rem 1rem auto;
+  width: min(28rem, calc(100vw - 2rem));
+  max-height: min(50vh, 24rem);
+  overflow: auto;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  line-height: var(--body-leading);
+  white-space: normal;
+}
+
 .semantic-term [data-glossary-panel] .semantic-title {
   display: block;
 }
@@ -1630,6 +1730,10 @@ th {
     width: auto;
     max-height: min(50vh, 24rem);
     overflow: auto;
+  }
+
+  .semantic-code-term [data-glossary-panel] {
+    inset: auto 1rem 1rem;
   }
 }
 

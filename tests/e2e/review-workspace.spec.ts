@@ -72,7 +72,7 @@ for (const format of formats) {
     await page
       .locator('[data-review-import]')
       .setInputFiles({ name: 'review.json', mimeType: 'application/json', buffer: review });
-    await expect(page.locator('[data-review-summary]')).toContainText('1 threads · 0 unresolved');
+    await expect(page.locator('[data-review-summary]')).toContainText('1 thread · unresolved: 0');
   });
 
   test(`${format.name} rejects version 1 without losing current thread state`, async ({ page }) => {
@@ -227,7 +227,7 @@ for (const prior of [
     await expect(page.locator('[data-review-prior-section]')).toContainText(
       'Prior · changed · unresolved',
     );
-    await expect(page.locator('[data-review-summary]')).toContainText('1 threads · 0 unresolved');
+    await expect(page.locator('[data-review-summary]')).toContainText('1 thread · unresolved: 0');
     await page.getByRole('button', { name: 'Close', exact: true }).click();
     const changed = page
       .locator('p[data-review-target]')
@@ -264,7 +264,7 @@ for (const prior of [
       mimeType: 'application/json',
       buffer: continued,
     });
-    await expect(page.locator('[data-review-summary]')).toContainText('1 threads · 1 unresolved');
+    await expect(page.locator('[data-review-summary]')).toContainText('1 thread · unresolved: 1');
   });
 }
 

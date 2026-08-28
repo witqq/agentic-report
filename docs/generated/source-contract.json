@@ -10,6 +10,32 @@
       "leaf": "::name{attributes}",
       "text": ":name[label]{attributes}"
     },
+    "codeFenceMetadata": {
+      "terms": {
+        "syntax": "terms=\"key,other-key\"",
+        "description": "Annotates exact first canonical glossary occurrences in one code fence.",
+        "fieldExclusivity": "only-field",
+        "quoting": "double",
+        "separator": ",",
+        "minItems": 1,
+        "maxItems": 20,
+        "uniqueItems": true,
+        "itemConstraint": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$"
+        },
+        "matching": {
+          "source": "canonical-glossary-term",
+          "caseSensitive": true,
+          "occurrence": "first",
+          "lineBoundary": "reject",
+          "overlap": "reject"
+        }
+      }
+    },
     "resources": ["local images", "downloadable local assets", "local fonts"]
   },
   "directives": {
@@ -111,6 +137,35 @@
       },
       "children": "label-or-generated-label",
       "placement": { "requiredParent": "actions" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "source-link": {
+      "description": "Source location opened through an explicit IPv4 loopback editor helper without replacing the report page.",
+      "forms": ["text"],
+      "attributes": {
+        "label": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": true,
+          "description": "Short visible source path and line."
+        },
+        "href": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 1000,
+          "pattern": "^http://127\\.0\\.0\\.1:(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])/open\\?path=(?:%2[Ff]|/)[^\\s<>&#]+&line=[1-9][0-9]{0,8}$",
+          "required": true,
+          "description": "IPv4 loopback editor-helper URL with an absolute path and positive source line."
+        }
+      },
+      "children": "none",
+      "placement": {},
       "resource": "none",
       "runtime": "none",
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
@@ -353,7 +408,14 @@
           "minLength": 1,
           "maxLength": 160,
           "required": true,
-          "description": "Canonical term text inserted at every reference."
+          "description": "Canonical glossary identity and explanation title."
+        },
+        "placement": {
+          "kind": "enum",
+          "values": ["inline", "appendix"],
+          "required": false,
+          "default": "inline",
+          "description": "Definition location in the authored flow or, for a top-level definition, one package-owned reference appendix."
         }
       },
       "children": "markdown",
@@ -693,6 +755,13 @@
           "required": true,
           "description": "Meaningful plain-text description for the visual."
         },
+        "type": {
+          "kind": "enum",
+          "values": ["flow", "sequence"],
+          "required": false,
+          "default": "flow",
+          "description": "Diagram form."
+        },
         "direction": {
           "kind": "enum",
           "values": ["right", "down"],
@@ -701,8 +770,37 @@
           "description": "Flow direction."
         }
       },
-      "children": "node-and-edge-directives",
+      "children": "group-node-and-edge-directives",
       "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "group": {
+      "description": "One labelled subsystem group in a flow diagram.",
+      "forms": ["leaf"],
+      "attributes": {
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Unique group identity within the diagram."
+        },
+        "label": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": true,
+          "description": "Visible group label."
+        }
+      },
+      "children": "none",
+      "placement": { "requiredParent": "diagram" },
       "resource": "none",
       "runtime": "none",
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
@@ -728,6 +826,15 @@
           "maxLength": 160,
           "required": true,
           "description": "Visible node label."
+        },
+        "group": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": false,
+          "description": "Optional subsystem group identity for this node."
         },
         "kind": {
           "kind": "enum",
@@ -1036,6 +1143,32 @@
     "tokenResolution": {
       "defaultsFrom": "selected-preset",
       "precedence": ["selected-preset", "explicit-tokens"]
+    }
+  },
+  "visualizations": {
+    "diagram": {
+      "defaultType": "flow",
+      "types": ["flow", "sequence"],
+      "flow": {
+        "nodes": { "minimum": 1, "maximum": 20 },
+        "edges": { "maximum": 40 },
+        "selfEdges": false,
+        "groups": {
+          "ungrouped": 0,
+          "minimum": 2,
+          "maximum": 3,
+          "requireEveryNode": true,
+          "direction": "right"
+        }
+      },
+      "sequence": {
+        "participants": { "minimum": 2, "maximum": 6 },
+        "messages": { "minimum": 1, "maximum": 40, "labelRequired": true },
+        "groups": false,
+        "participantGroups": false,
+        "direction": "forbidden",
+        "selfMessages": false
+      }
     }
   },
   "safety": [

@@ -47,6 +47,42 @@ describe('renderDocument runtime boundary', () => {
     expect(html).not.toContain('<script>');
   });
 
+  it('uses the input language for complete package chrome and falls back to English', () => {
+    const localized = renderDocument({
+      ...inlineOptions,
+      language: 'ru-RU',
+      contentHtml:
+        '<p data-review-target="rt-target">Содержимое</p><h2 id="a">А</h2><h2 id="b">Б</h2>',
+      navigation: [
+        { id: 'a', label: 'А', depth: 2 },
+        { id: 'b', label: 'Б', depth: 2 },
+      ],
+      reviewManifest: {
+        contractVersion: 1,
+        reportRevision: `sha256:${'b'.repeat(64)}`,
+        targets: [
+          {
+            id: 'rt-target',
+            kind: 'markdown:paragraph',
+            fingerprint: `sha256:${'c'.repeat(64)}`,
+            source: { file: 'report.md', line: 1, column: 1, endLine: 1, endColumn: 10 },
+          },
+        ],
+      },
+    });
+    expect(localized).toContain('data-package-locale="ru"');
+    expect(localized).toContain('Перейти к содержимому');
+    expect(localized).toContain('aria-label="Содержание документа"');
+    expect(localized).toContain('Пространство ревью');
+    expect(localized).not.toContain('Skip to content');
+    expect(localized).not.toContain('Review workspace');
+
+    const fallback = renderDocument({ ...inlineOptions, language: 'de-DE' });
+    expect(fallback).toContain('data-package-locale="en"');
+    expect(fallback).toContain('Skip to content');
+    expect(fallback).not.toContain('Перейти к содержимому');
+  });
+
   it('projects every validated layout and theme through one semantic page shell', () => {
     for (const preset of ['studio', 'editorial', 'signal'] as const) {
       for (const layout of ['document', 'dashboard', 'landing', 'mixed'] as const) {
@@ -127,7 +163,7 @@ describe('renderDocument runtime boundary', () => {
     ).toEqual([]);
     expect(
       extractNavigation(
-        '<h2 id="legacy">Legacy section</h2><h3 id="detail">Detail</h3><h2 id="next">Next section</h2>',
+        '<h2 id="legacy">Legacy section</h2><h3 id="detail">Detail</h3><h2 id="glossary" data-navigation-exclude="">Glossary</h2><h2 id="next">Next section</h2>',
       ),
     ).toEqual([
       { depth: 2, id: 'legacy', label: 'Legacy section' },

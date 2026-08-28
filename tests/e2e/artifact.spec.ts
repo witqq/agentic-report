@@ -73,6 +73,479 @@ const defaultMotionArtifacts = [
   { format: 'single-file', url: artifactUrl },
   { format: 'directory', url: directoryArtifactUrl },
 ] as const;
+const glossaryCodeArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('glossary-code') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/glossary-code-directory/index.html'),
+    ).href,
+  },
+] as const;
+const diagramTourArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('diagram-tour') },
+  {
+    format: 'directory',
+    url: pathToFileURL(path.resolve('test-results/e2e-generated/diagram-tour-directory/index.html'))
+      .href,
+  },
+] as const;
+const russianChromeArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('russian-chrome') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/russian-chrome-directory/index.html'),
+    ).href,
+  },
+] as const;
+const russianPriorArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('russian-prior') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/russian-prior-directory/index.html'),
+    ).href,
+  },
+] as const;
+const fallbackChromeArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('fallback-chrome') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/fallback-chrome-directory/index.html'),
+    ).href,
+  },
+] as const;
+
+for (const artifact of fallbackChromeArtifacts) {
+  test(`${artifact.format} keeps English fallback under a Russian browser locale`, async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'language', { configurable: true, value: 'ru-RU' });
+      Object.defineProperty(navigator, 'languages', { configurable: true, value: ['ru-RU', 'ru'] });
+    });
+    await page.goto(artifact.url);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'und');
+    await expect(page.locator('html')).toHaveAttribute('data-package-locale', 'en');
+    await expect(page.getByRole('link', { name: 'Skip to content' })).toBeAttached();
+    await expect(page.getByRole('button', { name: 'Toggle color theme' })).toBeVisible();
+    await expect(page.locator('[data-copy-code]').first()).toContainText('Copy');
+    expect(await page.evaluate(() => navigator.language)).toBe('ru-RU');
+    expect(await page.locator('body').innerText()).not.toContain('Перейти к содержимому');
+  });
+}
+
+for (const artifact of russianChromeArtifacts) {
+  test(`${artifact.format} derives all reader chrome from Russian source language`, async ({
+    page,
+  }, testInfo) => {
+    await page.addInitScript(() => {
+      Reflect.set(globalThis, '__copyShouldFail', false);
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async () => {
+            if (Reflect.get(globalThis, '__copyShouldFail') === true) {
+              throw new Error('Controlled clipboard failure');
+            }
+          },
+        },
+      });
+    });
+    await page.goto(artifact.url);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ru-RU');
+    await expect(page.locator('html')).toHaveAttribute('data-package-locale', 'ru');
+    await expect(page.getByRole('link', { name: 'Перейти к содержимому' })).toBeAttached();
+    await expect(page.getByRole('button', { name: 'Переключить цветовую тему' })).toBeVisible();
+
+    const navigation = page.locator('[data-nav-toggle]');
+    await expect(navigation).toHaveAccessibleName(/Скрыть содержание|Открыть содержание/);
+    await navigation.click();
+    await expect(navigation).toHaveAccessibleName(/Показать содержание|Закрыть содержание/);
+    if ((await navigation.getAttribute('aria-label')) === 'Закрыть содержание') {
+      await page.locator('[data-nav-close]').click();
+      await expect(navigation).toHaveAccessibleName('Открыть содержание');
+    }
+
+    const filter = page.getByRole('searchbox', { name: 'Фильтр' });
+    await expect(filter).toHaveAttribute('placeholder', 'Фильтровать элементы');
+    await filter.fill('Копирование');
+    await expect(page.locator('[data-filter-count]')).toHaveText('1 элемент');
+
+    const copy = page.locator('[data-copy-code]').first();
+    await expect(copy).toContainText('Копировать');
+    await copy.click();
+    await expect(copy).toContainText('Скопировано');
+    await expect(copy).toContainText('Копировать');
+    await page.evaluate(() => Reflect.set(globalThis, '__copyShouldFail', true));
+    await copy.click();
+    await expect(copy).toContainText('Копирование недоступно');
+
+    const glossaryTrigger = page.locator('[data-glossary-trigger]').first();
+    await glossaryTrigger.click();
+    await expect(page.locator('[data-glossary-definition-link]').first()).toHaveText(
+      'Открыть полное определение',
+    );
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-glossary-panel]').first()).toBeHidden();
+    await page.getByRole('button', { name: 'Открыть диалог' }).click();
+    await expect(page.getByRole('dialog', { name: 'Проверка модального окна' })).toBeVisible();
+    await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Показать подробности' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Увеличить' })).toBeVisible();
+    await expect(page.locator('[aria-label="Легенда"]')).toBeVisible();
+    await expect(page.locator('[data-chart-type="bar"] desc')).toContainText(
+      'Результат, А: 1 234,5',
+    );
+    await expect(page.locator('[data-diagram-type="flow"] desc')).toContainText(
+      'Узлы: first: Первый; second: Второй. Связи: first к second: переход.',
+    );
+
+    const review = page.locator('[data-review-toggle]');
+    await review.click();
+    await expect(
+      page.getByRole('button', { name: 'Открыть обсуждение: Разделитель' }),
+    ).toBeVisible();
+    const dialog = page.locator('[data-review-dialog]');
+    const target = page.locator('[data-review-target-control]').first();
+    await target.click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Пространство ревью');
+    await expect(dialog).toContainText('0 обсуждений · открыто: 0');
+
+    await page.locator('[data-review-add-message]').click();
+    await expect(page.locator('[data-review-error]')).toHaveText(
+      'Введите сообщение для выбранного блока.',
+    );
+    await page.locator('[data-review-message]').fill('Первоначальный комментарий.');
+    await page.locator('[data-review-add-message]').click();
+    await expect(dialog).toContainText('1 обсуждение · открыто: 1');
+    await expect(page.locator('[data-review-thread-messages]')).toContainText(
+      'Первоначальный комментарий.',
+    );
+    await expect(page.locator('[data-review-thread-messages]')).toContainText('Вы');
+    await page.getByRole('button', { name: 'Изменить' }).click();
+    await expect(page.locator('[data-review-add-message]')).toHaveText('Сохранить сообщение');
+    await page.locator('[data-review-message]').fill('Исправленный комментарий.');
+    await page.locator('[data-review-add-message]').click();
+    await expect(page.locator('[data-review-thread-messages]')).toContainText(
+      'Исправленный комментарий.',
+    );
+    const resolution = page.locator('[data-review-resolve-thread]');
+    await expect(resolution).toHaveText('Закрыть обсуждение');
+    await resolution.click();
+    await expect(resolution).toHaveText('Возобновить обсуждение');
+    await resolution.click();
+    await expect(resolution).toHaveText('Закрыть обсуждение');
+    await page.locator('[data-review-import]').setInputFiles({
+      name: 'invalid.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from('{'),
+    });
+    await expect(page.locator('[data-review-error]')).toHaveText('Не удалось импортировать ревью.');
+
+    const packageEnglish = [
+      'Skip to content',
+      'Copy unavailable',
+      'Review workspace',
+      'No discussion threads yet',
+      'Filter items',
+    ];
+    const chrome = await page.locator('body').innerText();
+    for (const label of packageEnglish) expect(chrome).not.toContain(label);
+    const capturePath = path.resolve(
+      'test-results/captures/localization',
+      `${artifact.format}-${testInfo.project.name}.png`,
+    );
+    await mkdir(path.dirname(capturePath), { recursive: true });
+    await page.screenshot({ path: capturePath, fullPage: true });
+  });
+}
+
+for (const artifact of russianPriorArtifacts) {
+  test(`${artifact.format} localizes stale prior-review classifications`, async ({ page }) => {
+    await page.goto(artifact.url);
+    await page.locator('[data-review-toggle]').click();
+    await page.locator('[data-review-target-control]').first().click();
+    const prior = page.locator('[data-review-prior-section]');
+    await expect(prior).toBeVisible();
+    await expect(prior).toContainText('Предыдущее · изменено · открыто');
+    await expect(prior).toContainText('Предыдущее · точно · закрыто');
+    await expect(prior).toContainText('Вы: Изменено.');
+    await expect(prior).toContainText('Агент: Без изменений.');
+    expect(await prior.innerText()).not.toMatch(/\b(?:exact|changed|missing|ambiguous)\b/u);
+  });
+}
+
+for (const artifact of defaultMotionArtifacts) {
+  test(`${artifact.format} source link opens the loopback helper without replacing the file report`, async ({
+    page,
+  }, testInfo) => {
+    const helperUrl =
+      'http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42';
+    await page.context().route('http://127.0.0.1:7789/**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'text/plain', body: '' });
+    });
+    await page.goto(artifact.url);
+    const reportUrl = page.url();
+    const link = page.getByRole('link', { name: 'src/render/directives.ts:42' });
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute('href', helperUrl);
+    await expect(link).toHaveAttribute('target', '_blank');
+    await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(await link.evaluate((element) => getComputedStyle(element).fontFamily)).toContain(
+      'SFMono-Regular',
+    );
+
+    const capturePath = path.resolve(
+      'test-results/captures/source-link',
+      `${artifact.format}-${testInfo.project.name}.png`,
+    );
+    await mkdir(path.dirname(capturePath), { recursive: true });
+    await page.screenshot({ path: capturePath });
+
+    const popupPromise = page.waitForEvent('popup');
+    if (artifact.format === 'single-file' && testInfo.project.name === 'desktop-chromium') {
+      expect(await link.evaluate((element) => element.tabIndex)).toBe(0);
+      await link.focus();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      await expect(link).toBeFocused();
+      expect(
+        await link.evaluate((element) => Number.parseFloat(getComputedStyle(element).outlineWidth)),
+      ).toBeGreaterThan(0);
+      await page.keyboard.press('Enter');
+    } else if (testInfo.project.name.startsWith('mobile')) await link.tap();
+    else await link.click();
+    const popup = await popupPromise;
+    await popup.waitForLoadState();
+    expect(popup.url()).toBe(helperUrl);
+    await popup.close();
+    expect(page.url()).toBe(reportUrl);
+    await expect(page.getByRole('heading', { name: 'Architecture report' })).toBeVisible();
+  });
+}
+
+for (const artifact of glossaryCodeArtifacts) {
+  test(`${artifact.format} glossary keeps authored prose forms and first highlighted code references`, async ({
+    page,
+  }, testInfo) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async (value: string) => {
+            Reflect.set(globalThis, '__copiedCode', value);
+          },
+        },
+      });
+    });
+    await page.goto(artifact.url);
+    if (artifact.format === 'directory') {
+      await page.locator('html').evaluate((element) => {
+        element.dataset.theme = 'dark';
+      });
+    }
+
+    const prose = page.getByRole('button', { name: 'concepts' });
+    await expect(prose).toBeVisible();
+    await prose.focus();
+    const proseDialog = page.getByRole('dialog', { name: 'concept' });
+    await expect(proseDialog).toBeVisible();
+    await expect(proseDialog).toContainText('Canonical prose definition.');
+    await page.keyboard.press('Escape');
+    await expect(prose).toBeFocused();
+
+    const marked = page.locator('pre').nth(0);
+    const plain = page.locator('pre').nth(1);
+    const decorator = marked.getByRole('button', { name: '@d.def' });
+    const nodeType = marked.getByRole('button', { name: 'Node' });
+    await expect(decorator).toHaveCount(1);
+    await expect(nodeType).toHaveCount(1);
+    await expect(marked.locator('[data-term-reference="own-field"]')).toHaveCount(1);
+    await expect(marked.locator('[data-term-reference="node-type"]')).toHaveCount(1);
+    const characterColors = async (code: Locator): Promise<readonly string[]> =>
+      code.locator('code').evaluate((element) => {
+        const colors: string[] = [];
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let current = walker.nextNode();
+        while (current !== null) {
+          const parent = current.parentElement;
+          if (parent !== null && parent.closest('[data-glossary-panel]') === null) {
+            for (const character of current.textContent ?? '') {
+              colors.push(`${character}:${getComputedStyle(parent).color}`);
+            }
+          }
+          current = walker.nextNode();
+        }
+        return colors;
+      });
+    const markedColors = await characterColors(marked);
+    const plainColors = await characterColors(plain);
+    expect(markedColors).toEqual(plainColors);
+
+    if (testInfo.project.name.startsWith('mobile')) await decorator.tap();
+    else await decorator.hover();
+    const codeDialog = marked.getByRole('dialog', { name: '@d.def' });
+    await expect(codeDialog).toBeVisible();
+    await expect(codeDialog).toContainText('Field ownership decorator.');
+    await decorator.focus();
+    await page.keyboard.press('Escape');
+    await expect(codeDialog).toBeHidden();
+    await expect(decorator).toBeFocused();
+
+    await marked.getByRole('button', { name: 'Copy' }).click();
+    expect(await page.evaluate(() => Reflect.get(globalThis, '__copiedCode'))).toBe(
+      '@d.def(Node) accessor child!: Node;\n@d.def(Node) accessor sibling!: Node;',
+    );
+
+    await decorator.click();
+    const definitionLink = codeDialog.getByRole('link', { name: 'View full definition' });
+    await expect(definitionLink).toHaveAttribute('href', '#glossary-own-field');
+    await definitionLink.click();
+    await expect(page).toHaveURL(/#glossary-own-field$/u);
+    await expect(page.locator('#glossary-own-field')).toBeInViewport();
+    await expect(page.locator('[data-navigation] a')).toHaveText([
+      'Prose forms',
+      'Highlighted code',
+    ]);
+    await expect(page.locator('[data-glossary-appendix]')).toContainText('Canonical node type.');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+
+    const capturePath = path.resolve(
+      'test-results/captures/code-glossary',
+      `${artifact.format}-${testInfo.project.name}.png`,
+    );
+    await mkdir(path.dirname(capturePath), { recursive: true });
+    await page.screenshot({ path: capturePath, fullPage: true });
+  });
+}
+
+for (const artifact of diagramTourArtifacts) {
+  test(`${artifact.format} grouped flow and sequence remain readable and contained from file URL`, async ({
+    page,
+  }, testInfo) => {
+    await page.goto(artifact.url);
+    if (artifact.format === 'directory') {
+      await page.locator('html').evaluate((element) => {
+        element.dataset.theme = 'dark';
+      });
+    }
+
+    const flow = page.getByRole('img', { name: 'Code tour grouped flow' });
+    const sequence = page.getByRole('img', { name: 'Compile request sequence' });
+    await expect(flow).toBeVisible();
+    await expect(sequence).toBeVisible();
+    await expect(flow).toHaveAccessibleDescription(
+      /Groups: source: Authentication and authorization services \(step-1, step-2, step-3, step-4, step-5, step-6\).*reader: Reader artifact.*step-18: Step 18 detail/u,
+    );
+    await expect(sequence).toHaveAccessibleDescription(
+      /Participants: agent: Authoring agent.*Messages in order: 1\. agent to loader: load source; 2\. loader to compiler: validated graph; 3\. compiler to browser: write artifact; 4\. browser to agent: review result/u,
+    );
+    await expect(page.locator('[data-diagram-type="flow"] [data-group-id]')).toHaveCount(3);
+    await expect(page.locator('[data-diagram-type="flow"] [data-node-id]')).toHaveCount(18);
+    await expect(page.locator('[data-diagram-type="flow"] .visualization-group-edge')).toHaveCount(
+      2,
+    );
+    await expect(
+      page.locator('[data-diagram-type="flow"] .visualization-group-internal-edge'),
+    ).toHaveCount(1);
+    await expect(
+      page.locator('[data-diagram-type="flow"] .visualization-group-outer-edge'),
+    ).toHaveCount(3);
+    expect(
+      await page
+        .locator('[data-diagram-type="flow"] .visualization-group-outer-edge')
+        .evaluateAll((edges) => edges.map((edge) => edge.getAttribute('data-route-lane'))),
+    ).toEqual(['694', '714', '734']);
+    await expectDiagramEdgesAvoidNodes(flow);
+    await expect(page.locator('[data-diagram-type="sequence"] [data-participant]')).toHaveCount(4);
+    await expect(page.locator('[data-diagram-type="sequence"] [data-message-order]')).toHaveCount(
+      4,
+    );
+    expect(
+      await page
+        .locator('[data-diagram-type="sequence"] [data-message-order]')
+        .evaluateAll((elements) =>
+          elements.map((element) => element.getAttribute('data-message-order')),
+        ),
+    ).toEqual(['1', '2', '3', '4']);
+
+    const groupContainment = await page.locator('[data-diagram-type="flow"]').evaluate((root) => {
+      const groups = [...root.querySelectorAll<SVGGElement>('[data-group-id]')];
+      return groups.every((group) => {
+        const id = group.getAttribute('data-group-id');
+        const boundary = group.querySelector<SVGRectElement>('.visualization-group')?.getBBox();
+        if (boundary === undefined) return false;
+        const members = [...root.querySelectorAll<SVGGElement>(`[data-group="${id}"]`)];
+        const labels = [...group.querySelectorAll<SVGTextElement>('.visualization-group-label')];
+        return (
+          members.length > 0 &&
+          labels.length > 0 &&
+          labels.every((label) => {
+            const box = label.getBBox();
+            return (
+              box.x >= boundary.x &&
+              box.y >= boundary.y &&
+              box.x + box.width <= boundary.x + boundary.width &&
+              box.y + box.height <= boundary.y + 54
+            );
+          }) &&
+          members.every((member) => {
+            const box = member.getBBox();
+            return (
+              box.x >= boundary.x &&
+              box.y >= boundary.y &&
+              box.x + box.width <= boundary.x + boundary.width &&
+              box.y + box.height <= boundary.y + boundary.height
+            );
+          })
+        );
+      });
+    });
+    expect(groupContainment).toBe(true);
+
+    const geometry = await page.locator('[data-visualization="diagram"]').evaluateAll((figures) =>
+      figures.map((figure) => {
+        const frame = figure.querySelector<HTMLElement>('.visualization-frame');
+        const svg = figure.querySelector<SVGSVGElement>('svg');
+        const label = figure.querySelector<SVGTextElement>('.visualization-node-label');
+        if (frame === null || svg === null || label === null)
+          throw new Error('Diagram geometry missing.');
+        const scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
+        return {
+          frameContained: frame.scrollWidth <= frame.clientWidth,
+          effectiveLabelSize: Number.parseFloat(getComputedStyle(label).fontSize) * scale,
+        };
+      }),
+    );
+    if (testInfo.project.name.startsWith('desktop')) {
+      expect(geometry.every((item) => item.frameContained)).toBe(true);
+      expect(geometry.every((item) => item.effectiveLabelSize >= 11)).toBe(true);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+
+    const groupFill = page.locator('.visualization-group').first();
+    const before = await groupFill.evaluate((element) => getComputedStyle(element).fill);
+    await page.getByRole('button', { name: 'Toggle color theme' }).click();
+    const after = await groupFill.evaluate((element) => getComputedStyle(element).fill);
+    expect(after).not.toBe(before);
+    await page.getByRole('button', { name: 'Toggle color theme' }).click();
+
+    const capturePath = path.resolve(
+      'test-results/captures/diagram-tour',
+      `${artifact.format}-${testInfo.project.name}.png`,
+    );
+    await mkdir(path.dirname(capturePath), { recursive: true });
+    await page.screenshot({ path: capturePath, fullPage: true });
+  });
+}
 
 const presetShowcases = [
   {
@@ -1585,10 +2058,18 @@ for (const artifact of visualizationArtifacts) {
     const flowDiagram = page.getByRole('img', { name: /Offline compilation flow/u });
     await expect(flowDiagram).toBeVisible();
     await expect(flowDiagram).toHaveAccessibleDescription(
-      /source: Declarative source.*source to validate: parse/u,
+      /Groups: authoring: Authoring graph.*source: Declarative source.*source to validate: parse/u,
     );
+    await expect(page.locator('[data-diagram-type="flow"] [data-group-id]')).toHaveCount(3);
+    await expect(page.locator('[data-diagram-type="flow"] [data-node-id]')).toHaveCount(15);
     await expect(page.locator('[data-node-id="source"]')).toBeAttached();
     await expect(page.locator('[data-from="source"][data-to="validate"]')).toBeAttached();
+    await expectDiagramEdgesAvoidNodes(flowDiagram);
+    const sequenceDiagram = page.getByRole('img', { name: /Compile request sequence/u });
+    await expect(sequenceDiagram).toBeVisible();
+    await expect(sequenceDiagram).toHaveAccessibleDescription(
+      /Messages in order: 1\. agent to loader: load source.*4\. browser to agent: review result/u,
+    );
     await expect(page.locator('.visualization-timeline-event')).toHaveCount(4);
     await expect(page.getByText('Compile offline', { exact: true })).toBeVisible();
 
@@ -2230,6 +2711,39 @@ test('system theme follows dark preference and becomes an explicit theme after a
   await expect(root).toHaveAttribute('data-theme', 'dark');
   expect(await codeThemeState(page.locator('pre.shiki'))).toEqual(darkCode);
 });
+
+async function expectDiagramEdgesAvoidNodes(diagram: Locator): Promise<void> {
+  const intersections = await diagram.evaluate((svg) => {
+    const nodes = [...svg.querySelectorAll<SVGGElement>('[data-node-id]')].map((node) => ({
+      id: node.getAttribute('data-node-id') ?? '',
+      bounds: node.getBBox(),
+    }));
+    return [...svg.querySelectorAll<SVGGeometryElement>('.visualization-edge')].flatMap((edge) => {
+      const from = edge.getAttribute('data-from');
+      const to = edge.getAttribute('data-to');
+      const length = edge.getTotalLength();
+      for (let offset = 2; offset < length - 2; offset += 2) {
+        const point = edge.getPointAtLength(offset);
+        const collision = nodes.find(({ id, bounds }) => {
+          if (id === from || id === to) return false;
+          return (
+            point.x > bounds.x + 1 &&
+            point.x < bounds.x + bounds.width - 1 &&
+            point.y > bounds.y + 1 &&
+            point.y < bounds.y + bounds.height - 1
+          );
+        });
+        if (collision !== undefined) {
+          return [
+            `${from ?? '?'}->${to ?? '?'} intersects ${collision.id} at ${Math.round(point.x)},${Math.round(point.y)}`,
+          ];
+        }
+      }
+      return [];
+    });
+  });
+  expect(intersections).toEqual([]);
+}
 
 async function codeThemeState(
   block: Locator,

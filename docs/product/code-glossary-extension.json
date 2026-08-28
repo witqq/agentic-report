@@ -1,0 +1,29 @@
+{
+  "contractVersion": 1,
+  "id": "code-glossary-references",
+  "summary": "Extends one canonical glossary identity to authored grammatical forms, highlighted code references, and an optional reference appendix.",
+  "trustBoundary": {
+    "authorCode": "forbidden",
+    "callbacks": "forbidden",
+    "eval": "forbidden",
+    "dynamicImports": "forbidden",
+    "networkAccess": "forbidden",
+    "confinement": "source-root",
+    "offline": "required",
+    "deterministicSerialization": "required",
+    "cspCompatible": "required",
+    "packageOwnedRuntime": "required"
+  },
+  "evidence": {
+    "sourceGrammar": "A term text directive keeps its authored visible form while resolving one registered key. A code fence accepts only one quoted, bounded, unique comma-separated terms field. Glossary placement is the closed inline or appendix choice, with appendix restricted to a top-level definition so extraction cannot empty an authored parent. Unknown, missing, malformed, duplicate, multiline, overlapping, and invalid-placement references fail at authored ranges.",
+    "executionCapabilities": "Compile-time validation matches exact canonical text, then trusted post-Shiki enhancement wraps only each requested first occurrence. Existing package popover behavior opens the explanation; the compiler never evaluates or interprets code bytes. Appendix movement reuses source-derived review targets.",
+    "confinement": "The extension creates no filesystem reference. Glossary keys, terms, authored forms, code bytes, and definitions come from the already confined Markdown graph and never cause an additional read or path resolution.",
+    "offlineBehavior": "Parsing, syntax highlighting, range wrapping, appendix assembly, review targeting, copy cleanup, and reader interaction use local source plus package assets only. Both output formats work through file URLs without a service or network request.",
+    "deterministicSerialization": "Key order, exact first matches, collision-free IDs, authored appendix order, highlighted fragments, and copied code text derive only from validated source and package version. No clock, random value, environment locale, or runtime layout decision changes serialized bytes.",
+    "cspAndRuntime": "Code remains escaped Shiki text. The annotation reuses package-owned delegated glossary events and adds no script source, inline handler, callback, eval, dynamic import, raw HTML, style input, URL, or CSP branch. Clipboard text is read from a clone after generated panels are removed.",
+    "accessibility": "Prose and code references are native buttons controlling labelled dialogs with canonical titles and full-definition links. Only first code occurrences are controls, styled token descendants keep their colors, keyboard and touch routes reuse the existing glossary contract, and the appendix is a labelled region excluded only from primary navigation.",
+    "byteAndPerformanceBudgets": "Compilation performs bounded exact searches for at most twenty keys per annotated block and finite HAST splitting. Runtime adds no listener, observer, timer, or controller beyond the existing delegated glossary behavior; CSS and markup growth remain covered by package checks.",
+    "packageDependenciesAndLicenses": "No dependency or license is added. The implementation reuses remark directive metadata, the installed Shiki 4.4.3 meta transport, typed HAST utilities, existing package CSS/runtime, and project-owned review and document modules.",
+    "compatibility": "Existing canonical prose references, detached term references, inline definitions, unannotated code fences, both output formats, review artifacts, CLI and ESM contracts remain valid. Authored noncanonical forms are checked only when explicitly marked; unmarked validation continues to recognize canonical forms and does not claim morphological inference."
+  }
+}
