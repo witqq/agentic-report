@@ -115,13 +115,13 @@ const createSiteFixture = async (
     path.join(root, 'package.json'),
     `${JSON.stringify({
       name: 'agentic-report',
-      version: options.packageVersion ?? '0.4.2',
+      version: options.packageVersion ?? '0.4.3',
       engines: { node: '>=24.18.0' },
     })}\n`,
   );
   await writeFile(
     path.join(root, 'skills/agentic-report/SKILL.md'),
-    `---\nname: agentic-report\nlicense: MIT\nmetadata:\n  version: '${options.skillVersion ?? '0.4.2'}'\n  compatibility: Requires Node.js 24.18.0 or newer.\n---\n\n# Fixture skill\n`,
+    `---\nname: agentic-report\nlicense: MIT\nmetadata:\n  version: '${options.skillVersion ?? '0.4.3'}'\n  compatibility: Requires Node.js 24.18.0 or newer.\n---\n\n# Fixture skill\n`,
   );
   await writeFile(
     path.join(root, 'website/routes.json'),
@@ -293,11 +293,11 @@ describe('deterministic public site staging', () => {
       contractVersion: 1,
       package: {
         name: 'agentic-report',
-        version: '0.4.2',
+        version: '0.4.3',
         engines: { node: '>=24.18.0' },
       },
       sourceRevision: revision,
-      skill: { version: '0.4.2', license: 'MIT' },
+      skill: { version: '0.4.3', license: 'MIT' },
     });
     expect(release.routes).toHaveLength(routes.length - 1);
     const actualFiles = (await listFiles(firstSite)).filter((file) => file !== 'release.json');
@@ -372,7 +372,7 @@ describe('deterministic public site staging', () => {
       license: 'MIT',
       metadata: { version: packageMetadata.version, homepage: packageMetadata.homepage },
     });
-    expect(packageMetadata.version).toBe('0.4.2');
+    expect(packageMetadata.version).toBe('0.4.3');
     expect(skillFrontmatter.metadata.compatibility).toContain('Node.js 24.18.0 or newer');
     expect(packageMetadata.engines.node).toBe('>=24.18.0');
     for (const plugin of [openAiPlugin, claudePlugin]) {
@@ -392,7 +392,7 @@ describe('deterministic public site staging', () => {
       }),
     ]);
     expect(skillSource).toContain(
-      'npx --yes agentic-report@0.4.2 build ./my-page --output ./my-page.html --json',
+      'npx --yes agentic-report@0.4.3 build ./my-page --output ./my-page.html --json',
     );
     expect(skillSource).toContain('Do not deploy, publish, use credentials');
     for (const [publicSource, source] of [
@@ -413,6 +413,28 @@ describe('deterministic public site staging', () => {
     expect(readme.trimEnd()).toMatch(
       /<a href="https:\/\/moira-mcp\.com\/"><img alt="Made with Moira"[^>]*><\/a>\n<\/p>$/u,
     );
+  });
+
+  it('onboards agents through the ready-made skill and a reusable custom-skill pattern', async () => {
+    const [landing, quickstart, llms, readme] = await Promise.all([
+      readFile(path.join(repositoryRoot, 'website/landing/report.md'), 'utf8'),
+      readFile(path.join(repositoryRoot, 'website/docs/agent/index.md'), 'utf8'),
+      readFile(path.join(repositoryRoot, 'website/llms.txt'), 'utf8'),
+      readFile(path.join(repositoryRoot, 'README.md'), 'utf8'),
+    ]);
+    for (const [name, source] of [
+      ['landing', landing],
+      ['quickstart', quickstart],
+      ['llms', llms],
+      ['README', readme],
+    ] as const) {
+      expect(source, name).toContain('npx skills add witqq/agentic-report --skill agentic-report');
+      expect(source, name).toMatch(/chat response|wall of text/iu);
+    }
+    expect(landing).toContain('Build it into your own skill');
+    expect(quickstart).toContain('## Use it inside your own skill');
+    expect(quickstart).toContain('name: architecture-handoff');
+    expect(readme).toContain('The custom skill owns research,');
   });
 
   it('contains no internal workflow paths, workstation paths, credential assignments, or authority claims', async () => {

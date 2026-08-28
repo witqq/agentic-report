@@ -121,35 +121,24 @@ describe('release readiness', () => {
     expect(service?.container_name).toBe(deploy.healthCheck?.containerName);
   });
 
-  it('documents the public asset publish source and manual metadata inspection', async () => {
+  it('keeps the release cycle single-gated and delegates external checks to their owning stages', async () => {
     const runbook = await readFile(path.resolve('docs/RELEASE.md'), 'utf8');
-    const publish = runbook
-      .split('## Publish the inspected tarball\n')[1]
-      ?.split('## Prove real registry npx\n')[0];
-    if (publish === undefined) throw new Error('Release publish section is missing.');
-
-    expect(publish).toContain(
-      'release_asset_url="https://github.com/witqq/agentic-report/releases/download/v0.4.2/agentic-report-0.4.2.tgz"',
-    );
-    expect(publish).toContain(
-      'gh workflow run publish-npm.yml --ref main -f tag=v0.4.2 -f sha256="$candidate_sha256"',
-    );
-    expect(publish).toContain('gh run watch "<databaseId>" --interval 10 --exit-status');
-    expect(publish).toContain('shasum -a 256');
-    expect(publish).toContain('npm view agentic-report@0.4.2 --json');
-    expect(publish).toContain('Inspect the complete unauthenticated version document');
-    expect(publish).toContain('Stop on any mismatch or sensitive value.');
-    expect(
-      publish
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.startsWith('npm publish ')),
-    ).toEqual([]);
-    expect(runbook).toContain('`[Made with Moira](https://moira-mcp.com/)`.');
+    expect(runbook.match(/^pnpm verify$/gmu)).toHaveLength(1);
+    expect(runbook).toContain('`pnpm verify` is the complete pre-release gate.');
+    expect(runbook).toContain('do not run its constituent checks again');
+    expect(runbook).toContain('do not duplicate it with a second download or isolated install');
     expect(runbook).toContain(
-      'workspace roots must remain distinct, and neither may contain a checkout link or local tarball.\n\n## Deploy and accept the site',
+      'gh workflow run publish-npm.yml --ref main -f tag=v0.4.3 -f sha256="$candidate_sha256"',
     );
-    expect(runbook).not.toContain('local tarball. Published');
+    expect(runbook).toContain('gh run watch "<databaseId>" --exit-status');
+    expect(runbook).toContain('npm view agentic-report dist-tags version --json');
+    expect(runbook).toContain('pnpm deploy:prod');
+    expect(runbook).toContain('After a healthy deploy, perform one public smoke test');
+    expect(runbook).toContain('Repeat only the affected gate and every later stage.');
+    expect(runbook).not.toContain('npm publish ');
+    expect(runbook).not.toContain('## Prove real registry npx');
+    expect(runbook).not.toContain('shasum -a 256');
+    expect(runbook).toContain('`[Made with Moira](https://moira-mcp.com/)`.');
   });
 
   it('labels every packaged example as fictional before its first evidence claims', async () => {
@@ -197,56 +186,7 @@ describe('release readiness', () => {
       allAbsent: false,
     });
   });
-
-  it('keeps the two registry npx journeys isolated', async () => {
-    const runbook = await readFile(path.resolve('docs/RELEASE.md'), 'utf8');
-    const section = runbook
-      .split('## Prove real registry npx\n')[1]
-      ?.split('## Deploy and accept')[0];
-    if (section === undefined) throw new Error('Registry-npx section is missing.');
-    const blocks = [...section.matchAll(/```sh\n([\s\S]*?)```/gu)].map((match) => match[1] ?? '');
-    expect(blocks).toHaveLength(3);
-    const [setup = '', pinned = '', latest = ''] = blocks;
-
-    expect(setup).toContain('test "$pinned_cache" != "$latest_cache"');
-    expect(setup).toContain('find "$pinned_cache" -mindepth 1 -print -quit');
-    expect(setup).toContain('find "$latest_cache" -mindepth 1 -print -quit');
-    for (const block of [pinned, latest]) {
-      expect(block).toContain('view agentic-report@0.4.2 --json > ./npm-version.json');
-      expect(block).toContain('cat ./npm-version.json');
-    }
-    const pinnedCommands = registryCommands(pinned);
-    const latestCommands = registryCommands(latest);
-    expect(pinnedCommands).toHaveLength(6);
-    expect(latestCommands).toHaveLength(7);
-    expect(
-      pinnedCommands.every(
-        (line) => line.startsWith('env -i ') && line.includes('npm_config_cache="$pinned_cache"'),
-      ),
-    ).toBe(true);
-    expect(
-      latestCommands.every(
-        (line) => line.startsWith('env -i ') && line.includes('npm_config_cache="$latest_cache"'),
-      ),
-    ).toBe(true);
-    expect(
-      pinnedCommands
-        .filter((line) => line.includes('"$release_npx"'))
-        .every((line) => line.includes('agentic-report@0.4.2')),
-    ).toBe(true);
-    expect(
-      latestCommands
-        .filter((line) => line.includes('"$release_npx"'))
-        .every((line) => !line.includes('agentic-report@')),
-    ).toBe(true);
-  });
 });
-
-function registryCommands(block: string): string[] {
-  return block
-    .split('\n')
-    .filter((line) => line.includes('"$release_npm"') || line.includes('"$release_npx"'));
-}
 
 function fictionalMarkerIssue(source: string): string | undefined {
   let content: string;

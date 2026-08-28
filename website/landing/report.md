@@ -9,19 +9,15 @@ preset: editorial
 scrollProgress: true
 ---
 
-# Markdown in. An interactive page out.
+# Give your agent a better handoff.
 
 **Declarative pages for agent handoffs**
 
-Turn declarative Markdown into a finished interactive page an agent can hand to a human—locally, with one
-build command and no frontend project.
-
-```sh
-npx --yes agentic-report init ./my-page --starter landing --json
-```
+Install one skill. Your coding agent can turn research, code tours, decisions, incidents, and status into a
+polished interactive page whenever visual structure helps. Everything stays local; no frontend project.
 
 ::::actions
-::action[Build your first page]{href="#workflow" kind="primary"}
+::action[Install the agent skill]{href="#agent-skill" kind="primary"}
 ::action[See examples]{href="#examples" kind="secondary"}
 ::action[Agent instructions]{href="docs/agent/index.md" kind="quiet"}
 ::::
@@ -91,6 +87,55 @@ npx --yes agentic-report build ./website/landing --output ./site/index.html --js
 ```
 
 [Read the landing source](source/landing/report.md) · [Inspect release identity](release.json)
+:::::
+
+:::::section{title="Install once. Let the agent choose when a page helps." id="agent-skill" nav="Agent skill" width="wide" align="start" tone="accent" reveal="true"}
+The packaged skill teaches a compatible coding agent when to use `agentic-report`, how to choose a starter,
+how to validate the source, and how to return the finished local HTML. You ask for the work, not for a
+frontend implementation.
+
+::::cards
+:::card{title="Use the ready-made skill"}
+
+```sh
+npx skills add witqq/agentic-report --skill agentic-report
+```
+
+After installation, ask naturally: “Investigate this subsystem and give me an interactive code tour,”
+“compare these vendors,” or “turn the incident findings into a reviewable report.” The skill is designed to
+activate for static agent-to-human handoffs where sections, evidence, diagrams, timelines, code explanations,
+or local review threads make the result easier to understand.
+
+[Read the exact installed skill](skills/agentic-report/SKILL.md)
+:::
+:::card{title="Build it into your own skill"}
+
+```markdown
+---
+name: architecture-handoff
+description: Investigate a codebase and return a reviewable architecture page.
+---
+
+When the investigation is complete:
+
+1. Write the evidence and decisions as declarative Markdown.
+2. Run agentic-report validate and inspect.
+3. Build a single HTML artifact and open it for the user.
+```
+
+Pin `agentic-report` in the commands your skill runs. Your skill owns domain research and judgment;
+`agentic-report` owns the safe page contract, responsive layout, interaction runtime, and portable output.
+
+[Copy the agent quickstart](docs/agent/index.md)
+:::
+::::
+
+:::callout{kind="info" title="Good moments to generate a page"}
+Use it when a normal chat response would hide relationships or make review tedious: several findings with
+evidence, a code path with definitions, competing options and gates, a timeline, a dashboard, a tutorial, or
+a handoff that needs comments on exact fragments. Keep simple answers in chat; use a notebook for live
+computation and a bespoke app for ongoing multi-user state.
+:::
 :::::
 
 :::::section{title="From empty folder to reviewable page." id="workflow" nav="Workflow" width="standard" align="start" tone="plain"}

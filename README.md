@@ -12,6 +12,26 @@ when arbitrary layout control is the primary job.
 
 It is a local compiler, not a hosted or cloud service, and it does not start a server.
 
+## Give the capability to an agent
+
+Install the packaged skill so a compatible coding agent can recognize when a static interactive handoff is
+more useful than another long chat response:
+
+```sh
+npx skills add witqq/agentic-report --skill agentic-report
+```
+
+Ask naturally: “investigate this subsystem and open an interactive code tour,” “compare these options as a
+reviewable decision,” or “turn this incident into a report with a timeline and owners.” The skill chooses a
+starter, writes declarative source, validates and inspects it, builds the local HTML, and returns the source
+and artifact paths. It is intended for finished agent-to-human handoffs with evidence, relationships,
+timelines, code explanations, visualizations, or fragment-level review; simple answers should stay in chat.
+
+You can also use the CLI as the rendering stage of a domain-specific skill. The custom skill owns research,
+judgment, and the trigger; `agentic-report` owns the safe source contract, responsive page, packaged
+interaction runtime, and portable output. See the [agent quickstart](website/docs/agent/index.md) for a
+copyable custom-skill pattern and example prompts.
+
 ## Document map
 
 | Document                                                             | Role                                                       |
