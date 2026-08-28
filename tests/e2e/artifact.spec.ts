@@ -388,13 +388,58 @@ for (const artifact of glossaryCodeArtifacts) {
 
     if (testInfo.project.name.startsWith('mobile')) await decorator.tap();
     else await decorator.hover();
-    const codeDialog = marked.getByRole('dialog', { name: '@d.def' });
+    const codeDialogId = await decorator.getAttribute('aria-controls');
+    if (codeDialogId === null) throw new Error('Code glossary control is unlabelled.');
+    const codeDialog = page.locator(`#${codeDialogId}`);
+    await expect(page.getByRole('dialog', { name: '@d.def' })).toBeVisible();
     await expect(codeDialog).toBeVisible();
     await expect(codeDialog).toContainText('Field ownership decorator.');
+    expect(
+      await codeDialog.evaluate((panel) => ({
+        inBody: panel.parentElement === document.body,
+        portaled: panel.hasAttribute('data-glossary-portal'),
+      })),
+    ).toEqual({ inBody: true, portaled: true });
+    const tooltipGeometry = await decorator.evaluate((trigger) => {
+      const controlled = trigger.getAttribute('aria-controls');
+      const panel = controlled === null ? null : document.getElementById(controlled);
+      if (!(panel instanceof HTMLElement)) throw new Error('Code glossary panel is missing.');
+      const triggerRect = trigger.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      return {
+        attached:
+          Math.abs(panelRect.top - triggerRect.bottom) <= 1 ||
+          Math.abs(panelRect.bottom - triggerRect.top) <= 1,
+        overlapsInline: panelRect.left <= triggerRect.right && panelRect.right >= triggerRect.left,
+        contained:
+          panelRect.top >= 0 &&
+          panelRect.left >= 0 &&
+          panelRect.right <= innerWidth &&
+          panelRect.bottom <= innerHeight,
+      };
+    });
+    expect(tooltipGeometry).toEqual({ attached: true, overlapsInline: true, contained: true });
     await decorator.focus();
+    await page.evaluate(() => window.scrollBy(0, 80));
+    await expect(codeDialog).toBeVisible();
+    expect(
+      await decorator.evaluate((trigger) => {
+        const panel = document.getElementById(trigger.getAttribute('aria-controls') ?? '');
+        if (!(panel instanceof HTMLElement)) return false;
+        const triggerRect = trigger.getBoundingClientRect();
+        const panelRect = panel.getBoundingClientRect();
+        return (
+          Math.abs(panelRect.top - triggerRect.bottom) <= 1 ||
+          Math.abs(panelRect.bottom - triggerRect.top) <= 1
+        );
+      }),
+    ).toBe(true);
     await page.keyboard.press('Escape');
     await expect(codeDialog).toBeHidden();
     await expect(decorator).toBeFocused();
+    expect(
+      await codeDialog.evaluate((panel) => panel.closest('.semantic-code-term') !== null),
+    ).toBe(true);
 
     await marked.getByRole('button', { name: 'Copy' }).click();
     expect(await page.evaluate(() => Reflect.get(globalThis, '__copiedCode'))).toBe(

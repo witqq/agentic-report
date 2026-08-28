@@ -77,7 +77,10 @@ Markdown + metadata + local assets + partials + semantic directives
 - `src/browser/` contains the browser runtime and token-based stylesheet bundled by Vite. One delegated
   event controller handles theme/navigation controls, current-section ownership, bounded normal-motion
   progress/reveal, code copying, glossary hover/focus/tap explanations,
-  tab selection, modal/popover focus, filtering, switches, and bounded counters. Interaction instances keep state in their own semantic DOM
+  tab selection, modal/popover focus, filtering, switches, and bounded counters. A code-term explanation is
+  portalled to `body` while open, positioned against its trigger with viewport clamping and above/below
+  flipping, then restored to its semantic source position on close; this prevents scrollable code blocks from
+  clipping or relocating the panel. Interaction instances otherwise keep state in their own semantic DOM
   subtree, so repeated components do not share accidental state.
 - `src/browser/review-workspace.ts` is a cohesive package-owned controller over the shared review contract.
   It parses the inert manifest once, creates bounded target affordances, owns in-memory discussion threads,
