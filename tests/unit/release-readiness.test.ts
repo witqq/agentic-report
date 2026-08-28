@@ -129,14 +129,14 @@ describe('release readiness', () => {
     if (publish === undefined) throw new Error('Release publish section is missing.');
 
     expect(publish).toContain(
-      'release_asset_url="https://github.com/witqq/agentic-report/releases/download/v0.3.5/agentic-report-0.3.5.tgz"',
+      'release_asset_url="https://github.com/witqq/agentic-report/releases/download/v0.4.0/agentic-report-0.4.0.tgz"',
     );
     expect(publish).toContain(
-      'gh workflow run publish-npm.yml --ref main -f tag=v0.3.5 -f sha256="$candidate_sha256"',
+      'gh workflow run publish-npm.yml --ref main -f tag=v0.4.0 -f sha256="$candidate_sha256"',
     );
     expect(publish).toContain('gh run watch "<databaseId>" --interval 10 --exit-status');
     expect(publish).toContain('shasum -a 256');
-    expect(publish).toContain('npm view agentic-report@0.3.5 --json');
+    expect(publish).toContain('npm view agentic-report@0.4.0 --json');
     expect(publish).toContain('Inspect the complete unauthenticated version document');
     expect(publish).toContain('Stop on any mismatch or sensitive value.');
     expect(
@@ -212,7 +212,7 @@ describe('release readiness', () => {
     expect(setup).toContain('find "$pinned_cache" -mindepth 1 -print -quit');
     expect(setup).toContain('find "$latest_cache" -mindepth 1 -print -quit');
     for (const block of [pinned, latest]) {
-      expect(block).toContain('view agentic-report@0.3.5 --json > ./npm-version.json');
+      expect(block).toContain('view agentic-report@0.4.0 --json > ./npm-version.json');
       expect(block).toContain('cat ./npm-version.json');
     }
     const pinnedCommands = registryCommands(pinned);
@@ -232,7 +232,7 @@ describe('release readiness', () => {
     expect(
       pinnedCommands
         .filter((line) => line.includes('"$release_npx"'))
-        .every((line) => line.includes('agentic-report@0.3.5')),
+        .every((line) => line.includes('agentic-report@0.4.0')),
     ).toBe(true);
     expect(
       latestCommands
