@@ -1,16 +1,60 @@
 # Agent quickstart
 
+`agentic-report` is a local rendering capability for coding agents. Install the ready-made skill when you
+want the agent to recognize that a research result, code tour, decision, incident review, tutorial,
+dashboard, or project handoff would be clearer as an interactive page instead of a long chat response:
+
+```sh
+npx skills add witqq/agentic-report --skill agentic-report
+```
+
+Then ask for the work in ordinary language. Useful prompts include:
+
+- “Investigate this subsystem and open an interactive code tour with definitions on the important symbols.”
+- “Compare these options, preserve the evidence and assumptions, and hand me a reviewable decision page.”
+- “Turn the incident timeline, causes, and follow-up owners into an interactive report.”
+- “Summarize this release as a dashboard with risks, gates, and links to the relevant source.”
+
+The skill should choose this tool when visual structure, relationships, code explanations, timelines,
+evidence, or fragment-level review materially improve the handoff. It should keep a simple answer in chat,
+use a notebook for live computation, and use a bespoke application for persistent multi-user state.
+
+## Use it inside your own skill
+
+Domain-specific skills can keep their own research and decision process while delegating the finished page
+to `agentic-report`. A minimal skill can say:
+
+```markdown
+---
+name: architecture-handoff
+description: Investigate a codebase and return a reviewable architecture page.
+---
+
+After the investigation:
+
+1. Write verified findings, evidence, diagrams, and decisions as declarative Markdown.
+2. Run the pinned agentic-report validate and inspect commands.
+3. Resolve every diagnostic, build one HTML artifact, and open it for the user.
+4. Report the source path, artifact path, warnings, and unresolved facts.
+```
+
+Your skill owns when the handoff is useful and what the content means. The utility owns the validated source
+contract, accessible layout, interaction runtime, and portable output. Do not ask the agent to write a
+parallel React page, custom CSS, or browser script.
+
+## Build the artifact
+
 Use Node.js 24.18.0 or newer. The first `npx` command needs npm registry and network access; the generated
 page itself opens locally through `file://` with its included package-owned browser runtime.
 
-For a reproducible 0.4.2 run, create a new landing-page source and keep the package version pinned through
+For a reproducible 0.4.3 run, create a new landing-page source and keep the package version pinned through
 validation, inspection, and build:
 
 ```sh
-npx --yes agentic-report@0.4.2 init ./my-page --starter landing --json
-npx --yes agentic-report@0.4.2 validate ./my-page --json
-npx --yes agentic-report@0.4.2 inspect ./my-page --json
-npx --yes agentic-report@0.4.2 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.4.3 init ./my-page --starter landing --json
+npx --yes agentic-report@0.4.3 validate ./my-page --json
+npx --yes agentic-report@0.4.3 inspect ./my-page --json
+npx --yes agentic-report@0.4.3 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Edit only the declarative source: Markdown, YAML frontmatter or the
@@ -60,9 +104,9 @@ registry's current `latest` release.
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.4.2 describe --json
-npx --yes agentic-report@0.4.2 schema --scope source
-npx --yes agentic-report@0.4.2 examples --json
+npx --yes agentic-report@0.4.3 describe --json
+npx --yes agentic-report@0.4.3 schema --scope source
+npx --yes agentic-report@0.4.3 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),

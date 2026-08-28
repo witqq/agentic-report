@@ -86,11 +86,12 @@ test('public landing has the exact proof-first contract in both output formats',
     );
     await expect(page.locator('html')).toHaveAttribute('data-preset', 'editorial');
     await expect(
-      page.getByRole('heading', { name: 'Markdown in. An interactive page out.', level: 1 }),
+      page.getByRole('heading', { name: 'Give your agent a better handoff.', level: 1 }),
     ).toBeVisible();
-    await expect(page.locator('section.semantic-section')).toHaveCount(8);
+    await expect(page.locator('section.semantic-section')).toHaveCount(9);
     await expect(page.locator('[data-navigation] a')).toHaveText([
       'Proof',
+      'Agent skill',
       'Workflow',
       'Examples',
       'Page types',
@@ -318,7 +319,7 @@ test('captures the complete public-landing acceptance states in both formats', a
     if (options.drawer === true) {
       await page.getByRole('button', { name: 'Open contents' }).click();
       await expect(page.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
-      await expect(page.locator('[data-navigation] a')).toHaveCount(8);
+      await expect(page.locator('[data-navigation] a')).toHaveCount(9);
       await expect(page.locator('[data-nav-dialog]')).toHaveCSS('opacity', '1');
       await expect(page.locator('[data-nav-dialog]')).toHaveCSS(
         'transform',

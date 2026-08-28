@@ -46,6 +46,7 @@ describe('public landing product proof', () => {
     );
     expect(sections).toEqual([
       'Proof',
+      'Agent skill',
       'Workflow',
       'Examples',
       'Page types',
@@ -54,9 +55,10 @@ describe('public landing product proof', () => {
       'Docs',
       'Start',
     ]);
-    expect(source).toContain(
-      'Turn declarative Markdown into a finished interactive page an agent can hand to a human—locally, with one\nbuild command and no frontend project.',
-    );
+    expect(source).toContain('# Give your agent a better handoff.');
+    expect(source).toContain('Install one skill. Your coding agent can turn research');
+    expect(source).toContain('npx skills add witqq/agentic-report --skill agentic-report');
+    expect(source).toContain('name: architecture-handoff');
     expect(source).toContain('preset: editorial');
     expect(source).toContain('No author JSX, JS, or CSS');
     expect(source).toContain('Use Node.js 24.18.0 or newer.');
