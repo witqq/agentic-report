@@ -422,6 +422,10 @@ a {
   padding: calc(2rem * var(--space-factor)) var(--shell-gutter) 4rem;
 }
 
+.report-shell[data-has-navigation='false'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 :root[data-nav-collapsed] .report-shell {
   grid-template-columns: minmax(0, 1fr);
 }
