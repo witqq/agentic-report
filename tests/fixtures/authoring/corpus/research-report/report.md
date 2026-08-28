@@ -76,9 +76,11 @@ Additional evidence is visible initially.
 :::
 ::::
 
-:::diagram{title="Evidence flow" description="Local evidence moves through validation into a portable result." direction="right"}
-::node{id="local" label="Local evidence" kind="accent"}
-::node{id="validated" label="Validated model" kind="success"}
+:::diagram{title="Evidence flow" description="Local evidence moves through validation into a portable result." type="flow" direction="right"}
+::group{id="inputs" label="Inputs"}
+::group{id="outputs" label="Outputs"}
+::node{id="local" label="Local evidence" group="inputs" kind="accent"}
+::node{id="validated" label="Validated model" group="outputs" kind="success"}
 ::edge{from="local" to="validated" label="check"}
 :::
 

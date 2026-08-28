@@ -22,6 +22,7 @@ describe('release readiness', () => {
   it('ships accepted evidence for every product extension proposal', async () => {
     for (const file of [
       'docs/product/code-glossary-extension.json',
+      'docs/product/diagram-extension.json',
       'docs/product/review-workspace-extension.json',
       'docs/product/source-link-extension.json',
     ]) {

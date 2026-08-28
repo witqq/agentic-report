@@ -26,6 +26,7 @@ export function authoringRegistryIntegrityIssues(
 
   checkOutputFormats(registry, issues);
   checkPageContract(registry, issues);
+  checkDiagramContract(registry, issues);
 
   for (const directive of registry.directives) {
     if (directive.description.trim().length === 0)
@@ -130,6 +131,59 @@ export function authoringRegistryIntegrityIssues(
     }
   }
   return issues;
+}
+
+function checkDiagramContract(registry: RegistryIntegrityInput, issues: string[]): void {
+  const contract = registry.visualizations.diagram;
+  if (!contract.types.includes(contract.defaultType)) {
+    issues.push('diagram contract: default type is outside the type domain');
+  }
+  if (
+    contract.flow.nodes.minimum < 1 ||
+    contract.flow.nodes.maximum < contract.flow.nodes.minimum ||
+    contract.flow.edges.maximum < 0
+  ) {
+    issues.push('diagram contract: invalid flow bounds');
+  }
+  if (
+    contract.flow.groups.minimum < 2 ||
+    contract.flow.groups.maximum < contract.flow.groups.minimum
+  ) {
+    issues.push('diagram contract: invalid group bounds');
+  }
+  if (
+    contract.flow.selfEdges ||
+    !contract.flow.groups.requireEveryNode ||
+    contract.flow.groups.direction !== 'right'
+  ) {
+    issues.push('diagram contract: unsupported flow policy');
+  }
+  if (
+    contract.sequence.participants.minimum < 2 ||
+    contract.sequence.participants.maximum < contract.sequence.participants.minimum ||
+    contract.sequence.messages.minimum < 1 ||
+    contract.sequence.messages.maximum < contract.sequence.messages.minimum
+  ) {
+    issues.push('diagram contract: invalid sequence bounds');
+  }
+  if (
+    contract.sequence.groups ||
+    contract.sequence.participantGroups ||
+    contract.sequence.direction !== 'forbidden' ||
+    !contract.sequence.messages.labelRequired ||
+    contract.sequence.selfMessages
+  ) {
+    issues.push('diagram contract: unsupported sequence policy');
+  }
+  const diagram = registry.directives.find((directive) => directive.name === 'diagram');
+  const type = diagram?.attributes.find((attribute) => attribute.name === 'type');
+  if (
+    type?.constraint.kind !== 'enum' ||
+    !sameOrderedValues(type.constraint.values, contract.types) ||
+    type.default !== contract.defaultType
+  ) {
+    issues.push('diagram contract: directive type domain differs from visualization contract');
+  }
 }
 
 function expectedSanitizerProperties(directive: DirectiveDefinition): readonly string[] {

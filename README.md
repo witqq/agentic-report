@@ -136,6 +136,8 @@ numbered contents, and package-owned action icons. These are closed validated va
 `examples/layout-*` demonstrate every layout and are listed by
 `agentic-report examples --json`; `examples/interactive-catalog` and `examples/visualization-catalog`
 demonstrate the package-owned interaction and data primitives.
+The visualization catalog includes a 15-node grouped subsystem flow and an ordered compile-request sequence;
+both use the same bounded `diagram`/`group`/`node`/`edge` directives and compile offline.
 
 Authors may replace heading-only structure with top-level `section` directives. Each section owns a
 visible H2 and a stable anchor, plus closed reading/standard/wide tracks, start/center alignment, and

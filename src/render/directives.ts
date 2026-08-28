@@ -6,6 +6,7 @@ import { visit } from 'unist-util-visit';
 
 import {
   authoringRegistry,
+  DIAGRAM_CONTRACT,
   type DirectiveAttributeDefinition,
   type DirectiveDefinition,
   type DirectiveForm,
@@ -522,19 +523,21 @@ function validateVisualizationData(
   }
 
   function validateDiagram(diagram: DirectiveNode): void {
-    const children = requireOnlyDirectiveChildren(diagram, ['node', 'edge']);
+    const children = requireOnlyDirectiveChildren(diagram, ['group', 'node', 'edge']);
+    const type = String(attributes(diagram).type);
+    const groups = children.filter((child) => child.name === 'group');
     const nodes = children.filter((child) => child.name === 'node');
     const edges = children.filter((child) => child.name === 'edge');
-    if (nodes.length < 1 || nodes.length > 12) {
-      fail(diagram, 'Diagrams require 1 to 12 nodes.', 'Add a node or split a large diagram.');
-    }
-    if (edges.length > 20) {
-      fail(diagram, 'Diagrams support at most 20 edges.', 'Split the diagram into smaller flows.');
-    }
     const ids = nodes.map((node) => String(attributes(node).id));
     if (new Set(ids).size !== ids.length) {
       fail(diagram, 'Diagram node ids must be unique.', 'Give every node a distinct id.');
     }
+    const groupIds = groups.map((group) => String(attributes(group).id));
+    if (new Set(groupIds).size !== groupIds.length) {
+      fail(diagram, 'Diagram group ids must be unique.', 'Give every group a distinct id.');
+    }
+    if (type === 'flow') validateFlowDiagram(diagram, groups, nodes, edges, groupIds);
+    else validateSequenceDiagram(diagram, groups, nodes, edges);
     const known = new Set(ids);
     for (const edge of edges) {
       const from = String(attributes(edge).from);
@@ -546,8 +549,150 @@ function validateVisualizationData(
           'Use ids declared by node directives in this diagram.',
         );
       }
-      if (from === to) {
-        fail(edge, 'Diagram self-edges are not supported.', 'Connect two distinct nodes.');
+      const selfConnectionAllowed =
+        type === 'sequence'
+          ? DIAGRAM_CONTRACT.sequence.selfMessages
+          : DIAGRAM_CONTRACT.flow.selfEdges;
+      if (from === to && !selfConnectionAllowed) {
+        fail(
+          edge,
+          type === 'sequence'
+            ? 'Sequence self-messages are not supported.'
+            : 'Diagram self-edges are not supported.',
+          'Connect two distinct nodes.',
+        );
+      }
+    }
+  }
+
+  function validateFlowDiagram(
+    diagram: DirectiveNode,
+    groups: readonly DirectiveNode[],
+    nodes: readonly DirectiveNode[],
+    edges: readonly DirectiveNode[],
+    groupIds: readonly string[],
+  ): void {
+    const contract = DIAGRAM_CONTRACT.flow;
+    if (nodes.length < contract.nodes.minimum || nodes.length > contract.nodes.maximum) {
+      fail(
+        diagram,
+        `Flow diagrams require ${contract.nodes.minimum} to ${contract.nodes.maximum} nodes.`,
+        'Add nodes or split a larger flow.',
+      );
+    }
+    if (edges.length > contract.edges.maximum) {
+      fail(
+        diagram,
+        `Flow diagrams support at most ${contract.edges.maximum} edges.`,
+        'Split the flow or remove non-essential connections.',
+      );
+    }
+    if (
+      groups.length !== contract.groups.ungrouped &&
+      (groups.length < contract.groups.minimum || groups.length > contract.groups.maximum)
+    ) {
+      fail(
+        diagram,
+        `Grouped flows require ${contract.groups.minimum} to ${contract.groups.maximum} groups.`,
+        'Remove all groups or declare the supported number of subsystem groups.',
+      );
+    }
+    if (groups.length > 0 && attributes(diagram).direction !== contract.groups.direction) {
+      fail(
+        diagram,
+        'Grouped flows support only rightward subsystem columns.',
+        'Use direction="right" or remove groups for an ungrouped down flow.',
+      );
+    }
+    const knownGroups = new Set(groupIds);
+    for (const node of nodes) {
+      const group = attributes(node).group;
+      if (groups.length === 0 && group !== undefined) {
+        fail(
+          node,
+          `Diagram node references an undeclared group: ${String(group)}.`,
+          'Declare the group or remove the group attribute.',
+        );
+      }
+      if (
+        groups.length > 0 &&
+        contract.groups.requireEveryNode &&
+        (group === undefined || !knownGroups.has(String(group)))
+      ) {
+        fail(
+          node,
+          group === undefined
+            ? 'Every node in a grouped flow requires a group.'
+            : `Diagram node references an unknown group: ${String(group)}.`,
+          'Reference one of the groups declared in this diagram.',
+        );
+      }
+    }
+    for (const group of groups) {
+      const id = String(attributes(group).id);
+      if (!nodes.some((node) => attributes(node).group === id)) {
+        fail(
+          group,
+          `Diagram group has no nodes: ${id}.`,
+          'Assign at least one node to this group.',
+        );
+      }
+    }
+  }
+
+  function validateSequenceDiagram(
+    diagram: DirectiveNode,
+    groups: readonly DirectiveNode[],
+    participants: readonly DirectiveNode[],
+    messages: readonly DirectiveNode[],
+  ): void {
+    const contract = DIAGRAM_CONTRACT.sequence;
+    if (!contract.groups && groups.length > 0) {
+      fail(
+        groups[0] ?? diagram,
+        'Sequence diagrams do not support subsystem groups.',
+        'Remove group directives and node group attributes.',
+      );
+    }
+    if (contract.direction === 'forbidden' && diagram.attributes?.direction !== undefined) {
+      fail(
+        diagram,
+        'Sequence diagrams do not accept a flow direction.',
+        'Remove the direction attribute from this sequence diagram.',
+      );
+    }
+    if (
+      participants.length < contract.participants.minimum ||
+      participants.length > contract.participants.maximum
+    ) {
+      fail(
+        diagram,
+        `Sequence diagrams require ${contract.participants.minimum} to ${contract.participants.maximum} participants.`,
+        'Adjust the number of node participants.',
+      );
+    }
+    if (
+      messages.length < contract.messages.minimum ||
+      messages.length > contract.messages.maximum
+    ) {
+      fail(
+        diagram,
+        `Sequence diagrams require ${contract.messages.minimum} to ${contract.messages.maximum} messages.`,
+        'Adjust the number of edge messages.',
+      );
+    }
+    for (const participant of participants) {
+      if (!contract.participantGroups && attributes(participant).group !== undefined) {
+        fail(
+          participant,
+          'Sequence participants do not accept a group.',
+          'Remove the group attribute.',
+        );
+      }
+    }
+    for (const message of messages) {
+      if (contract.messages.labelRequired && attributes(message).label === undefined) {
+        fail(message, 'Sequence messages require a label.', 'Add a label to this edge message.');
       }
     }
   }
@@ -2068,6 +2213,8 @@ function allowedDirectiveChildren(
       return ['point'];
     case 'node-and-edge-directives':
       return ['node', 'edge'];
+    case 'group-node-and-edge-directives':
+      return ['group', 'node', 'edge'];
     case 'event-directives':
       return ['event'];
     case 'markdown':

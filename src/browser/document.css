@@ -1253,7 +1253,35 @@ th {
 }
 
 .visualization-diagram {
-  min-width: 52rem;
+  min-width: 0;
+}
+
+.visualization-group {
+  fill: color-mix(in srgb, var(--color-surface-raised) 78%, transparent);
+  stroke: var(--color-border-strong);
+  stroke-width: 2;
+}
+
+.visualization-group-label {
+  fill: var(--color-text);
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 780;
+}
+
+.visualization-sequence-lifeline {
+  stroke: var(--color-border-strong);
+  stroke-width: 1.5;
+  stroke-dasharray: 7 6;
+}
+
+.visualization-sequence-message {
+  stroke-width: 2.5;
+}
+
+.visualization-sequence-label {
+  fill: var(--color-text);
+  font-weight: 650;
 }
 
 .visualization-grid {
@@ -1474,6 +1502,10 @@ th {
 
   .visualization-svg {
     min-width: 31rem;
+  }
+
+  .visualization-diagram {
+    min-width: 48rem;
   }
 }
 

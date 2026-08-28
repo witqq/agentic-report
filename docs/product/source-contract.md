@@ -204,8 +204,8 @@ rewriting their historical targets. Invalid sidecars fail before authoritative o
 - `toggle`: switch-controlled content with required `label`, optional `title`, and `default` state;
 - `chart`, nested `series`, and nested leaf `point`: compile-time `bar`, `line`, or `pie` SVG from bounded
   labelled numeric values;
-- `diagram` with leaf `node` and `edge` children: compile-time directed flow SVG with validated node
-  identities and references;
+- `diagram` with leaf `group`, `node`, and `edge` children: compile-time grouped flow or ordered sequence SVG
+  with validated identities and references;
 - `timeline` and directly nested `event`: semantic ordered chronology; each event may contain Markdown;
 - `demo`: safe built-in counter with optional `title`, `start`, and `step`; it never evaluates author code;
 - `asset`: downloadable local resource with required `src`;
@@ -257,15 +257,24 @@ path is unacceptable or the recipient does not share the same filesystem layout.
 Top-level visuals require `title` and `description`. A chart accepts 1–6 `series`; each series accepts 1–12
 leaf `point` values, and every series must use the same unique labels in the same order. Values are finite
 decimal numbers between `-999999999` and `999999999`, with at most four decimal places. Pie charts require
-one series, non-negative values, and at least one positive value. A diagram accepts 1–12 unique nodes and
-up to 20 edges; every edge must reference two distinct declared node IDs. `direction` is `right` or `down`.
+one series, non-negative values, and at least one positive value. `diagram.type` defaults to `flow`. A flow
+accepts 1–20 unique nodes and up to 40 edges; it is ungrouped or declares 2–3 non-empty groups and gives every
+node a declared group. Ungrouped flows accept `direction="right|down"`; grouped subsystem columns are
+rightward. A `sequence` accepts 2–6 node participants and 1–40
+labelled edge messages in authored order; group records, group membership, direction and self-messages fail.
+Every edge or message references two distinct declared node IDs.
+Grouped members use authored row order. Longer intra-group connections route through the group's inner gutter,
+and the first connection for an adjacent group pair uses its inter-column gutter. Non-adjacent connections and
+additional edges for an already-used pair receive distinct bottom-corridor lanes outside all groups; each lane
+increases the SVG viewBox height within the finite edge bound. Dense arbitrary graph optimization remains
+outside the bounded flow contract.
 A timeline accepts 1–20 direct events. Visual data containers reject prose as a direct child, while an
 event body accepts ordinary Markdown.
 
 The compiler emits responsive deterministic SVG for charts and diagrams and semantic HTML for timelines.
 Titles and descriptions are visible and label each atomic SVG image. The SVG accessible description also
-contains every complete series/point value or diagram node/connection label, including text shortened only
-in the visible plot. Values retain up to the supported four decimal places in observable text. Colors come
+contains every complete series/point value, flow group/member/node/connection, or sequence participant and
+ordered message, including text shortened only in the visible plot. Values retain up to the supported four decimal places in observable text. Colors come
 from package-owned theme variables. There is no visualization-time JavaScript, canvas, network request,
 author CSS, executable graph DSL, or separate behavior between `single-file` and `directory`.
 

@@ -82,6 +82,14 @@ const glossaryCodeArtifacts = [
     ).href,
   },
 ] as const;
+const diagramTourArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('diagram-tour') },
+  {
+    format: 'directory',
+    url: pathToFileURL(path.resolve('test-results/e2e-generated/diagram-tour-directory/index.html'))
+      .href,
+  },
+] as const;
 
 for (const artifact of defaultMotionArtifacts) {
   test(`${artifact.format} source link opens the loopback helper without replacing the file report`, async ({
@@ -222,6 +230,128 @@ for (const artifact of glossaryCodeArtifacts) {
 
     const capturePath = path.resolve(
       'test-results/captures/code-glossary',
+      `${artifact.format}-${testInfo.project.name}.png`,
+    );
+    await mkdir(path.dirname(capturePath), { recursive: true });
+    await page.screenshot({ path: capturePath, fullPage: true });
+  });
+}
+
+for (const artifact of diagramTourArtifacts) {
+  test(`${artifact.format} grouped flow and sequence remain readable and contained from file URL`, async ({
+    page,
+  }, testInfo) => {
+    await page.goto(artifact.url);
+    if (artifact.format === 'directory') {
+      await page.locator('html').evaluate((element) => {
+        element.dataset.theme = 'dark';
+      });
+    }
+
+    const flow = page.getByRole('img', { name: 'Code tour grouped flow' });
+    const sequence = page.getByRole('img', { name: 'Compile request sequence' });
+    await expect(flow).toBeVisible();
+    await expect(sequence).toBeVisible();
+    await expect(flow).toHaveAccessibleDescription(
+      /Groups: source: Authentication and authorization services \(step-1, step-2, step-3, step-4, step-5, step-6\).*reader: Reader artifact.*step-18: Step 18 detail/u,
+    );
+    await expect(sequence).toHaveAccessibleDescription(
+      /Participants: agent: Authoring agent.*Messages in order: 1\. agent to loader: load source; 2\. loader to compiler: validated graph; 3\. compiler to browser: write artifact; 4\. browser to agent: review result/u,
+    );
+    await expect(page.locator('[data-diagram-type="flow"] [data-group-id]')).toHaveCount(3);
+    await expect(page.locator('[data-diagram-type="flow"] [data-node-id]')).toHaveCount(18);
+    await expect(page.locator('[data-diagram-type="flow"] .visualization-group-edge')).toHaveCount(
+      2,
+    );
+    await expect(
+      page.locator('[data-diagram-type="flow"] .visualization-group-internal-edge'),
+    ).toHaveCount(1);
+    await expect(
+      page.locator('[data-diagram-type="flow"] .visualization-group-outer-edge'),
+    ).toHaveCount(3);
+    expect(
+      await page
+        .locator('[data-diagram-type="flow"] .visualization-group-outer-edge')
+        .evaluateAll((edges) => edges.map((edge) => edge.getAttribute('data-route-lane'))),
+    ).toEqual(['694', '714', '734']);
+    await expectDiagramEdgesAvoidNodes(flow);
+    await expect(page.locator('[data-diagram-type="sequence"] [data-participant]')).toHaveCount(4);
+    await expect(page.locator('[data-diagram-type="sequence"] [data-message-order]')).toHaveCount(
+      4,
+    );
+    expect(
+      await page
+        .locator('[data-diagram-type="sequence"] [data-message-order]')
+        .evaluateAll((elements) =>
+          elements.map((element) => element.getAttribute('data-message-order')),
+        ),
+    ).toEqual(['1', '2', '3', '4']);
+
+    const groupContainment = await page.locator('[data-diagram-type="flow"]').evaluate((root) => {
+      const groups = [...root.querySelectorAll<SVGGElement>('[data-group-id]')];
+      return groups.every((group) => {
+        const id = group.getAttribute('data-group-id');
+        const boundary = group.querySelector<SVGRectElement>('.visualization-group')?.getBBox();
+        if (boundary === undefined) return false;
+        const members = [...root.querySelectorAll<SVGGElement>(`[data-group="${id}"]`)];
+        const labels = [...group.querySelectorAll<SVGTextElement>('.visualization-group-label')];
+        return (
+          members.length > 0 &&
+          labels.length > 0 &&
+          labels.every((label) => {
+            const box = label.getBBox();
+            return (
+              box.x >= boundary.x &&
+              box.y >= boundary.y &&
+              box.x + box.width <= boundary.x + boundary.width &&
+              box.y + box.height <= boundary.y + 54
+            );
+          }) &&
+          members.every((member) => {
+            const box = member.getBBox();
+            return (
+              box.x >= boundary.x &&
+              box.y >= boundary.y &&
+              box.x + box.width <= boundary.x + boundary.width &&
+              box.y + box.height <= boundary.y + boundary.height
+            );
+          })
+        );
+      });
+    });
+    expect(groupContainment).toBe(true);
+
+    const geometry = await page.locator('[data-visualization="diagram"]').evaluateAll((figures) =>
+      figures.map((figure) => {
+        const frame = figure.querySelector<HTMLElement>('.visualization-frame');
+        const svg = figure.querySelector<SVGSVGElement>('svg');
+        const label = figure.querySelector<SVGTextElement>('.visualization-node-label');
+        if (frame === null || svg === null || label === null)
+          throw new Error('Diagram geometry missing.');
+        const scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
+        return {
+          frameContained: frame.scrollWidth <= frame.clientWidth,
+          effectiveLabelSize: Number.parseFloat(getComputedStyle(label).fontSize) * scale,
+        };
+      }),
+    );
+    if (testInfo.project.name.startsWith('desktop')) {
+      expect(geometry.every((item) => item.frameContained)).toBe(true);
+      expect(geometry.every((item) => item.effectiveLabelSize >= 11)).toBe(true);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+
+    const groupFill = page.locator('.visualization-group').first();
+    const before = await groupFill.evaluate((element) => getComputedStyle(element).fill);
+    await page.getByRole('button', { name: 'Toggle color theme' }).click();
+    const after = await groupFill.evaluate((element) => getComputedStyle(element).fill);
+    expect(after).not.toBe(before);
+    await page.getByRole('button', { name: 'Toggle color theme' }).click();
+
+    const capturePath = path.resolve(
+      'test-results/captures/diagram-tour',
       `${artifact.format}-${testInfo.project.name}.png`,
     );
     await mkdir(path.dirname(capturePath), { recursive: true });
@@ -1740,10 +1870,18 @@ for (const artifact of visualizationArtifacts) {
     const flowDiagram = page.getByRole('img', { name: /Offline compilation flow/u });
     await expect(flowDiagram).toBeVisible();
     await expect(flowDiagram).toHaveAccessibleDescription(
-      /source: Declarative source.*source to validate: parse/u,
+      /Groups: authoring: Authoring graph.*source: Declarative source.*source to validate: parse/u,
     );
+    await expect(page.locator('[data-diagram-type="flow"] [data-group-id]')).toHaveCount(3);
+    await expect(page.locator('[data-diagram-type="flow"] [data-node-id]')).toHaveCount(15);
     await expect(page.locator('[data-node-id="source"]')).toBeAttached();
     await expect(page.locator('[data-from="source"][data-to="validate"]')).toBeAttached();
+    await expectDiagramEdgesAvoidNodes(flowDiagram);
+    const sequenceDiagram = page.getByRole('img', { name: /Compile request sequence/u });
+    await expect(sequenceDiagram).toBeVisible();
+    await expect(sequenceDiagram).toHaveAccessibleDescription(
+      /Messages in order: 1\. agent to loader: load source.*4\. browser to agent: review result/u,
+    );
     await expect(page.locator('.visualization-timeline-event')).toHaveCount(4);
     await expect(page.getByText('Compile offline', { exact: true })).toBeVisible();
 
@@ -2385,6 +2523,39 @@ test('system theme follows dark preference and becomes an explicit theme after a
   await expect(root).toHaveAttribute('data-theme', 'dark');
   expect(await codeThemeState(page.locator('pre.shiki'))).toEqual(darkCode);
 });
+
+async function expectDiagramEdgesAvoidNodes(diagram: Locator): Promise<void> {
+  const intersections = await diagram.evaluate((svg) => {
+    const nodes = [...svg.querySelectorAll<SVGGElement>('[data-node-id]')].map((node) => ({
+      id: node.getAttribute('data-node-id') ?? '',
+      bounds: node.getBBox(),
+    }));
+    return [...svg.querySelectorAll<SVGGeometryElement>('.visualization-edge')].flatMap((edge) => {
+      const from = edge.getAttribute('data-from');
+      const to = edge.getAttribute('data-to');
+      const length = edge.getTotalLength();
+      for (let offset = 2; offset < length - 2; offset += 2) {
+        const point = edge.getPointAtLength(offset);
+        const collision = nodes.find(({ id, bounds }) => {
+          if (id === from || id === to) return false;
+          return (
+            point.x > bounds.x + 1 &&
+            point.x < bounds.x + bounds.width - 1 &&
+            point.y > bounds.y + 1 &&
+            point.y < bounds.y + bounds.height - 1
+          );
+        });
+        if (collision !== undefined) {
+          return [
+            `${from ?? '?'}->${to ?? '?'} intersects ${collision.id} at ${Math.round(point.x)},${Math.round(point.y)}`,
+          ];
+        }
+      }
+      return [];
+    });
+  });
+  expect(intersections).toEqual([]);
+}
 
 async function codeThemeState(
   block: Locator,

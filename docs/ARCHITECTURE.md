@@ -186,17 +186,21 @@ panels before reading text.
 
 ## Visualization model
 
-The registry owns a closed data vocabulary for `chart`/`series`/`point`, `diagram`/`node`/`edge`, and
+The registry owns a closed data vocabulary for `chart`/`series`/`point`,
+`diagram`/`group`/`node`/`edge`, and
 `timeline`/`event`. Charts support `bar`, `line`, and `pie`; series are bounded, share an ordered category
-domain, and use finite numeric values. Diagrams contain bounded uniquely identified nodes and validated
-directed references. Timeline events retain ordinary Markdown bodies. Every top-level visual requires a
-visible title and meaningful description.
+domain, and use finite numeric values. Flow diagrams contain up to twenty uniquely identified nodes, bounded
+directed references, and optionally two or three complete subsystem groups. Sequence diagrams retain
+participant and labelled message order. The registry owns both form-specific bounds and unsupported
+combinations. Timeline events retain ordinary Markdown bodies. Every top-level visual requires a visible
+title and meaningful description.
 
 Visualization output is generated after Markdown sanitization from values already checked by the registry
 schemas and cross-record validator. SVG uses deterministic document-order IDs, a responsive `viewBox`,
 package theme variables, and an atomic image role. Its accessible `title` and `desc` expose the authored
-summary plus complete chart series/point data or diagram node/connection data; decorative SVG descendants
-do not make unreachable nested-role claims. Timelines use an ordered semantic list. No source value becomes
+summary plus complete chart series/point data, grouped-flow membership/connections, or sequence participants/
+messages; decorative SVG descendants do not make unreachable nested-role claims. Timelines use an ordered
+semantic list. No source value becomes
 JavaScript, CSS, raw HTML, a URL, or an executable graph expression.
 
 The implementation uses package-owned compile-time SVG/HTML rather than a new dependency. The bounded

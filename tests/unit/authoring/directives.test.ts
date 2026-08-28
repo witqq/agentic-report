@@ -102,8 +102,10 @@ describe('registry-driven semantic directives', () => {
       ':::',
       '::::',
       ':::diagram{title="Flow" description="Source becomes output." direction="right"}',
-      '::node{id="source" label="Source" kind="accent"}',
-      '::node{id="output" label="Output" kind="success"}',
+      '::group{id="input" label="Input"}',
+      '::group{id="result" label="Result"}',
+      '::node{id="source" label="Source" group="input" kind="accent"}',
+      '::node{id="output" label="Output" group="result" kind="success"}',
       '::edge{from="source" to="output" label="compile"}',
       ':::',
       '::::timeline{title="Delivery" description="Two delivery phases."}',
@@ -797,7 +799,9 @@ describe('registry-driven semantic directives', () => {
       'Two aligned series. Data: One, A: 1.5; One, B: 2; Two, A: 2.5; Two, B: 3.',
     );
     expect(first.html).toContain('data-node-id="a"');
-    expect(first.html).toContain('A validated edge. Nodes: a: A; b: B. Connections: a to b: next.');
+    expect(first.html).toContain(
+      'A validated edge. Groups: none. Nodes: a: A; b: B. Connections: a to b: next.',
+    );
     expect(first.html).not.toMatch(/class="semantic-(?:point|node)[^"]*"[^>]*role=/u);
     expect(first.html).toContain('class="semantic-event visualization-timeline-event');
     expect(first.html.match(/class="semantic-series"/gu)).toHaveLength(2);
@@ -832,7 +836,7 @@ describe('registry-driven semantic directives', () => {
       workspace,
     );
     expect(labelledDiagram.html).toContain(
-      `Complete edge data. Nodes: a: A; b: B. Connections: a to b: ${longEdgeLabel}.`,
+      `Complete edge data. Groups: none. Nodes: a: A; b: B. Connections: a to b: ${longEdgeLabel}.`,
     );
     expect(labelledDiagram.html).toContain('>12345678901234567890🛰…</text>');
     expect(labelledDiagram.html).not.toContain('\uFFFD');
@@ -1001,7 +1005,7 @@ describe('registry-driven semantic directives', () => {
         line: 2,
         source: [
           ':::diagram{title="Crowded" description="Too many nodes."}',
-          ...repeatedNodes(13),
+          ...repeatedNodes(21),
           ':::',
         ],
       },
@@ -1012,7 +1016,7 @@ describe('registry-driven semantic directives', () => {
           ':::diagram{title="Crowded" description="Too many edges."}',
           '::node{id="a" label="A"}',
           '::node{id="b" label="B"}',
-          ...repeatedEdges(21),
+          ...repeatedEdges(41),
           ':::',
         ],
       },
@@ -1043,6 +1047,192 @@ describe('registry-driven semantic directives', () => {
           ':::diagram{title="Loop" description="Self edge."}',
           '::node{id="a" label="A"}',
           '::edge{from="a" to="a"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'grouped flow with only one group',
+        line: 2,
+        source: [
+          ':::diagram{title="One group" description="Unsupported group count."}',
+          '::group{id="only" label="Only"}',
+          '::node{id="a" label="A" group="only"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'grouped flow above the group limit',
+        line: 2,
+        source: [
+          ':::diagram{title="Four groups" description="Unsupported group count."}',
+          '::group{id="one" label="One"}',
+          '::group{id="two" label="Two"}',
+          '::group{id="three" label="Three"}',
+          '::group{id="four" label="Four"}',
+          '::node{id="a" label="A" group="one"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'grouped flow with duplicate group ids',
+        line: 2,
+        source: [
+          ':::diagram{title="Duplicate groups" description="Group ids are unique."}',
+          '::group{id="same" label="One"}',
+          '::group{id="same" label="Two"}',
+          '::node{id="a" label="A" group="same"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'grouped flow with unsupported down direction',
+        line: 2,
+        source: [
+          ':::diagram{title="Grouped down" description="Columns are rightward." direction="down"}',
+          '::group{id="one" label="One"}',
+          '::group{id="two" label="Two"}',
+          '::node{id="a" label="A" group="one"}',
+          '::node{id="b" label="B" group="two"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'grouped flow with an unassigned node',
+        line: 5,
+        source: [
+          ':::diagram{title="Unassigned" description="Every node needs membership."}',
+          '::group{id="one" label="One"}',
+          '::group{id="two" label="Two"}',
+          '::node{id="a" label="A"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'grouped flow with an unknown group',
+        line: 5,
+        source: [
+          ':::diagram{title="Unknown group" description="Missing membership target."}',
+          '::group{id="one" label="One"}',
+          '::group{id="two" label="Two"}',
+          '::node{id="a" label="A" group="missing"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'grouped flow with an empty group',
+        line: 4,
+        source: [
+          ':::diagram{title="Empty group" description="Every group needs a member."}',
+          '::group{id="one" label="One"}',
+          '::group{id="two" label="Two"}',
+          '::node{id="a" label="A" group="one"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence with flow direction',
+        line: 2,
+        source: [
+          ':::diagram{title="Sequence" description="Direction is inapplicable." type="sequence" direction="down"}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          '::edge{from="a" to="b" label="call"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence with explicit right direction',
+        line: 2,
+        source: [
+          ':::diagram{title="Sequence" description="Any explicit direction is inapplicable." type="sequence" direction="right"}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          '::edge{from="a" to="b" label="call"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence below the participant minimum',
+        line: 2,
+        source: [
+          ':::diagram{title="Sequence" description="One participant is insufficient." type="sequence"}',
+          '::node{id="a" label="A"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence below the message minimum',
+        line: 2,
+        source: [
+          ':::diagram{title="Sequence" description="A message is required." type="sequence"}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence with a group record',
+        line: 3,
+        source: [
+          ':::diagram{title="Sequence" description="Groups are flow-only." type="sequence"}',
+          '::group{id="flow" label="Flow group"}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          '::edge{from="a" to="b" label="call"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence participant with group membership',
+        line: 3,
+        source: [
+          ':::diagram{title="Sequence" description="Membership is flow-only." type="sequence"}',
+          '::node{id="a" label="A" group="flow"}',
+          '::node{id="b" label="B"}',
+          '::edge{from="a" to="b" label="call"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence self-message',
+        line: 5,
+        source: [
+          ':::diagram{title="Sequence" description="Self messages are unsupported." type="sequence"}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          '::edge{from="a" to="a" label="recursive call"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence without a message label',
+        line: 5,
+        source: [
+          ':::diagram{title="Sequence" description="Labels are required." type="sequence"}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          '::edge{from="a" to="b"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence above the participant limit',
+        line: 2,
+        source: [
+          ':::diagram{title="Sequence" description="Too many participants." type="sequence"}',
+          ...repeatedNodes(7),
+          '::edge{from="node-1" to="node-2" label="call"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence above the message limit',
+        line: 2,
+        source: [
+          ':::diagram{title="Sequence" description="Too many messages." type="sequence"}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          ...repeatedEdges(41),
           ':::',
         ],
       },
@@ -1092,6 +1282,135 @@ describe('registry-driven semantic directives', () => {
         workspace,
       ),
     ).rejects.toMatchObject({ diagnostic: { code: 'INVALID_DIRECTIVE_ATTRIBUTE' } });
+  });
+
+  it('renders bounded grouped flows and ordered sequence diagrams with complete accessible data', async () => {
+    const workspace = await trackedWorkspace('directive-large-diagrams');
+    const groupIds = ['source', 'compiler', 'reader'] as const;
+    const groupedNodes = Array.from({ length: 18 }, (_, index) => {
+      const group = groupIds[Math.floor(index / 6)] ?? groupIds[0];
+      return `::node{id="step-${index + 1}" label="Step ${index + 1} detail" group="${group}" kind="${index % 3 === 0 ? 'accent' : 'neutral'}"}`;
+    });
+    const groupedEdges = Array.from(
+      { length: 17 },
+      (_, index) =>
+        `::edge{from="step-${index + 1}" to="step-${index + 2}" label="handoff ${index + 1}"}`,
+    );
+    const groupedSource = [
+      '# Grouped flow',
+      ':::diagram{title="Code tour flow" description="Eighteen participants across three subsystems." type="flow"}',
+      '::group{id="source" label="Authentication and authorization services"}',
+      '::group{id="compiler" label="Compiler pipeline"}',
+      '::group{id="reader" label="Reader artifact"}',
+      ...groupedNodes,
+      ...groupedEdges,
+      '::edge{from="step-1" to="step-4" label="validated shortcut"}',
+      '::edge{from="step-5" to="step-17" label="evidence bypass"}',
+      '::edge{from="step-2" to="step-9" label="second subsystem handoff"}',
+      '::edge{from="step-18" to="step-3" label="reverse feedback"}',
+      ':::',
+    ].join('\n');
+    const firstGrouped = await render(groupedSource, workspace);
+    const secondGrouped = await render(groupedSource, workspace);
+    expect(secondGrouped.html).toBe(firstGrouped.html);
+    expect(firstGrouped.html).toContain('data-diagram-type="flow"');
+    expect(firstGrouped.html.match(/data-group-id=/gu)).toHaveLength(3);
+    expect(firstGrouped.html.match(/data-node-id=/gu)).toHaveLength(18);
+    expect(firstGrouped.html.match(/visualization-group-edge/gu)).toHaveLength(2);
+    expect(firstGrouped.html.match(/visualization-group-internal-edge/gu)).toHaveLength(1);
+    expect(firstGrouped.html.match(/visualization-group-outer-edge/gu)).toHaveLength(3);
+    expect(firstGrouped.html).toContain(
+      'Groups: source: Authentication and authorization services (step-1, step-2, step-3, step-4, step-5, step-6); compiler: Compiler pipeline (step-7, step-8, step-9, step-10, step-11, step-12); reader: Reader artifact (step-13, step-14, step-15, step-16, step-17, step-18).',
+    );
+    expect(firstGrouped.html).toContain('>Authentication and</text>');
+    expect(firstGrouped.html).toContain('>authorization services</text>');
+    expect(firstGrouped.html).toContain('viewBox="0 0 816 772"');
+
+    const sequenceSource = [
+      '# Sequence',
+      ':::diagram{title="Compile request" description="A request crosses four participants." type="sequence"}',
+      '::node{id="agent" label="Authoring agent"}',
+      '::node{id="loader" label="Source loader"}',
+      '::node{id="compiler" label="Compiler"}',
+      '::node{id="browser" label="Browser"}',
+      '::edge{from="agent" to="loader" label="load source"}',
+      '::edge{from="loader" to="compiler" label="validated graph"}',
+      '::edge{from="compiler" to="browser" label="write artifact"}',
+      '::edge{from="browser" to="agent" label="review result"}',
+      ':::',
+    ].join('\n');
+    const firstSequence = await render(sequenceSource, workspace);
+    const secondSequence = await render(sequenceSource, workspace);
+    expect(secondSequence.html).toBe(firstSequence.html);
+    expect(firstSequence.html).toContain('data-diagram-type="sequence"');
+    expect(firstSequence.html.match(/data-participant=/gu)).toHaveLength(4);
+    expect(firstSequence.html.match(/data-message-order=/gu)).toHaveLength(4);
+    expect(firstSequence.html).toContain(
+      'Messages in order: 1. agent to loader: load source; 2. loader to compiler: validated graph; 3. compiler to browser: write artifact; 4. browser to agent: review result.',
+    );
+
+    const maximumFlow = await render(
+      [
+        '# Maximum flow',
+        ':::diagram{title="Maximum flow" description="Twenty nodes remain supported."}',
+        ...Array.from(
+          { length: 20 },
+          (_, index) => `::node{id="maximum-${index + 1}" label="Maximum ${index + 1}"}`,
+        ),
+        ':::',
+      ].join('\n'),
+      workspace,
+    );
+    expect(maximumFlow.html.match(/data-node-id="maximum-/gu)).toHaveLength(20);
+
+    const maximumFlowEdges = await render(
+      [
+        '# Maximum flow edges',
+        ':::diagram{title="Maximum edges" description="Forty flow edges remain supported."}',
+        '::node{id="edge-a" label="A"}',
+        '::node{id="edge-b" label="B"}',
+        ...Array.from(
+          { length: 40 },
+          (_, index) => `::edge{from="edge-a" to="edge-b" label="Flow edge ${index + 1}"}`,
+        ),
+        ':::',
+      ].join('\n'),
+      workspace,
+    );
+    expect(maximumFlowEdges.html.match(/data-edge=/gu)).toHaveLength(40);
+
+    const minimumSequence = await render(
+      [
+        '# Minimum sequence',
+        ':::diagram{title="Minimum sequence" description="Two participants and one message." type="sequence"}',
+        '::node{id="minimum-a" label="A"}',
+        '::node{id="minimum-b" label="B"}',
+        '::edge{from="minimum-a" to="minimum-b" label="Only message"}',
+        ':::',
+      ].join('\n'),
+      workspace,
+    );
+    expect(minimumSequence.html.match(/data-participant=/gu)).toHaveLength(2);
+    expect(minimumSequence.html.match(/data-message-order=/gu)).toHaveLength(1);
+
+    const maximumSequence = await render(
+      [
+        '# Maximum sequence',
+        ':::diagram{title="Maximum sequence" description="Six participants and forty messages." type="sequence"}',
+        ...Array.from(
+          { length: 6 },
+          (_, index) => `::node{id="participant-${index + 1}" label="Participant ${index + 1}"}`,
+        ),
+        ...Array.from(
+          { length: 40 },
+          (_, index) =>
+            `::edge{from="participant-${(index % 6) + 1}" to="participant-${((index + 1) % 6) + 1}" label="Message ${index + 1}"}`,
+        ),
+        ':::',
+      ].join('\n'),
+      workspace,
+    );
+    expect(maximumSequence.html.match(/data-message-order=/gu)).toHaveLength(40);
   });
 
   it('requires every registered glossary occurrence to use a reference without flagging excluded contexts', async () => {
@@ -1596,7 +1915,7 @@ describe('registry-driven semantic directives', () => {
     for (const directive of required) {
       const requiredParent = directive.placement.requiredParent;
       if (requiredParent === undefined) throw new Error('Required parent disappeared');
-      const valid = ['series', 'point', 'node', 'edge', 'event'].includes(directive.name)
+      const valid = ['series', 'point', 'group', 'node', 'edge', 'event'].includes(directive.name)
         ? visualizationInvocation(directive.name, {})
         : nestedDirectiveInvocation(requiredParent, directive.name);
       expect((await render(`# Valid parent\n${valid}\n`, workspace)).html).toMatch(
@@ -2071,7 +2390,7 @@ function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
     return 'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42';
   }
   if (attribute.name === 'href') return '#valid-target';
-  if (['key', 'id', 'from', 'to'].includes(attribute.name)) return 'valid-key';
+  if (['key', 'id', 'group', 'from', 'to'].includes(attribute.name)) return 'valid-key';
   return 'Valid title';
 }
 
@@ -2092,7 +2411,7 @@ function renderedAttributeValue(attribute: DirectiveAttributeDefinition): string
     return 'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42';
   }
   if (attribute.name === 'href') return '#valid-target';
-  if (['key', 'id', 'from', 'to'].includes(attribute.name)) return 'valid-key';
+  if (['key', 'id', 'group', 'from', 'to'].includes(attribute.name)) return 'valid-key';
   return 'T';
 }
 
@@ -2102,7 +2421,7 @@ function directiveInvocation(
   overrides: Readonly<Record<string, string>> = {},
 ): string {
   if (
-    ['chart', 'series', 'point', 'diagram', 'node', 'edge', 'timeline', 'event'].includes(
+    ['chart', 'series', 'point', 'diagram', 'group', 'node', 'edge', 'timeline', 'event'].includes(
       directive.name,
     )
   ) {
@@ -2173,7 +2492,43 @@ function visualizationInvocation(
       ':::::',
     ].join('\n');
   }
-  if (target === 'diagram' || target === 'node') {
+  if (target === 'diagram') {
+    if (overrides.type === 'sequence') {
+      return [
+        `:::diagram{${attributes('diagram')}}`,
+        `::node{${attributes('node', { id: 'valid-key' })}}`,
+        `::node{${attributes('node', { id: 'second-key' })}}`,
+        `::edge{${attributes('edge', { from: 'valid-key', to: 'second-key', label: 'Message' })}}`,
+        ':::',
+      ].join('\n');
+    }
+    return [
+      `:::diagram{${attributes('diagram')}}`,
+      `::node{${attributes('node', { id: 'valid-key' })}}`,
+      ':::',
+    ].join('\n');
+  }
+  if (target === 'group') {
+    return [
+      `:::diagram{${attributes('diagram')}}`,
+      `::group{${attributes('group', { id: 'valid-key' })}}`,
+      '::group{id="second-key" label="Second"}',
+      `::node{${attributes('node', { id: 'node-one', group: 'valid-key' })}}`,
+      '::node{id="node-two" label="Second node" group="second-key"}',
+      ':::',
+    ].join('\n');
+  }
+  if (target === 'node') {
+    if ('group' in overrides) {
+      return [
+        `:::diagram{${attributes('diagram')}}`,
+        `::group{${attributes('group', { id: 'valid-key', label: 'First' })}}`,
+        '::group{id="second-key" label="Second"}',
+        `::node{${attributes('node', { id: 'node-one' })}}`,
+        '::node{id="node-two" label="Second node" group="second-key"}',
+        ':::',
+      ].join('\n');
+    }
     return [
       `:::diagram{${attributes('diagram')}}`,
       `::node{${attributes('node', { id: 'valid-key' })}}`,
@@ -2264,14 +2619,17 @@ function assertRenderedAttribute(
   if (expected === undefined) throw new Error(`Missing expected value for ${directive.name}`);
   const serialized = String(expected);
   if (
-    ['chart', 'series', 'point', 'diagram', 'node', 'edge', 'timeline', 'event'].includes(
+    ['chart', 'series', 'point', 'diagram', 'group', 'node', 'edge', 'timeline', 'event'].includes(
       directive.name,
     )
   ) {
     const visualExpectation: Readonly<Record<string, string>> = {
       'chart.type': `data-chart-type="${serialized}"`,
+      'diagram.type': `data-diagram-type="${serialized}"`,
       'diagram.direction': `data-diagram-direction="${serialized}"`,
+      'group.id': `data-group-id="${serialized}"`,
       'node.id': `data-node-id="${serialized}"`,
+      'node.group': `data-group="${serialized}"`,
       'node.kind': `visualization-node-${serialized}`,
       'edge.from': `data-from="${serialized}"`,
       'edge.to': `data-to="${serialized}"`,

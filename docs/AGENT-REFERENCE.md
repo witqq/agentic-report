@@ -438,10 +438,24 @@ Visuals use nested data directives, not JSX, JavaScript, JSON-in-an-attribute, o
 ::::
 :::::
 
-:::diagram{title="Build flow" description="Validated source becomes a portable artifact." direction="right"}
-::node{id="source" label="Source" kind="accent"}
-::node{id="artifact" label="Artifact" kind="success"}
-::edge{from="source" to="artifact" label="compile"}
+:::diagram{title="Build flow" description="Source crosses two subsystems." type="flow"}
+::group{id="authoring" label="Authoring"}
+::group{id="output" label="Output"}
+::node{id="source" label="Source" group="authoring" kind="accent"}
+::node{id="validate" label="Validate" group="authoring"}
+::node{id="render" label="Render" group="output"}
+::node{id="artifact" label="Artifact" group="output" kind="success"}
+::edge{from="source" to="validate" label="parse"}
+::edge{from="validate" to="render" label="typed graph"}
+::edge{from="render" to="artifact" label="compile"}
+:::
+
+:::diagram{title="Build sequence" description="Calls stay in authored order." type="sequence"}
+::node{id="agent" label="Agent"}
+::node{id="compiler" label="Compiler"}
+::node{id="browser" label="Browser"}
+::edge{from="agent" to="compiler" label="build"}
+::edge{from="compiler" to="browser" label="write artifact"}
 :::
 
 ::::timeline{title="Delivery" description="The page moves through two verified phases."}
@@ -456,12 +470,20 @@ Open the result directly through `file://`.
 
 `chart.type` is `bar`, `line`, or `pie`. Charts accept 1–6 series with 1–12 points each; series share the
 same unique ordered labels. Pie charts accept exactly one non-negative series with a positive total.
-Diagrams accept 1–12 unique nodes and up to 20 validated directed edges. `direction` is `right` or `down`.
+`diagram.type` is `flow` by default or `sequence`. A flow accepts 1–20 unique nodes and up to 40 validated
+edges. It is either ungrouped or declares 2–3 non-empty groups and assigns every node to one. Ungrouped flows
+accept `direction="right|down"`; grouped subsystem columns are rightward. A sequence accepts 2–6 node participants and 1–40 labelled edge messages;
+participant and message order is source order, while groups, direction and self-messages are rejected.
+Grouped members use authored row order; longer intra-group connections route through the group's inner
+gutter. The first handoff for an adjacent group pair uses its inter-column gutter. Non-adjacent handoffs and
+additional edges for an already-used pair receive distinct bottom-corridor lanes outside all groups, which
+expands the SVG viewBox height within the finite edge bound. Split a dense arbitrary graph rather than treating
+this bounded flow layout as a general graph optimizer.
 Timelines accept 1–20 direct events. Every visual requires a title and description and compiles into
 theme-aware responsive SVG or semantic HTML without visualization runtime code. A chart or diagram is one
 atomic accessible image whose description includes the complete authored data; visible axis and connection
-labels may be shortened to preserve layout, but accessible point values, node identities, and connection
-labels are not truncated. Numeric output retains the supported four decimal places.
+labels may be shortened to preserve layout, but accessible point values, group membership, node identities,
+participants, and ordered messages are not truncated. Numeric output retains the supported four decimal places.
 
 `callout.kind` is a lowercase presentation token. `demo.start` and `demo.step` are bounded integers.
 `section` is top-level only and requires `title`. Its optional `id` is a lowercase letter-led identity;

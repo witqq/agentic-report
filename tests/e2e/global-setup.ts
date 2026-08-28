@@ -95,6 +95,7 @@ export default async function globalSetup(): Promise<void> {
   const navigationSource = path.join(fixtureRoot, 'navigation-source');
   const reviewSource = path.join(fixtureRoot, 'review-source');
   const glossaryCodeSource = path.join(fixtureRoot, 'glossary-code-source');
+  const diagramTourSource = path.join(fixtureRoot, 'diagram-tour-source');
   const layoutExamples = [
     'layout-document',
     'layout-dashboard',
@@ -251,6 +252,55 @@ export default async function globalSetup(): Promise<void> {
       ':::',
     ].join('\n'),
   );
+  await mkdir(diagramTourSource, { recursive: true });
+  const diagramGroups = ['source', 'compiler', 'reader'] as const;
+  const diagramNodes = Array.from({ length: 18 }, (_, index) => {
+    const group = diagramGroups[Math.floor(index / 6)] ?? diagramGroups[0];
+    return `::node{id="step-${index + 1}" label="Step ${index + 1} detail" group="${group}" kind="${index % 3 === 0 ? 'accent' : 'neutral'}"}`;
+  });
+  const diagramEdges = Array.from(
+    { length: 17 },
+    (_, index) =>
+      `::edge{from="step-${index + 1}" to="step-${index + 2}" label="handoff ${index + 1}"}`,
+  );
+  await writeFile(
+    path.join(diagramTourSource, 'report.md'),
+    [
+      '---',
+      'title: Code tour diagrams',
+      'language: en',
+      'layout: document',
+      'theme: light',
+      'preset: editorial',
+      'tokens:',
+      '  width: wide',
+      '---',
+      '# Code tour diagrams',
+      '## Grouped flow',
+      ':::diagram{title="Code tour grouped flow" description="Eighteen participants across three subsystems." type="flow"}',
+      '::group{id="source" label="Authentication and authorization services"}',
+      '::group{id="compiler" label="Compiler pipeline"}',
+      '::group{id="reader" label="Reader artifact"}',
+      ...diagramNodes,
+      ...diagramEdges,
+      '::edge{from="step-1" to="step-4" label="validated shortcut"}',
+      '::edge{from="step-5" to="step-17" label="evidence bypass"}',
+      '::edge{from="step-2" to="step-9" label="second subsystem handoff"}',
+      '::edge{from="step-18" to="step-3" label="reverse feedback"}',
+      ':::',
+      '## Sequence',
+      ':::diagram{title="Compile request sequence" description="A request crosses four participants." type="sequence"}',
+      '::node{id="agent" label="Authoring agent"}',
+      '::node{id="loader" label="Source loader"}',
+      '::node{id="compiler" label="Compiler"}',
+      '::node{id="browser" label="Browser"}',
+      '::edge{from="agent" to="loader" label="load source"}',
+      '::edge{from="loader" to="compiler" label="validated graph"}',
+      '::edge{from="compiler" to="browser" label="write artifact"}',
+      '::edge{from="browser" to="agent" label="review result"}',
+      ':::',
+    ].join('\n'),
+  );
   await Promise.all([
     buildReport({ input: source, output: singleOutput }),
     buildReport({
@@ -307,6 +357,15 @@ export default async function globalSetup(): Promise<void> {
     buildReport({
       input: glossaryCodeSource,
       output: path.join(fixtureRoot, 'glossary-code-directory'),
+      format: 'directory',
+    }),
+    buildReport({
+      input: diagramTourSource,
+      output: path.join(fixtureRoot, 'diagram-tour.html'),
+    }),
+    buildReport({
+      input: diagramTourSource,
+      output: path.join(fixtureRoot, 'diagram-tour-directory'),
       format: 'directory',
     }),
     buildReport({

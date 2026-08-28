@@ -19,8 +19,18 @@ interface DiagramNode {
   readonly id: string;
   readonly label: string;
   readonly kind: string;
+  readonly group?: string;
   readonly x: number;
   readonly y: number;
+}
+
+interface DiagramGroup {
+  readonly id: string;
+  readonly label: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
 }
 
 interface DiagramEdge {
@@ -321,25 +331,85 @@ function enhanceDiagram(
 ): void {
   const title = take(node, 'dataDirectiveTitle') ?? 'Diagram';
   const description = take(node, 'dataDescription') ?? title;
+  const type = take(node, 'dataType') ?? 'flow';
   const direction = take(node, 'dataDirection') ?? 'right';
+  if (type === 'sequence') {
+    enhanceSequenceDiagram(node, instance, allocateId, title, description);
+    return;
+  }
+  enhanceFlowDiagram(node, instance, allocateId, title, description, direction);
+}
+
+function enhanceFlowDiagram(
+  node: Element,
+  instance: number,
+  allocateId: (base: string) => string,
+  title: string,
+  description: string,
+  direction: string,
+): void {
+  const rawGroups = semanticChildren(node, 'group');
   const rawNodes = semanticChildren(node, 'node');
   const count = rawNodes.length;
-  const primary = Math.min(4, count);
-  const columns = direction === 'right' ? primary : Math.ceil(count / primary);
-  const rows = direction === 'right' ? Math.ceil(count / primary) : primary;
-  const width = Math.max(420, columns * 220 + 80);
-  const height = Math.max(210, rows * 122 + 70);
-  const nodes: DiagramNode[] = rawNodes.map((child, index) => {
-    const column = direction === 'right' ? index % columns : Math.floor(index / rows);
-    const row = direction === 'right' ? Math.floor(index / columns) : index % rows;
+  const groupRecords = rawGroups.map((child) => ({
+    id: take(child, 'dataId') ?? '',
+    label: take(child, 'dataLabel') ?? '',
+  }));
+  const rawRecords = rawNodes.map((child, index) => {
+    const group = take(child, 'dataGroup');
     return {
       id: take(child, 'dataId') ?? `node-${index + 1}`,
       label: take(child, 'dataLabel') ?? `Node ${index + 1}`,
       kind: take(child, 'dataKind') ?? 'neutral',
-      x: 50 + column * 220,
-      y: 38 + row * 122,
+      ...(group === undefined ? {} : { group }),
     };
   });
+  const grouped = groupRecords.length > 0;
+  let width: number;
+  let height: number;
+  let groups: DiagramGroup[];
+  let nodes: DiagramNode[];
+  if (grouped) {
+    const groupWidth = 240;
+    const groupGap = 24;
+    const outer = 24;
+    const titleHeight = 54;
+    const rowHeight = 96;
+    const maximumMembers = Math.max(
+      ...groupRecords.map((group) => rawRecords.filter((item) => item.group === group.id).length),
+    );
+    const groupHeight = titleHeight + maximumMembers * rowHeight + 22;
+    width = outer * 2 + groupRecords.length * groupWidth + (groupRecords.length - 1) * groupGap;
+    height = outer * 2 + groupHeight;
+    groups = groupRecords.map((group, index) => ({
+      ...group,
+      x: outer + index * (groupWidth + groupGap),
+      y: outer,
+      width: groupWidth,
+      height: groupHeight,
+    }));
+    const memberIndex = new Map<string, number>();
+    nodes = rawRecords.map((item) => {
+      const group = groups.find((candidate) => candidate.id === item.group);
+      if (group === undefined)
+        throw new Error(`Validated diagram group is missing: ${item.group}.`);
+      const index = memberIndex.get(group.id) ?? 0;
+      memberIndex.set(group.id, index + 1);
+      return { ...item, x: group.x + 50, y: group.y + titleHeight + index * rowHeight };
+    });
+  } else {
+    const primary = Math.min(4, count);
+    const columns = direction === 'right' ? primary : Math.ceil(count / primary);
+    const rows = direction === 'right' ? Math.ceil(count / primary) : primary;
+    width = Math.max(420, columns * 220 + 80);
+    height = Math.max(210, rows * 122 + 70);
+    groups = [];
+    nodes = rawRecords.map((item, index) => {
+      const column = direction === 'right' ? index % columns : Math.floor(index / rows);
+      const row = direction === 'right' ? Math.floor(index / columns) : index % rows;
+      return { ...item, x: 50 + column * 220, y: 38 + row * 122 };
+    });
+  }
   const byId = new Map(nodes.map((item) => [item.id, item]));
   const edges: readonly DiagramEdge[] = semanticChildren(node, 'edge').map((edge) => {
     const label = take(edge, 'dataLabel');
@@ -351,17 +421,75 @@ function enhanceDiagram(
   });
   const titleId = allocateId(`visual-${instance}-title`);
   const descriptionId = allocateId(`visual-${instance}-description`);
-  const edgeElements = edges.flatMap((edge, index) => {
+  const groupById = new Map(groups.map((group, index) => [group.id, { group, index }]));
+  const adjacentPairUsage = new Map<string, number>();
+  let outerRouteCount = 0;
+  const edgePlans = edges.map((edge, index) => {
     const from = byId.get(edge.from);
     const to = byId.get(edge.to);
-    if (from === undefined || to === undefined) return [];
-    return diagramEdge(from, to, edge.label, index);
+    if (from === undefined || to === undefined) return { kind: 'missing' } as const;
+    if (grouped && from.group !== to.group) {
+      const fromGroup = groupById.get(from.group ?? '');
+      const toGroup = groupById.get(to.group ?? '');
+      if (fromGroup === undefined || toGroup === undefined) return { kind: 'missing' } as const;
+      const pair = [fromGroup.group.id, toGroup.group.id].sort().join(':');
+      const usage = adjacentPairUsage.get(pair) ?? 0;
+      adjacentPairUsage.set(pair, usage + 1);
+      if (Math.abs(fromGroup.index - toGroup.index) === 1 && usage === 0) {
+        return { kind: 'adjacent', edge, index, from, to } as const;
+      }
+      const lane = outerRouteCount;
+      outerRouteCount += 1;
+      return {
+        kind: 'outer',
+        edge,
+        index,
+        from,
+        to,
+        fromGroup: fromGroup.group,
+        toGroup: toGroup.group,
+        lane,
+      } as const;
+    }
+    if (grouped && Math.abs(from.y - to.y) > 100) {
+      return { kind: 'internal', edge, index, from, to } as const;
+    }
+    return { kind: 'direct', edge, index, from, to } as const;
   });
+  const outerRouteStart =
+    groups.length === 0 ? height : Math.max(...groups.map((group) => group.y + group.height)) + 18;
+  if (outerRouteCount > 0) height = outerRouteStart + outerRouteCount * 20 + 18;
+  const edgeElements = edgePlans.flatMap((plan) => {
+    switch (plan.kind) {
+      case 'missing':
+        return [];
+      case 'adjacent':
+        return groupedDiagramEdge(plan.from, plan.to, plan.edge.label, plan.index);
+      case 'outer':
+        return groupedOuterEdge(
+          plan.from,
+          plan.to,
+          plan.fromGroup,
+          plan.toGroup,
+          plan.edge.label,
+          plan.index,
+          outerRouteStart + plan.lane * 20,
+        );
+      case 'internal':
+        return groupedInternalEdge(plan.from, plan.to, plan.edge.label, plan.index);
+      case 'direct':
+        return diagramEdge(plan.from, plan.to, plan.edge.label, plan.index);
+      default:
+        return unreachableEdgePlan(plan);
+    }
+  });
+  const groupElements = groups.map((item) => diagramGroup(item));
   const nodeElements = nodes.map((item) => diagramNode(item));
-  const accessibleDescription = diagramDescription(description, nodes, edges);
+  const accessibleDescription = flowDiagramDescription(description, groups, nodes, edges);
 
   node.tagName = 'figure';
   node.properties.dataVisualization = 'diagram';
+  node.properties.dataDiagramType = 'flow';
   node.properties.dataDiagramDirection = direction;
   node.children = [
     caption(title, description),
@@ -378,6 +506,7 @@ function enhanceDiagram(
         [
           element('title', { id: titleId }, [text(title)]),
           element('desc', { id: descriptionId }, [text(accessibleDescription)]),
+          ...groupElements,
           ...edgeElements,
           ...nodeElements,
         ],
@@ -386,25 +515,94 @@ function enhanceDiagram(
   ];
 }
 
-function diagramNode(node: DiagramNode): Element {
-  const lines = wrapLabel(node.label, 20, 3);
-  return element('g', { dataNodeId: node.id, className: ['semantic-node'] }, [
+function enhanceSequenceDiagram(
+  node: Element,
+  instance: number,
+  allocateId: (base: string) => string,
+  title: string,
+  description: string,
+): void {
+  const participants = semanticChildren(node, 'node').map((child, index) => ({
+    id: take(child, 'dataId') ?? `participant-${index + 1}`,
+    label: take(child, 'dataLabel') ?? `Participant ${index + 1}`,
+    kind: take(child, 'dataKind') ?? 'neutral',
+    x: 50 + index * 160,
+    y: 28,
+  }));
+  const messages = semanticChildren(node, 'edge').map((edge) => ({
+    from: take(edge, 'dataFrom') ?? '',
+    to: take(edge, 'dataTo') ?? '',
+    label: take(edge, 'dataLabel') ?? '',
+  }));
+  const width = Math.max(720, participants.length * 160 + 40);
+  const height = 150 + messages.length * 62;
+  const byId = new Map(participants.map((participant) => [participant.id, participant]));
+  const titleId = allocateId(`visual-${instance}-title`);
+  const descriptionId = allocateId(`visual-${instance}-description`);
+  const bottom = height - 24;
+  const participantElements = participants.flatMap((participant) => [
+    element('line', {
+      x1: participant.x + 70,
+      y1: 100,
+      x2: participant.x + 70,
+      y2: bottom,
+      className: ['visualization-sequence-lifeline'],
+      dataParticipant: participant.id,
+    }),
+    diagramNode(participant),
+  ]);
+  const messageElements = messages.flatMap((message, index) => {
+    const from = byId.get(message.from);
+    const to = byId.get(message.to);
+    if (from === undefined || to === undefined) return [];
+    return sequenceMessage(from, to, message.label, index, 132 + index * 62);
+  });
+  const accessibleDescription = sequenceDiagramDescription(description, participants, messages);
+
+  node.tagName = 'figure';
+  node.properties.dataVisualization = 'diagram';
+  node.properties.dataDiagramType = 'sequence';
+  node.children = [
+    caption(title, description),
+    element('div', { className: ['visualization-frame'] }, [
+      element(
+        'svg',
+        {
+          viewBox: `0 0 ${width} ${height}`,
+          role: 'img',
+          ariaLabelledBy: [titleId],
+          ariaDescribedBy: [descriptionId],
+          className: ['visualization-svg', 'visualization-diagram', 'visualization-sequence'],
+        },
+        [
+          element('title', { id: titleId }, [text(title)]),
+          element('desc', { id: descriptionId }, [text(accessibleDescription)]),
+          ...participantElements,
+          ...messageElements,
+        ],
+      ),
+    ]),
+  ];
+}
+
+function diagramGroup(group: DiagramGroup): Element {
+  const lines = wrapLabel(group.label, 26, 2);
+  return element('g', { dataGroupId: group.id, className: ['semantic-group'] }, [
     element('rect', {
-      x: node.x,
-      y: node.y,
-      width: 140,
-      height: 72,
-      rx: 12,
-      className: ['visualization-node', `visualization-node-${node.kind}`],
+      x: group.x,
+      y: group.y,
+      width: group.width,
+      height: group.height,
+      rx: 16,
+      className: ['visualization-group'],
     }),
     ...lines.map((line, index) =>
       element(
         'text',
         {
-          x: node.x + 70,
-          y: node.y + 31 + (index - (lines.length - 1) / 2) * 17,
-          textAnchor: 'middle',
-          className: ['visualization-node-label'],
+          x: group.x + 18,
+          y: group.y + 24 + index * 17,
+          className: ['visualization-group-label'],
         },
         [text(line)],
       ),
@@ -412,11 +610,54 @@ function diagramNode(node: DiagramNode): Element {
   ]);
 }
 
-function diagramDescription(
+function diagramNode(node: DiagramNode): Element {
+  const lines = wrapLabel(node.label, 20, 3);
+  return element(
+    'g',
+    { dataNodeId: node.id, dataGroup: node.group, className: ['semantic-node'] },
+    [
+      element('rect', {
+        x: node.x,
+        y: node.y,
+        width: 140,
+        height: 72,
+        rx: 12,
+        className: ['visualization-node', `visualization-node-${node.kind}`],
+      }),
+      ...lines.map((line, index) =>
+        element(
+          'text',
+          {
+            x: node.x + 70,
+            y: node.y + 31 + (index - (lines.length - 1) / 2) * 17,
+            textAnchor: 'middle',
+            className: ['visualization-node-label'],
+          },
+          [text(line)],
+        ),
+      ),
+    ],
+  );
+}
+
+function flowDiagramDescription(
   description: string,
+  groups: readonly DiagramGroup[],
   nodes: readonly DiagramNode[],
   edges: readonly DiagramEdge[],
 ): string {
+  const groupText =
+    groups.length === 0
+      ? 'none'
+      : groups
+          .map((group) => {
+            const members = nodes
+              .filter((node) => node.group === group.id)
+              .map((node) => node.id)
+              .join(', ');
+            return `${group.id}: ${group.label} (${members})`;
+          })
+          .join('; ');
   const nodeText = nodes.map((node) => `${node.id}: ${node.label}`).join('; ');
   const edgeText =
     edges.length === 0
@@ -427,7 +668,64 @@ function diagramDescription(
               `${edge.from} to ${edge.to}${edge.label === undefined ? '' : `: ${edge.label}`}`,
           )
           .join('; ');
-  return `${description} Nodes: ${nodeText}. Connections: ${edgeText}.`;
+  return `${description} Groups: ${groupText}. Nodes: ${nodeText}. Connections: ${edgeText}.`;
+}
+
+function sequenceDiagramDescription(
+  description: string,
+  participants: readonly DiagramNode[],
+  messages: readonly DiagramEdge[],
+): string {
+  const participantText = participants
+    .map((participant) => `${participant.id}: ${participant.label}`)
+    .join('; ');
+  const messageText = messages
+    .map(
+      (message, index) => `${index + 1}. ${message.from} to ${message.to}: ${message.label ?? ''}`,
+    )
+    .join('; ');
+  return `${description} Participants: ${participantText}. Messages in order: ${messageText}.`;
+}
+
+function sequenceMessage(
+  from: DiagramNode,
+  to: DiagramNode,
+  label: string,
+  index: number,
+  y: number,
+): readonly Element[] {
+  const fromX = from.x + 70;
+  const toX = to.x + 70;
+  const direction = Math.sign(toX - fromX) || 1;
+  const endX = toX - direction * 9;
+  const baseX = endX - direction * 11;
+  return [
+    element('line', {
+      x1: fromX,
+      y1: y,
+      x2: endX,
+      y2: y,
+      className: ['semantic-edge', 'visualization-edge', 'visualization-sequence-message'],
+      dataEdge: String(index + 1),
+      dataFrom: from.id,
+      dataTo: to.id,
+      dataMessageOrder: String(index + 1),
+    }),
+    element('polygon', {
+      points: `${round(endX)},${round(y)} ${round(baseX)},${round(y - 5)} ${round(baseX)},${round(y + 5)}`,
+      className: ['visualization-edge-arrow'],
+    }),
+    element(
+      'text',
+      {
+        x: (fromX + toX) / 2,
+        y: y - 9,
+        textAnchor: 'middle',
+        className: ['visualization-edge-label', 'visualization-sequence-label'],
+      },
+      [text(shortLabel(label, 36))],
+    ),
+  ];
 }
 
 function diagramEdge(
@@ -462,16 +760,158 @@ function diagramEdge(
     }),
   ];
   if (label !== undefined) {
+    const vertical = Math.abs(dy) > Math.abs(dx);
     children.push(
       element(
         'text',
         {
-          x: (start.x + target.x) / 2,
-          y: (start.y + target.y) / 2 - 8,
-          textAnchor: 'middle',
+          x: (start.x + target.x) / 2 + (vertical ? 12 : 0),
+          y: (start.y + target.y) / 2 + (vertical ? 4 : -8),
+          textAnchor: vertical ? 'start' : 'middle',
           className: ['visualization-edge-label'],
         },
         [text(shortLabel(label, 22))],
+      ),
+    );
+  }
+  return children;
+}
+
+function groupedDiagramEdge(
+  from: DiagramNode,
+  to: DiagramNode,
+  label: string | undefined,
+  index: number,
+): readonly Element[] {
+  const rightward = to.x > from.x;
+  const startX = rightward ? from.x + 140 : from.x;
+  const endX = rightward ? to.x : to.x + 140;
+  const startY = from.y + 36;
+  const endY = to.y + 36;
+  const gutterX = (startX + endX) / 2;
+  const arrowBaseX = endX + (rightward ? -11 : 11);
+  const children = [
+    element('path', {
+      d: `M ${round(startX)} ${round(startY)} H ${round(gutterX)} V ${round(endY)} H ${round(endX)}`,
+      fill: 'none',
+      className: ['semantic-edge', 'visualization-edge', 'visualization-group-edge'],
+      dataEdge: String(index + 1),
+      dataFrom: from.id,
+      dataTo: to.id,
+    }),
+    element('polygon', {
+      points: `${round(endX)},${round(endY)} ${round(arrowBaseX)},${round(endY - 5)} ${round(arrowBaseX)},${round(endY + 5)}`,
+      className: ['visualization-edge-arrow'],
+    }),
+  ];
+  if (label !== undefined) {
+    children.push(
+      element(
+        'text',
+        {
+          x: (gutterX + endX) / 2,
+          y: endY - 8,
+          textAnchor: 'middle',
+          className: ['visualization-edge-label'],
+        },
+        [text(shortLabel(label, 12))],
+      ),
+    );
+  }
+  return children;
+}
+
+function groupedOuterEdge(
+  from: DiagramNode,
+  to: DiagramNode,
+  fromGroup: DiagramGroup,
+  toGroup: DiagramGroup,
+  label: string | undefined,
+  index: number,
+  laneY: number,
+): readonly Element[] {
+  const rightward = toGroup.x > fromGroup.x;
+  const startX = rightward ? from.x + 140 : from.x;
+  const endX = rightward ? to.x : to.x + 140;
+  const startY = from.y + 36;
+  const endY = to.y + 36;
+  const sourceLaneX = rightward ? fromGroup.x + fromGroup.width - 12 : fromGroup.x + 12;
+  const targetLaneX = rightward ? toGroup.x + 12 : toGroup.x + toGroup.width - 12;
+  const arrowBaseX = endX + (rightward ? -11 : 11);
+  const children = [
+    element('path', {
+      d: `M ${round(startX)} ${round(startY)} H ${round(sourceLaneX)} V ${round(laneY)} H ${round(targetLaneX)} V ${round(endY)} H ${round(endX)}`,
+      fill: 'none',
+      className: ['semantic-edge', 'visualization-edge', 'visualization-group-outer-edge'],
+      dataEdge: String(index + 1),
+      dataFrom: from.id,
+      dataTo: to.id,
+      dataRouteLane: String(laneY),
+    }),
+    element('polygon', {
+      points: `${round(endX)},${round(endY)} ${round(arrowBaseX)},${round(endY - 5)} ${round(arrowBaseX)},${round(endY + 5)}`,
+      className: ['visualization-edge-arrow'],
+    }),
+  ];
+  if (label !== undefined) {
+    children.push(
+      element(
+        'text',
+        {
+          x: (sourceLaneX + targetLaneX) / 2,
+          y: laneY - 6,
+          textAnchor: 'middle',
+          className: ['visualization-edge-label'],
+        },
+        [text(shortLabel(label, 20))],
+      ),
+    );
+  }
+  return children;
+}
+
+function unreachableEdgePlan(plan: never): never {
+  throw new Error(`Unsupported grouped edge plan: ${JSON.stringify(plan)}.`);
+}
+
+function groupedInternalEdge(
+  from: DiagramNode,
+  to: DiagramNode,
+  label: string | undefined,
+  index: number,
+): readonly Element[] {
+  const startX = from.x + 140;
+  const endX = to.x + 140;
+  const startY = from.y + 36;
+  const endY = to.y + 36;
+  const laneX = startX + 22 + (index % 3) * 5;
+  const children = [
+    element('path', {
+      d: `M ${round(startX)} ${round(startY)} H ${round(laneX)} V ${round(endY)} H ${round(endX)}`,
+      fill: 'none',
+      className: ['semantic-edge', 'visualization-edge', 'visualization-group-internal-edge'],
+      dataEdge: String(index + 1),
+      dataFrom: from.id,
+      dataTo: to.id,
+    }),
+    element('polygon', {
+      points: `${round(endX)},${round(endY)} ${round(endX + 11)},${round(endY - 5)} ${round(endX + 11)},${round(endY + 5)}`,
+      className: ['visualization-edge-arrow'],
+    }),
+  ];
+  if (label !== undefined) {
+    const labelY = (startY + endY) / 2;
+    children.push(
+      element(
+        'text',
+        {
+          x: laneX,
+          y: labelY,
+          textAnchor: 'middle',
+          transform: `rotate(-90 ${round(laneX)} ${round(labelY)})`,
+          className: ['visualization-edge-label', 'visualization-group-internal-label'],
+        },
+        [text(shortLabel(label, 12))],
       ),
     );
   }

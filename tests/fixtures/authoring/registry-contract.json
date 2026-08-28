@@ -147,6 +147,32 @@
       }
     ]
   },
+  "visualizations": {
+    "diagram": {
+      "defaultType": "flow",
+      "types": ["flow", "sequence"],
+      "flow": {
+        "nodes": { "minimum": 1, "maximum": 20 },
+        "edges": { "maximum": 40 },
+        "selfEdges": false,
+        "groups": {
+          "ungrouped": 0,
+          "minimum": 2,
+          "maximum": 3,
+          "requireEveryNode": true,
+          "direction": "right"
+        }
+      },
+      "sequence": {
+        "participants": { "minimum": 2, "maximum": 6 },
+        "messages": { "minimum": 1, "maximum": 40, "labelRequired": true },
+        "groups": false,
+        "participantGroups": false,
+        "direction": "forbidden",
+        "selfMessages": false
+      }
+    }
+  },
   "manifestFields": [
     {
       "name": "contractVersion",
@@ -1402,6 +1428,15 @@
           "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
         },
         {
+          "name": "type",
+          "description": "Diagram form.",
+          "required": false,
+          "default": "flow",
+          "constraint": { "kind": "enum", "values": ["flow", "sequence"] },
+          "renderProperty": "dataType",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
           "name": "direction",
           "description": "Flow direction.",
           "required": false,
@@ -1411,13 +1446,63 @@
           "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
         }
       ],
-      "children": "node-and-edge-directives",
+      "children": "group-node-and-edge-directives",
       "placement": {},
       "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
       "sanitizer": {
         "tagName": "section",
         "className": "semantic-diagram",
-        "properties": ["dataSemantic", "dataDirectiveTitle", "dataDescription", "dataDirection"]
+        "properties": [
+          "dataSemantic",
+          "dataDirectiveTitle",
+          "dataDescription",
+          "dataType",
+          "dataDirection"
+        ]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
+      "name": "group",
+      "description": "One labelled subsystem group in a flow diagram.",
+      "forms": ["leaf"],
+      "attributes": [
+        {
+          "name": "id",
+          "description": "Unique group identity within the diagram.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "renderProperty": "dataId",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
+          "name": "label",
+          "description": "Visible group label.",
+          "required": true,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "renderProperty": "dataLabel",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        }
+      ],
+      "children": "none",
+      "placement": { "requiredParent": "diagram" },
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "span",
+        "className": "semantic-group",
+        "properties": ["dataSemantic", "dataId", "dataLabel"]
       },
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
       "handoffs": ["semantic-document"]
@@ -1455,6 +1540,20 @@
           "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
         },
         {
+          "name": "group",
+          "description": "Optional subsystem group identity for this node.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "renderProperty": "dataGroup",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
           "name": "kind",
           "description": "Package-owned node emphasis.",
           "required": false,
@@ -1470,7 +1569,7 @@
       "sanitizer": {
         "tagName": "span",
         "className": "semantic-node",
-        "properties": ["dataSemantic", "dataId", "dataLabel", "dataKind"]
+        "properties": ["dataSemantic", "dataId", "dataLabel", "dataGroup", "dataKind"]
       },
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
       "handoffs": ["semantic-document"]

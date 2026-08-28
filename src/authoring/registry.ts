@@ -114,6 +114,32 @@ export type LayoutChoice = (typeof PAGE_CONTRACT.layouts)[number];
 export type ThemeChoice = (typeof PAGE_CONTRACT.themes)[number];
 export type PresetChoice = (typeof PAGE_PRESET_NAMES)[number];
 
+export const DIAGRAM_CONTRACT = {
+  defaultType: 'flow',
+  types: ['flow', 'sequence'],
+  flow: {
+    nodes: { minimum: 1, maximum: 20 },
+    edges: { maximum: 40 },
+    selfEdges: false,
+    groups: {
+      ungrouped: 0,
+      minimum: 2,
+      maximum: 3,
+      requireEveryNode: true,
+      direction: 'right',
+    },
+  },
+  sequence: {
+    participants: { minimum: 2, maximum: 6 },
+    messages: { minimum: 1, maximum: 40, labelRequired: true },
+    groups: false,
+    participantGroups: false,
+    direction: 'forbidden',
+    selfMessages: false,
+  },
+} as const;
+export type DiagramTypeChoice = (typeof DIAGRAM_CONTRACT.types)[number];
+
 export type ConstraintDefinition =
   | {
       readonly kind: 'string';
@@ -223,6 +249,7 @@ export interface DirectiveDefinition {
     | 'series-directives'
     | 'point-directives'
     | 'node-and-edge-directives'
+    | 'group-node-and-edge-directives'
     | 'event-directives'
     | 'label-or-generated-label'
     | 'none';
@@ -310,6 +337,7 @@ export interface AuthoringRegistryDefinition {
     readonly runtimePlacement: Readonly<Record<OutputFormatChoice, RuntimePlacement>>;
   };
   readonly page: typeof PAGE_CONTRACT;
+  readonly visualizations: { readonly diagram: typeof DIAGRAM_CONTRACT };
   readonly manifestFields: readonly [FieldDefinition, ...FieldDefinition[]];
   readonly directives: readonly [DirectiveDefinition, ...DirectiveDefinition[]];
   readonly capabilities: readonly [CapabilityDefinition, ...CapabilityDefinition[]];
@@ -377,6 +405,7 @@ export const authoringRegistry = {
   },
   output: OUTPUT_CONTRACT,
   page: PAGE_CONTRACT,
+  visualizations: { diagram: DIAGRAM_CONTRACT },
   manifestFields: [
     {
       name: 'contractVersion',
@@ -1058,14 +1087,31 @@ function visualizationDirectives(): readonly DirectiveDefinition[] {
       attributes: [
         requiredTitleAttribute(),
         descriptionAttribute(),
+        enumAttribute(
+          'type',
+          'Diagram form.',
+          DIAGRAM_CONTRACT.types,
+          DIAGRAM_CONTRACT.defaultType,
+        ),
         enumAttribute('direction', 'Flow direction.', ['right', 'down'], 'right'),
       ],
-      children: 'node-and-edge-directives',
+      children: 'group-node-and-edge-directives',
+    }),
+    visualizationContainer('group', 'One labelled subsystem group in a flow diagram.', {
+      attributes: [
+        identityAttribute('id', 'Unique group identity within the diagram.'),
+        textAttribute('label', 'Visible group label.', true),
+      ],
+      children: 'none',
+      requiredParent: 'diagram',
+      tagName: 'span',
+      forms: ['leaf'],
     }),
     visualizationContainer('node', 'One labelled node in a flow diagram.', {
       attributes: [
         identityAttribute('id', 'Unique node identity within the diagram.'),
         textAttribute('label', 'Visible node label.', true),
+        optionalIdentityAttribute('group', 'Optional subsystem group identity for this node.'),
         enumAttribute(
           'kind',
           'Package-owned node emphasis.',
@@ -1111,7 +1157,7 @@ function visualizationDirectives(): readonly DirectiveDefinition[] {
 }
 
 function visualizationContainer(
-  name: 'chart' | 'series' | 'point' | 'diagram' | 'node' | 'edge' | 'timeline' | 'event',
+  name: 'chart' | 'series' | 'point' | 'diagram' | 'group' | 'node' | 'edge' | 'timeline' | 'event',
   description: string,
   options: {
     readonly attributes: readonly DirectiveAttributeDefinition[];
@@ -1184,7 +1230,7 @@ function keyAttribute(description: string): DirectiveAttributeDefinition {
 }
 
 function identityAttribute(
-  name: 'key' | 'id' | 'from' | 'to',
+  name: 'key' | 'id' | 'group' | 'from' | 'to',
   description: string,
 ): DirectiveAttributeDefinition {
   return {
@@ -1197,7 +1243,10 @@ function identityAttribute(
   };
 }
 
-function optionalIdentityAttribute(name: 'id', description: string): DirectiveAttributeDefinition {
+function optionalIdentityAttribute(
+  name: 'id' | 'group',
+  description: string,
+): DirectiveAttributeDefinition {
   return { ...identityAttribute(name, description), required: false };
 }
 

@@ -52,6 +52,7 @@ describe('authoring registry', () => {
       'series',
       'point',
       'diagram',
+      'group',
       'node',
       'edge',
       'timeline',
@@ -63,6 +64,30 @@ describe('authoring registry', () => {
     expect(OUTPUT_FORMATS).toEqual(['single-file', 'directory']);
     expect(authoringRegistry.output).toBe(OUTPUT_CONTRACT);
     expect(authoringRegistry.page).toBe(PAGE_CONTRACT);
+    expect(authoringRegistry.visualizations.diagram).toMatchObject({
+      defaultType: 'flow',
+      types: ['flow', 'sequence'],
+      flow: {
+        nodes: { minimum: 1, maximum: 20 },
+        edges: { maximum: 40 },
+        selfEdges: false,
+        groups: {
+          ungrouped: 0,
+          minimum: 2,
+          maximum: 3,
+          requireEveryNode: true,
+          direction: 'right',
+        },
+      },
+      sequence: {
+        participants: { minimum: 2, maximum: 6 },
+        messages: { minimum: 1, maximum: 40, labelRequired: true },
+        groups: false,
+        participantGroups: false,
+        direction: 'forbidden',
+        selfMessages: false,
+      },
+    });
     expect(authoringRegistry.source.codeFenceMetadata.terms).toMatchObject({
       syntax: 'terms="key,other-key"',
       fieldExclusivity: 'only-field',
@@ -413,6 +438,37 @@ describe('authoring registry', () => {
         }),
       ),
     ).toContain('Unsafe/Capability: unsafe capability identity');
+
+    expect(
+      authoringRegistryIntegrityIssues(
+        unsafeRegistryWith({
+          visualizations: {
+            diagram: {
+              ...authoringRegistry.visualizations.diagram,
+              defaultType: 'sequence',
+              types: ['flow'],
+              flow: {
+                ...authoringRegistry.visualizations.diagram.flow,
+                nodes: { minimum: 2, maximum: 1 },
+                selfEdges: true,
+              },
+              sequence: {
+                ...authoringRegistry.visualizations.diagram.sequence,
+                groups: true,
+              },
+            },
+          },
+        }),
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        'diagram contract: default type is outside the type domain',
+        'diagram contract: invalid flow bounds',
+        'diagram contract: unsupported flow policy',
+        'diagram contract: unsupported sequence policy',
+        'diagram contract: directive type domain differs from visualization contract',
+      ]),
+    );
 
     expect(
       authoringRegistryIntegrityIssues(

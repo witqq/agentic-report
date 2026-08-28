@@ -156,6 +156,7 @@
         { "$ref": "#/$defs/series" },
         { "$ref": "#/$defs/point" },
         { "$ref": "#/$defs/diagram" },
+        { "$ref": "#/$defs/group" },
         { "$ref": "#/$defs/node" },
         { "$ref": "#/$defs/edge" },
         { "$ref": "#/$defs/timeline" },
@@ -825,6 +826,12 @@
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,298}\\S))\\s*$",
               "description": "Meaningful plain-text description for the visual."
             },
+            "type": {
+              "type": "string",
+              "enum": ["flow", "sequence"],
+              "description": "Diagram form.",
+              "default": "flow"
+            },
             "direction": {
               "type": "string",
               "enum": ["right", "down"],
@@ -833,6 +840,32 @@
             }
           },
           "required": ["title", "description"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "group" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Unique group identity within the diagram."
+            },
+            "label": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Visible group label."
+            }
+          },
+          "required": ["id", "label"]
         }
       },
       "required": ["name", "form", "attributes"]
@@ -856,6 +889,11 @@
               "type": "string",
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
               "description": "Visible node label."
+            },
+            "group": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Optional subsystem group identity for this node."
             },
             "kind": {
               "type": "string",
