@@ -32,6 +32,34 @@ judgment, and the trigger; `agentic-report` owns the safe source contract, respo
 interaction runtime, and portable output. See the [agent quickstart](website/docs/agent/index.md) for a
 copyable custom-skill pattern and example prompts.
 
+### Build from reviewed source instead of installing the package
+
+If you do not want to execute the published `agentic-report` npm package, clone a specific release tag,
+inspect the repository, run its checks, and invoke the compiled CLI directly:
+
+```sh
+git clone --branch v0.4.4 --depth 1 https://github.com/witqq/agentic-report.git
+cd agentic-report
+git rev-parse HEAD
+git tag --points-at HEAD
+
+# Inspect README.md, LICENSE, package.json, pnpm-lock.yaml, and the source before installing dependencies.
+pnpm install --frozen-lockfile
+pnpm verify
+pnpm build
+
+node dist/node/cli.js init ../my-page --starter report --json
+node dist/node/cli.js validate ../my-page --json
+node dist/node/cli.js inspect ../my-page --json
+node dist/node/cli.js build ../my-page --output ../my-page.html --json
+```
+
+This avoids installing or running the `agentic-report` package from npm and gives you the complete source to
+review. It does not eliminate registry trust: `pnpm install` still downloads the exact dependencies recorded
+in `pnpm-lock.yaml`. The project does not vendor those dependencies. Inspect the lockfile and lifecycle
+scripts before installation, use an isolated environment when appropriate, and keep the release tag pinned
+for reproducibility.
+
 ## Document map
 
 | Document                                                             | Role                                                       |
