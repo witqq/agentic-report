@@ -223,6 +223,37 @@ describe('report analysis', () => {
     });
   });
 
+  it('keeps visualization review manifests limited to final DOM owners', async () => {
+    const workspace = await createTestWorkspace('analysis-review-visualization');
+    workspaces.push(workspace);
+    await writeFile(
+      path.join(workspace, 'report.md'),
+      [
+        '---',
+        'title: Reviewable visualization',
+        'language: en',
+        '---',
+        '# Reviewable visualization',
+        '::::chart{title="Result" description="One result." type="bar"}',
+        ':::series{label="Series"}',
+        '::point{label="A" value="1"}',
+        ':::',
+        '::::',
+      ].join('\n'),
+    );
+    const output = path.join(workspace, 'report.html');
+    await buildReport({ input: workspace, output });
+    const html = await readFile(output, 'utf8');
+    const manifest = await embeddedManifest(output);
+    const owners = [...html.matchAll(/\bdata-review-target="([^"]+)"/gu)]
+      .map((match) => match[1] ?? '')
+      .sort();
+
+    expect(manifest.targets.some((target) => target.kind === 'directive:chart')).toBe(true);
+    expect(manifest.targets.some((target) => target.kind === 'directive:series')).toBe(false);
+    expect(owners).toEqual(manifest.targets.map((target) => target.id).sort());
+  });
+
   it('confines review files lexically and canonically before reading', async () => {
     const workspace = await reviewWorkspace('analysis-review-confinement');
     const outside = await createTestWorkspace('analysis-review-outside');

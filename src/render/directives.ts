@@ -15,6 +15,7 @@ import {
 import { interpretDirectiveAttributes } from '../authoring/schemas.js';
 import type { SourceMapSegment } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
+import { packageStrings, type PackageStrings } from '../localization.js';
 import { MAX_REVIEW_RESPONSES } from '../review/contract.js';
 import { resolveSourceLocation } from '../source/source-map.js';
 import { decorativeIcon } from './icons.js';
@@ -53,6 +54,7 @@ interface DirectivePluginOptions {
 
 interface DirectiveEnhancementOptions {
   readonly sourceMap: readonly SourceMapSegment[];
+  readonly language?: string;
 }
 
 const directiveByName: ReadonlyMap<string, DirectiveDefinition> = new Map(
@@ -230,7 +232,7 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
           termReferences.push({ key: String(interpretation.values.key), node });
         }
         options.observedDirectives?.add(directive.name);
-        node.data = renderDirective(directive, values);
+        node.data = renderDirective(directive, values, new Set(Object.keys(node.attributes ?? {})));
       } catch (error) {
         if (
           error instanceof AgenticReportError &&
@@ -1382,6 +1384,7 @@ function skipQuotedValue(value: string, start: number, quote: '"' | "'"): number
 
 export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], HastRoot> =
   (options) => (tree) => {
+    const strings = packageStrings(options.language);
     const allocateId = createDocumentIdAllocator(tree, options);
     const glossary = new Map<
       string,
@@ -1468,7 +1471,7 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
                   className: ['semantic-glossary-link'],
                   dataGlossaryDefinitionLink: '',
                 },
-                children: [{ type: 'text', value: 'View full definition' }],
+                children: [{ type: 'text', value: strings.viewFullDefinition }],
               },
             ],
           },
@@ -1483,7 +1486,7 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
       ) {
         node.children.push({
           type: 'text',
-          value: `Download ${assetLabel(node.properties.dataLocalAsset)}`,
+          value: strings.download(assetLabel(node.properties.dataLocalAsset)),
         });
       }
       const codeTermKeys = takeStringProperty(node, 'dataCodeTerms');
@@ -1505,7 +1508,7 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
       }
       if (semantic !== undefined && ['chart', 'diagram', 'timeline'].includes(semantic)) {
         instance += 1;
-        enhanceVisualization(node, semantic, instance, allocateId);
+        enhanceVisualization(node, semantic, instance, allocateId, strings);
         return;
       }
       if (semantic === 'term') {
@@ -1534,36 +1537,36 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
         return;
       }
       if (semantic === 'disclosure') {
-        enhanceDisclosure(node);
+        enhanceDisclosure(node, strings);
         return;
       }
       if (semantic === 'tabs') {
         instance += 1;
-        enhanceTabs(node, instance, allocateId);
+        enhanceTabs(node, instance, allocateId, strings);
         return;
       }
       if (semantic === 'modal') {
         instance += 1;
-        enhanceModal(node, instance, allocateId);
+        enhanceModal(node, instance, allocateId, strings);
         return;
       }
       if (semantic === 'popover') {
         instance += 1;
-        enhancePopover(node, instance, allocateId);
+        enhancePopover(node, instance, allocateId, strings);
         return;
       }
       if (semantic === 'filter') {
         instance += 1;
-        enhanceFilter(node, instance, allocateId);
+        enhanceFilter(node, instance, allocateId, strings);
         return;
       }
       if (semantic === 'toggle') {
         instance += 1;
-        enhanceToggle(node, instance, allocateId);
+        enhanceToggle(node, instance, allocateId, strings);
         return;
       }
       prependDirectiveTitle(node);
-      if ('dataDemoCounter' in node.properties) enhanceCounter(node);
+      if ('dataDemoCounter' in node.properties) enhanceCounter(node, strings);
     });
     const appendixDefinitions = extractAppendixGlossaries(tree);
     if (appendixDefinitions.length > 0) {
@@ -1587,7 +1590,7 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
               className: ['semantic-glossary-appendix-title'],
               dataNavigationExclude: '',
             },
-            children: [{ type: 'text', value: 'Glossary' }],
+            children: [{ type: 'text', value: strings.glossary }],
           },
           ...appendixDefinitions,
         ],
@@ -1866,8 +1869,8 @@ function hastText(node: Element): string {
   return values.join(' ').replace(/\s+/gu, ' ').trim();
 }
 
-function enhanceDisclosure(node: Element): void {
-  const title = takeStringProperty(node, 'dataDirectiveTitle') ?? 'Details';
+function enhanceDisclosure(node: Element, strings: PackageStrings): void {
+  const title = takeStringProperty(node, 'dataDirectiveTitle') ?? strings.details;
   const open = takeStringProperty(node, 'dataOpen') === 'true';
   node.tagName = 'details';
   node.properties.dataDisclosure = '';
@@ -1880,7 +1883,12 @@ function enhanceDisclosure(node: Element): void {
   });
 }
 
-function enhanceTabs(node: Element, instance: number, allocateId: (base: string) => string): void {
+function enhanceTabs(
+  node: Element,
+  instance: number,
+  allocateId: (base: string) => string,
+  strings: PackageStrings,
+): void {
   const title = takeStringProperty(node, 'dataDirectiveTitle');
   const titleId = title === undefined ? undefined : allocateId(`tabs-${instance}-title`);
   const panels = node.children.filter(
@@ -1889,7 +1897,7 @@ function enhanceTabs(node: Element, instance: number, allocateId: (base: string)
   );
   const buttons: Element[] = [];
   panels.forEach((panel, index) => {
-    const label = takeStringProperty(panel, 'dataLabel') ?? `Tab ${index + 1}`;
+    const label = takeStringProperty(panel, 'dataLabel') ?? strings.tab(index + 1);
     const tabId = allocateId(`tabs-${instance}-tab-${index + 1}`);
     const panelId = allocateId(`tabs-${instance}-panel-${index + 1}`);
     panel.properties.id = panelId;
@@ -1922,7 +1930,7 @@ function enhanceTabs(node: Element, instance: number, allocateId: (base: string)
       properties: {
         role: 'tablist',
         ...(titleId === undefined
-          ? { ariaLabel: 'Content sections' }
+          ? { ariaLabel: strings.contentSections }
           : { ariaLabelledBy: [titleId] }),
         className: ['semantic-tab-list'],
       },
@@ -1932,9 +1940,14 @@ function enhanceTabs(node: Element, instance: number, allocateId: (base: string)
   ];
 }
 
-function enhanceModal(node: Element, instance: number, allocateId: (base: string) => string): void {
-  const title = takeStringProperty(node, 'dataDirectiveTitle') ?? 'Dialog';
-  const trigger = takeStringProperty(node, 'dataTrigger') ?? 'Open dialog';
+function enhanceModal(
+  node: Element,
+  instance: number,
+  allocateId: (base: string) => string,
+  strings: PackageStrings,
+): void {
+  const title = takeStringProperty(node, 'dataDirectiveTitle') ?? strings.dialog;
+  const trigger = takeStringProperty(node, 'dataTrigger') ?? strings.openDialog;
   const dialogId = allocateId(`modal-${instance}`);
   const titleId = allocateId(`${dialogId}-title`);
   const content = node.children;
@@ -1948,7 +1961,7 @@ function enhanceModal(node: Element, instance: number, allocateId: (base: string
       children: [
         semanticTitle(title, titleId),
         ...content,
-        actionButton('Close', { dataModalClose: '' }),
+        actionButton(strings.close, { dataModalClose: '' }),
       ],
     },
   ];
@@ -1958,9 +1971,10 @@ function enhancePopover(
   node: Element,
   instance: number,
   allocateId: (base: string) => string,
+  strings: PackageStrings,
 ): void {
-  const title = takeStringProperty(node, 'dataDirectiveTitle') ?? 'Details';
-  const trigger = takeStringProperty(node, 'dataTrigger') ?? 'Show details';
+  const title = takeStringProperty(node, 'dataDirectiveTitle') ?? strings.details;
+  const trigger = takeStringProperty(node, 'dataTrigger') ?? strings.showDetails;
   const panelId = allocateId(`popover-${instance}`);
   const titleId = allocateId(`${panelId}-title`);
   const content = node.children;
@@ -1991,9 +2005,10 @@ function enhanceFilter(
   node: Element,
   instance: number,
   allocateId: (base: string) => string,
+  strings: PackageStrings,
 ): void {
   const title = takeStringProperty(node, 'dataDirectiveTitle');
-  const placeholder = takeStringProperty(node, 'dataPlaceholder') ?? 'Filter items';
+  const placeholder = takeStringProperty(node, 'dataPlaceholder') ?? strings.filterItems;
   const inputId = allocateId(`filter-${instance}`);
   node.properties.dataFilter = '';
   node.children = [
@@ -2007,7 +2022,7 @@ function enhanceFilter(
           type: 'element',
           tagName: 'label',
           properties: { htmlFor: [inputId] },
-          children: [{ type: 'text', value: 'Filter' }],
+          children: [{ type: 'text', value: strings.filter }],
         },
         {
           type: 'element',
@@ -2031,9 +2046,10 @@ function enhanceToggle(
   node: Element,
   instance: number,
   allocateId: (base: string) => string,
+  strings: PackageStrings,
 ): void {
   const title = takeStringProperty(node, 'dataDirectiveTitle');
-  const label = takeStringProperty(node, 'dataLabel') ?? 'Toggle content';
+  const label = takeStringProperty(node, 'dataLabel') ?? strings.toggleContent;
   const active = takeStringProperty(node, 'dataDefault') === 'on';
   const panelId = allocateId(`toggle-${instance}`);
   const content = node.children;
@@ -2055,14 +2071,14 @@ function enhanceToggle(
   ];
 }
 
-function enhanceCounter(node: Element): void {
+function enhanceCounter(node: Element, strings: PackageStrings): void {
   const start = String(node.properties.dataStart ?? '0');
   node.children.push({
     type: 'element',
     tagName: 'div',
     properties: { className: ['semantic-demo-controls'] },
     children: [
-      actionButton('Increment', { dataDemoIncrement: '' }),
+      actionButton(strings.increment, { dataDemoIncrement: '' }),
       { type: 'text', value: ' ' },
       {
         type: 'element',
@@ -2236,12 +2252,18 @@ function isTraversableNode(value: unknown): value is TraversableNode {
 function renderDirective(
   directive: DirectiveDefinition,
   values: Readonly<Record<string, string | number | boolean>>,
+  authoredAttributes: ReadonlySet<string>,
 ): NonNullable<DirectiveNode['data']> {
   const properties: Record<string, string | string[]> = {
     className: [directive.sanitizer.className],
   };
   for (const attribute of directive.attributes) {
     const value = values[attribute.name];
+    if (
+      !authoredAttributes.has(attribute.name) &&
+      LOCALIZED_DEFAULT_ATTRIBUTES.has(`${directive.name}.${attribute.name}`)
+    )
+      continue;
     if (value !== undefined) properties[attribute.renderProperty] = String(value);
   }
   switch (directive.behavior.renderer) {
@@ -2264,6 +2286,12 @@ function renderDirective(
   }
   return { hName: directive.sanitizer.tagName, hProperties: properties };
 }
+
+const LOCALIZED_DEFAULT_ATTRIBUTES = new Set([
+  'modal.trigger',
+  'popover.trigger',
+  'filter.placeholder',
+]);
 
 function directiveAttributeError(
   node: DirectiveNode,

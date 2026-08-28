@@ -38,6 +38,12 @@ also contain:
 - semantic directives for labelled page sections, action and source-location links, authored/code glossary references, content, interactions, compile-time
   charts/diagrams/timelines, safe built-in demos, downloads, and fonts.
 
+Set frontmatter or manifest `language` to `ru` (including subtags such as `ru-RU`) for Russian
+package-owned reader controls, interaction states, accessibility labels, visualization descriptions, and
+Review Workspace. `en`, the default `und`, and unsupported languages use a complete English fallback. This
+choice comes only from the input; it does not follow the browser locale and never translates authored
+Markdown or CLI diagnostics.
+
 Example:
 
 ````markdown

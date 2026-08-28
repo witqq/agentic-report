@@ -233,12 +233,20 @@ Use semantic directives instead of handwritten layout.
 :::
 ```
 
+`language` is the sole selector for package-owned reader chrome. Use `ru` or a Russian subtag such as
+`ru-RU` for Russian shell controls, interaction states, Review Workspace, accessible visualization prose,
+and locale-formatted chart numbers. Use `en` for English. The default `und` and unsupported language tags
+select the complete English fallback even when the browser or operating system uses another locale. This
+setting does not translate authored Markdown, explicitly authored directive labels, or CLI diagnostics.
+
 ## Choose the page shape
 
 The package owns the page shell and design system. Metadata selects one closed layout, coordinated preset,
 theme, and optional token values:
 
 - `layout`: `document` (default), `dashboard`, `landing`, or `mixed`;
+- `language`: `ru` and Russian subtags select Russian reader chrome; `en`, `und`, and unsupported tags use
+  English chrome;
 - `preset`: `studio` (default), `editorial`, or `signal`;
 - `theme`: `system` (default), `light`, or `dark`;
 - `scrollProgress`: boolean, default `false`; decorative normal-motion reading progress;
@@ -483,7 +491,9 @@ Timelines accept 1–20 direct events. Every visual requires a title and descrip
 theme-aware responsive SVG or semantic HTML without visualization runtime code. A chart or diagram is one
 atomic accessible image whose description includes the complete authored data; visible axis and connection
 labels may be shortened to preserve layout, but accessible point values, group membership, node identities,
-participants, and ordered messages are not truncated. Numeric output retains the supported four decimal places.
+participants, and ordered messages are not truncated. Numeric output retains up to six fractional digits and
+uses the reader locale for decimal and grouping separators; authored numeric values and labels retain their
+meaning.
 
 `callout.kind` is a lowercase presentation token. `demo.start` and `demo.step` are bounded integers.
 `section` is top-level only and requires `title`. Its optional `id` is a lowercase letter-led identity;

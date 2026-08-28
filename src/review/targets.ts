@@ -9,7 +9,7 @@ import { visit } from 'unist-util-visit';
 import type { SourceDigest, SourceMapSegment } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
 import { resolveSourceLocation } from '../source/source-map.js';
-import { SOURCE_CONTRACT_MAJOR } from '../authoring/registry.js';
+import { REVIEW_TARGET_OWNERSHIP_CONTRACT, SOURCE_CONTRACT_MAJOR } from '../authoring/registry.js';
 import {
   MAX_REVIEW_TARGETS,
   MAX_REVIEW_MANIFEST_BYTES,
@@ -39,16 +39,19 @@ type PositionedNode = {
   };
 };
 
-const REVIEWABLE_MARKDOWN_BLOCKS = new Set([
-  'blockquote',
-  'code',
-  'heading',
-  'list',
-  'paragraph',
-  'table',
-  'thematicBreak',
+const REVIEWABLE_MARKDOWN_BLOCKS: ReadonlyMap<string, string> = new Map([
+  ['blockquote', 'blockquote'],
+  ['code', 'code'],
+  ['heading', 'heading'],
+  ['list', 'list'],
+  ['paragraph', 'paragraph'],
+  ['table', 'table'],
+  ['thematicBreak', 'thematic-break'],
 ]);
-const REVIEW_TARGET_ALGORITHM_VERSION = 1;
+const PARENT_OWNED_DIRECTIVES: ReadonlySet<string> = new Set(
+  REVIEW_TARGET_OWNERSHIP_CONTRACT.parentOwnedDirectives,
+);
+const REVIEW_TARGET_ALGORITHM_VERSION = 3;
 
 export const remarkReviewTargets: Plugin<[ReviewTargetPluginOptions], Root> =
   (options) => (tree) => {
@@ -237,9 +240,11 @@ export function createReportRevision(
 
 function reviewableKind(node: PositionedNode): string | undefined {
   if (node.type === 'containerDirective' && typeof node.name === 'string') {
+    if (PARENT_OWNED_DIRECTIVES.has(node.name)) return;
     return `directive:${node.name}`;
   }
-  return REVIEWABLE_MARKDOWN_BLOCKS.has(node.type) ? `markdown:${node.type}` : undefined;
+  const markdownKind = REVIEWABLE_MARKDOWN_BLOCKS.get(node.type);
+  return markdownKind === undefined ? undefined : `markdown:${markdownKind}`;
 }
 
 function reviewableElementKind(node: Element): string | undefined {

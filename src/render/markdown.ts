@@ -33,6 +33,7 @@ import {
 } from './directives.js';
 
 export interface MarkdownRenderOptions {
+  readonly language?: string;
   readonly sourceRoot: string;
   readonly format: OutputFormat;
   readonly outputFilePath?: string;
@@ -221,7 +222,10 @@ export async function renderMarkdown(
       sourceMap: options.sourceMap,
       targets: reviewTargets,
     })
-    .use(rehypeEnhanceDirectives, { sourceMap: options.sourceMap })
+    .use(rehypeEnhanceDirectives, {
+      sourceMap: options.sourceMap,
+      ...(options.language === undefined ? {} : { language: options.language }),
+    })
     .use(rehypeAssets, { ...options, collector })
     .use(rehypeStringify)
     .process(markdown);

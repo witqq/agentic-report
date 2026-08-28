@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 import type { ReportManifest } from '../contracts.js';
 import { PACKAGE_ICON_PATHS, type PackageIconName } from '../iconography.js';
+import { packageStrings, resolvePackageLocale } from '../localization.js';
 import type { ReviewTargetManifest } from '../review/contract.js';
 import type { ResolvedReviewArtifact } from '../review/binding.js';
 import type { ReviewArtifact } from '../review/contract.js';
@@ -34,6 +35,7 @@ export type DocumentRuntime =
   | { readonly src: string; readonly inline?: never };
 
 export function renderDocument(options: DocumentRenderOptions): string {
+  const strings = packageStrings(options.language);
   const hasNavigation = options.navigation.length >= 2;
   const hasReviewTargets = options.reviewManifest.targets.length > 0;
   const documentIdentity = compactDocumentIdentity(options.title);
@@ -61,6 +63,7 @@ export function renderDocument(options: DocumentRenderOptions): string {
       data-width={options.page.tokens.width}
       data-radius={options.page.tokens.radius}
       data-scroll-progress={options.page.scrollProgress ? 'true' : undefined}
+      data-package-locale={resolvePackageLocale(options.language)}
     >
       <head>
         <meta charSet="utf-8" />
@@ -79,7 +82,7 @@ export function renderDocument(options: DocumentRenderOptions): string {
       </head>
       <body>
         <a className="skip-link" href={`#${contentId}`}>
-          Skip to content
+          {strings.skipToContent}
         </a>
         <header className="topbar" data-nav-outside>
           {hasNavigation ? (
@@ -88,11 +91,11 @@ export function renderDocument(options: DocumentRenderOptions): string {
               type="button"
               aria-controls={navigationId}
               aria-expanded="true"
-              aria-label="Hide contents"
+              aria-label={strings.hideContents}
               data-nav-toggle
             >
               <PackageIcon name="three-bars" />
-              <span data-nav-toggle-label>Hide contents</span>
+              <span data-nav-toggle-label>{strings.hideContents}</span>
             </button>
           ) : null}
           <div className="topbar-context">
@@ -107,7 +110,7 @@ export function renderDocument(options: DocumentRenderOptions): string {
             </a>
             {hasNavigation ? (
               <span className="topbar-current">
-                <span className="topbar-current-prefix">Current / </span>
+                <span className="topbar-current-prefix">{strings.current}</span>
                 <span data-topbar-current>{options.navigation[0]?.label}</span>
               </span>
             ) : null}
@@ -120,25 +123,25 @@ export function renderDocument(options: DocumentRenderOptions): string {
               aria-expanded="false"
               data-review-toggle
             >
-              <span data-review-toggle-label>Review</span>
+              <span data-review-toggle-label>{strings.review}</span>
               <span className="review-toggle-count" data-review-toggle-count hidden />
             </button>
           ) : null}
           <button
             className="theme-toggle"
             type="button"
-            aria-label="Toggle color theme"
+            aria-label={strings.toggleTheme}
             data-theme-toggle
           >
             <PackageIcon name="sun" />
-            <span data-theme-toggle-label>Theme</span>
+            <span data-theme-toggle-label>{strings.theme}</span>
           </button>
         </header>
         <div className="report-shell" data-nav-outside>
           {hasNavigation ? (
             <aside className="sidebar" id={navigationHostId} data-nav-desktop-host>
-              <nav id={navigationId} aria-label="Document contents" data-navigation>
-                <p className="sidebar-label">On this page</p>
+              <nav id={navigationId} aria-label={strings.documentContents} data-navigation>
+                <p className="sidebar-label">{strings.onThisPage}</p>
                 <ol>
                   {options.navigation.map((item, index) => (
                     <li key={item.id} data-depth={item.depth}>
@@ -165,10 +168,10 @@ export function renderDocument(options: DocumentRenderOptions): string {
           >
             <div className="nav-dialog-panel">
               <div className="nav-dialog-header">
-                <p id={navigationDialogTitleId}>Contents</p>
+                <p id={navigationDialogTitleId}>{strings.contents}</p>
                 <button type="button" className="nav-dialog-close" data-nav-close>
                   <PackageIcon name="x" />
-                  Close
+                  {strings.close}
                 </button>
               </div>
               <div data-nav-dialog-content />
@@ -185,17 +188,17 @@ export function renderDocument(options: DocumentRenderOptions): string {
             <div className="review-panel">
               <header className="review-panel-header">
                 <div>
-                  <p className="review-eyebrow">Review workspace</p>
-                  <h2 id={reviewDialogTitleId}>Review this report</h2>
+                  <p className="review-eyebrow">{strings.reviewWorkspace}</p>
+                  <h2 id={reviewDialogTitleId}>{strings.reviewThisReport}</h2>
                 </div>
                 <button type="button" className="review-close" data-review-close>
-                  Close
+                  {strings.close}
                 </button>
               </header>
               <div className="review-panel-body">
                 <p className="review-error" role="alert" data-review-error hidden />
                 <output className="review-summary" aria-live="polite" data-review-summary>
-                  No discussion threads yet
+                  {strings.noThreads}
                 </output>
                 <section
                   className="review-form-section review-target-editor"
@@ -203,7 +206,7 @@ export function renderDocument(options: DocumentRenderOptions): string {
                   data-review-target-editor
                   hidden
                 >
-                  <h3 id={reviewTargetTitleId}>Discussion for selected block</h3>
+                  <h3 id={reviewTargetTitleId}>{strings.discussionSelected}</h3>
                   <p className="review-target-label" data-review-target-label />
                   <ol
                     className="review-response-list"
@@ -211,39 +214,39 @@ export function renderDocument(options: DocumentRenderOptions): string {
                     data-review-thread-messages
                   />
                   <p id={reviewThreadTitleId} data-review-thread-empty>
-                    No messages yet.
+                    {strings.noMessages}
                   </p>
                   <label className="review-field">
-                    <span>New message</span>
+                    <span>{strings.newMessage}</span>
                     <textarea rows={4} data-review-message />
                   </label>
                   <div className="review-inline-actions">
                     <button type="button" className="review-primary" data-review-add-message>
-                      Add message
+                      {strings.addMessage}
                     </button>
                     <button type="button" data-review-cancel-message-edit hidden>
-                      Cancel edit
+                      {strings.cancelEdit}
                     </button>
                     <button type="button" data-review-resolve-thread hidden>
-                      Resolve thread
+                      {strings.resolveThread}
                     </button>
                   </div>
                 </section>
                 <section className="review-form-section" data-review-prior-section hidden>
-                  <h3>Threads from the previous revision</h3>
+                  <h3>{strings.previousThreads}</h3>
                   <ol className="review-response-list" data-review-prior-list />
                 </section>
               </div>
               <footer className="review-panel-footer">
                 <label className="review-file-action">
-                  Import review
+                  {strings.importReview}
                   <input type="file" accept="application/json,.json" data-review-import />
                 </label>
                 <button type="button" className="review-primary" data-review-export>
-                  Export review.json
+                  {strings.exportReview}
                 </button>
                 <button type="button" data-review-exit>
-                  Exit review
+                  {strings.exitReview}
                 </button>
               </footer>
             </div>

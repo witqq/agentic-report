@@ -156,6 +156,14 @@ are allowed; the loader rejects cycles, nesting over 10 levels, and lexical or c
 source root. The source contract is defined in
 [`product/source-contract.md`](product/source-contract.md).
 
+The manifest language is also the sole input to the browser-safe package localization module. It resolves
+`ru` and Russian subtags to one closed Russian catalog and resolves `en`, `und`, and unsupported tags to the
+complete English catalog. Static document markup, compile-time directive and visualization enhancement,
+the browser runtime, and Review Workspace consume that same catalog. They never inspect `navigator`, the
+host environment, or network state. Authored content and CLI diagnostics remain outside this reader-chrome
+boundary. The catalog also owns explicit-locale numeric formatting for visible and accessible chart output,
+so compiled values cannot fall back to a host or hardcoded locale.
+
 The `section` directive is restricted to the Markdown root. It creates one real `<section>` labelled by an
 owned visible H2, with a validated explicit ID or deterministic title-derived ID. Explicit duplicates and
 unsafe IDs fail; generated collisions receive deterministic suffixes. When explicit sections exist they
@@ -253,7 +261,10 @@ session-only. Mobile moves the same nav into a native modal dialog with inert ba
 Escape/backdrop/Close return, link-to-heading focus, and safe breakpoint closure.
 
 Both formats contain the same inert escaped review-target manifest in a `template` element. Reviewable
-container directives and ordinary Markdown blocks carry deterministic `data-review-target` identities. The
+container directives that survive enhancement as DOM owners and ordinary Markdown blocks carry deterministic
+`data-review-target` identities. The registry-owned review-ownership contract assigns structural chart
+`series` data to the chart target instead of
+creating an orphan target after compile-time SVG enhancement. The
 manifest contains source-root-relative ranges and SHA-256 fingerprints, not source bodies or workstation
 paths. Its report revision covers the confined entry, manifest, expanded partials, referenced local resource
 bytes, review/source-contract versions, target-algorithm version, and canonical target inventory; it is

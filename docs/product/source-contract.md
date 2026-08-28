@@ -23,7 +23,11 @@ Frontmatter takes precedence. Supported fields are:
 - `title`: non-empty document title; when omitted, the first level-one heading or filename is used;
 - `description`: plain-text metadata description;
 - `language`: tag used on `<html lang>`; the current accepted subset is a 2–8 ASCII-letter primary tag
-  followed by optional 2–8 character ASCII alphanumeric subtags; default `und` means undetermined;
+  followed by optional 2–8 character ASCII alphanumeric subtags; default `und` means undetermined. `ru`
+  and its subtags select complete Russian package-owned reader chrome; `en`, `und`, and every unsupported
+  language select complete English chrome. The compiler never uses the browser or host locale, and it does
+  not translate authored Markdown or CLI diagnostics. Visible and accessible package-generated chart
+  numbers use the same selected locale;
 - `preset`: coordinated `studio`, `editorial`, or `signal` package-owned visual defaults;
 - `theme`: `system`, `light`, or `dark`;
 - `layout`: `document`, `dashboard`, `landing`, or `mixed`;
@@ -70,7 +74,8 @@ and validate all resources required by the selected format but do not create or 
 ## Review protocol and source binding
 
 Every normal build embeds an inert version-2 review manifest in a `template` element. Container directives
-and ordinary Markdown blocks receive deterministic review-target identities. Each target records its kind,
+that produce a final DOM owner and ordinary Markdown blocks receive deterministic review-target identities;
+structural chart `series` data is reviewed through its owning chart rather than a removed intermediate node. Each target records its kind,
 SHA-256 fingerprint, source-root-relative entry or partial path, and authored range. A section with an
 explicit `id` also receives a stable review key. The manifest never contains source bodies or absolute
 workstation paths.

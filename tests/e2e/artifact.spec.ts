@@ -90,6 +90,194 @@ const diagramTourArtifacts = [
       .href,
   },
 ] as const;
+const russianChromeArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('russian-chrome') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/russian-chrome-directory/index.html'),
+    ).href,
+  },
+] as const;
+const russianPriorArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('russian-prior') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/russian-prior-directory/index.html'),
+    ).href,
+  },
+] as const;
+const fallbackChromeArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('fallback-chrome') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/fallback-chrome-directory/index.html'),
+    ).href,
+  },
+] as const;
+
+for (const artifact of fallbackChromeArtifacts) {
+  test(`${artifact.format} keeps English fallback under a Russian browser locale`, async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'language', { configurable: true, value: 'ru-RU' });
+      Object.defineProperty(navigator, 'languages', { configurable: true, value: ['ru-RU', 'ru'] });
+    });
+    await page.goto(artifact.url);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'und');
+    await expect(page.locator('html')).toHaveAttribute('data-package-locale', 'en');
+    await expect(page.getByRole('link', { name: 'Skip to content' })).toBeAttached();
+    await expect(page.getByRole('button', { name: 'Toggle color theme' })).toBeVisible();
+    await expect(page.locator('[data-copy-code]').first()).toContainText('Copy');
+    expect(await page.evaluate(() => navigator.language)).toBe('ru-RU');
+    expect(await page.locator('body').innerText()).not.toContain('Перейти к содержимому');
+  });
+}
+
+for (const artifact of russianChromeArtifacts) {
+  test(`${artifact.format} derives all reader chrome from Russian source language`, async ({
+    page,
+  }, testInfo) => {
+    await page.addInitScript(() => {
+      Reflect.set(globalThis, '__copyShouldFail', false);
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async () => {
+            if (Reflect.get(globalThis, '__copyShouldFail') === true) {
+              throw new Error('Controlled clipboard failure');
+            }
+          },
+        },
+      });
+    });
+    await page.goto(artifact.url);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ru-RU');
+    await expect(page.locator('html')).toHaveAttribute('data-package-locale', 'ru');
+    await expect(page.getByRole('link', { name: 'Перейти к содержимому' })).toBeAttached();
+    await expect(page.getByRole('button', { name: 'Переключить цветовую тему' })).toBeVisible();
+
+    const navigation = page.locator('[data-nav-toggle]');
+    await expect(navigation).toHaveAccessibleName(/Скрыть содержание|Открыть содержание/);
+    await navigation.click();
+    await expect(navigation).toHaveAccessibleName(/Показать содержание|Закрыть содержание/);
+    if ((await navigation.getAttribute('aria-label')) === 'Закрыть содержание') {
+      await page.locator('[data-nav-close]').click();
+      await expect(navigation).toHaveAccessibleName('Открыть содержание');
+    }
+
+    const filter = page.getByRole('searchbox', { name: 'Фильтр' });
+    await expect(filter).toHaveAttribute('placeholder', 'Фильтровать элементы');
+    await filter.fill('Копирование');
+    await expect(page.locator('[data-filter-count]')).toHaveText('1 элемент');
+
+    const copy = page.locator('[data-copy-code]').first();
+    await expect(copy).toContainText('Копировать');
+    await copy.click();
+    await expect(copy).toContainText('Скопировано');
+    await expect(copy).toContainText('Копировать');
+    await page.evaluate(() => Reflect.set(globalThis, '__copyShouldFail', true));
+    await copy.click();
+    await expect(copy).toContainText('Копирование недоступно');
+
+    const glossaryTrigger = page.locator('[data-glossary-trigger]').first();
+    await glossaryTrigger.click();
+    await expect(page.locator('[data-glossary-definition-link]').first()).toHaveText(
+      'Открыть полное определение',
+    );
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-glossary-panel]').first()).toBeHidden();
+    await page.getByRole('button', { name: 'Открыть диалог' }).click();
+    await expect(page.getByRole('dialog', { name: 'Проверка модального окна' })).toBeVisible();
+    await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Показать подробности' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Увеличить' })).toBeVisible();
+    await expect(page.locator('[aria-label="Легенда"]')).toBeVisible();
+    await expect(page.locator('[data-chart-type="bar"] desc')).toContainText(
+      'Результат, А: 1 234,5',
+    );
+    await expect(page.locator('[data-diagram-type="flow"] desc')).toContainText(
+      'Узлы: first: Первый; second: Второй. Связи: first к second: переход.',
+    );
+
+    const review = page.locator('[data-review-toggle]');
+    await review.click();
+    await expect(
+      page.getByRole('button', { name: 'Открыть обсуждение: Разделитель' }),
+    ).toBeVisible();
+    const dialog = page.locator('[data-review-dialog]');
+    const target = page.locator('[data-review-target-control]').first();
+    await target.click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Пространство ревью');
+    await expect(dialog).toContainText('0 обсуждений · открыто: 0');
+
+    await page.locator('[data-review-add-message]').click();
+    await expect(page.locator('[data-review-error]')).toHaveText(
+      'Введите сообщение для выбранного блока.',
+    );
+    await page.locator('[data-review-message]').fill('Первоначальный комментарий.');
+    await page.locator('[data-review-add-message]').click();
+    await expect(dialog).toContainText('1 обсуждение · открыто: 1');
+    await expect(page.locator('[data-review-thread-messages]')).toContainText(
+      'Первоначальный комментарий.',
+    );
+    await expect(page.locator('[data-review-thread-messages]')).toContainText('Вы');
+    await page.getByRole('button', { name: 'Изменить' }).click();
+    await expect(page.locator('[data-review-add-message]')).toHaveText('Сохранить сообщение');
+    await page.locator('[data-review-message]').fill('Исправленный комментарий.');
+    await page.locator('[data-review-add-message]').click();
+    await expect(page.locator('[data-review-thread-messages]')).toContainText(
+      'Исправленный комментарий.',
+    );
+    const resolution = page.locator('[data-review-resolve-thread]');
+    await expect(resolution).toHaveText('Закрыть обсуждение');
+    await resolution.click();
+    await expect(resolution).toHaveText('Возобновить обсуждение');
+    await resolution.click();
+    await expect(resolution).toHaveText('Закрыть обсуждение');
+    await page.locator('[data-review-import]').setInputFiles({
+      name: 'invalid.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from('{'),
+    });
+    await expect(page.locator('[data-review-error]')).toHaveText('Не удалось импортировать ревью.');
+
+    const packageEnglish = [
+      'Skip to content',
+      'Copy unavailable',
+      'Review workspace',
+      'No discussion threads yet',
+      'Filter items',
+    ];
+    const chrome = await page.locator('body').innerText();
+    for (const label of packageEnglish) expect(chrome).not.toContain(label);
+    const capturePath = path.resolve(
+      'test-results/captures/localization',
+      `${artifact.format}-${testInfo.project.name}.png`,
+    );
+    await mkdir(path.dirname(capturePath), { recursive: true });
+    await page.screenshot({ path: capturePath, fullPage: true });
+  });
+}
+
+for (const artifact of russianPriorArtifacts) {
+  test(`${artifact.format} localizes stale prior-review classifications`, async ({ page }) => {
+    await page.goto(artifact.url);
+    await page.locator('[data-review-toggle]').click();
+    await page.locator('[data-review-target-control]').first().click();
+    const prior = page.locator('[data-review-prior-section]');
+    await expect(prior).toBeVisible();
+    await expect(prior).toContainText('Предыдущее · изменено · открыто');
+    await expect(prior).toContainText('Предыдущее · точно · закрыто');
+    await expect(prior).toContainText('Вы: Изменено.');
+    await expect(prior).toContainText('Агент: Без изменений.');
+    expect(await prior.innerText()).not.toMatch(/\b(?:exact|changed|missing|ambiguous)\b/u);
+  });
+}
 
 for (const artifact of defaultMotionArtifacts) {
   test(`${artifact.format} source link opens the loopback helper without replacing the file report`, async ({

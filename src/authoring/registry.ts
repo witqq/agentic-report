@@ -140,6 +140,10 @@ export const DIAGRAM_CONTRACT = {
 } as const;
 export type DiagramTypeChoice = (typeof DIAGRAM_CONTRACT.types)[number];
 
+export const REVIEW_TARGET_OWNERSHIP_CONTRACT = {
+  parentOwnedDirectives: ['series'],
+} as const;
+
 export type ConstraintDefinition =
   | {
       readonly kind: 'string';

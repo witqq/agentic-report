@@ -603,7 +603,7 @@ describe('buildReport', () => {
     expect(html).toContain('data-demo-counter');
     expect(html).toContain('data:application/json;base64,');
     expect(html).toContain('class="semantic-asset"');
-    expect(html).toContain('>Download data.json</a>');
+    expect(html).toContain('>Скачать data.json</a>');
     expect(html).toContain('data:font/woff2;base64,');
     expect(html).toContain('@font-face');
 

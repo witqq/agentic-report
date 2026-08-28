@@ -1,4 +1,5 @@
 import type { Element, ElementContent } from 'hast';
+import type { PackageStrings } from '../localization.js';
 
 const CHART_WIDTH = 720;
 const CHART_HEIGHT = 360;
@@ -44,44 +45,50 @@ export function enhanceVisualization(
   semantic: string,
   instance: number,
   allocateId: (base: string) => string,
+  strings: PackageStrings,
 ): boolean {
   if (semantic === 'chart') {
-    enhanceChart(node, instance, allocateId);
+    enhanceChart(node, instance, allocateId, strings);
     return true;
   }
   if (semantic === 'diagram') {
-    enhanceDiagram(node, instance, allocateId);
+    enhanceDiagram(node, instance, allocateId, strings);
     return true;
   }
   if (semantic === 'timeline') {
-    enhanceTimeline(node, instance);
+    enhanceTimeline(node, instance, strings);
     return true;
   }
   return false;
 }
 
-function enhanceChart(node: Element, instance: number, allocateId: (base: string) => string): void {
-  const title = take(node, 'dataDirectiveTitle') ?? 'Chart';
+function enhanceChart(
+  node: Element,
+  instance: number,
+  allocateId: (base: string) => string,
+  strings: PackageStrings,
+): void {
+  const title = take(node, 'dataDirectiveTitle') ?? strings.chart;
   const description = take(node, 'dataDescription') ?? title;
   const type = take(node, 'dataType') ?? 'bar';
   const xLabel = take(node, 'dataXLabel');
   const yLabel = take(node, 'dataYLabel');
   const series = semanticChildren(node, 'series').map((seriesNode) => ({
-    label: take(seriesNode, 'dataLabel') ?? 'Series',
+    label: take(seriesNode, 'dataLabel') ?? strings.series,
     points: semanticChildren(seriesNode, 'point').map((point) => ({
-      label: take(point, 'dataLabel') ?? 'Value',
+      label: take(point, 'dataLabel') ?? strings.value,
       value: Number(take(point, 'dataValue') ?? '0'),
     })),
   }));
   const titleId = allocateId(`visual-${instance}-title`);
   const descriptionId = allocateId(`visual-${instance}-description`);
-  const accessibleDescription = chartDescription(description, series);
+  const accessibleDescription = chartDescription(description, series, strings);
   const svgChildren: ElementContent[] = [
     element('title', { id: titleId }, [text(title)]),
     element('desc', { id: descriptionId }, [text(accessibleDescription)]),
     ...(type === 'pie'
-      ? renderPie(series[0]?.points ?? [])
-      : renderCartesian(type, series, xLabel, yLabel)),
+      ? renderPie(series[0]?.points ?? [], strings.formatNumber)
+      : renderCartesian(type, series, xLabel, yLabel, strings.formatNumber)),
   ];
   node.tagName = 'figure';
   node.properties.dataVisualization = 'chart';
@@ -101,7 +108,7 @@ function enhanceChart(node: Element, instance: number, allocateId: (base: string
         svgChildren,
       ),
     ]),
-    renderLegend(series, type),
+    renderLegend(series, type, strings),
   ];
 }
 
@@ -110,6 +117,7 @@ function renderCartesian(
   series: readonly ChartSeries[],
   xLabel: string | undefined,
   yLabel: string | undefined,
+  formatNumber: (value: number) => string,
 ): readonly ElementContent[] {
   const values = series.flatMap((item) => item.points.map((point) => point.value));
   const minimum = Math.min(0, ...values);
@@ -259,7 +267,10 @@ function renderCartesian(
   return children;
 }
 
-function renderPie(points: readonly ChartPoint[]): readonly ElementContent[] {
+function renderPie(
+  points: readonly ChartPoint[],
+  formatNumber: (value: number) => string,
+): readonly ElementContent[] {
   const total = points.reduce((sum, point) => sum + point.value, 0);
   let angle = -Math.PI / 2;
   const children: ElementContent[] = [];
@@ -293,7 +304,11 @@ function renderPie(points: readonly ChartPoint[]): readonly ElementContent[] {
   return children;
 }
 
-function renderLegend(series: readonly ChartSeries[], type: string): Element {
+function renderLegend(
+  series: readonly ChartSeries[],
+  type: string,
+  strings: PackageStrings,
+): Element {
   const entries = series.flatMap((item, seriesIndex) =>
     type === 'pie'
       ? item.points.map((point, pointIndex) => ({
@@ -304,7 +319,7 @@ function renderLegend(series: readonly ChartSeries[], type: string): Element {
   );
   return element(
     'ul',
-    { className: ['visualization-legend'], ariaLabel: 'Legend' },
+    { className: ['visualization-legend'], ariaLabel: strings.legend },
     entries.map((entry) =>
       element('li', { className: ['semantic-series'] }, [
         element('span', {
@@ -317,27 +332,34 @@ function renderLegend(series: readonly ChartSeries[], type: string): Element {
   );
 }
 
-function chartDescription(description: string, series: readonly ChartSeries[]): string {
+function chartDescription(
+  description: string,
+  series: readonly ChartSeries[],
+  strings: PackageStrings,
+): string {
   const data = series.flatMap((item) =>
-    item.points.map((point) => `${item.label}, ${point.label}: ${formatNumber(point.value)}`),
+    item.points.map(
+      (point) => `${item.label}, ${point.label}: ${strings.formatNumber(point.value)}`,
+    ),
   );
-  return `${description} Data: ${data.join('; ')}.`;
+  return `${description} ${strings.data}: ${data.join('; ')}.`;
 }
 
 function enhanceDiagram(
   node: Element,
   instance: number,
   allocateId: (base: string) => string,
+  strings: PackageStrings,
 ): void {
-  const title = take(node, 'dataDirectiveTitle') ?? 'Diagram';
+  const title = take(node, 'dataDirectiveTitle') ?? strings.diagram;
   const description = take(node, 'dataDescription') ?? title;
   const type = take(node, 'dataType') ?? 'flow';
   const direction = take(node, 'dataDirection') ?? 'right';
   if (type === 'sequence') {
-    enhanceSequenceDiagram(node, instance, allocateId, title, description);
+    enhanceSequenceDiagram(node, instance, allocateId, title, description, strings);
     return;
   }
-  enhanceFlowDiagram(node, instance, allocateId, title, description, direction);
+  enhanceFlowDiagram(node, instance, allocateId, title, description, direction, strings);
 }
 
 function enhanceFlowDiagram(
@@ -347,6 +369,7 @@ function enhanceFlowDiagram(
   title: string,
   description: string,
   direction: string,
+  strings: PackageStrings,
 ): void {
   const rawGroups = semanticChildren(node, 'group');
   const rawNodes = semanticChildren(node, 'node');
@@ -359,7 +382,7 @@ function enhanceFlowDiagram(
     const group = take(child, 'dataGroup');
     return {
       id: take(child, 'dataId') ?? `node-${index + 1}`,
-      label: take(child, 'dataLabel') ?? `Node ${index + 1}`,
+      label: take(child, 'dataLabel') ?? strings.node(index + 1),
       kind: take(child, 'dataKind') ?? 'neutral',
       ...(group === undefined ? {} : { group }),
     };
@@ -485,7 +508,7 @@ function enhanceFlowDiagram(
   });
   const groupElements = groups.map((item) => diagramGroup(item));
   const nodeElements = nodes.map((item) => diagramNode(item));
-  const accessibleDescription = flowDiagramDescription(description, groups, nodes, edges);
+  const accessibleDescription = flowDiagramDescription(description, groups, nodes, edges, strings);
 
   node.tagName = 'figure';
   node.properties.dataVisualization = 'diagram';
@@ -521,10 +544,11 @@ function enhanceSequenceDiagram(
   allocateId: (base: string) => string,
   title: string,
   description: string,
+  strings: PackageStrings,
 ): void {
   const participants = semanticChildren(node, 'node').map((child, index) => ({
     id: take(child, 'dataId') ?? `participant-${index + 1}`,
-    label: take(child, 'dataLabel') ?? `Participant ${index + 1}`,
+    label: take(child, 'dataLabel') ?? strings.participant(index + 1),
     kind: take(child, 'dataKind') ?? 'neutral',
     x: 50 + index * 160,
     y: 28,
@@ -557,7 +581,12 @@ function enhanceSequenceDiagram(
     if (from === undefined || to === undefined) return [];
     return sequenceMessage(from, to, message.label, index, 132 + index * 62);
   });
-  const accessibleDescription = sequenceDiagramDescription(description, participants, messages);
+  const accessibleDescription = sequenceDiagramDescription(
+    description,
+    participants,
+    messages,
+    strings,
+  );
 
   node.tagName = 'figure';
   node.properties.dataVisualization = 'diagram';
@@ -645,10 +674,11 @@ function flowDiagramDescription(
   groups: readonly DiagramGroup[],
   nodes: readonly DiagramNode[],
   edges: readonly DiagramEdge[],
+  strings: PackageStrings,
 ): string {
   const groupText =
     groups.length === 0
-      ? 'none'
+      ? strings.none
       : groups
           .map((group) => {
             const members = nodes
@@ -661,30 +691,32 @@ function flowDiagramDescription(
   const nodeText = nodes.map((node) => `${node.id}: ${node.label}`).join('; ');
   const edgeText =
     edges.length === 0
-      ? 'none'
+      ? strings.none
       : edges
           .map(
             (edge) =>
-              `${edge.from} to ${edge.to}${edge.label === undefined ? '' : `: ${edge.label}`}`,
+              `${edge.from} ${strings.to} ${edge.to}${edge.label === undefined ? '' : `: ${edge.label}`}`,
           )
           .join('; ');
-  return `${description} Groups: ${groupText}. Nodes: ${nodeText}. Connections: ${edgeText}.`;
+  return `${description} ${strings.groups}: ${groupText}. ${strings.nodes}: ${nodeText}. ${strings.connections}: ${edgeText}.`;
 }
 
 function sequenceDiagramDescription(
   description: string,
   participants: readonly DiagramNode[],
   messages: readonly DiagramEdge[],
+  strings: PackageStrings,
 ): string {
   const participantText = participants
     .map((participant) => `${participant.id}: ${participant.label}`)
     .join('; ');
   const messageText = messages
     .map(
-      (message, index) => `${index + 1}. ${message.from} to ${message.to}: ${message.label ?? ''}`,
+      (message, index) =>
+        `${index + 1}. ${message.from} ${strings.to} ${message.to}: ${message.label ?? ''}`,
     )
     .join('; ');
-  return `${description} Participants: ${participantText}. Messages in order: ${messageText}.`;
+  return `${description} ${strings.participants}: ${participantText}. ${strings.messagesInOrder}: ${messageText}.`;
 }
 
 function sequenceMessage(
@@ -918,8 +950,8 @@ function groupedInternalEdge(
   return children;
 }
 
-function enhanceTimeline(node: Element, _instance: number): void {
-  const title = take(node, 'dataDirectiveTitle') ?? 'Timeline';
+function enhanceTimeline(node: Element, _instance: number, strings: PackageStrings): void {
+  const title = take(node, 'dataDirectiveTitle') ?? strings.timeline;
   const description = take(node, 'dataDescription') ?? title;
   const events = semanticChildren(node, 'event');
   node.tagName = 'section';
@@ -931,7 +963,7 @@ function enhanceTimeline(node: Element, _instance: number): void {
       { className: ['visualization-timeline-list'] },
       events.map((event) => {
         const date = take(event, 'dataDate') ?? '';
-        const eventTitle = take(event, 'dataDirectiveTitle') ?? 'Event';
+        const eventTitle = take(event, 'dataDirectiveTitle') ?? strings.event;
         const kind = take(event, 'dataKind') ?? 'neutral';
         event.tagName = 'li';
         event.properties.className = [
@@ -993,10 +1025,6 @@ function element(
 
 function text(value: string): ElementContent {
   return { type: 'text', value };
-}
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat('en', { maximumFractionDigits: 6, useGrouping: true }).format(value);
 }
 
 function round(value: number): number {
