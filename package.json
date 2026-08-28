@@ -1,6 +1,6 @@
 {
   "name": "agentic-report",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Local declarative page builder for agent-authored interactive HTML artifacts.",
   "type": "module",
   "license": "MIT",

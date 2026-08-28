@@ -94,6 +94,10 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
   await expect(
     page.getByRole('heading', { name: 'Build the page, not a frontend project' }),
   ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Build from source' })).toBeVisible();
+  await expect(
+    page.getByText('git clone --branch v0.4.4 --depth 1', { exact: false }),
+  ).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open the quickstart' })).toHaveAttribute(
     'href',
     'agent/index.html',
@@ -102,9 +106,12 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
   await expect(page).toHaveTitle('Agent quickstart');
   await expect(page.getByText('Node.js 24.18.0 or newer', { exact: false }).first()).toBeVisible();
   await expect(
-    page.getByText('npx --yes agentic-report@0.4.3 init ./my-page', { exact: false }).first(),
+    page.getByText('npx --yes agentic-report@0.4.4 init ./my-page', { exact: false }).first(),
   ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Use it inside your own skill' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Use reviewed source instead of the npm package' }),
+  ).toBeVisible();
   await expect(page.getByRole('link', { name: 'complete agent reference' })).toHaveAttribute(
     'href',
     '../AGENT-REFERENCE.md',
@@ -123,7 +130,7 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
   );
 
   await page.goto(fileUrl('docs/agent/index.md'));
-  await expect(page.locator('body')).toContainText('npx --yes agentic-report@0.4.3 validate');
+  await expect(page.locator('body')).toContainText('npx --yes agentic-report@0.4.4 validate');
   await expect(page.locator('body')).toContainText('Authors do not need React');
 
   for (const example of ['incident-review', 'vendor-decision', 'launch-readiness']) {

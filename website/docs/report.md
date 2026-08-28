@@ -27,6 +27,33 @@ Use Node.js 24.18.0 or newer. Start with the [agent quickstart](agent/index.html
 
 ::::
 
+::::section{title="Build from source" id="source-install" nav="From source" width="standard" align="start" tone="accent" reveal="true"}
+
+If you prefer to inspect the implementation instead of executing the published `agentic-report` npm
+package, clone a specific release tag and run the compiler directly from its build:
+
+```sh
+git clone --branch v0.4.4 --depth 1 https://github.com/witqq/agentic-report.git
+cd agentic-report
+git rev-parse HEAD
+git tag --points-at HEAD
+
+# Review the source, package.json, pnpm-lock.yaml, and lifecycle scripts first.
+pnpm install --frozen-lockfile
+pnpm verify
+pnpm build
+
+node dist/node/cli.js init ../my-page --starter report --json
+node dist/node/cli.js build ../my-page --output ../my-page.html --json
+```
+
+This path does not install or execute the `agentic-report` package from npm. It still uses the npm registry
+for the exact dependencies pinned by `pnpm-lock.yaml`; dependencies are not vendored. Review the lockfile
+and scripts before installation, use an isolated environment if your threat model requires it, and keep the
+tag pinned so later commands continue to use the revision you inspected.
+
+::::
+
 :::::section{title="Authoring contract" id="authoring" nav="Authoring" width="wide" align="start" tone="plain" reveal="true"}
 
 Authors write declarative source rather than application code. Use Markdown for content, frontmatter or a

@@ -42,19 +42,46 @@ Your skill owns when the handoff is useful and what the content means. The utili
 contract, accessible layout, interaction runtime, and portable output. Do not ask the agent to write a
 parallel React page, custom CSS, or browser script.
 
+## Use reviewed source instead of the npm package
+
+When the user does not trust the published package, do not silently fall back to `npx`. Clone the requested
+release tag, let the user inspect the repository, and run the locally compiled CLI:
+
+```sh
+git clone --branch v0.4.4 --depth 1 https://github.com/witqq/agentic-report.git
+cd agentic-report
+git rev-parse HEAD
+git tag --points-at HEAD
+
+# Pause for source, package.json, pnpm-lock.yaml, and lifecycle-script review.
+pnpm install --frozen-lockfile
+pnpm verify
+pnpm build
+
+node dist/node/cli.js init ../my-page --starter report --json
+node dist/node/cli.js validate ../my-page --json
+node dist/node/cli.js inspect ../my-page --json
+node dist/node/cli.js build ../my-page --output ../my-page.html --json
+```
+
+State the trust boundary precisely: this avoids installing or executing the `agentic-report` package from
+npm, but `pnpm install` still downloads the dependencies pinned in `pnpm-lock.yaml`. They are not vendored.
+Do not claim a registry-free or fully audited installation. Keep the tag pinned, report the checked commit,
+and use an isolated environment when the user's threat model calls for one.
+
 ## Build the artifact
 
 Use Node.js 24.18.0 or newer. The first `npx` command needs npm registry and network access; the generated
 page itself opens locally through `file://` with its included package-owned browser runtime.
 
-For a reproducible 0.4.3 run, create a new landing-page source and keep the package version pinned through
+For a reproducible 0.4.4 run, create a new landing-page source and keep the package version pinned through
 validation, inspection, and build:
 
 ```sh
-npx --yes agentic-report@0.4.3 init ./my-page --starter landing --json
-npx --yes agentic-report@0.4.3 validate ./my-page --json
-npx --yes agentic-report@0.4.3 inspect ./my-page --json
-npx --yes agentic-report@0.4.3 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.4.4 init ./my-page --starter landing --json
+npx --yes agentic-report@0.4.4 validate ./my-page --json
+npx --yes agentic-report@0.4.4 inspect ./my-page --json
+npx --yes agentic-report@0.4.4 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Edit only the declarative source: Markdown, YAML frontmatter or the
@@ -104,9 +131,9 @@ registry's current `latest` release.
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.4.3 describe --json
-npx --yes agentic-report@0.4.3 schema --scope source
-npx --yes agentic-report@0.4.3 examples --json
+npx --yes agentic-report@0.4.4 describe --json
+npx --yes agentic-report@0.4.4 schema --scope source
+npx --yes agentic-report@0.4.4 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),
