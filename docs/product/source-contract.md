@@ -191,9 +191,11 @@ rewriting their historical targets. Invalid sidecars fail before authoritative o
 
 - `cards` and nested `card`: responsive content grid;
 - `steps`: styled process container whose authored Markdown supplies the ordered or explanatory content;
-- `glossary`: reusable definition with required stable `key` and canonical `term` text;
-- `term`: inline or standalone reference to a glossary `key`; output uses the canonical definition text,
-  opens a contextual explanation on hover, focus, or tap, and provides a link to the full definition;
+- `glossary`: reusable definition with required stable `key`, canonical `term` text, and optional
+  `placement="inline|appendix"`;
+- `term`: inline or standalone reference to a glossary `key`; an inline authored label remains the visible
+  grammatical form while the detached form uses canonical text; both open a contextual explanation on hover,
+  focus, or tap and link to the canonical full definition;
 - `disclosure`: native details block with required `title` and optional initial `open` state;
 - `tabs` and directly nested `tab`: keyboard-operable panels; each `tab` requires a visible `label`;
 - `modal`: modal dialog with required `title` and optional trigger label;
@@ -213,8 +215,8 @@ rewriting their historical targets. Invalid sidecars fail before authoritative o
 Container directives use `:::name ... :::`; nested containers use a longer outer fence. `asset` and
 `font` support leaf directives. An `action` uses the labelled leaf form
 `::action[Visible label]{href="#target" kind="primary"}`. Use
-`:term[Canonical term]{key="term-key"}` inside prose; the label marks
-the authored range, while output always uses the registered canonical text. The compatible standalone form
+`:term[authored form]{key="term-key"}` inside prose; the label is rendered exactly as the visible grammatical
+form while canonical text remains the explanation/definition title and unique identity. The compatible standalone form
 `::term{key="term-key"}` remains available when a detached reference is intentional. A `tab` must be a
 direct directive child of `tabs`, and other directive children are rejected there. Complete copyable examples
 are in
@@ -273,6 +275,33 @@ canonical glossary term is registered, an ordinary prose occurrence must use
 code, and code blocks and reports the unmarked authored range with a valid inline replacement. This keeps
 terminology machine-checkable without splitting sentences or rewriting code samples.
 
+The occurrence validator deliberately recognizes only the exact canonical prose form. Explicitly marked
+labels such as `:term[атомам]{key="atom"}` are accepted as author-owned grammatical forms of the same key;
+unmarked inflected forms are not guessed or reported as checked.
+
+To explain code where a term first appears, use one closed fence field:
+
+````markdown
+```typescript terms="own-field,node-type"
+@d.def(Node) accessor child!: Node;
+@d.def(Node) accessor sibling!: Node;
+```
+````
+
+The value contains 1–20 unique comma-separated glossary keys. Every key must exist, and its canonical term
+must occur exactly and case-sensitively within one code line. The first occurrence for each key becomes the
+same keyboard/hover/tap glossary control; repeated occurrences remain ordinary highlighted code. First
+ranges may not overlap. Malformed metadata, unknown or duplicate keys, missing canonical text, multiline or
+overlapping matches fail at the authored code block. Other fences keep current behavior. The code remains
+escaped text, Shiki token colors are preserved, and copying excludes generated explanation panels.
+`getSourceContract().source.codeFenceMetadata.terms` exposes the quoted envelope, separator, item bounds,
+uniqueness, shared key constraint and exact-match policy as machine-readable discovery data.
+
+`glossary.placement` defaults to `inline`. On a top-level glossary definition, `appendix` moves the complete
+visible definition into one labelled package-owned glossary appendix after the authored reading flow, in definition order. A nested appendix definition fails instead of leaving its parent empty. The appendix heading is
+excluded from primary navigation, while every full-definition link and review target retains its stable ID
+and authored source range.
+
 The text form `:asset[Label]{src="path"}` uses the authored accessible label. The leaf form
 `::asset{src="path"}` is also valid and receives the deterministic visible label `Download <filename>`.
 
@@ -281,16 +310,16 @@ The text form `:asset[Label]{src="path"}` uses the authored accessible label. Th
 All state is local to the generated component instance. Browser behavior is package-owned, works through
 `file://` in both output formats, and never evaluates author content.
 
-| Primitive           | Initial state and semantic HTML                                                                                                                                                                        | Keyboard behavior                                                                                                                   | Pointer/touch behavior and limits                                                                                                                                 |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `glossary` + `term` | The definition is a visible labelled section with a stable `glossary-<key>` ID. Each term is a button controlling a closed labelled contextual `dialog`; its text comes from the canonical definition. | Focusing the term opens the explanation. `Escape` closes it and restores focus. The panel link navigates to the full definition.    | Hover or click/tap opens the explanation; leaving/clicking outside closes it. The panel link is the explicit route to the full Markdown definition.               |
-| `disclosure`        | Native `details`/`summary`; closed unless `open="true"`.                                                                                                                                               | Native summary activation with `Enter` or `Space`.                                                                                  | Click/tap the summary to toggle.                                                                                                                                  |
-| `tabs` + `tab`      | `tablist`, `tab`, and `tabpanel` roles; the first direct `tab` is selected and other panels are hidden. Each panel requires `label`; non-`tab` directive children are rejected.                        | `ArrowLeft`/`ArrowRight` select and focus adjacent tabs with wraparound; `Home`/`End` select the first/last tab.                    | Click/tap a tab to select its panel. State does not cross into another tabs instance.                                                                             |
-| `modal`             | Trigger button plus closed native `dialog` labelled by required `title`.                                                                                                                               | Activating the trigger opens the modal; native `Escape` closes it and restores focus to the opener. The Close button does the same. | Click/tap the trigger and Close button. Backdrop-click dismissal is not part of the contract.                                                                     |
-| `popover`           | Trigger button controls a closed non-modal labelled `dialog`.                                                                                                                                          | `Enter`/`Space` toggles the trigger. `Escape` closes an open panel and restores trigger focus.                                      | Click/tap toggles; clicking outside closes without moving focus.                                                                                                  |
-| `filter`            | Labelled search input plus polite live result count; the empty query shows every item.                                                                                                                 | Normal search-input editing.                                                                                                        | Input filters case-insensitively while typing. Only `li` elements in a direct authored `ul` or `ol` are filter targets; nested lists are not independent targets. |
-| `toggle`            | Button with `role="switch"` and a controlled panel; `default="off"` hides content, `on` shows it.                                                                                                      | Native button `Enter`/`Space` toggles `aria-checked` and panel visibility.                                                          | Click/tap toggles the same state. Instances are isolated.                                                                                                         |
-| `demo`              | Bounded numeric output starts at `start` (default `0`).                                                                                                                                                | Native Increment button activation adds `step` (default `1`).                                                                       | Click/tap performs the same package-owned increment; no author script is accepted.                                                                                |
+| Primitive           | Initial state and semantic HTML                                                                                                                                                                                                                                | Keyboard behavior                                                                                                                   | Pointer/touch behavior and limits                                                                                                                                 |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `glossary` + `term` | The inline or appendix definition is a visible labelled section with a stable `glossary-<key>` ID. Each prose/code term is a button controlling a closed labelled contextual `dialog`; prose may show an authored form while the dialog title stays canonical. | Focusing the term opens the explanation. `Escape` closes it and restores focus. The panel link navigates to the full definition.    | Hover or click/tap opens the explanation; leaving/clicking outside closes it. The panel link is the explicit route to the full Markdown definition.               |
+| `disclosure`        | Native `details`/`summary`; closed unless `open="true"`.                                                                                                                                                                                                       | Native summary activation with `Enter` or `Space`.                                                                                  | Click/tap the summary to toggle.                                                                                                                                  |
+| `tabs` + `tab`      | `tablist`, `tab`, and `tabpanel` roles; the first direct `tab` is selected and other panels are hidden. Each panel requires `label`; non-`tab` directive children are rejected.                                                                                | `ArrowLeft`/`ArrowRight` select and focus adjacent tabs with wraparound; `Home`/`End` select the first/last tab.                    | Click/tap a tab to select its panel. State does not cross into another tabs instance.                                                                             |
+| `modal`             | Trigger button plus closed native `dialog` labelled by required `title`.                                                                                                                                                                                       | Activating the trigger opens the modal; native `Escape` closes it and restores focus to the opener. The Close button does the same. | Click/tap the trigger and Close button. Backdrop-click dismissal is not part of the contract.                                                                     |
+| `popover`           | Trigger button controls a closed non-modal labelled `dialog`.                                                                                                                                                                                                  | `Enter`/`Space` toggles the trigger. `Escape` closes an open panel and restores trigger focus.                                      | Click/tap toggles; clicking outside closes without moving focus.                                                                                                  |
+| `filter`            | Labelled search input plus polite live result count; the empty query shows every item.                                                                                                                                                                         | Normal search-input editing.                                                                                                        | Input filters case-insensitively while typing. Only `li` elements in a direct authored `ul` or `ol` are filter targets; nested lists are not independent targets. |
+| `toggle`            | Button with `role="switch"` and a controlled panel; `default="off"` hides content, `on` shows it.                                                                                                                                                              | Native button `Enter`/`Space` toggles `aria-checked` and panel visibility.                                                          | Click/tap toggles the same state. Instances are isolated.                                                                                                         |
+| `demo`              | Bounded numeric output starts at `start` (default `0`).                                                                                                                                                                                                        | Native Increment button activation adds `step` (default `1`).                                                                       | Click/tap performs the same package-owned increment; no author script is accepted.                                                                                |
 
 `actions`/`action` does not appear in the stateful table because it is an ordinary group of links. Native
 anchor focus, Enter activation, URL behavior, and browser history apply without a package event handler.

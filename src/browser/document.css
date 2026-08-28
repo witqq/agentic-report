@@ -1532,6 +1532,17 @@ th {
   display: inline-block;
 }
 
+.semantic-code-term {
+  white-space: pre;
+}
+
+.semantic-code-term [data-glossary-trigger] {
+  padding: 0 0.08em;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
 .semantic-term [data-glossary-trigger] {
   border: 0;
   border-radius: var(--radius-small);
@@ -1547,6 +1558,21 @@ th {
 
 .semantic-glossary {
   border-left: 0.35rem solid var(--color-accent);
+}
+
+.semantic-glossary-appendix {
+  max-width: min(100%, var(--reading-measure));
+  margin-top: calc(3rem * var(--space-factor));
+  border-top: 2px solid var(--color-border-strong);
+  padding-top: var(--space-card);
+}
+
+.semantic-glossary-appendix-title {
+  margin-top: 0;
+}
+
+.semantic-glossary-appendix .semantic-glossary {
+  max-width: 100%;
 }
 
 .semantic-disclosure {
@@ -1635,6 +1661,18 @@ th {
   font-weight: 400;
 }
 
+.semantic-code-term [data-glossary-panel] {
+  position: fixed;
+  inset: auto 1rem 1rem auto;
+  width: min(28rem, calc(100vw - 2rem));
+  max-height: min(50vh, 24rem);
+  overflow: auto;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  line-height: var(--body-leading);
+  white-space: normal;
+}
+
 .semantic-term [data-glossary-panel] .semantic-title {
   display: block;
 }
@@ -1660,6 +1698,10 @@ th {
     width: auto;
     max-height: min(50vh, 24rem);
     overflow: auto;
+  }
+
+  .semantic-code-term [data-glossary-panel] {
+    inset: auto 1rem 1rem;
   }
 }
 

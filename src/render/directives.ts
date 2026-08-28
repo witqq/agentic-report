@@ -1,5 +1,5 @@
-import type { Element, Root as HastRoot } from 'hast';
-import type { Root as MdastRoot } from 'mdast';
+import type { Element, ElementContent, Root as HastRoot } from 'hast';
+import type { Code, Root as MdastRoot } from 'mdast';
 import { decodeString } from 'micromark-util-decode-string';
 import type { Plugin } from 'unified';
 import { visit } from 'unist-util-visit';
@@ -9,6 +9,7 @@ import {
   type DirectiveAttributeDefinition,
   type DirectiveDefinition,
   type DirectiveForm,
+  type CodeFenceMetadataDefinition,
 } from '../authoring/registry.js';
 import { interpretDirectiveAttributes } from '../authoring/schemas.js';
 import type { SourceMapSegment } from '../contracts.js';
@@ -17,6 +18,19 @@ import { MAX_REVIEW_RESPONSES } from '../review/contract.js';
 import { resolveSourceLocation } from '../source/source-map.js';
 import { decorativeIcon } from './icons.js';
 import { enhanceVisualization } from './visualizations.js';
+
+interface SourcePosition {
+  readonly start: {
+    readonly line: number;
+    readonly column: number;
+    readonly offset?: number | undefined;
+  };
+  readonly end: {
+    readonly line: number;
+    readonly column: number;
+    readonly offset?: number | undefined;
+  };
+}
 
 interface DirectiveNode {
   readonly type: string;
@@ -27,10 +41,7 @@ interface DirectiveNode {
     hName?: string;
     hProperties?: Readonly<Record<string, string | string[]>>;
   };
-  readonly position?: {
-    readonly start: { readonly line: number; readonly column: number; readonly offset?: number };
-    readonly end: { readonly line: number; readonly column: number; readonly offset?: number };
-  };
+  readonly position?: SourcePosition | undefined;
 }
 
 interface DirectivePluginOptions {
@@ -47,12 +58,86 @@ const directiveByName: ReadonlyMap<string, DirectiveDefinition> = new Map(
   authoringRegistry.directives.map((directive) => [directive.name, directive]),
 );
 const GENERATED_SECTION_ID_PREFIX = 'generated:';
+const CODE_TERM_FIELD = 'terms' as const;
+const CODE_TERM_METADATA = authoringRegistry.source.codeFenceMetadata.terms;
+const CODE_TERM_KEY_PATTERN = new RegExp(CODE_TERM_METADATA.itemConstraint.pattern, 'u');
+const CODE_TERM_ATTEMPT_PATTERN = new RegExp(`(?:^|\\s)${CODE_TERM_FIELD}(?:\\s*=|\\s|$)`, 'u');
+const CODE_TERM_EXACT_PATTERN = codeTermExactPattern(CODE_TERM_FIELD, CODE_TERM_METADATA);
+
+export type CodeTermMetadataResult =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'valid'; readonly keys: readonly string[] }
+  | { readonly kind: 'invalid'; readonly message: string; readonly remediation: string };
+
+export function parseCodeTermMetadata(meta: string | null | undefined): CodeTermMetadataResult {
+  if (meta === undefined || meta === null || !CODE_TERM_ATTEMPT_PATTERN.test(meta)) {
+    return { kind: 'none' };
+  }
+  const match = CODE_TERM_EXACT_PATTERN.exec(meta);
+  if (match === null) {
+    return {
+      kind: 'invalid',
+      message: `Code term metadata must contain only ${CODE_TERM_METADATA.syntax}.`,
+      remediation: 'Use one quoted comma-separated terms field or remove the code metadata.',
+    };
+  }
+  const keys = (match[1] ?? '').split(CODE_TERM_METADATA.separator).map((key) => key.trim());
+  if (
+    keys.length < CODE_TERM_METADATA.minItems ||
+    keys.some((key) => !CODE_TERM_KEY_PATTERN.test(key))
+  ) {
+    return {
+      kind: 'invalid',
+      message: 'Code term metadata contains an empty or invalid glossary key.',
+      remediation: 'Use lowercase glossary keys separated by commas.',
+    };
+  }
+  if (keys.length > CODE_TERM_METADATA.maxItems) {
+    return {
+      kind: 'invalid',
+      message: `Code term metadata supports at most ${CODE_TERM_METADATA.maxItems} keys.`,
+      remediation: 'Keep only terms that need an explanation in this code block.',
+    };
+  }
+  if (CODE_TERM_METADATA.uniqueItems && new Set(keys).size !== keys.length) {
+    return {
+      kind: 'invalid',
+      message: 'Code term metadata contains a duplicate glossary key.',
+      remediation: 'List each glossary key once per code block.',
+    };
+  }
+  return { kind: 'valid', keys };
+}
+
+function codeTermExactPattern(field: string, definition: CodeFenceMetadataDefinition): RegExp {
+  const quote = metadataQuote(definition.quoting);
+  switch (definition.fieldExclusivity) {
+    case 'only-field':
+      return new RegExp(`^\\s*${field}=${quote}([^${quote}]*)${quote}\\s*$`, 'u');
+    default:
+      return unsupportedCodeMetadataContract(definition.fieldExclusivity);
+  }
+}
+
+function metadataQuote(quoting: CodeFenceMetadataDefinition['quoting']): string {
+  switch (quoting) {
+    case 'double':
+      return '"';
+    default:
+      return unsupportedCodeMetadataContract(quoting);
+  }
+}
+
+function unsupportedCodeMetadataContract(value: never): never {
+  throw new Error(`Unsupported code metadata contract: ${JSON.stringify(value)}.`);
+}
 
 export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoot> =
   (options) => (tree) => {
     const glossaryByKey = new Map<string, GlossaryDefinition>();
     const glossaryTerms = new Map<string, GlossaryDefinition>();
     const termReferences: Array<{ readonly key: string; readonly node: DirectiveNode }> = [];
+    const codeTermBlocks: Array<{ readonly node: Code; readonly keys: readonly string[] }> = [];
     const attributesByNode = new WeakMap<
       object,
       Readonly<Record<string, string | number | boolean>>
@@ -60,6 +145,26 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
     const sectionIds = collectAuthoredSectionIds(tree);
     const claimedAuthoredSectionIds = new Set<string>();
     visit(tree, (node, _index, parent) => {
+      if (isCodeNode(node)) {
+        const metadata = parseCodeTermMetadata(node.meta);
+        if (metadata.kind === 'invalid') {
+          throw attachNodeSource(
+            new AgenticReportError({
+              level: 'error',
+              code: 'INVALID_CODE_TERM_METADATA',
+              message: metadata.message,
+              remediation: metadata.remediation,
+            }),
+            node,
+            options,
+          );
+        }
+        if (metadata.kind === 'valid') {
+          codeTermBlocks.push({ node, keys: metadata.keys });
+          options.observedDirectives?.add('term');
+        }
+        return;
+      }
       if (!isDirectiveNode(node)) {
         return;
       }
@@ -82,6 +187,18 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
             : interpretation.values;
         if (directive.name === 'action') {
           requireActionLabel(node);
+        }
+        if (
+          directive.name === 'glossary' &&
+          values.placement === 'appendix' &&
+          (!isTraversableNode(parent) || parent.type !== 'root')
+        ) {
+          throw directiveError(
+            node,
+            'INVALID_DIRECTIVE_PLACEMENT',
+            'A glossary definition placed in the appendix must be a top-level directive.',
+            'Move this appendix glossary outside lists, blockquotes, sections, and other directives.',
+          );
         }
         if (directive.name === 'source-link' && (node.children ?? []).length > 0) {
           throw directiveError(
@@ -158,6 +275,7 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
         );
       }
     }
+    validateCodeTermBlocks(codeTermBlocks, glossaryByKey, options);
     validateVisualizationData(tree, attributesByNode, options);
     validateActionGroups(tree, options);
     validateTypedReviewComponents(tree, attributesByNode, options);
@@ -486,6 +604,131 @@ interface GlossaryDefinition {
   readonly key: string;
   readonly term: string;
   readonly node: DirectiveNode;
+}
+
+function validateCodeTermBlocks(
+  blocks: readonly { readonly node: Code; readonly keys: readonly string[] }[],
+  glossaryByKey: ReadonlyMap<string, GlossaryDefinition>,
+  options: DirectivePluginOptions,
+): void {
+  for (const block of blocks) {
+    const ranges: Array<{
+      readonly key: string;
+      readonly term: string;
+      readonly start: number;
+      readonly end: number;
+    }> = [];
+    for (const key of block.keys) {
+      const definition = glossaryByKey.get(key);
+      if (definition === undefined) {
+        throw attachNodeSource(
+          new AgenticReportError({
+            level: 'error',
+            code: 'UNKNOWN_GLOSSARY_TERM',
+            message: `No glossary definition exists for code term key: ${key}.`,
+            remediation:
+              'Add a glossary definition with the same key or correct the code metadata.',
+            details: { key },
+          }),
+          block.node,
+          options,
+        );
+      }
+      const term = codeTermMatchText(definition, CODE_TERM_METADATA.matching.source);
+      const start = firstCodeTermIndex(block.node.value, term, CODE_TERM_METADATA.matching);
+      if (start === -1) {
+        throw attachNodeSource(
+          new AgenticReportError({
+            level: 'error',
+            code: 'CODE_TERM_NOT_FOUND',
+            message: `Code term ${key} does not occur as canonical text: ${term}.`,
+            remediation: 'Correct the key or include the exact canonical term in this code block.',
+            details: { key },
+          }),
+          block.node,
+          options,
+        );
+      }
+      const end = start + term.length;
+      if (
+        CODE_TERM_METADATA.matching.lineBoundary === 'reject' &&
+        block.node.value.slice(start, end).includes('\n')
+      ) {
+        throw attachNodeSource(
+          new AgenticReportError({
+            level: 'error',
+            code: 'INVALID_CODE_TERM_METADATA',
+            message: `Code term ${key} crosses a line boundary.`,
+            remediation: 'Use a glossary term that occurs within one code line.',
+            details: { key },
+          }),
+          block.node,
+          options,
+        );
+      }
+      ranges.push({ key, term, start, end });
+    }
+    const ordered = [...ranges].sort(
+      (left, right) => left.start - right.start || right.end - left.end,
+    );
+    for (let index = 1; index < ordered.length; index += 1) {
+      const previous = ordered[index - 1];
+      const current = ordered[index];
+      if (
+        CODE_TERM_METADATA.matching.overlap === 'reject' &&
+        previous !== undefined &&
+        current !== undefined &&
+        current.start < previous.end
+      ) {
+        throw attachNodeSource(
+          new AgenticReportError({
+            level: 'error',
+            code: 'OVERLAPPING_CODE_TERMS',
+            message: `Code terms ${previous.key} and ${current.key} overlap in their first occurrences.`,
+            remediation: 'Annotate only one of the overlapping glossary terms in this code block.',
+            details: { keys: [previous.key, current.key] },
+          }),
+          block.node,
+          options,
+        );
+      }
+    }
+  }
+}
+
+function codeTermMatchText(
+  definition: { readonly term: string },
+  source: CodeFenceMetadataDefinition['matching']['source'],
+): string {
+  switch (source) {
+    case 'canonical-glossary-term':
+      return definition.term;
+    default:
+      return unsupportedCodeMetadataContract(source);
+  }
+}
+
+function firstCodeTermIndex(
+  value: string,
+  term: string,
+  matching: CodeFenceMetadataDefinition['matching'],
+): number {
+  let searchableValue: string;
+  let searchableTerm: string;
+  switch (matching.caseSensitive) {
+    case true:
+      searchableValue = value;
+      searchableTerm = term;
+      break;
+    default:
+      return unsupportedCodeMetadataContract(matching.caseSensitive);
+  }
+  switch (matching.occurrence) {
+    case 'first':
+      return searchableValue.indexOf(searchableTerm);
+    default:
+      return unsupportedCodeMetadataContract(matching.occurrence);
+  }
 }
 
 interface TraversableNode {
@@ -845,6 +1088,14 @@ function attachDirectiveSource(
   node: DirectiveNode,
   options: DirectivePluginOptions,
 ): AgenticReportError {
+  return attachNodeSource(error, node, options);
+}
+
+function attachNodeSource(
+  error: AgenticReportError,
+  node: { readonly position?: SourcePosition | undefined },
+  options: DirectivePluginOptions,
+): AgenticReportError {
   const start = node.position?.start.offset;
   const end = node.position?.end.offset;
   if (start === undefined || end === undefined) return error;
@@ -1006,6 +1257,79 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
 
     let instance = 0;
     let glossaryReferenceInstance = 0;
+    const createGlossaryReference = (
+      key: string,
+      triggerChildren: ElementContent[],
+      classNames: readonly string[] = ['semantic-term'],
+    ): Element => {
+      const definition = glossary.get(key);
+      if (definition === undefined)
+        throw new Error(`Missing validated glossary definition: ${key}.`);
+      glossaryReferenceInstance += 1;
+      const panelId = allocateId(`glossary-reference-${glossaryReferenceInstance}`);
+      const panelTitleId = allocateId(`${panelId}-title`);
+      return {
+        type: 'element',
+        tagName: 'span',
+        properties: {
+          className: [...classNames],
+          dataTermReference: key,
+          dataPopover: '',
+          dataGlossaryReference: '',
+        },
+        children: [
+          {
+            type: 'element',
+            tagName: 'button',
+            properties: {
+              type: 'button',
+              ariaControls: [panelId],
+              ariaExpanded: 'false',
+              ariaHasPopup: 'dialog',
+              dataPopoverTrigger: '',
+              dataGlossaryTrigger: '',
+            },
+            children: triggerChildren,
+          },
+          {
+            type: 'element',
+            tagName: 'span',
+            properties: {
+              id: panelId,
+              role: 'dialog',
+              ariaLabelledBy: [panelTitleId],
+              hidden: '',
+              dataPopoverPanel: '',
+              dataGlossaryPanel: '',
+            },
+            children: [
+              {
+                type: 'element',
+                tagName: 'span',
+                properties: { id: panelTitleId, className: ['semantic-title'] },
+                children: [{ type: 'text', value: definition.term }],
+              },
+              {
+                type: 'element',
+                tagName: 'span',
+                properties: { className: ['semantic-glossary-explanation'] },
+                children: [{ type: 'text', value: definition.explanation }],
+              },
+              {
+                type: 'element',
+                tagName: 'a',
+                properties: {
+                  href: `#${definition.id}`,
+                  className: ['semantic-glossary-link'],
+                  dataGlossaryDefinitionLink: '',
+                },
+                children: [{ type: 'text', value: 'View full definition' }],
+              },
+            ],
+          },
+        ],
+      };
+    };
     visit(tree, 'element', (node: Element) => {
       if (
         node.tagName === 'a' &&
@@ -1016,6 +1340,10 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
           type: 'text',
           value: `Download ${assetLabel(node.properties.dataLocalAsset)}`,
         });
+      }
+      const codeTermKeys = takeStringProperty(node, 'dataCodeTerms');
+      if (node.tagName === 'pre' && codeTermKeys !== undefined) {
+        enhanceCodeTerms(node, codeTermKeys.split(','), glossary, createGlossaryReference);
       }
       const semantic = stringProperty(node, 'dataSemantic');
       if (semantic === 'section') {
@@ -1039,74 +1367,22 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
         const key = stringProperty(node, 'dataKey');
         const definition = key === undefined ? undefined : glossary.get(key);
         if (key !== undefined && definition !== undefined) {
-          glossaryReferenceInstance += 1;
-          const panelId = allocateId(`glossary-reference-${glossaryReferenceInstance}`);
-          const panelTitleId = allocateId(`${panelId}-title`);
-          node.tagName = 'span';
-          node.properties.dataTermReference = key;
-          node.properties.dataPopover = '';
-          node.properties.dataGlossaryReference = '';
-          node.children = [
-            {
-              type: 'element',
-              tagName: 'button',
-              properties: {
-                type: 'button',
-                ariaControls: [panelId],
-                ariaExpanded: 'false',
-                ariaHasPopup: 'dialog',
-                dataPopoverTrigger: '',
-                dataGlossaryTrigger: '',
-              },
-              children: [{ type: 'text', value: definition.term }],
-            },
-            {
-              type: 'element',
-              tagName: 'span',
-              properties: {
-                id: panelId,
-                role: 'dialog',
-                ariaLabelledBy: [panelTitleId],
-                hidden: '',
-                dataPopoverPanel: '',
-                dataGlossaryPanel: '',
-              },
-              children: [
-                {
-                  type: 'element',
-                  tagName: 'span',
-                  properties: { id: panelTitleId, className: ['semantic-title'] },
-                  children: [{ type: 'text', value: definition.term }],
-                },
-                {
-                  type: 'element',
-                  tagName: 'span',
-                  properties: { className: ['semantic-glossary-explanation'] },
-                  children: [{ type: 'text', value: definition.explanation }],
-                },
-                {
-                  type: 'element',
-                  tagName: 'a',
-                  properties: {
-                    href: `#${definition.id}`,
-                    className: ['semantic-glossary-link'],
-                    dataGlossaryDefinitionLink: '',
-                  },
-                  children: [{ type: 'text', value: 'View full definition' }],
-                },
-              ],
-            },
-          ];
-          delete node.properties.dataKey;
+          const authoredLabel = hastText(node) || definition.term;
+          const reference = createGlossaryReference(key, [{ type: 'text', value: authoredLabel }]);
+          node.tagName = reference.tagName;
+          node.properties = reference.properties;
+          node.children = reference.children;
         }
         return;
       }
       if (semantic === 'glossary') {
         const key = stringProperty(node, 'dataKey');
         const term = stringProperty(node, 'dataTerm');
+        const placement = takeStringProperty(node, 'dataPlacement') ?? 'inline';
         if (key !== undefined && term !== undefined) {
           node.properties.id = glossary.get(key)?.id ?? allocateId(`glossary-${key}`);
           node.children.unshift(semanticTitle(term));
+          if (placement === 'appendix') node.properties.dataGlossaryAppendixDefinition = '';
         }
         delete node.properties.dataKey;
         delete node.properties.dataTerm;
@@ -1144,7 +1420,208 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
       prependDirectiveTitle(node);
       if ('dataDemoCounter' in node.properties) enhanceCounter(node);
     });
+    const appendixDefinitions = extractAppendixGlossaries(tree);
+    if (appendixDefinitions.length > 0) {
+      const appendixId = allocateId('glossary-appendix');
+      const titleId = allocateId(`${appendixId}-title`);
+      tree.children.push({
+        type: 'element',
+        tagName: 'aside',
+        properties: {
+          id: appendixId,
+          className: ['semantic-glossary-appendix'],
+          ariaLabelledBy: [titleId],
+          dataGlossaryAppendix: '',
+        },
+        children: [
+          {
+            type: 'element',
+            tagName: 'h2',
+            properties: {
+              id: titleId,
+              className: ['semantic-glossary-appendix-title'],
+              dataNavigationExclude: '',
+            },
+            children: [{ type: 'text', value: 'Glossary' }],
+          },
+          ...appendixDefinitions,
+        ],
+      });
+    }
   };
+
+function enhanceCodeTerms(
+  pre: Element,
+  keys: readonly string[],
+  glossary: ReadonlyMap<
+    string,
+    { readonly term: string; readonly explanation: string; readonly id: string }
+  >,
+  createReference: (
+    key: string,
+    triggerChildren: ElementContent[],
+    classNames?: readonly string[],
+  ) => Element,
+): void {
+  const code = pre.children.find(
+    (child): child is Element => child.type === 'element' && child.tagName === 'code',
+  );
+  if (code === undefined) throw new Error('Highlighted code metadata is missing its code element.');
+  const lines = code.children.filter(
+    (child): child is Element => child.type === 'element' && hasClassName(child, 'line'),
+  );
+  const rangesByLine = new Map<
+    Element,
+    Array<{ readonly key: string; readonly start: number; readonly end: number }>
+  >();
+  for (const key of keys) {
+    const definition = glossary.get(key);
+    if (definition === undefined) throw new Error(`Missing validated code glossary key: ${key}.`);
+    const term = codeTermMatchText(definition, CODE_TERM_METADATA.matching.source);
+    let matched = false;
+    for (const line of lines) {
+      const start = firstCodeTermIndex(hastRawText(line), term, CODE_TERM_METADATA.matching);
+      if (start === -1) continue;
+      const ranges = rangesByLine.get(line) ?? [];
+      ranges.push({ key, start, end: start + term.length });
+      rangesByLine.set(line, ranges);
+      matched = true;
+      break;
+    }
+    if (!matched) throw new Error(`Highlighted code lost validated glossary term: ${key}.`);
+  }
+  for (const [line, ranges] of rangesByLine) {
+    for (const range of [...ranges].sort((left, right) => right.start - left.start)) {
+      const pieces = splitContentRange(line.children, range.start, range.end);
+      if (pieces.match.length === 0) {
+        throw new Error(`Highlighted code range is empty for glossary term: ${range.key}.`);
+      }
+      line.children = [
+        ...pieces.before,
+        createReference(range.key, pieces.match, ['semantic-term', 'semantic-code-term']),
+        ...pieces.after,
+      ];
+    }
+  }
+}
+
+function splitContentRange(
+  children: readonly ElementContent[],
+  start: number,
+  end: number,
+): {
+  readonly before: ElementContent[];
+  readonly match: ElementContent[];
+  readonly after: ElementContent[];
+} {
+  const before: ElementContent[] = [];
+  const match: ElementContent[] = [];
+  const after: ElementContent[] = [];
+  let offset = 0;
+  for (const child of children) {
+    const length = hastContentLength(child);
+    const childStart = offset;
+    const childEnd = offset + length;
+    offset = childEnd;
+    if (childEnd <= start) {
+      before.push(child);
+      continue;
+    }
+    if (childStart >= end) {
+      after.push(child);
+      continue;
+    }
+    const pieces = splitContentNode(
+      child,
+      Math.max(0, start - childStart),
+      Math.min(length, end - childStart),
+    );
+    before.push(...pieces.before);
+    match.push(...pieces.match);
+    after.push(...pieces.after);
+  }
+  return { before, match, after };
+}
+
+function splitContentNode(
+  node: ElementContent,
+  start: number,
+  end: number,
+): {
+  readonly before: ElementContent[];
+  readonly match: ElementContent[];
+  readonly after: ElementContent[];
+} {
+  if (node.type === 'text') {
+    return {
+      before:
+        node.value.slice(0, start).length === 0
+          ? []
+          : [{ ...node, value: node.value.slice(0, start) }],
+      match:
+        node.value.slice(start, end).length === 0
+          ? []
+          : [{ ...node, value: node.value.slice(start, end) }],
+      after: node.value.slice(end).length === 0 ? [] : [{ ...node, value: node.value.slice(end) }],
+    };
+  }
+  if (node.type !== 'element') {
+    return start === 0 && end > 0
+      ? { before: [], match: [node], after: [] }
+      : { before: [node], match: [], after: [] };
+  }
+  const pieces = splitContentRange(node.children, start, end);
+  return {
+    before: cloneElementPart(node, pieces.before),
+    match: cloneElementPart(node, pieces.match),
+    after: cloneElementPart(node, pieces.after),
+  };
+}
+
+function cloneElementPart(node: Element, children: ElementContent[]): ElementContent[] {
+  return children.length === 0 ? [] : [{ ...node, properties: { ...node.properties }, children }];
+}
+
+function hastContentLength(node: ElementContent): number {
+  if (node.type === 'text') return node.value.length;
+  if (node.type === 'element')
+    return node.children.reduce((total, child) => total + hastContentLength(child), 0);
+  return 0;
+}
+
+function hastRawText(node: Element): string {
+  const values: string[] = [];
+  const pending = [...node.children].reverse();
+  while (pending.length > 0) {
+    const child = pending.pop();
+    if (child?.type === 'text') values.push(child.value);
+    else if (child?.type === 'element') pending.push(...[...child.children].reverse());
+  }
+  return values.join('');
+}
+
+function hasClassName(node: Element, className: string): boolean {
+  const value = node.properties.className ?? node.properties.class;
+  return Array.isArray(value)
+    ? value.some((candidate) => candidate === className)
+    : typeof value === 'string' && value.split(/\s+/u).includes(className);
+}
+
+function extractAppendixGlossaries<Parent extends HastRoot | Element>(parent: Parent): Element[] {
+  const appendix: Element[] = [];
+  const retained: Array<Parent['children'][number]> = [];
+  for (const child of parent.children) {
+    if (child.type === 'element' && child.properties.dataGlossaryAppendixDefinition !== undefined) {
+      delete child.properties.dataGlossaryAppendixDefinition;
+      appendix.push(child);
+      continue;
+    }
+    if (child.type === 'element') appendix.push(...extractAppendixGlossaries(child));
+    retained.push(child);
+  }
+  parent.children = retained as Parent['children'];
+  return appendix;
+}
 
 function enhanceSection(node: Element, allocateId: (base: string) => string): void {
   const title = takeStringProperty(node, 'dataDirectiveTitle');
@@ -1515,6 +1992,10 @@ function isDirectiveNode(node: unknown): node is DirectiveNode {
     candidate.type.endsWith('Directive') &&
     typeof candidate.name === 'string'
   );
+}
+
+function isCodeNode(node: unknown): node is Code {
+  return typeof node === 'object' && node !== null && 'type' in node && node.type === 'code';
 }
 
 function requireDirectiveForm(node: DirectiveNode, directive: DirectiveDefinition): void {

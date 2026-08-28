@@ -9,6 +9,7 @@ import { parse as parseYaml } from 'yaml';
 
 import { inspectExecutableSearch } from '../../scripts/package-provenance.ts';
 import { validateExtensionProposal } from '../../src/authoring/extension-gate.js';
+import { buildReport } from '../../src/core/compiler.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
 
 const workspaces: string[] = [];
@@ -20,12 +21,33 @@ afterEach(async () => {
 describe('release readiness', () => {
   it('ships accepted evidence for every product extension proposal', async () => {
     for (const file of [
+      'docs/product/code-glossary-extension.json',
       'docs/product/review-workspace-extension.json',
       'docs/product/source-link-extension.json',
     ]) {
       const proposal = JSON.parse(await readFile(path.resolve(file), 'utf8')) as unknown;
       expect(validateExtensionProposal(proposal), file).toEqual({ accepted: true, issues: [] });
     }
+  });
+
+  it('keeps the primary README source example buildable as written', async () => {
+    const readme = await readFile(path.resolve('README.md'), 'utf8');
+    const example = /````markdown\n([\s\S]*?)\n````/u.exec(readme)?.[1];
+    if (example === undefined) throw new Error('README primary Markdown example is missing.');
+    const workspace = await createTestWorkspace('release-readme-example');
+    workspaces.push(workspace);
+    await mkdir(path.join(workspace, 'partials'), { recursive: true });
+    await mkdir(path.join(workspace, 'assets'), { recursive: true });
+    await writeFile(path.join(workspace, 'report.md'), example);
+    await writeFile(path.join(workspace, 'partials/context.md'), 'Context for the decision.\n');
+    await writeFile(
+      path.join(workspace, 'assets/system.svg'),
+      '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"></svg>\n',
+    );
+
+    await expect(
+      buildReport({ input: workspace, output: path.join(workspace, 'report.html') }),
+    ).resolves.toMatchObject({ format: 'single-file' });
   });
 
   it('keeps all shipped review pillars in normative product requirements', async () => {

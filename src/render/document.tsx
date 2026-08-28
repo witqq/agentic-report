@@ -317,6 +317,7 @@ export function extractNavigation(html: string): readonly NavigationItem[] {
   }
   const headingPattern = /<h2\s+([^>]*)>([\s\S]*?)<\/h2>/g;
   const legacySections = [...html.matchAll(headingPattern)]
+    .filter((match) => !/\bdata-navigation-exclude(?:="")?/u.test(match[1] ?? ''))
     .map((match) => ({
       depth: 2 as const,
       id: /\bid="([^"]+)"/u.exec(match[1] ?? '')?.[1] ?? '',

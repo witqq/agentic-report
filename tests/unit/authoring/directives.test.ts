@@ -25,6 +25,7 @@ import { interpretDirectiveAttributes } from '../../../src/authoring/schemas.js'
 import { buildReport } from '../../../src/core/compiler.js';
 import { AgenticReportError } from '../../../src/diagnostics.js';
 import { getAuthoringSchema, getSourceContract } from '../../../src/discovery.js';
+import { parseCodeTermMetadata } from '../../../src/render/directives.js';
 import { projectSemanticSanitizeSchema, renderMarkdown } from '../../../src/render/markdown.js';
 import { createTestWorkspace, removeTestWorkspace } from '../../helpers/workspace.js';
 
@@ -525,8 +526,9 @@ describe('registry-driven semantic directives', () => {
     );
 
     expect(rendered.html).toContain('data-term-reference="shared-concept" data-popover=""');
-    expect(rendered.html).not.toContain('Authored alias');
-    expect(rendered.html.match(/>Shared concept<\/button>/gu)).toHaveLength(2);
+    expect(rendered.html).toContain('>Authored alias</button>');
+    expect(rendered.html.match(/>Shared concept<\/button>/gu)).toHaveLength(1);
+    expect(rendered.html.match(/>Shared concept<\/span>/gu)).toHaveLength(2);
     expect(rendered.html).toContain(
       '<button type="button" aria-controls="glossary-reference-1" aria-expanded="false"',
     );
@@ -557,6 +559,207 @@ describe('registry-driven semantic directives', () => {
     expect(rendered.html).toContain('placeholder="Search entries"');
     expect(rendered.html).toContain('role="switch" aria-checked="true"');
     expect(rendered.html).not.toMatch(/onclick|onkeydown|<script/u);
+  });
+
+  it('preserves authored term forms and annotates first highlighted code occurrences in an appendix-backed glossary', async () => {
+    const workspace = await trackedWorkspace('directive-code-glossary');
+    const rendered = await render(
+      [
+        '# Code glossary',
+        'Traversal continues through :term[concepts]{key="concept"}.',
+        '## Code',
+        '```typescript terms="own-field,node-type"',
+        '@d.def(Node) accessor child!: Node;',
+        '@d.def(Node) accessor sibling!: Node;',
+        '<script>globalThis.executed = true;</script>',
+        '```',
+        '## Detail',
+        'Definitions follow outside the primary route.',
+        ':::glossary{key="concept" term="concept"}',
+        'Canonical prose definition.',
+        ':::',
+        ':::glossary{key="own-field" term="@d.def" placement="appendix"}',
+        'Field ownership decorator.',
+        ':::',
+        ':::glossary{key="node-type" term="Node" placement="appendix"}',
+        'Canonical node type.',
+        ':::',
+      ].join('\n'),
+      workspace,
+    );
+
+    expect(rendered.html).toContain('>concepts</button>');
+    expect(rendered.html).toContain('>concept</span>');
+    expect(rendered.html.match(/data-term-reference="own-field"/gu)).toHaveLength(1);
+    expect(rendered.html.match(/data-term-reference="node-type"/gu)).toHaveLength(1);
+    expect(rendered.html.match(/class="semantic-term semantic-code-term"/gu)).toHaveLength(2);
+    expect(rendered.html).toMatch(
+      /data-term-reference="own-field"[\s\S]*?<button[^>]*>[\s\S]*?--shiki-light/u,
+    );
+    expect(rendered.html).toMatch(
+      /data-term-reference="own-field"[\s\S]*?<button[^>]*>[\s\S]*?--shiki-dark/u,
+    );
+    expect(rendered.html).toContain('&#x3C;');
+    expect(rendered.html).toContain('globalThis.executed');
+    expect(rendered.html).not.toContain('<script>globalThis.executed = true;</script>');
+    expect(rendered.html).toContain(
+      '<aside id="glossary-appendix" class="semantic-glossary-appendix"',
+    );
+    expect(rendered.html).toContain('data-navigation-exclude=""');
+    expect(rendered.html.indexOf('id="glossary-own-field"')).toBeGreaterThan(
+      rendered.html.indexOf('data-glossary-appendix=""'),
+    );
+    expect(rendered.html.indexOf('id="glossary-node-type"')).toBeGreaterThan(
+      rendered.html.indexOf('id="glossary-own-field"'),
+    );
+    expect(rendered.html).toContain('href="#glossary-own-field"');
+    expect(rendered.observedDirectives).toContain('term');
+    expect(rendered.reviewTargets.filter((target) => target.kind === 'markdown:code')).toHaveLength(
+      1,
+    );
+    const movedDefinitionTarget = rendered.reviewTargets.find(
+      (target) => target.kind === 'directive:glossary' && target.source.line === 14,
+    )?.id;
+    expect(movedDefinitionTarget).toBeTypeOf('string');
+    expect(rendered.html).toContain(`data-review-target="${movedDefinitionTarget}"`);
+    expect(rendered.html.match(/data-review-target=/gu)).toHaveLength(
+      rendered.reviewTargets.length,
+    );
+  });
+
+  it('rejects malformed, unresolved, missing and overlapping code term metadata at the code block', async () => {
+    const workspace = await trackedWorkspace('directive-code-glossary-errors');
+    const cases = [
+      {
+        name: 'malformed metadata',
+        code: 'INVALID_CODE_TERM_METADATA',
+        source: '```ts terms=own-field\n@d.def(Node)\n```',
+        definitions: ':::glossary{key="own-field" term="@d.def"}\nDefinition.\n:::',
+      },
+      {
+        name: 'metadata mixed with another field',
+        code: 'INVALID_CODE_TERM_METADATA',
+        source: '```ts terms="own-field" title="Code"\n@d.def(Node)\n```',
+        definitions: ':::glossary{key="own-field" term="@d.def"}\nDefinition.\n:::',
+      },
+      {
+        name: 'duplicate key',
+        code: 'INVALID_CODE_TERM_METADATA',
+        source: '```ts terms="own-field,own-field"\n@d.def(Node)\n```',
+        definitions: ':::glossary{key="own-field" term="@d.def"}\nDefinition.\n:::',
+      },
+      {
+        name: 'unknown key',
+        code: 'UNKNOWN_GLOSSARY_TERM',
+        source: '```ts terms="unknown"\n@d.def(Node)\n```',
+        definitions: ':::glossary{key="own-field" term="@d.def"}\nDefinition.\n:::',
+      },
+      {
+        name: 'canonical text missing',
+        code: 'CODE_TERM_NOT_FOUND',
+        source: '```ts terms="own-field"\nplain code\n```',
+        definitions: ':::glossary{key="own-field" term="@d.def"}\nDefinition.\n:::',
+      },
+      {
+        name: 'overlapping canonical terms',
+        code: 'OVERLAPPING_CODE_TERMS',
+        source: '```ts terms="decorator,member"\n@d.def(Node)\n```',
+        definitions: [
+          ':::glossary{key="decorator" term="@d.def"}',
+          'Definition.',
+          ':::',
+          ':::glossary{key="member" term="def"}',
+          'Definition.',
+          ':::',
+        ].join('\n'),
+      },
+    ] as const;
+    for (const testCase of cases) {
+      await expect(
+        render(`# Invalid code terms\n${testCase.source}\n${testCase.definitions}\n`, workspace),
+        testCase.name,
+      ).rejects.toMatchObject({
+        diagnostic: {
+          code: testCase.code,
+          source: { file: path.join(workspace, 'report.md'), line: 2, column: 1 },
+        },
+      });
+    }
+  });
+
+  it('bounds the closed code term metadata grammar without interpreting unrelated fence metadata', () => {
+    const contract = authoringRegistry.source.codeFenceMetadata.terms;
+    const maximumKeys = Array.from(
+      { length: contract.maxItems },
+      (_, index) => `term-${index + 1}`,
+    );
+    expect(parseCodeTermMetadata(`terms="${maximumKeys.join(contract.separator)}"`)).toEqual({
+      kind: 'valid',
+      keys: maximumKeys,
+    });
+    expect(
+      parseCodeTermMetadata(
+        `terms="${[...maximumKeys, `term-${contract.maxItems + 1}`].join(contract.separator)}"`,
+      ),
+    ).toMatchObject({ kind: 'invalid' });
+    expect(parseCodeTermMetadata('terms=""')).toMatchObject({ kind: 'invalid' });
+    expect(parseCodeTermMetadata('terms="Uppercase"')).toMatchObject({ kind: 'invalid' });
+    expect(parseCodeTermMetadata('title="terms remain ordinary text"')).toEqual({ kind: 'none' });
+    expect(getSourceContract().source.codeFenceMetadata.terms).toEqual(contract);
+    expect(contract.itemConstraint).toEqual(
+      authoringRegistry.directives
+        .find((directive) => directive.name === 'glossary')
+        ?.attributes.find((attribute) => attribute.name === 'key')?.constraint,
+    );
+  });
+
+  it('rejects appendix extraction from a nested authored container', async () => {
+    const workspace = await trackedWorkspace('directive-glossary-nested-appendix');
+    await expect(
+      render(
+        [
+          '# Nested appendix',
+          '::::callout{title="Parent"}',
+          ':::glossary{key="nested" term="Nested" placement="appendix"}',
+          'Definition.',
+          ':::',
+          '::::',
+        ].join('\n'),
+        workspace,
+      ),
+    ).rejects.toMatchObject({
+      diagnostic: {
+        code: 'INVALID_DIRECTIVE_PLACEMENT',
+        source: { file: path.join(workspace, 'report.md'), line: 3, column: 1 },
+      },
+    });
+  });
+
+  it('maps code term metadata failures to the authored partial range', async () => {
+    const workspace = await trackedWorkspace('directive-code-glossary-partial');
+    const partialFile = path.join(workspace, 'partials', 'code.md');
+    const markdown = '```ts terms="unknown"\n@d.def(Node)\n```';
+    await expect(
+      renderMarkdown(markdown, {
+        sourceRoot: workspace,
+        format: 'single-file',
+        sourceMap: [
+          {
+            generatedStart: 0,
+            generatedEnd: markdown.length,
+            sourceFile: partialFile,
+            sourceStart: 0,
+            sourceText: markdown,
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      diagnostic: {
+        code: 'UNKNOWN_GLOSSARY_TERM',
+        source: { file: partialFile, line: 1, column: 1, endLine: 3, endColumn: 4 },
+        details: { key: 'unknown' },
+      },
+    });
   });
 
   it('validates visualization records and emits deterministic accessible markup', async () => {
@@ -908,6 +1111,19 @@ describe('registry-driven semantic directives', () => {
       workspace,
     );
     expect(accepted.html).toContain('data-term-reference="bounded-runtime"');
+
+    await expect(
+      render(
+        [
+          '# Predictable inflection boundary',
+          'Unmarked bounded runtimes are not claimed as morphologically checked.',
+          ':::glossary{key="bounded-runtime" term="bounded runtime"}',
+          'Definition.',
+          ':::',
+        ].join('\n'),
+        workspace,
+      ),
+    ).resolves.toMatchObject({ html: expect.stringContaining('bounded runtimes') });
 
     await expect(
       render(
@@ -2072,6 +2288,12 @@ function assertRenderedAttribute(
   }
   if (directive.name === 'glossary' && attribute.name === 'term') {
     expect(rendered.html).toContain(`>${serialized}</h3>`);
+    return;
+  }
+  if (directive.name === 'glossary' && attribute.name === 'placement') {
+    if (serialized === 'appendix') expect(rendered.html).toContain('data-glossary-appendix=""');
+    else expect(rendered.html).not.toContain('data-glossary-appendix=""');
+    expect(rendered.html).not.toContain('data-placement=');
     return;
   }
   if (directive.name === 'term' && attribute.name === 'key') {

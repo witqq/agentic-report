@@ -35,12 +35,12 @@ also contain:
 - `agentic-report.yaml`, `agentic-report.yml`, or `agentic-report.json`;
 - local images referenced by relative paths;
 - Markdown partials included as `{{include: partials/summary.md}}`;
-- semantic directives for labelled page sections, action and source-location links, content, interactions, compile-time
+- semantic directives for labelled page sections, action and source-location links, authored/code glossary references, content, interactions, compile-time
   charts/diagrams/timelines, safe built-in demos, downloads, and fonts.
 
 Example:
 
-```markdown
+````markdown
 ---
 title: Architecture options
 description: Decision report
@@ -71,8 +71,19 @@ The compiler owns responsive layout and navigation.
 :::
 
 Inspect :source-link{label="src/render/directives.ts:42" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42"}.
-::::
+
+Traversal continues through :term[concepts]{key="concept"}.
+
+```typescript terms="concept"
+const concept = compileSource();
 ```
+
+::::
+
+:::glossary{key="concept" term="concept" placement="appendix"}
+One canonical definition shared by prose forms and selected first code occurrences.
+:::
+````
 
 See [`docs/product/source-contract.md`](docs/product/source-contract.md) for the complete declarative
 source contract.

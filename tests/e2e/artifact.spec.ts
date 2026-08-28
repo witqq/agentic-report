@@ -73,6 +73,15 @@ const defaultMotionArtifacts = [
   { format: 'single-file', url: artifactUrl },
   { format: 'directory', url: directoryArtifactUrl },
 ] as const;
+const glossaryCodeArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('glossary-code') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/glossary-code-directory/index.html'),
+    ).href,
+  },
+] as const;
 
 for (const artifact of defaultMotionArtifacts) {
   test(`${artifact.format} source link opens the loopback helper without replacing the file report`, async ({
@@ -120,6 +129,103 @@ for (const artifact of defaultMotionArtifacts) {
     await popup.close();
     expect(page.url()).toBe(reportUrl);
     await expect(page.getByRole('heading', { name: 'Architecture report' })).toBeVisible();
+  });
+}
+
+for (const artifact of glossaryCodeArtifacts) {
+  test(`${artifact.format} glossary keeps authored prose forms and first highlighted code references`, async ({
+    page,
+  }, testInfo) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async (value: string) => {
+            Reflect.set(globalThis, '__copiedCode', value);
+          },
+        },
+      });
+    });
+    await page.goto(artifact.url);
+    if (artifact.format === 'directory') {
+      await page.locator('html').evaluate((element) => {
+        element.dataset.theme = 'dark';
+      });
+    }
+
+    const prose = page.getByRole('button', { name: 'concepts' });
+    await expect(prose).toBeVisible();
+    await prose.focus();
+    const proseDialog = page.getByRole('dialog', { name: 'concept' });
+    await expect(proseDialog).toBeVisible();
+    await expect(proseDialog).toContainText('Canonical prose definition.');
+    await page.keyboard.press('Escape');
+    await expect(prose).toBeFocused();
+
+    const marked = page.locator('pre').nth(0);
+    const plain = page.locator('pre').nth(1);
+    const decorator = marked.getByRole('button', { name: '@d.def' });
+    const nodeType = marked.getByRole('button', { name: 'Node' });
+    await expect(decorator).toHaveCount(1);
+    await expect(nodeType).toHaveCount(1);
+    await expect(marked.locator('[data-term-reference="own-field"]')).toHaveCount(1);
+    await expect(marked.locator('[data-term-reference="node-type"]')).toHaveCount(1);
+    const characterColors = async (code: Locator): Promise<readonly string[]> =>
+      code.locator('code').evaluate((element) => {
+        const colors: string[] = [];
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let current = walker.nextNode();
+        while (current !== null) {
+          const parent = current.parentElement;
+          if (parent !== null && parent.closest('[data-glossary-panel]') === null) {
+            for (const character of current.textContent ?? '') {
+              colors.push(`${character}:${getComputedStyle(parent).color}`);
+            }
+          }
+          current = walker.nextNode();
+        }
+        return colors;
+      });
+    const markedColors = await characterColors(marked);
+    const plainColors = await characterColors(plain);
+    expect(markedColors).toEqual(plainColors);
+
+    if (testInfo.project.name.startsWith('mobile')) await decorator.tap();
+    else await decorator.hover();
+    const codeDialog = marked.getByRole('dialog', { name: '@d.def' });
+    await expect(codeDialog).toBeVisible();
+    await expect(codeDialog).toContainText('Field ownership decorator.');
+    await decorator.focus();
+    await page.keyboard.press('Escape');
+    await expect(codeDialog).toBeHidden();
+    await expect(decorator).toBeFocused();
+
+    await marked.getByRole('button', { name: 'Copy' }).click();
+    expect(await page.evaluate(() => Reflect.get(globalThis, '__copiedCode'))).toBe(
+      '@d.def(Node) accessor child!: Node;\n@d.def(Node) accessor sibling!: Node;',
+    );
+
+    await decorator.click();
+    const definitionLink = codeDialog.getByRole('link', { name: 'View full definition' });
+    await expect(definitionLink).toHaveAttribute('href', '#glossary-own-field');
+    await definitionLink.click();
+    await expect(page).toHaveURL(/#glossary-own-field$/u);
+    await expect(page.locator('#glossary-own-field')).toBeInViewport();
+    await expect(page.locator('[data-navigation] a')).toHaveText([
+      'Prose forms',
+      'Highlighted code',
+    ]);
+    await expect(page.locator('[data-glossary-appendix]')).toContainText('Canonical node type.');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+
+    const capturePath = path.resolve(
+      'test-results/captures/code-glossary',
+      `${artifact.format}-${testInfo.project.name}.png`,
+    );
+    await mkdir(path.dirname(capturePath), { recursive: true });
+    await page.screenshot({ path: capturePath, fullPage: true });
   });
 }
 

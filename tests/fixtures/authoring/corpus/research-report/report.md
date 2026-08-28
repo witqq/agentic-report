@@ -32,7 +32,7 @@ The :term[Evidence bundle]{key="evidence-bundle"} is reusable without duplicatin
 
 ::term{key="evidence-bundle"}
 
-:::glossary{key="evidence-bundle" term="Evidence bundle"}
+:::glossary{key="evidence-bundle" term="Evidence bundle" placement="appendix"}
 A local collection of findings and supporting material.
 :::
 

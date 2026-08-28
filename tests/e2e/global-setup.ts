@@ -94,6 +94,7 @@ export default async function globalSetup(): Promise<void> {
   const presetFixtures = ['studio', 'editorial', 'signal'] as const;
   const navigationSource = path.join(fixtureRoot, 'navigation-source');
   const reviewSource = path.join(fixtureRoot, 'review-source');
+  const glossaryCodeSource = path.join(fixtureRoot, 'glossary-code-source');
   const layoutExamples = [
     'layout-document',
     'layout-dashboard',
@@ -216,6 +217,40 @@ export default async function globalSetup(): Promise<void> {
       ':::',
     ].join('\n\n'),
   );
+  await mkdir(glossaryCodeSource, { recursive: true });
+  await writeFile(
+    path.join(glossaryCodeSource, 'report.md'),
+    [
+      '---',
+      'title: Code glossary fixture',
+      'language: en',
+      'layout: document',
+      'theme: light',
+      'preset: editorial',
+      '---',
+      '# Code glossary fixture',
+      '## Prose forms',
+      'Traversal continues through :term[concepts]{key="concept"}.',
+      '## Highlighted code',
+      '```typescript terms="own-field,node-type"',
+      '@d.def(Node) accessor child!: Node;',
+      '@d.def(Node) accessor sibling!: Node;',
+      '```',
+      '```typescript',
+      '@d.def(Node) accessor child!: Node;',
+      '@d.def(Node) accessor sibling!: Node;',
+      '```',
+      ':::glossary{key="concept" term="concept"}',
+      'Canonical prose definition.',
+      ':::',
+      ':::glossary{key="own-field" term="@d.def" placement="appendix"}',
+      'Field ownership decorator.',
+      ':::',
+      ':::glossary{key="node-type" term="Node" placement="appendix"}',
+      'Canonical node type.',
+      ':::',
+    ].join('\n'),
+  );
   await Promise.all([
     buildReport({ input: source, output: singleOutput }),
     buildReport({
@@ -263,6 +298,15 @@ export default async function globalSetup(): Promise<void> {
     buildReport({
       input: reviewSource,
       output: path.join(fixtureRoot, 'review-directory'),
+      format: 'directory',
+    }),
+    buildReport({
+      input: glossaryCodeSource,
+      output: path.join(fixtureRoot, 'glossary-code.html'),
+    }),
+    buildReport({
+      input: glossaryCodeSource,
+      output: path.join(fixtureRoot, 'glossary-code-directory'),
       format: 'directory',
     }),
     buildReport({

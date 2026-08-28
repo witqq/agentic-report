@@ -10,6 +10,32 @@
       "leaf": "::name{attributes}",
       "text": ":name[label]{attributes}"
     },
+    "codeFenceMetadata": {
+      "terms": {
+        "syntax": "terms=\"key,other-key\"",
+        "description": "Annotates exact first canonical glossary occurrences in one code fence.",
+        "fieldExclusivity": "only-field",
+        "quoting": "double",
+        "separator": ",",
+        "minItems": 1,
+        "maxItems": 20,
+        "uniqueItems": true,
+        "itemConstraint": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$"
+        },
+        "matching": {
+          "source": "canonical-glossary-term",
+          "caseSensitive": true,
+          "occurrence": "first",
+          "lineBoundary": "reject",
+          "overlap": "reject"
+        }
+      }
+    },
     "resources": ["local images", "downloadable local assets", "local fonts"]
   },
   "directives": {
@@ -382,7 +408,14 @@
           "minLength": 1,
           "maxLength": 160,
           "required": true,
-          "description": "Canonical term text inserted at every reference."
+          "description": "Canonical glossary identity and explanation title."
+        },
+        "placement": {
+          "kind": "enum",
+          "values": ["inline", "appendix"],
+          "required": false,
+          "default": "inline",
+          "description": "Definition location in the authored flow or, for a top-level definition, one package-owned reference appendix."
         }
       },
       "children": "markdown",

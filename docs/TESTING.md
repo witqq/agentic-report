@@ -53,7 +53,8 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   native-dialog mobile
   focus containment/return, normal/reduced-motion progress and one-time reveal, themes, visible focus,
   locally scrolling wide tables, protected loopback source-location links that preserve the report page,
-  built-in demo and code-copy interactions, embedded single-file and
+  authored glossary forms, first-only color-preserving code glossary references, clean code copying,
+  appendix navigation, built-in demo interactions, embedded single-file and
   external directory runtimes, and representative architecture, tutorial, work-report, and landing-page
   artifacts. The document, dashboard, landing, and mixed examples are built and exercised through
   `file://` in desktop and mobile profiles, including their page data contract and local images. All six

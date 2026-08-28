@@ -35,6 +35,7 @@
     "docs/AGENT-REFERENCE.md",
     "docs/ARCHITECTURE.md",
     "docs/generated",
+    "docs/product/code-glossary-extension.json",
     "docs/product/source-contract.md",
     "docs/product/review-workspace-extension.json",
     "docs/product/source-link-extension.json",

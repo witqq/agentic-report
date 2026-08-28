@@ -498,7 +498,13 @@
               "term": {
                 "type": "string",
                 "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
-                "description": "Canonical term text inserted at every reference."
+                "description": "Canonical glossary identity and explanation title."
+              },
+              "placement": {
+                "type": "string",
+                "enum": ["inline", "appendix"],
+                "description": "Definition location in the authored flow or, for a top-level definition, one package-owned reference appendix.",
+                "default": "inline"
               }
             },
             "required": ["key", "term"]
@@ -1540,7 +1546,13 @@
               "term": {
                 "type": "string",
                 "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
-                "description": "Canonical term text inserted at every reference."
+                "description": "Canonical glossary identity and explanation title."
+              },
+              "placement": {
+                "type": "string",
+                "enum": ["inline", "appendix"],
+                "description": "Definition location in the authored flow or, for a top-level definition, one package-owned reference appendix.",
+                "default": "inline"
               }
             },
             "required": ["key", "term"]

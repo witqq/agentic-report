@@ -63,6 +63,25 @@ describe('authoring registry', () => {
     expect(OUTPUT_FORMATS).toEqual(['single-file', 'directory']);
     expect(authoringRegistry.output).toBe(OUTPUT_CONTRACT);
     expect(authoringRegistry.page).toBe(PAGE_CONTRACT);
+    expect(authoringRegistry.source.codeFenceMetadata.terms).toMatchObject({
+      syntax: 'terms="key,other-key"',
+      fieldExclusivity: 'only-field',
+      quoting: 'double',
+      separator: ',',
+      minItems: 1,
+      maxItems: 20,
+      uniqueItems: true,
+      matching: {
+        source: 'canonical-glossary-term',
+        caseSensitive: true,
+        occurrence: 'first',
+        lineBoundary: 'reject',
+        overlap: 'reject',
+      },
+    });
+    expect(authoringRegistry.source.codeFenceMetadata.terms.itemConstraint).toBe(
+      directive('glossary').attributes.find((attribute) => attribute.name === 'key')?.constraint,
+    );
   });
 
   it('gives every directive validation, placement, behavior, security, and projection metadata', () => {
@@ -394,6 +413,33 @@ describe('authoring registry', () => {
         }),
       ),
     ).toContain('Unsafe/Capability: unsafe capability identity');
+
+    expect(
+      authoringRegistryIntegrityIssues(
+        unsafeRegistryWith({
+          source: {
+            ...authoringRegistry.source,
+            codeFenceMetadata: {
+              terms: {
+                ...authoringRegistry.source.codeFenceMetadata.terms,
+                syntax: 'terms="stale separator"',
+                maxItems: 0,
+                itemConstraint: {
+                  ...authoringRegistry.source.codeFenceMetadata.terms.itemConstraint,
+                  pattern: '[',
+                },
+              },
+            },
+          },
+        }),
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        'source.codeFenceMetadata.terms: maximum below minimum',
+        'source.codeFenceMetadata.terms: syntax differs from its grammar fields',
+        'source.codeFenceMetadata.terms.items: invalid string pattern',
+      ]),
+    );
     expect(
       authoringRegistryIntegrityIssues(
         registryWith({

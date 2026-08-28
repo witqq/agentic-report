@@ -335,7 +335,7 @@ identities for deterministic static staging; a screenshot alone is never treated
 Directives are declarative and allowlisted. Unknown names and invalid attributes fail with actionable
 diagnostics.
 
-```markdown
+````markdown
 ::::section{title="Decision" id="decision" nav="Decision" width="wide" align="start" tone="soft" reveal="true"}
 :::callout{title="Finding" kind="warning"}
 Content may contain ordinary Markdown.
@@ -370,11 +370,15 @@ Schemas and examples are CLI-readable.
 3. Run the CLI.
    :::
 
-Use the :term[Review packet]{key="review-packet"} while writing ordinary prose.
+Use the :term[Review packets]{key="review-packet"} while writing ordinary prose.
 
-:::glossary{key="review-packet" term="Review packet"}
+:::glossary{key="review-packet" term="Review packet" placement="appendix"}
 A reusable definition shared by every marked reference.
 :::
+
+```typescript terms="review-packet"
+const packet = await createReviewPacket(); // Review packet
+```
 
 :::disclosure{title="Build details" open="true"}
 This content starts expanded and uses native disclosure semantics.
@@ -416,7 +420,7 @@ The package-owned runtime increments a number. Author JavaScript is never execut
 ::asset{src="assets/evidence.json"}
 
 ::font{src="assets/report.woff2" family="Report Sans"}
-```
+````
 
 ### Data visualizations
 
@@ -486,24 +490,32 @@ acceptable.
 `asset.src` and `font.src` must resolve to existing files under the canonical source root. The first font
 directive becomes the document font; later directives register additional faces. The text form uses its
 authored label; the leaf asset form receives `Download <filename>` so it remains visible and accessible.
-`tab` must be directly nested in `tabs`. Glossary keys and canonical terms are unique; registered terms in
-ordinary prose use `:term[Canonical term]{key="..."}`, while definitions and code are excluded from that
-occurrence rule. Output uses the registered canonical text even if the inline label differs. The standalone
-`::term{key="..."}` form remains available for an intentionally detached reference. Initial states are
-declarative, and all interaction code belongs to the package.
+`tab` must be directly nested in `tabs`. Glossary keys and canonical terms are unique. In prose,
+`:term[authored form]{key="..."}` renders the authored grammatical form while the popover and full definition
+retain the canonical title; detached `::term{key="..."}` uses canonical text. Unmarked validation recognizes
+only exact canonical forms and deliberately does not claim morphological inference.
+
+`glossary.placement` is `inline` by default. A top-level definition may use `appendix` for one visible
+package-owned reference section outside primary navigation; nested appendix placement fails rather than
+leaving an empty authored container. A code fence may use only `terms="key,other-key"` metadata to annotate exact
+case-sensitive canonical text. Keys are bounded and unique; every requested term must occur within one line,
+and first ranges cannot overlap. Only the first occurrence per key becomes a glossary control. Shiki colors,
+literal code bytes, keyboard/touch behavior, full-definition links and copied code text are preserved; the
+compiler never executes the block. Initial states are declarative, and all interaction code belongs to the
+package.
 
 ### Interaction behavior and limits
 
-| Primitive           | Semantics and initial state                                                                                                | Reader routes                                                                                                                                                              |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `term` / `glossary` | A term button controls a closed labelled contextual dialog; the full definition remains a visible section.                 | Hover, focus, click, or tap opens; `Escape` closes and restores focus; click **View full definition** to navigate to the complete Markdown entry. Clicking outside closes. |
-| `disclosure`        | Native `details`/`summary`; `open="false"` is the default.                                                                 | Activate the summary with click/tap or native `Enter`/`Space`.                                                                                                             |
-| `tabs` / `tab`      | ARIA `tablist`/`tab`/`tabpanel`; first direct tab selected. A tab requires `label`; other directive children are rejected. | Click/tap selects. `ArrowLeft`/`ArrowRight` wrap, while `Home`/`End` select the first/last tab.                                                                            |
-| `modal`             | Closed native `dialog` with a labelled trigger.                                                                            | Trigger opens; `Escape` or Close closes and returns focus to the opener. Backdrop click is not a supported dismissal route.                                                |
-| `popover`           | Closed non-modal labelled dialog.                                                                                          | Click/tap or native button activation toggles; `Escape` closes and restores trigger focus; outside click closes.                                                           |
-| `filter`            | Labelled search input and polite live count; empty initially.                                                              | Typing filters case-insensitively. Only list items in a direct authored `ul`/`ol` are targets.                                                                             |
-| `toggle`            | ARIA switch; `default="off"` hides its panel.                                                                              | Click/tap or native `Enter`/`Space` toggles checked state and visibility.                                                                                                  |
-| `demo`              | Numeric output starts at `start="0"`.                                                                                      | Increment button adds `step="1"` by default; author code is never executed.                                                                                                |
+| Primitive           | Semantics and initial state                                                                                                                          | Reader routes                                                                                                                                                              |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `term` / `glossary` | A prose or first code term button controls a closed canonical-title dialog; the full definition remains visible inline or in the reference appendix. | Hover, focus, click, or tap opens; `Escape` closes and restores focus; click **View full definition** to navigate to the complete Markdown entry. Clicking outside closes. |
+| `disclosure`        | Native `details`/`summary`; `open="false"` is the default.                                                                                           | Activate the summary with click/tap or native `Enter`/`Space`.                                                                                                             |
+| `tabs` / `tab`      | ARIA `tablist`/`tab`/`tabpanel`; first direct tab selected. A tab requires `label`; other directive children are rejected.                           | Click/tap selects. `ArrowLeft`/`ArrowRight` wrap, while `Home`/`End` select the first/last tab.                                                                            |
+| `modal`             | Closed native `dialog` with a labelled trigger.                                                                                                      | Trigger opens; `Escape` or Close closes and returns focus to the opener. Backdrop click is not a supported dismissal route.                                                |
+| `popover`           | Closed non-modal labelled dialog.                                                                                                                    | Click/tap or native button activation toggles; `Escape` closes and restores trigger focus; outside click closes.                                                           |
+| `filter`            | Labelled search input and polite live count; empty initially.                                                                                        | Typing filters case-insensitively. Only list items in a direct authored `ul`/`ol` are targets.                                                                             |
+| `toggle`            | ARIA switch; `default="off"` hides its panel.                                                                                                        | Click/tap or native `Enter`/`Space` toggles checked state and visibility.                                                                                                  |
+| `demo`              | Numeric output starts at `start="0"`.                                                                                                                | Increment button adds `step="1"` by default; author code is never executed.                                                                                                |
 
 Each instance owns its state. Tabs, overlays, filters, switches, and demos do not change another instance.
 

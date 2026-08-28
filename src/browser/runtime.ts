@@ -703,7 +703,12 @@ function applyFilter(input: HTMLInputElement): void {
 }
 
 async function copyCode(button: HTMLButtonElement): Promise<void> {
-  const text = button.closest('pre')?.querySelector('code')?.textContent ?? '';
+  const code = button.closest('pre')?.querySelector('code');
+  const copy = code?.cloneNode(true);
+  if (copy instanceof HTMLElement) {
+    for (const panel of copy.querySelectorAll('[data-glossary-panel]')) panel.remove();
+  }
+  const text = copy?.textContent ?? '';
   const label = button.querySelector<HTMLElement>('[data-copy-code-label]') ?? button;
   try {
     await navigator.clipboard.writeText(text);

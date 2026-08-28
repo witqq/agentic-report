@@ -139,6 +139,33 @@ export type ConstraintDefinition =
   | { readonly kind: 'boolean' }
   | { readonly kind: 'enum'; readonly values: readonly string[] };
 
+export const REGISTRY_IDENTITY_CONSTRAINT = {
+  kind: 'string',
+  normalization: 'trim',
+  minLength: 1,
+  maxLength: 64,
+  pattern: '^[a-z][a-z0-9-]{0,63}$',
+} as const satisfies ConstraintDefinition;
+
+export interface CodeFenceMetadataDefinition {
+  readonly syntax: string;
+  readonly description: string;
+  readonly fieldExclusivity: 'only-field';
+  readonly quoting: 'double';
+  readonly separator: ',';
+  readonly minItems: number;
+  readonly maxItems: number;
+  readonly uniqueItems: true;
+  readonly itemConstraint: typeof REGISTRY_IDENTITY_CONSTRAINT;
+  readonly matching: {
+    readonly source: 'canonical-glossary-term';
+    readonly caseSensitive: true;
+    readonly occurrence: 'first';
+    readonly lineBoundary: 'reject';
+    readonly overlap: 'reject';
+  };
+}
+
 interface FieldDefinitionBase {
   readonly name: string;
   readonly description: string;
@@ -274,6 +301,7 @@ export interface AuthoringRegistryDefinition {
     readonly directiveSyntax: Readonly<
       Record<'container' | 'nestedContainer' | 'leaf' | 'text', string>
     >;
+    readonly codeFenceMetadata: Readonly<Record<'terms', CodeFenceMetadataDefinition>>;
     readonly resources: readonly [string, ...string[]];
   };
   readonly output: {
@@ -324,6 +352,26 @@ export const authoringRegistry = {
       nestedContainer: 'Use a longer outer colon fence than nested directives.',
       leaf: '::name{attributes}',
       text: ':name[label]{attributes}',
+    },
+    codeFenceMetadata: {
+      terms: {
+        syntax: 'terms="key,other-key"',
+        description: 'Annotates exact first canonical glossary occurrences in one code fence.',
+        fieldExclusivity: 'only-field',
+        quoting: 'double',
+        separator: ',',
+        minItems: 1,
+        maxItems: 20,
+        uniqueItems: true,
+        itemConstraint: REGISTRY_IDENTITY_CONSTRAINT,
+        matching: {
+          source: 'canonical-glossary-term',
+          caseSensitive: true,
+          occurrence: 'first',
+          lineBoundary: 'reject',
+          overlap: 'reject',
+        },
+      },
     },
     resources: ['local images', 'downloadable local assets', 'local fonts'],
   },
@@ -895,7 +943,13 @@ function interactiveDirectives(): readonly DirectiveDefinition[] {
     interactiveContainer('glossary', 'Reusable glossary definition containing Markdown.', {
       attributes: [
         keyAttribute('Stable glossary definition key.'),
-        textAttribute('term', 'Canonical term text inserted at every reference.', true),
+        textAttribute('term', 'Canonical glossary identity and explanation title.', true),
+        enumAttribute(
+          'placement',
+          'Definition location in the authored flow or, for a top-level definition, one package-owned reference appendix.',
+          ['inline', 'appendix'],
+          'inline',
+        ),
       ],
       runtime: 'none',
     }),
@@ -1137,13 +1191,7 @@ function identityAttribute(
     name,
     description,
     required: true,
-    constraint: {
-      kind: 'string',
-      normalization: 'trim',
-      minLength: 1,
-      maxLength: 64,
-      pattern: '^[a-z][a-z0-9-]{0,63}$',
-    },
+    constraint: REGISTRY_IDENTITY_CONSTRAINT,
     renderProperty: attributeRenderProperty(name),
     invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
   };

@@ -127,7 +127,7 @@ describe('renderDocument runtime boundary', () => {
     ).toEqual([]);
     expect(
       extractNavigation(
-        '<h2 id="legacy">Legacy section</h2><h3 id="detail">Detail</h3><h2 id="next">Next section</h2>',
+        '<h2 id="legacy">Legacy section</h2><h3 id="detail">Detail</h3><h2 id="glossary" data-navigation-exclude="">Glossary</h2><h2 id="next">Next section</h2>',
       ),
     ).toEqual([
       { depth: 2, id: 'legacy', label: 'Legacy section' },

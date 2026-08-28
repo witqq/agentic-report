@@ -340,12 +340,16 @@ function checkContract(registry: RegistryIntegrityInput, issues: string[]): void
 }
 
 function checkSource(registry: RegistryIntegrityInput, issues: string[]): void {
+  const codeTerms = registry.source.codeFenceMetadata.terms;
   const sourceValues = [
     registry.source.entry,
     registry.source.partialSyntax,
     ...registry.source.metadata,
     ...registry.source.resources,
     ...Object.values(registry.source.directiveSyntax),
+    codeTerms.syntax,
+    codeTerms.description,
+    codeTerms.separator,
   ];
   if (sourceValues.some((value) => value.trim().length === 0)) {
     issues.push('source: empty syntax or inventory value');
@@ -356,6 +360,15 @@ function checkSource(registry: RegistryIntegrityInput, issues: string[]): void {
   if (new Set(registry.source.resources).size !== registry.source.resources.length) {
     issues.push('source: duplicate resource kind');
   }
+  if (codeTerms.minItems < 1) issues.push('source.codeFenceMetadata.terms: minimum below one');
+  if (codeTerms.maxItems < codeTerms.minItems) {
+    issues.push('source.codeFenceMetadata.terms: maximum below minimum');
+  }
+  const expectedTermsSyntax = `terms="key${codeTerms.separator}other-key"`;
+  if (codeTerms.syntax !== expectedTermsSyntax) {
+    issues.push('source.codeFenceMetadata.terms: syntax differs from its grammar fields');
+  }
+  checkConstraint(codeTerms.itemConstraint, 'source.codeFenceMetadata.terms.items', issues);
 }
 
 function checkUnique(

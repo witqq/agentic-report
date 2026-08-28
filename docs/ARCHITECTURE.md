@@ -48,7 +48,11 @@ Markdown + metadata + local assets + partials + semantic directives
   deliberately does not implement an inode ledger or defend against hostile concurrent path replacement.
 - `src/render/markdown.ts` uses the unified/remark/rehype AST pipeline with GitHub Flavored Markdown table,
   strikethrough, task-list, and autolink-literal parsing. Raw HTML is not passed through; rehype sanitization
-  runs before trusted compile-time syntax highlighting. The asset plugin embeds local images, downloads,
+  runs before trusted compile-time syntax highlighting. The authoring registry owns the serializable
+  code-fence `terms` envelope, shared key constraint, bounds, uniqueness and exact-match policy; discovery
+  projects those fields and the mdast parser consumes the same contract before transporting validated keys
+  through Shiki metadata. Trusted post-Shiki enhancement splits existing styled HAST spans around bounded
+  first glossary occurrences without changing code text. The asset plugin embeds local images, downloads,
   and fonts or copies them under deterministic hashed names.
 - `src/review/contract.ts`, `src/review/targets.ts`, and `src/review/binding.ts` own the platform-neutral
   versioned review data contract, bounded canonical serialization, compile-time target inventory,
@@ -61,7 +65,8 @@ Markdown + metadata + local assets + partials + semantic directives
   enhancement creates labelled top-level sections, ordinary safe action links, bounded loopback
   source-location links that preserve the report browsing context, native disclosures, and
   accessible package-owned tabs, dialogs, popovers, filters, switches, and bounded counters without
-  accepting author code.
+  accepting author code. Authored term labels remain visible forms of one canonical key; appendix glossary
+  definitions are moved after review targeting and retain their source identities.
 - `src/render/visualizations.ts` projects validated chart series/points, diagram nodes/edges, and timeline
   events into deterministic accessible SVG or semantic HTML. It is compile-time code and does not add a
   visualization browser runtime.
@@ -170,6 +175,14 @@ disclose local directory names when an artifact is shared.
 Partial expansion produces a compact offset source map. Markdown AST positions resolve through that map,
 so diagnostics from entry content and nested partials identify the original authored file and range rather
 than the concatenated intermediate document.
+
+Glossary definitions default to their authored inline position. A source-mapped placement check restricts
+`placement="appendix"` to root definitions so extraction cannot empty an authored parent. The complete
+already-targeted definition moves into one package-owned labelled appendix in authored order. Its heading is marked
+as package-owned navigation-excluded content, so explicit-section and legacy-H2 primary inventories remain
+the document's reading route. Popover links still target the same collision-free definition IDs. Code-term
+panels reuse the existing delegated glossary runtime; code copy clones the code element and removes generated
+panels before reading text.
 
 ## Visualization model
 
