@@ -137,7 +137,11 @@ export function renderDocument(options: DocumentRenderOptions): string {
             <span data-theme-toggle-label>{strings.theme}</span>
           </button>
         </header>
-        <div className="report-shell" data-nav-outside>
+        <div
+          className="report-shell"
+          data-has-navigation={hasNavigation ? 'true' : 'false'}
+          data-nav-outside
+        >
           {hasNavigation ? (
             <aside className="sidebar" id={navigationHostId} data-nav-desktop-host>
               <nav id={navigationId} aria-label={strings.documentContents} data-navigation>

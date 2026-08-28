@@ -39,6 +39,7 @@ describe('renderDocument runtime boundary', () => {
     const html = renderDocument(inlineOptions);
     expect(html).toContain('<script>globalThis.started=true;</script>');
     expect(html).not.toContain('<script src=');
+    expect(html).toContain('class="report-shell" data-has-navigation="false"');
   });
 
   it('renders exactly the required external runtime alternative', () => {
@@ -182,6 +183,7 @@ describe('renderDocument runtime boundary', () => {
       ],
     });
     expect(html).toContain('data-scroll-progress="true"');
+    expect(html).toContain('class="report-shell" data-has-navigation="true"');
     expect(html).toContain('aria-label="Hide contents"');
     expect(html).toContain('data-nav-dialog="true"');
     expect(html).toContain('data-nav-close="true"');

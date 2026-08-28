@@ -1062,6 +1062,15 @@ for (const fixture of [
     await page.goto(url);
     await expect(page.getByRole('heading', { name: fixture.heading, level: 1 })).toBeVisible();
     await expect(page.locator(fixture.selector)).toBeVisible();
+    await expect(page.locator('.report-shell')).toHaveAttribute('data-has-navigation', 'false');
+    expect(
+      await page.locator('.report-shell').evaluate((shell) => {
+        const content = shell.querySelector<HTMLElement>('.report-content');
+        return content === null
+          ? 0
+          : content.getBoundingClientRect().width / shell.getBoundingClientRect().width;
+      }),
+    ).toBeGreaterThan(0.75);
     if (fixture.file === 'landing.html') {
       await expect(page.getByRole('button', { name: 'Contents' })).toHaveCount(0);
       await expect(page.locator('[data-navigation]')).toHaveCount(0);
