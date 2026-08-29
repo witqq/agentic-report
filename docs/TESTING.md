@@ -38,6 +38,9 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   deterministic review-target manifests and local-input revisions, strict canonical review JSON,
   strict response form/artifact parsing, kind-specific answer domains, untouched/default distinction,
   canonical response JSON and foreign/stale/prototype-like rejection,
+  exact unescaped clock/range/duration Markdown and frontmatter titles while malformed numeric or unknown
+  alphabetic directives—including astral-letter and combining-mark word adjacency—retain source-mapped
+  rejection,
   exact/changed/missing/ambiguous entry/partial binding, confined review paths, and sanitized review transport,
   exact serialized inline-size accounting, canonical and hard-link source/output collision protection,
   injected partial-write/rename preservation and retry for both output formats, same-process name/content

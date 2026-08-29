@@ -79,6 +79,7 @@ const CODE_TERM_METADATA = authoringRegistry.source.codeFenceMetadata.terms;
 const CODE_TERM_KEY_PATTERN = new RegExp(CODE_TERM_METADATA.itemConstraint.pattern, 'u');
 const CODE_TERM_ATTEMPT_PATTERN = new RegExp(`(?:^|\\s)${CODE_TERM_FIELD}(?:\\s*=|\\s|$)`, 'u');
 const CODE_TERM_EXACT_PATTERN = codeTermExactPattern(CODE_TERM_FIELD, CODE_TERM_METADATA);
+const WORD_CONTINUATION_PATTERN = /[\p{L}\p{N}\p{M}\p{Pc}\u200c\u200d]/u;
 
 export type CodeTermMetadataResult =
   | { readonly kind: 'none' }
@@ -150,6 +151,7 @@ function unsupportedCodeMetadataContract(value: never): never {
 
 export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoot> =
   (options) => (tree) => {
+    restoreNumericColonText(tree, options.markdown);
     const glossaryByKey = new Map<string, GlossaryDefinition>();
     const glossaryTerms = new Map<string, GlossaryDefinition>();
     const termReferences: Array<{ readonly key: string; readonly node: DirectiveNode }> = [];
@@ -298,6 +300,80 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
     validateResponseForms(tree, attributesByNode, options);
     validateUnmarkedGlossaryTerms(tree, [...glossaryByKey.values()], options);
   };
+
+function restoreNumericColonText(tree: MdastRoot, markdown: string): void {
+  visit(tree, (node, index, parent) => {
+    if (
+      !isDirectiveNode(node) ||
+      node.type !== 'textDirective' ||
+      !/^\d+$/u.test(node.name) ||
+      Object.keys(node.attributes ?? {}).length > 0 ||
+      (node.children?.length ?? 0) > 0 ||
+      index === undefined ||
+      !isMutableChildrenParent(parent)
+    )
+      return;
+    const start = node.position?.start.offset;
+    const end = node.position?.end.offset;
+    if (start === undefined || end === undefined || !isTimeOrDurationToken(markdown, start, end))
+      return;
+    parent.children[index] = {
+      type: 'text',
+      value: markdown.slice(start, end),
+      position: node.position,
+    };
+  });
+}
+
+function isTimeOrDurationToken(
+  markdown: string,
+  directiveStart: number,
+  directiveEnd: number,
+): boolean {
+  let tokenStart = directiveStart;
+  let tokenEnd = directiveEnd;
+  while (tokenStart > 0 && /[\d:]/u.test(markdown[tokenStart - 1] ?? '')) tokenStart -= 1;
+  while (tokenEnd < markdown.length && /[\d:]/u.test(markdown[tokenEnd] ?? '')) tokenEnd += 1;
+  if (tokenStart === directiveStart || markdown[directiveStart] !== ':') return false;
+  const before = codePointBefore(markdown, tokenStart);
+  const after = codePointAt(markdown, tokenEnd);
+  if (
+    (before !== undefined && WORD_CONTINUATION_PATTERN.test(before)) ||
+    (after !== undefined && WORD_CONTINUATION_PATTERN.test(after))
+  )
+    return false;
+  const groups = markdown.slice(tokenStart, tokenEnd).split(':');
+  if (groups.length < 2 || groups.length > 3 || !/^\d+$/u.test(groups[0] ?? '')) return false;
+  return groups.slice(1).every((group) => /^\d{2}$/u.test(group) && Number(group) <= 59);
+}
+
+function codePointBefore(value: string, index: number): string | undefined {
+  if (index <= 0) return;
+  const finalCodeUnit = value.charCodeAt(index - 1);
+  const start =
+    finalCodeUnit >= 0xdc00 &&
+    finalCodeUnit <= 0xdfff &&
+    index >= 2 &&
+    value.charCodeAt(index - 2) >= 0xd800 &&
+    value.charCodeAt(index - 2) <= 0xdbff
+      ? index - 2
+      : index - 1;
+  return codePointAt(value, start);
+}
+
+function codePointAt(value: string, index: number): string | undefined {
+  const point = value.codePointAt(index);
+  return point === undefined ? undefined : String.fromCodePoint(point);
+}
+
+function isMutableChildrenParent(value: unknown): value is { children: TraversableNode[] } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'children' in value &&
+    Array.isArray((value as { readonly children?: unknown }).children)
+  );
+}
 
 function validateResponseForms(
   tree: MdastRoot,

@@ -109,6 +109,9 @@ priority order, scores, text, or per-item comments. The generated page keeps ans
 offers both **Copy response** and **Download response.json**; a rejected import preserves existing answers.
 The installed example catalog includes the complete `response-workspace` source.
 
+Write times and durations directly—`21:01`, `21:01 — 00:12`, and `1:30:05` remain literal text in Markdown,
+and frontmatter titles need no backslash. Real unknown directive names still fail with a source diagnostic.
+
 Review version 2 stores ordered user/agent messages and resolved state in one local sidecar; it is not an
 account, signature, or hosted collaboration service. Decision/checklist directives remain document content.
 

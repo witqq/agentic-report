@@ -25,6 +25,7 @@ describe('release readiness', () => {
       'docs/product/diagram-extension.json',
       'docs/product/review-workspace-extension.json',
       'docs/product/response-workspace-extension.json',
+      'docs/product/time-text-extension.json',
       'docs/product/source-link-extension.json',
     ]) {
       const proposal = JSON.parse(await readFile(path.resolve(file), 'utf8')) as unknown;

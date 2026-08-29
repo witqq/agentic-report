@@ -1334,6 +1334,7 @@ async function expectedTarballFiles(): Promise<string[]> {
       'product/diagram-extension.json',
       'product/review-workspace-extension.json',
       'product/response-workspace-extension.json',
+      'product/time-text-extension.json',
       'product/source-link-extension.json',
       'product/source-contract.md',
     ].map((file) => `package/docs/${file}`),

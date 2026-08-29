@@ -333,7 +333,7 @@ export interface AuthoringRegistryDefinition {
     readonly metadata: readonly [string, ...string[]];
     readonly partialSyntax: string;
     readonly directiveSyntax: Readonly<
-      Record<'container' | 'nestedContainer' | 'leaf' | 'text', string>
+      Record<'container' | 'nestedContainer' | 'leaf' | 'text' | 'numericColonText', string>
     >;
     readonly codeFenceMetadata: Readonly<Record<'terms', CodeFenceMetadataDefinition>>;
     readonly resources: readonly [string, ...string[]];
@@ -387,6 +387,8 @@ export const authoringRegistry = {
       nestedContainer: 'Use a longer outer colon fence than nested directives.',
       leaf: '::name{attributes}',
       text: ':name[label]{attributes}',
+      numericColonText:
+        'Two- or three-part numeric time/duration tokens such as 21:01 and 1:30:05 remain literal Markdown text.',
     },
     codeFenceMetadata: {
       terms: {

@@ -30,6 +30,8 @@ Create a local declarative source, verify it, and hand the user a finished inter
 - Use Response Workspace when the human must return structured triage, choices, ordering, scores, text, or
   item comments. Keep it separate from Review Workspace discussion threads, and tell the user to copy or
   download `response.json` after completing the local page.
+- Write clock times and durations normally (`21:01`, `1:30:05`); do not add backslash escaping in prose or
+  frontmatter.
 - Do not deploy, publish, use credentials, or mutate unrelated files. This skill authorizes only local
   installation, source authoring, validation, inspection, build, and artifact review.
 

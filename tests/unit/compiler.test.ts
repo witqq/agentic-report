@@ -636,6 +636,56 @@ describe('buildReport', () => {
     ).rejects.toMatchObject({ diagnostic: { code: 'UNSUPPORTED_DIRECTIVE' } });
   });
 
+  it('keeps clock times, ranges, durations and frontmatter titles as exact authored text', async () => {
+    const workspace = await trackedWorkspace('numeric-time-text');
+    const entry = path.join(workspace, 'report.md');
+    const output = path.join(workspace, 'report.html');
+    await writeFile(
+      entry,
+      [
+        '---',
+        'title: Отчёт за 9 июля (ночь до 05:24)',
+        '---',
+        '# Сводка',
+        '',
+        'Время 21:01.',
+        '',
+        'Диапазон 21:01 — 00:12.',
+        '',
+        'Длительность 1:30:05.',
+      ].join('\n'),
+    );
+
+    await expect(buildReport({ input: workspace, output })).resolves.toMatchObject({
+      format: 'single-file',
+    });
+    const html = await readFile(output, 'utf8');
+    expect(html).toContain('<title>Отчёт за 9 июля (ночь до 05:24)</title>');
+    expect(html).toMatch(/<p[^>]*>Время 21:01\.<\/p>/u);
+    expect(html).toMatch(/<p[^>]*>Диапазон 21:01 — 00:12\.<\/p>/u);
+    expect(html).toMatch(/<p[^>]*>Длительность 1:30:05\.<\/p>/u);
+
+    for (const [label, invalid] of [
+      ['unknown alphabetic directive', 'Текст :unknown рядом.'],
+      ['invalid minute domain', 'Неверное время 21:99.'],
+      ['short subordinate field', 'Не время 1:2.'],
+      ['four numeric groups', 'Не длительность 1:20:30:40.'],
+      ['word-adjacent token', 'Версия v21:01alpha.'],
+      ['left astral letter', '𐐀21:01'],
+      ['right astral letter', '21:01𐐀'],
+      ['left combining mark', 'á21:01'],
+      ['right combining mark', '21:01́a'],
+    ] as const) {
+      await writeFile(entry, `# Проверка\n\n${invalid}\n`);
+      await expect(buildReport({ input: workspace, output }), label).rejects.toMatchObject({
+        diagnostic: {
+          code: 'UNSUPPORTED_DIRECTIVE',
+          source: { file: entry, line: 3 },
+        },
+      });
+    }
+  });
+
   it('rejects unknown directive attributes as agent input errors', async () => {
     const workspace = await trackedWorkspace('unknown-directive-attribute');
     await writeFile(

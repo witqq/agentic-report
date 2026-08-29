@@ -171,6 +171,11 @@ CommonMark plus GitHub Flavored Markdown tables, strikethrough, task-list syntax
 converted through a typed unified AST. Raw HTML is not enabled. Sanitization occurs before package-trusted
 syntax highlighting and semantic enhancement.
 
+Numeric clock and duration tokens with two or three groups remain ordinary text: the trailing groups contain
+exactly two digits in the `00`–`59` domain, as in `21:01`, `21:01 — 00:12`, and `1:30:05`. They require no
+backslash in Markdown or frontmatter. This narrow lexical rule does not accept malformed times or suppress
+unknown alphabetic directives; those continue through the normal directive diagnostic.
+
 ## Semantic primitives
 
 The directive vocabulary is:

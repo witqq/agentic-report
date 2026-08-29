@@ -8,7 +8,8 @@
       "container": ":::name{attributes}\nMarkdown children\n:::",
       "nestedContainer": "Use a longer outer colon fence than nested directives.",
       "leaf": "::name{attributes}",
-      "text": ":name[label]{attributes}"
+      "text": ":name[label]{attributes}",
+      "numericColonText": "Two- or three-part numeric time/duration tokens such as 21:01 and 1:30:05 remain literal Markdown text."
     },
     "codeFenceMetadata": {
       "terms": {

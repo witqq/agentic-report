@@ -233,6 +233,10 @@ current tab without storage, network, an account, or form submission. Build the 
 
 ## Minimal source
 
+Write clock times, ranges, and durations directly: `21:01`, `21:01 — 00:12`, and `1:30:05` are literal
+Markdown text, and a frontmatter title such as `title: Отчёт за 9 июля (ночь до 05:24)` needs no backslash.
+Unknown directive names still fail validation.
+
 ```text
 my-report/
 ├── report.md

@@ -66,6 +66,8 @@ Markdown + metadata + local assets + partials + semantic directives
 - `src/render/directives.ts` maps the documented, allowlisted directive vocabulary to semantic HAST.
   Unknown directives, invalid attributes/nesting, unresolved glossary references, duplicate definitions,
   and unmarked occurrences of registered glossary terms fail with authored-range diagnostics. Compile-time
+  normalization restores only complete numeric clock/duration tokens that `remark-directive` misclassifies
+  as text directives; alphabetic and malformed directive names retain the normal error path. Compile-time
   enhancement creates labelled top-level sections, ordinary safe action links, bounded loopback
   source-location links that preserve the report browsing context, native disclosures, and
   accessible package-owned tabs, dialogs, popovers, filters, switches, and bounded counters without
