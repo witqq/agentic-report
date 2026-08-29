@@ -8,6 +8,10 @@ language: ru
 
 Corpus class: work-report
 
+:::copyable
+Скопируйте этот обычный абзац в сообщение.
+:::
+
 :::callout{title="Статус" kind="success"}
 Работа описана декларативно.
 :::

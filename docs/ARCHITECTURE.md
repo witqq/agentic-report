@@ -99,6 +99,9 @@ Markdown + metadata + local assets + partials + semantic directives
   text/value APIs only and never writes storage, submits a form, starts a service, or performs a request.
   Drag identity is a controller-local DOM reference accepted only by its owning bucket question; native and
   artifact validation apply the authored number range and step before either export path.
+- The main browser runtime owns one copy-control factory and localized clipboard lifecycle for both code and
+  `copyable` prose. Trusted enhancement marks a prose content owner; runtime reads its rendered `innerText`,
+  while code retains clone-based glossary-panel exclusion. Neither route accepts author behavior.
 - `src/core/prepare-report.ts` owns the shared side-effect-free preparation used by building, validation,
   and inspection: source/render work, registry-owned output selection, package browser assets, size
   accounting, content hashing, observed source features, and prepared directory resources. Package browser

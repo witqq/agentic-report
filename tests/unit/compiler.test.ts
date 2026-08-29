@@ -686,6 +686,42 @@ describe('buildReport', () => {
     }
   });
 
+  it('renders copyable prose as a marked ordinary Markdown content owner', async () => {
+    const workspace = await trackedWorkspace('copyable-prose');
+    const entry = path.join(workspace, 'report.md');
+    const output = path.join(workspace, 'report.html');
+    await writeFile(
+      entry,
+      [
+        '# Copyable prose',
+        '',
+        ':::copyable',
+        'Deploy after **two checks**.',
+        '',
+        'Read the [rollback runbook](https://example.com/runbook).',
+        ':::',
+      ].join('\n'),
+    );
+    await buildReport({ input: workspace, output });
+    const html = await readFile(output, 'utf8');
+    expect(html).toContain('class="semantic-copyable"');
+    expect(html).toContain('data-copyable-prose=""');
+    expect(html).toContain('data-copyable-content=""');
+    expect(html).toContain('<strong>two checks</strong>');
+    expect(html).toContain('href="https://example.com/runbook"');
+    expect(html).not.toMatch(/<pre[^>]*>[\s\S]*Deploy after/u);
+
+    for (const [label, child] of [
+      ['block code', '```text\nnot prose\n```'],
+      ['nested behavior', ':::demo\nnot prose\n:::'],
+    ] as const) {
+      await writeFile(entry, `# Invalid\n\n::::copyable\n${child}\n::::\n`);
+      await expect(buildReport({ input: workspace, output }), label).rejects.toMatchObject({
+        diagnostic: { code: 'INVALID_DIRECTIVE_PLACEMENT', source: { file: entry } },
+      });
+    }
+  });
+
   it('rejects unknown directive attributes as agent input errors', async () => {
     const workspace = await trackedWorkspace('unknown-directive-attribute');
     await writeFile(

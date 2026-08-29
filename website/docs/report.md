@@ -104,6 +104,9 @@ The page keeps state only in the current tab and exports the same deterministic 
 and file download. [Open the complete live example](../examples/response-workspace/index.html) or inspect
 its [declarative source](../examples/response-workspace/report.md).
 
+Use `copyable` when ordinary prose should be pasted elsewhere. It keeps Markdown typography/wrapping and
+copies only visible rendered text through the localized package control.
+
 ::::
 
 ::::section{title="Output and operation" id="output" nav="Output" width="standard" align="start" tone="soft" reveal="true"}

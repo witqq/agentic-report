@@ -32,6 +32,8 @@ Create a local declarative source, verify it, and hand the user a finished inter
   download `response.json` after completing the local page.
 - Write clock times and durations normally (`21:01`, `1:30:05`); do not add backslash escaping in prose or
   frontmatter.
+- Use `copyable` for prose the reader should paste elsewhere; do not misrepresent ordinary language as a
+  code fence merely to obtain a Copy button.
 - Do not deploy, publish, use credentials, or mutate unrelated files. This skill authorizes only local
   installation, source authoring, validation, inspection, build, and artifact review.
 

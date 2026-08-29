@@ -41,6 +41,7 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   exact unescaped clock/range/duration Markdown and frontmatter titles while malformed numeric or unknown
   alphabetic directives—including astral-letter and combining-mark word adjacency—retain source-mapped
   rejection,
+  semantic copyable-prose ownership and nested behavior/code rejection,
   exact/changed/missing/ambiguous entry/partial binding, confined review paths, and sanitized review transport,
   exact serialized inline-size accounting, canonical and hard-link source/output collision protection,
   injected partial-write/rename preservation and retry for both output formats, same-process name/content
@@ -85,7 +86,11 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   two forms that reuse radio and bucket item IDs, rejects cross-owner drag while preserving same-owner drag,
   blocks out-of-range/step-mismatched numeric export and import until correction, accepts phase-sensitive
   large four-decimal values through export/import, proves reload returns to the untouched memory-only state,
-  checks containment, and captures inspected dense form states. A local SVG must complete with non-zero intrinsic width in
+  checks containment, and captures inspected dense form states. Dedicated copyable-prose coverage opens
+  English and Russian single-file/directory artifacts on desktop
+  and mobile, asserts proportional wrapping/no code surface, keyboard copy success/failure, exact visible
+  multi-paragraph clipboard text, unchanged prose, localization, containment, and inspected light/dark states.
+  A local SVG must complete with non-zero intrinsic width in
   both embedded and rewritten hashed forms. The current suite does not cover browser behavior for downloadable assets or local fonts,
   axe/screen-reader evidence or difficult-content reflow beyond the authored fixtures.
 - `pack:check` builds an npm tarball, checks its exact release allowlist, metadata, license, types, exports,

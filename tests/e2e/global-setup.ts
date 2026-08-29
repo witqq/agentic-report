@@ -170,6 +170,11 @@ export default async function globalSetup(): Promise<void> {
       ':::demo{title="Счётчик" start="1" step="1"}',
       'Безопасное встроенное действие.',
       ':::',
+      ':::copyable',
+      'Сначала проверьте **владельца**.',
+      '',
+      'Откройте [план отката](https://example.com/rollback) и сверьтесь с :term[локусом]{key="locus"} перед отправкой.',
+      ':::',
       '::::chart{type="bar" title="Наблюдения" description="Два наблюдения."}',
       ':::series{label="Результат"}',
       '::point{label="А" value="1234.5"}',
@@ -453,6 +458,11 @@ export default async function globalSetup(): Promise<void> {
     buildReport({
       input: path.resolve('examples/response-workspace'),
       output: path.join(fixtureRoot, 'response-workspace-directory'),
+      format: 'directory',
+    }),
+    buildReport({
+      input: path.resolve('examples/interactive-catalog'),
+      output: path.join(fixtureRoot, 'copyable-prose-directory'),
       format: 'directory',
     }),
     buildReport({

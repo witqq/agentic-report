@@ -249,6 +249,7 @@ export interface DirectiveDefinition {
     | 'check-item-directives'
     | 'markdown-and-card-directives'
     | 'markdown-and-tab-directives'
+    | 'markdown-and-term-directives'
     | 'action-directives'
     | 'series-directives'
     | 'point-directives'
@@ -277,7 +278,8 @@ export interface DirectiveDefinition {
       | 'package-owned-popover'
       | 'package-owned-filter'
       | 'package-owned-toggle'
-      | 'package-owned-response';
+      | 'package-owned-response'
+      | 'package-owned-copy';
   };
   readonly sanitizer: {
     readonly tagName: 'a' | 'article' | 'aside' | 'div' | 'section' | 'span';
@@ -1099,6 +1101,11 @@ function responseLeaf(
 
 function interactiveDirectives(): readonly DirectiveDefinition[] {
   return [
+    interactiveContainer('copyable', 'Ordinary Markdown prose with a localized copy control.', {
+      attributes: [],
+      children: 'markdown-and-term-directives',
+      runtime: 'package-owned-copy',
+    }),
     interactiveContainer('glossary', 'Reusable glossary definition containing Markdown.', {
       attributes: [
         keyAttribute('Stable glossary definition key.'),
@@ -1320,7 +1327,16 @@ function visualizationContainer(
 }
 
 function interactiveContainer(
-  name: 'glossary' | 'disclosure' | 'tabs' | 'tab' | 'modal' | 'popover' | 'filter' | 'toggle',
+  name:
+    | 'copyable'
+    | 'glossary'
+    | 'disclosure'
+    | 'tabs'
+    | 'tab'
+    | 'modal'
+    | 'popover'
+    | 'filter'
+    | 'toggle',
   description: string,
   options: {
     readonly attributes: readonly DirectiveAttributeDefinition[];

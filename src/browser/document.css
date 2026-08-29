@@ -361,6 +361,7 @@ a {
 .review-toggle,
 .theme-toggle,
 .copy-code,
+.copy-prose,
 .semantic-demo button,
 .semantic-tabs button,
 .semantic-modal button,
@@ -388,7 +389,7 @@ a {
 }
 
 :root[data-preset='editorial']
-  :is(.nav-toggle, .theme-toggle, .copy-code, .nav-dialog-close, .semantic-action) {
+  :is(.nav-toggle, .theme-toggle, .copy-code, .copy-prose, .nav-dialog-close, .semantic-action) {
   gap: var(--control-icon-gap);
 }
 
@@ -396,7 +397,8 @@ a {
   display: block;
 }
 
-:root[data-preset='editorial'] :is(.nav-toggle, .theme-toggle, .copy-code, .nav-dialog-close) {
+:root[data-preset='editorial']
+  :is(.nav-toggle, .theme-toggle, .copy-code, .copy-prose, .nav-dialog-close) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -406,6 +408,7 @@ a {
 .review-toggle:hover,
 .theme-toggle:hover,
 .copy-code:hover,
+.copy-prose:hover,
 .semantic-demo button:hover,
 .semantic-tabs button:hover,
 .semantic-modal button:hover,
@@ -992,6 +995,21 @@ pre.shiki span {
   top: 0.55rem;
   right: 0.55rem;
   font-size: 0.75rem;
+}
+
+.semantic-copyable {
+  max-width: min(100%, var(--flow-measure, var(--reading-measure)));
+  margin: calc(1.5rem * var(--space-factor)) 0;
+}
+
+.semantic-copyable [data-copyable-content] {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.copy-prose {
+  margin-top: calc(0.65rem * var(--space-factor));
+  font-size: 0.8rem;
 }
 
 code {
@@ -2161,7 +2179,8 @@ th {
   text-transform: uppercase;
 }
 
-:root[data-preset='editorial'] :is(.nav-toggle, .theme-toggle, .copy-code, .nav-dialog-close) {
+:root[data-preset='editorial']
+  :is(.nav-toggle, .theme-toggle, .copy-code, .copy-prose, .nav-dialog-close) {
   border-radius: var(--radius-small);
   font-size: 0.78rem;
   font-weight: 700;

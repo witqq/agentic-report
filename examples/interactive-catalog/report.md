@@ -1,7 +1,7 @@
 ---
 contractVersion: 1
 title: Interactive component catalog
-description: Declarative glossary, disclosure, tabs, overlays, filtering, toggles, and a bounded demo.
+description: Declarative copyable prose, glossary, disclosure, tabs, overlays, filtering, toggles, and a bounded demo.
 language: en
 theme: dark
 layout: mixed
@@ -28,6 +28,15 @@ A compact bundle of evidence, constraints, and a recommendation that another age
 
 The same :term[Decision packet]{key="decision-packet"} explanation remains available wherever the concept
 appears.
+
+## Copyable prose
+
+:::copyable
+Deploy after **two checks** are complete.
+
+Read the [rollback runbook](https://example.com/runbook) and confirm the
+:term[decision packet]{key="decision-packet"} before the handoff.
+:::
 
 ## Progressive detail
 

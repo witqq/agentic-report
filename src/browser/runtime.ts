@@ -131,8 +131,8 @@ document.addEventListener('click', (event) => {
     return;
   }
 
-  const copy = target.closest<HTMLButtonElement>('[data-copy-code]');
-  if (copy !== null) void copyCode(copy);
+  const copy = target.closest<HTMLButtonElement>('[data-copy-code], [data-copy-prose]');
+  if (copy !== null) void copyContent(copy);
 });
 
 document.addEventListener('keydown', (event) => {
@@ -224,15 +224,25 @@ for (const input of document.querySelectorAll<HTMLInputElement>('[data-filter-in
 }
 
 for (const block of document.querySelectorAll<HTMLElement>('pre')) {
+  block.append(createCopyButton('code'));
+}
+
+for (const block of document.querySelectorAll<HTMLElement>('[data-copyable-prose]')) {
+  block.append(createCopyButton('prose'));
+}
+
+function createCopyButton(kind: 'code' | 'prose'): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = 'copy-code';
-  button.dataset.copyCode = '';
+  button.className = kind === 'code' ? 'copy-code' : 'copy-prose';
+  if (kind === 'code') button.dataset.copyCode = '';
+  else button.dataset.copyProse = '';
   const label = document.createElement('span');
-  label.dataset.copyCodeLabel = '';
+  label.dataset.copyLabel = '';
+  if (kind === 'code') label.dataset.copyCodeLabel = '';
   label.textContent = strings.copy;
   button.append(createCopyIcon(), label);
-  block.append(button);
+  return button;
 }
 
 function createCopyIcon(): SVGSVGElement {
@@ -836,14 +846,22 @@ function applyFilter(input: HTMLInputElement): void {
   if (output !== null) output.textContent = strings.items(visible);
 }
 
-async function copyCode(button: HTMLButtonElement): Promise<void> {
-  const code = button.closest('pre')?.querySelector('code');
-  const copy = code?.cloneNode(true);
-  if (copy instanceof HTMLElement) {
-    for (const panel of copy.querySelectorAll('[data-glossary-panel]')) panel.remove();
+async function copyContent(button: HTMLButtonElement): Promise<void> {
+  let text: string;
+  if (button.matches('[data-copy-prose]')) {
+    const prose = button
+      .closest<HTMLElement>('[data-copyable-prose]')
+      ?.querySelector<HTMLElement>('[data-copyable-content]');
+    text = prose === undefined || prose === null ? '' : renderedProseText(prose);
+  } else {
+    const code = button.closest('pre')?.querySelector('code');
+    const copy = code?.cloneNode(true);
+    if (copy instanceof HTMLElement) {
+      for (const panel of copy.querySelectorAll('[data-glossary-panel]')) panel.remove();
+    }
+    text = copy?.textContent ?? '';
   }
-  const text = copy?.textContent ?? '';
-  const label = button.querySelector<HTMLElement>('[data-copy-code-label]') ?? button;
+  const label = button.querySelector<HTMLElement>('[data-copy-label]') ?? button;
   try {
     await navigator.clipboard.writeText(text);
     label.textContent = strings.copied;
@@ -853,4 +871,28 @@ async function copyCode(button: HTMLButtonElement): Promise<void> {
   window.setTimeout(() => {
     label.textContent = strings.copy;
   }, 1200);
+}
+
+function renderedProseText(content: HTMLElement): string {
+  const copy = content.cloneNode(true);
+  if (!(copy instanceof HTMLElement)) return '';
+  for (const reference of copy.querySelectorAll<HTMLElement>('[data-glossary-reference]')) {
+    const label =
+      reference.querySelector<HTMLElement>('[data-glossary-trigger]')?.textContent ?? '';
+    reference.replaceWith(document.createTextNode(label));
+  }
+  for (const generated of copy.querySelectorAll(
+    '[hidden], [aria-hidden="true"], button, input, select, textarea, output, [role="dialog"]',
+  ))
+    generated.remove();
+  copy.style.position = 'fixed';
+  copy.style.top = '0';
+  copy.style.left = '-10000px';
+  copy.style.width = `${content.getBoundingClientRect().width}px`;
+  copy.style.pointerEvents = 'none';
+  copy.setAttribute('aria-hidden', 'true');
+  document.body.append(copy);
+  const text = copy.innerText.replace(/\r\n?/gu, '\n').trim();
+  copy.remove();
+  return text;
 }

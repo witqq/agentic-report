@@ -44,6 +44,7 @@ describe('authoring registry', () => {
       'bucket',
       'option',
       'item',
+      'copyable',
       'glossary',
       'term',
       'disclosure',
@@ -130,6 +131,7 @@ describe('authoring registry', () => {
         'package-owned-filter',
         'package-owned-toggle',
         'package-owned-response',
+        'package-owned-copy',
       ]).toContain(directive.behavior.runtime);
       expect(directive.security).toMatchObject({ authorCode: false, rawHtml: false });
       expect(directive.sanitizer.className).toBe(`semantic-${directive.name}`);

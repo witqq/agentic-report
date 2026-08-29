@@ -1947,7 +1947,9 @@ test('declarative interactions preserve scoped state, focus, and responsive file
     expect(metrics.paddingRight, name).toBeLessThanOrEqual(12);
   };
 
-  const terms = page.getByRole('button', { name: 'Decision packet' });
+  const terms = page
+    .locator('article > p [data-term-reference="decision-packet"]')
+    .getByRole('button', { name: 'Decision packet' });
   await expect(terms).toHaveCount(2);
   const term = terms.first();
   await expect(term.locator('xpath=ancestor::p')).toContainText(

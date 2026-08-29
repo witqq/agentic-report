@@ -1331,6 +1331,7 @@ async function expectedTarballFiles(): Promise<string[]> {
       'generated/source-contract.json',
       'generated/source.schema.json',
       'product/code-glossary-extension.json',
+      'product/copyable-prose-extension.json',
       'product/diagram-extension.json',
       'product/review-workspace-extension.json',
       'product/response-workspace-extension.json',

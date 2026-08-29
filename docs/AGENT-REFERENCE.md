@@ -231,6 +231,22 @@ same form revision and validates the complete file before replacing any current 
 current tab without storage, network, an account, or form submission. Build the complete packaged
 [`response-workspace` example source](../examples/response-workspace/report.md) to inspect every answer kind.
 
+## Copy prose without code styling
+
+Use a closed `copyable` container for text the reader should paste into a chat or handoff:
+
+```md
+:::copyable
+Deploy after **two checks** are complete.
+
+Read the [rollback runbook](https://example.com/runbook) before the handoff.
+:::
+```
+
+The block remains ordinary wrapped Markdown. Its localized button copies rendered visible text with
+paragraph breaks and link labels, without Markdown syntax, URLs, HTML, control labels, or hidden panels.
+`term` references are allowed; block code and other nested directives are rejected.
+
 ## Minimal source
 
 Write clock times, ranges, and durations directly: `21:01`, `21:01 — 00:12`, and `1:30:05` are literal

@@ -296,10 +296,35 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
     validateCodeTermBlocks(codeTermBlocks, glossaryByKey, options);
     validateVisualizationData(tree, attributesByNode, options);
     validateActionGroups(tree, options);
+    validateCopyableProse(tree, options);
     validateTypedReviewComponents(tree, attributesByNode, options);
     validateResponseForms(tree, attributesByNode, options);
     validateUnmarkedGlossaryTerms(tree, [...glossaryByKey.values()], options);
   };
+
+function validateCopyableProse(tree: MdastRoot, options: DirectivePluginOptions): void {
+  visit(tree, (candidate) => {
+    if (!isDirectiveNode(candidate) || candidate.name !== 'copyable') return;
+    const pending = [...(candidate.children ?? [])];
+    while (pending.length > 0) {
+      const child = pending.pop();
+      if (isCodeNode(child) || (isDirectiveNode(child) && child.name !== 'term')) {
+        const node = child as DirectiveNode;
+        throw attachDirectiveSource(
+          directiveError(
+            node,
+            'INVALID_DIRECTIVE_PLACEMENT',
+            'copyable accepts prose Markdown and term references, not code blocks or other directives.',
+            'Move the code or interactive/data directive outside copyable.',
+          ),
+          node,
+          options,
+        );
+      }
+      if (isTraversableNode(child)) pending.push(...(child.children ?? []));
+    }
+  });
+}
 
 function restoreNumericColonText(tree: MdastRoot, markdown: string): void {
   visit(tree, (node, index, parent) => {
@@ -1704,6 +1729,10 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
         enhanceCodeTerms(node, codeTermKeys.split(','), glossary, createGlossaryReference);
       }
       const semantic = stringProperty(node, 'dataSemantic');
+      if (semantic === 'copyable') {
+        enhanceCopyableProse(node);
+        return;
+      }
       if (semantic === 'response') {
         enhanceResponse(node, allocateId);
         return;
@@ -2070,6 +2099,19 @@ function enhanceSourceLink(node: Element): void {
   node.properties.rel = ['noopener', 'noreferrer'];
   node.properties.dataSourceLink = '';
   node.children = [decorativeIcon('arrow-right'), { type: 'text', value: label }];
+}
+
+function enhanceCopyableProse(node: Element): void {
+  const authoredChildren = node.children;
+  node.properties.dataCopyableProse = '';
+  node.children = [
+    {
+      type: 'element',
+      tagName: 'div',
+      properties: { dataCopyableContent: '' },
+      children: authoredChildren,
+    },
+  ];
 }
 
 function enhanceResponse(node: Element, allocateId: (base: string) => string): void {
@@ -2550,6 +2592,8 @@ function allowedDirectiveChildren(
       return ['card'];
     case 'markdown-and-tab-directives':
       return ['tab'];
+    case 'markdown-and-term-directives':
+      return ['term'];
     case 'action-directives':
       return ['action'];
     case 'decision-option-directives':

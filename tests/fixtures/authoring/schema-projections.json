@@ -147,6 +147,7 @@
       { "$ref": "#/$defs/bucket" },
       { "$ref": "#/$defs/option" },
       { "$ref": "#/$defs/item" },
+      { "$ref": "#/$defs/copyable" },
       { "$ref": "#/$defs/glossary" },
       { "$ref": "#/$defs/term" },
       { "$ref": "#/$defs/disclosure" },
@@ -677,6 +678,16 @@
             },
             "required": ["id", "label", "note", "meta", "href"]
           }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "copyable": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "copyable" },
+          "form": { "type": "string", "enum": ["container"] },
+          "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
         },
         "required": ["name", "form", "attributes"]
       },
@@ -1432,6 +1443,7 @@
           { "$ref": "#/$defs/bucket" },
           { "$ref": "#/$defs/option" },
           { "$ref": "#/$defs/item" },
+          { "$ref": "#/$defs/copyable" },
           { "$ref": "#/$defs/glossary" },
           { "$ref": "#/$defs/term" },
           { "$ref": "#/$defs/disclosure" },
@@ -1962,6 +1974,16 @@
             },
             "required": ["id", "label", "note", "meta", "href"]
           }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "copyable": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "copyable" },
+          "form": { "type": "string", "enum": ["container"] },
+          "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
         },
         "required": ["name", "form", "attributes"]
       },

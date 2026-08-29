@@ -200,6 +200,10 @@ demonstrate the package-owned interaction and data primitives.
 The visualization catalog includes a 15-node grouped subsystem flow and an ordered compile-request sequence;
 both use the same bounded `diagram`/`group`/`node`/`edge` directives and compile offline.
 
+Use `:::copyable` for prose that a reader should paste into a message or handoff. Paragraphs, emphasis,
+links, proportional typography, and wrapping remain ordinary Markdown; the localized Copy control writes
+only visible rendered text rather than Markdown or HTML.
+
 Authors may replace heading-only structure with top-level `section` directives. Each section owns a
 visible H2 and a stable anchor, plus closed reading/standard/wide tracks, start/center alignment, and
 plain/soft/accent/contrast tones. `reveal="true"` opts one section into a bounded one-time normal-motion
