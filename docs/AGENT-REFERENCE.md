@@ -193,6 +193,44 @@ For a repeat review, run `agentic-report build ./my-page --review review.json --
 The sidecar is confined to the source root and read before publication. Invalid input preserves existing
 output. Exact state resumes; stale bindings remain prior evidence until the reviewer resolves the new revision.
 
+## Collect a structured reader response
+
+Response Workspace is separate from Review Workspace: it collects typed question values rather than block
+discussion threads. Declare one response form with stable direct questions and kind-specific leaves:
+
+```md
+:::::response{title="Review triage" id="triage"}
+::::question{id="scope" kind="bucket" title="What should happen?" prompt="Assign every item."}
+::bucket{id="do" label="Do now"}
+::bucket{id="later" label="Later"}
+::bucket{id="skip" label="Do not do"}
+::item{id="login" label="Fix login" note="Empty email returns 500." meta="Issue 142" href="https://example.com/issues/142" bucket="do" comment=true}
+::item{id="copy" label="Correct the export label" note="Cosmetic." meta="Issue 138" href="https://example.com/issues/138" comment=true}
+::::
+::::question{id="decision" kind="single" title="Release decision"}
+::option{id="go" label="Go"}
+::option{id="hold" label="Hold"}
+::::
+::::question{id="score" kind="number" title="Scores" min="1" max="5" step="1"}
+::item{id="confidence" label="Evidence confidence" note="Score the evidence quality." meta="Release evidence" href="https://example.com/evidence"}
+::::
+::::question{id="summary" kind="text" title="Decision summary"}
+::::
+:::::
+```
+
+The remaining kinds are `item-single` (one option per item), `item-multi` (several options per item),
+and `order` (all items in priority order). Bucket questions require two to five buckets. Choice questions
+require at least two options. `comment=true` adds an optional item comment; empty comments are omitted.
+
+The reader can complete every question with native fields and buttons. Bucket cards also support drag and
+drop, while the select remains the keyboard and fallback route. **Copy response** and **Download
+response.json** serialize the same deterministic version-1 JSON. Every question stores `id`, `kind`,
+`answered`, and a machine-readable value; comments are a separate sparse array. Import accepts only the
+same form revision and validates the complete file before replacing any current answer. State remains in the
+current tab without storage, network, an account, or form submission. Build the complete packaged
+[`response-workspace` example source](../examples/response-workspace/report.md) to inspect every answer kind.
+
 ## Minimal source
 
 ```text
@@ -548,8 +586,10 @@ package.
 | `filter`            | Labelled search input and polite live count; empty initially.                                                                                                                                                                                         | Typing filters case-insensitively. Only list items in a direct authored `ul`/`ol` are targets.                                                                             |
 | `toggle`            | ARIA switch; `default="off"` hides its panel.                                                                                                                                                                                                         | Click/tap or native `Enter`/`Space` toggles checked state and visibility.                                                                                                  |
 | `demo`              | Numeric output starts at `start="0"`.                                                                                                                                                                                                                 | Increment button adds `step="1"` by default; author code is never executed.                                                                                                |
+| `response`          | Native typed controls plus deterministic copy/file export and validated local import. Authored defaults remain explicitly unanswered until reader input.                                                                                              | Native fields cover all values; bucket select and order buttons provide complete keyboard routes, with bucket drag-and-drop as an additional pointer route.                |
 
-Each instance owns its state. Tabs, overlays, filters, switches, and demos do not change another instance.
+Each instance owns its state. Tabs, overlays, filters, switches, demos, and response forms do not change
+another instance.
 
 ### Page navigation and bounded motion
 

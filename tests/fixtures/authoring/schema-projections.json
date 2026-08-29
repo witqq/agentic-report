@@ -142,6 +142,11 @@
       { "$ref": "#/$defs/cards" },
       { "$ref": "#/$defs/card" },
       { "$ref": "#/$defs/steps" },
+      { "$ref": "#/$defs/response" },
+      { "$ref": "#/$defs/question" },
+      { "$ref": "#/$defs/bucket" },
+      { "$ref": "#/$defs/option" },
+      { "$ref": "#/$defs/item" },
       { "$ref": "#/$defs/glossary" },
       { "$ref": "#/$defs/term" },
       { "$ref": "#/$defs/disclosure" },
@@ -477,6 +482,200 @@
                 "description": "Visible title."
               }
             }
+          }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "response" },
+          "form": { "type": "string", "enum": ["container"] },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "title": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+                "description": "Visible title."
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+                "description": "Stable response form identity."
+              }
+            },
+            "required": ["title", "id"]
+          }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "question": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "question" },
+          "form": { "type": "string", "enum": ["container"] },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+                "description": "Stable question identity within the response form."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "bucket",
+                  "item-single",
+                  "item-multi",
+                  "single",
+                  "order",
+                  "number",
+                  "text"
+                ],
+                "description": "Structured answer kind."
+              },
+              "title": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+                "description": "Visible title."
+              },
+              "prompt": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
+                "description": "Optional reader instruction."
+              },
+              "min": {
+                "type": "number",
+                "minimum": -999999999,
+                "maximum": 999999999,
+                "multipleOf": 0.0001,
+                "description": "Required minimum for number questions."
+              },
+              "max": {
+                "type": "number",
+                "minimum": -999999999,
+                "maximum": 999999999,
+                "multipleOf": 0.0001,
+                "description": "Required maximum for number questions."
+              },
+              "step": {
+                "type": "number",
+                "minimum": -999999999,
+                "maximum": 999999999,
+                "multipleOf": 0.0001,
+                "description": "Optional positive increment for number questions."
+              }
+            },
+            "required": ["id", "kind", "title"]
+          }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "bucket": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "bucket" },
+          "form": { "type": "string", "enum": ["leaf"] },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+                "description": "Stable bucket identity within the question."
+              },
+              "label": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+                "description": "Visible bucket label."
+              }
+            },
+            "required": ["id", "label"]
+          }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "option": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "option" },
+          "form": { "type": "string", "enum": ["leaf"] },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+                "description": "Stable option identity within the question."
+              },
+              "label": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+                "description": "Visible option label."
+              }
+            },
+            "required": ["id", "label"]
+          }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "item": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "item" },
+          "form": { "type": "string", "enum": ["leaf"] },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+                "description": "Stable item identity within the question."
+              },
+              "label": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
+                "description": "Visible item title."
+              },
+              "note": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,998}\\S))\\s*$",
+                "description": "Required explanatory line."
+              },
+              "meta": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
+                "description": "Required metadata line."
+              },
+              "href": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
+                "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected."
+              },
+              "bucket": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+                "description": "Optional authored initial bucket."
+              },
+              "comment": {
+                "type": "boolean",
+                "description": "Enables one optional comment for this item.",
+                "default": false
+              }
+            },
+            "required": ["id", "label", "note", "meta", "href"]
           }
         },
         "required": ["name", "form", "attributes"]
@@ -1228,6 +1427,11 @@
           { "$ref": "#/$defs/cards" },
           { "$ref": "#/$defs/card" },
           { "$ref": "#/$defs/steps" },
+          { "$ref": "#/$defs/response" },
+          { "$ref": "#/$defs/question" },
+          { "$ref": "#/$defs/bucket" },
+          { "$ref": "#/$defs/option" },
+          { "$ref": "#/$defs/item" },
           { "$ref": "#/$defs/glossary" },
           { "$ref": "#/$defs/term" },
           { "$ref": "#/$defs/disclosure" },
@@ -1563,6 +1767,200 @@
                 "description": "Visible title."
               }
             }
+          }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "response" },
+          "form": { "type": "string", "enum": ["container"] },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "title": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+                "description": "Visible title."
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+                "description": "Stable response form identity."
+              }
+            },
+            "required": ["title", "id"]
+          }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "question": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "question" },
+          "form": { "type": "string", "enum": ["container"] },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+                "description": "Stable question identity within the response form."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "bucket",
+                  "item-single",
+                  "item-multi",
+                  "single",
+                  "order",
+                  "number",
+                  "text"
+                ],
+                "description": "Structured answer kind."
+              },
+              "title": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+                "description": "Visible title."
+              },
+              "prompt": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
+                "description": "Optional reader instruction."
+              },
+              "min": {
+                "type": "number",
+                "minimum": -999999999,
+                "maximum": 999999999,
+                "multipleOf": 0.0001,
+                "description": "Required minimum for number questions."
+              },
+              "max": {
+                "type": "number",
+                "minimum": -999999999,
+                "maximum": 999999999,
+                "multipleOf": 0.0001,
+                "description": "Required maximum for number questions."
+              },
+              "step": {
+                "type": "number",
+                "minimum": -999999999,
+                "maximum": 999999999,
+                "multipleOf": 0.0001,
+                "description": "Optional positive increment for number questions."
+              }
+            },
+            "required": ["id", "kind", "title"]
+          }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "bucket": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "bucket" },
+          "form": { "type": "string", "enum": ["leaf"] },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+                "description": "Stable bucket identity within the question."
+              },
+              "label": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+                "description": "Visible bucket label."
+              }
+            },
+            "required": ["id", "label"]
+          }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "option": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "option" },
+          "form": { "type": "string", "enum": ["leaf"] },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+                "description": "Stable option identity within the question."
+              },
+              "label": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+                "description": "Visible option label."
+              }
+            },
+            "required": ["id", "label"]
+          }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "item": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "item" },
+          "form": { "type": "string", "enum": ["leaf"] },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+                "description": "Stable item identity within the question."
+              },
+              "label": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
+                "description": "Visible item title."
+              },
+              "note": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,998}\\S))\\s*$",
+                "description": "Required explanatory line."
+              },
+              "meta": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
+                "description": "Required metadata line."
+              },
+              "href": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
+                "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected."
+              },
+              "bucket": {
+                "type": "string",
+                "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+                "description": "Optional authored initial bucket."
+              },
+              "comment": {
+                "type": "boolean",
+                "description": "Enables one optional comment for this item.",
+                "default": false
+              }
+            },
+            "required": ["id", "label", "note", "meta", "href"]
           }
         },
         "required": ["name", "form", "attributes"]

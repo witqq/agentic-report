@@ -39,6 +39,11 @@ describe('authoring registry', () => {
       'cards',
       'card',
       'steps',
+      'response',
+      'question',
+      'bucket',
+      'option',
+      'item',
       'glossary',
       'term',
       'disclosure',
@@ -124,6 +129,7 @@ describe('authoring registry', () => {
         'package-owned-popover',
         'package-owned-filter',
         'package-owned-toggle',
+        'package-owned-response',
       ]).toContain(directive.behavior.runtime);
       expect(directive.security).toMatchObject({ authorCode: false, rawHtml: false });
       expect(directive.sanitizer.className).toBe(`semantic-${directive.name}`);
@@ -263,6 +269,7 @@ describe('authoring registry', () => {
       'layout-mixed',
       'interactive-catalog',
       'review-workspace',
+      'response-workspace',
       'visualization-catalog',
       'incident-review',
       'vendor-decision',

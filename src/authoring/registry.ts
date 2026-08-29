@@ -141,7 +141,7 @@ export const DIAGRAM_CONTRACT = {
 export type DiagramTypeChoice = (typeof DIAGRAM_CONTRACT.types)[number];
 
 export const REVIEW_TARGET_OWNERSHIP_CONTRACT = {
-  parentOwnedDirectives: ['series'],
+  parentOwnedDirectives: ['series', 'question', 'bucket', 'option', 'item'],
 } as const;
 
 export type ConstraintDefinition =
@@ -255,6 +255,8 @@ export interface DirectiveDefinition {
     | 'node-and-edge-directives'
     | 'group-node-and-edge-directives'
     | 'event-directives'
+    | 'response-question-directives'
+    | 'response-field-directives'
     | 'label-or-generated-label'
     | 'none';
   readonly placement: {
@@ -274,7 +276,8 @@ export interface DirectiveDefinition {
       | 'package-owned-modal'
       | 'package-owned-popover'
       | 'package-owned-filter'
-      | 'package-owned-toggle';
+      | 'package-owned-toggle'
+      | 'package-owned-response';
   };
   readonly sanitizer: {
     readonly tagName: 'a' | 'article' | 'aside' | 'div' | 'section' | 'span';
@@ -548,6 +551,7 @@ export const authoringRegistry = {
       handoffs: ['semantic-document'],
     },
     ...semanticContainers(),
+    ...responseDirectives(),
     ...interactiveDirectives(),
     ...visualizationDirectives(),
     {
@@ -797,6 +801,15 @@ export const authoringRegistry = {
       classes: ['work-report'],
     },
     {
+      id: 'response-workspace',
+      path: 'response-workspace',
+      entry: 'report.md',
+      title: 'Structured reader response workspace',
+      description:
+        'Offline response form covering bucket, per-item choices, ordering, scoring, text, comments, import, and deterministic export.',
+      classes: ['work-report', 'structured-response-handoff'],
+    },
+    {
       id: 'visualization-catalog',
       path: 'visualization-catalog',
       entry: 'report.md',
@@ -968,6 +981,117 @@ function sourceLinkDirective(): DirectiveDefinition {
     },
     security: { authorCode: false, rawHtml: false, localResourceOnly: false },
     handoffs: ['semantic-document'],
+  };
+}
+
+function responseDirectives(): readonly DirectiveDefinition[] {
+  const responseAttributes = [
+    requiredTitleAttribute(),
+    identityAttribute('id', 'Stable response form identity.'),
+  ] as const;
+  const questionAttributes = [
+    identityAttribute('id', 'Stable question identity within the response form.'),
+    requiredEnumAttribute('kind', 'Structured answer kind.', [
+      'bucket',
+      'item-single',
+      'item-multi',
+      'single',
+      'order',
+      'number',
+      'text',
+    ]),
+    requiredTitleAttribute(),
+    responseTextAttribute('prompt', 'Optional reader instruction.', false, 500),
+    responseNumberAttribute('min', 'Required minimum for number questions.'),
+    responseNumberAttribute('max', 'Required maximum for number questions.'),
+    responseNumberAttribute('step', 'Optional positive increment for number questions.'),
+  ] as const;
+  const bucketAttributes = [
+    identityAttribute('id', 'Stable bucket identity within the question.'),
+    responseTextAttribute('label', 'Visible bucket label.', true, 200),
+  ] as const;
+  const optionAttributes = [
+    identityAttribute('id', 'Stable option identity within the question.'),
+    responseTextAttribute('label', 'Visible option label.', true, 200),
+  ] as const;
+  const itemAttributes = [
+    identityAttribute('id', 'Stable item identity within the question.'),
+    responseTextAttribute('label', 'Visible item title.', true, 500),
+    responseTextAttribute('note', 'Required explanatory line.', true, 1_000),
+    responseTextAttribute('meta', 'Required metadata line.', true, 500),
+    linkAttribute(),
+    optionalIdentityAttribute('bucket', 'Optional authored initial bucket.'),
+    booleanAttribute('comment', 'Enables one optional comment for this item.', false),
+  ] as const;
+  return [
+    {
+      name: 'response',
+      description: 'Local structured reader-response workspace with deterministic export.',
+      forms: ['container'],
+      attributes: responseAttributes,
+      children: 'response-question-directives',
+      placement: {},
+      behavior: {
+        renderer: 'semantic-container',
+        resource: 'none',
+        runtime: 'package-owned-response',
+      },
+      sanitizer: {
+        tagName: 'section',
+        className: 'semantic-response',
+        properties: [
+          'dataSemantic',
+          ...responseAttributes.map((attribute) => attribute.renderProperty),
+        ],
+      },
+      security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+      handoffs: ['semantic-document', 'reader-runtime'],
+    },
+    {
+      name: 'question',
+      description: 'One typed question inside a response workspace.',
+      forms: ['container'],
+      attributes: questionAttributes,
+      children: 'response-field-directives',
+      placement: { requiredParent: 'response' },
+      behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+      sanitizer: {
+        tagName: 'section',
+        className: 'semantic-question',
+        properties: [
+          'dataSemantic',
+          ...questionAttributes.map((attribute) => attribute.renderProperty),
+        ],
+      },
+      security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+      handoffs: ['semantic-document', 'reader-runtime'],
+    },
+    responseLeaf('bucket', 'One named assignment bucket.', bucketAttributes),
+    responseLeaf('option', 'One selectable answer option.', optionAttributes),
+    responseLeaf('item', 'One readable response item.', itemAttributes),
+  ];
+}
+
+function responseLeaf(
+  name: 'bucket' | 'option' | 'item',
+  description: string,
+  attributes: readonly DirectiveAttributeDefinition[],
+): DirectiveDefinition {
+  return {
+    name,
+    description,
+    forms: ['leaf'],
+    attributes,
+    children: 'none',
+    placement: { requiredParent: 'question' },
+    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+    sanitizer: {
+      tagName: 'span',
+      className: `semantic-${name}`,
+      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
+    },
+    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+    handoffs: ['semantic-document', 'reader-runtime'],
   };
 }
 
@@ -1234,7 +1358,7 @@ function keyAttribute(description: string): DirectiveAttributeDefinition {
 }
 
 function identityAttribute(
-  name: 'key' | 'id' | 'group' | 'from' | 'to',
+  name: 'key' | 'id' | 'group' | 'from' | 'to' | 'bucket',
   description: string,
 ): DirectiveAttributeDefinition {
   return {
@@ -1248,7 +1372,7 @@ function identityAttribute(
 }
 
 function optionalIdentityAttribute(
-  name: 'id' | 'group',
+  name: 'id' | 'group' | 'bucket',
   description: string,
 ): DirectiveAttributeDefinition {
   return { ...identityAttribute(name, description), required: false };
@@ -1319,6 +1443,26 @@ function numberAttribute(name: 'value', description: string): DirectiveAttribute
   };
 }
 
+function responseNumberAttribute(
+  name: 'min' | 'max' | 'step',
+  description: string,
+): DirectiveAttributeDefinition {
+  return {
+    name,
+    description,
+    required: false,
+    constraint: {
+      kind: 'number',
+      minimum: -999_999_999,
+      maximum: 999_999_999,
+      multipleOf: 0.0001,
+      lexicalPattern: '^-?(?:0|[1-9]\\d{0,8})(?:\\.\\d{1,4})?$',
+    },
+    renderProperty: attributeRenderProperty(name),
+    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
+  };
+}
+
 function textAttribute(
   name: string,
   description: string,
@@ -1331,6 +1475,22 @@ function textAttribute(
     required,
     ...(defaultValue === undefined ? {} : { default: defaultValue }),
     constraint: { kind: 'string', normalization: 'trim', minLength: 1, maxLength: 160 },
+    renderProperty: attributeRenderProperty(name),
+    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
+  };
+}
+
+function responseTextAttribute(
+  name: string,
+  description: string,
+  required: boolean,
+  maxLength: number,
+): DirectiveAttributeDefinition {
+  return {
+    name,
+    description,
+    required,
+    constraint: { kind: 'string', normalization: 'trim', minLength: 1, maxLength },
     renderProperty: attributeRenderProperty(name),
     invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
   };
@@ -1356,6 +1516,21 @@ function enumAttribute(
     default: defaultValue,
     constraint: { kind: 'enum', values },
     renderProperty: `data${name[0]?.toUpperCase() ?? ''}${name.slice(1)}`,
+    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
+  };
+}
+
+function requiredEnumAttribute(
+  name: string,
+  description: string,
+  values: readonly [string, ...string[]],
+): DirectiveAttributeDefinition {
+  return {
+    name,
+    description,
+    required: true,
+    constraint: { kind: 'enum', values },
+    renderProperty: attributeRenderProperty(name),
     invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
   };
 }

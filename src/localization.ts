@@ -88,6 +88,24 @@ export interface PackageStrings {
   readonly importFailed: string;
   readonly multipleCurrentSegments: string;
   readonly unknownCurrentTarget: string;
+  readonly unanswered: string;
+  readonly copyResponse: string;
+  readonly downloadResponse: string;
+  readonly importResponse: string;
+  readonly responseCopied: string;
+  readonly responseCopyUnavailable: string;
+  readonly responseImportFailed: string;
+  readonly responseDifferentForm: string;
+  readonly responseUnsupported: string;
+  readonly responseFileTooLarge: (bytes: number) => string;
+  readonly responseInvalidValues: string;
+  readonly responseReady: string;
+  readonly unassigned: string;
+  readonly itemComment: string;
+  readonly openOriginal: string;
+  readonly moveUp: string;
+  readonly moveDown: string;
+  readonly assignTo: (label: string) => string;
 }
 
 const en: PackageStrings = {
@@ -181,6 +199,24 @@ const en: PackageStrings = {
   multipleCurrentSegments: 'Imported review contains more than one current segment for a thread.',
   unknownCurrentTarget:
     'Imported review contains a current target that is not part of this report revision.',
+  unanswered: 'Not answered',
+  copyResponse: 'Copy response',
+  downloadResponse: 'Download response.json',
+  importResponse: 'Import response',
+  responseCopied: 'Response copied',
+  responseCopyUnavailable: 'Clipboard unavailable; download the response file instead.',
+  responseImportFailed: 'Response import failed. Existing answers were preserved.',
+  responseDifferentForm: 'This response belongs to a different or outdated form.',
+  responseUnsupported: 'This response file uses an unsupported contract version.',
+  responseFileTooLarge: (bytes) => `Response files must be no larger than ${bytes} bytes.`,
+  responseInvalidValues: 'Correct invalid response values before exporting.',
+  responseReady: 'Response file imported.',
+  unassigned: 'Unassigned',
+  itemComment: 'Comment',
+  openOriginal: 'Open original',
+  moveUp: 'Move up',
+  moveDown: 'Move down',
+  assignTo: (label) => `Assign to ${label}`,
 };
 
 const ru: PackageStrings = {
@@ -277,6 +313,24 @@ const ru: PackageStrings = {
     'Импортированное ревью содержит несколько текущих сегментов одного обсуждения.',
   unknownCurrentTarget:
     'Импортированное ревью содержит текущую цель, которой нет в этой редакции отчёта.',
+  unanswered: 'Нет ответа',
+  copyResponse: 'Копировать ответ',
+  downloadResponse: 'Скачать response.json',
+  importResponse: 'Импортировать ответ',
+  responseCopied: 'Ответ скопирован',
+  responseCopyUnavailable: 'Буфер недоступен; скачайте файл ответа.',
+  responseImportFailed: 'Не удалось импортировать ответ. Введённые ответы сохранены.',
+  responseDifferentForm: 'Ответ относится к другой или устаревшей форме.',
+  responseUnsupported: 'Версия файла ответа не поддерживается.',
+  responseFileTooLarge: (bytes) => `Размер файла ответа не должен превышать ${bytes} байт.`,
+  responseInvalidValues: 'Исправьте недопустимые значения ответа перед экспортом.',
+  responseReady: 'Файл ответа импортирован.',
+  unassigned: 'Не распределено',
+  itemComment: 'Комментарий',
+  openOriginal: 'Открыть оригинал',
+  moveUp: 'Поднять',
+  moveDown: 'Опустить',
+  assignTo: (label) => `Переместить в «${label}»`,
 };
 
 export function resolvePackageLocale(language: string | undefined): PackageLocale {

@@ -1,0 +1,29 @@
+{
+  "contractVersion": 1,
+  "id": "response-workspace",
+  "summary": "Adds bounded local structured questions with deterministic clipboard and file handoff.",
+  "trustBoundary": {
+    "authorCode": "forbidden",
+    "callbacks": "forbidden",
+    "eval": "forbidden",
+    "dynamicImports": "forbidden",
+    "networkAccess": "forbidden",
+    "confinement": "source-root",
+    "offline": "required",
+    "deterministicSerialization": "required",
+    "cspCompatible": "required",
+    "packageOwnedRuntime": "required"
+  },
+  "evidence": {
+    "sourceGrammar": "The typed registry exposes response, question, bucket, option, and item directives with stable identifiers, bounded attributes, closed question kinds, kind-specific child validation, and source-mapped diagnostics.",
+    "executionCapabilities": "The package runtime builds native controls from one inert validated manifest, keeps explicit answered state in the current DOM, supports bucket drag and select fallback plus order buttons, and exports only the closed response artifact.",
+    "confinement": "Authored response data is part of the already confined Markdown graph; import reads only a user-selected bounded local JSON File and never resolves or reads an authored filesystem path.",
+    "offlineBehavior": "Compilation, file URL interaction, import, clipboard export, and Blob download use local source bytes and package code only; no listener, request, account, form submission, or remote resource is introduced.",
+    "deterministicSerialization": "The compiler hashes a canonical form projection, exported answers follow authored question and item order, sparse comments are sorted by stable identity, human text is NFC-normalized, and clocks and random identifiers are absent.",
+    "cspAndRuntime": "The manifest is escaped inert template text and the package controller uses createElement, textContent, value, File text parsing, Clipboard, and a revoked Blob object URL without innerHTML, eval, storage, network, or another CSP source.",
+    "accessibility": "Questions use fieldset and legend, choices use native radio and checkbox controls, numeric and text fields are labelled, bucket assignment has a native select keyboard path, ordering has explicit move buttons, and status is announced through a live output.",
+    "byteAndPerformanceBudgets": "Forms, questions, items, options, comments, text, and import bytes are bounded; one delegated listener set is installed per form and no scroll-time or per-frame work is added. Existing package and inline byte checks remain authoritative.",
+    "packageDependenciesAndLicenses": "No dependency or license is added. The implementation composes the existing typed registry, unified/HAST compiler, browser DOM APIs, localization catalog, package runtime, and MIT-licensed project code.",
+    "compatibility": "The grammar is additive within source contract version 1, existing static decision/checklist and Review Workspace behavior remain separate, old documents render unchanged, and both normal output formats retain the same file URL runtime contract."
+  }
+}

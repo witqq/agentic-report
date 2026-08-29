@@ -24,6 +24,7 @@ describe('release readiness', () => {
       'docs/product/code-glossary-extension.json',
       'docs/product/diagram-extension.json',
       'docs/product/review-workspace-extension.json',
+      'docs/product/response-workspace-extension.json',
       'docs/product/source-link-extension.json',
     ]) {
       const proposal = JSON.parse(await readFile(path.resolve(file), 'utf8')) as unknown;
@@ -149,7 +150,7 @@ describe('release readiness', () => {
         readonly entry: string;
       }[];
     };
-    expect(manifest.examples).toHaveLength(16);
+    expect(manifest.examples).toHaveLength(17);
     for (const example of manifest.examples) {
       const source = await readFile(path.resolve('examples', example.path, example.entry), 'utf8');
       expect(fictionalMarkerIssue(source), example.id).toBeUndefined();

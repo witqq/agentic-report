@@ -27,6 +27,9 @@ Create a local declarative source, verify it, and hand the user a finished inter
   templates, plugins, or remote source fetching.
 - Treat missing content facts as unresolved inputs; do not invent operational evidence, identities, or
   metrics.
+- Use Response Workspace when the human must return structured triage, choices, ordering, scores, text, or
+  item comments. Keep it separate from Review Workspace discussion threads, and tell the user to copy or
+  download `response.json` after completing the local page.
 - Do not deploy, publish, use credentials, or mutate unrelated files. This skill authorizes only local
   installation, source authoring, validation, inspection, build, and artifact review.
 

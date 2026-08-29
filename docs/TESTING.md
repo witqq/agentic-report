@@ -36,6 +36,8 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   closed en/ru reader-locale resolution, unsupported/`und` English fallback, Russian count forms,
   localized review binding/target fallbacks, and explicit-locale visualization number formatting,
   deterministic review-target manifests and local-input revisions, strict canonical review JSON,
+  strict response form/artifact parsing, kind-specific answer domains, untouched/default distinction,
+  canonical response JSON and foreign/stale/prototype-like rejection,
   exact/changed/missing/ambiguous entry/partial binding, confined review paths, and sanitized review transport,
   exact serialized inline-size accounting, canonical and hard-link source/output collision protection,
   injected partial-write/rename preservation and retry for both output formats, same-process name/content
@@ -72,7 +74,15 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   enter/exit, desktop/mobile dialog semantics, equal-text target isolation, ordered user/agent messages,
   message editing, resolved/reopened state, version-1 rejection without state loss, canonical download,
   exact import and stale prior-thread classification, and produces the required visually inspected state
-  captures. A local SVG must complete with non-zero intrinsic width in
+  captures. Dedicated Response Workspace coverage builds both formats for desktop/mobile, completes all
+  seven answer kinds, uses bucket select/drag and explicit ordering controls, preserves original-link state,
+  asserts every exported answer shape, compares clipboard/file bytes, forces clipboard failure, rejects
+  oversized, unsupported, malformed, and foreign form revisions without state loss, replaces a selected
+  global choice with a valid unanswered import, proves whole-artifact restoration by byte equality, isolates
+  two forms that reuse radio and bucket item IDs, rejects cross-owner drag while preserving same-owner drag,
+  blocks out-of-range/step-mismatched numeric export and import until correction, accepts phase-sensitive
+  large four-decimal values through export/import, proves reload returns to the untouched memory-only state,
+  checks containment, and captures inspected dense form states. A local SVG must complete with non-zero intrinsic width in
   both embedded and rewritten hashed forms. The current suite does not cover browser behavior for downloadable assets or local fonts,
   axe/screen-reader evidence or difficult-content reflow beyond the authored fixtures.
 - `pack:check` builds an npm tarball, checks its exact release allowlist, metadata, license, types, exports,

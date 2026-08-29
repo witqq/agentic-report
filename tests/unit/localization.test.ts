@@ -45,5 +45,17 @@ describe('package reader localization', () => {
     ]);
     expect(ru.reviewTargetFallback('markdown:thematic-break')).toBe('Разделитель');
     expect(ru.reviewTargetFallback('directive:future')).toBe('Блок отчёта');
+    expect(ru.copyResponse).toBe('Копировать ответ');
+    expect(ru.assignTo('Позже')).toBe('Переместить в «Позже»');
+    expect(packageStrings('und').responseCopyUnavailable).toContain('download');
+    expect(packageStrings('en').responseFileTooLarge(2_000_000)).toBe(
+      'Response files must be no larger than 2000000 bytes.',
+    );
+    expect(ru.responseFileTooLarge(2_000_000)).toBe(
+      'Размер файла ответа не должен превышать 2000000 байт.',
+    );
+    expect(ru.responseFileTooLarge(2_000_000)).not.toContain('ревью');
+    expect(packageStrings('en').responseInvalidValues).toContain('invalid response values');
+    expect(ru.responseInvalidValues).toContain('значения ответа');
   });
 });

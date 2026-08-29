@@ -39,6 +39,18 @@
       "kind": "copy"
     },
     {
+      "id": "example-response-workspace",
+      "href": "examples/response-workspace/index.html",
+      "source": "../examples/response-workspace",
+      "kind": "page"
+    },
+    {
+      "id": "source-response-workspace",
+      "href": "examples/response-workspace/report.md",
+      "source": "../examples/response-workspace/report.md",
+      "kind": "copy"
+    },
+    {
       "id": "example-vendor",
       "href": "examples/vendor-decision/index.html",
       "source": "../examples/vendor-decision",

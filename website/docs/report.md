@@ -98,6 +98,12 @@ Use `build --review review.json` for a follow-up artifact. Exact state resumes; 
 prior exact/changed/missing/ambiguous evidence. Continuing a changed fragment appends a current revision
 segment to the same exported thread, retaining every prior user/agent message and resolution state.
 
+When the reader must return typed values instead of discussion, use Response Workspace. It supports bucket
+triage, per-item and global choices, priority ordering, bounded scores, free text, and sparse item comments.
+The page keeps state only in the current tab and exports the same deterministic response through clipboard
+and file download. [Open the complete live example](../examples/response-workspace/index.html) or inspect
+its [declarative source](../examples/response-workspace/report.md).
+
 ::::
 
 ::::section{title="Output and operation" id="output" nav="Output" width="standard" align="start" tone="soft" reveal="true"}

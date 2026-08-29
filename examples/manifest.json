@@ -213,6 +213,20 @@
       ]
     },
     {
+      "id": "response-workspace",
+      "path": "response-workspace",
+      "entry": "report.md",
+      "title": "Structured reader response workspace",
+      "description": "Offline response form covering bucket, per-item choices, ordering, scoring, text, comments, import, and deterministic export.",
+      "classes": ["work-report", "structured-response-handoff"],
+      "files": [
+        {
+          "path": "report.md",
+          "sha256": "de2da960af080e5ac180277c7aa2810652fab9eff5fc05960d97f4ca7f9057c9"
+        }
+      ]
+    },
+    {
       "id": "visualization-catalog",
       "path": "visualization-catalog",
       "entry": "report.md",

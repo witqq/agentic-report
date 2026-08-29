@@ -59,6 +59,10 @@ Markdown + metadata + local assets + partials + semantic directives
   local-input revision, and exact/changed/missing/ambiguous binding. Target provenance is captured while AST
   offsets and the partial source map are available; it is never reconstructed from final HTML or matched by
   proximity.
+- `src/response/contract.ts` owns the independent version-1 response manifest and answer artifact. It
+  validates exact bounded records and kind-specific values, distinguishes untouched questions from authored
+  defaults, normalizes human text, compares the compiler-created form revision, and serializes canonical
+  newline-terminated JSON. It has no DOM, filesystem, review-thread, or transport dependency.
 - `src/render/directives.ts` maps the documented, allowlisted directive vocabulary to semantic HAST.
   Unknown directives, invalid attributes/nesting, unresolved glossary references, duplicate definitions,
   and unmarked occurrences of registered glossary terms fail with authored-range diagnostics. Compile-time
@@ -87,6 +91,12 @@ Markdown + metadata + local assets + partials + semantic directives
   ordered user/agent messages and segment-local resolution, validates exact-revision imports, and exports
   canonical JSON through a revoked local object URL. It never evaluates or injects messages as HTML, writes storage, starts a service, or performs a
   network request.
+- `src/browser/response-workspace.ts` reads each inert response manifest and creates native question controls.
+  It owns current-tab answer state, select-based bucket assignment plus drag-and-drop, explicit order moves,
+  sparse item comments, clipboard and Blob-file export, and validate-before-swap file import. It uses DOM
+  text/value APIs only and never writes storage, submits a form, starts a service, or performs a request.
+  Drag identity is a controller-local DOM reference accepted only by its owning bucket question; native and
+  artifact validation apply the authored number range and step before either export path.
 - `src/core/prepare-report.ts` owns the shared side-effect-free preparation used by building, validation,
   and inspection: source/render work, registry-owned output selection, package browser assets, size
   accounting, content hashing, observed source features, and prepared directory resources. Package browser
@@ -132,6 +142,13 @@ changed. Only when the original origin is absent may a unique matching fingerpri
 resolve the thread segment. A unique cross-file fingerprint is treated as a move only after the previous source
 file disappears from the current target graph. This prevents equal text elsewhere from impersonating edited
 content. Changed, missing, and ambiguous targets remain explicit and never trigger source mutation.
+
+Response Workspace is deliberately a reader artifact contract rather than a CLI source-binding API. The
+compiler validates `response`/`question`/`bucket`/`option`/`item` records, hashes their canonical form
+projection, and embeds one inert manifest per form. The browser exports a closed artifact containing form
+identity/revision, one ordered typed answer per question, and only non-empty item comments. Defaults can be
+visible while `answered` remains false. Import validates the whole artifact, value domains and matching form
+revision before replacing any visible state. Clipboard and file downloads serialize the same bytes.
 
 Six package-owned starter trees are ordinary buildable examples carrying registry `starter` metadata:
 the default report tree (canonical ID `basic`, alias `report`), `research`, `architecture`, `tutorial`,

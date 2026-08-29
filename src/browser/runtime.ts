@@ -3,6 +3,7 @@ import './document.css';
 import { COPY_ICON_PATH } from '../iconography.js';
 import { packageStrings } from '../localization.js';
 import { PAGE_MOTION_POLICY } from '../page-motion.js';
+import { installResponseWorkspaces } from './response-workspace.js';
 import { installReviewWorkspace } from './review-workspace.js';
 
 const root = document.documentElement;
@@ -25,6 +26,7 @@ const pendingPopoverCloses = new Map<HTMLElement, number>();
 const navigationController = createNavigationController();
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const motionController = createMotionController(reducedMotion);
+installResponseWorkspaces();
 installReviewWorkspace();
 
 reducedMotion.addEventListener('change', () => motionController.sync());

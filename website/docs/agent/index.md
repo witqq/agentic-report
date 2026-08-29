@@ -104,6 +104,11 @@ reader downloads `review.json`, map it back to the authored files with:
 npx --yes agentic-report review review.json ./my-page --json
 ```
 
+Use the separate `response`/`question` directives when the reader must return structured triage, choices,
+priority order, scores, text, or per-item comments. The generated page keeps answers in the current tab and
+offers both **Copy response** and **Download response.json**; a rejected import preserves existing answers.
+The installed example catalog includes the complete `response-workspace` source.
+
 Review version 2 stores ordered user/agent messages and resolved state in one local sidecar; it is not an
 account, signature, or hosted collaboration service. Decision/checklist directives remain document content.
 

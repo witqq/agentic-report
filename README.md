@@ -181,6 +181,13 @@ in the one exported sidecar instead of being copied onto a different source targ
 Desktop uses a non-modal rail; mobile uses a modal sheet. State leaves the page only through explicit local
 import/export—there is no account, backend, network sync, or authenticated signature.
 
+Response Workspace is the separate typed-answer layer for triage and decisions. Declarative questions cover
+bucket assignment, one or several choices per item, one global choice, priority order, bounded item scores,
+global text, and optional item comments. Native fields and buttons provide the complete keyboard path;
+bucket cards also support drag-and-drop. The reader copies or downloads the same deterministic
+`response.json`, and a foreign, stale, unsupported, or invalid import preserves current-tab answers. The
+complete source is [`examples/response-workspace/report.md`](examples/response-workspace/report.md).
+
 The package owns four responsive page layouts: `document`, `dashboard`, `landing`, and `mixed`. Authors
 select one as metadata and may choose the coordinated `studio`, `editorial`, or `signal` preset, an
 independent `system`, `light`, or `dark` color mode, and compact token overrides for `density`, `font`,

@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import type { Element, ElementContent, Root as HastRoot } from 'hast';
 import type { Code, Root as MdastRoot } from 'mdast';
 import { decodeString } from 'micromark-util-decode-string';
@@ -17,6 +19,17 @@ import type { SourceMapSegment } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
 import { packageStrings, type PackageStrings } from '../localization.js';
 import { MAX_REVIEW_RESPONSES } from '../review/contract.js';
+import {
+  RESPONSE_CONTRACT_VERSION,
+  MAX_RESPONSE_FORMS,
+  MAX_RESPONSE_ITEMS,
+  MAX_RESPONSE_OPTIONS,
+  MAX_RESPONSE_QUESTIONS,
+  parseResponseFormManifest,
+  type ResponseItemDefinition,
+  type ResponseQuestionDefinition,
+  type ResponseQuestionKind,
+} from '../response/contract.js';
 import { resolveSourceLocation } from '../source/source-map.js';
 import { decorativeIcon } from './icons.js';
 import { enhanceVisualization } from './visualizations.js';
@@ -282,8 +295,129 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
     validateVisualizationData(tree, attributesByNode, options);
     validateActionGroups(tree, options);
     validateTypedReviewComponents(tree, attributesByNode, options);
+    validateResponseForms(tree, attributesByNode, options);
     validateUnmarkedGlossaryTerms(tree, [...glossaryByKey.values()], options);
   };
+
+function validateResponseForms(
+  tree: MdastRoot,
+  attributesByNode: WeakMap<object, Readonly<Record<string, string | number | boolean>>>,
+  options: DirectivePluginOptions,
+): void {
+  const formIds = new Set<string>();
+  let formCount = 0;
+  visit(tree, (candidate) => {
+    if (!isDirectiveNode(candidate) || candidate.name !== 'response') return;
+    formCount += 1;
+    if (formCount > MAX_RESPONSE_FORMS)
+      fail(candidate, `A document supports at most ${MAX_RESPONSE_FORMS} response forms.`);
+    const form = attributes(candidate);
+    const formId = String(form.id);
+    if (formIds.has(formId)) fail(candidate, `Response id is duplicated: ${formId}.`);
+    formIds.add(formId);
+    const questions = directChildren(candidate, ['question']);
+    if (questions.length < 1 || questions.length > MAX_RESPONSE_QUESTIONS)
+      fail(candidate, `Response requires 1 to ${MAX_RESPONSE_QUESTIONS} questions.`);
+    const questionIds = new Set<string>();
+    let itemTotal = 0;
+    for (const question of questions) {
+      const values = attributes(question);
+      const id = String(values.id);
+      const kind = String(values.kind) as ResponseQuestionKind;
+      if (questionIds.has(id)) fail(question, `Question id is duplicated: ${id}.`);
+      questionIds.add(id);
+      const children = directChildren(question, ['bucket', 'option', 'item']);
+      const buckets = children.filter((child) => child.name === 'bucket');
+      const choices = children.filter((child) => child.name === 'option');
+      const items = children.filter((child) => child.name === 'item');
+      itemTotal += items.length;
+      uniqueChildIds(question, buckets, 'bucket');
+      uniqueChildIds(question, choices, 'option');
+      uniqueChildIds(question, items, 'item');
+      const itemKind = ['bucket', 'item-single', 'item-multi', 'order', 'number'].includes(kind);
+      if (itemKind !== items.length > 0)
+        fail(
+          question,
+          itemKind ? `${kind} requires response items.` : `${kind} does not accept items.`,
+        );
+      if (kind === 'bucket') {
+        if (buckets.length < 2 || buckets.length > 5)
+          fail(question, 'Bucket questions require 2 to 5 buckets.');
+        const bucketIds = new Set(buckets.map((child) => String(attributes(child).id)));
+        for (const item of items) {
+          const initial = attributes(item).bucket;
+          if (initial !== undefined && !bucketIds.has(String(initial)))
+            fail(item, `Response item references an unknown bucket: ${String(initial)}.`);
+        }
+      } else if (buckets.length > 0) fail(question, `${kind} does not accept bucket definitions.`);
+      if (['item-single', 'item-multi', 'single'].includes(kind)) {
+        if (choices.length < 2 || choices.length > MAX_RESPONSE_OPTIONS)
+          fail(question, `${kind} requires 2 to ${MAX_RESPONSE_OPTIONS} options.`);
+      } else if (choices.length > 0) fail(question, `${kind} does not accept option definitions.`);
+      if (kind === 'number') {
+        const minimum = values.min;
+        const maximum = values.max;
+        const step = values.step;
+        if (typeof minimum !== 'number' || typeof maximum !== 'number')
+          fail(question, 'Number questions require min and max.');
+        if (minimum > maximum) fail(question, 'Number question min must not exceed max.');
+        if (typeof step === 'number' && step <= 0)
+          fail(question, 'Number question step must be positive.');
+      } else if (
+        values.min !== undefined ||
+        values.max !== undefined ||
+        values.step !== undefined
+      ) {
+        fail(question, `Numeric bounds are supported only by number questions, not ${kind}.`);
+      }
+    }
+    if (itemTotal > MAX_RESPONSE_ITEMS)
+      fail(candidate, `Response supports at most ${MAX_RESPONSE_ITEMS} items in total.`);
+  });
+
+  function attributes(node: DirectiveNode): Readonly<Record<string, string | number | boolean>> {
+    const values = attributesByNode.get(node);
+    if (!values) throw new Error(`Missing validated response attributes for ${node.name}.`);
+    return values;
+  }
+  function directChildren(
+    parent: DirectiveNode,
+    allowed: readonly string[],
+  ): readonly DirectiveNode[] {
+    const children = parent.children ?? [];
+    const directives = children.filter(isDirectiveNode);
+    if (
+      directives.length !== children.length ||
+      directives.some((child) => !allowed.includes(child.name))
+    )
+      fail(
+        parent,
+        `${parent.name} accepts only ${allowed.join(', ')} directives as direct children.`,
+      );
+    return directives;
+  }
+  function uniqueChildIds(
+    parent: DirectiveNode,
+    children: readonly DirectiveNode[],
+    label: string,
+  ): void {
+    const ids = children.map((child) => String(attributes(child).id));
+    if (new Set(ids).size !== ids.length)
+      fail(parent, `${label} ids must be unique within the question.`);
+  }
+  function fail(node: DirectiveNode, message: string): never {
+    throw attachDirectiveSource(
+      directiveError(
+        node,
+        'INVALID_RESPONSE_DATA',
+        message,
+        'Correct the response/question child types, stable ids, defaults, or kind-specific domain.',
+      ),
+      node,
+      options,
+    );
+  }
+}
 
 function validateTypedReviewComponents(
   tree: MdastRoot,
@@ -1494,6 +1628,10 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
         enhanceCodeTerms(node, codeTermKeys.split(','), glossary, createGlossaryReference);
       }
       const semantic = stringProperty(node, 'dataSemantic');
+      if (semantic === 'response') {
+        enhanceResponse(node, allocateId);
+        return;
+      }
       if (semantic === 'section') {
         enhanceSection(node, allocateId);
         return;
@@ -1856,6 +1994,125 @@ function enhanceSourceLink(node: Element): void {
   node.properties.rel = ['noopener', 'noreferrer'];
   node.properties.dataSourceLink = '';
   node.children = [decorativeIcon('arrow-right'), { type: 'text', value: label }];
+}
+
+function enhanceResponse(node: Element, allocateId: (base: string) => string): void {
+  const id = stringProperty(node, 'dataId');
+  const title = stringProperty(node, 'dataDirectiveTitle');
+  if (!id || !title) throw new Error('Validated response is missing its id or title.');
+  const authoredChildren = node.children;
+  const questions = authoredChildren.filter(
+    (child): child is Element =>
+      child.type === 'element' && child.properties.dataSemantic === 'question',
+  );
+  const projection = {
+    contractVersion: RESPONSE_CONTRACT_VERSION,
+    id,
+    title,
+    questions: questions.map(responseQuestionDefinition),
+  };
+  const revision = `sha256:${createHash('sha256').update(JSON.stringify(projection)).digest('hex')}`;
+  const manifest = parseResponseFormManifest({ ...projection, revision });
+  const titleId = allocateId(`response-${id}-title`);
+  node.properties.id = allocateId(`response-${id}`);
+  node.properties.ariaLabelledBy = [titleId];
+  node.properties.dataResponseWorkspace = '';
+  node.properties.dataResponseId = id;
+  node.children = [
+    semanticTitle(title, titleId),
+    {
+      type: 'element',
+      tagName: 'div',
+      properties: { dataResponseSource: '', hidden: '' },
+      children: authoredChildren,
+    },
+    {
+      type: 'element',
+      tagName: 'div',
+      properties: { dataResponseManifest: '', hidden: '' },
+      children: [{ type: 'text', value: JSON.stringify(manifest) }],
+    },
+    {
+      type: 'element',
+      tagName: 'div',
+      properties: { dataResponseMount: '' },
+      children: [],
+    },
+  ];
+}
+
+function responseQuestionDefinition(node: Element): ResponseQuestionDefinition {
+  const id = stringProperty(node, 'dataId');
+  const kind = stringProperty(node, 'dataKind') as ResponseQuestionKind | undefined;
+  const title = stringProperty(node, 'dataDirectiveTitle');
+  if (!id || !kind || !title) throw new Error('Validated response question is incomplete.');
+  const prompt = stringProperty(node, 'dataPrompt');
+  const minimum = numericProperty(node, 'dataMin');
+  const maximum = numericProperty(node, 'dataMax');
+  const step = numericProperty(node, 'dataStep');
+  const buckets = responseDefinitions(node, 'bucket');
+  const options = responseDefinitions(node, 'option');
+  const items = node.children
+    .filter(
+      (child): child is Element =>
+        child.type === 'element' && child.properties.dataSemantic === 'item',
+    )
+    .map(responseItemDefinition);
+  return {
+    id,
+    kind,
+    title,
+    ...(prompt === undefined ? {} : { prompt }),
+    ...(minimum === undefined ? {} : { minimum }),
+    ...(maximum === undefined ? {} : { maximum }),
+    ...(step === undefined ? {} : { step }),
+    buckets,
+    options,
+    items,
+  };
+}
+
+function responseDefinitions(
+  node: Element,
+  kind: 'bucket' | 'option',
+): readonly { readonly id: string; readonly label: string }[] {
+  return node.children
+    .filter(
+      (child): child is Element =>
+        child.type === 'element' && child.properties.dataSemantic === kind,
+    )
+    .map((child) => {
+      const id = stringProperty(child, 'dataId');
+      const label = stringProperty(child, 'dataLabel');
+      if (!id || !label) throw new Error(`Validated response ${kind} is incomplete.`);
+      return { id, label };
+    });
+}
+
+function responseItemDefinition(node: Element): ResponseItemDefinition {
+  const id = stringProperty(node, 'dataId');
+  const label = stringProperty(node, 'dataLabel');
+  if (!id || !label) throw new Error('Validated response item is incomplete.');
+  const note = stringProperty(node, 'dataNote');
+  const meta = stringProperty(node, 'dataMeta');
+  const href = stringProperty(node, 'dataHref');
+  const bucket = stringProperty(node, 'dataBucket');
+  const comment = stringProperty(node, 'dataComment') === 'true';
+  if (!note || !meta || !href) throw new Error('Validated response item detail is incomplete.');
+  return {
+    id,
+    label,
+    note,
+    meta,
+    href,
+    ...(bucket === undefined ? {} : { bucket }),
+    comment,
+  };
+}
+
+function numericProperty(node: Element, name: string): number | undefined {
+  const value = stringProperty(node, name);
+  return value === undefined ? undefined : Number(value);
 }
 
 function hastText(node: Element): string {
@@ -2233,6 +2490,10 @@ function allowedDirectiveChildren(
       return ['group', 'node', 'edge'];
     case 'event-directives':
       return ['event'];
+    case 'response-question-directives':
+      return ['question'];
+    case 'response-field-directives':
+      return ['bucket', 'option', 'item'];
     case 'markdown':
     case 'label-or-generated-label':
     case 'none':

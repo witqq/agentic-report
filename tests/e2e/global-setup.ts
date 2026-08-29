@@ -94,6 +94,7 @@ export default async function globalSetup(): Promise<void> {
   const presetFixtures = ['studio', 'editorial', 'signal'] as const;
   const navigationSource = path.join(fixtureRoot, 'navigation-source');
   const reviewSource = path.join(fixtureRoot, 'review-source');
+  const responseIsolationSource = path.join(fixtureRoot, 'response-isolation-source');
   const glossaryCodeSource = path.join(fixtureRoot, 'glossary-code-source');
   const diagramTourSource = path.join(fixtureRoot, 'diagram-tour-source');
   const russianChromeSource = path.join(fixtureRoot, 'russian-chrome-source');
@@ -105,12 +106,41 @@ export default async function globalSetup(): Promise<void> {
     'layout-landing',
     'layout-mixed',
     'interactive-catalog',
+    'response-workspace',
     'visualization-catalog',
     'incident-review',
     'vendor-decision',
     'launch-readiness',
   ] as const;
   const starters = listExamples().filter((example) => example.starter !== undefined);
+  await mkdir(responseIsolationSource, { recursive: true });
+  await writeFile(
+    path.join(responseIsolationSource, 'report.md'),
+    [
+      '# Response isolation',
+      ...['first-form', 'second-form'].flatMap((formId) => [
+        `:::::response{title="${formId}" id="${formId}"}`,
+        '::::question{id="shared-global" kind="single" title="Shared global choice"}',
+        '::option{id="yes" label="Yes"}',
+        '::option{id="no" label="No"}',
+        '::::',
+        '::::question{id="shared-item" kind="item-single" title="Shared item choice"}',
+        '::option{id="yes" label="Yes"}',
+        '::option{id="no" label="No"}',
+        `::item{id="shared" label="Shared item" note="Isolation evidence for ${formId}." meta="${formId}" href="https://example.com/${formId}"}`,
+        '::::',
+        '::::question{id="shared-bucket" kind="bucket" title="Shared bucket assignment"}',
+        '::bucket{id="do" label="Do"}',
+        '::bucket{id="skip" label="Skip"}',
+        `::item{id="shared" label="Shared bucket item" note="Bucket isolation evidence for ${formId}." meta="${formId}" href="https://example.com/${formId}/bucket" bucket="do"}`,
+        '::::',
+        '::::question{id="large-score" kind="number" title="Large decimal score" min="0" max="999999999" step="0.0001"}',
+        `::item{id="shared" label="Shared numeric item" note="Decimal phase evidence for ${formId}." meta="${formId}" href="https://example.com/${formId}/number"}`,
+        '::::',
+        ':::::',
+      ]),
+    ].join('\n'),
+  );
   await mkdir(russianChromeSource, { recursive: true });
   await writeFile(
     path.join(russianChromeSource, 'report.md'),
@@ -418,6 +448,20 @@ export default async function globalSetup(): Promise<void> {
     buildReport({
       input: reviewSource,
       output: path.join(fixtureRoot, 'review-directory'),
+      format: 'directory',
+    }),
+    buildReport({
+      input: path.resolve('examples/response-workspace'),
+      output: path.join(fixtureRoot, 'response-workspace-directory'),
+      format: 'directory',
+    }),
+    buildReport({
+      input: responseIsolationSource,
+      output: path.join(fixtureRoot, 'response-isolation.html'),
+    }),
+    buildReport({
+      input: responseIsolationSource,
+      output: path.join(fixtureRoot, 'response-isolation-directory'),
       format: 'directory',
     }),
     buildReport({
