@@ -24,7 +24,7 @@ may own domain research and call the pinned agentic-report CLI as its final rend
 
 Requires Node.js 24.18.0 or newer. The first npx run requires npm registry access. Start with:
 
-    npx --yes agentic-report@0.4.4 init ./my-page --starter landing --json
-    npx --yes agentic-report@0.4.4 validate ./my-page --json
-    npx --yes agentic-report@0.4.4 inspect ./my-page --json
-    npx --yes agentic-report@0.4.4 build ./my-page --output ./my-page.html --json
+    npx --yes agentic-report@0.5.0 init ./my-page --starter landing --json
+    npx --yes agentic-report@0.5.0 validate ./my-page --json
+    npx --yes agentic-report@0.5.0 inspect ./my-page --json
+    npx --yes agentic-report@0.5.0 build ./my-page --output ./my-page.html --json
