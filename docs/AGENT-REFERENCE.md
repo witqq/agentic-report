@@ -562,6 +562,12 @@ omission derives a deterministic collision-free ID from the title. `nav` supplie
 heading-only sources use H2 primary links. H3 and component anchors remain owned targets without becoming
 primary links.
 
+Use top-level `::contents` to place the section map inside the article. It accepts no attributes, label, or
+children. The compiler fills it after final IDs are known: exact visible section headings become native
+links, while short `section.nav` labels remain exclusive to sidebar/mobile navigation. The in-flow map stays
+visible on narrow screens and renders zero or one item even when navigation chrome is absent. Do not write a
+parallel Markdown list or parse headings in browser code.
+
 `actions` accepts only direct labelled `::action[...]` children. Every action requires `href`; valid targets
 are same-page anchors, relative paths, HTTP(S), and `mailto:`. `javascript:`, `data:`, `file:`, absolute
 local paths, and protocol-relative URLs fail validation. `kind` is `primary`, `secondary`, or `quiet` and

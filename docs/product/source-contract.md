@@ -188,6 +188,8 @@ The directive vocabulary is:
 
 - `section`: top-level labelled page region with required `title`, optional stable `id` and short `nav`
   label, closed `width`, `align`, and `tone` choices, and optional boolean `reveal`;
+- `contents`: top-level leaf placement for a compiler-generated in-flow map of final primary sections; it
+  accepts no attributes, label or children;
 - `actions` and directly nested leaf `action`: responsive ordinary link group; every action requires a
   visible label and safe `href` and may select `primary`, `secondary`, or `quiet` emphasis;
 - `source-link`: inline source-location link with a short visible label and a bounded IPv4-loopback editor
@@ -266,6 +268,14 @@ short navigation text. Defaults are `width="standard"`, `align="start"`, `tone="
 `reveal="false"`; other values are `reading|wide`, `center`, `soft|accent|contrast`, and boolean
 `reveal="true"`. Documents without explicit sections use legacy H2 headings for primary navigation. H3
 and component anchors remain owned descendant targets but are not primary links.
+
+`::contents` is a top-level leaf directive. After final section IDs and appendix extraction, it renders a
+labelled native navigation landmark at the authored position. Explicit sections supply their exact visible
+H2 text and final section anchor; optional short `nav` text is not used. Without explicit sections, eligible
+legacy H2 headings supply exact text and IDs, while H3 and `data-navigation-exclude` package headings stay
+out. Zero and one-item maps remain visible in flow; sidebar and mobile-dialog chrome independently require
+at least two items. Multiple authored maps receive the same final inventory. The compiler performs no
+browser heading scan or runtime synchronization.
 
 An `actions` container accepts one or more direct `action` children and no prose. `href` accepts a
 same-page `#anchor`, a relative target, HTTP(S), or `mailto:`. Executable schemes such as `javascript:` and
@@ -397,6 +407,10 @@ focused targets clear the sticky topbar. During normal-motion smooth hash naviga
 current until the scroll settles. Native `scrollend` performs one terminal geometry update; browsers without
 it coalesce the scroll series into one terminal update. Reduced motion uses the same final ownership without
 smooth traversal.
+
+This shell navigation is separate from authored `::contents`. The in-flow landmark uses the same final
+primary inventory but exact visible headings, has no `aria-current` state or browser controller, remains in
+the article at narrow widths, and is present for zero or one item even when shell navigation is absent.
 
 On desktop, a persistent `Hide contents`/`Show contents` button collapses a non-modal navigation region,
 removes hidden links from focus, and releases the content column. This state lasts only for the current

@@ -19,7 +19,7 @@ import {
 } from '../review/contract.js';
 import { bindReviewArtifact, type ResolvedReviewArtifact } from '../review/binding.js';
 import { createReviewTargetManifest } from '../review/targets.js';
-import { extractNavigation, renderDocument } from '../render/document.js';
+import { renderDocument } from '../render/document.js';
 import {
   renderMarkdown,
   type MarkdownRenderResult,
@@ -150,7 +150,7 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
       scrollProgress: source.manifest.scrollProgress,
     },
     contentHtml: markdown.html,
-    navigation: extractNavigation(markdown.html),
+    navigation: markdown.navigation,
     contentSecurityPolicy: createContentSecurityPolicy(runtimePlacement, inlineRuntime),
     styles:
       format === 'single-file'

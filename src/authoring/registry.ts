@@ -282,7 +282,7 @@ export interface DirectiveDefinition {
       | 'package-owned-copy';
   };
   readonly sanitizer: {
-    readonly tagName: 'a' | 'article' | 'aside' | 'div' | 'section' | 'span';
+    readonly tagName: 'a' | 'article' | 'aside' | 'div' | 'nav' | 'section' | 'span';
     readonly className: string;
     readonly properties: readonly [string, ...string[]];
   };
@@ -514,6 +514,7 @@ export const authoringRegistry = {
   ],
   directives: [
     sectionDirective(),
+    contentsDirective(),
     actionsDirective(),
     actionDirective(),
     sourceLinkDirective(),
@@ -914,6 +915,26 @@ function sectionDirective(): DirectiveDefinition {
       tagName: 'section',
       className: 'semantic-section',
       properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
+    },
+    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+    handoffs: ['semantic-document'],
+  };
+}
+
+function contentsDirective(): DirectiveDefinition {
+  return {
+    name: 'contents',
+    description:
+      'Generated in-flow links to final primary sections using their exact visible headings.',
+    forms: ['leaf'],
+    attributes: [],
+    children: 'none',
+    placement: { topLevelOnly: true },
+    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+    sanitizer: {
+      tagName: 'nav',
+      className: 'semantic-contents',
+      properties: ['dataSemantic'],
     },
     security: { authorCode: false, rawHtml: false, localResourceOnly: false },
     handoffs: ['semantic-document'],

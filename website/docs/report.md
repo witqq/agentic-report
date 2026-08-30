@@ -14,6 +14,8 @@ scrollProgress: true
 interactive HTML page. The default is one self-contained file; directory output keeps the same behavior
 with content-addressed assets.
 
+::contents
+
 ::::section{title="Start here" id="start" nav="Start" width="standard" align="start" tone="soft" reveal="true"}
 
 Use Node.js 24.18.0 or newer. Start with the [agent quickstart](agent/index.html), retrieve the
@@ -114,6 +116,8 @@ copies only visible rendered text through the localized package control.
 - `single-file` is the default: one portable HTML file with embedded local resources and runtime.
 - `directory` writes `index.html` plus content-hashed resources for larger pages.
 - Both formats open through normal `file://` and preserve the same supported interactions.
+- Top-level `::contents` keeps an exact compiler-generated section map in the article and on narrow screens;
+  short `section.nav` labels remain exclusive to sidebar/mobile navigation.
 - `build --share` derives path-free non-link filename/line text from each validated source helper, falls back
   to `source:line` for unsafe terminals, omits workstation paths and authored directory/free-form labels, and
   reports the exact count without editing Markdown.

@@ -24,6 +24,7 @@ describe('release readiness', () => {
       'docs/product/code-glossary-extension.json',
       'docs/product/copyable-prose-extension.json',
       'docs/product/diagram-extension.json',
+      'docs/product/in-flow-contents-extension.json',
       'docs/product/review-workspace-extension.json',
       'docs/product/response-workspace-extension.json',
       'docs/product/share-safe-build-extension.json',

@@ -42,6 +42,9 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   alphabetic directives—including astral-letter and combining-mark word adjacency—retain source-mapped
   rejection,
   semantic copyable-prose ownership and nested behavior/code rejection,
+  generated in-flow contents in both formats with exact-heading/short-navigation divergence, final ID
+  collision handling, rename/reorder synchronization, repeated declarations, legacy/explicit H3 and
+  appendix exclusion, zero/one cardinality, and invalid form/attribute/label/placement diagnostics,
   share-safe source-link neutralization in both formats, compiler-derived filename/line precedence over
   arbitrary authored labels, total raw/nested-decoded unsafe-terminal fallback, exact transformed-node
   results, default-link compatibility, source-byte preservation, non-boolean ESM rejection and staged
@@ -61,7 +64,9 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   self-contained artifact; tests open it through `file://` and verify document navigation, code,
   responsive navigation, deterministic current-section ownership, sticky-topbar target clearance and
   settled normal/reduced hash ownership including the no-`scrollend` fallback, full bounded geometry and
-  hash ownership without `IntersectionObserver`, desktop collapse,
+  hash ownership without `IntersectionObserver`, generated in-flow contents using exact final headings and
+  final explicit targets in both formats, short-sidebar-label divergence, fragment navigation, and
+  narrow-screen visibility with the drawer closed, desktop collapse,
   native-dialog mobile
   focus containment/return, normal/reduced-motion progress and one-time reveal, themes, visible focus,
   locally scrolling wide tables, protected loopback source-location links that preserve the report page,

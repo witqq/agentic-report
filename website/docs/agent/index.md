@@ -19,6 +19,8 @@ The skill should choose this tool when visual structure, relationships, code exp
 evidence, or fragment-level review materially improve the handoff. It should keep a simple answer in chat,
 use a notebook for live computation, and use a bespoke application for persistent multi-user state.
 
+::contents
+
 ## Use it inside your own skill
 
 Domain-specific skills can keep their own research and decision process while delegating the finished page
@@ -96,6 +98,10 @@ npx --yes agentic-report validate ./my-page --json
 npx --yes agentic-report inspect ./my-page --json
 npx --yes agentic-report build ./my-page --output ./my-page.html --json
 ```
+
+Add top-level `::contents` when the handoff needs a route map inside the article. The compiler uses exact
+final section headings and anchors; do not duplicate them in an authored Markdown list. Optional short
+`section.nav` labels continue to serve sidebar/mobile navigation only.
 
 When the artifact leaves the source workstation, add `--share`. The compiler derives path-free non-link
 filename/line text from each validated source helper and uses `source:line` for unsafe terminals;

@@ -1078,6 +1078,38 @@ for (const fixture of [
   });
 }
 
+test('in-flow contents keeps exact section headings and remains visible with the mobile drawer closed', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const captureRoot = path.resolve('test-results/step-7-captures/in-flow-contents');
+  await rm(captureRoot, { recursive: true, force: true });
+  await mkdir(captureRoot, { recursive: true });
+  for (const artifact of navigationArtifacts) {
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await page.goto(artifact.url);
+    const inFlow = page.locator('[data-in-flow-contents]');
+    await expect(inFlow).toBeVisible();
+    await expect(inFlow.locator('a')).toHaveText([
+      'Alpha section',
+      'Beta section asks a deliberately long question about final target ownership',
+      'Gamma section',
+    ]);
+    await expect(inFlow.locator('a').nth(1)).toHaveAttribute('href', '#beta');
+    await expect(page.locator('[data-navigation] a')).toHaveText(['Alpha', 'Beta', 'Gamma']);
+    await inFlow.screenshot({ path: path.join(captureRoot, `${artifact.format}-desktop.png`) });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator('[data-nav-dialog]')).toBeHidden();
+    await expect(inFlow).toBeVisible();
+    await inFlow.screenshot({ path: path.join(captureRoot, `${artifact.format}-mobile.png`) });
+    await inFlow.locator('a[href="#beta"]').click();
+    await expect(page).toHaveURL(/#beta$/u);
+    await expect(page.locator('#beta-title')).toBeVisible();
+    await expect(inFlow).toBeVisible();
+  }
+});
+
 test('desktop navigation has one total current state and a non-modal session collapse in both formats', async ({
   page,
 }, testInfo) => {

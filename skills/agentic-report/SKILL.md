@@ -34,6 +34,9 @@ Create a local declarative source, verify it, and hand the user a finished inter
   frontmatter.
 - Use `copyable` for prose the reader should paste elsewhere; do not misrepresent ordinary language as a
   code fence merely to obtain a Copy button.
+- Use top-level `::contents` when the reader needs the complete section route inside the article or print/file
+  handoff. Do not author a parallel list: the compiler uses exact final section headings and targets while
+  keeping optional short `nav` labels in sidebar chrome.
 - When a finished artifact containing `source-link` will leave the source workstation, build it with
   `--share` and report the returned `neutralizedSourceLinks` count. Keep the default build when local editor
   links are part of the requested handoff; share output derives path-free filename/line labels from validated

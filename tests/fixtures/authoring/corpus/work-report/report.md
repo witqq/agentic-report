@@ -8,6 +8,8 @@ language: ru
 
 Corpus class: work-report
 
+::contents
+
 :::copyable
 Скопируйте этот обычный абзац в сообщение.
 :::

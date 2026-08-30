@@ -23,6 +23,8 @@ tutorials, dashboards, and landing pages that open directly from disk.
 ::action[Read the boundaries]{href="#boundaries" kind="quiet"}
 ::::
 
+::contents
+
 :::::section{title="Start with the work, not the framework" id="workflow" nav="Workflow" width="wide" align="start" tone="soft" reveal="true"}
 :::callout{kind="success" title="One portable result"}
 The default output is one self-contained HTML file with no server, remote runtime, or author JavaScript.

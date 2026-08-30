@@ -32,6 +32,7 @@ import {
 } from '../response/contract.js';
 import { resolveSourceLocation } from '../source/source-map.js';
 import { decorativeIcon } from './icons.js';
+import { resolveDocumentNavigation, type NavigationItem } from './navigation.js';
 import { enhanceVisualization } from './visualizations.js';
 
 interface SourcePosition {
@@ -70,6 +71,7 @@ interface DirectiveEnhancementOptions {
   readonly language?: string;
   readonly share?: boolean;
   readonly shareTransform?: { neutralizedSourceLinks: number };
+  readonly navigationTransform?: { items: NavigationItem[] };
 }
 
 const directiveByName: ReadonlyMap<string, DirectiveDefinition> = new Map(
@@ -195,6 +197,7 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
         requireNoPrototypeLikeAttributes(node, options.markdown);
         requireDirectiveForm(node, directive);
         requireDirectivePlacement(node, directive, parent);
+        requireDirectiveChildren(node, directive);
         const interpretation = interpretDirectiveAttributes(directive, node.attributes ?? {});
         if (!interpretation.ok) throw directiveAttributeError(node, interpretation);
         const values =
@@ -219,14 +222,6 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
             'INVALID_DIRECTIVE_PLACEMENT',
             'A glossary definition placed in the appendix must be a top-level directive.',
             'Move this appendix glossary outside lists, blockquotes, sections, and other directives.',
-          );
-        }
-        if (directive.name === 'source-link' && (node.children ?? []).length > 0) {
-          throw directiveError(
-            node,
-            'INVALID_DIRECTIVE_PLACEMENT',
-            'source-link accepts its visible label only through the label attribute.',
-            'Use :source-link{label="Short path:line" href="..."}.',
           );
         }
         attributesByNode.set(node, values);
@@ -1744,6 +1739,7 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
         enhanceSection(node, allocateId);
         return;
       }
+      if (semantic === 'contents') return;
       if (semantic === 'action') {
         enhanceAction(node);
         return;
@@ -1844,6 +1840,10 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
           ...appendixDefinitions,
         ],
       });
+    }
+    const navigation = resolveDocumentNavigation(tree, strings.contentSections);
+    if (options.navigationTransform !== undefined) {
+      options.navigationTransform.items = navigation;
     }
   };
 
@@ -2667,6 +2667,16 @@ function requireDirectivePlacement(
       `Move this ${directive.name} directive outside ${parentName} or use an allowed child.`,
     );
   }
+}
+
+function requireDirectiveChildren(node: DirectiveNode, directive: DirectiveDefinition): void {
+  if (directive.children !== 'none' || (node.children ?? []).length === 0) return;
+  throw directiveError(
+    node,
+    'INVALID_DIRECTIVE_PLACEMENT',
+    `${directive.name} accepts no label or child content.`,
+    `Remove the label or child content from this ${directive.name} directive.`,
+  );
 }
 
 function allowedDirectiveChildren(

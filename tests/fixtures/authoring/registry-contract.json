@@ -411,6 +411,22 @@
       "handoffs": ["semantic-document"]
     },
     {
+      "name": "contents",
+      "description": "Generated in-flow links to final primary sections using their exact visible headings.",
+      "forms": ["leaf"],
+      "attributes": [],
+      "children": "none",
+      "placement": { "topLevelOnly": true },
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "nav",
+        "className": "semantic-contents",
+        "properties": ["dataSemantic"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
       "name": "actions",
       "description": "Responsive group containing ordinary action links.",
       "forms": ["container"],

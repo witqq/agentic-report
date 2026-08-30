@@ -1060,6 +1060,67 @@ th {
   background: var(--color-surface);
 }
 
+.semantic-contents {
+  max-width: min(100%, var(--content-width));
+  margin: calc(1.75rem * var(--space-factor)) 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  padding: var(--space-card);
+  background: var(--color-surface-raised);
+}
+
+.semantic-contents-title {
+  margin: 0 0 calc(0.8rem * var(--space-factor));
+  color: var(--color-text-muted);
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  font-weight: 780;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.semantic-contents ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: calc(0.65rem * var(--space-factor));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: in-flow-section;
+}
+
+.semantic-contents li {
+  min-width: 0;
+  counter-increment: in-flow-section;
+}
+
+.semantic-contents a {
+  display: flex;
+  min-height: 100%;
+  gap: 0.65rem;
+  align-items: baseline;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  padding: calc(0.75rem * var(--space-factor)) 0.85rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 680;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.semantic-contents a::before {
+  content: counter(in-flow-section, decimal-leading-zero);
+  flex: 0 0 auto;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.semantic-contents a:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
 .semantic-section {
   --flow-measure: var(--section-measure, var(--content-width));
 

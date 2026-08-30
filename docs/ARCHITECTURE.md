@@ -76,10 +76,13 @@ Markdown + metadata + local assets + partials + semantic directives
 - `src/render/visualizations.ts` projects validated chart series/points, diagram nodes/edges, and timeline
   events into deterministic accessible SVG or semantic HTML. It is compile-time code and does not add a
   visualization browser runtime.
-- `src/render/document.tsx` creates the static HTML document, explicit-section or legacy H2 navigation,
-  selected registry-owned page layout/tokens, responsive shell, metadata, and content security policy. It
-  allocates collision-free shell IDs around authored content IDs and uses them consistently for navigation
-  and accessibility relationships.
+- `src/render/navigation.ts` derives the final explicit-section or legacy H2 inventory structurally from
+  enhanced HAST, fills authored in-flow maps with exact headings, and projects optional short labels for the
+  shell. Appendix and subordinate headings remain excluded without parsing serialized HTML.
+- `src/render/document.tsx` creates the static HTML document from prepared navigation, selected
+  registry-owned page layout/tokens, responsive shell, metadata, and content security policy. It allocates
+  collision-free shell IDs around authored content IDs and uses them consistently for navigation and
+  accessibility relationships.
 - `src/browser/` contains the browser runtime and token-based stylesheet bundled by Vite. One delegated
   event controller handles theme/navigation controls, current-section ownership, bounded normal-motion
   progress/reveal, code copying, glossary hover/focus/tap explanations,
@@ -195,6 +198,11 @@ unsafe IDs fail; generated collisions receive deterministic suffixes. When expli
 are the primary navigation inventory, using `nav` when supplied; documents without them use legacy H2
 headings. H3 and component IDs remain owned descendant hash targets but do not become primary links.
 `reveal` defaults to false and opts only that section into the package-owned normal-motion reveal.
+After section enhancement and appendix extraction, one structural HAST inventory supplies both projections:
+`contents` renders exact heading text and final anchors in article flow, while the document shell receives
+short `nav` labels when authored. The shell alone applies its two-item threshold; an in-flow map remains
+visible with zero or one item. Production no longer reparses serialized HTML to derive navigation, and no
+browser heading parser or synchronization state exists.
 `actions` accepts only direct `action` children. Each action becomes an ordinary anchor after
 its same-page, relative, HTTP(S), or mail target passes the closed registry constraint; executable,
 local-file, absolute-path, and protocol-relative targets are rejected.
@@ -283,8 +291,9 @@ selects coordinated visual defaults. The schema normalizer resolves preset defau
 bounded token overrides, and the renderer projects only the resolved preset/theme/token identities into
 the shared package stylesheet in both formats. The stylesheet owns reading/standard/wide tracks, section
 rhythm, component containment, and a single content-surface layer; wide media, tables, charts, and code
-scroll locally instead of widening the document. Navigation exists only with at least two eligible
-sections. One ordinary link is always current: direct and descendant hashes resolve through section
+scroll locally instead of widening the document. Sidebar/mobile navigation exists only with at least two
+eligible sections; an authored in-flow map remains ordinary visible content at every inventory size and
+viewport. One shell navigation link is always current: direct and descendant hashes resolve through section
 ownership, outside targets use the preceding or first section, and geometry uses the sticky-topbar
 activation line with deterministic bottom and equal-top rules. Root scroll padding keeps hash/focus targets
 below the sticky topbar; primary sections compensate their own block padding. In browsers with `scrollend`,

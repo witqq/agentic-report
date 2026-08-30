@@ -513,6 +513,19 @@ for (const expected of expectedLayoutExamples) {
         `Installed ${expected.id} ${format} artifact did not preserve its page layout.`,
       );
     }
+    if (expected.id === 'landing') {
+      const inFlowContents = /<nav class="semantic-contents"[\s\S]*?<\/nav>/u.exec(html)?.[0];
+      if (
+        inFlowContents === undefined ||
+        !inFlowContents.includes('data-in-flow-contents=""') ||
+        !inFlowContents.includes('>Start with the work, not the framework</a>') ||
+        inFlowContents.includes('>Workflow</a>')
+      ) {
+        throw new Error(
+          `Installed landing ${format} artifact did not derive exact in-flow section contents.`,
+        );
+      }
+    }
   }
 }
 
@@ -1407,6 +1420,7 @@ async function expectedTarballFiles(): Promise<string[]> {
       'product/code-glossary-extension.json',
       'product/copyable-prose-extension.json',
       'product/diagram-extension.json',
+      'product/in-flow-contents-extension.json',
       'product/review-workspace-extension.json',
       'product/response-workspace-extension.json',
       'product/share-safe-build-extension.json',

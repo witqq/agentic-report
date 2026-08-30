@@ -104,6 +104,17 @@
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
       "handoffs": ["semantic-document"]
     },
+    "contents": {
+      "description": "Generated in-flow links to final primary sections using their exact visible headings.",
+      "forms": ["leaf"],
+      "attributes": {},
+      "children": "none",
+      "placement": { "topLevelOnly": true },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
     "actions": {
       "description": "Responsive group containing ordinary action links.",
       "forms": ["container"],

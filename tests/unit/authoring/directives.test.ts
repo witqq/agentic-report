@@ -42,6 +42,7 @@ describe('registry-driven semantic directives', () => {
     await writeFile(path.join(workspace, 'reader.woff'), 'package-owned-font-bytes');
     const markdown = [
       '# Registry renderers',
+      '::contents',
       '::::section{title="Semantic section" id="semantic-section" nav="Section" width="wide" align="center" tone="accent" reveal="true"}',
       'Section body.',
       ':::actions',

@@ -6,12 +6,9 @@ import { packageStrings, resolvePackageLocale } from '../localization.js';
 import type { ReviewTargetManifest } from '../review/contract.js';
 import type { ResolvedReviewArtifact } from '../review/binding.js';
 import type { ReviewArtifact } from '../review/contract.js';
+import type { NavigationItem } from './navigation.js';
 
-export interface NavigationItem {
-  readonly id: string;
-  readonly label: string;
-  readonly depth: 2;
-}
+export type { NavigationItem } from './navigation.js';
 
 export interface DocumentRenderOptions {
   readonly title: string;
@@ -306,41 +303,4 @@ function allocateShellId(base: string, usedIds: Set<string>): string {
   }
   usedIds.add(candidate);
   return candidate;
-}
-
-export function extractNavigation(html: string): readonly NavigationItem[] {
-  const explicitSections = [
-    ...html.matchAll(
-      /<section\s+([^>]*\bdata-semantic="section"[^>]*)>\s*<h2\s+[^>]*>([\s\S]*?)<\/h2>/g,
-    ),
-  ].map((match) => {
-    const attributes = match[1] ?? '';
-    const id = /\bid="([^"]+)"/u.exec(attributes)?.[1] ?? '';
-    const nav = /\bdata-nav="([^"]+)"/u.exec(attributes)?.[1];
-    return { depth: 2 as const, id, label: stripMarkup(nav ?? match[2] ?? '') };
-  });
-  if (explicitSections.length > 0) {
-    return explicitSections.length >= 2 ? explicitSections : [];
-  }
-  const headingPattern = /<h2\s+([^>]*)>([\s\S]*?)<\/h2>/g;
-  const legacySections = [...html.matchAll(headingPattern)]
-    .filter((match) => !/\bdata-navigation-exclude(?:="")?/u.test(match[1] ?? ''))
-    .map((match) => ({
-      depth: 2 as const,
-      id: /\bid="([^"]+)"/u.exec(match[1] ?? '')?.[1] ?? '',
-      label: stripMarkup(match[2] ?? ''),
-    }))
-    .filter((item) => item.id.length > 0);
-  return legacySections.length >= 2 ? legacySections : [];
-}
-
-function stripMarkup(value: string): string {
-  return value
-    .replace(/<[^>]+>/g, '')
-    .replaceAll('&amp;', '&')
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&quot;', '"')
-    .replaceAll('&#x27;', "'")
-    .trim();
 }

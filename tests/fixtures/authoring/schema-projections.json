@@ -131,6 +131,7 @@
     },
     "oneOf": [
       { "$ref": "#/$defs/section" },
+      { "$ref": "#/$defs/contents" },
       { "$ref": "#/$defs/actions" },
       { "$ref": "#/$defs/action" },
       { "$ref": "#/$defs/source-link" },
@@ -222,6 +223,16 @@
             },
             "required": ["title"]
           }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "contents": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "contents" },
+          "form": { "type": "string", "enum": ["leaf"] },
+          "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
         },
         "required": ["name", "form", "attributes"]
       },
@@ -1427,6 +1438,7 @@
       "directive": {
         "oneOf": [
           { "$ref": "#/$defs/section" },
+          { "$ref": "#/$defs/contents" },
           { "$ref": "#/$defs/actions" },
           { "$ref": "#/$defs/action" },
           { "$ref": "#/$defs/source-link" },
@@ -1518,6 +1530,16 @@
             },
             "required": ["title"]
           }
+        },
+        "required": ["name", "form", "attributes"]
+      },
+      "contents": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "contents" },
+          "form": { "type": "string", "enum": ["leaf"] },
+          "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
         },
         "required": ["name", "form", "attributes"]
       },

@@ -83,7 +83,7 @@ also contain:
 - `agentic-report.yaml`, `agentic-report.yml`, or `agentic-report.json`;
 - local images referenced by relative paths;
 - Markdown partials included as `{{include: partials/summary.md}}`;
-- semantic directives for labelled page sections, action and source-location links, authored/code glossary references, content, interactions, compile-time
+- semantic directives for labelled page sections, generated in-flow contents, action and source-location links, authored/code glossary references, content, interactions, compile-time
   charts/diagrams/timelines, safe built-in demos, downloads, and fonts.
 
 Set frontmatter or manifest `language` to `ru` (including subtags such as `ru-RU`) for Russian
@@ -113,6 +113,8 @@ tokens:
 {{include: partials/context.md}}
 
 ![System boundary](assets/system.svg)
+
+::contents
 
 ::::section{title="Decision" id="decision" nav="Decision" width="reading" align="start" tone="soft" reveal="true"}
 :::callout{title="Key finding" kind="info"}
@@ -213,6 +215,11 @@ plain/soft/accent/contrast tones. `reveal="true"` opts one section into a bounde
 reveal. A nested `actions` group composes ordinary safe links with primary/secondary/quiet emphasis.
 Legacy heading documents remain valid; their H2 headings define the primary navigation while H3 and
 component anchors remain owned descendant targets.
+
+Place `::contents` at the document root to keep a generated route map inside the article. Its native links
+use exact visible section headings and final collision-free targets; optional short `nav` labels remain in
+the sidebar. The map stays visible at narrow widths and still renders with zero or one primary section,
+while sidebar/mobile-dialog chrome continues to require at least two.
 
 Pages with at least two eligible sections receive one responsive contents navigation. Desktop readers can
 collapse the non-modal sidebar without persisting state; mobile readers get a labelled native dialog with
