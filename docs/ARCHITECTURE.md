@@ -198,6 +198,10 @@ unsafe IDs fail; generated collisions receive deterministic suffixes. When expli
 are the primary navigation inventory, using `nav` when supplied; documents without them use legacy H2
 headings. H3 and component IDs remain owned descendant hash targets but do not become primary links.
 `reveal` defaults to false and opts only that section into the package-owned normal-motion reveal.
+One direct `lead` may be the section's first authored block. MDAST validation bounds it to one paragraph
+before review targeting; lead is excluded as a duplicate directive owner, and trusted HAST enhancement
+collapses the wrapper while retaining the paragraph's authored review target. It adds presentation only,
+not a callout region or browser behavior.
 After section enhancement and appendix extraction, one structural HAST inventory supplies both projections:
 `contents` renders exact heading text and final anchors in article flow, while the document shell receives
 short `nav` labels when authored. The shell alone applies its two-item threshold; an in-flow map remains
@@ -223,8 +227,10 @@ so diagnostics from entry content and nested partials identify the original auth
 than the concatenated intermediate document.
 
 Glossary definitions default to their authored inline position. A source-mapped placement check restricts
-`placement="appendix"` to root definitions so extraction cannot empty an authored parent. The complete
-already-targeted definition moves into one package-owned labelled appendix in authored order. Its heading is marked
+`placement="appendix"` to root definitions or direct section children, so extraction cannot empty lists,
+quotes, lead blocks, or unrelated component parents. After review targeting, the complete already-targeted
+definition is removed from its section without a placeholder and moves into one package-owned labelled
+appendix in authored document order. Its heading is marked
 as package-owned navigation-excluded content, so explicit-section and legacy-H2 primary inventories remain
 the document's reading route. Popover links still target the same collision-free definition IDs. Code-term
 panels reuse the existing delegated glossary runtime; code copy clones the code element and removes generated

@@ -215,13 +215,13 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
         if (
           directive.name === 'glossary' &&
           values.placement === 'appendix' &&
-          (!isTraversableNode(parent) || parent.type !== 'root')
+          !isAppendixGlossaryParent(parent)
         ) {
           throw directiveError(
             node,
             'INVALID_DIRECTIVE_PLACEMENT',
-            'A glossary definition placed in the appendix must be a top-level directive.',
-            'Move this appendix glossary outside lists, blockquotes, sections, and other directives.',
+            'A glossary definition placed in the appendix must be top-level or directly inside a section.',
+            'Move this appendix glossary outside lists, blockquotes, and unrelated directives, or make it a direct section child.',
           );
         }
         attributesByNode.set(node, values);
@@ -295,6 +295,7 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
     validateVisualizationData(tree, attributesByNode, options);
     validateActionGroups(tree, options);
     validateCopyableProse(tree, options);
+    validateLeadParagraphs(tree, options);
     validateTypedReviewComponents(tree, attributesByNode, options);
     validateResponseForms(tree, attributesByNode, options);
     validateUnmarkedGlossaryTerms(tree, [...glossaryByKey.values()], options);
@@ -322,6 +323,56 @@ function validateCopyableProse(tree: MdastRoot, options: DirectivePluginOptions)
       if (isTraversableNode(child)) pending.push(...(child.children ?? []));
     }
   });
+}
+
+function validateLeadParagraphs(tree: MdastRoot, options: DirectivePluginOptions): void {
+  visit(tree, (candidate) => {
+    if (!isDirectiveNode(candidate) || candidate.name !== 'section') return;
+    const children = candidate.children ?? [];
+    const leads = children.filter(
+      (child): child is DirectiveNode => isDirectiveNode(child) && child.name === 'lead',
+    );
+    for (const [index, lead] of leads.entries()) {
+      const blocks = lead.children ?? [];
+      if (
+        blocks.length !== 1 ||
+        typeof blocks[0] !== 'object' ||
+        blocks[0] === null ||
+        !('type' in blocks[0]) ||
+        blocks[0].type !== 'paragraph'
+      ) {
+        throw attachDirectiveSource(
+          directiveError(
+            lead,
+            'INVALID_DIRECTIVE_PLACEMENT',
+            'lead must contain exactly one Markdown paragraph.',
+            'Keep one prose paragraph inside lead and move every other block outside it.',
+          ),
+          lead,
+          options,
+        );
+      }
+      if (index > 0 || children[0] !== lead) {
+        throw attachDirectiveSource(
+          directiveError(
+            lead,
+            'INVALID_DIRECTIVE_PLACEMENT',
+            'A section accepts one lead as its first authored block.',
+            'Keep one lead first in the section and use ordinary paragraphs for the remaining prose.',
+          ),
+          lead,
+          options,
+        );
+      }
+    }
+  });
+}
+
+function isAppendixGlossaryParent(parent: unknown): boolean {
+  return (
+    (isTraversableNode(parent) && parent.type === 'root') ||
+    (isDirectiveNode(parent) && parent.name === 'section')
+  );
 }
 
 function restoreNumericColonText(tree: MdastRoot, markdown: string): void {
@@ -1727,6 +1778,10 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
         enhanceCodeTerms(node, codeTermKeys.split(','), glossary, createGlossaryReference);
       }
       const semantic = stringProperty(node, 'dataSemantic');
+      if (semantic === 'lead') {
+        enhanceLead(node);
+        return;
+      }
       if (semantic === 'copyable') {
         enhanceCopyableProse(node);
         return;
@@ -2018,6 +2073,19 @@ function extractAppendixGlossaries<Parent extends HastRoot | Element>(parent: Pa
   }
   parent.children = retained as Parent['children'];
   return appendix;
+}
+
+function enhanceLead(node: Element): void {
+  const paragraphs = node.children.filter(
+    (child): child is Element => child.type === 'element' && child.tagName === 'p',
+  );
+  const paragraph = paragraphs[0];
+  if (paragraph === undefined || paragraphs.length !== 1) {
+    throw new Error('Validated lead is missing its single paragraph.');
+  }
+  node.tagName = 'p';
+  node.properties = { ...paragraph.properties, ...node.properties };
+  node.children = paragraph.children;
 }
 
 function enhanceSection(node: Element, allocateId: (base: string) => string): void {

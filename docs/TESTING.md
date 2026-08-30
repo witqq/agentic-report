@@ -45,6 +45,9 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   generated in-flow contents in both formats with exact-heading/short-navigation divergence, final ID
   collision handling, rename/reorder synchronization, repeated declarations, legacy/explicit H3 and
   appendix exclusion, zero/one cardinality, and invalid form/attribute/label/placement diagnostics,
+  bounded first/unique lead paragraphs, direct-section appendix extraction, root/section definition order,
+  collision-resolved glossary links, preserved review targets, empty-source-flow removal, and invalid
+  lead/glossary parent diagnostics,
   share-safe source-link neutralization in both formats, compiler-derived filename/line precedence over
   arbitrary authored labels, total raw/nested-decoded unsafe-terminal fallback, exact transformed-node
   results, default-link compatibility, source-byte preservation, non-boolean ESM rejection and staged
@@ -66,7 +69,8 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   settled normal/reduced hash ownership including the no-`scrollend` fallback, full bounded geometry and
   hash ownership without `IntersectionObserver`, generated in-flow contents using exact final headings and
   final explicit targets in both formats, short-sidebar-label divergence, fragment navigation, and
-  narrow-screen visibility with the drawer closed, desktop collapse,
+  narrow-screen visibility with the drawer closed, section lead and moved appendix definition states across
+  desktop/mobile, light/dark and both formats, desktop collapse,
   native-dialog mobile
   focus containment/return, normal/reduced-motion progress and one-time reveal, themes, visible focus,
   locally scrolling wide tables, protected loopback source-location links that preserve the report page,

@@ -93,6 +93,7 @@ export default async function globalSetup(): Promise<void> {
   ] as const;
   const presetFixtures = ['studio', 'editorial', 'signal'] as const;
   const navigationSource = path.join(fixtureRoot, 'navigation-source');
+  const sectionProseSource = path.join(fixtureRoot, 'section-prose-source');
   const reviewSource = path.join(fixtureRoot, 'review-source');
   const responseIsolationSource = path.join(fixtureRoot, 'response-isolation-source');
   const shareSource = path.join(fixtureRoot, 'share-source');
@@ -304,6 +305,32 @@ export default async function globalSetup(): Promise<void> {
       'This valid target follows every eligible section.',
     ].join('\n\n'),
   );
+  await mkdir(sectionProseSource, { recursive: true });
+  await writeFile(
+    path.join(sectionProseSource, 'report.md'),
+    [
+      '---',
+      'title: Section prose fixture',
+      'language: en',
+      'layout: document',
+      'theme: light',
+      'preset: editorial',
+      '---',
+      '# Section prose fixture',
+      '::::section{title="Opening thesis" id="thesis" nav="Thesis" tone="soft"}',
+      ':::lead',
+      'A :term[nearby definition]{key="nearby"} begins as emphasized prose without becoming a callout.',
+      ':::',
+      'Ordinary supporting prose follows the thesis.',
+      ':::glossary{key="nearby" term="Nearby definition" placement="appendix"}',
+      'The full definition was authored beside the explanation and moved intact.',
+      ':::',
+      '::::',
+      ':::section{title="Following section" id="following" nav="Following"}',
+      'The next section proves the lead remains bounded to its owner.',
+      ':::',
+    ].join('\n\n'),
+  );
   await mkdir(reviewSource, { recursive: true });
   await writeFile(
     path.join(reviewSource, 'report.md'),
@@ -461,6 +488,15 @@ export default async function globalSetup(): Promise<void> {
     buildReport({
       input: navigationSource,
       output: path.join(fixtureRoot, 'navigation.html'),
+    }),
+    buildReport({
+      input: sectionProseSource,
+      output: path.join(fixtureRoot, 'section-prose.html'),
+    }),
+    buildReport({
+      input: sectionProseSource,
+      output: path.join(fixtureRoot, 'section-prose-directory'),
+      format: 'directory',
     }),
     buildReport({
       input: reviewSource,

@@ -69,6 +69,15 @@ const navigationArtifacts = [
       .href,
   },
 ] as const;
+const sectionProseArtifacts = [
+  { format: 'single-file', url: layoutArtifactUrl('section-prose') },
+  {
+    format: 'directory',
+    url: pathToFileURL(
+      path.resolve('test-results/e2e-generated/section-prose-directory/index.html'),
+    ).href,
+  },
+] as const;
 const defaultMotionArtifacts = [
   { format: 'single-file', url: artifactUrl },
   { format: 'directory', url: directoryArtifactUrl },
@@ -1107,6 +1116,54 @@ test('in-flow contents keeps exact section headings and remains visible with the
     await expect(page).toHaveURL(/#beta$/u);
     await expect(page.locator('#beta-title')).toBeVisible();
     await expect(inFlow).toBeVisible();
+  }
+});
+
+test('section lead stays prose and nearby definitions retain their appendix route in every visual profile', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const captureRoot = path.resolve('test-results/step-8-captures/section-prose');
+  await rm(captureRoot, { recursive: true, force: true });
+  await mkdir(captureRoot, { recursive: true });
+  for (const artifact of sectionProseArtifacts) {
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await page.goto(artifact.url);
+    const lead = page.locator('#thesis > .semantic-lead');
+    const appendix = page.locator('[data-glossary-appendix]');
+    await expect(lead).toBeVisible();
+    await expect(lead).toHaveJSProperty('tagName', 'P');
+    await expect(lead).toContainText('begins as emphasized prose without becoming a callout');
+    await expect(page.locator('#thesis > .semantic-callout')).toHaveCount(0);
+    await expect(page.locator('#thesis > .semantic-glossary')).toHaveCount(0);
+    await expect(appendix.locator('#glossary-nearby')).toHaveCount(1);
+    const term = lead.locator('[data-glossary-trigger]');
+    await term.focus();
+    const fullDefinition = page.getByRole('link', { name: 'View full definition' });
+    await expect(fullDefinition).toBeVisible();
+    await fullDefinition.click();
+    await expect(page).toHaveURL(/#glossary-nearby$/u);
+    await expect(appendix.locator('#glossary-nearby')).toBeVisible();
+
+    await page.goto(artifact.url);
+    for (const theme of ['light', 'dark'] as const) {
+      if (theme === 'dark') {
+        await page.locator('[data-theme-toggle]').click();
+        await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+      }
+      for (const viewport of [
+        { name: 'desktop', width: 1200, height: 900 },
+        { name: 'mobile', width: 390, height: 844 },
+      ] as const) {
+        await page.setViewportSize({ width: viewport.width, height: viewport.height });
+        await expect(lead).toBeVisible();
+        await expect(appendix).toBeVisible();
+        await page.screenshot({
+          fullPage: true,
+          path: path.join(captureRoot, `${artifact.format}-${theme}-${viewport.name}.png`),
+        });
+      }
+    }
   }
 });
 

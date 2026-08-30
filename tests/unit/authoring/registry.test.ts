@@ -29,6 +29,7 @@ describe('authoring registry', () => {
     expect(authoringRegistry.directives.map((directive) => directive.name)).toEqual([
       'section',
       'contents',
+      'lead',
       'actions',
       'action',
       'source-link',

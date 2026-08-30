@@ -103,6 +103,11 @@ Add top-level `::contents` when the handoff needs a route map inside the article
 final section headings and anchors; do not duplicate them in an authored Markdown list. Optional short
 `section.nav` labels continue to serve sidebar/mobile navigation only.
 
+Inside a section, use one first `:::lead` paragraph for the main thesis without turning it into a callout.
+An appendix glossary definition may sit directly beside the section explanation; the compiler moves it into
+the single appendix and preserves the same full-definition link. Do not nest appendix definitions in lists,
+quotes, the lead, or unrelated components.
+
 When the artifact leaves the source workstation, add `--share`. The compiler derives path-free non-link
 filename/line text from each validated source helper and uses `source:line` for unsafe terminals;
 compiler-owned local paths and authored directory/free-form labels are omitted, and the JSON result reports

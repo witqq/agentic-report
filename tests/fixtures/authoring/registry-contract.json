@@ -427,6 +427,22 @@
       "handoffs": ["semantic-document"]
     },
     {
+      "name": "lead",
+      "description": "One emphasized opening thesis paragraph inside a section.",
+      "forms": ["container"],
+      "attributes": [],
+      "children": "markdown",
+      "placement": { "requiredParent": "section" },
+      "behavior": { "renderer": "semantic-container", "resource": "none", "runtime": "none" },
+      "sanitizer": {
+        "tagName": "div",
+        "className": "semantic-lead",
+        "properties": ["dataSemantic"]
+      },
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    {
       "name": "actions",
       "description": "Responsive group containing ordinary action links.",
       "forms": ["container"],
@@ -1248,7 +1264,7 @@
     },
     {
       "name": "glossary",
-      "description": "Reusable glossary definition containing Markdown.",
+      "description": "Reusable glossary definition containing Markdown, optionally moved from the document root or a direct section child into the appendix.",
       "forms": ["container"],
       "attributes": [
         {
@@ -1280,7 +1296,7 @@
         },
         {
           "name": "placement",
-          "description": "Definition location in the authored flow or, for a top-level definition, one package-owned reference appendix.",
+          "description": "Definition location in the authored flow or, from the document root or a direct section child, one package-owned reference appendix.",
           "required": false,
           "default": "inline",
           "constraint": { "kind": "enum", "values": ["inline", "appendix"] },

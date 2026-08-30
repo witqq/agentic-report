@@ -515,6 +515,12 @@ for (const expected of expectedLayoutExamples) {
     }
     if (expected.id === 'landing') {
       const inFlowContents = /<nav class="semantic-contents"[\s\S]*?<\/nav>/u.exec(html)?.[0];
+      const workflowStart = /<section[^>]*id="workflow"/u.exec(html)?.index;
+      const journeyStart = /<section[^>]*id="journey"/u.exec(html)?.index;
+      const workflowSection =
+        workflowStart !== undefined && journeyStart !== undefined && journeyStart > workflowStart
+          ? html.slice(workflowStart, journeyStart)
+          : undefined;
       if (
         inFlowContents === undefined ||
         !inFlowContents.includes('data-in-flow-contents=""') ||
@@ -523,6 +529,19 @@ for (const expected of expectedLayoutExamples) {
       ) {
         throw new Error(
           `Installed landing ${format} artifact did not derive exact in-flow section contents.`,
+        );
+      }
+      if (
+        workflowSection === undefined ||
+        !workflowSection.includes('class="semantic-lead"') ||
+        !workflowSection.includes('data-semantic="lead"') ||
+        workflowSection.includes('id="glossary-portable-boundary"') ||
+        !html.includes('href="#glossary-portable-boundary"') ||
+        !html.includes('id="glossary-portable-boundary"') ||
+        !html.includes('data-glossary-appendix=""')
+      ) {
+        throw new Error(
+          `Installed landing ${format} artifact did not preserve lead and section-local appendix behavior.`,
         );
       }
     }
@@ -1423,6 +1442,7 @@ async function expectedTarballFiles(): Promise<string[]> {
       'product/in-flow-contents-extension.json',
       'product/review-workspace-extension.json',
       'product/response-workspace-extension.json',
+      'product/section-prose-extension.json',
       'product/share-safe-build-extension.json',
       'product/time-text-extension.json',
       'product/source-link-extension.json',

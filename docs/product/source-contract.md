@@ -190,6 +190,7 @@ The directive vocabulary is:
   label, closed `width`, `align`, and `tone` choices, and optional boolean `reveal`;
 - `contents`: top-level leaf placement for a compiler-generated in-flow map of final primary sections; it
   accepts no attributes, label or children;
+- `lead`: attribute-free direct section child containing exactly one opening Markdown paragraph;
 - `actions` and directly nested leaf `action`: responsive ordinary link group; every action requires a
   visible label and safe `href` and may select `primary`, `secondary`, or `quiet` emphasis;
 - `source-link`: inline source-location link with a short visible label and a bounded IPv4-loopback editor
@@ -277,6 +278,12 @@ out. Zero and one-item maps remain visible in flow; sidebar and mobile-dialog ch
 at least two items. Multiple authored maps receive the same final inventory. The compiler performs no
 browser heading scan or runtime synchronization.
 
+`:::lead` is valid only as the first direct block of a `section`, at most once. It accepts no attributes and
+exactly one Markdown paragraph; inline emphasis, links and term references retain normal prose semantics.
+Empty, multi-paragraph, list, quote, code, heading, nested-component, top-level, later and repeated forms fail
+with authored source evidence. Output is one semantic paragraph with an accent rule, not a callout/aside,
+card, disclosure or runtime component. Its paragraph remains the review target after wrapper removal.
+
 An `actions` container accepts one or more direct `action` children and no prose. `href` accepts a
 same-page `#anchor`, a relative target, HTTP(S), or `mailto:`. Executable schemes such as `javascript:` and
 `data:`, `file:` URLs, absolute local paths, protocol-relative URLs, callbacks, forms, and scripts are not
@@ -351,8 +358,10 @@ escaped text, Shiki token colors are preserved, and copying excludes generated e
 `getSourceContract().source.codeFenceMetadata.terms` exposes the quoted envelope, separator, item bounds,
 uniqueness, shared key constraint and exact-match policy as machine-readable discovery data.
 
-`glossary.placement` defaults to `inline`. On a top-level glossary definition, `appendix` moves the complete
-visible definition into one labelled package-owned glossary appendix after the authored reading flow, in definition order. A nested appendix definition fails instead of leaving its parent empty. The appendix heading is
+`glossary.placement` defaults to `inline`. On a top-level or direct-section glossary definition, `appendix`
+moves the complete visible definition into one labelled package-owned glossary appendix after the authored
+reading flow, in authored document order. The source section retains no placeholder. Placement inside a
+list, quote, lead, callout, or unrelated directive fails instead of leaving its parent empty. The appendix heading is
 excluded from primary navigation, while every full-definition link and review target retains its stable ID
 and authored source range.
 

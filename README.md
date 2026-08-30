@@ -117,6 +117,10 @@ tokens:
 ::contents
 
 ::::section{title="Decision" id="decision" nav="Decision" width="reading" align="start" tone="soft" reveal="true"}
+:::lead
+The opening thesis introduces :term[concepts]{key="concept"} as emphasized prose, not a callout.
+:::
+
 :::callout{title="Key finding" kind="info"}
 The compiler owns responsive layout and navigation.
 :::
@@ -128,17 +132,14 @@ The compiler owns responsive layout and navigation.
 
 Inspect :source-link{label="src/render/directives.ts:42" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42"}.
 
-Traversal continues through :term[concepts]{key="concept"}.
-
 ```typescript terms="concept"
 const concept = compileSource();
 ```
 
-::::
-
 :::glossary{key="concept" term="concept" placement="appendix"}
 One canonical definition shared by prose forms and selected first code occurrences.
 :::
+::::
 ````
 
 See [`docs/product/source-contract.md`](docs/product/source-contract.md) for the complete declarative
@@ -220,6 +221,13 @@ Place `::contents` at the document root to keep a generated route map inside the
 use exact visible section headings and final collision-free targets; optional short `nav` labels remain in
 the sidebar. The map stays visible at narrow widths and still renders with zero or one primary section,
 while sidebar/mobile-dialog chrome continues to require at least two.
+
+Inside a `section`, place one opening `:::lead` containing exactly one Markdown paragraph when the first
+thesis needs restrained in-flow emphasis rather than a callout. The lead must be the section's first block
+and accepts no attributes. A glossary definition with `placement="appendix"` may be authored at the document
+root or directly inside that section; the compiler removes it from the section and keeps its existing full-
+definition target in the single ordered appendix. Lists, quotes, lead blocks, and unrelated directives do
+not become valid appendix parents.
 
 Pages with at least two eligible sections receive one responsive contents navigation. Desktop readers can
 collapse the non-modal sidebar without persisting state; mobile readers get a labelled native dialog with

@@ -133,6 +133,7 @@
       "oneOf": [
         { "$ref": "#/$defs/section" },
         { "$ref": "#/$defs/contents" },
+        { "$ref": "#/$defs/lead" },
         { "$ref": "#/$defs/actions" },
         { "$ref": "#/$defs/action" },
         { "$ref": "#/$defs/source-link" },
@@ -233,6 +234,16 @@
       "properties": {
         "name": { "const": "contents" },
         "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "lead": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "lead" },
+        "form": { "type": "string", "enum": ["container"] },
         "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
       },
       "required": ["name", "form", "attributes"]
@@ -718,7 +729,7 @@
             "placement": {
               "type": "string",
               "enum": ["inline", "appendix"],
-              "description": "Definition location in the authored flow or, for a top-level definition, one package-owned reference appendix.",
+              "description": "Definition location in the authored flow or, from the document root or a direct section child, one package-owned reference appendix.",
               "default": "inline"
             }
           },

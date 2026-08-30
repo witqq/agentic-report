@@ -47,3 +47,13 @@ Corpus class: work-report
 ::item{id="confidence" label="Уверенность" note="Оценка уверенности" meta="Шкала 1–5" href="https://example.com/scores/confidence"}
 ::::
 :::::
+
+::::section{title="Тезис и определение" nav="Тезис"}
+:::lead
+Ведущий абзац вводит :term[локальный термин]{key="local-term"} как обычную акцентированную прозу.
+:::
+::::
+
+:::glossary{key="local-term" term="Локальный термин" placement="appendix"}
+Определение напечатано в приложении.
+:::

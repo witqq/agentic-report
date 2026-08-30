@@ -37,6 +37,9 @@ Create a local declarative source, verify it, and hand the user a finished inter
 - Use top-level `::contents` when the reader needs the complete section route inside the article or print/file
   handoff. Do not author a parallel list: the compiler uses exact final section headings and targets while
   keeping optional short `nav` labels in sidebar chrome.
+- Use one opening `:::lead` inside a `section` for its thesis, not a callout. When a glossary definition
+  belongs beside that explanation but should print in the reference appendix, keep it as a direct section
+  child with `placement="appendix"`; do not move it to a separate hand-maintained source list.
 - When a finished artifact containing `source-link` will leave the source workstation, build it with
   `--share` and report the returned `neutralizedSourceLinks` count. Keep the default build when local editor
   links are part of the requested handoff; share output derives path-free filename/line labels from validated

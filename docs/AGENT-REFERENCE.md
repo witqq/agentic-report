@@ -568,6 +568,13 @@ links, while short `section.nav` labels remain exclusive to sidebar/mobile navig
 visible on narrow screens and renders zero or one item even when navigation chrome is absent. Do not write a
 parallel Markdown list or parse headings in browser code.
 
+Use one direct `:::lead` as the first block of a `section` to emphasize its opening thesis without creating
+a callout. It accepts no attributes and exactly one Markdown paragraph, including ordinary inline markup
+and term references; additional paragraphs, lists, code, nested components, top-level placement, and later
+or repeated lead blocks fail validation. A glossary with `placement="appendix"` may be top-level or a direct
+section child. Direct-section authorship keeps the definition beside its explanation while compilation
+moves the complete already-targeted definition into the single appendix without leaving a placeholder.
+
 `actions` accepts only direct labelled `::action[...]` children. Every action requires `href`; valid targets
 are same-page anchors, relative paths, HTTP(S), and `mailto:`. `javascript:`, `data:`, `file:`, absolute
 local paths, and protocol-relative URLs fail validation. `kind` is `primary`, `secondary`, or `quiet` and
@@ -591,9 +598,9 @@ authored label; the leaf asset form receives `Download <filename>` so it remains
 retain the canonical title; detached `::term{key="..."}` uses canonical text. Unmarked validation recognizes
 only exact canonical forms and deliberately does not claim morphological inference.
 
-`glossary.placement` is `inline` by default. A top-level definition may use `appendix` for one visible
-package-owned reference section outside primary navigation; nested appendix placement fails rather than
-leaving an empty authored container. A code fence may use only `terms="key,other-key"` metadata to annotate exact
+`glossary.placement` is `inline` by default. A top-level or direct-section definition may use `appendix` for
+one visible package-owned reference section outside primary navigation; list, quote, lead, and unrelated
+directive nesting fails rather than leaving an empty authored container. A code fence may use only `terms="key,other-key"` metadata to annotate exact
 case-sensitive canonical text. Keys are bounded and unique; every requested term must occur within one line,
 and first ranges cannot overlap. Only the first occurrence per key becomes a glossary control. Shiki colors,
 literal code bytes, keyboard/touch behavior, full-definition links and copied code text are preserved; the

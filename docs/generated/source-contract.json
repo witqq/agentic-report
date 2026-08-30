@@ -115,6 +115,17 @@
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
       "handoffs": ["semantic-document"]
     },
+    "lead": {
+      "description": "One emphasized opening thesis paragraph inside a section.",
+      "forms": ["container"],
+      "attributes": {},
+      "children": "markdown",
+      "placement": { "requiredParent": "section" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
     "actions": {
       "description": "Responsive group containing ordinary action links.",
       "forms": ["container"],
@@ -639,7 +650,7 @@
       "handoffs": ["semantic-document", "reader-runtime"]
     },
     "glossary": {
-      "description": "Reusable glossary definition containing Markdown.",
+      "description": "Reusable glossary definition containing Markdown, optionally moved from the document root or a direct section child into the appendix.",
       "forms": ["container"],
       "attributes": {
         "key": {
@@ -664,7 +675,7 @@
           "values": ["inline", "appendix"],
           "required": false,
           "default": "inline",
-          "description": "Definition location in the authored flow or, for a top-level definition, one package-owned reference appendix."
+          "description": "Definition location in the authored flow or, from the document root or a direct section child, one package-owned reference appendix."
         }
       },
       "children": "markdown",

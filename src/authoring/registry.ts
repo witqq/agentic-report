@@ -141,7 +141,7 @@ export const DIAGRAM_CONTRACT = {
 export type DiagramTypeChoice = (typeof DIAGRAM_CONTRACT.types)[number];
 
 export const REVIEW_TARGET_OWNERSHIP_CONTRACT = {
-  parentOwnedDirectives: ['series', 'question', 'bucket', 'option', 'item'],
+  parentOwnedDirectives: ['lead', 'series', 'question', 'bucket', 'option', 'item'],
 } as const;
 
 export type ConstraintDefinition =
@@ -515,6 +515,7 @@ export const authoringRegistry = {
   directives: [
     sectionDirective(),
     contentsDirective(),
+    leadDirective(),
     actionsDirective(),
     actionDirective(),
     sourceLinkDirective(),
@@ -941,6 +942,25 @@ function contentsDirective(): DirectiveDefinition {
   };
 }
 
+function leadDirective(): DirectiveDefinition {
+  return {
+    name: 'lead',
+    description: 'One emphasized opening thesis paragraph inside a section.',
+    forms: ['container'],
+    attributes: [],
+    children: 'markdown',
+    placement: { requiredParent: 'section' },
+    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+    sanitizer: {
+      tagName: 'div',
+      className: 'semantic-lead',
+      properties: ['dataSemantic'],
+    },
+    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+    handoffs: ['semantic-document'],
+  };
+}
+
 function actionsDirective(): DirectiveDefinition {
   return {
     name: 'actions',
@@ -1130,19 +1150,23 @@ function interactiveDirectives(): readonly DirectiveDefinition[] {
       children: 'markdown-and-term-directives',
       runtime: 'package-owned-copy',
     }),
-    interactiveContainer('glossary', 'Reusable glossary definition containing Markdown.', {
-      attributes: [
-        keyAttribute('Stable glossary definition key.'),
-        textAttribute('term', 'Canonical glossary identity and explanation title.', true),
-        enumAttribute(
-          'placement',
-          'Definition location in the authored flow or, for a top-level definition, one package-owned reference appendix.',
-          ['inline', 'appendix'],
-          'inline',
-        ),
-      ],
-      runtime: 'none',
-    }),
+    interactiveContainer(
+      'glossary',
+      'Reusable glossary definition containing Markdown, optionally moved from the document root or a direct section child into the appendix.',
+      {
+        attributes: [
+          keyAttribute('Stable glossary definition key.'),
+          textAttribute('term', 'Canonical glossary identity and explanation title.', true),
+          enumAttribute(
+            'placement',
+            'Definition location in the authored flow or, from the document root or a direct section child, one package-owned reference appendix.',
+            ['inline', 'appendix'],
+            'inline',
+          ),
+        ],
+        runtime: 'none',
+      },
+    ),
     {
       name: 'term',
       description: 'Inline or standalone reference that opens a registered glossary explanation.',
