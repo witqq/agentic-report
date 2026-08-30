@@ -26,6 +26,7 @@ describe('release readiness', () => {
       'docs/product/diagram-extension.json',
       'docs/product/review-workspace-extension.json',
       'docs/product/response-workspace-extension.json',
+      'docs/product/share-safe-build-extension.json',
       'docs/product/time-text-extension.json',
       'docs/product/source-link-extension.json',
     ]) {

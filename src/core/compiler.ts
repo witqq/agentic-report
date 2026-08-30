@@ -18,11 +18,13 @@ import { prepareReport, validateRequestedFormat, type PreparedReport } from './p
 
 export async function buildReport(options: BuildReportOptions): Promise<BuildReportResult> {
   const requestedFormat = validateRequestedFormat(options.format);
+  const share = validateShareOption(options.share);
   const prepared = await prepareReport({
     input: options.input,
     ...(requestedFormat === undefined ? {} : { format: requestedFormat }),
     ...(options.output === undefined ? {} : { output: options.output }),
     ...(options.review === undefined ? {} : { review: options.review }),
+    share,
     publication: true,
   });
   const outputPath = requireOutputPath(prepared);
@@ -100,8 +102,21 @@ function buildResult(
     embeddedAssets: prepared.embeddedAssets,
     externalAssets: prepared.externalAssets,
     contentHash: prepared.contentHash,
+    share: prepared.share,
+    neutralizedSourceLinks: prepared.neutralizedSourceLinks,
     warnings: prepared.warnings,
   };
+}
+
+function validateShareOption(value: unknown): boolean {
+  if (value === undefined || value === false) return false;
+  if (value === true) return true;
+  throw new AgenticReportError({
+    level: 'error',
+    code: 'BUILD_SHARE_INVALID',
+    message: 'Share-safe build selection must be a boolean.',
+    remediation: 'Pass share: true or share: false.',
+  });
 }
 
 function requireOutputPath(prepared: PreparedReport): string {

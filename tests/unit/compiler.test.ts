@@ -405,7 +405,7 @@ describe('buildReport', () => {
       if (failure === 'staged-write') publicationControl.failStagedWriteFor = output;
       else publicationControl.failRenameTo = output;
 
-      const error = await buildReport({ input: workspace, output }).catch(
+      const error = await buildReport({ input: workspace, output, share: true }).catch(
         (reason: unknown) => reason,
       );
       expect(error).toMatchObject({ diagnostic: { code: 'OUTPUT_PUBLICATION_FAILED' } });
@@ -417,8 +417,8 @@ describe('buildReport', () => {
 
       publicationControl.failStagedWriteFor = undefined;
       publicationControl.failRenameTo = undefined;
-      const retry = await buildReport({ input: workspace, output });
-      expect(retry.outputPath).toBe(output);
+      const retry = await buildReport({ input: workspace, output, share: true });
+      expect(retry).toMatchObject({ outputPath: output, share: true });
       await expect(readFile(output, 'utf8')).resolves.toContain('<!doctype html>');
     },
   );
@@ -451,7 +451,7 @@ describe('buildReport', () => {
     );
 
     await expect(
-      buildReport({ input: workspace, output, format: 'directory' }),
+      buildReport({ input: workspace, output, format: 'directory', share: true }),
     ).rejects.toMatchObject({ diagnostic: { code: 'ASSET_READ_FAILED' } });
     await expect(readdir(output)).rejects.toMatchObject({ code: 'ENOENT' });
     expect((await readdir(workspace)).some((name) => name.includes('.agentic-report-'))).toBe(
@@ -487,7 +487,13 @@ describe('buildReport', () => {
     );
 
     publicationControl.failDirectoryWriteFor = undefined;
-    const retry = await buildReport({ input: workspace, output, format: 'directory' });
+    const retry = await buildReport({
+      input: workspace,
+      output,
+      format: 'directory',
+      share: true,
+    });
+    expect(retry.share).toBe(true);
     await expect(readFile(retry.outputPath, 'utf8')).resolves.toContain('<!doctype html>');
   });
 
@@ -498,7 +504,7 @@ describe('buildReport', () => {
     publicationControl.failRenameTo = output;
 
     await expect(
-      buildReport({ input: workspace, output, format: 'directory' }),
+      buildReport({ input: workspace, output, format: 'directory', share: true }),
     ).rejects.toMatchObject({ diagnostic: { code: 'OUTPUT_PUBLICATION_FAILED' } });
     expect(await readdir(output)).toEqual([]);
     expect((await readdir(workspace)).some((name) => name.includes('.agentic-report-'))).toBe(
@@ -506,7 +512,13 @@ describe('buildReport', () => {
     );
 
     publicationControl.failRenameTo = undefined;
-    const retry = await buildReport({ input: workspace, output, format: 'directory' });
+    const retry = await buildReport({
+      input: workspace,
+      output,
+      format: 'directory',
+      share: true,
+    });
+    expect(retry.share).toBe(true);
     await expect(readFile(retry.outputPath, 'utf8')).resolves.toContain('<!doctype html>');
   });
 

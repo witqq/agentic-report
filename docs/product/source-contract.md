@@ -71,6 +71,12 @@ and warnings. Inspection also reports sorted relative source files, observed dir
 occurrence counts, and the registry-derived command/format/starter/capability catalog. Both commands read
 and validate all resources required by the selected format but do not create or replace an output artifact.
 
+`buildReport({ input, output?, format?, review?, share? })` is the publishing operation. `share: true`, or
+CLI `build --share`, neutralizes compiler-owned workstation source links before serialization in either
+output format. `BuildReportResult.share` identifies the selected profile and
+`neutralizedSourceLinks` is the exact transformed-node count; human output prints the count for a share
+build. The option does not rewrite source and is intentionally absent from validation and inspection.
+
 ## Review protocol and source binding
 
 Every normal build embeds an inert version-2 review manifest in a `template` element. Container directives
@@ -271,13 +277,17 @@ Use `:source-link{label="src/render/directives.ts:42" href="http://127.0.0.1:778
 for an address that a reader opens repeatedly while following code. The visible label is authored and may
 stay short; `href` must use literal host `127.0.0.1`, a port from 1 through 65535, `/open`, a `path` value
 beginning with `/` or encoded `%2F`, and a positive `line`. The output is a native link in a protected
-separate browsing context. The report page therefore remains in place for either an empty 200 or 204 helper
-response. The package never contacts the helper during build, validation, inspection, or page startup, does
-not verify that the external helper opened an editor, and adds no network CSP capability.
-The full absolute path is still present in the generated HTML even though only the short label is visible.
-Treat a page containing `source-link` as workstation-specific. Do not put credentials or sensitive directory
-names in the path, and remove or replace source links before public distribution when revealing the local
-path is unacceptable or the recipient does not share the same filesystem layout.
+separate browsing context in a default build. The report page therefore remains in place for either an empty
+200 or 204 helper response. The package never contacts the helper during build, validation, inspection, or
+page startup, does not verify that the external helper opened an editor, and adds no network CSP capability.
+The full absolute path is present in a default build even though only the short label is visible. Treat that
+artifact as workstation-specific. For distribution, select the share build profile: each source-link label
+becomes a non-anchor `span` whose text is a safe final helper filename plus line or `source:line`. An authored
+path-free label remains exact only when it already equals that derived location; directory-bearing and
+free-form labels are replaced wholesale, so no semantic path-token inference is applied to arbitrary label
+text. Link/helper attributes and their absolute path are absent, and the build result reports the exact count.
+Arbitrary prose and ordinary links are not scanned or rewritten.
+Do not put credentials in authored paths; share-safe output is not a general secret scrubber.
 
 Top-level visuals require `title` and `description`. A chart accepts 1–6 `series`; each series accepts 1–12
 leaf `point` values, and every series must use the same unique labels in the same order. Values are finite
@@ -369,8 +379,9 @@ bucket question, 4,000 characters per text or comment value, and 2,000,000 bytes
 
 `actions`/`action` does not appear in the stateful table because it is an ordinary group of links. Native
 anchor focus, Enter activation, URL behavior, and browser history apply without a package event handler.
-`source-link` is also a native anchor without a package event handler; its protected separate browsing
-context and loopback-only grammar are compile-time link contracts rather than reader state.
+In a default build, `source-link` is also a native anchor without a package event handler; its protected
+separate browsing context and loopback-only grammar are compile-time link contracts rather than reader
+state. Share output is ordinary inline text and has no activation or reader state.
 
 ## Page navigation and motion
 

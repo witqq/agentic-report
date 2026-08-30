@@ -1217,9 +1217,13 @@ th {
   transform: rotate(-45deg);
 }
 
-.semantic-source-link:hover {
+a.semantic-source-link:hover {
   border-color: var(--color-accent);
   background: var(--color-accent-soft);
+}
+
+span.semantic-source-link[data-source-link-neutralized] {
+  color: var(--color-text-muted);
 }
 
 @media (width <= 30rem) {

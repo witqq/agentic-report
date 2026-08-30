@@ -34,6 +34,11 @@ Create a local declarative source, verify it, and hand the user a finished inter
   frontmatter.
 - Use `copyable` for prose the reader should paste elsewhere; do not misrepresent ordinary language as a
   code fence merely to obtain a Copy button.
+- When a finished artifact containing `source-link` will leave the source workstation, build it with
+  `--share` and report the returned `neutralizedSourceLinks` count. Keep the default build when local editor
+  links are part of the requested handoff; share output derives path-free filename/line labels from validated
+  helpers and uses `source:line` when a terminal is unsafe. Directory-bearing and free-form authored labels
+  remain available only in the default workstation build.
 - Do not deploy, publish, use credentials, or mutate unrelated files. This skill authorizes only local
   installation, source authoring, validation, inspection, build, and artifact review.
 

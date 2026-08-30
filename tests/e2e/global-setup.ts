@@ -95,6 +95,7 @@ export default async function globalSetup(): Promise<void> {
   const navigationSource = path.join(fixtureRoot, 'navigation-source');
   const reviewSource = path.join(fixtureRoot, 'review-source');
   const responseIsolationSource = path.join(fixtureRoot, 'response-isolation-source');
+  const shareSource = path.join(fixtureRoot, 'share-source');
   const glossaryCodeSource = path.join(fixtureRoot, 'glossary-code-source');
   const diagramTourSource = path.join(fixtureRoot, 'diagram-tour-source');
   const russianChromeSource = path.join(fixtureRoot, 'russian-chrome-source');
@@ -113,6 +114,20 @@ export default async function globalSetup(): Promise<void> {
     'launch-readiness',
   ] as const;
   const starters = listExamples().filter((example) => example.starter !== undefined);
+  await mkdir(shareSource, { recursive: true });
+  await writeFile(
+    path.join(shareSource, 'report.md'),
+    [
+      '# Share-safe handoff',
+      'First :source-link{label="first.ts:10" href="http://127.0.0.1:7789/open?path=%2FUsers%2Ffixture%2Fworktree-a%2Ffirst.ts&line=10"}.',
+      'Combining :source-link{label="src/é/file.ts:11" href="http://127.0.0.1:7789/open?path=%2FUsers%2Ffixture%2Fworktree-a%2Funicode-combining.ts&line=11"}.',
+      'Symbol :source-link{label="icons/📁/file.ts:12" href="http://127.0.0.1:7789/open?path=%2FUsers%2Ffixture%2Fworktree-a%2Funicode-symbol.ts&line=12"}.',
+      'Second :source-link{label="/Users/alice/private/second.ts:20" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fsecond.ts&line=20"}.',
+      'Wrapped :source-link{label="location (/Users/alice/private/wrapped.ts:25)" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fwrapped.ts&line=25"}.',
+      'Third :source-link{label="file:///Users/alice/private/hidden.ts:30" href="http://127.0.0.1:7789/open?path=%2Ftmp%2F%252FUsers%252Falice%252Fhidden.ts&line=30"}.',
+      'Ordinary prose keeps /Users/fixture/authored-note and an [external link](https://example.com/source).',
+    ].join('\n'),
+  );
   await mkdir(responseIsolationSource, { recursive: true });
   await writeFile(
     path.join(responseIsolationSource, 'report.md'),
@@ -473,6 +488,26 @@ export default async function globalSetup(): Promise<void> {
       input: responseIsolationSource,
       output: path.join(fixtureRoot, 'response-isolation-directory'),
       format: 'directory',
+    }),
+    buildReport({
+      input: shareSource,
+      output: path.join(fixtureRoot, 'share-default.html'),
+    }),
+    buildReport({
+      input: shareSource,
+      output: path.join(fixtureRoot, 'share-default-directory'),
+      format: 'directory',
+    }),
+    buildReport({
+      input: shareSource,
+      output: path.join(fixtureRoot, 'share-safe.html'),
+      share: true,
+    }),
+    buildReport({
+      input: shareSource,
+      output: path.join(fixtureRoot, 'share-safe-directory'),
+      format: 'directory',
+      share: true,
     }),
     buildReport({
       input: glossaryCodeSource,

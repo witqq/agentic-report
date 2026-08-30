@@ -141,9 +141,12 @@ One canonical definition shared by prose forms and selected first code occurrenc
 
 See [`docs/product/source-contract.md`](docs/product/source-contract.md) for the complete declarative
 source contract.
-`source-link` is an optional local-workstation integration: its full absolute path remains in the generated
-HTML even though the page shows a short label. Remove or replace it before public distribution when local
-directory disclosure or machine-specific links are not acceptable.
+`source-link` is an optional local-workstation integration: its full absolute path remains in a normal
+build even though the page shows a short label. For distribution, run the same build with `--share`; the
+compiler derives non-link `filename:line` text from each validated helper, using `source:line` when the
+terminal filename is unsafe. An already matching short label remains byte-exact; directory-bearing and
+free-form labels are replaced wholesale. Compiler-owned paths are omitted, and the result reports the exact
+neutralized count without changing Markdown.
 
 Agents can retrieve the same closed contract through `getSourceContract()`,
 `getAuthoringSchema('manifest' | 'directives' | 'source')`, and `listExamples()` from the ESM API. Checked
@@ -236,6 +239,7 @@ agentic-report build ./examples/incident-review --output ./incident-review.html
 agentic-report build ./examples/vendor-decision --output ./vendor-decision.html
 agentic-report build ./examples/launch-readiness --output ./launch-readiness.html
 agentic-report build ./examples/launch-readiness --format directory --output ./launch-readiness-directory
+agentic-report build ./examples/tutorial --share --output ./tutorial-share.html
 ```
 
 Open the HTML file or directory `index.html` directly through `file://`. In an installed package,

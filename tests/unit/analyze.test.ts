@@ -90,7 +90,7 @@ describe('report analysis', () => {
           inspect:
             'Inspect source usage and the available authoring catalog without writing output.',
           review: 'Resolve a confined review artifact without changing report sources.',
-          build: 'Compile a source into a static artifact.',
+          build: 'Compile a source into a default or share-safe static artifact.',
           describe: 'Return the complete source contract.',
           schema: 'Return manifest, directive, or complete source JSON Schema.',
           examples: 'List packaged buildable examples.',
@@ -685,6 +685,8 @@ interface ParityOracle {
       readonly embeddedAssets: number;
       readonly externalAssets: number;
       readonly contentHash: string;
+      readonly share: false;
+      readonly neutralizedSourceLinks: 0;
       readonly warnings: readonly unknown[];
     };
     readonly sha256: string;
@@ -697,6 +699,8 @@ interface ParityOracle {
       readonly embeddedAssets: number;
       readonly externalAssets: number;
       readonly contentHash: string;
+      readonly share: false;
+      readonly neutralizedSourceLinks: 0;
       readonly warnings: readonly unknown[];
     };
     readonly tree: Readonly<Record<string, string>>;

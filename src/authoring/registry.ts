@@ -682,7 +682,10 @@ export const authoringRegistry = {
       id: 'review',
       description: 'Resolve a confined review artifact without changing report sources.',
     },
-    { id: 'build', description: 'Compile a source into a static artifact.' },
+    {
+      id: 'build',
+      description: 'Compile a source into a default or share-safe static artifact.',
+    },
     { id: 'describe', description: 'Return the complete source contract.' },
     {
       id: 'schema',

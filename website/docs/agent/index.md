@@ -97,6 +97,11 @@ npx --yes agentic-report inspect ./my-page --json
 npx --yes agentic-report build ./my-page --output ./my-page.html --json
 ```
 
+When the artifact leaves the source workstation, add `--share`. The compiler derives path-free non-link
+filename/line text from each validated source helper and uses `source:line` for unsafe terminals;
+compiler-owned local paths and authored directory/free-form labels are omitted, and the JSON result reports
+`neutralizedSourceLinks`. The default build keeps every authored label and working editor link.
+
 Open the generated page and select **Review** when the human needs to discuss exact fragments. After the
 reader downloads `review.json`, map it back to the authored files with:
 

@@ -572,10 +572,10 @@ narrower than an action: `http://127.0.0.1:<port>/open?path=<absolute-path>&line
 absolute path beginning with `/` or encoded `%2F`. The compiler emits a native `target="_blank"` link with
 `noopener noreferrer`, so the report remains open regardless of an empty helper response. It never requests
 the helper itself, checks the editor, reads the addressed path, or relaxes CSP. Use a short authored
-`path:line` label and percent-encode the full absolute path in the URL. The full path remains recoverable from
-the generated HTML and makes the link workstation-specific; do not include sensitive directory names, and
-remove or replace these links before public distribution when that disclosure or machine binding is not
-acceptable.
+`path:line` label and percent-encode the full absolute path in the URL. A default build retains that path and
+remains workstation-specific. For distribution, add `--share`: the label becomes a non-link, the helper/path
+payload is absent from output bytes, and the result reports the exact neutralized count. The profile does not
+scan arbitrary prose or replace ordinary links.
 
 `asset.src` and `font.src` must resolve to existing files under the canonical source root. The first font
 directive becomes the document font; later directives register additional faces. The text form uses its
@@ -636,7 +636,8 @@ Each stdout line is JSON. A diagnostic line contains `type`, `runId`, `level`, `
 `remediation`; a content-backed error includes the authored `source.file`, start/end line and column, while
 the referenced local path is kept in structured `details.target`. Process-level errors omit source
 locations. The final result contains an absolute output path, format, HTML byte size, embedded/external
-occurrence counts, an HTML SHA-256 content hash, and warnings. Asset counters describe authored/generated
+occurrence counts, an HTML SHA-256 content hash, the selected share profile, exact neutralized source-link
+count, and warnings. Asset counters describe authored/generated
 occurrences, while `contentHash` hashes the generated HTML rather than an entire directory tree.
 Successful warnings are duplicated between diagnostic and result records. The build transport has no independent contract
 version yet; treat these fields as the current 0.x shape, not a final portable protocol.
@@ -658,6 +659,11 @@ Exit code `3` means an unexpected internal failure occurred.
 - Use `--format directory` when separate content-addressed assets are more important than one-file
   portability. The package runtime is embedded for `single-file` and external for `directory`; callers do
   not select its placement.
+- Add `--share` when the artifact leaves the source workstation. Source-link labels remain readable
+  non-links derived as path-free filename/line from the validated helper, with `source:line` for an unsafe
+  terminal. An already matching short label remains exact; directory-bearing and free-form labels are
+  replaced wholesale. Compiler-owned helper paths are not serialized, and human/JSON results report the
+  exact neutralized count. The default build preserves every authored label and working editor link.
 
 All source assets must be local and below the source directory after symlinks are resolved. Remote URLs,
 escaping paths, executable templates, author scripts, and raw HTML are outside the current contract.

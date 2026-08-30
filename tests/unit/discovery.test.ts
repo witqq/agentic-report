@@ -129,7 +129,9 @@ describe('agent discovery contract', () => {
     (mutableNestedContract.commands as Record<string, string>).build = 'poison';
     (mutableNestedContract.capabilities as Record<string, string>).init = 'poison';
     (mutableNestedContract.page.layouts as unknown as string[])[0] = 'poison';
-    expect(getSourceContract().commands.build).toBe('Compile a source into a static artifact.');
+    expect(getSourceContract().commands.build).toBe(
+      'Compile a source into a default or share-safe static artifact.',
+    );
     expect(getSourceContract().commands.init).toBe(
       'Initialize a packaged declarative starter without overwriting user content.',
     );
@@ -145,7 +147,9 @@ describe('agent discovery contract', () => {
     expect(() => {
       (sourceContract.commands as Record<string, string>).build = 'poison';
     }).toThrow(TypeError);
-    expect(getSourceContract().commands.build).toBe('Compile a source into a static artifact.');
+    expect(getSourceContract().commands.build).toBe(
+      'Compile a source into a default or share-safe static artifact.',
+    );
     expect(authoringRegistry.source.entry).toBe(
       'Markdown file or directory containing report.md/index.md',
     );

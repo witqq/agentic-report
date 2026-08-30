@@ -114,6 +114,9 @@ copies only visible rendered text through the localized package control.
 - `single-file` is the default: one portable HTML file with embedded local resources and runtime.
 - `directory` writes `index.html` plus content-hashed resources for larger pages.
 - Both formats open through normal `file://` and preserve the same supported interactions.
+- `build --share` derives path-free non-link filename/line text from each validated source helper, falls back
+  to `source:line` for unsafe terminals, omits workstation paths and authored directory/free-form labels, and
+  reports the exact count without editing Markdown.
 - The compiler neither hosts nor deploys the result and never fetches remote source.
 
 The public [landing](../index.html), [incident review](../examples/incident-review/index.html),

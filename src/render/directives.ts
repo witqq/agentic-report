@@ -68,11 +68,14 @@ interface DirectivePluginOptions {
 interface DirectiveEnhancementOptions {
   readonly sourceMap: readonly SourceMapSegment[];
   readonly language?: string;
+  readonly share?: boolean;
+  readonly shareTransform?: { neutralizedSourceLinks: number };
 }
 
 const directiveByName: ReadonlyMap<string, DirectiveDefinition> = new Map(
   authoringRegistry.directives.map((directive) => [directive.name, directive]),
 );
+const SOURCE_LINK_LABEL_MAX_LENGTH = sourceLinkLabelMaximumLength();
 const GENERATED_SECTION_ID_PREFIX = 'generated:';
 const CODE_TERM_FIELD = 'terms' as const;
 const CODE_TERM_METADATA = authoringRegistry.source.codeFenceMetadata.terms;
@@ -1746,7 +1749,10 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
         return;
       }
       if (semantic === 'source-link') {
-        enhanceSourceLink(node);
+        enhanceSourceLink(node, options.share === true);
+        if (options.share === true && options.shareTransform !== undefined) {
+          options.shareTransform.neutralizedSourceLinks += 1;
+        }
         return;
       }
       if (semantic !== undefined && ['chart', 'diagram', 'timeline'].includes(semantic)) {
@@ -2088,17 +2094,96 @@ function enhanceAction(node: Element): void {
   node.children.unshift(decorativeIcon('arrow-right'));
 }
 
-function enhanceSourceLink(node: Element): void {
+function enhanceSourceLink(node: Element, share: boolean): void {
   const label = takeStringProperty(node, 'dataLabel');
   const href = takeStringProperty(node, 'dataHref');
   if (label === undefined || href === undefined) {
     throw new Error('Validated source-link is missing its label or href.');
+  }
+  if (share) {
+    node.tagName = 'span';
+    delete node.properties.href;
+    delete node.properties.target;
+    delete node.properties.rel;
+    delete node.properties.dataSourceLink;
+    node.properties.dataSourceLinkNeutralized = '';
+    node.children = [{ type: 'text', value: shareSafeSourceLabel(href) }];
+    return;
   }
   node.properties.href = href;
   node.properties.target = '_blank';
   node.properties.rel = ['noopener', 'noreferrer'];
   node.properties.dataSourceLink = '';
   node.children = [decorativeIcon('arrow-right'), { type: 'text', value: label }];
+}
+
+type ShareLabelSafety =
+  { readonly safe: true; readonly fixedPoint: string } | { readonly safe: false };
+
+function shareSafeSourceLabel(href: string): string {
+  const helper = new URL(href);
+  const helperPath = helper.searchParams.get('path');
+  const line = helper.searchParams.get('line');
+  if (helperPath === null || line === null) {
+    throw new Error('Validated source-link helper is missing its path or line.');
+  }
+  const generic = `source:${line}`;
+  if (/[\\/]$/u.test(helperPath)) return generic;
+  const candidate = helperPath.split(/[\\/]/u).at(-1);
+  if (candidate === undefined) return generic;
+  const safety = classifyShareLabel(candidate);
+  if (!safety.safe) return generic;
+  const derived = `${safety.fixedPoint}:${line}`;
+  return derived.length <= SOURCE_LINK_LABEL_MAX_LENGTH ? derived : generic;
+}
+
+function classifyShareLabel(value: string): ShareLabelSafety {
+  let current = value;
+  for (let inspection = 0; inspection <= value.length; inspection += 1) {
+    if (!shareLabelRepresentationIsSafe(current)) return { safe: false };
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(current);
+    } catch {
+      return { safe: false };
+    }
+    if (decoded === current) return { safe: true, fixedPoint: current };
+    current = decoded;
+  }
+  return { safe: false };
+}
+
+function shareLabelRepresentationIsSafe(value: string): boolean {
+  return (
+    value.length > 0 &&
+    value !== '.' &&
+    value !== '..' &&
+    !value.startsWith('~') &&
+    !hasShareLabelControl(value) &&
+    !/[\\/:]/u.test(value)
+  );
+}
+
+function hasShareLabelControl(value: string): boolean {
+  for (const character of value) {
+    const codePoint = character.codePointAt(0);
+    if (
+      codePoint !== undefined &&
+      (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f))
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function sourceLinkLabelMaximumLength(): number {
+  const sourceLink = directiveByName.get('source-link');
+  const label = sourceLink?.attributes.find((attribute) => attribute.name === 'label');
+  if (label?.constraint.kind !== 'string' || label.constraint.maxLength === undefined) {
+    throw new Error('Source-link label constraint is missing its maximum length.');
+  }
+  return label.constraint.maxLength;
 }
 
 function enhanceCopyableProse(node: Element): void {

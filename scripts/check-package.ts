@@ -950,7 +950,17 @@ if (
 
 const reportPath = path.join(consumerDirectory, 'report.md');
 const outputPath = path.join(consumerDirectory, 'report.html');
-await writeFile(reportPath, '# Packed CLI report\n\nBuilt from a clean npm consumer.\n');
+const installedSourcePath = '/tmp/%2FUsers%2Fpacked-consumer%2Fprivate%2Fsource.ts';
+const installedSourcePathEncoded = encodeURIComponent(installedSourcePath);
+await writeFile(
+  reportPath,
+  [
+    '# Packed CLI report',
+    '',
+    'Built from a clean npm consumer.',
+    `Inspect :source-link{label="/Users/packed-consumer/private/source.ts:42" href="http://127.0.0.1:7789/open?path=${installedSourcePathEncoded}&line=42"}.`,
+  ].join('\n'),
+);
 const { stdout: buildOutput } = await execFileAsync(
   binary,
   ['build', reportPath, '--output', outputPath, '--json'],
@@ -978,6 +988,8 @@ assertExactKeys(
     'embeddedAssets',
     'externalAssets',
     'contentHash',
+    'share',
+    'neutralizedSourceLinks',
     'warnings',
   ],
   'installed CLI result',
@@ -988,6 +1000,39 @@ if (cliResult.format !== 'single-file') {
 const installedHtml = await readFile(outputPath, 'utf8');
 if (!/<h1[^>]*id="packed-cli-report"[^>]*>Packed CLI report<\/h1>/u.test(installedHtml)) {
   throw new Error('Installed CLI did not build the expected self-contained HTML artifact.');
+}
+if (
+  cliResult.share !== false ||
+  cliResult.neutralizedSourceLinks !== 0 ||
+  !installedHtml.includes(installedSourcePathEncoded)
+) {
+  throw new Error('Installed CLI default build did not preserve workstation source links.');
+}
+
+const shareOutputPath = path.join(consumerDirectory, 'report-share.html');
+const { stdout: shareBuildOutput } = await execFileAsync(
+  binary,
+  ['build', reportPath, '--output', shareOutputPath, '--share', '--json'],
+  { cwd: consumerDirectory },
+);
+const shareRecord = requireRecord(
+  shareBuildOutput
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line) as unknown)
+    .find((record) => requireRecord(record, 'share CLI record').type === 'result'),
+  'installed share CLI result',
+);
+const installedShareHtml = await readFile(shareOutputPath, 'utf8');
+if (
+  shareRecord.share !== true ||
+  shareRecord.neutralizedSourceLinks !== 1 ||
+  installedShareHtml.includes(installedSourcePathEncoded) ||
+  !installedShareHtml.includes('data-source-link-neutralized=""') ||
+  !installedShareHtml.includes('>source:42</span>') ||
+  installedShareHtml.includes('/Users/packed-consumer/private')
+) {
+  throw new Error('Installed CLI share build did not neutralize the exact source-link path.');
 }
 
 const directoryOutput = path.join(consumerDirectory, 'directory-artifact');
@@ -1021,6 +1066,8 @@ assertExactKeys(
     'embeddedAssets',
     'externalAssets',
     'contentHash',
+    'share',
+    'neutralizedSourceLinks',
     'warnings',
   ],
   'installed directory CLI result',
@@ -1034,6 +1081,9 @@ if (
     'Installed CLI directory build did not use external content-addressed runtime assets.',
   );
 }
+if (!directoryHtml.includes(installedSourcePathEncoded)) {
+  throw new Error('Installed CLI default directory build did not preserve source links.');
+}
 
 const esmOutput = path.join(consumerDirectory, 'esm-directory');
 const { stdout: esmBuildOutput } = await execFileAsync(
@@ -1041,7 +1091,7 @@ const { stdout: esmBuildOutput } = await execFileAsync(
   [
     '--input-type=module',
     '-e',
-    "import {buildReport} from 'agentic-report'; const result=await buildReport({input:process.argv[1],output:process.argv[2],format:'directory'}); console.log(JSON.stringify(result));",
+    "import {buildReport} from 'agentic-report'; const result=await buildReport({input:process.argv[1],output:process.argv[2],format:'directory',share:true}); console.log(JSON.stringify(result));",
     reportPath,
     esmOutput,
   ],
@@ -1050,14 +1100,34 @@ const { stdout: esmBuildOutput } = await execFileAsync(
 const esmResult = requireRecord(JSON.parse(esmBuildOutput), 'installed ESM build result');
 assertExactKeys(
   esmResult,
-  ['outputPath', 'format', 'bytes', 'embeddedAssets', 'externalAssets', 'contentHash', 'warnings'],
+  [
+    'outputPath',
+    'format',
+    'bytes',
+    'embeddedAssets',
+    'externalAssets',
+    'contentHash',
+    'share',
+    'neutralizedSourceLinks',
+    'warnings',
+  ],
   'installed ESM build result',
 );
 if (
   esmResult.format !== 'directory' ||
-  esmResult.outputPath !== path.join(esmOutput, 'index.html')
+  esmResult.outputPath !== path.join(esmOutput, 'index.html') ||
+  esmResult.share !== true ||
+  esmResult.neutralizedSourceLinks !== 1
 ) {
-  throw new Error('Installed ESM buildReport did not produce directory output.');
+  throw new Error('Installed ESM buildReport did not produce share-safe directory output.');
+}
+const esmShareHtml = await readFile(path.join(esmOutput, 'index.html'), 'utf8');
+if (
+  esmShareHtml.includes(installedSourcePathEncoded) ||
+  esmShareHtml.includes('/Users/packed-consumer/private') ||
+  !esmShareHtml.includes('>source:42</span>')
+) {
+  throw new Error('Installed ESM share-safe directory output retained its source-link path.');
 }
 
 const invalidEsmParent = path.join(consumerDirectory, 'invalid-esm-format');
@@ -1100,7 +1170,7 @@ await writeFile(
   path.join(consumerDirectory, 'contract.ts'),
   [
     "import type { BuildReportOptions, BuildReportResult, InspectReportOptions, InspectReportResult, InspectReviewOptions, InspectReviewResult, ReviewArtifact, ReviewTargetManifest, ValidateReportOptions, ValidateReportResult } from 'agentic-report';",
-    "const supported: BuildReportOptions = { input: 'report.md', format: 'directory' };",
+    "const supported: BuildReportOptions = { input: 'report.md', format: 'directory', share: true };",
     "const validate: ValidateReportOptions = { input: 'report.md' };",
     "const inspect: InspectReportOptions = { input: 'report.md', format: 'directory' };",
     "const review: InspectReviewOptions = { input: '.', review: 'review.json' };",
@@ -1112,6 +1182,8 @@ await writeFile(
     '// @ts-expect-error scripts is a retired option and must not reappear',
     "const retired: BuildReportOptions = { input: 'report.md', scripts: 'none' };",
     'declare const result: BuildReportResult;',
+    'const neutralized: number = result.neutralizedSourceLinks;',
+    'const share: boolean = result.share;',
     '// @ts-expect-error scripts is a retired result member and must not reappear',
     'result.scripts;',
     'void supported;',
@@ -1124,6 +1196,8 @@ await writeFile(
     'void reviewArtifact;',
     'void reviewManifest;',
     'void retired;',
+    'void neutralized;',
+    'void share;',
   ].join('\n'),
 );
 await writeFile(
@@ -1335,6 +1409,7 @@ async function expectedTarballFiles(): Promise<string[]> {
       'product/diagram-extension.json',
       'product/review-workspace-extension.json',
       'product/response-workspace-extension.json',
+      'product/share-safe-build-extension.json',
       'product/time-text-extension.json',
       'product/source-link-extension.json',
       'product/source-contract.md',

@@ -40,6 +40,7 @@ interface BuildCommandOptions {
   readonly format?: OutputFormat;
   readonly json?: boolean;
   readonly review?: string;
+  readonly share?: boolean;
 }
 
 interface InitCommandOptions {
@@ -102,6 +103,7 @@ program
   .option('-o, --output <path>', 'Output HTML file or directory')
   .option('--format <format>', 'single-file or directory', parseFormat)
   .option('--review <path>', 'Confined prior review JSON sidecar')
+  .option('--share', 'Neutralize workstation source links for distribution')
   .option('--json', 'Emit NDJSON suitable for agents')
   .action(async (input: string, commandOptions: BuildCommandOptions) => {
     try {
@@ -110,6 +112,7 @@ program
         ...(commandOptions.output === undefined ? {} : { output: commandOptions.output }),
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
         ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
+        share: commandOptions.share === true,
       });
       writeSuccess(result, invocationRunId, commandOptions.json === true);
     } catch (error) {
@@ -271,7 +274,9 @@ function writeSuccess(result: BuildReportResult, runId: string, json: boolean): 
     return;
   }
   process.stdout.write(
-    `Created ${sanitized.outputPath} (${sanitized.bytes} bytes, sha256 ${sanitized.contentHash})\n`,
+    sanitized.share
+      ? `Created ${sanitized.outputPath} (${sanitized.bytes} bytes, sha256 ${sanitized.contentHash}); neutralized ${sanitized.neutralizedSourceLinks} source link${sanitized.neutralizedSourceLinks === 1 ? '' : 's'}\n`
+      : `Created ${sanitized.outputPath} (${sanitized.bytes} bytes, sha256 ${sanitized.contentHash})\n`,
   );
 }
 

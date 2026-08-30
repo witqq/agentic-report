@@ -202,8 +202,13 @@ The inline `source-link` directive is narrower: it accepts only an explicit IPv4
 URL carrying an absolute path and positive line. The compiled protected anchor opens a separate browsing
 context, so helper response status cannot replace the `file://` report. The package does not request the
 helper, read the addressed source file, add a CSP source, or install browser behavior for the link. The
-authored absolute path remains serialized in the HTML: the optional link is workstation-specific and can
-disclose local directory names when an artifact is shared.
+authored absolute path remains serialized in a default build. An explicit share build branches inside
+trusted HAST enhancement: it derives one path-free terminal filename/line from the validated helper, uses
+`source:line` when that terminal is unsafe, discards the authored label plus helper/path properties, and
+counts transformed nodes. An already matching short label is observably unchanged; directory-bearing and
+free-form labels are replaced rather than semantically scanned for embedded paths. Terminal classification
+checks raw and iteratively percent-decoded representations with an input-derived termination bound. It never
+resolves the path, parses arbitrary HTML, rewrites Markdown, or scans user prose.
 
 Partial expansion produces a compact offset source map. Markdown AST positions resolve through that map,
 so diagnostics from entry content and nested partials identify the original authored file and range rather
@@ -265,6 +270,11 @@ entry, manifest, included partial, or referenced local asset. Publication failur
 not report success. Hostile concurrent path replacement and process/OS crash recovery are outside the
 proportionate filesystem model. The inline warning threshold counts the actual serialized CSS, inline
 runtime, and image/download data URLs; a font data URL is counted once through generated CSS.
+
+`build --share` and ESM `share: true` are one build profile over the same preparation/publication path in
+both formats. The typed result always identifies the profile and exact neutralized source-link count;
+human output states that count for an explicit share build. Validation and inspection do not publish and
+therefore do not accept the build-only profile.
 
 Output format, page layout, and visual preset are independent public data choices. One data-only registry
 contract owns their defaults and closed domains: `single-file` uses an inline runtime and `directory` uses

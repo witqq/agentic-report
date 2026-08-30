@@ -36,6 +36,7 @@ export interface MarkdownRenderOptions {
   readonly language?: string;
   readonly sourceRoot: string;
   readonly format: OutputFormat;
+  readonly share?: boolean;
   readonly outputFilePath?: string;
   readonly sourceMap: readonly SourceMapSegment[];
 }
@@ -56,6 +57,7 @@ export interface MarkdownRenderResult {
   readonly sourceFiles: readonly string[];
   readonly resourceDigests: readonly SourceDigest[];
   readonly observedDirectives: readonly string[];
+  readonly neutralizedSourceLinks: number;
   readonly reviewTargets: readonly ReviewTargetReference[];
   readonly observedResources: {
     readonly images: number;
@@ -191,6 +193,7 @@ export async function renderMarkdown(
     observedResources: { images: 0, downloads: 0, fonts: 0 },
   };
   const observedDirectives = new Set<string>();
+  const shareTransform = { neutralizedSourceLinks: 0 };
   const reviewTargets: ReviewTargetReference[] = [];
   const result = await unified()
     .use(remarkParse)
@@ -224,6 +227,8 @@ export async function renderMarkdown(
     })
     .use(rehypeEnhanceDirectives, {
       sourceMap: options.sourceMap,
+      share: options.share === true,
+      shareTransform,
       ...(options.language === undefined ? {} : { language: options.language }),
     })
     .use(rehypeAssets, { ...options, collector })
@@ -246,6 +251,7 @@ export async function renderMarkdown(
       .map(([file, sha256]) => ({ file, sha256 }))
       .sort((left, right) => compareNames(left.file, right.file)),
     observedDirectives: [...observedDirectives].sort(compareNames),
+    neutralizedSourceLinks: shareTransform.neutralizedSourceLinks,
     reviewTargets,
     observedResources: collector.observedResources,
   };

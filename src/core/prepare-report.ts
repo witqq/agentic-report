@@ -33,6 +33,7 @@ export interface PrepareReportOptions {
   readonly output?: string;
   readonly publication?: true;
   readonly review?: string;
+  readonly share?: boolean;
 }
 
 export interface PreparedReport {
@@ -42,6 +43,8 @@ export interface PreparedReport {
   readonly outputPath?: string;
   readonly html: string;
   readonly contentHash: string;
+  readonly share: boolean;
+  readonly neutralizedSourceLinks: number;
   readonly embeddedAssets: number;
   readonly externalAssets: number;
   readonly warnings: readonly Diagnostic[];
@@ -82,6 +85,7 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
     sourceRoot: source.sourceRoot,
     sourceMap: source.sourceMap,
     format,
+    share: options.share === true,
     ...(outputFilePath === undefined ? {} : { outputFilePath }),
   });
   const documentStyles = markdown.fontCss.length === 0 ? styles : `${styles}\n${markdown.fontCss}`;
@@ -167,6 +171,8 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
     ...(outputPath === undefined ? {} : { outputPath }),
     html,
     contentHash: createHash('sha256').update(html).digest('hex'),
+    share: options.share === true,
+    neutralizedSourceLinks: markdown.neutralizedSourceLinks,
     embeddedAssets: markdown.embeddedAssets + (format === 'single-file' ? 2 : 0),
     externalAssets: markdown.externalAssets + external.files.length,
     warnings,

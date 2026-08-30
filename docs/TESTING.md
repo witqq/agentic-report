@@ -42,6 +42,10 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   alphabetic directives—including astral-letter and combining-mark word adjacency—retain source-mapped
   rejection,
   semantic copyable-prose ownership and nested behavior/code rejection,
+  share-safe source-link neutralization in both formats, compiler-derived filename/line precedence over
+  arbitrary authored labels, total raw/nested-decoded unsafe-terminal fallback, exact transformed-node
+  results, default-link compatibility, source-byte preservation, non-boolean ESM rejection and staged
+  publication recovery,
   exact/changed/missing/ambiguous entry/partial binding, confined review paths, and sanitized review transport,
   exact serialized inline-size accounting, canonical and hard-link source/output collision protection,
   injected partial-write/rename preservation and retry for both output formats, same-process name/content
@@ -101,6 +105,8 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   installed binary in both formats plus directory output through the ESM API. It also builds every packaged
   page-layout example and all six starters in both formats and verifies the selected layout. Two installed
   first-use journeys perform init, edit, validate, inspect, and build for single-file and directory output.
+  Installed CLI and ESM share builds additionally prove exact source-link counts and absence of their
+  workstation paths while default builds retain the links.
   It asserts exact
   discovery/schema/result shapes, rejects retired options, type members, and out-of-domain ESM format
   values without output mutation, and contains conflicting `dist/browser` files to prove the installed
