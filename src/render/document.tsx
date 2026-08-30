@@ -14,7 +14,10 @@ export interface DocumentRenderOptions {
   readonly title: string;
   readonly description?: string;
   readonly language: string;
-  readonly page: Pick<ReportManifest, 'preset' | 'theme' | 'layout' | 'tokens' | 'scrollProgress'>;
+  readonly page: Pick<
+    ReportManifest,
+    'preset' | 'theme' | 'layout' | 'tokens' | 'scrollProgress' | 'attribution'
+  >;
   readonly contentHtml: string;
   readonly navigation: readonly NavigationItem[];
   readonly contentSecurityPolicy: string;
@@ -160,6 +163,11 @@ export function renderDocument(options: DocumentRenderOptions): string {
             <article dangerouslySetInnerHTML={{ __html: options.contentHtml }} />
           </main>
         </div>
+        {options.page.attribution ? (
+          <footer className="report-attribution" data-report-attribution>
+            <a href="https://agentic-report.witqq.dev/">Made with Agentic Report</a>
+          </footer>
+        ) : null}
         {hasNavigation ? (
           <dialog
             className="nav-dialog"

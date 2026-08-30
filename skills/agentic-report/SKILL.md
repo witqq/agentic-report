@@ -34,6 +34,8 @@ Create a local declarative source, verify it, and hand the user a finished inter
   frontmatter.
 - Use `copyable` for prose the reader should paste elsewhere; do not misrepresent ordinary language as a
   code fence merely to obtain a Copy button.
+- Keep the default bottom **Made with Agentic Report** link. When the user explicitly needs an unbranded
+  artifact, set root metadata `attribution: false`; this removes only the package-owned footer.
 - Use top-level `::contents` when the reader needs the complete section route inside the article or print/file
   handoff. Do not author a parallel list: the compiler uses exact final section headings and targets while
   keeping optional short `nav` labels in sidebar chrome.

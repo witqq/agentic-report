@@ -171,7 +171,9 @@ envelopes are not yet independently versioned; the source-contract major is incl
 inspection results.
 
 The current source schema supports title, description, a documented restricted language-tag syntax,
-theme, layout, a coordinated preset, optional scroll progress, compact page-token overrides, and output defaults. `studio`,
+theme, layout, a coordinated preset, optional scroll progress, a default-on boolean package attribution,
+compact page-token overrides, and output defaults. `attribution: false` removes only the renderer-owned
+**Made with Agentic Report** footer; default and opt-out behavior are identical across output formats. `studio`,
 `editorial`, and `signal` are registry-owned token-default families; `editorial` is the Field Manual family
 with warm package surfaces, compact controls, numbered document navigation, and package-owned decorative
 action/shell icons. Theme remains an independent color mode, and explicitly authored bounded tokens

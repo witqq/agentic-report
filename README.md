@@ -92,6 +92,11 @@ Review Workspace. `en`, the default `und`, and unsupported languages use a compl
 choice comes only from the input; it does not follow the browser locale and never translates authored
 Markdown or CLI diagnostics.
 
+Every generated report shows a compact footer link, **Made with Agentic Report**, pointing to
+`https://agentic-report.witqq.dev/`. Omit `attribution` to keep this default. Set `attribution: false` in
+frontmatter or the manifest when the generated artifact must not carry the package attribution; this
+removes only the package-owned footer and never rewrites authored links or prose.
+
 Example:
 
 ````markdown
@@ -102,6 +107,7 @@ layout: document
 theme: system
 preset: editorial
 scrollProgress: true
+attribution: true
 tokens:
   font: serif
   width: narrow

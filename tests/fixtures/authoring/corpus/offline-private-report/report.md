@@ -2,6 +2,7 @@
 title: Offline private registry corpus
 description: Bounded offline/private report contract coverage.
 language: en
+attribution: false
 ---
 
 # Offline private registry corpus

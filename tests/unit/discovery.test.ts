@@ -54,6 +54,7 @@ describe('agent discovery contract', () => {
       defaultTheme: authoringRegistry.page.defaultTheme,
       themes: authoringRegistry.page.themes,
       defaultScrollProgress: authoringRegistry.page.defaultScrollProgress,
+      defaultAttribution: authoringRegistry.page.defaultAttribution,
       motion: authoringRegistry.page.motion,
       tokenResolution: {
         defaultsFrom: 'selected-preset',

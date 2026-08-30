@@ -10,7 +10,20 @@ export default async function globalSetup(): Promise<void> {
   const source = path.join(fixtureRoot, 'architecture-source');
   const singleOutput = path.resolve('test-results/e2e-artifact/report.html');
   const directoryOutput = path.join(fixtureRoot, 'directory-artifact');
+  const attributionOptOutSource = path.join(fixtureRoot, 'attribution-opt-out-source');
   await mkdir(source, { recursive: true });
+  await mkdir(attributionOptOutSource, { recursive: true });
+  await writeFile(
+    path.join(attributionOptOutSource, 'report.md'),
+    [
+      '---',
+      'title: Attribution opt-out fixture',
+      'attribution: false',
+      '---',
+      '# Attribution opt-out fixture',
+      '[Made with Agentic Report](https://example.com/authored) is ordinary authored content here.',
+    ].join('\n'),
+  );
   await writeFile(
     path.join(source, 'runtime-placement.svg'),
     [
@@ -454,6 +467,15 @@ export default async function globalSetup(): Promise<void> {
     buildReport({
       input: source,
       output: directoryOutput,
+      format: 'directory',
+    }),
+    buildReport({
+      input: attributionOptOutSource,
+      output: path.join(fixtureRoot, 'attribution-opt-out.html'),
+    }),
+    buildReport({
+      input: attributionOptOutSource,
+      output: path.join(fixtureRoot, 'attribution-opt-out-directory'),
       format: 'directory',
     }),
     ...representativeSources.map((fixture) =>

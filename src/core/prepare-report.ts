@@ -148,6 +148,7 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
       layout: source.manifest.layout,
       tokens: source.manifest.tokens,
       scrollProgress: source.manifest.scrollProgress,
+      attribution: source.manifest.attribution,
     },
     contentHtml: markdown.html,
     navigation: markdown.navigation,

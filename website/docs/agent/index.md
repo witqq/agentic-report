@@ -90,6 +90,10 @@ Open `my-page.html` through `file://`. Edit only the declarative source: Markdow
 optional YAML/JSON manifest, confined Markdown partials, and local assets. Authors do not need React,
 JSX, browser JavaScript, CSS, or a frontend project.
 
+Generated reports include a bottom **Made with Agentic Report** link by default. Keep that default unless
+the user asks for an unbranded artifact; in that case set `attribution: false` in frontmatter or the
+manifest. This removes only the package footer and does not alter author-owned prose or links.
+
 The shorter current-channel journey is:
 
 ```sh

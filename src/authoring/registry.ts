@@ -106,6 +106,7 @@ export const PAGE_CONTRACT = {
   defaultTheme: 'system',
   themes: ['system', 'light', 'dark'],
   defaultScrollProgress: false,
+  defaultAttribution: true,
   motion: PAGE_MOTION_POLICY,
   tokens: PAGE_TOKEN_FIELDS,
 } as const;
@@ -479,6 +480,14 @@ export const authoringRegistry = {
         'Enables a decorative package-owned scroll indicator only in the normal-motion profile.',
       required: false,
       default: PAGE_CONTRACT.defaultScrollProgress,
+      constraint: { kind: 'boolean' },
+    },
+    {
+      name: 'attribution',
+      description:
+        'Shows the package-owned “Made with Agentic Report” footer link; set false to omit it.',
+      required: false,
+      default: PAGE_CONTRACT.defaultAttribution,
       constraint: { kind: 'boolean' },
     },
     {

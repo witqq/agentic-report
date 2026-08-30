@@ -238,6 +238,7 @@ describe('authoring registry', () => {
       defaultTheme: 'system',
       themes: ['system', 'light', 'dark'],
       defaultScrollProgress: false,
+      defaultAttribution: true,
       motion: {
         scrollProgress: { normalMotionOnly: true },
         sectionReveal: {

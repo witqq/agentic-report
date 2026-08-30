@@ -368,6 +368,7 @@ if (
     JSON.stringify(['document', 'dashboard', 'landing', 'mixed']) ||
   installedPage.defaultTheme !== 'system' ||
   JSON.stringify(installedPage.themes) !== JSON.stringify(['system', 'light', 'dark']) ||
+  installedPage.defaultAttribution !== true ||
   !Array.isArray(installedPage.tokens) ||
   installedPage.tokens.length !== 5
 ) {
@@ -410,6 +411,11 @@ const outputProperties = requireRecord(
   'installed output schema properties',
 );
 assertExactKeys(outputProperties, ['format', 'maxInlineBytes'], 'manifest output schema');
+if (
+  requireRecord(manifestProperties.attribution, 'installed attribution schema').default !== true
+) {
+  throw new Error('Installed manifest schema lost the default attribution contract.');
+}
 const { stdout: apiContractOutput } = await execFileAsync(
   process.execPath,
   [
@@ -512,6 +518,12 @@ for (const expected of expectedLayoutExamples) {
       throw new Error(
         `Installed ${expected.id} ${format} artifact did not preserve its page layout.`,
       );
+    }
+    if (
+      !html.includes('data-report-attribution="true"') ||
+      !html.includes('<a href="https://agentic-report.witqq.dev/">Made with Agentic Report</a>')
+    ) {
+      throw new Error(`Installed ${expected.id} ${format} artifact lost default attribution.`);
     }
     if (expected.id === 'landing') {
       const inFlowContents = /<nav class="semantic-contents"[\s\S]*?<\/nav>/u.exec(html)?.[0];
