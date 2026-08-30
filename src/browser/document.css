@@ -433,6 +433,33 @@ a {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.report-attribution {
+  display: flex;
+  width: min(100%, var(--content-width));
+  justify-content: center;
+  margin: 0 auto;
+  border-top: 1px solid var(--color-border);
+  padding: 1.25rem var(--shell-gutter) 2rem;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.report-attribution a {
+  color: inherit;
+  font-weight: 650;
+  text-decoration-thickness: 0.08em;
+}
+
+.report-attribution a:hover {
+  color: var(--color-accent-strong);
+}
+
+.report-attribution a:focus-visible {
+  border-radius: var(--radius-small);
+  outline: 2px solid var(--color-focus);
+  outline-offset: 0.25rem;
+}
+
 :root[data-nav-collapsed] .report-shell {
   grid-template-columns: minmax(0, 1fr);
 }

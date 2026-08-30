@@ -56,7 +56,8 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   exact serialized inline-size accounting, canonical and hard-link source/output collision protection,
   injected partial-write/rename preservation and retry for both output formats, same-process name/content
   determinism, registry-owned page layouts/themes/token defaults, GFM table rendering, collision-free
-  document shell IDs, compiler results, deterministic public-site staging, complete declared-route
+  document shell IDs, default attribution and explicit footer opt-out without changing authored content,
+  compiler results, deterministic public-site staging, complete declared-route
   reachability, direct-file byte identity, release hashes, synchronized skill/plugin metadata, and public
   tree safety. Public-site staging also rejects route/source escapes, canonically external page sources,
   symlinked direct inputs, an existing destination, release-identity divergence, and invalid generated routes
@@ -81,7 +82,9 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   review-target accessible labels, Russian Review Workspace add/edit/resolve/reopen/import states and stale
   prior classifications, non-English-browser independence for unsupported/`und` fallback, embedded single-file and
   external directory runtimes, and representative architecture, tutorial, work-report, and landing-page
-  artifacts. The document, dashboard, landing, and mixed examples are built and exercised through
+  artifacts. Both formats also verify the accessible **Made with Agentic Report** footer at the visible
+  document bottom and its complete absence under `attribution: false`. The document, dashboard, landing,
+  and mixed examples are built and exercised through
   `file://` in desktop and mobile profiles, including their page data contract and local images. All six
   package starters are also opened in both profiles, exercise a declared interaction, assert responsive
   containment, and produce inspected captures. Dedicated semantic-tabs coverage builds every current

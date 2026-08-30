@@ -276,6 +276,7 @@ layout: mixed
 theme: system
 preset: signal
 scrollProgress: true
+attribution: true
 tokens:
   radius: round
 ---
@@ -308,6 +309,8 @@ theme, and optional token values:
 - `preset`: `studio` (default), `editorial`, or `signal`;
 - `theme`: `system` (default), `light`, or `dark`;
 - `scrollProgress`: boolean, default `false`; decorative normal-motion reading progress;
+- `attribution`: boolean, default `true`; shows **Made with Agentic Report** linked to
+  `https://agentic-report.witqq.dev/` at the bottom. Set `false` to omit only that package footer;
 - `tokens.density`: `compact`, `comfortable`, or `spacious`;
 - `tokens.font`: `sans`, `serif`, or `mono`;
 - `tokens.accent`: `indigo`, `teal`, or `coral`;

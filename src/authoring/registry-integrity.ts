@@ -278,6 +278,7 @@ function checkPageContract(registry: RegistryIntegrityInput, issues: string[]): 
   const theme = registry.manifestFields.find((field) => field.name === 'theme');
   const layout = registry.manifestFields.find((field) => field.name === 'layout');
   const scrollProgress = registry.manifestFields.find((field) => field.name === 'scrollProgress');
+  const attribution = registry.manifestFields.find((field) => field.name === 'attribution');
   if (preset?.default !== registry.page.defaultPreset) {
     issues.push('page preset: manifest default differs from registry default');
   }
@@ -292,6 +293,12 @@ function checkPageContract(registry: RegistryIntegrityInput, issues: string[]): 
     scrollProgress.default !== registry.page.defaultScrollProgress
   ) {
     issues.push('page motion: scroll-progress field differs from registry default');
+  }
+  if (
+    attribution?.constraint?.kind !== 'boolean' ||
+    attribution.default !== registry.page.defaultAttribution
+  ) {
+    issues.push('page attribution: field differs from registry default');
   }
 
   const tokens = registry.manifestFields.find((field) => field.name === 'tokens');

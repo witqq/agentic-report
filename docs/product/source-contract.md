@@ -32,6 +32,9 @@ Frontmatter takes precedence. Supported fields are:
 - `theme`: `system`, `light`, or `dark`;
 - `layout`: `document`, `dashboard`, `landing`, or `mixed`;
 - `scrollProgress`: boolean; default `false`; enables decorative normal-motion reading progress;
+- `attribution`: boolean; default `true`; shows the package-owned footer link **Made with Agentic Report**
+  to `https://agentic-report.witqq.dev/`. Set `false` to omit only that footer; authored links and prose are
+  unchanged;
 - `tokens`: optional compact visual overrides containing only the fields below:
   - `density`: `compact`, `comfortable`, or `spacious`;
   - `font`: `sans`, `serif`, or `mono`;
@@ -142,7 +145,8 @@ The root metadata value, `tokens`, and `output` must be objects; scalar and arra
 silently replaced by defaults. Validation diagnostics point to the actual manifest or frontmatter field
 range that supplied the failing value.
 
-Defaults are `layout: document`, `theme: system`, `preset: studio`, and `scrollProgress: false`. Presets provide these coordinated
+Defaults are `layout: document`, `theme: system`, `preset: studio`, `scrollProgress: false`, and
+`attribution: true`. Presets provide these coordinated
 token defaults:
 
 | Preset      | Density     | Font  | Accent | Width    | Radius |
@@ -445,13 +449,17 @@ destinations; clean-package verification repeats the build through independent C
 data URLs including base64 expansion. A font data URL is counted once through generated CSS. The result's `bytes` field
 separately reports the HTML file size, not a directory-tree total.
 
-Both formats include the same package-owned page layout, theme/tokens, responsive navigation and bounded motion, code-copy,
+Both formats include the same package-owned page layout, theme/tokens, responsive navigation and bounded motion, default attribution footer, code-copy,
 tabs, overlays, filters, switches, visualizations, and demo behavior. Tabs start on their first panel; disclosures use the
 authored `open` value; toggles use `default: off` unless set to `on`; popovers start closed; filter counts
 and modal state initialize in the browser. Wide tables and code scroll inside their content surface on
 narrow screens instead of breaking the page. Runtime
 placement follows the format and is not authored: inline for `single-file`, or a deterministic hashed local
 asset for `directory`.
+
+The attribution footer is the final visible package-owned block after the report shell in both formats. It
+contains one ordinary HTTPS anchor named **Made with Agentic Report**. `attribution: false` removes that
+footer at compile time and does not hide matching author-owned content.
 
 An output may not resolve to, or share a filesystem identity with, the entry, a manifest, an included
 partial, or a referenced local asset. A single file is written exclusively to a private sibling file and

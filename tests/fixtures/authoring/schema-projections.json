@@ -61,6 +61,11 @@
         "description": "Enables a decorative package-owned scroll indicator only in the normal-motion profile.",
         "default": false
       },
+      "attribution": {
+        "type": "boolean",
+        "description": "Shows the package-owned “Made with Agentic Report” footer link; set false to omit it.",
+        "default": true
+      },
       "tokens": {
         "type": "object",
         "additionalProperties": false,
@@ -1377,6 +1382,11 @@
             "type": "boolean",
             "description": "Enables a decorative package-owned scroll indicator only in the normal-motion profile.",
             "default": false
+          },
+          "attribution": {
+            "type": "boolean",
+            "description": "Shows the package-owned “Made with Agentic Report” footer link; set false to omit it.",
+            "default": true
           },
           "tokens": {
             "type": "object",

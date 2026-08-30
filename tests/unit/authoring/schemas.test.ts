@@ -165,6 +165,7 @@ describe('authoring schema projections', () => {
       theme: 'system',
       layout: 'document',
       scrollProgress: false,
+      attribution: true,
       tokens: {
         density: 'comfortable',
         font: 'sans',
@@ -302,6 +303,8 @@ describe('authoring schema projections', () => {
       accepted('mixed layout', { layout: 'mixed' }),
       accepted('scroll progress enabled', { scrollProgress: true }),
       accepted('scroll progress disabled', { scrollProgress: false }),
+      accepted('attribution enabled', { attribution: true }),
+      accepted('attribution disabled', { attribution: false }),
       accepted('compact visual token overrides', {
         tokens: {
           density: 'compact',
@@ -332,6 +335,8 @@ describe('authoring schema projections', () => {
       rejected('numeric layout', { layout: 1 }),
       rejected('string scroll progress', { scrollProgress: 'true' }),
       rejected('numeric scroll progress', { scrollProgress: 1 }),
+      rejected('string attribution', { attribution: 'false' }),
+      rejected('numeric attribution', { attribution: 0 }),
       rejected('non-object tokens', { tokens: 'wide' }),
       rejected('unknown token field', { tokens: { color: 'red' } }),
       rejected('unknown density token', { tokens: { density: 'tiny' } }),

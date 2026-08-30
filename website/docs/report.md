@@ -120,6 +120,8 @@ copies only visible rendered text through the localized package control.
 - `single-file` is the default: one portable HTML file with embedded local resources and runtime.
 - `directory` writes `index.html` plus content-hashed resources for larger pages.
 - Both formats open through normal `file://` and preserve the same supported interactions.
+- Both formats show a bottom **Made with Agentic Report** link by default. Set root metadata
+  `attribution: false` to omit only that package footer.
 - Top-level `::contents` keeps an exact compiler-generated section map in the article and on narrow screens;
   short `section.nav` labels remain exclusive to sidebar/mobile navigation.
 - A section may start with one bounded `:::lead` paragraph. Appendix glossary definitions may be direct

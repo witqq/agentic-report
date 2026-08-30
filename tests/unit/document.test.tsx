@@ -14,6 +14,7 @@ const baseOptions = {
     theme: 'system',
     layout: 'document',
     scrollProgress: false,
+    attribution: true,
     tokens: {
       density: 'comfortable',
       font: 'sans',
@@ -45,6 +46,22 @@ describe('renderDocument runtime boundary', () => {
     const html = renderDocument(externalOptions);
     expect(html).toContain('<script src="assets/runtime.hash.js" defer=""></script>');
     expect(html).not.toContain('<script>');
+  });
+
+  it('renders package attribution by default and omits only the package footer on opt-out', () => {
+    const attributed = renderDocument(inlineOptions);
+    expect(attributed).toContain(
+      '<footer class="report-attribution" data-report-attribution="true"><a href="https://agentic-report.witqq.dev/">Made with Agentic Report</a></footer>',
+    );
+    const optedOut = renderDocument({
+      ...inlineOptions,
+      page: { ...inlineOptions.page, attribution: false },
+      contentHtml: '<p><a href="https://example.com/authored">Made with Agentic Report</a></p>',
+    });
+    expect(optedOut).not.toContain('data-report-attribution');
+    expect(optedOut).toContain(
+      '<a href="https://example.com/authored">Made with Agentic Report</a>',
+    );
   });
 
   it('uses the input language for complete package chrome and falls back to English', () => {
