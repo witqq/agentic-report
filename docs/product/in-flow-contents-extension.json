@@ -1,0 +1,29 @@
+{
+  "contractVersion": 1,
+  "id": "in-flow-contents",
+  "summary": "Adds an authored document-flow map generated from the compiler's final primary-section inventory.",
+  "trustBoundary": {
+    "authorCode": "forbidden",
+    "callbacks": "forbidden",
+    "eval": "forbidden",
+    "dynamicImports": "forbidden",
+    "networkAccess": "forbidden",
+    "confinement": "source-root",
+    "offline": "required",
+    "deterministicSerialization": "required",
+    "cspCompatible": "required",
+    "packageOwnedRuntime": "required"
+  },
+  "evidence": {
+    "sourceGrammar": "The top-level leaf directive ::contents accepts no attributes, label, children, author HTML, script, template, callback, URL, resource, or manifest default. Invalid forms, attributes and nested placement fail with authored-range diagnostics and appear in generated discovery and schemas.",
+    "executionCapabilities": "After final section IDs and appendix extraction, trusted HAST enhancement replaces the directive placeholder with a labelled native navigation landmark and ordered links. Exact visible section headings populate the in-flow map; optional short nav labels remain exclusive to sidebar chrome.",
+    "confinement": "The transformation consumes only the already confined document HAST and allocates no path or ID. It reads no additional source, file, URL, environment value or generated artifact.",
+    "offlineBehavior": "Compilation and direct file-URL reading require no network or service. Links are same-document fragments to compiler-final section targets.",
+    "deterministicSerialization": "Final explicit sections, or eligible legacy H2 headings when no explicit section exists, determine exact order, labels and hrefs. Zero and one-item maps remain in flow while sidebar chrome keeps its independent two-item threshold.",
+    "cspAndRuntime": "The feature serializes native nav, ordered-list and same-page anchor elements before output. It adds no browser parser, listener, observer, handler, storage, script, style input, form, iframe, fetch, CSP source or runtime branch.",
+    "accessibility": "The map is a labelled navigation landmark with a visible localized title, ordered native links and exact visible section names. It remains ordinary article content at narrow widths instead of moving into the modal contents drawer.",
+    "byteAndPerformanceBudgets": "One final structural section traversal supplies both in-flow and sidebar projections. Work is linear in document elements and section count, with no duplicate HTML parse, reader-time scan, scroll work or background task.",
+    "packageDependenciesAndLicenses": "No dependency or license is added. The implementation composes the typed registry, existing Markdown/HAST pipeline, section ID allocator, localization strings, static document shell and shared CSS tokens.",
+    "compatibility": "Sources without ::contents retain current output behavior. Explicit and legacy sidebar navigation, current-section ownership, review targets, appendix exclusion, output formats, CSP and runtime stay unchanged; the new directive is additive within source contract major 1."
+  }
+}

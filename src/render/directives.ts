@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import type { Element, ElementContent, Root as HastRoot } from 'hast';
 import type { Code, Root as MdastRoot } from 'mdast';
 import { decodeString } from 'micromark-util-decode-string';
@@ -17,8 +19,20 @@ import type { SourceMapSegment } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
 import { packageStrings, type PackageStrings } from '../localization.js';
 import { MAX_REVIEW_RESPONSES } from '../review/contract.js';
+import {
+  RESPONSE_CONTRACT_VERSION,
+  MAX_RESPONSE_FORMS,
+  MAX_RESPONSE_ITEMS,
+  MAX_RESPONSE_OPTIONS,
+  MAX_RESPONSE_QUESTIONS,
+  parseResponseFormManifest,
+  type ResponseItemDefinition,
+  type ResponseQuestionDefinition,
+  type ResponseQuestionKind,
+} from '../response/contract.js';
 import { resolveSourceLocation } from '../source/source-map.js';
 import { decorativeIcon } from './icons.js';
+import { resolveDocumentNavigation, type NavigationItem } from './navigation.js';
 import { enhanceVisualization } from './visualizations.js';
 
 interface SourcePosition {
@@ -55,17 +69,22 @@ interface DirectivePluginOptions {
 interface DirectiveEnhancementOptions {
   readonly sourceMap: readonly SourceMapSegment[];
   readonly language?: string;
+  readonly share?: boolean;
+  readonly shareTransform?: { neutralizedSourceLinks: number };
+  readonly navigationTransform?: { items: NavigationItem[] };
 }
 
 const directiveByName: ReadonlyMap<string, DirectiveDefinition> = new Map(
   authoringRegistry.directives.map((directive) => [directive.name, directive]),
 );
+const SOURCE_LINK_LABEL_MAX_LENGTH = sourceLinkLabelMaximumLength();
 const GENERATED_SECTION_ID_PREFIX = 'generated:';
 const CODE_TERM_FIELD = 'terms' as const;
 const CODE_TERM_METADATA = authoringRegistry.source.codeFenceMetadata.terms;
 const CODE_TERM_KEY_PATTERN = new RegExp(CODE_TERM_METADATA.itemConstraint.pattern, 'u');
 const CODE_TERM_ATTEMPT_PATTERN = new RegExp(`(?:^|\\s)${CODE_TERM_FIELD}(?:\\s*=|\\s|$)`, 'u');
 const CODE_TERM_EXACT_PATTERN = codeTermExactPattern(CODE_TERM_FIELD, CODE_TERM_METADATA);
+const WORD_CONTINUATION_PATTERN = /[\p{L}\p{N}\p{M}\p{Pc}\u200c\u200d]/u;
 
 export type CodeTermMetadataResult =
   | { readonly kind: 'none' }
@@ -137,6 +156,7 @@ function unsupportedCodeMetadataContract(value: never): never {
 
 export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoot> =
   (options) => (tree) => {
+    restoreNumericColonText(tree, options.markdown);
     const glossaryByKey = new Map<string, GlossaryDefinition>();
     const glossaryTerms = new Map<string, GlossaryDefinition>();
     const termReferences: Array<{ readonly key: string; readonly node: DirectiveNode }> = [];
@@ -177,6 +197,7 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
         requireNoPrototypeLikeAttributes(node, options.markdown);
         requireDirectiveForm(node, directive);
         requireDirectivePlacement(node, directive, parent);
+        requireDirectiveChildren(node, directive);
         const interpretation = interpretDirectiveAttributes(directive, node.attributes ?? {});
         if (!interpretation.ok) throw directiveAttributeError(node, interpretation);
         const values =
@@ -194,21 +215,13 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
         if (
           directive.name === 'glossary' &&
           values.placement === 'appendix' &&
-          (!isTraversableNode(parent) || parent.type !== 'root')
+          !isAppendixGlossaryParent(parent)
         ) {
           throw directiveError(
             node,
             'INVALID_DIRECTIVE_PLACEMENT',
-            'A glossary definition placed in the appendix must be a top-level directive.',
-            'Move this appendix glossary outside lists, blockquotes, sections, and other directives.',
-          );
-        }
-        if (directive.name === 'source-link' && (node.children ?? []).length > 0) {
-          throw directiveError(
-            node,
-            'INVALID_DIRECTIVE_PLACEMENT',
-            'source-link accepts its visible label only through the label attribute.',
-            'Use :source-link{label="Short path:line" href="..."}.',
+            'A glossary definition placed in the appendix must be top-level or directly inside a section.',
+            'Move this appendix glossary outside lists, blockquotes, and unrelated directives, or make it a direct section child.',
           );
         }
         attributesByNode.set(node, values);
@@ -281,9 +294,280 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
     validateCodeTermBlocks(codeTermBlocks, glossaryByKey, options);
     validateVisualizationData(tree, attributesByNode, options);
     validateActionGroups(tree, options);
+    validateCopyableProse(tree, options);
+    validateLeadParagraphs(tree, options);
     validateTypedReviewComponents(tree, attributesByNode, options);
+    validateResponseForms(tree, attributesByNode, options);
     validateUnmarkedGlossaryTerms(tree, [...glossaryByKey.values()], options);
   };
+
+function validateCopyableProse(tree: MdastRoot, options: DirectivePluginOptions): void {
+  visit(tree, (candidate) => {
+    if (!isDirectiveNode(candidate) || candidate.name !== 'copyable') return;
+    const pending = [...(candidate.children ?? [])];
+    while (pending.length > 0) {
+      const child = pending.pop();
+      if (isCodeNode(child) || (isDirectiveNode(child) && child.name !== 'term')) {
+        const node = child as DirectiveNode;
+        throw attachDirectiveSource(
+          directiveError(
+            node,
+            'INVALID_DIRECTIVE_PLACEMENT',
+            'copyable accepts prose Markdown and term references, not code blocks or other directives.',
+            'Move the code or interactive/data directive outside copyable.',
+          ),
+          node,
+          options,
+        );
+      }
+      if (isTraversableNode(child)) pending.push(...(child.children ?? []));
+    }
+  });
+}
+
+function validateLeadParagraphs(tree: MdastRoot, options: DirectivePluginOptions): void {
+  visit(tree, (candidate) => {
+    if (!isDirectiveNode(candidate) || candidate.name !== 'section') return;
+    const children = candidate.children ?? [];
+    const leads = children.filter(
+      (child): child is DirectiveNode => isDirectiveNode(child) && child.name === 'lead',
+    );
+    for (const [index, lead] of leads.entries()) {
+      const blocks = lead.children ?? [];
+      if (
+        blocks.length !== 1 ||
+        typeof blocks[0] !== 'object' ||
+        blocks[0] === null ||
+        !('type' in blocks[0]) ||
+        blocks[0].type !== 'paragraph'
+      ) {
+        throw attachDirectiveSource(
+          directiveError(
+            lead,
+            'INVALID_DIRECTIVE_PLACEMENT',
+            'lead must contain exactly one Markdown paragraph.',
+            'Keep one prose paragraph inside lead and move every other block outside it.',
+          ),
+          lead,
+          options,
+        );
+      }
+      if (index > 0 || children[0] !== lead) {
+        throw attachDirectiveSource(
+          directiveError(
+            lead,
+            'INVALID_DIRECTIVE_PLACEMENT',
+            'A section accepts one lead as its first authored block.',
+            'Keep one lead first in the section and use ordinary paragraphs for the remaining prose.',
+          ),
+          lead,
+          options,
+        );
+      }
+    }
+  });
+}
+
+function isAppendixGlossaryParent(parent: unknown): boolean {
+  return (
+    (isTraversableNode(parent) && parent.type === 'root') ||
+    (isDirectiveNode(parent) && parent.name === 'section')
+  );
+}
+
+function restoreNumericColonText(tree: MdastRoot, markdown: string): void {
+  visit(tree, (node, index, parent) => {
+    if (
+      !isDirectiveNode(node) ||
+      node.type !== 'textDirective' ||
+      !/^\d+$/u.test(node.name) ||
+      Object.keys(node.attributes ?? {}).length > 0 ||
+      (node.children?.length ?? 0) > 0 ||
+      index === undefined ||
+      !isMutableChildrenParent(parent)
+    )
+      return;
+    const start = node.position?.start.offset;
+    const end = node.position?.end.offset;
+    if (start === undefined || end === undefined || !isTimeOrDurationToken(markdown, start, end))
+      return;
+    parent.children[index] = {
+      type: 'text',
+      value: markdown.slice(start, end),
+      position: node.position,
+    };
+  });
+}
+
+function isTimeOrDurationToken(
+  markdown: string,
+  directiveStart: number,
+  directiveEnd: number,
+): boolean {
+  let tokenStart = directiveStart;
+  let tokenEnd = directiveEnd;
+  while (tokenStart > 0 && /[\d:]/u.test(markdown[tokenStart - 1] ?? '')) tokenStart -= 1;
+  while (tokenEnd < markdown.length && /[\d:]/u.test(markdown[tokenEnd] ?? '')) tokenEnd += 1;
+  if (tokenStart === directiveStart || markdown[directiveStart] !== ':') return false;
+  const before = codePointBefore(markdown, tokenStart);
+  const after = codePointAt(markdown, tokenEnd);
+  if (
+    (before !== undefined && WORD_CONTINUATION_PATTERN.test(before)) ||
+    (after !== undefined && WORD_CONTINUATION_PATTERN.test(after))
+  )
+    return false;
+  const groups = markdown.slice(tokenStart, tokenEnd).split(':');
+  if (groups.length < 2 || groups.length > 3 || !/^\d+$/u.test(groups[0] ?? '')) return false;
+  return groups.slice(1).every((group) => /^\d{2}$/u.test(group) && Number(group) <= 59);
+}
+
+function codePointBefore(value: string, index: number): string | undefined {
+  if (index <= 0) return;
+  const finalCodeUnit = value.charCodeAt(index - 1);
+  const start =
+    finalCodeUnit >= 0xdc00 &&
+    finalCodeUnit <= 0xdfff &&
+    index >= 2 &&
+    value.charCodeAt(index - 2) >= 0xd800 &&
+    value.charCodeAt(index - 2) <= 0xdbff
+      ? index - 2
+      : index - 1;
+  return codePointAt(value, start);
+}
+
+function codePointAt(value: string, index: number): string | undefined {
+  const point = value.codePointAt(index);
+  return point === undefined ? undefined : String.fromCodePoint(point);
+}
+
+function isMutableChildrenParent(value: unknown): value is { children: TraversableNode[] } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'children' in value &&
+    Array.isArray((value as { readonly children?: unknown }).children)
+  );
+}
+
+function validateResponseForms(
+  tree: MdastRoot,
+  attributesByNode: WeakMap<object, Readonly<Record<string, string | number | boolean>>>,
+  options: DirectivePluginOptions,
+): void {
+  const formIds = new Set<string>();
+  let formCount = 0;
+  visit(tree, (candidate) => {
+    if (!isDirectiveNode(candidate) || candidate.name !== 'response') return;
+    formCount += 1;
+    if (formCount > MAX_RESPONSE_FORMS)
+      fail(candidate, `A document supports at most ${MAX_RESPONSE_FORMS} response forms.`);
+    const form = attributes(candidate);
+    const formId = String(form.id);
+    if (formIds.has(formId)) fail(candidate, `Response id is duplicated: ${formId}.`);
+    formIds.add(formId);
+    const questions = directChildren(candidate, ['question']);
+    if (questions.length < 1 || questions.length > MAX_RESPONSE_QUESTIONS)
+      fail(candidate, `Response requires 1 to ${MAX_RESPONSE_QUESTIONS} questions.`);
+    const questionIds = new Set<string>();
+    let itemTotal = 0;
+    for (const question of questions) {
+      const values = attributes(question);
+      const id = String(values.id);
+      const kind = String(values.kind) as ResponseQuestionKind;
+      if (questionIds.has(id)) fail(question, `Question id is duplicated: ${id}.`);
+      questionIds.add(id);
+      const children = directChildren(question, ['bucket', 'option', 'item']);
+      const buckets = children.filter((child) => child.name === 'bucket');
+      const choices = children.filter((child) => child.name === 'option');
+      const items = children.filter((child) => child.name === 'item');
+      itemTotal += items.length;
+      uniqueChildIds(question, buckets, 'bucket');
+      uniqueChildIds(question, choices, 'option');
+      uniqueChildIds(question, items, 'item');
+      const itemKind = ['bucket', 'item-single', 'item-multi', 'order', 'number'].includes(kind);
+      if (itemKind !== items.length > 0)
+        fail(
+          question,
+          itemKind ? `${kind} requires response items.` : `${kind} does not accept items.`,
+        );
+      if (kind === 'bucket') {
+        if (buckets.length < 2 || buckets.length > 5)
+          fail(question, 'Bucket questions require 2 to 5 buckets.');
+        const bucketIds = new Set(buckets.map((child) => String(attributes(child).id)));
+        for (const item of items) {
+          const initial = attributes(item).bucket;
+          if (initial !== undefined && !bucketIds.has(String(initial)))
+            fail(item, `Response item references an unknown bucket: ${String(initial)}.`);
+        }
+      } else if (buckets.length > 0) fail(question, `${kind} does not accept bucket definitions.`);
+      if (['item-single', 'item-multi', 'single'].includes(kind)) {
+        if (choices.length < 2 || choices.length > MAX_RESPONSE_OPTIONS)
+          fail(question, `${kind} requires 2 to ${MAX_RESPONSE_OPTIONS} options.`);
+      } else if (choices.length > 0) fail(question, `${kind} does not accept option definitions.`);
+      if (kind === 'number') {
+        const minimum = values.min;
+        const maximum = values.max;
+        const step = values.step;
+        if (typeof minimum !== 'number' || typeof maximum !== 'number')
+          fail(question, 'Number questions require min and max.');
+        if (minimum > maximum) fail(question, 'Number question min must not exceed max.');
+        if (typeof step === 'number' && step <= 0)
+          fail(question, 'Number question step must be positive.');
+      } else if (
+        values.min !== undefined ||
+        values.max !== undefined ||
+        values.step !== undefined
+      ) {
+        fail(question, `Numeric bounds are supported only by number questions, not ${kind}.`);
+      }
+    }
+    if (itemTotal > MAX_RESPONSE_ITEMS)
+      fail(candidate, `Response supports at most ${MAX_RESPONSE_ITEMS} items in total.`);
+  });
+
+  function attributes(node: DirectiveNode): Readonly<Record<string, string | number | boolean>> {
+    const values = attributesByNode.get(node);
+    if (!values) throw new Error(`Missing validated response attributes for ${node.name}.`);
+    return values;
+  }
+  function directChildren(
+    parent: DirectiveNode,
+    allowed: readonly string[],
+  ): readonly DirectiveNode[] {
+    const children = parent.children ?? [];
+    const directives = children.filter(isDirectiveNode);
+    if (
+      directives.length !== children.length ||
+      directives.some((child) => !allowed.includes(child.name))
+    )
+      fail(
+        parent,
+        `${parent.name} accepts only ${allowed.join(', ')} directives as direct children.`,
+      );
+    return directives;
+  }
+  function uniqueChildIds(
+    parent: DirectiveNode,
+    children: readonly DirectiveNode[],
+    label: string,
+  ): void {
+    const ids = children.map((child) => String(attributes(child).id));
+    if (new Set(ids).size !== ids.length)
+      fail(parent, `${label} ids must be unique within the question.`);
+  }
+  function fail(node: DirectiveNode, message: string): never {
+    throw attachDirectiveSource(
+      directiveError(
+        node,
+        'INVALID_RESPONSE_DATA',
+        message,
+        'Correct the response/question child types, stable ids, defaults, or kind-specific domain.',
+      ),
+      node,
+      options,
+    );
+  }
+}
 
 function validateTypedReviewComponents(
   tree: MdastRoot,
@@ -1494,16 +1778,32 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
         enhanceCodeTerms(node, codeTermKeys.split(','), glossary, createGlossaryReference);
       }
       const semantic = stringProperty(node, 'dataSemantic');
+      if (semantic === 'lead') {
+        enhanceLead(node);
+        return;
+      }
+      if (semantic === 'copyable') {
+        enhanceCopyableProse(node);
+        return;
+      }
+      if (semantic === 'response') {
+        enhanceResponse(node, allocateId);
+        return;
+      }
       if (semantic === 'section') {
         enhanceSection(node, allocateId);
         return;
       }
+      if (semantic === 'contents') return;
       if (semantic === 'action') {
         enhanceAction(node);
         return;
       }
       if (semantic === 'source-link') {
-        enhanceSourceLink(node);
+        enhanceSourceLink(node, options.share === true);
+        if (options.share === true && options.shareTransform !== undefined) {
+          options.shareTransform.neutralizedSourceLinks += 1;
+        }
         return;
       }
       if (semantic !== undefined && ['chart', 'diagram', 'timeline'].includes(semantic)) {
@@ -1595,6 +1895,10 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
           ...appendixDefinitions,
         ],
       });
+    }
+    const navigation = resolveDocumentNavigation(tree, strings.contentSections);
+    if (options.navigationTransform !== undefined) {
+      options.navigationTransform.items = navigation;
     }
   };
 
@@ -1771,6 +2075,19 @@ function extractAppendixGlossaries<Parent extends HastRoot | Element>(parent: Pa
   return appendix;
 }
 
+function enhanceLead(node: Element): void {
+  const paragraphs = node.children.filter(
+    (child): child is Element => child.type === 'element' && child.tagName === 'p',
+  );
+  const paragraph = paragraphs[0];
+  if (paragraph === undefined || paragraphs.length !== 1) {
+    throw new Error('Validated lead is missing its single paragraph.');
+  }
+  node.tagName = 'p';
+  node.properties = { ...paragraph.properties, ...node.properties };
+  node.children = paragraph.children;
+}
+
 function enhanceSection(node: Element, allocateId: (base: string) => string): void {
   const title = takeStringProperty(node, 'dataDirectiveTitle');
   const transportedId = takeStringProperty(node, 'dataId');
@@ -1845,17 +2162,228 @@ function enhanceAction(node: Element): void {
   node.children.unshift(decorativeIcon('arrow-right'));
 }
 
-function enhanceSourceLink(node: Element): void {
+function enhanceSourceLink(node: Element, share: boolean): void {
   const label = takeStringProperty(node, 'dataLabel');
   const href = takeStringProperty(node, 'dataHref');
   if (label === undefined || href === undefined) {
     throw new Error('Validated source-link is missing its label or href.');
+  }
+  if (share) {
+    node.tagName = 'span';
+    delete node.properties.href;
+    delete node.properties.target;
+    delete node.properties.rel;
+    delete node.properties.dataSourceLink;
+    node.properties.dataSourceLinkNeutralized = '';
+    node.children = [{ type: 'text', value: shareSafeSourceLabel(href) }];
+    return;
   }
   node.properties.href = href;
   node.properties.target = '_blank';
   node.properties.rel = ['noopener', 'noreferrer'];
   node.properties.dataSourceLink = '';
   node.children = [decorativeIcon('arrow-right'), { type: 'text', value: label }];
+}
+
+type ShareLabelSafety =
+  { readonly safe: true; readonly fixedPoint: string } | { readonly safe: false };
+
+function shareSafeSourceLabel(href: string): string {
+  const helper = new URL(href);
+  const helperPath = helper.searchParams.get('path');
+  const line = helper.searchParams.get('line');
+  if (helperPath === null || line === null) {
+    throw new Error('Validated source-link helper is missing its path or line.');
+  }
+  const generic = `source:${line}`;
+  if (/[\\/]$/u.test(helperPath)) return generic;
+  const candidate = helperPath.split(/[\\/]/u).at(-1);
+  if (candidate === undefined) return generic;
+  const safety = classifyShareLabel(candidate);
+  if (!safety.safe) return generic;
+  const derived = `${safety.fixedPoint}:${line}`;
+  return derived.length <= SOURCE_LINK_LABEL_MAX_LENGTH ? derived : generic;
+}
+
+function classifyShareLabel(value: string): ShareLabelSafety {
+  let current = value;
+  for (let inspection = 0; inspection <= value.length; inspection += 1) {
+    if (!shareLabelRepresentationIsSafe(current)) return { safe: false };
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(current);
+    } catch {
+      return { safe: false };
+    }
+    if (decoded === current) return { safe: true, fixedPoint: current };
+    current = decoded;
+  }
+  return { safe: false };
+}
+
+function shareLabelRepresentationIsSafe(value: string): boolean {
+  return (
+    value.length > 0 &&
+    value !== '.' &&
+    value !== '..' &&
+    !value.startsWith('~') &&
+    !hasShareLabelControl(value) &&
+    !/[\\/:]/u.test(value)
+  );
+}
+
+function hasShareLabelControl(value: string): boolean {
+  for (const character of value) {
+    const codePoint = character.codePointAt(0);
+    if (
+      codePoint !== undefined &&
+      (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f))
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function sourceLinkLabelMaximumLength(): number {
+  const sourceLink = directiveByName.get('source-link');
+  const label = sourceLink?.attributes.find((attribute) => attribute.name === 'label');
+  if (label?.constraint.kind !== 'string' || label.constraint.maxLength === undefined) {
+    throw new Error('Source-link label constraint is missing its maximum length.');
+  }
+  return label.constraint.maxLength;
+}
+
+function enhanceCopyableProse(node: Element): void {
+  const authoredChildren = node.children;
+  node.properties.dataCopyableProse = '';
+  node.children = [
+    {
+      type: 'element',
+      tagName: 'div',
+      properties: { dataCopyableContent: '' },
+      children: authoredChildren,
+    },
+  ];
+}
+
+function enhanceResponse(node: Element, allocateId: (base: string) => string): void {
+  const id = stringProperty(node, 'dataId');
+  const title = stringProperty(node, 'dataDirectiveTitle');
+  if (!id || !title) throw new Error('Validated response is missing its id or title.');
+  const authoredChildren = node.children;
+  const questions = authoredChildren.filter(
+    (child): child is Element =>
+      child.type === 'element' && child.properties.dataSemantic === 'question',
+  );
+  const projection = {
+    contractVersion: RESPONSE_CONTRACT_VERSION,
+    id,
+    title,
+    questions: questions.map(responseQuestionDefinition),
+  };
+  const revision = `sha256:${createHash('sha256').update(JSON.stringify(projection)).digest('hex')}`;
+  const manifest = parseResponseFormManifest({ ...projection, revision });
+  const titleId = allocateId(`response-${id}-title`);
+  node.properties.id = allocateId(`response-${id}`);
+  node.properties.ariaLabelledBy = [titleId];
+  node.properties.dataResponseWorkspace = '';
+  node.properties.dataResponseId = id;
+  node.children = [
+    semanticTitle(title, titleId),
+    {
+      type: 'element',
+      tagName: 'div',
+      properties: { dataResponseSource: '', hidden: '' },
+      children: authoredChildren,
+    },
+    {
+      type: 'element',
+      tagName: 'div',
+      properties: { dataResponseManifest: '', hidden: '' },
+      children: [{ type: 'text', value: JSON.stringify(manifest) }],
+    },
+    {
+      type: 'element',
+      tagName: 'div',
+      properties: { dataResponseMount: '' },
+      children: [],
+    },
+  ];
+}
+
+function responseQuestionDefinition(node: Element): ResponseQuestionDefinition {
+  const id = stringProperty(node, 'dataId');
+  const kind = stringProperty(node, 'dataKind') as ResponseQuestionKind | undefined;
+  const title = stringProperty(node, 'dataDirectiveTitle');
+  if (!id || !kind || !title) throw new Error('Validated response question is incomplete.');
+  const prompt = stringProperty(node, 'dataPrompt');
+  const minimum = numericProperty(node, 'dataMin');
+  const maximum = numericProperty(node, 'dataMax');
+  const step = numericProperty(node, 'dataStep');
+  const buckets = responseDefinitions(node, 'bucket');
+  const options = responseDefinitions(node, 'option');
+  const items = node.children
+    .filter(
+      (child): child is Element =>
+        child.type === 'element' && child.properties.dataSemantic === 'item',
+    )
+    .map(responseItemDefinition);
+  return {
+    id,
+    kind,
+    title,
+    ...(prompt === undefined ? {} : { prompt }),
+    ...(minimum === undefined ? {} : { minimum }),
+    ...(maximum === undefined ? {} : { maximum }),
+    ...(step === undefined ? {} : { step }),
+    buckets,
+    options,
+    items,
+  };
+}
+
+function responseDefinitions(
+  node: Element,
+  kind: 'bucket' | 'option',
+): readonly { readonly id: string; readonly label: string }[] {
+  return node.children
+    .filter(
+      (child): child is Element =>
+        child.type === 'element' && child.properties.dataSemantic === kind,
+    )
+    .map((child) => {
+      const id = stringProperty(child, 'dataId');
+      const label = stringProperty(child, 'dataLabel');
+      if (!id || !label) throw new Error(`Validated response ${kind} is incomplete.`);
+      return { id, label };
+    });
+}
+
+function responseItemDefinition(node: Element): ResponseItemDefinition {
+  const id = stringProperty(node, 'dataId');
+  const label = stringProperty(node, 'dataLabel');
+  if (!id || !label) throw new Error('Validated response item is incomplete.');
+  const note = stringProperty(node, 'dataNote');
+  const meta = stringProperty(node, 'dataMeta');
+  const href = stringProperty(node, 'dataHref');
+  const bucket = stringProperty(node, 'dataBucket');
+  const comment = stringProperty(node, 'dataComment') === 'true';
+  if (!note || !meta || !href) throw new Error('Validated response item detail is incomplete.');
+  return {
+    id,
+    label,
+    note,
+    meta,
+    href,
+    ...(bucket === undefined ? {} : { bucket }),
+    comment,
+  };
+}
+
+function numericProperty(node: Element, name: string): number | undefined {
+  const value = stringProperty(node, name);
+  return value === undefined ? undefined : Number(value);
 }
 
 function hastText(node: Element): string {
@@ -2209,6 +2737,16 @@ function requireDirectivePlacement(
   }
 }
 
+function requireDirectiveChildren(node: DirectiveNode, directive: DirectiveDefinition): void {
+  if (directive.children !== 'none' || (node.children ?? []).length === 0) return;
+  throw directiveError(
+    node,
+    'INVALID_DIRECTIVE_PLACEMENT',
+    `${directive.name} accepts no label or child content.`,
+    `Remove the label or child content from this ${directive.name} directive.`,
+  );
+}
+
 function allowedDirectiveChildren(
   children: DirectiveDefinition['children'] | undefined,
 ): readonly string[] | undefined {
@@ -2217,6 +2755,8 @@ function allowedDirectiveChildren(
       return ['card'];
     case 'markdown-and-tab-directives':
       return ['tab'];
+    case 'markdown-and-term-directives':
+      return ['term'];
     case 'action-directives':
       return ['action'];
     case 'decision-option-directives':
@@ -2233,6 +2773,10 @@ function allowedDirectiveChildren(
       return ['group', 'node', 'edge'];
     case 'event-directives':
       return ['event'];
+    case 'response-question-directives':
+      return ['question'];
+    case 'response-field-directives':
+      return ['bucket', 'option', 'item'];
     case 'markdown':
     case 'label-or-generated-label':
     case 'none':

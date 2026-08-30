@@ -59,9 +59,15 @@ Markdown + metadata + local assets + partials + semantic directives
   local-input revision, and exact/changed/missing/ambiguous binding. Target provenance is captured while AST
   offsets and the partial source map are available; it is never reconstructed from final HTML or matched by
   proximity.
+- `src/response/contract.ts` owns the independent version-1 response manifest and answer artifact. It
+  validates exact bounded records and kind-specific values, distinguishes untouched questions from authored
+  defaults, normalizes human text, compares the compiler-created form revision, and serializes canonical
+  newline-terminated JSON. It has no DOM, filesystem, review-thread, or transport dependency.
 - `src/render/directives.ts` maps the documented, allowlisted directive vocabulary to semantic HAST.
   Unknown directives, invalid attributes/nesting, unresolved glossary references, duplicate definitions,
   and unmarked occurrences of registered glossary terms fail with authored-range diagnostics. Compile-time
+  normalization restores only complete numeric clock/duration tokens that `remark-directive` misclassifies
+  as text directives; alphabetic and malformed directive names retain the normal error path. Compile-time
   enhancement creates labelled top-level sections, ordinary safe action links, bounded loopback
   source-location links that preserve the report browsing context, native disclosures, and
   accessible package-owned tabs, dialogs, popovers, filters, switches, and bounded counters without
@@ -70,10 +76,13 @@ Markdown + metadata + local assets + partials + semantic directives
 - `src/render/visualizations.ts` projects validated chart series/points, diagram nodes/edges, and timeline
   events into deterministic accessible SVG or semantic HTML. It is compile-time code and does not add a
   visualization browser runtime.
-- `src/render/document.tsx` creates the static HTML document, explicit-section or legacy H2 navigation,
-  selected registry-owned page layout/tokens, responsive shell, metadata, and content security policy. It
-  allocates collision-free shell IDs around authored content IDs and uses them consistently for navigation
-  and accessibility relationships.
+- `src/render/navigation.ts` derives the final explicit-section or legacy H2 inventory structurally from
+  enhanced HAST, fills authored in-flow maps with exact headings, and projects optional short labels for the
+  shell. Appendix and subordinate headings remain excluded without parsing serialized HTML.
+- `src/render/document.tsx` creates the static HTML document from prepared navigation, selected
+  registry-owned page layout/tokens, responsive shell, metadata, and content security policy. It allocates
+  collision-free shell IDs around authored content IDs and uses them consistently for navigation and
+  accessibility relationships.
 - `src/browser/` contains the browser runtime and token-based stylesheet bundled by Vite. One delegated
   event controller handles theme/navigation controls, current-section ownership, bounded normal-motion
   progress/reveal, code copying, glossary hover/focus/tap explanations,
@@ -87,6 +96,15 @@ Markdown + metadata + local assets + partials + semantic directives
   ordered user/agent messages and segment-local resolution, validates exact-revision imports, and exports
   canonical JSON through a revoked local object URL. It never evaluates or injects messages as HTML, writes storage, starts a service, or performs a
   network request.
+- `src/browser/response-workspace.ts` reads each inert response manifest and creates native question controls.
+  It owns current-tab answer state, select-based bucket assignment plus drag-and-drop, explicit order moves,
+  sparse item comments, clipboard and Blob-file export, and validate-before-swap file import. It uses DOM
+  text/value APIs only and never writes storage, submits a form, starts a service, or performs a request.
+  Drag identity is a controller-local DOM reference accepted only by its owning bucket question; native and
+  artifact validation apply the authored number range and step before either export path.
+- The main browser runtime owns one copy-control factory and localized clipboard lifecycle for both code and
+  `copyable` prose. Trusted enhancement marks a prose content owner; runtime reads its rendered `innerText`,
+  while code retains clone-based glossary-panel exclusion. Neither route accepts author behavior.
 - `src/core/prepare-report.ts` owns the shared side-effect-free preparation used by building, validation,
   and inspection: source/render work, registry-owned output selection, package browser assets, size
   accounting, content hashing, observed source features, and prepared directory resources. Package browser
@@ -133,6 +151,13 @@ resolve the thread segment. A unique cross-file fingerprint is treated as a move
 file disappears from the current target graph. This prevents equal text elsewhere from impersonating edited
 content. Changed, missing, and ambiguous targets remain explicit and never trigger source mutation.
 
+Response Workspace is deliberately a reader artifact contract rather than a CLI source-binding API. The
+compiler validates `response`/`question`/`bucket`/`option`/`item` records, hashes their canonical form
+projection, and embeds one inert manifest per form. The browser exports a closed artifact containing form
+identity/revision, one ordered typed answer per question, and only non-empty item comments. Defaults can be
+visible while `answered` remains false. Import validates the whole artifact, value domains and matching form
+revision before replacing any visible state. Clipboard and file downloads serialize the same bytes.
+
 Six package-owned starter trees are ordinary buildable examples carrying registry `starter` metadata:
 the default report tree (canonical ID `basic`, alias `report`), `research`, `architecture`, `tutorial`,
 `dashboard`, and `landing`. Discovery exposes canonical identity, aliases, and default status; init uses
@@ -173,6 +198,15 @@ unsafe IDs fail; generated collisions receive deterministic suffixes. When expli
 are the primary navigation inventory, using `nav` when supplied; documents without them use legacy H2
 headings. H3 and component IDs remain owned descendant hash targets but do not become primary links.
 `reveal` defaults to false and opts only that section into the package-owned normal-motion reveal.
+One direct `lead` may be the section's first authored block. MDAST validation bounds it to one paragraph
+before review targeting; lead is excluded as a duplicate directive owner, and trusted HAST enhancement
+collapses the wrapper while retaining the paragraph's authored review target. It adds presentation only,
+not a callout region or browser behavior.
+After section enhancement and appendix extraction, one structural HAST inventory supplies both projections:
+`contents` renders exact heading text and final anchors in article flow, while the document shell receives
+short `nav` labels when authored. The shell alone applies its two-item threshold; an in-flow map remains
+visible with zero or one item. Production no longer reparses serialized HTML to derive navigation, and no
+browser heading parser or synchronization state exists.
 `actions` accepts only direct `action` children. Each action becomes an ordinary anchor after
 its same-page, relative, HTTP(S), or mail target passes the closed registry constraint; executable,
 local-file, absolute-path, and protocol-relative targets are rejected.
@@ -180,16 +214,23 @@ The inline `source-link` directive is narrower: it accepts only an explicit IPv4
 URL carrying an absolute path and positive line. The compiled protected anchor opens a separate browsing
 context, so helper response status cannot replace the `file://` report. The package does not request the
 helper, read the addressed source file, add a CSP source, or install browser behavior for the link. The
-authored absolute path remains serialized in the HTML: the optional link is workstation-specific and can
-disclose local directory names when an artifact is shared.
+authored absolute path remains serialized in a default build. An explicit share build branches inside
+trusted HAST enhancement: it derives one path-free terminal filename/line from the validated helper, uses
+`source:line` when that terminal is unsafe, discards the authored label plus helper/path properties, and
+counts transformed nodes. An already matching short label is observably unchanged; directory-bearing and
+free-form labels are replaced rather than semantically scanned for embedded paths. Terminal classification
+checks raw and iteratively percent-decoded representations with an input-derived termination bound. It never
+resolves the path, parses arbitrary HTML, rewrites Markdown, or scans user prose.
 
 Partial expansion produces a compact offset source map. Markdown AST positions resolve through that map,
 so diagnostics from entry content and nested partials identify the original authored file and range rather
 than the concatenated intermediate document.
 
 Glossary definitions default to their authored inline position. A source-mapped placement check restricts
-`placement="appendix"` to root definitions so extraction cannot empty an authored parent. The complete
-already-targeted definition moves into one package-owned labelled appendix in authored order. Its heading is marked
+`placement="appendix"` to root definitions or direct section children, so extraction cannot empty lists,
+quotes, lead blocks, or unrelated component parents. After review targeting, the complete already-targeted
+definition is removed from its section without a placeholder and moves into one package-owned labelled
+appendix in authored document order. Its heading is marked
 as package-owned navigation-excluded content, so explicit-section and legacy-H2 primary inventories remain
 the document's reading route. Popover links still target the same collision-free definition IDs. Code-term
 panels reuse the existing delegated glossary runtime; code copy clones the code element and removes generated
@@ -244,6 +285,11 @@ not report success. Hostile concurrent path replacement and process/OS crash rec
 proportionate filesystem model. The inline warning threshold counts the actual serialized CSS, inline
 runtime, and image/download data URLs; a font data URL is counted once through generated CSS.
 
+`build --share` and ESM `share: true` are one build profile over the same preparation/publication path in
+both formats. The typed result always identifies the profile and exact neutralized source-link count;
+human output states that count for an explicit share build. Validation and inspection do not publish and
+therefore do not accept the build-only profile.
+
 Output format, page layout, and visual preset are independent public data choices. One data-only registry
 contract owns their defaults and closed domains: `single-file` uses an inline runtime and `directory` uses
 an external content-addressed runtime; layout selects document/dashboard/landing/mixed composition; preset
@@ -251,8 +297,9 @@ selects coordinated visual defaults. The schema normalizer resolves preset defau
 bounded token overrides, and the renderer projects only the resolved preset/theme/token identities into
 the shared package stylesheet in both formats. The stylesheet owns reading/standard/wide tracks, section
 rhythm, component containment, and a single content-surface layer; wide media, tables, charts, and code
-scroll locally instead of widening the document. Navigation exists only with at least two eligible
-sections. One ordinary link is always current: direct and descendant hashes resolve through section
+scroll locally instead of widening the document. Sidebar/mobile navigation exists only with at least two
+eligible sections; an authored in-flow map remains ordinary visible content at every inventory size and
+viewport. One shell navigation link is always current: direct and descendant hashes resolve through section
 ownership, outside targets use the preceding or first section, and geometry uses the sticky-topbar
 activation line with deterministic bottom and equal-top rules. Root scroll padding keeps hash/focus targets
 below the sticky topbar; primary sections compensate their own block padding. In browsers with `scrollend`,

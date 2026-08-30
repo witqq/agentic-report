@@ -1,0 +1,29 @@
+{
+  "contractVersion": 1,
+  "id": "numeric-time-text",
+  "summary": "Keeps bounded numeric clock and duration notation as literal Markdown text without weakening directive diagnostics.",
+  "trustBoundary": {
+    "authorCode": "forbidden",
+    "callbacks": "forbidden",
+    "eval": "forbidden",
+    "dynamicImports": "forbidden",
+    "networkAccess": "forbidden",
+    "confinement": "source-root",
+    "offline": "required",
+    "deterministicSerialization": "required",
+    "cspCompatible": "required",
+    "packageOwnedRuntime": "required"
+  },
+  "evidence": {
+    "sourceGrammar": "Only a leaf numeric text-directive node whose complete source token has two or three numeric groups is restored. Trailing groups require exactly two digits in the 00-59 domain and word-adjacent, malformed, four-part, attributed, child-bearing, and alphabetic directive forms remain directives.",
+    "executionCapabilities": "The compile-time mdast pass reconstructs the exact source slice before registry lookup. Registered directives and unknown alphabetic names continue through the existing typed interpretation and source-mapped diagnostics.",
+    "confinement": "The rule reads only offsets in the already confined and partial-expanded Markdown string. It creates no path, resource, file read, include, or external reference.",
+    "offlineBehavior": "Parsing and exact text reconstruction are deterministic local compiler work shared by single-file and directory output. No reader runtime or service is involved.",
+    "deterministicSerialization": "The replacement bytes and position come only from the authored source range. There is no clock read, locale inference, random identity, placeholder, entity, or output-format branch.",
+    "cspAndRuntime": "The extension adds no browser code, script, style, event, raw HTML, URL, eval, callback, import, or CSP source. Restored nodes use ordinary Markdown text rendering.",
+    "accessibility": "Time and duration notation remains ordinary readable text in document flow with no generated control or alternate interaction.",
+    "byteAndPerformanceBudgets": "One bounded scan around a candidate numeric text-directive node inspects only adjacent digits and colons. The pass adds no runtime bytes or work.",
+    "packageDependenciesAndLicenses": "No dependency or license is added. The implementation composes the installed remark-directive AST, unist traversal, and project compiler.",
+    "compatibility": "Valid existing directives, unknown-name diagnostics, source maps, frontmatter parsing, partials, review targets, both output formats, CLI and ESM contracts retain their behavior. Only the previously failing numeric clock/duration ambiguity changes."
+  }
+}

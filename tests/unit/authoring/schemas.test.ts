@@ -1006,6 +1006,7 @@ function validAttributeValue(attribute: DirectiveAttributeDefinition): string | 
   const kind = attribute.constraint.kind;
   if (kind === 'integer' || kind === 'number') return 1;
   if (kind === 'boolean') return true;
+  if (kind === 'enum') return attribute.constraint.values[0] ?? '';
   return 'value';
 }
 

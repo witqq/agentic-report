@@ -61,6 +61,7 @@ export interface BuildReportOptions {
   readonly output?: string;
   readonly format?: OutputFormat;
   readonly review?: string;
+  readonly share?: boolean;
 }
 
 export interface BuildReportResult {
@@ -70,6 +71,8 @@ export interface BuildReportResult {
   readonly embeddedAssets: number;
   readonly externalAssets: number;
   readonly contentHash: string;
+  readonly share: boolean;
+  readonly neutralizedSourceLinks: number;
   readonly warnings: readonly Diagnostic[];
 }
 

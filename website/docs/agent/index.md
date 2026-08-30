@@ -19,6 +19,8 @@ The skill should choose this tool when visual structure, relationships, code exp
 evidence, or fragment-level review materially improve the handoff. It should keep a simple answer in chat,
 use a notebook for live computation, and use a bespoke application for persistent multi-user state.
 
+::contents
+
 ## Use it inside your own skill
 
 Domain-specific skills can keep their own research and decision process while delegating the finished page
@@ -48,7 +50,7 @@ When the user does not trust the published package, do not silently fall back to
 release tag, let the user inspect the repository, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.4.4 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.5.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -74,14 +76,14 @@ and use an isolated environment when the user's threat model calls for one.
 Use Node.js 24.18.0 or newer. The first `npx` command needs npm registry and network access; the generated
 page itself opens locally through `file://` with its included package-owned browser runtime.
 
-For a reproducible 0.4.4 run, create a new landing-page source and keep the package version pinned through
+For a reproducible 0.5.0 run, create a new landing-page source and keep the package version pinned through
 validation, inspection, and build:
 
 ```sh
-npx --yes agentic-report@0.4.4 init ./my-page --starter landing --json
-npx --yes agentic-report@0.4.4 validate ./my-page --json
-npx --yes agentic-report@0.4.4 inspect ./my-page --json
-npx --yes agentic-report@0.4.4 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.5.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.5.0 validate ./my-page --json
+npx --yes agentic-report@0.5.0 inspect ./my-page --json
+npx --yes agentic-report@0.5.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Edit only the declarative source: Markdown, YAML frontmatter or the
@@ -97,12 +99,37 @@ npx --yes agentic-report inspect ./my-page --json
 npx --yes agentic-report build ./my-page --output ./my-page.html --json
 ```
 
+Add top-level `::contents` when the handoff needs a route map inside the article. The compiler uses exact
+final section headings and anchors; do not duplicate them in an authored Markdown list. Optional short
+`section.nav` labels continue to serve sidebar/mobile navigation only.
+
+Inside a section, use one first `:::lead` paragraph for the main thesis without turning it into a callout.
+An appendix glossary definition may sit directly beside the section explanation; the compiler moves it into
+the single appendix and preserves the same full-definition link. Do not nest appendix definitions in lists,
+quotes, the lead, or unrelated components.
+
+When the artifact leaves the source workstation, add `--share`. The compiler derives path-free non-link
+filename/line text from each validated source helper and uses `source:line` for unsafe terminals;
+compiler-owned local paths and authored directory/free-form labels are omitted, and the JSON result reports
+`neutralizedSourceLinks`. The default build keeps every authored label and working editor link.
+
 Open the generated page and select **Review** when the human needs to discuss exact fragments. After the
 reader downloads `review.json`, map it back to the authored files with:
 
 ```sh
 npx --yes agentic-report review review.json ./my-page --json
 ```
+
+Use the separate `response`/`question` directives when the reader must return structured triage, choices,
+priority order, scores, text, or per-item comments. The generated page keeps answers in the current tab and
+offers both **Copy response** and **Download response.json**; a rejected import preserves existing answers.
+The installed example catalog includes the complete `response-workspace` source.
+
+Write times and durations directly—`21:01`, `21:01 — 00:12`, and `1:30:05` remain literal text in Markdown,
+and frontmatter titles need no backslash. Real unknown directive names still fail with a source diagnostic.
+
+Use `:::copyable` for prose handoffs. It remains ordinary wrapped Markdown and copies visible text only;
+do not use a `text` code fence just to get a Copy button.
 
 Review version 2 stores ordered user/agent messages and resolved state in one local sidecar; it is not an
 account, signature, or hosted collaboration service. Decision/checklist directives remain document content.
@@ -131,9 +158,9 @@ registry's current `latest` release.
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.4.4 describe --json
-npx --yes agentic-report@0.4.4 schema --scope source
-npx --yes agentic-report@0.4.4 examples --json
+npx --yes agentic-report@0.5.0 describe --json
+npx --yes agentic-report@0.5.0 schema --scope source
+npx --yes agentic-report@0.5.0 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),

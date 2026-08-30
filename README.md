@@ -38,7 +38,7 @@ If you do not want to execute the published `agentic-report` npm package, clone 
 inspect the repository, run its checks, and invoke the compiled CLI directly:
 
 ```sh
-git clone --branch v0.4.4 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.5.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -83,7 +83,7 @@ also contain:
 - `agentic-report.yaml`, `agentic-report.yml`, or `agentic-report.json`;
 - local images referenced by relative paths;
 - Markdown partials included as `{{include: partials/summary.md}}`;
-- semantic directives for labelled page sections, action and source-location links, authored/code glossary references, content, interactions, compile-time
+- semantic directives for labelled page sections, generated in-flow contents, action and source-location links, authored/code glossary references, content, interactions, compile-time
   charts/diagrams/timelines, safe built-in demos, downloads, and fonts.
 
 Set frontmatter or manifest `language` to `ru` (including subtags such as `ru-RU`) for Russian
@@ -114,7 +114,13 @@ tokens:
 
 ![System boundary](assets/system.svg)
 
+::contents
+
 ::::section{title="Decision" id="decision" nav="Decision" width="reading" align="start" tone="soft" reveal="true"}
+:::lead
+The opening thesis introduces :term[concepts]{key="concept"} as emphasized prose, not a callout.
+:::
+
 :::callout{title="Key finding" kind="info"}
 The compiler owns responsive layout and navigation.
 :::
@@ -126,24 +132,24 @@ The compiler owns responsive layout and navigation.
 
 Inspect :source-link{label="src/render/directives.ts:42" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fagentic-report%2Fsrc%2Frender%2Fdirectives.ts&line=42"}.
 
-Traversal continues through :term[concepts]{key="concept"}.
-
 ```typescript terms="concept"
 const concept = compileSource();
 ```
 
-::::
-
 :::glossary{key="concept" term="concept" placement="appendix"}
 One canonical definition shared by prose forms and selected first code occurrences.
 :::
+::::
 ````
 
 See [`docs/product/source-contract.md`](docs/product/source-contract.md) for the complete declarative
 source contract.
-`source-link` is an optional local-workstation integration: its full absolute path remains in the generated
-HTML even though the page shows a short label. Remove or replace it before public distribution when local
-directory disclosure or machine-specific links are not acceptable.
+`source-link` is an optional local-workstation integration: its full absolute path remains in a normal
+build even though the page shows a short label. For distribution, run the same build with `--share`; the
+compiler derives non-link `filename:line` text from each validated helper, using `source:line` when the
+terminal filename is unsafe. An already matching short label remains byte-exact; directory-bearing and
+free-form labels are replaced wholesale. Compiler-owned paths are omitted, and the result reports the exact
+neutralized count without changing Markdown.
 
 Agents can retrieve the same closed contract through `getSourceContract()`,
 `getAuthoringSchema('manifest' | 'directives' | 'source')`, and `listExamples()` from the ESM API. Checked
@@ -181,6 +187,13 @@ in the one exported sidecar instead of being copied onto a different source targ
 Desktop uses a non-modal rail; mobile uses a modal sheet. State leaves the page only through explicit local
 import/export—there is no account, backend, network sync, or authenticated signature.
 
+Response Workspace is the separate typed-answer layer for triage and decisions. Declarative questions cover
+bucket assignment, one or several choices per item, one global choice, priority order, bounded item scores,
+global text, and optional item comments. Native fields and buttons provide the complete keyboard path;
+bucket cards also support drag-and-drop. The reader copies or downloads the same deterministic
+`response.json`, and a foreign, stale, unsupported, or invalid import preserves current-tab answers. The
+complete source is [`examples/response-workspace/report.md`](examples/response-workspace/report.md).
+
 The package owns four responsive page layouts: `document`, `dashboard`, `landing`, and `mixed`. Authors
 select one as metadata and may choose the coordinated `studio`, `editorial`, or `signal` preset, an
 independent `system`, `light`, or `dark` color mode, and compact token overrides for `density`, `font`,
@@ -193,12 +206,28 @@ demonstrate the package-owned interaction and data primitives.
 The visualization catalog includes a 15-node grouped subsystem flow and an ordered compile-request sequence;
 both use the same bounded `diagram`/`group`/`node`/`edge` directives and compile offline.
 
+Use `:::copyable` for prose that a reader should paste into a message or handoff. Paragraphs, emphasis,
+links, proportional typography, and wrapping remain ordinary Markdown; the localized Copy control writes
+only visible rendered text rather than Markdown or HTML.
+
 Authors may replace heading-only structure with top-level `section` directives. Each section owns a
 visible H2 and a stable anchor, plus closed reading/standard/wide tracks, start/center alignment, and
 plain/soft/accent/contrast tones. `reveal="true"` opts one section into a bounded one-time normal-motion
 reveal. A nested `actions` group composes ordinary safe links with primary/secondary/quiet emphasis.
 Legacy heading documents remain valid; their H2 headings define the primary navigation while H3 and
 component anchors remain owned descendant targets.
+
+Place `::contents` at the document root to keep a generated route map inside the article. Its native links
+use exact visible section headings and final collision-free targets; optional short `nav` labels remain in
+the sidebar. The map stays visible at narrow widths and still renders with zero or one primary section,
+while sidebar/mobile-dialog chrome continues to require at least two.
+
+Inside a `section`, place one opening `:::lead` containing exactly one Markdown paragraph when the first
+thesis needs restrained in-flow emphasis rather than a callout. The lead must be the section's first block
+and accepts no attributes. A glossary definition with `placement="appendix"` may be authored at the document
+root or directly inside that section; the compiler removes it from the section and keeps its existing full-
+definition target in the single ordered appendix. Lists, quotes, lead blocks, and unrelated directives do
+not become valid appendix parents.
 
 Pages with at least two eligible sections receive one responsive contents navigation. Desktop readers can
 collapse the non-modal sidebar without persisting state; mobile readers get a labelled native dialog with
@@ -225,6 +254,7 @@ agentic-report build ./examples/incident-review --output ./incident-review.html
 agentic-report build ./examples/vendor-decision --output ./vendor-decision.html
 agentic-report build ./examples/launch-readiness --output ./launch-readiness.html
 agentic-report build ./examples/launch-readiness --format directory --output ./launch-readiness-directory
+agentic-report build ./examples/tutorial --share --output ./tutorial-share.html
 ```
 
 Open the HTML file or directory `index.html` directly through `file://`. In an installed package,

@@ -23,7 +23,14 @@ tutorials, dashboards, and landing pages that open directly from disk.
 ::action[Read the boundaries]{href="#boundaries" kind="quiet"}
 ::::
 
+::contents
+
 :::::section{title="Start with the work, not the framework" id="workflow" nav="Workflow" width="wide" align="start" tone="soft" reveal="true"}
+:::lead
+A :term[portable boundary]{key="portable-boundary"} keeps the opening thesis in normal reading flow while
+making the page's main claim easy to scan.
+:::
+
 :::callout{kind="success" title="One portable result"}
 The default output is one self-contained HTML file with no server, remote runtime, or author JavaScript.
 :::
@@ -39,6 +46,10 @@ Choose package-owned cards, decisions, interactions, diagrams, timelines, and ch
 Validate, inspect, and build through one production preparation path.
 :::
 ::::
+
+:::glossary{key="portable-boundary" term="Portable boundary" placement="appendix"}
+The source remains declarative and the package owns rendering, interaction, confinement, and offline output.
+:::
 :::::
 
 :::::section{title="The path to a useful page" id="journey" nav="Journey" width="standard" align="start" tone="plain"}

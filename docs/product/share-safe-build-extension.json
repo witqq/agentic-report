@@ -1,0 +1,29 @@
+{
+  "contractVersion": 1,
+  "id": "share-safe-build",
+  "summary": "Adds an explicit build profile that emits compiler-derived path-free source locations while omitting workstation link paths.",
+  "trustBoundary": {
+    "authorCode": "forbidden",
+    "callbacks": "forbidden",
+    "eval": "forbidden",
+    "dynamicImports": "forbidden",
+    "networkAccess": "forbidden",
+    "confinement": "source-root",
+    "offline": "required",
+    "deterministicSerialization": "required",
+    "cspCompatible": "required",
+    "packageOwnedRuntime": "required"
+  },
+  "evidence": {
+    "sourceGrammar": "The profile adds no author syntax or manifest default. CLI build --share and ESM share: true are closed build-only selectors; invalid ESM values fail before source reads or output mutation.",
+    "executionCapabilities": "Trusted HAST enhancement changes each validated source-link anchor into a non-anchor label before HTML serialization, derives its text from the validated helper terminal and line, uses source:line when the raw or nested-decoded terminal is unsafe, removes the authored label plus helper/path carrier, and increments one pipeline-owned result count. It never parses a prebuilt artifact or rewrites Markdown.",
+    "confinement": "The same confined source graph and publication collision checks are used. Share transformation reads no additional file and does not resolve, open, copy, or otherwise consume the absolute path carried by source-link.",
+    "offlineBehavior": "Default and share builds in both output formats use only local source and package assets. The profile creates no request, helper call, service, port, account, credential, storage, form, or deployment behavior.",
+    "deterministicSerialization": "The branch depends only on an explicit boolean and validated source-link nodes. Identical source, format, package and profile produce identical HTML, exact neutralized counts and content hashes without clocks or random result values.",
+    "cspAndRuntime": "Neutralization completes before serialization and requires no browser code, event handler, CSP source, raw HTML, script, style input, storage or runtime parser. Existing runtime placement remains format-owned.",
+    "accessibility": "Share output exposes a deterministic path-free filename/line or source:line location as ordinary inline text and removes link role, href, target, rel and arrow-link icon. An already matching authored short label is observably exact; default output retains every authored label and the native keyboard-accessible protected anchor.",
+    "byteAndPerformanceBudgets": "The existing directive traversal performs one input-bounded compile-time helper-terminal classification and counter increment per source-link. Helper input is URL-grammar-bounded, every successful nested decode shortens the terminal representation, and there is no extra document parse, whole-page scan, listener, observer, timer, frame or background work.",
+    "packageDependenciesAndLicenses": "No dependency or license is added. The implementation composes the existing typed build contract, trusted directive enhancement, shared preparation, atomic publisher, CLI transport sanitizer and package checks.",
+    "compatibility": "Default builds retain every authored label and workstation source link. Share is additive for CLI and ESM, works in single-file and directory output, replaces directory-bearing and free-form labels with compiler-derived path-free locations, leaves validate and inspect unchanged, preserves source bytes and ordinary prose/links, and reports the exact transformed-node count."
+  }
+}

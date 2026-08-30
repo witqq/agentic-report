@@ -36,6 +36,22 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   closed en/ru reader-locale resolution, unsupported/`und` English fallback, Russian count forms,
   localized review binding/target fallbacks, and explicit-locale visualization number formatting,
   deterministic review-target manifests and local-input revisions, strict canonical review JSON,
+  strict response form/artifact parsing, kind-specific answer domains, untouched/default distinction,
+  canonical response JSON and foreign/stale/prototype-like rejection,
+  exact unescaped clock/range/duration Markdown and frontmatter titles while malformed numeric or unknown
+  alphabetic directives—including astral-letter and combining-mark word adjacency—retain source-mapped
+  rejection,
+  semantic copyable-prose ownership and nested behavior/code rejection,
+  generated in-flow contents in both formats with exact-heading/short-navigation divergence, final ID
+  collision handling, rename/reorder synchronization, repeated declarations, legacy/explicit H3 and
+  appendix exclusion, zero/one cardinality, and invalid form/attribute/label/placement diagnostics,
+  bounded first/unique lead paragraphs, direct-section appendix extraction, root/section definition order,
+  collision-resolved glossary links, preserved review targets, empty-source-flow removal, and invalid
+  lead/glossary parent diagnostics,
+  share-safe source-link neutralization in both formats, compiler-derived filename/line precedence over
+  arbitrary authored labels, total raw/nested-decoded unsafe-terminal fallback, exact transformed-node
+  results, default-link compatibility, source-byte preservation, non-boolean ESM rejection and staged
+  publication recovery,
   exact/changed/missing/ambiguous entry/partial binding, confined review paths, and sanitized review transport,
   exact serialized inline-size accounting, canonical and hard-link source/output collision protection,
   injected partial-write/rename preservation and retry for both output formats, same-process name/content
@@ -51,7 +67,10 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   self-contained artifact; tests open it through `file://` and verify document navigation, code,
   responsive navigation, deterministic current-section ownership, sticky-topbar target clearance and
   settled normal/reduced hash ownership including the no-`scrollend` fallback, full bounded geometry and
-  hash ownership without `IntersectionObserver`, desktop collapse,
+  hash ownership without `IntersectionObserver`, generated in-flow contents using exact final headings and
+  final explicit targets in both formats, short-sidebar-label divergence, fragment navigation, and
+  narrow-screen visibility with the drawer closed, section lead and moved appendix definition states across
+  desktop/mobile, light/dark and both formats, desktop collapse,
   native-dialog mobile
   focus containment/return, normal/reduced-motion progress and one-time reveal, themes, visible focus,
   locally scrolling wide tables, protected loopback source-location links that preserve the report page,
@@ -72,7 +91,19 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   enter/exit, desktop/mobile dialog semantics, equal-text target isolation, ordered user/agent messages,
   message editing, resolved/reopened state, version-1 rejection without state loss, canonical download,
   exact import and stale prior-thread classification, and produces the required visually inspected state
-  captures. A local SVG must complete with non-zero intrinsic width in
+  captures. Dedicated Response Workspace coverage builds both formats for desktop/mobile, completes all
+  seven answer kinds, uses bucket select/drag and explicit ordering controls, preserves original-link state,
+  asserts every exported answer shape, compares clipboard/file bytes, forces clipboard failure, rejects
+  oversized, unsupported, malformed, and foreign form revisions without state loss, replaces a selected
+  global choice with a valid unanswered import, proves whole-artifact restoration by byte equality, isolates
+  two forms that reuse radio and bucket item IDs, rejects cross-owner drag while preserving same-owner drag,
+  blocks out-of-range/step-mismatched numeric export and import until correction, accepts phase-sensitive
+  large four-decimal values through export/import, proves reload returns to the untouched memory-only state,
+  checks containment, and captures inspected dense form states. Dedicated copyable-prose coverage opens
+  English and Russian single-file/directory artifacts on desktop
+  and mobile, asserts proportional wrapping/no code surface, keyboard copy success/failure, exact visible
+  multi-paragraph clipboard text, unchanged prose, localization, containment, and inspected light/dark states.
+  A local SVG must complete with non-zero intrinsic width in
   both embedded and rewritten hashed forms. The current suite does not cover browser behavior for downloadable assets or local fonts,
   axe/screen-reader evidence or difficult-content reflow beyond the authored fixtures.
 - `pack:check` builds an npm tarball, checks its exact release allowlist, metadata, license, types, exports,
@@ -83,6 +114,8 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   installed binary in both formats plus directory output through the ESM API. It also builds every packaged
   page-layout example and all six starters in both formats and verifies the selected layout. Two installed
   first-use journeys perform init, edit, validate, inspect, and build for single-file and directory output.
+  Installed CLI and ESM share builds additionally prove exact source-link counts and absence of their
+  workstation paths while default builds retain the links.
   It asserts exact
   discovery/schema/result shapes, rejects retired options, type members, and out-of-domain ESM format
   values without output mutation, and contains conflicting `dist/browser` files to prove the installed

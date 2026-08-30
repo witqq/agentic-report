@@ -71,6 +71,12 @@ and warnings. Inspection also reports sorted relative source files, observed dir
 occurrence counts, and the registry-derived command/format/starter/capability catalog. Both commands read
 and validate all resources required by the selected format but do not create or replace an output artifact.
 
+`buildReport({ input, output?, format?, review?, share? })` is the publishing operation. `share: true`, or
+CLI `build --share`, neutralizes compiler-owned workstation source links before serialization in either
+output format. `BuildReportResult.share` identifies the selected profile and
+`neutralizedSourceLinks` is the exact transformed-node count; human output prints the count for a share
+build. The option does not rewrite source and is intentionally absent from validation and inspection.
+
 ## Review protocol and source binding
 
 Every normal build embeds an inert version-2 review manifest in a `template` element. Container directives
@@ -171,24 +177,46 @@ CommonMark plus GitHub Flavored Markdown tables, strikethrough, task-list syntax
 converted through a typed unified AST. Raw HTML is not enabled. Sanitization occurs before package-trusted
 syntax highlighting and semantic enhancement.
 
+Numeric clock and duration tokens with two or three groups remain ordinary text: the trailing groups contain
+exactly two digits in the `00`–`59` domain, as in `21:01`, `21:01 — 00:12`, and `1:30:05`. They require no
+backslash in Markdown or frontmatter. This narrow lexical rule does not accept malformed times or suppress
+unknown alphabetic directives; those continue through the normal directive diagnostic.
+
 ## Semantic primitives
 
 The directive vocabulary is:
 
 - `section`: top-level labelled page region with required `title`, optional stable `id` and short `nav`
   label, closed `width`, `align`, and `tone` choices, and optional boolean `reveal`;
+- `contents`: top-level leaf placement for a compiler-generated in-flow map of final primary sections; it
+  accepts no attributes, label or children;
+- `lead`: attribute-free direct section child containing exactly one opening Markdown paragraph;
 - `actions` and directly nested leaf `action`: responsive ordinary link group; every action requires a
   visible label and safe `href` and may select `primary`, `secondary`, or `quiet` emphasis;
 - `source-link`: inline source-location link with a short visible label and a bounded IPv4-loopback editor
   helper URL containing an absolute path and positive line;
 - `callout`: emphasized finding with optional `title` and lowercase `kind`;
+- `copyable`: ordinary Markdown prose plus optional `term` references with a localized reader copy control;
+  block code and nested package directives are rejected so clipboard text has one visible prose owner;
 - `decision`: legacy static Markdown decision with optional `title`, or typed decision with stable `id`,
   optional `required`, and directly nested leaf `decision-option` values with stable `id` and `label`;
 - `checklist`: static structured checklist with required `title` and stable `id`, containing directly nested
   leaf `check-item` values with stable `id`, visible `label`, and optional authored `required` marker;
+- `response`: structured reader workspace with required `title` and stable `id`, containing direct
+  `question` containers;
+- `question`: one required stable `id`, `title`, and `kind` from `bucket`, `item-single`, `item-multi`,
+  `single`, `order`, `number`, or `text`; it accepts kind-appropriate direct `bucket`, `option`, and `item`
+  leaves. Number questions require `min` and `max` and may add positive `step`; entered and imported values
+  must remain within the range and align to that step from `min`;
+- `bucket` and `option`: stable labelled domains scoped to one question;
+- `item`: readable stable item with required `label`, explanatory `note`, metadata `meta`, and safe original
+  `href`, plus optional initial `bucket` and boolean `comment` support;
 
-Typed component, option, and item inventories are bounded to 500 at source and manifest boundaries. Mixed
-Markdown plus typed children is invalid; use a Markdown-only legacy decision or a closed typed component.
+Decision and checklist component, option, and item inventories are bounded to 500 at source and manifest
+boundaries. Response Workspace has its own smaller limits: at most 20 forms per document, 50 questions and
+250 items per form, 20 options per question, two to five buckets per bucket question, 4,000 characters per
+text or comment value, and 2,000,000 bytes per imported response file. Mixed Markdown plus typed children is
+invalid; use a Markdown-only legacy decision or a closed typed component.
 
 `build`, `validate`, and `inspect` accept an optional confined prior-review sidecar. Exact revisions restore
 current state. Stale bindings expose exact, changed, missing, or ambiguous prior thread segments without
@@ -230,7 +258,8 @@ are in
 [`examples/architecture`](../../examples/architecture/report.md), [`examples/tutorial`](../../examples/tutorial/report.md),
 [`examples/dashboard`](../../examples/dashboard/report.md), [`examples/landing`](../../examples/landing/report.md), and
 [`examples/interactive-catalog`](../../examples/interactive-catalog/report.md) sources. The complete data example is
-[`examples/visualization-catalog`](../../examples/visualization-catalog/report.md).
+[`examples/visualization-catalog`](../../examples/visualization-catalog/report.md); the complete response
+example is [`examples/response-workspace`](../../examples/response-workspace/report.md).
 
 A `section` must be a direct child of the Markdown document, not a blockquote, list item, or another
 directive. It always renders a real labelled `<section>` and visible H2. `id` is a lowercase identity that
@@ -240,6 +269,20 @@ short navigation text. Defaults are `width="standard"`, `align="start"`, `tone="
 `reveal="false"`; other values are `reading|wide`, `center`, `soft|accent|contrast`, and boolean
 `reveal="true"`. Documents without explicit sections use legacy H2 headings for primary navigation. H3
 and component anchors remain owned descendant targets but are not primary links.
+
+`::contents` is a top-level leaf directive. After final section IDs and appendix extraction, it renders a
+labelled native navigation landmark at the authored position. Explicit sections supply their exact visible
+H2 text and final section anchor; optional short `nav` text is not used. Without explicit sections, eligible
+legacy H2 headings supply exact text and IDs, while H3 and `data-navigation-exclude` package headings stay
+out. Zero and one-item maps remain visible in flow; sidebar and mobile-dialog chrome independently require
+at least two items. Multiple authored maps receive the same final inventory. The compiler performs no
+browser heading scan or runtime synchronization.
+
+`:::lead` is valid only as the first direct block of a `section`, at most once. It accepts no attributes and
+exactly one Markdown paragraph; inline emphasis, links and term references retain normal prose semantics.
+Empty, multi-paragraph, list, quote, code, heading, nested-component, top-level, later and repeated forms fail
+with authored source evidence. Output is one semantic paragraph with an accent rule, not a callout/aside,
+card, disclosure or runtime component. Its paragraph remains the review target after wrapper removal.
 
 An `actions` container accepts one or more direct `action` children and no prose. `href` accepts a
 same-page `#anchor`, a relative target, HTTP(S), or `mailto:`. Executable schemes such as `javascript:` and
@@ -251,13 +294,17 @@ Use `:source-link{label="src/render/directives.ts:42" href="http://127.0.0.1:778
 for an address that a reader opens repeatedly while following code. The visible label is authored and may
 stay short; `href` must use literal host `127.0.0.1`, a port from 1 through 65535, `/open`, a `path` value
 beginning with `/` or encoded `%2F`, and a positive `line`. The output is a native link in a protected
-separate browsing context. The report page therefore remains in place for either an empty 200 or 204 helper
-response. The package never contacts the helper during build, validation, inspection, or page startup, does
-not verify that the external helper opened an editor, and adds no network CSP capability.
-The full absolute path is still present in the generated HTML even though only the short label is visible.
-Treat a page containing `source-link` as workstation-specific. Do not put credentials or sensitive directory
-names in the path, and remove or replace source links before public distribution when revealing the local
-path is unacceptable or the recipient does not share the same filesystem layout.
+separate browsing context in a default build. The report page therefore remains in place for either an empty
+200 or 204 helper response. The package never contacts the helper during build, validation, inspection, or
+page startup, does not verify that the external helper opened an editor, and adds no network CSP capability.
+The full absolute path is present in a default build even though only the short label is visible. Treat that
+artifact as workstation-specific. For distribution, select the share build profile: each source-link label
+becomes a non-anchor `span` whose text is a safe final helper filename plus line or `source:line`. An authored
+path-free label remains exact only when it already equals that derived location; directory-bearing and
+free-form labels are replaced wholesale, so no semantic path-token inference is applied to arbitrary label
+text. Link/helper attributes and their absolute path are absent, and the build result reports the exact count.
+Arbitrary prose and ordinary links are not scanned or rewritten.
+Do not put credentials in authored paths; share-safe output is not a general secret scrubber.
 
 Top-level visuals require `title` and `description`. A chart accepts 1–6 `series`; each series accepts 1–12
 leaf `point` values, and every series must use the same unique labels in the same order. Values are finite
@@ -311,8 +358,10 @@ escaped text, Shiki token colors are preserved, and copying excludes generated e
 `getSourceContract().source.codeFenceMetadata.terms` exposes the quoted envelope, separator, item bounds,
 uniqueness, shared key constraint and exact-match policy as machine-readable discovery data.
 
-`glossary.placement` defaults to `inline`. On a top-level glossary definition, `appendix` moves the complete
-visible definition into one labelled package-owned glossary appendix after the authored reading flow, in definition order. A nested appendix definition fails instead of leaving its parent empty. The appendix heading is
+`glossary.placement` defaults to `inline`. On a top-level or direct-section glossary definition, `appendix`
+moves the complete visible definition into one labelled package-owned glossary appendix after the authored
+reading flow, in authored document order. The source section retains no placeholder. Placement inside a
+list, quote, lead, callout, or unrelated directive fails instead of leaving its parent empty. The appendix heading is
 excluded from primary navigation, while every full-definition link and review target retains its stable ID
 and authored source range.
 
@@ -324,21 +373,34 @@ The text form `:asset[Label]{src="path"}` uses the authored accessible label. Th
 All state is local to the generated component instance. Browser behavior is package-owned, works through
 `file://` in both output formats, and never evaluates author content.
 
-| Primitive           | Initial state and semantic HTML                                                                                                                                                                                                                                                                                                                                                                                                         | Keyboard behavior                                                                                                                   | Pointer/touch behavior and limits                                                                                                                                 |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `glossary` + `term` | The inline or appendix definition is a visible labelled section with a stable `glossary-<key>` ID. Each prose/code term is a button controlling a closed labelled contextual `dialog`; prose may show an authored form while the dialog title stays canonical. An open code-term panel is portalled to `body`, anchored next to its token, flipped/clamped within the viewport, and restored on close so code scrolling cannot clip it. | Focusing the term opens the explanation. `Escape` closes it and restores focus. The panel link navigates to the full definition.    | Hover or click/tap opens the explanation; leaving/clicking outside closes it. The panel link is the explicit route to the full Markdown definition.               |
-| `disclosure`        | Native `details`/`summary`; closed unless `open="true"`.                                                                                                                                                                                                                                                                                                                                                                                | Native summary activation with `Enter` or `Space`.                                                                                  | Click/tap the summary to toggle.                                                                                                                                  |
-| `tabs` + `tab`      | `tablist`, `tab`, and `tabpanel` roles; the first direct `tab` is selected and other panels are hidden. Each panel requires `label`; non-`tab` directive children are rejected.                                                                                                                                                                                                                                                         | `ArrowLeft`/`ArrowRight` select and focus adjacent tabs with wraparound; `Home`/`End` select the first/last tab.                    | Click/tap a tab to select its panel. State does not cross into another tabs instance.                                                                             |
-| `modal`             | Trigger button plus closed native `dialog` labelled by required `title`.                                                                                                                                                                                                                                                                                                                                                                | Activating the trigger opens the modal; native `Escape` closes it and restores focus to the opener. The Close button does the same. | Click/tap the trigger and Close button. Backdrop-click dismissal is not part of the contract.                                                                     |
-| `popover`           | Trigger button controls a closed non-modal labelled `dialog`.                                                                                                                                                                                                                                                                                                                                                                           | `Enter`/`Space` toggles the trigger. `Escape` closes an open panel and restores trigger focus.                                      | Click/tap toggles; clicking outside closes without moving focus.                                                                                                  |
-| `filter`            | Labelled search input plus polite live result count; the empty query shows every item.                                                                                                                                                                                                                                                                                                                                                  | Normal search-input editing.                                                                                                        | Input filters case-insensitively while typing. Only `li` elements in a direct authored `ul` or `ol` are filter targets; nested lists are not independent targets. |
-| `toggle`            | Button with `role="switch"` and a controlled panel; `default="off"` hides content, `on` shows it.                                                                                                                                                                                                                                                                                                                                       | Native button `Enter`/`Space` toggles `aria-checked` and panel visibility.                                                          | Click/tap toggles the same state. Instances are isolated.                                                                                                         |
-| `demo`              | Bounded numeric output starts at `start` (default `0`).                                                                                                                                                                                                                                                                                                                                                                                 | Native Increment button activation adds `step` (default `1`).                                                                       | Click/tap performs the same package-owned increment; no author script is accepted.                                                                                |
+Response Workspace uses a closed version-1 manifest and export. Every exported question includes its stable
+id, kind, explicit `answered` boolean, and kind-specific value; authored defaults may be visible while
+`answered` remains false. Non-empty item comments are exported in a separate sorted array. Clipboard and
+file actions serialize identical canonical JSON without clocks or random values. Import is bounded and
+validates the complete schema, domains, form identity, and form revision before replacing current state; a
+foreign, stale, unsupported, or malformed file leaves existing answers unchanged. No state is written to
+cookies, Web Storage, IndexedDB, a service, or a form submission. The exact Response Workspace bounds are
+20 forms per document, 50 questions and 250 items per form, 20 options per question, two to five buckets per
+bucket question, 4,000 characters per text or comment value, and 2,000,000 bytes per imported response file.
+
+| Primitive           | Initial state and semantic HTML                                                                                                                                                                                                                                                                                                                                                                                                         | Keyboard behavior                                                                                                                                                                                        | Pointer/touch behavior and limits                                                                                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `glossary` + `term` | The inline or appendix definition is a visible labelled section with a stable `glossary-<key>` ID. Each prose/code term is a button controlling a closed labelled contextual `dialog`; prose may show an authored form while the dialog title stays canonical. An open code-term panel is portalled to `body`, anchored next to its token, flipped/clamped within the viewport, and restored on close so code scrolling cannot clip it. | Focusing the term opens the explanation. `Escape` closes it and restores focus. The panel link navigates to the full definition.                                                                         | Hover or click/tap opens the explanation; leaving/clicking outside closes it. The panel link is the explicit route to the full Markdown definition.               |
+| `disclosure`        | Native `details`/`summary`; closed unless `open="true"`.                                                                                                                                                                                                                                                                                                                                                                                | Native summary activation with `Enter` or `Space`.                                                                                                                                                       | Click/tap the summary to toggle.                                                                                                                                  |
+| `tabs` + `tab`      | `tablist`, `tab`, and `tabpanel` roles; the first direct `tab` is selected and other panels are hidden. Each panel requires `label`; non-`tab` directive children are rejected.                                                                                                                                                                                                                                                         | `ArrowLeft`/`ArrowRight` select and focus adjacent tabs with wraparound; `Home`/`End` select the first/last tab.                                                                                         | Click/tap a tab to select its panel. State does not cross into another tabs instance.                                                                             |
+| `modal`             | Trigger button plus closed native `dialog` labelled by required `title`.                                                                                                                                                                                                                                                                                                                                                                | Activating the trigger opens the modal; native `Escape` closes it and restores focus to the opener. The Close button does the same.                                                                      | Click/tap the trigger and Close button. Backdrop-click dismissal is not part of the contract.                                                                     |
+| `popover`           | Trigger button controls a closed non-modal labelled `dialog`.                                                                                                                                                                                                                                                                                                                                                                           | `Enter`/`Space` toggles the trigger. `Escape` closes an open panel and restores trigger focus.                                                                                                           | Click/tap toggles; clicking outside closes without moving focus.                                                                                                  |
+| `filter`            | Labelled search input plus polite live result count; the empty query shows every item.                                                                                                                                                                                                                                                                                                                                                  | Normal search-input editing.                                                                                                                                                                             | Input filters case-insensitively while typing. Only `li` elements in a direct authored `ul` or `ol` are filter targets; nested lists are not independent targets. |
+| `toggle`            | Button with `role="switch"` and a controlled panel; `default="off"` hides content, `on` shows it.                                                                                                                                                                                                                                                                                                                                       | Native button `Enter`/`Space` toggles `aria-checked` and panel visibility.                                                                                                                               | Click/tap toggles the same state. Instances are isolated.                                                                                                         |
+| `demo`              | Bounded numeric output starts at `start` (default `0`).                                                                                                                                                                                                                                                                                                                                                                                 | Native Increment button activation adds `step` (default `1`).                                                                                                                                            | Click/tap performs the same package-owned increment; no author script is accepted.                                                                                |
+| `copyable`          | Ordinary paragraphs, emphasis, links and wrapping remain visible body prose. One package button copies rendered visible text only; its own label and hidden helper/panel content are outside the content owner.                                                                                                                                                                                                                         | Native Copy button activation supports focus, `Enter`, and `Space`; success/failure text follows document locale.                                                                                        | Click/tap performs the same clipboard action. Clipboard failure changes only the button label and leaves prose unchanged.                                         |
+| `response`          | Native fieldsets, legends, radio buttons, checkboxes, selects, number inputs, textareas, ordered lists, safe original anchors, status output, import control, and copy/file export. Each form owns isolated current-tab state.                                                                                                                                                                                                          | Native fields cover every value. Bucket selects are the complete fallback to drag-and-drop; explicit Move up/down buttons reorder items. Copy, download, import, and original links use native controls. | Bucket cards may additionally be dragged between named columns. Pointer changes use the same state as keyboard controls; original links do not mutate answers.    |
 
 `actions`/`action` does not appear in the stateful table because it is an ordinary group of links. Native
 anchor focus, Enter activation, URL behavior, and browser history apply without a package event handler.
-`source-link` is also a native anchor without a package event handler; its protected separate browsing
-context and loopback-only grammar are compile-time link contracts rather than reader state.
+In a default build, `source-link` is also a native anchor without a package event handler; its protected
+separate browsing context and loopback-only grammar are compile-time link contracts rather than reader
+state. Share output is ordinary inline text and has no activation or reader state.
 
 ## Page navigation and motion
 
@@ -354,6 +416,10 @@ focused targets clear the sticky topbar. During normal-motion smooth hash naviga
 current until the scroll settles. Native `scrollend` performs one terminal geometry update; browsers without
 it coalesce the scroll series into one terminal update. Reduced motion uses the same final ownership without
 smooth traversal.
+
+This shell navigation is separate from authored `::contents`. The in-flow landmark uses the same final
+primary inventory but exact visible headings, has no `aria-current` state or browser controller, remains in
+the article at narrow widths, and is present for zero or one item even when shell navigation is absent.
 
 On desktop, a persistent `Hide contents`/`Show contents` button collapses a non-modal navigation region,
 removes hidden links from focus, and releases the content column. This state lasts only for the current

@@ -1,0 +1,29 @@
+{
+  "contractVersion": 1,
+  "id": "section-prose",
+  "summary": "Adds one bounded opening thesis paragraph and permits direct-section glossary definitions to move into the existing appendix.",
+  "trustBoundary": {
+    "authorCode": "forbidden",
+    "callbacks": "forbidden",
+    "eval": "forbidden",
+    "dynamicImports": "forbidden",
+    "networkAccess": "forbidden",
+    "confinement": "source-root",
+    "offline": "required",
+    "deterministicSerialization": "required",
+    "cspCompatible": "required",
+    "packageOwnedRuntime": "required"
+  },
+  "evidence": {
+    "sourceGrammar": "A direct section child may contain one attribute-free lead container whose sole block is its first Markdown paragraph. Appendix glossary placement is accepted only at the document root or as a direct section child; list, quote, lead and unrelated directive nesting remain invalid with authored-range diagnostics.",
+    "executionCapabilities": "Trusted HAST enhancement collapses the validated lead wrapper into one semantic paragraph. Already enhanced and review-targeted glossary definitions are removed from their source section and appended in authored document order to the existing single glossary appendix.",
+    "confinement": "Both transformations consume only validated MDAST/HAST already loaded from the confined source. They read no additional path, file, URL, environment value or generated artifact.",
+    "offlineBehavior": "Lead presentation is static package CSS. Existing term controls and full-definition fragment links retain the package-owned offline glossary runtime in both output formats.",
+    "deterministicSerialization": "One lead is first and unique per section. Root and direct-section appendix definitions retain authored document order, collision-resolved glossary IDs, review targets and identical fragment destinations without leaving source-flow placeholders.",
+    "cspAndRuntime": "The feature adds no author HTML, script, style input, handler, listener, observer, storage, form, iframe, fetch, CSP source or browser synchronization branch.",
+    "accessibility": "Lead remains one reviewable prose paragraph with inline Markdown semantics and restrained visual emphasis instead of an aside/callout. Moved definitions remain visible in the labelled appendix and existing keyboard-accessible term controls link to them.",
+    "byteAndPerformanceBudgets": "Validation scans direct section children and enhancement flattens one bounded paragraph. Appendix movement uses the existing linear extraction traversal and adds no reader-time work.",
+    "packageDependenciesAndLicenses": "No dependency or license is added. The implementation composes the typed registry, source-mapped directive validation, existing review projection, glossary ID allocator/extractor, navigation exclusion and shared CSS tokens.",
+    "compatibility": "Sources without lead retain their current output. Root and inline glossary forms, prose/code term controls, review revisions, navigation, both publishers, CSP and package runtime remain compatible; the additions stay within source contract major 1."
+  }
+}

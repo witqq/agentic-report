@@ -8,7 +8,8 @@
       "container": ":::name{attributes}\nMarkdown children\n:::",
       "nestedContainer": "Use a longer outer colon fence than nested directives.",
       "leaf": "::name{attributes}",
-      "text": ":name[label]{attributes}"
+      "text": ":name[label]{attributes}",
+      "numericColonText": "Two- or three-part numeric time/duration tokens such as 21:01 and 1:30:05 remain literal Markdown text."
     },
     "codeFenceMetadata": {
       "terms": {
@@ -98,6 +99,28 @@
       },
       "children": "markdown",
       "placement": { "topLevelOnly": true },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "contents": {
+      "description": "Generated in-flow links to final primary sections using their exact visible headings.",
+      "forms": ["leaf"],
+      "attributes": {},
+      "children": "none",
+      "placement": { "topLevelOnly": true },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "lead": {
+      "description": "One emphasized opening thesis paragraph inside a section.",
+      "forms": ["container"],
+      "attributes": {},
+      "children": "markdown",
+      "placement": { "requiredParent": "section" },
       "resource": "none",
       "runtime": "none",
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
@@ -389,8 +412,245 @@
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
       "handoffs": ["semantic-document"]
     },
+    "response": {
+      "description": "Local structured reader-response workspace with deterministic export.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": true,
+          "description": "Visible title."
+        },
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Stable response form identity."
+        }
+      },
+      "children": "response-question-directives",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-response",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "question": {
+      "description": "One typed question inside a response workspace.",
+      "forms": ["container"],
+      "attributes": {
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Stable question identity within the response form."
+        },
+        "kind": {
+          "kind": "enum",
+          "values": ["bucket", "item-single", "item-multi", "single", "order", "number", "text"],
+          "required": true,
+          "description": "Structured answer kind."
+        },
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": true,
+          "description": "Visible title."
+        },
+        "prompt": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 500,
+          "required": false,
+          "description": "Optional reader instruction."
+        },
+        "min": {
+          "kind": "number",
+          "minimum": -999999999,
+          "maximum": 999999999,
+          "multipleOf": 0.0001,
+          "lexicalPattern": "^-?(?:0|[1-9]\\d{0,8})(?:\\.\\d{1,4})?$",
+          "required": false,
+          "description": "Required minimum for number questions."
+        },
+        "max": {
+          "kind": "number",
+          "minimum": -999999999,
+          "maximum": 999999999,
+          "multipleOf": 0.0001,
+          "lexicalPattern": "^-?(?:0|[1-9]\\d{0,8})(?:\\.\\d{1,4})?$",
+          "required": false,
+          "description": "Required maximum for number questions."
+        },
+        "step": {
+          "kind": "number",
+          "minimum": -999999999,
+          "maximum": 999999999,
+          "multipleOf": 0.0001,
+          "lexicalPattern": "^-?(?:0|[1-9]\\d{0,8})(?:\\.\\d{1,4})?$",
+          "required": false,
+          "description": "Optional positive increment for number questions."
+        }
+      },
+      "children": "response-field-directives",
+      "placement": { "requiredParent": "response" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "bucket": {
+      "description": "One named assignment bucket.",
+      "forms": ["leaf"],
+      "attributes": {
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Stable bucket identity within the question."
+        },
+        "label": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": true,
+          "description": "Visible bucket label."
+        }
+      },
+      "children": "none",
+      "placement": { "requiredParent": "question" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "option": {
+      "description": "One selectable answer option.",
+      "forms": ["leaf"],
+      "attributes": {
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Stable option identity within the question."
+        },
+        "label": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": true,
+          "description": "Visible option label."
+        }
+      },
+      "children": "none",
+      "placement": { "requiredParent": "question" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "item": {
+      "description": "One readable response item.",
+      "forms": ["leaf"],
+      "attributes": {
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Stable item identity within the question."
+        },
+        "label": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 500,
+          "required": true,
+          "description": "Visible item title."
+        },
+        "note": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 1000,
+          "required": true,
+          "description": "Required explanatory line."
+        },
+        "meta": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 500,
+          "required": true,
+          "description": "Required metadata line."
+        },
+        "href": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 500,
+          "pattern": "^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*)$",
+          "required": true,
+          "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected."
+        },
+        "bucket": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": false,
+          "description": "Optional authored initial bucket."
+        },
+        "comment": {
+          "kind": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Enables one optional comment for this item."
+        }
+      },
+      "children": "none",
+      "placement": { "requiredParent": "question" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "copyable": {
+      "description": "Ordinary Markdown prose with a localized copy control.",
+      "forms": ["container"],
+      "attributes": {},
+      "children": "markdown-and-term-directives",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-copy",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
     "glossary": {
-      "description": "Reusable glossary definition containing Markdown.",
+      "description": "Reusable glossary definition containing Markdown, optionally moved from the document root or a direct section child into the appendix.",
       "forms": ["container"],
       "attributes": {
         "key": {
@@ -415,7 +675,7 @@
           "values": ["inline", "appendix"],
           "required": false,
           "default": "inline",
-          "description": "Definition location in the authored flow or, for a top-level definition, one package-owned reference appendix."
+          "description": "Definition location in the authored flow or, from the document root or a direct section child, one package-owned reference appendix."
         }
       },
       "children": "markdown",
@@ -1188,7 +1448,7 @@
     "validate": "Validate a project without writing an output artifact.",
     "inspect": "Inspect source usage and the available authoring catalog without writing output.",
     "review": "Resolve a confined review artifact without changing report sources.",
-    "build": "Compile a source into a static artifact.",
+    "build": "Compile a source into a default or share-safe static artifact.",
     "describe": "Return the complete source contract.",
     "schema": "Return manifest, directive, or complete source JSON Schema.",
     "examples": "List packaged buildable examples."

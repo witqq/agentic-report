@@ -193,7 +193,65 @@ For a repeat review, run `agentic-report build ./my-page --review review.json --
 The sidecar is confined to the source root and read before publication. Invalid input preserves existing
 output. Exact state resumes; stale bindings remain prior evidence until the reviewer resolves the new revision.
 
+## Collect a structured reader response
+
+Response Workspace is separate from Review Workspace: it collects typed question values rather than block
+discussion threads. Declare one response form with stable direct questions and kind-specific leaves:
+
+```md
+:::::response{title="Review triage" id="triage"}
+::::question{id="scope" kind="bucket" title="What should happen?" prompt="Assign every item."}
+::bucket{id="do" label="Do now"}
+::bucket{id="later" label="Later"}
+::bucket{id="skip" label="Do not do"}
+::item{id="login" label="Fix login" note="Empty email returns 500." meta="Issue 142" href="https://example.com/issues/142" bucket="do" comment=true}
+::item{id="copy" label="Correct the export label" note="Cosmetic." meta="Issue 138" href="https://example.com/issues/138" comment=true}
+::::
+::::question{id="decision" kind="single" title="Release decision"}
+::option{id="go" label="Go"}
+::option{id="hold" label="Hold"}
+::::
+::::question{id="score" kind="number" title="Scores" min="1" max="5" step="1"}
+::item{id="confidence" label="Evidence confidence" note="Score the evidence quality." meta="Release evidence" href="https://example.com/evidence"}
+::::
+::::question{id="summary" kind="text" title="Decision summary"}
+::::
+:::::
+```
+
+The remaining kinds are `item-single` (one option per item), `item-multi` (several options per item),
+and `order` (all items in priority order). Bucket questions require two to five buckets. Choice questions
+require at least two options. `comment=true` adds an optional item comment; empty comments are omitted.
+
+The reader can complete every question with native fields and buttons. Bucket cards also support drag and
+drop, while the select remains the keyboard and fallback route. **Copy response** and **Download
+response.json** serialize the same deterministic version-1 JSON. Every question stores `id`, `kind`,
+`answered`, and a machine-readable value; comments are a separate sparse array. Import accepts only the
+same form revision and validates the complete file before replacing any current answer. State remains in the
+current tab without storage, network, an account, or form submission. Build the complete packaged
+[`response-workspace` example source](../examples/response-workspace/report.md) to inspect every answer kind.
+
+## Copy prose without code styling
+
+Use a closed `copyable` container for text the reader should paste into a chat or handoff:
+
+```md
+:::copyable
+Deploy after **two checks** are complete.
+
+Read the [rollback runbook](https://example.com/runbook) before the handoff.
+:::
+```
+
+The block remains ordinary wrapped Markdown. Its localized button copies rendered visible text with
+paragraph breaks and link labels, without Markdown syntax, URLs, HTML, control labels, or hidden panels.
+`term` references are allowed; block code and other nested directives are rejected.
+
 ## Minimal source
+
+Write clock times, ranges, and durations directly: `21:01`, `21:01 — 00:12`, and `1:30:05` are literal
+Markdown text, and a frontmatter title such as `title: Отчёт за 9 июля (ночь до 05:24)` needs no backslash.
+Unknown directive names still fail validation.
 
 ```text
 my-report/
@@ -504,6 +562,19 @@ omission derives a deterministic collision-free ID from the title. `nav` supplie
 heading-only sources use H2 primary links. H3 and component anchors remain owned targets without becoming
 primary links.
 
+Use top-level `::contents` to place the section map inside the article. It accepts no attributes, label, or
+children. The compiler fills it after final IDs are known: exact visible section headings become native
+links, while short `section.nav` labels remain exclusive to sidebar/mobile navigation. The in-flow map stays
+visible on narrow screens and renders zero or one item even when navigation chrome is absent. Do not write a
+parallel Markdown list or parse headings in browser code.
+
+Use one direct `:::lead` as the first block of a `section` to emphasize its opening thesis without creating
+a callout. It accepts no attributes and exactly one Markdown paragraph, including ordinary inline markup
+and term references; additional paragraphs, lists, code, nested components, top-level placement, and later
+or repeated lead blocks fail validation. A glossary with `placement="appendix"` may be top-level or a direct
+section child. Direct-section authorship keeps the definition beside its explanation while compilation
+moves the complete already-targeted definition into the single appendix without leaving a placeholder.
+
 `actions` accepts only direct labelled `::action[...]` children. Every action requires `href`; valid targets
 are same-page anchors, relative paths, HTTP(S), and `mailto:`. `javascript:`, `data:`, `file:`, absolute
 local paths, and protocol-relative URLs fail validation. `kind` is `primary`, `secondary`, or `quiet` and
@@ -514,10 +585,10 @@ narrower than an action: `http://127.0.0.1:<port>/open?path=<absolute-path>&line
 absolute path beginning with `/` or encoded `%2F`. The compiler emits a native `target="_blank"` link with
 `noopener noreferrer`, so the report remains open regardless of an empty helper response. It never requests
 the helper itself, checks the editor, reads the addressed path, or relaxes CSP. Use a short authored
-`path:line` label and percent-encode the full absolute path in the URL. The full path remains recoverable from
-the generated HTML and makes the link workstation-specific; do not include sensitive directory names, and
-remove or replace these links before public distribution when that disclosure or machine binding is not
-acceptable.
+`path:line` label and percent-encode the full absolute path in the URL. A default build retains that path and
+remains workstation-specific. For distribution, add `--share`: the label becomes a non-link, the helper/path
+payload is absent from output bytes, and the result reports the exact neutralized count. The profile does not
+scan arbitrary prose or replace ordinary links.
 
 `asset.src` and `font.src` must resolve to existing files under the canonical source root. The first font
 directive becomes the document font; later directives register additional faces. The text form uses its
@@ -527,9 +598,9 @@ authored label; the leaf asset form receives `Download <filename>` so it remains
 retain the canonical title; detached `::term{key="..."}` uses canonical text. Unmarked validation recognizes
 only exact canonical forms and deliberately does not claim morphological inference.
 
-`glossary.placement` is `inline` by default. A top-level definition may use `appendix` for one visible
-package-owned reference section outside primary navigation; nested appendix placement fails rather than
-leaving an empty authored container. A code fence may use only `terms="key,other-key"` metadata to annotate exact
+`glossary.placement` is `inline` by default. A top-level or direct-section definition may use `appendix` for
+one visible package-owned reference section outside primary navigation; list, quote, lead, and unrelated
+directive nesting fails rather than leaving an empty authored container. A code fence may use only `terms="key,other-key"` metadata to annotate exact
 case-sensitive canonical text. Keys are bounded and unique; every requested term must occur within one line,
 and first ranges cannot overlap. Only the first occurrence per key becomes a glossary control. Shiki colors,
 literal code bytes, keyboard/touch behavior, full-definition links and copied code text are preserved; the
@@ -548,8 +619,10 @@ package.
 | `filter`            | Labelled search input and polite live count; empty initially.                                                                                                                                                                                         | Typing filters case-insensitively. Only list items in a direct authored `ul`/`ol` are targets.                                                                             |
 | `toggle`            | ARIA switch; `default="off"` hides its panel.                                                                                                                                                                                                         | Click/tap or native `Enter`/`Space` toggles checked state and visibility.                                                                                                  |
 | `demo`              | Numeric output starts at `start="0"`.                                                                                                                                                                                                                 | Increment button adds `step="1"` by default; author code is never executed.                                                                                                |
+| `response`          | Native typed controls plus deterministic copy/file export and validated local import. Authored defaults remain explicitly unanswered until reader input.                                                                                              | Native fields cover all values; bucket select and order buttons provide complete keyboard routes, with bucket drag-and-drop as an additional pointer route.                |
 
-Each instance owns its state. Tabs, overlays, filters, switches, and demos do not change another instance.
+Each instance owns its state. Tabs, overlays, filters, switches, demos, and response forms do not change
+another instance.
 
 ### Page navigation and bounded motion
 
@@ -576,7 +649,8 @@ Each stdout line is JSON. A diagnostic line contains `type`, `runId`, `level`, `
 `remediation`; a content-backed error includes the authored `source.file`, start/end line and column, while
 the referenced local path is kept in structured `details.target`. Process-level errors omit source
 locations. The final result contains an absolute output path, format, HTML byte size, embedded/external
-occurrence counts, an HTML SHA-256 content hash, and warnings. Asset counters describe authored/generated
+occurrence counts, an HTML SHA-256 content hash, the selected share profile, exact neutralized source-link
+count, and warnings. Asset counters describe authored/generated
 occurrences, while `contentHash` hashes the generated HTML rather than an entire directory tree.
 Successful warnings are duplicated between diagnostic and result records. The build transport has no independent contract
 version yet; treat these fields as the current 0.x shape, not a final portable protocol.
@@ -598,6 +672,11 @@ Exit code `3` means an unexpected internal failure occurred.
 - Use `--format directory` when separate content-addressed assets are more important than one-file
   portability. The package runtime is embedded for `single-file` and external for `directory`; callers do
   not select its placement.
+- Add `--share` when the artifact leaves the source workstation. Source-link labels remain readable
+  non-links derived as path-free filename/line from the validated helper, with `source:line` for an unsafe
+  terminal. An already matching short label remains exact; directory-bearing and free-form labels are
+  replaced wholesale. Compiler-owned helper paths are not serialized, and human/JSON results report the
+  exact neutralized count. The default build preserves every authored label and working editor link.
 
 All source assets must be local and below the source directory after symlinks are resolved. Remote URLs,
 escaping paths, executable templates, author scripts, and raw HTML are outside the current contract.

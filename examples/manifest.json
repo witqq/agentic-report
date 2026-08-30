@@ -112,7 +112,7 @@
       "files": [
         {
           "path": "report.md",
-          "sha256": "626ee6f42a0fbf537c36c919438a9c3e1232a7b992355f08f3d79666212e9489"
+          "sha256": "a467548c97e9fdb8f21833ba0de7c73f0f9014374b20c04e974a9bada59082f1"
         }
       ]
     },
@@ -190,7 +190,7 @@
       "files": [
         {
           "path": "report.md",
-          "sha256": "b81ff253d2728ab39ff0dcc16bab43135d32174d1b3ef05e1312478af9aea3bb"
+          "sha256": "b7f2104d53c3a130212fb3707404de4cae5ad5e70b33b0fe9c987f114f261a6a"
         }
       ]
     },
@@ -209,6 +209,20 @@
         {
           "path": "report.md",
           "sha256": "e3d8b52beccd00680306680e02723ed6e834670a0bd231fb1522989afe2440b6"
+        }
+      ]
+    },
+    {
+      "id": "response-workspace",
+      "path": "response-workspace",
+      "entry": "report.md",
+      "title": "Structured reader response workspace",
+      "description": "Offline response form covering bucket, per-item choices, ordering, scoring, text, comments, import, and deterministic export.",
+      "classes": ["work-report", "structured-response-handoff"],
+      "files": [
+        {
+          "path": "report.md",
+          "sha256": "de2da960af080e5ac180277c7aa2810652fab9eff5fc05960d97f4ca7f9057c9"
         }
       ]
     },

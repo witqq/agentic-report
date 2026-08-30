@@ -1,0 +1,29 @@
+{
+  "contractVersion": 1,
+  "id": "copyable-prose",
+  "summary": "Adds ordinary rendered Markdown prose with the package-owned localized copy control.",
+  "trustBoundary": {
+    "authorCode": "forbidden",
+    "callbacks": "forbidden",
+    "eval": "forbidden",
+    "dynamicImports": "forbidden",
+    "networkAccess": "forbidden",
+    "confinement": "source-root",
+    "offline": "required",
+    "deterministicSerialization": "required",
+    "cspCompatible": "required",
+    "packageOwnedRuntime": "required"
+  },
+  "evidence": {
+    "sourceGrammar": "The copyable container accepts ordinary Markdown plus term references and rejects block code or nested package directives, so copied visible prose has one unambiguous owner.",
+    "executionCapabilities": "Trusted enhancement marks the authored content owner. The existing package copy-button factory, localized states and delegated clipboard effect select rendered innerText for prose while retaining code-specific extraction for pre blocks.",
+    "confinement": "Copyable prose is part of the already confined Markdown graph and creates no path, resource, include or additional read.",
+    "offlineBehavior": "Compilation and clipboard interaction use local source plus package runtime through file URLs in both formats without a service or network request.",
+    "deterministicSerialization": "Markup and control identity derive only from validated source and package version. Clipboard text derives from current visible rendered prose without clocks, random IDs or author callbacks.",
+    "cspAndRuntime": "The extension reuses createElement, innerText and Clipboard without innerHTML, eval, script/style input, storage, form submission, dynamic import or a new CSP source.",
+    "accessibility": "Prose retains normal semantic paragraphs, links and wrapping. A native localized button supports focus, Enter and Space; success/failure is announced through its visible label.",
+    "byteAndPerformanceBudgets": "One control per bounded authored container and one innerText read per explicit copy action add no listener, observer, frame or background work.",
+    "packageDependenciesAndLicenses": "No dependency or license is added. The implementation composes the typed directive registry, HAST enhancement, existing package runtime/icon/localization and browser APIs.",
+    "compatibility": "Existing code copying, glossary controls, Markdown rendering, Review Workspace, both output formats and CLI/ESM contracts remain valid. The directive is additive within source major 1."
+  }
+}

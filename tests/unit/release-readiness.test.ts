@@ -22,8 +22,14 @@ describe('release readiness', () => {
   it('ships accepted evidence for every product extension proposal', async () => {
     for (const file of [
       'docs/product/code-glossary-extension.json',
+      'docs/product/copyable-prose-extension.json',
       'docs/product/diagram-extension.json',
+      'docs/product/in-flow-contents-extension.json',
       'docs/product/review-workspace-extension.json',
+      'docs/product/response-workspace-extension.json',
+      'docs/product/section-prose-extension.json',
+      'docs/product/share-safe-build-extension.json',
+      'docs/product/time-text-extension.json',
       'docs/product/source-link-extension.json',
     ]) {
       const proposal = JSON.parse(await readFile(path.resolve(file), 'utf8')) as unknown;
@@ -128,7 +134,7 @@ describe('release readiness', () => {
     expect(runbook).toContain('do not run its constituent checks again');
     expect(runbook).toContain('do not duplicate it with a second download or isolated install');
     expect(runbook).toContain(
-      'gh workflow run publish-npm.yml --ref main -f tag=v0.4.4 -f sha256="$candidate_sha256"',
+      'gh workflow run publish-npm.yml --ref main -f tag=v0.5.0 -f sha256="$candidate_sha256"',
     );
     expect(runbook).toContain('gh run watch "<databaseId>" --exit-status');
     expect(runbook).toContain('npm view agentic-report dist-tags version --json');
@@ -149,7 +155,7 @@ describe('release readiness', () => {
         readonly entry: string;
       }[];
     };
-    expect(manifest.examples).toHaveLength(16);
+    expect(manifest.examples).toHaveLength(17);
     for (const example of manifest.examples) {
       const source = await readFile(path.resolve('examples', example.path, example.entry), 'utf8');
       expect(fictionalMarkerIssue(source), example.id).toBeUndefined();

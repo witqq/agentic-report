@@ -368,6 +368,31 @@ describe('CLI transport', () => {
     expect(html).not.toContain('<script>');
   });
 
+  it('reports an explicit share-safe build count in JSON and human output', async () => {
+    const workspace = await createTestWorkspace('cli-share');
+    workspaces.push(workspace);
+    const source = path.join(workspace, 'report.md');
+    const href = 'http://127.0.0.1:7789/open?path=%2FUsers%2Ffixture%2Fprivate%2Fsource.ts&line=42';
+    await writeFile(source, `# Share\nOpen :source-link{label="source.ts:42" href="${href}"}.\n`);
+    const plainSource = path.join(workspace, 'plain.md');
+    await writeFile(plainSource, '# Share without workstation links\n');
+    const jsonOutput = path.join(workspace, 'share.json.html');
+    const humanOutput = path.join(workspace, 'share.human.html');
+    const [json, human] = await Promise.all([
+      runCli(['build', source, '--share', '--output', jsonOutput, '--json']),
+      runCli(['build', plainSource, '--share', '--output', humanOutput]),
+    ]);
+    expect(json).toMatchObject({ exitCode: 0, stderr: '' });
+    expect(JSON.parse(json.stdout)).toMatchObject({
+      type: 'result',
+      share: true,
+      neutralizedSourceLinks: 1,
+    });
+    expect(await readFile(jsonOutput, 'utf8')).not.toContain('%2FUsers%2Ffixture%2Fprivate');
+    expect(human).toMatchObject({ exitCode: 0, stderr: '' });
+    expect(human.stdout).toMatch(/; neutralized 0 source links\n$/u);
+  });
+
   it('serializes validate state without output mutation', async () => {
     const { workspace, singleSentinel, directorySentinel } =
       await createAnalysisWorkspace('cli-validate');

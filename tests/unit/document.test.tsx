@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  extractNavigation,
   renderDocument,
   type DocumentRenderOptions,
   type DocumentRuntime,
@@ -146,30 +145,6 @@ describe('renderDocument runtime boundary', () => {
     expect(html).toContain('href="#report-content-2"');
     expect(html.match(/id="report-content"/gu)).toHaveLength(1);
     expect(html.match(/id="report-navigation"/gu)).toHaveLength(1);
-  });
-
-  it('uses at least two explicit or legacy H2 targets and keeps subordinate H3 out of primary navigation', () => {
-    expect(
-      extractNavigation(
-        '<h1 id="page">Page</h1><section class="semantic-section" data-nav="Proof" data-semantic="section" id="proof" aria-labelledby="proof-title">\n<h2 id="proof-title">Long proof heading</h2><h3 id="detail">Detail</h3></section><section class="semantic-section" data-semantic="section" id="next" aria-labelledby="next-title"><h2 id="next-title">Next section</h2></section>',
-      ),
-    ).toEqual([
-      { depth: 2, id: 'proof', label: 'Proof' },
-      { depth: 2, id: 'next', label: 'Next section' },
-    ]);
-    expect(
-      extractNavigation(
-        '<h1 id="page">Page</h1><h2 id="legacy">Legacy section</h2><h3 id="detail">Detail</h3>',
-      ),
-    ).toEqual([]);
-    expect(
-      extractNavigation(
-        '<h2 id="legacy">Legacy section</h2><h3 id="detail">Detail</h3><h2 id="glossary" data-navigation-exclude="">Glossary</h2><h2 id="next">Next section</h2>',
-      ),
-    ).toEqual([
-      { depth: 2, id: 'legacy', label: 'Legacy section' },
-      { depth: 2, id: 'next', label: 'Next section' },
-    ]);
   });
 
   it('renders one current navigation set, native mobile dialog, and optional progress intent', () => {

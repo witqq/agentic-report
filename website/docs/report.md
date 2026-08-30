@@ -14,7 +14,13 @@ scrollProgress: true
 interactive HTML page. The default is one self-contained file; directory output keeps the same behavior
 with content-addressed assets.
 
+::contents
+
 ::::section{title="Start here" id="start" nav="Start" width="standard" align="start" tone="soft" reveal="true"}
+
+:::lead
+Write the opening thesis as one emphasized prose paragraph, not as a callout or custom HTML component.
+:::
 
 Use Node.js 24.18.0 or newer. Start with the [agent quickstart](agent/index.html), retrieve the
 [direct Markdown version](agent/index.md), or install the [agent skill](../skills/agentic-report/SKILL.md).
@@ -33,7 +39,7 @@ If you prefer to inspect the implementation instead of executing the published `
 package, clone a specific release tag and run the compiler directly from its build:
 
 ```sh
-git clone --branch v0.4.4 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.5.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -98,6 +104,15 @@ Use `build --review review.json` for a follow-up artifact. Exact state resumes; 
 prior exact/changed/missing/ambiguous evidence. Continuing a changed fragment appends a current revision
 segment to the same exported thread, retaining every prior user/agent message and resolution state.
 
+When the reader must return typed values instead of discussion, use Response Workspace. It supports bucket
+triage, per-item and global choices, priority ordering, bounded scores, free text, and sparse item comments.
+The page keeps state only in the current tab and exports the same deterministic response through clipboard
+and file download. [Open the complete live example](../examples/response-workspace/index.html) or inspect
+its [declarative source](../examples/response-workspace/report.md).
+
+Use `copyable` when ordinary prose should be pasted elsewhere. It keeps Markdown typography/wrapping and
+copies only visible rendered text through the localized package control.
+
 ::::
 
 ::::section{title="Output and operation" id="output" nav="Output" width="standard" align="start" tone="soft" reveal="true"}
@@ -105,6 +120,13 @@ segment to the same exported thread, retaining every prior user/agent message an
 - `single-file` is the default: one portable HTML file with embedded local resources and runtime.
 - `directory` writes `index.html` plus content-hashed resources for larger pages.
 - Both formats open through normal `file://` and preserve the same supported interactions.
+- Top-level `::contents` keeps an exact compiler-generated section map in the article and on narrow screens;
+  short `section.nav` labels remain exclusive to sidebar/mobile navigation.
+- A section may start with one bounded `:::lead` paragraph. Appendix glossary definitions may be direct
+  section children and compile into the existing ordered appendix without leaving an in-flow placeholder.
+- `build --share` derives path-free non-link filename/line text from each validated source helper, falls back
+  to `source:line` for unsafe terminals, omits workstation paths and authored directory/free-form labels, and
+  reports the exact count without editing Markdown.
 - The compiler neither hosts nor deploys the result and never fetches remote source.
 
 The public [landing](../index.html), [incident review](../examples/incident-review/index.html),

@@ -93,7 +93,10 @@ export default async function globalSetup(): Promise<void> {
   ] as const;
   const presetFixtures = ['studio', 'editorial', 'signal'] as const;
   const navigationSource = path.join(fixtureRoot, 'navigation-source');
+  const sectionProseSource = path.join(fixtureRoot, 'section-prose-source');
   const reviewSource = path.join(fixtureRoot, 'review-source');
+  const responseIsolationSource = path.join(fixtureRoot, 'response-isolation-source');
+  const shareSource = path.join(fixtureRoot, 'share-source');
   const glossaryCodeSource = path.join(fixtureRoot, 'glossary-code-source');
   const diagramTourSource = path.join(fixtureRoot, 'diagram-tour-source');
   const russianChromeSource = path.join(fixtureRoot, 'russian-chrome-source');
@@ -105,12 +108,55 @@ export default async function globalSetup(): Promise<void> {
     'layout-landing',
     'layout-mixed',
     'interactive-catalog',
+    'response-workspace',
     'visualization-catalog',
     'incident-review',
     'vendor-decision',
     'launch-readiness',
   ] as const;
   const starters = listExamples().filter((example) => example.starter !== undefined);
+  await mkdir(shareSource, { recursive: true });
+  await writeFile(
+    path.join(shareSource, 'report.md'),
+    [
+      '# Share-safe handoff',
+      'First :source-link{label="first.ts:10" href="http://127.0.0.1:7789/open?path=%2FUsers%2Ffixture%2Fworktree-a%2Ffirst.ts&line=10"}.',
+      'Combining :source-link{label="src/é/file.ts:11" href="http://127.0.0.1:7789/open?path=%2FUsers%2Ffixture%2Fworktree-a%2Funicode-combining.ts&line=11"}.',
+      'Symbol :source-link{label="icons/📁/file.ts:12" href="http://127.0.0.1:7789/open?path=%2FUsers%2Ffixture%2Fworktree-a%2Funicode-symbol.ts&line=12"}.',
+      'Second :source-link{label="/Users/alice/private/second.ts:20" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fsecond.ts&line=20"}.',
+      'Wrapped :source-link{label="location (/Users/alice/private/wrapped.ts:25)" href="http://127.0.0.1:7789/open?path=%2Fworkspace%2Fwrapped.ts&line=25"}.',
+      'Third :source-link{label="file:///Users/alice/private/hidden.ts:30" href="http://127.0.0.1:7789/open?path=%2Ftmp%2F%252FUsers%252Falice%252Fhidden.ts&line=30"}.',
+      'Ordinary prose keeps /Users/fixture/authored-note and an [external link](https://example.com/source).',
+    ].join('\n'),
+  );
+  await mkdir(responseIsolationSource, { recursive: true });
+  await writeFile(
+    path.join(responseIsolationSource, 'report.md'),
+    [
+      '# Response isolation',
+      ...['first-form', 'second-form'].flatMap((formId) => [
+        `:::::response{title="${formId}" id="${formId}"}`,
+        '::::question{id="shared-global" kind="single" title="Shared global choice"}',
+        '::option{id="yes" label="Yes"}',
+        '::option{id="no" label="No"}',
+        '::::',
+        '::::question{id="shared-item" kind="item-single" title="Shared item choice"}',
+        '::option{id="yes" label="Yes"}',
+        '::option{id="no" label="No"}',
+        `::item{id="shared" label="Shared item" note="Isolation evidence for ${formId}." meta="${formId}" href="https://example.com/${formId}"}`,
+        '::::',
+        '::::question{id="shared-bucket" kind="bucket" title="Shared bucket assignment"}',
+        '::bucket{id="do" label="Do"}',
+        '::bucket{id="skip" label="Skip"}',
+        `::item{id="shared" label="Shared bucket item" note="Bucket isolation evidence for ${formId}." meta="${formId}" href="https://example.com/${formId}/bucket" bucket="do"}`,
+        '::::',
+        '::::question{id="large-score" kind="number" title="Large decimal score" min="0" max="999999999" step="0.0001"}',
+        `::item{id="shared" label="Shared numeric item" note="Decimal phase evidence for ${formId}." meta="${formId}" href="https://example.com/${formId}/number"}`,
+        '::::',
+        ':::::',
+      ]),
+    ].join('\n'),
+  );
   await mkdir(russianChromeSource, { recursive: true });
   await writeFile(
     path.join(russianChromeSource, 'report.md'),
@@ -139,6 +185,11 @@ export default async function globalSetup(): Promise<void> {
       ':::',
       ':::demo{title="Счётчик" start="1" step="1"}',
       'Безопасное встроенное действие.',
+      ':::',
+      ':::copyable',
+      'Сначала проверьте **владельца**.',
+      '',
+      'Откройте [план отката](https://example.com/rollback) и сверьтесь с :term[локусом]{key="locus"} перед отправкой.',
       ':::',
       '::::chart{type="bar" title="Наблюдения" description="Два наблюдения."}',
       ':::series{label="Результат"}',
@@ -225,6 +276,7 @@ export default async function globalSetup(): Promise<void> {
       '---',
       '# Navigation runtime fixture',
       'Content before the first eligible section provides an outside hash target.',
+      '::contents',
       ':::section{title="Alpha section" id="alpha" nav="Alpha" reveal="true"}',
       '### Alpha detail',
       'The first section owns this descendant heading.',
@@ -234,7 +286,7 @@ export default async function globalSetup(): Promise<void> {
           `Alpha evidence paragraph ${index + 1} keeps the section tall enough to exercise bidirectional geometry.`,
       ),
       ':::',
-      '::::section{title="Beta section" id="beta" nav="Beta" tone="soft" reveal="true"}',
+      '::::section{title="Beta section asks a deliberately long question about final target ownership" id="beta" nav="Beta" tone="soft" reveal="true"}',
       '### Beta detail',
       'The second section owns this descendant heading.',
       ':::modal{title="Beta component target"}',
@@ -251,6 +303,32 @@ export default async function globalSetup(): Promise<void> {
       ':::',
       '## Appendix outside navigation',
       'This valid target follows every eligible section.',
+    ].join('\n\n'),
+  );
+  await mkdir(sectionProseSource, { recursive: true });
+  await writeFile(
+    path.join(sectionProseSource, 'report.md'),
+    [
+      '---',
+      'title: Section prose fixture',
+      'language: en',
+      'layout: document',
+      'theme: light',
+      'preset: editorial',
+      '---',
+      '# Section prose fixture',
+      '::::section{title="Opening thesis" id="thesis" nav="Thesis" tone="soft"}',
+      ':::lead',
+      'A :term[nearby definition]{key="nearby"} begins as emphasized prose without becoming a callout.',
+      ':::',
+      'Ordinary supporting prose follows the thesis.',
+      ':::glossary{key="nearby" term="Nearby definition" placement="appendix"}',
+      'The full definition was authored beside the explanation and moved intact.',
+      ':::',
+      '::::',
+      ':::section{title="Following section" id="following" nav="Following"}',
+      'The next section proves the lead remains bounded to its owner.',
+      ':::',
     ].join('\n\n'),
   );
   await mkdir(reviewSource, { recursive: true });
@@ -412,6 +490,15 @@ export default async function globalSetup(): Promise<void> {
       output: path.join(fixtureRoot, 'navigation.html'),
     }),
     buildReport({
+      input: sectionProseSource,
+      output: path.join(fixtureRoot, 'section-prose.html'),
+    }),
+    buildReport({
+      input: sectionProseSource,
+      output: path.join(fixtureRoot, 'section-prose-directory'),
+      format: 'directory',
+    }),
+    buildReport({
       input: reviewSource,
       output: path.join(fixtureRoot, 'review.html'),
     }),
@@ -419,6 +506,45 @@ export default async function globalSetup(): Promise<void> {
       input: reviewSource,
       output: path.join(fixtureRoot, 'review-directory'),
       format: 'directory',
+    }),
+    buildReport({
+      input: path.resolve('examples/response-workspace'),
+      output: path.join(fixtureRoot, 'response-workspace-directory'),
+      format: 'directory',
+    }),
+    buildReport({
+      input: path.resolve('examples/interactive-catalog'),
+      output: path.join(fixtureRoot, 'copyable-prose-directory'),
+      format: 'directory',
+    }),
+    buildReport({
+      input: responseIsolationSource,
+      output: path.join(fixtureRoot, 'response-isolation.html'),
+    }),
+    buildReport({
+      input: responseIsolationSource,
+      output: path.join(fixtureRoot, 'response-isolation-directory'),
+      format: 'directory',
+    }),
+    buildReport({
+      input: shareSource,
+      output: path.join(fixtureRoot, 'share-default.html'),
+    }),
+    buildReport({
+      input: shareSource,
+      output: path.join(fixtureRoot, 'share-default-directory'),
+      format: 'directory',
+    }),
+    buildReport({
+      input: shareSource,
+      output: path.join(fixtureRoot, 'share-safe.html'),
+      share: true,
+    }),
+    buildReport({
+      input: shareSource,
+      output: path.join(fixtureRoot, 'share-safe-directory'),
+      format: 'directory',
+      share: true,
     }),
     buildReport({
       input: glossaryCodeSource,

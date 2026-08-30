@@ -42,7 +42,11 @@ describe('registry-driven semantic directives', () => {
     await writeFile(path.join(workspace, 'reader.woff'), 'package-owned-font-bytes');
     const markdown = [
       '# Registry renderers',
+      '::contents',
       '::::section{title="Semantic section" id="semantic-section" nav="Section" width="wide" align="center" tone="accent" reveal="true"}',
+      ':::lead',
+      'Opening thesis.',
+      ':::',
       'Section body.',
       ':::actions',
       '::action[Primary action]{href="#semantic-section" kind="primary"}',
@@ -62,6 +66,18 @@ describe('registry-driven semantic directives', () => {
       ':::checklist{title="Typed checklist" id="checklist"}',
       '::check-item{id="gate" label="Gate complete" required=true}',
       ':::',
+      ':::::response{title="Response" id="response"}',
+      '::::question{id="scope" kind="bucket" title="Scope"}',
+      '::bucket{id="do" label="Do"}',
+      '::bucket{id="skip" label="Skip"}',
+      '::item{id="task" label="Task" note="Explanation" meta="Issue 1" href="https://example.com/1" bucket="do" comment=true}',
+      '::::',
+      '::::question{id="choice" kind="item-single" title="Choice"}',
+      '::option{id="yes" label="Yes"}',
+      '::option{id="no" label="No"}',
+      '::item{id="finding" label="Finding" note="Explanation" meta="Review 1" href="https://example.com/reviews/1"}',
+      '::::',
+      ':::::',
       '::::cards{title="Options"}',
       ':::card{title="One"}',
       'Card body.',
@@ -70,6 +86,9 @@ describe('registry-driven semantic directives', () => {
       ':::steps{title="Procedure"}',
       '1. First',
       '2. Second',
+      ':::',
+      ':::copyable',
+      'Copyable prose body.',
       ':::',
       '::term{key="release-packet"}',
       ':::glossary{key="release-packet" term="Release packet"}',
@@ -2390,7 +2409,7 @@ function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
     return 'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42';
   }
   if (attribute.name === 'href') return '#valid-target';
-  if (['key', 'id', 'group', 'from', 'to'].includes(attribute.name)) return 'valid-key';
+  if (['key', 'id', 'group', 'from', 'to', 'bucket'].includes(attribute.name)) return 'valid-key';
   return 'Valid title';
 }
 
@@ -2411,7 +2430,7 @@ function renderedAttributeValue(attribute: DirectiveAttributeDefinition): string
     return 'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42';
   }
   if (attribute.name === 'href') return '#valid-target';
-  if (['key', 'id', 'group', 'from', 'to'].includes(attribute.name)) return 'valid-key';
+  if (['key', 'id', 'group', 'from', 'to', 'bucket'].includes(attribute.name)) return 'valid-key';
   return 'T';
 }
 
@@ -2420,6 +2439,9 @@ function directiveInvocation(
   form: DirectiveForm,
   overrides: Readonly<Record<string, string>> = {},
 ): string {
+  if (['response', 'question', 'bucket', 'option', 'item'].includes(directive.name)) {
+    return responseInvocation(directive.name, overrides);
+  }
   if (
     ['chart', 'series', 'point', 'diagram', 'group', 'node', 'edge', 'timeline', 'event'].includes(
       directive.name,
@@ -2460,6 +2482,69 @@ function directiveInvocation(
   if (directive.name !== 'term') return placed;
   const key = attributes.key ?? 'valid-key';
   return `${placed}\n:::glossary{key=${JSON.stringify(key)} term="Canonical concept"}\nDefinition.\n:::`;
+}
+
+function responseInvocation(target: string, overrides: Readonly<Record<string, string>>): string {
+  const attributes = (name: string, fixed: Readonly<Record<string, string>> = {}): string => {
+    const contract = (authoringRegistry.directives as readonly DirectiveDefinition[]).find(
+      (candidate) => candidate.name === name,
+    );
+    if (!contract) throw new Error(`Missing response directive contract: ${name}`);
+    const values = Object.fromEntries(
+      contract.attributes
+        .filter(
+          (attribute) => attribute.required || (name === target && attribute.name in overrides),
+        )
+        .map((attribute) => [attribute.name, renderedAttributeValue(attribute)]),
+    );
+    Object.assign(values, fixed, name === target ? overrides : {});
+    return Object.entries(values)
+      .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+      .join(' ');
+  };
+  const targetAttribute = Object.keys(overrides)[0];
+  const questionKind =
+    target === 'question' && targetAttribute === 'kind'
+      ? (overrides.kind ?? 'bucket')
+      : target === 'question' && ['min', 'max', 'step'].includes(targetAttribute ?? '')
+        ? 'number'
+        : target === 'option'
+          ? 'item-single'
+          : 'bucket';
+  const questionFixed: Record<string, string> = {
+    id: 'question',
+    kind: questionKind,
+    title: 'Question',
+  };
+  if (questionKind === 'number') Object.assign(questionFixed, { min: '1', max: '5' });
+  const children =
+    questionKind === 'text' || questionKind === 'single'
+      ? questionKind === 'single'
+        ? [
+            `::option{${attributes('option', { id: 'yes', label: 'Yes' })}}`,
+            '::option{id="no" label="No"}',
+          ]
+        : []
+      : questionKind === 'item-single' || questionKind === 'item-multi'
+        ? [
+            `::option{${attributes('option', { id: 'yes', label: 'Yes' })}}`,
+            '::option{id="no" label="No"}',
+            `::item{${attributes('item', { id: 'item', label: 'Item' })}}`,
+          ]
+        : questionKind === 'bucket'
+          ? [
+              `::bucket{${attributes('bucket', { id: 'valid-key', label: 'Do' })}}`,
+              '::bucket{id="second" label="Skip"}',
+              `::item{${attributes('item', { id: 'item', label: 'Item' })}}`,
+            ]
+          : [`::item{${attributes('item', { id: 'item', label: 'Item' })}}`];
+  return [
+    `:::::response{${attributes('response', { id: 'response', title: 'Response' })}}`,
+    `::::question{${attributes('question', questionFixed)}}`,
+    ...children,
+    '::::',
+    ':::::',
+  ].join('\n');
 }
 
 function visualizationInvocation(
@@ -2563,6 +2648,12 @@ function nestedDirectiveInvocation(
   child: string,
   childInvocation?: string,
 ): string {
+  if (
+    (parent === 'response' && child === 'question') ||
+    (parent === 'question' && ['bucket', 'option', 'item'].includes(child))
+  ) {
+    return responseInvocation(child, {});
+  }
   const contract = (name: string): DirectiveDefinition => {
     const found = (authoringRegistry.directives as readonly DirectiveDefinition[]).find(
       (candidate) => candidate.name === name,
@@ -2685,7 +2776,7 @@ function assertRenderedAttribute(
     return;
   }
   if (attribute.name === 'label') {
-    if (directive.name === 'decision-option' || directive.name === 'check-item') {
+    if (['decision-option', 'check-item', 'bucket', 'option', 'item'].includes(directive.name)) {
       expect(rendered.html).toContain(`data-label="${serialized}"`);
       return;
     }
