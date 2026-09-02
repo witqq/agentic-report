@@ -11,7 +11,7 @@ import { AgenticReportError } from '../diagnostics.js';
 import { resolveSourceLocation } from '../source/source-map.js';
 import { REVIEW_TARGET_OWNERSHIP_CONTRACT, SOURCE_CONTRACT_MAJOR } from '../authoring/registry.js';
 import {
-  MAX_REVIEW_TARGETS,
+  reviewTargetLimit,
   MAX_REVIEW_MANIFEST_BYTES,
   REVIEW_CONTRACT_VERSION,
   type ReviewTargetManifest,
@@ -107,11 +107,12 @@ export const remarkReviewTargets: Plugin<[ReviewTargetPluginOptions], Root> =
         },
       };
       options.targets.push(target);
-      if (options.targets.length > MAX_REVIEW_TARGETS) {
+      const targetLimit = reviewTargetLimit();
+      if (options.targets.length > targetLimit) {
         throw reviewTargetError(
           'REVIEW_TARGET_LIMIT_EXCEEDED',
-          `Report contains more than ${MAX_REVIEW_TARGETS} reviewable targets.`,
-          'Split the report into smaller artifacts or reduce reviewable block count.',
+          `Report contains more than ${targetLimit} reviewable targets.`,
+          'Raise AGENTIC_REPORT_MAX_REVIEW_TARGETS, split the report into smaller artifacts, or reduce reviewable block count.',
           source,
         );
       }

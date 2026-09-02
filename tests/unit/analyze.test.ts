@@ -551,18 +551,43 @@ describe('report analysis', () => {
     await expect(readFile(sentinel, 'utf8')).resolves.toBe('preserve output');
   });
 
-  it('rejects a report whose finite review target inventory exceeds the public bound', async () => {
+  it('rejects a report whose finite review target inventory exceeds the configured bound', async () => {
     const workspace = await createTestWorkspace('analysis-review-target-limit');
     workspaces.push(workspace);
     await writeFile(
       path.join(workspace, 'report.md'),
-      ['# Target limit', ...Array.from({ length: 500 }, (_, index) => `Paragraph ${index}.`)].join(
+      ['# Target limit', ...Array.from({ length: 40 }, (_, index) => `Paragraph ${index}.`)].join(
+        '\n\n',
+      ),
+    );
+    // The bound is lowered for this observation instead of writing a document past the default:
+    // a fixture of thousands of paragraphs would prove the same thing and cost seconds per run.
+    const previous = process.env['AGENTIC_REPORT_MAX_REVIEW_TARGETS'];
+    process.env['AGENTIC_REPORT_MAX_REVIEW_TARGETS'] = '10';
+    try {
+      await expect(
+        buildReport({ input: workspace, output: path.join(workspace, 'report.html') }),
+      ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_TARGET_LIMIT_EXCEEDED' } });
+    } finally {
+      if (previous === undefined) delete process.env['AGENTIC_REPORT_MAX_REVIEW_TARGETS'];
+      else process.env['AGENTIC_REPORT_MAX_REVIEW_TARGETS'] = previous;
+    }
+  });
+
+  it('accepts the same report under the default bound', async () => {
+    // The other half of the pair: without it the observation above would stay green if the limit
+    // rejected every document, and the whole point of the change is that ordinary long reports pass.
+    const workspace = await createTestWorkspace('analysis-review-target-default');
+    workspaces.push(workspace);
+    await writeFile(
+      path.join(workspace, 'report.md'),
+      ['# Target limit', ...Array.from({ length: 600 }, (_, index) => `Paragraph ${index}.`)].join(
         '\n\n',
       ),
     );
     await expect(
       buildReport({ input: workspace, output: path.join(workspace, 'report.html') }),
-    ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_TARGET_LIMIT_EXCEEDED' } });
+    ).resolves.toMatchObject({ outputPath: path.join(workspace, 'report.html') });
   });
 
   it('never publishes output and rejects an invalid format before source discovery', async () => {
