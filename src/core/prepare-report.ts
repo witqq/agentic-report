@@ -218,7 +218,8 @@ async function loadPriorReview(
         error instanceof ReviewContractError
           ? error.message
           : 'Prior review is not valid versioned review JSON.',
-      remediation: 'Use a version-2 thread review exported by Agentic Report.',
+      remediation:
+        'Use a version-3 review exported by Agentic Report; legacy version 2 is also accepted.',
       details: { cause: error instanceof Error ? error.name : 'unknown' },
     });
   }

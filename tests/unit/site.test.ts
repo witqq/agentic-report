@@ -115,13 +115,13 @@ const createSiteFixture = async (
     path.join(root, 'package.json'),
     `${JSON.stringify({
       name: 'agentic-report',
-      version: options.packageVersion ?? '0.7.0',
+      version: options.packageVersion ?? '0.8.0',
       engines: { node: '>=24.18.0' },
     })}\n`,
   );
   await writeFile(
     path.join(root, 'skills/agentic-report/SKILL.md'),
-    `---\nname: agentic-report\nlicense: MIT\nmetadata:\n  version: '${options.skillVersion ?? '0.7.0'}'\n  compatibility: Requires Node.js 24.18.0 or newer.\n---\n\n# Fixture skill\n`,
+    `---\nname: agentic-report\nlicense: MIT\nmetadata:\n  version: '${options.skillVersion ?? '0.8.0'}'\n  compatibility: Requires Node.js 24.18.0 or newer.\n---\n\n# Fixture skill\n`,
   );
   await writeFile(
     path.join(root, 'website/routes.json'),
@@ -293,11 +293,11 @@ describe('deterministic public site staging', () => {
       contractVersion: 1,
       package: {
         name: 'agentic-report',
-        version: '0.7.0',
+        version: '0.8.0',
         engines: { node: '>=24.18.0' },
       },
       sourceRevision: revision,
-      skill: { version: '0.7.0', license: 'MIT' },
+      skill: { version: '0.8.0', license: 'MIT' },
     });
     expect(release.routes).toHaveLength(routes.length - 1);
     const actualFiles = (await listFiles(firstSite)).filter((file) => file !== 'release.json');
@@ -372,7 +372,7 @@ describe('deterministic public site staging', () => {
       license: 'MIT',
       metadata: { version: packageMetadata.version, homepage: packageMetadata.homepage },
     });
-    expect(packageMetadata.version).toBe('0.7.0');
+    expect(packageMetadata.version).toBe('0.8.0');
     expect(skillFrontmatter.metadata.compatibility).toContain('Node.js 24.18.0 or newer');
     expect(packageMetadata.engines.node).toBe('>=24.18.0');
     for (const plugin of [openAiPlugin, claudePlugin]) {
@@ -392,7 +392,7 @@ describe('deterministic public site staging', () => {
       }),
     ]);
     expect(skillSource).toContain(
-      'npx --yes agentic-report@0.7.0 build ./my-page --output ./my-page.html --json',
+      'npx --yes agentic-report@0.8.0 build ./my-page --output ./my-page.html --json',
     );
     expect(skillSource).toContain('Do not deploy, publish, use credentials');
     for (const [publicSource, source] of [
@@ -429,7 +429,7 @@ describe('deterministic public site staging', () => {
       ['README', readme],
     ] as const) {
       expect(source, name).toContain('npx skills add witqq/agentic-report --skill agentic-report');
-      expect(source, name).toMatch(/chat response|wall of text/iu);
+      expect(source, name).toMatch(/chat\s+response|wall of text/iu);
     }
     expect(landing).toContain('Build it into your own skill');
     expect(quickstart).toContain('## Use it inside your own skill');
@@ -450,7 +450,7 @@ describe('deterministic public site staging', () => {
     );
     for (const [file, source] of sources) {
       expect(source, file).toContain(
-        'git clone --branch v0.7.0 --depth 1 https://github.com/witqq/agentic-report.git',
+        'git clone --branch v0.8.0 --depth 1 https://github.com/witqq/agentic-report.git',
       );
       expect(source, file).toContain('pnpm install --frozen-lockfile');
       expect(source, file).toContain('pnpm-lock.yaml');

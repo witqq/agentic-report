@@ -1833,7 +1833,7 @@ test('reduced motion omits progress and reveal machinery while normal motion sta
     const disabledEvidence = await readMotionEvidence(page);
     expect(disabledEvidence.rafRequests).toBe(0);
     expect(disabledEvidence.documentScrollAdds).toBe(0);
-    expect(disabledEvidence.windowResizeAdds).toBe(1);
+    expect(disabledEvidence.windowResizeAdds).toBe(2);
   }
 
   for (const artifact of navigationArtifacts) {
@@ -1846,7 +1846,7 @@ test('reduced motion omits progress and reveal machinery while normal motion sta
       rafRequests: 0,
       documentScrollAdds: 0,
       documentScrollRemoves: 0,
-      windowResizeAdds: 1,
+      windowResizeAdds: 2,
       windowResizeRemoves: 0,
       observers: 1,
       observerDisconnects: 0,
@@ -1981,7 +1981,7 @@ test('reduced motion omits progress and reveal machinery while normal motion sta
     await expect(page.locator('[data-reveal-pending]')).toHaveCount(0);
     const restoredEvidence = await readMotionEvidence(page);
     expect(restoredEvidence.documentScrollAdds).toBe(2);
-    expect(restoredEvidence.windowResizeAdds).toBe(3);
+    expect(restoredEvidence.windowResizeAdds).toBe(4);
     expect(restoredEvidence.revealTargets).toBe(revealedBeforeRestore);
   }
 });

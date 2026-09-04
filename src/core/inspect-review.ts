@@ -78,7 +78,7 @@ async function readReviewArtifact(reviewPath: string) {
         code: error.unsupportedVersion ? 'REVIEW_VERSION_UNSUPPORTED' : 'REVIEW_ARTIFACT_INVALID',
         message: error.message,
         remediation: error.unsupportedVersion
-          ? 'Export a version-2 thread review from the current report.'
+          ? 'Export a version-3 review from the current report; legacy version 2 is also accepted.'
           : 'Regenerate the review from the bound report or fix the reported fields.',
         source: { file: reviewPath },
         details: { issues: error.issues },

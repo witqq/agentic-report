@@ -39,7 +39,7 @@ If you prefer to inspect the implementation instead of executing the published `
 package, clone a specific release tag and run the compiler directly from its build:
 
 ```sh
-git clone --branch v0.7.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.8.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -107,10 +107,14 @@ runtime truth.
 
 ::::section{title="Review and return feedback" id="review" nav="Review" width="standard" align="start" tone="accent" reveal="true"}
 
-Generated pages include a local Review Workspace. A reader opens a discussion thread on an exact block,
-adds or edits messages, reads agent replies, resolves or reopens the thread, and downloads deterministic
-version-2 `review.json`. Desktop uses a non-modal rail; mobile uses a modal sheet. Nothing is uploaded or
-stored in an account; ordinary decisions and checklists remain static report content.
+Generated pages include a local Review Workspace. Select an eligible passage and choose **Create note**;
+the existing editor opens with the exact quote. A selection may stay within one block or cross adjacent
+review targets. Whole-block discussions remain available through **Review**. The panel reopens every current
+note, and one export downloads all block threads and selection notes as deterministic version-3
+`review.json`; valid version-2 whole-block files remain accepted. Desktop uses a non-modal rail; mobile uses
+a modal sheet. Nothing is uploaded or stored in an account; ordinary decisions and checklists remain static
+report content. [Try the complete Review Workspace example](../examples/review-workspace/index.html) or
+[read its declarative source](../examples/review-workspace/report.md).
 The target manifest is bounded to 5,000 reviewable blocks and 750,000 serialized bytes; unusually large
 handoffs must stay under both limits or be split.
 

@@ -69,7 +69,7 @@ describe('release readiness', () => {
       ].map(async (file) => ({ file, source: await readFile(path.resolve(file), 'utf8') })),
     );
     for (const { file, source } of surfaces) {
-      for (const fact of ['fix', 'forms', '5,000'])
+      for (const fact of ['fix', 'forms', '5,000', 'Create note', 'review.json'])
         expect(source, `${file}: ${fact}`).toContain(fact);
     }
     for (const { file, source } of surfaces.filter(({ file }) => file !== 'README.md')) {
@@ -89,11 +89,14 @@ describe('release readiness', () => {
       'AR-AUTHOR-REVIEW-BINDING',
       'AR-AUTHOR-REVIEW-RECONCILIATION',
       'AR-COMPONENT-REVIEW-WORKSPACE',
-      '`review.json` версии 2',
+      '`review.json` версии 3',
+      'точной привязкой к выделенному тексту',
+      '`Create note`',
       'сообщениями пользователя',
       'resolved или reopened',
       '`exact/changed/missing/ambiguous`',
-      'Формальные verdict, approval gate и review-чек-листы не входят',
+      'Формальные verdict, approval',
+      'gate и review-чек-листы не входят',
     ]) {
       expect(requirements, required).toContain(required);
     }
@@ -159,7 +162,7 @@ describe('release readiness', () => {
     expect(runbook).toContain('do not run its constituent checks again');
     expect(runbook).toContain('do not duplicate it with a second download or isolated install');
     expect(runbook).toContain(
-      'gh workflow run publish-npm.yml --ref main -f tag=v0.7.0 -f sha256="$candidate_sha256"',
+      'gh workflow run publish-npm.yml --ref main -f tag=v0.8.0 -f sha256="$candidate_sha256"',
     );
     expect(runbook).toContain('gh run watch "<databaseId>" --exit-status');
     expect(runbook).toContain('npm view agentic-report dist-tags version --json');

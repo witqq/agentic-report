@@ -1,7 +1,7 @@
 ---
 contractVersion: 1
 title: Human review handoff
-description: A local report prepared for fragment discussion threads.
+description: A local report prepared for selected-text notes and fragment discussion threads.
 language: en
 layout: document
 theme: system
@@ -12,7 +12,13 @@ preset: studio
 
 **Fictional sample.** Replace every metric and decision with evidence from the real review context.
 
-Open **Review** to start a thread on any block, exchange messages with the agent, resolve the discussion, and export one local `review.json` handoff.
+Select the words **68% in the revised cohort**, then choose **Create note** and enter a message in the existing
+Review Workspace editor. Select from the end of the first evidence paragraph into the second section to try
+a cross-block note. Open **Review** for a whole-block thread or to revisit every current note, then export all
+notes and discussions in one local version-3 `review.json` handoff.
+
+The bundled `prior-review.json` remains a valid version-2 whole-block handoff so this page also demonstrates
+backward-compatible import and stale binding.
 
 After editing this source, rebuild with `--review review.json` to display truthful prior bindings and complete
 the next review round without a server or automatic Markdown rewriting.

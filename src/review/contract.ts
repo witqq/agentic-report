@@ -1,6 +1,8 @@
 import { isNormalizedPackageRelativePosixPath } from '../authoring/local-reference.js';
 
-export const REVIEW_CONTRACT_VERSION = 2 as const;
+export const REVIEW_CONTRACT_VERSION = 3 as const;
+export const LEGACY_REVIEW_CONTRACT_VERSION = 2 as const;
+export const REVIEW_TARGET_MANIFEST_VERSION = 2 as const;
 export const MAX_REVIEW_THREADS = 500;
 export const MAX_REVIEW_SEGMENTS = 500;
 export const MAX_REVIEW_MESSAGES = 500;
@@ -41,7 +43,7 @@ export interface ReviewTargetReference {
   readonly source: ReviewSourceReference;
 }
 export interface ReviewTargetManifest {
-  readonly contractVersion: typeof REVIEW_CONTRACT_VERSION;
+  readonly contractVersion: typeof REVIEW_TARGET_MANIFEST_VERSION;
   readonly reportRevision: string;
   readonly targets: readonly ReviewTargetReference[];
 }
@@ -58,8 +60,18 @@ export interface ReviewThreadSegment {
   readonly id: string;
   readonly reportRevision: string;
   readonly target: ReviewTargetReference;
+  readonly selection?: ReviewSelectionAnchor;
   readonly resolved: boolean;
   readonly messages: readonly ReviewMessage[];
+}
+export interface ReviewSelectionBoundary {
+  readonly target: ReviewTargetReference;
+  readonly offset: number;
+}
+export interface ReviewSelectionAnchor {
+  readonly start: ReviewSelectionBoundary;
+  readonly end: ReviewSelectionBoundary;
+  readonly quote: string;
 }
 export interface ReviewArtifact {
   readonly contractVersion: typeof REVIEW_CONTRACT_VERSION;
@@ -95,10 +107,11 @@ export class ReviewContractError extends Error {
   public constructor(
     public readonly issues: readonly ReviewContractIssue[],
     public readonly unsupportedVersion = false,
+    expectedVersion: number = REVIEW_CONTRACT_VERSION,
   ) {
     super(
       unsupportedVersion
-        ? `Unsupported review contract version. Expected ${REVIEW_CONTRACT_VERSION}.`
+        ? `Unsupported review contract version. Expected ${expectedVersion}.`
         : 'Review artifact does not satisfy the review contract.',
     );
     this.name = 'ReviewContractError';
@@ -106,7 +119,7 @@ export class ReviewContractError extends Error {
 }
 
 export function parseReviewArtifact(input: unknown): ReviewArtifact {
-  const record = versioned(input);
+  const { record, version } = artifactVersioned(input);
   const issues: ReviewContractIssue[] = [];
   exact(record, ['contractVersion', 'report', 'threads'], '$', issues);
   const report = object(record.report, '$.report', issues);
@@ -118,7 +131,7 @@ export function parseReviewArtifact(input: unknown): ReviewArtifact {
     add(issues, '$.threads', `must contain at most ${MAX_REVIEW_THREADS} threads`);
   else
     record.threads.forEach((value, index) => {
-      const item = thread(value, `$.threads[${index}]`, issues);
+      const item = thread(value, `$.threads[${index}]`, issues, version);
       if (item) threads.push(item);
     });
   unique(
@@ -135,10 +148,14 @@ export function parseReviewArtifact(input: unknown): ReviewArtifact {
     threads.flatMap((item) =>
       item.segments
         .filter((segment) => segment.reportRevision === revision)
-        .map((segment) => segment.target.id),
+        .map((segment) =>
+          segment.selection === undefined
+            ? `block\0${segment.target.id}`
+            : `selection\0${segment.target.id}\0${JSON.stringify(segment.selection)}`,
+        ),
     ),
     '$.threads',
-    'thread target',
+    'thread subject',
     issues,
   );
   if (
@@ -156,7 +173,7 @@ export function parseReviewTargetManifest(
   input: unknown,
   targetLimit: number = MAX_REVIEW_TARGETS,
 ): ReviewTargetManifest {
-  const record = versioned(input);
+  const record = manifestVersioned(input);
   const issues: ReviewContractIssue[] = [];
   exact(record, ['contractVersion', 'reportRevision', 'targets'], '$', issues);
   const reportRevision = fingerprint(record.reportRevision, '$.reportRevision', issues);
@@ -182,7 +199,7 @@ export function parseReviewTargetManifest(
     issues,
   );
   if (!reportRevision || issues.length) throw new ReviewContractError(issues);
-  return { contractVersion: REVIEW_CONTRACT_VERSION, reportRevision, targets };
+  return { contractVersion: REVIEW_TARGET_MANIFEST_VERSION, reportRevision, targets };
 }
 
 export function serializeReviewArtifact(input: ReviewArtifact): string {
@@ -190,17 +207,39 @@ export function serializeReviewArtifact(input: ReviewArtifact): string {
   return `${JSON.stringify({ ...artifact, threads: [...artifact.threads].sort((a, b) => compare(a.id, b.id)) })}\n`;
 }
 
-function versioned(input: unknown): Readonly<Record<string, unknown>> {
+function artifactVersioned(input: unknown): {
+  readonly record: Readonly<Record<string, unknown>>;
+  readonly version: typeof REVIEW_CONTRACT_VERSION | typeof LEGACY_REVIEW_CONTRACT_VERSION;
+} {
   if (!plain(input)) throw new ReviewContractError([{ path: '$', message: 'must be an object' }]);
-  if (input.contractVersion !== REVIEW_CONTRACT_VERSION)
+  if (
+    input.contractVersion !== REVIEW_CONTRACT_VERSION &&
+    input.contractVersion !== LEGACY_REVIEW_CONTRACT_VERSION
+  )
     throw new ReviewContractError(
       [
         {
           path: '$.contractVersion',
-          message: `must equal ${REVIEW_CONTRACT_VERSION}; version 1 formal reviews are not supported`,
+          message: `must equal ${REVIEW_CONTRACT_VERSION} or legacy ${LEGACY_REVIEW_CONTRACT_VERSION}; version 1 formal reviews are not supported`,
         },
       ],
       true,
+    );
+  return { record: input, version: input.contractVersion };
+}
+
+function manifestVersioned(input: unknown): Readonly<Record<string, unknown>> {
+  if (!plain(input)) throw new ReviewContractError([{ path: '$', message: 'must be an object' }]);
+  if (input.contractVersion !== REVIEW_TARGET_MANIFEST_VERSION)
+    throw new ReviewContractError(
+      [
+        {
+          path: '$.contractVersion',
+          message: `must equal ${REVIEW_TARGET_MANIFEST_VERSION}`,
+        },
+      ],
+      true,
+      REVIEW_TARGET_MANIFEST_VERSION,
     );
   return input;
 }
@@ -209,6 +248,7 @@ function thread(
   input: unknown,
   path: string,
   issues: ReviewContractIssue[],
+  version: typeof REVIEW_CONTRACT_VERSION | typeof LEGACY_REVIEW_CONTRACT_VERSION,
 ): ReviewThread | undefined {
   const record = object(input, path, issues);
   if (!record) return;
@@ -220,7 +260,7 @@ function thread(
     add(issues, `${path}.segments`, `must contain at most ${MAX_REVIEW_SEGMENTS} segments`);
   else
     record.segments.forEach((value, index) => {
-      const item = segment(value, `${path}.segments[${index}]`, issues);
+      const item = segment(value, `${path}.segments[${index}]`, issues, version);
       if (item) segments.push(item);
     });
   unique(
@@ -249,13 +289,31 @@ function segment(
   input: unknown,
   path: string,
   issues: ReviewContractIssue[],
+  version: typeof REVIEW_CONTRACT_VERSION | typeof LEGACY_REVIEW_CONTRACT_VERSION,
 ): ReviewThreadSegment | undefined {
   const record = object(input, path, issues);
   if (!record) return;
-  exact(record, ['id', 'reportRevision', 'target', 'resolved', 'messages'], path, issues);
+  exact(
+    record,
+    version === REVIEW_CONTRACT_VERSION
+      ? ['id', 'reportRevision', 'target', 'selection', 'resolved', 'messages']
+      : ['id', 'reportRevision', 'target', 'resolved', 'messages'],
+    path,
+    issues,
+  );
   const id = identifier(record.id, `${path}.id`, issues);
   const reportRevision = fingerprint(record.reportRevision, `${path}.reportRevision`, issues);
   const owner = target(record.target, `${path}.target`, issues);
+  const selection =
+    version === REVIEW_CONTRACT_VERSION && record.selection !== undefined
+      ? selectionAnchor(record.selection, `${path}.selection`, issues)
+      : undefined;
+  if (
+    selection !== undefined &&
+    owner !== undefined &&
+    !equivalentTarget(owner, selection.start.target)
+  )
+    add(issues, `${path}.selection.start.target`, 'must equal the segment target');
   if (typeof record.resolved !== 'boolean') add(issues, `${path}.resolved`, 'must be boolean');
   const messages: ReviewMessage[] = [];
   if (!Array.isArray(record.messages)) add(issues, `${path}.messages`, 'must be an array');
@@ -274,8 +332,71 @@ function segment(
   );
   if (!messages.length) add(issues, `${path}.messages`, 'must contain at least one message');
   return id && reportRevision && owner && typeof record.resolved === 'boolean'
-    ? { id, reportRevision, target: owner, resolved: record.resolved, messages }
+    ? {
+        id,
+        reportRevision,
+        target: owner,
+        ...(selection === undefined ? {} : { selection }),
+        resolved: record.resolved,
+        messages,
+      }
     : undefined;
+}
+
+function selectionAnchor(
+  input: unknown,
+  path: string,
+  issues: ReviewContractIssue[],
+): ReviewSelectionAnchor | undefined {
+  const record = object(input, path, issues);
+  if (!record) return;
+  exact(record, ['start', 'end', 'quote'], path, issues);
+  const start = selectionBoundary(record.start, `${path}.start`, issues);
+  const end = selectionBoundary(record.end, `${path}.end`, issues);
+  const quote = selectionQuote(record.quote, `${path}.quote`, issues);
+  if (
+    start !== undefined &&
+    end !== undefined &&
+    start.target.id === end.target.id &&
+    end.offset <= start.offset
+  )
+    add(issues, `${path}.end.offset`, 'must follow the start offset in the same target');
+  return start && end && quote ? { start, end, quote } : undefined;
+}
+
+function selectionBoundary(
+  input: unknown,
+  path: string,
+  issues: ReviewContractIssue[],
+): ReviewSelectionBoundary | undefined {
+  const record = object(input, path, issues);
+  if (!record) return;
+  exact(record, ['target', 'offset'], path, issues);
+  const owner = target(record.target, `${path}.target`, issues);
+  const offset = nonNegative(record.offset, `${path}.offset`, issues);
+  return owner && offset !== undefined ? { target: owner, offset } : undefined;
+}
+
+function selectionQuote(
+  value: unknown,
+  path: string,
+  issues: ReviewContractIssue[],
+): string | undefined {
+  if (typeof value !== 'string') {
+    add(issues, path, 'must be text');
+    return;
+  }
+  const normalized = value.normalize('NFC');
+  const length = Array.from(normalized).length;
+  if (!normalized.trim() || length > MAX_REVIEW_TEXT_LENGTH) {
+    add(
+      issues,
+      path,
+      `must contain non-whitespace text up to ${MAX_REVIEW_TEXT_LENGTH} Unicode code points`,
+    );
+    return;
+  }
+  return normalized;
 }
 
 function message(
@@ -365,7 +486,7 @@ function exact(
   for (const key of Object.keys(value))
     if (!allowed.includes(key)) add(issues, `${path}.${key}`, 'is not allowed');
   for (const key of allowed)
-    if (key !== 'stableKey' && !Object.hasOwn(value, key))
+    if (key !== 'stableKey' && key !== 'selection' && !Object.hasOwn(value, key))
       add(issues, `${path}.${key}`, 'is required');
 }
 function identifier(
@@ -415,6 +536,20 @@ function positive(value: unknown, path: string, issues: ReviewContractIssue[]): 
     return;
   }
   return value as number;
+}
+function nonNegative(
+  value: unknown,
+  path: string,
+  issues: ReviewContractIssue[],
+): number | undefined {
+  if (!Number.isSafeInteger(value) || (value as number) < 0) {
+    add(issues, path, 'must be a non-negative safe integer');
+    return;
+  }
+  return value as number;
+}
+function equivalentTarget(left: ReviewTargetReference, right: ReviewTargetReference): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 function unique(
   values: readonly string[],

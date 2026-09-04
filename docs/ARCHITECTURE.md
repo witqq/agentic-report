@@ -56,9 +56,11 @@ Markdown + metadata + local assets + partials + semantic directives
   and fonts or copies them under deterministic hashed names.
 - `src/review/contract.ts`, `src/review/targets.ts`, and `src/review/binding.ts` own the platform-neutral
   versioned review data contract, bounded canonical serialization, compile-time target inventory,
-  local-input revision, and exact/changed/missing/ambiguous binding. Target provenance is captured while AST
-  offsets and the partial source map are available; it is never reconstructed from final HTML or matched by
-  proximity.
+  local-input revision, and exact/changed/missing/ambiguous binding. The unchanged version-2 target manifest
+  is separate from the version-3 review artifact, whose optional selected-text anchor stores full start/end
+  target references, Unicode code-point offsets, and a normalized quote. Valid version-2 whole-block
+  artifacts normalize into the current shape. Target provenance is captured while AST offsets and the
+  partial source map are available; it is never reconstructed from final HTML or matched by proximity.
 - `src/response/contract.ts` owns the independent version-1 response manifest and answer artifact. It
   validates exact bounded records and kind-specific values, distinguishes untouched questions from authored
   defaults, normalizes human text, compares the compiler-created form revision, and serializes canonical
@@ -108,10 +110,12 @@ Markdown + metadata + local assets + partials + semantic directives
   clipping or relocating the panel. Interaction instances otherwise keep state in their own semantic DOM
   subtree, so repeated components do not share accidental state.
 - `src/browser/review-workspace.ts` is a cohesive package-owned controller over the shared review contract.
-  It parses the inert manifest once, creates bounded target affordances, owns in-memory discussion threads,
-  ordered user/agent messages and segment-local resolution, validates exact-revision imports, and exports
-  canonical JSON through a revoked local object URL. It never evaluates or injects messages as HTML, writes storage, starts a service, or performs a
-  network request.
+  It parses the inert manifest once, creates bounded target affordances, maps native in-block or cross-block
+  text ranges to deterministic anchors, owns in-memory discussion threads, ordered user/agent messages and
+  segment-local resolution, validates exact-revision imports against reconstructed DOM ranges, and exports
+  canonical JSON through a revoked local object URL. The contextual action, existing editor, and current-note
+  list share that state machine. It never evaluates or injects messages as HTML, writes storage, starts a
+  service, or performs a network request.
 - `src/browser/response-workspace.ts` reads each inert response manifest and creates native question controls.
   It owns current-tab answer state, select-based bucket assignment plus drag-and-drop, explicit order moves,
   sparse item comments, clipboard and Blob-file export, and validate-before-swap file import. It uses DOM
@@ -181,7 +185,10 @@ the same authored source origin (file, line, and column); a changed fingerprint 
 changed. Only when the original origin is absent may a unique matching fingerprint in the same source file
 resolve the thread segment. A unique cross-file fingerprint is treated as a move only after the previous source
 file disappears from the current target graph. This prevents equal text elsewhere from impersonating edited
-content. Changed, missing, and ambiguous targets remain explicit and never trigger source mutation.
+content. For a selected-text segment, binding applies independently to both stored endpoint targets and the
+aggregate becomes changed, missing, or ambiguous when either endpoint does. The browser restores exact
+offsets only for an exact report revision; stale quotes remain historical evidence rather than fuzzy
+relocation. Changed, missing, and ambiguous targets remain explicit and never trigger source mutation.
 
 Response Workspace is deliberately a reader artifact contract rather than a CLI source-binding API. The
 compiler validates `response`/`question`/`bucket`/`option`/`item` records, hashes their canonical form
@@ -359,19 +366,27 @@ passes the count bound into shared validation explicitly, so the browser bundle 
 lookup and the default is identical in both output formats.
 
 When at least one target exists, the shared document shell includes one Review entry and one native review
-dialog. Normal reading exposes no target controls. Review mode creates one button sibling per actual DOM
-target; tight-list paragraphs that do not render their own element are represented by the containing list,
-so manifest and DOM inventories remain equal. Desktop opens the dialog non-modally as a fixed rail and
-reserves page width; mobile opens the same dialog modally as a bottom sheet. Close returns focus to the exact
-opener, while Exit removes all review affordances. State remains in memory until explicit canonical import or
-download.
+dialog. Normal reading exposes no persistent target controls, but a valid native text selection in report
+content exposes one localized, viewport-clamped **Create note** button. The controller snapshots its exact
+range before focus changes, opens the existing editor, and supports ranges within one target or across
+targets. Empty, whitespace-only, oversized, outside-report, and package-control selections expose no action.
+Review mode also creates one button sibling per actual DOM target; tight-list paragraphs that do not render
+their own element are represented by the containing list, so manifest and DOM inventories remain equal.
+Desktop opens the dialog non-modally as a fixed rail and reserves page width; mobile opens the same dialog
+modally as a bottom sheet. The panel lists every current whole-block or selected-text thread. Close returns
+focus to the exact external opener, while Exit removes all review affordances. State remains in memory until
+explicit canonical import or download.
 
-Review protocol version 2 stores discussion threads as ordered revision segments. Each segment owns its
-report revision, source target, ordered user/agent messages and resolved flag. A changed continuation appends
-a current segment without rewriting historical targets or messages. Equivalent artifacts serialize deterministically without clocks or random IDs.
-The browser can edit messages and resolve or reopen a thread; ordinary decision/checklist directives remain
-static report content and create no review requirements or approval gates. Version-1 formal review files fail
-at the version boundary without changing current state.
+Review protocol version 3 stores discussion threads as ordered revision segments. Each segment owns its
+report revision, source target, optional selected-text anchor, ordered user/agent messages and resolved flag.
+An anchor repeats the start target as an enforced invariant and supplies the end target, code-point offsets,
+and bounded NFC quote. Subject uniqueness distinguishes a whole-block thread and multiple ranges on the same
+target while rejecting duplicate exact subjects. A changed continuation appends a current segment without
+rewriting historical targets or messages. Equivalent artifacts serialize deterministically without clocks or
+random IDs. Valid version-2 whole-block artifacts normalize losslessly to version 3; a selection field cannot
+masquerade under the closed version-2 schema. The browser can edit messages and resolve or reopen a thread;
+ordinary decision/checklist directives remain static report content and create no review requirements or
+approval gates. Version-1 formal review files fail at the version boundary without changing current state.
 
 An optional confined prior-review sidecar enters common preparation before publication. Preparation embeds
 the parsed artifact plus shared exact/changed/missing/ambiguous bindings; it never embeds the sidecar path.

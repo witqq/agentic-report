@@ -38,12 +38,15 @@ export type {
 } from './contracts.js';
 export {
   REVIEW_CONTRACT_VERSION,
+  REVIEW_TARGET_MANIFEST_VERSION,
   parseReviewArtifact,
   parseReviewTargetManifest,
   serializeReviewArtifact,
   type ReviewArtifact,
   type ReviewBinding,
   type ReviewMessage,
+  type ReviewSelectionAnchor,
+  type ReviewSelectionBoundary,
   type ReviewThread,
   type ReviewThreadSegment,
   type ReviewTargetManifest,

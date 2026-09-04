@@ -13,7 +13,7 @@ import { REVIEW_TARGET_OWNERSHIP_CONTRACT, SOURCE_CONTRACT_MAJOR } from '../auth
 import {
   MAX_REVIEW_TARGETS,
   MAX_REVIEW_MANIFEST_BYTES,
-  REVIEW_CONTRACT_VERSION,
+  REVIEW_TARGET_MANIFEST_VERSION,
   type ReviewTargetManifest,
   type ReviewTargetReference,
 } from './contract.js';
@@ -197,7 +197,7 @@ export async function createReviewTargetManifest(
   const canonicalTargets = [...targets].sort((left, right) => compare(left.id, right.id));
   const reportRevision = createReportRevision(sourceRoot, sourceDigests, canonicalTargets);
   const manifest: ReviewTargetManifest = {
-    contractVersion: REVIEW_CONTRACT_VERSION,
+    contractVersion: REVIEW_TARGET_MANIFEST_VERSION,
     reportRevision,
     targets: canonicalTargets,
   };
@@ -229,7 +229,7 @@ export function createReportRevision(
   inputs.sort((left, right) => compare(left.relative, right.relative));
   const hash = createHash('sha256');
   hash.update(
-    `agentic-report-review\0${REVIEW_CONTRACT_VERSION}\0${SOURCE_CONTRACT_MAJOR}\0${REVIEW_TARGET_ALGORITHM_VERSION}\0`,
+    `agentic-report-review\0${REVIEW_TARGET_MANIFEST_VERSION}\0${SOURCE_CONTRACT_MAJOR}\0${REVIEW_TARGET_ALGORITHM_VERSION}\0`,
   );
   for (const item of inputs) {
     hash.update(item.relative);
