@@ -54,6 +54,6 @@ Corpus class: work-report
 :::
 ::::
 
-:::glossary{key="local-term" term="Локальный термин" placement="appendix"}
+:::glossary{key="local-term" term="Локальный термин" forms="локального термина, локальному термину" placement="appendix"}
 Определение напечатано в приложении.
 :::

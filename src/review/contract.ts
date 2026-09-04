@@ -6,7 +6,17 @@ export const MAX_REVIEW_SEGMENTS = 500;
 export const MAX_REVIEW_MESSAGES = 500;
 export const MAX_REVIEW_RESPONSES = MAX_REVIEW_MESSAGES;
 export const MAX_REVIEW_NAME_LENGTH = 200;
-export const MAX_REVIEW_TARGETS = 500;
+
+/**
+ * Ceiling on reviewable blocks in one report.
+ *
+ * The limit keeps a review manifest addressable; it does not cap document length. A long
+ * engineering walkthrough legitimately holds thousands of paragraphs, code fences and tables, and
+ * splitting it into several artifacts would defeat the single-file distribution this package exists
+ * for. Callers that need a different bound pass it explicitly.
+ */
+export const MAX_REVIEW_TARGETS = 5000;
+
 export const MAX_REVIEW_MANIFEST_BYTES = 750_000;
 export const MAX_REVIEW_FILE_BYTES = 3_000_000;
 export const MAX_REVIEW_TEXT_LENGTH = 4_000;
@@ -142,15 +152,18 @@ export function parseReviewArtifact(input: unknown): ReviewArtifact {
   return { contractVersion: REVIEW_CONTRACT_VERSION, report: { revision }, threads };
 }
 
-export function parseReviewTargetManifest(input: unknown): ReviewTargetManifest {
+export function parseReviewTargetManifest(
+  input: unknown,
+  targetLimit: number = MAX_REVIEW_TARGETS,
+): ReviewTargetManifest {
   const record = versioned(input);
   const issues: ReviewContractIssue[] = [];
   exact(record, ['contractVersion', 'reportRevision', 'targets'], '$', issues);
   const reportRevision = fingerprint(record.reportRevision, '$.reportRevision', issues);
   const targets: ReviewTargetReference[] = [];
   if (!Array.isArray(record.targets)) add(issues, '$.targets', 'must be an array');
-  else if (record.targets.length > MAX_REVIEW_TARGETS)
-    add(issues, '$.targets', `must contain at most ${MAX_REVIEW_TARGETS} targets`);
+  else if (record.targets.length > targetLimit)
+    add(issues, '$.targets', `must contain at most ${targetLimit} targets`);
   else
     record.targets.forEach((value, index) => {
       const item = target(value, `$.targets[${index}]`, issues);

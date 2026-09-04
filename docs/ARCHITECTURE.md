@@ -63,11 +63,27 @@ Markdown + metadata + local assets + partials + semantic directives
   validates exact bounded records and kind-specific values, distinguishes untouched questions from authored
   defaults, normalizes human text, compares the compiler-created form revision, and serializes canonical
   newline-terminated JSON. It has no DOM, filesystem, review-thread, or transport dependency.
+- `src/render/authored-rules.ts` holds the executor of the directive phase. Rule sets are declared
+  against it per authored subject, including the reading of the directive node itself: its name, written
+  attributes, form, placement and children are independent rules that answer together. The declared sets are not the whole phase, and the split is historical rather than principled:
+  checks that predate this arrangement — among them the children a question or a data container
+  accepts, the metadata of an annotated code fence, the shape of a response form, and document-wide
+  checks such as a glossary key referenced but never defined — are still written as ordinary code and
+  are not declared as rules. Report completeness does not depend on that split, because those checks
+  collect violations too; what it bounds is only what can be read as data. An authored rule
+  answers with a violation instead of throwing, and a rule that reads another's accepted result declares
+  that dependency by name; the executor keeps every violation and skips only what a refused dependency made
+  unreadable. Completeness therefore no longer depends on how finely the phase happens to be split,
+  and `src/render/authored-rule-contract.ts` projects the declared rules and dependencies into
+  discovery so a consumer can read them without running a check.
 - `src/render/directives.ts` maps the documented, allowlisted directive vocabulary to semantic HAST.
   Unknown directives, invalid attributes/nesting, unresolved glossary references, duplicate definitions,
-  and unmarked occurrences of registered glossary terms fail with authored-range diagnostics. Compile-time
-  normalization restores only complete numeric clock/duration tokens that `remark-directive` misclassifies
-  as text directives; alphabetic and malformed directive names retain the normal error path. Compile-time
+  and an unmarked first occurrence of a registered glossary term in a section fail with authored-range
+  diagnostics. Compile-time
+  normalization restores the colon tokens that `remark-directive` misclassifies as text directives: a
+  digit-initial name whatever precedes the colon, and a colon written against the preceding word. A spaced
+  alphabetic name, any attributed or child-bearing form, and every block-level form stay on the directive
+  path, so an unregistered name among them keeps its normal error. Compile-time
   enhancement creates labelled top-level sections, ordinary safe action links, bounded loopback
   source-location links that preserve the report browsing context, native disclosures, and
   accessible package-owned tabs, dialogs, popovers, filters, switches, and bounded counters without
@@ -115,8 +131,20 @@ Markdown + metadata + local assets + partials + semantic directives
 - `src/core/inspect-review.ts` reads one strictly bounded review JSON file confined under the prepared
   source root, validates it, binds its threads and revision segments to the current target manifest, and returns a
   centrally sanitized result without publishing output or editing Markdown.
-- `src/cli.ts` adapts initialization, building, validation, inspection, review binding, and discovery to human text or
-  agent-oriented NDJSON. The executable reads its version from the installed package metadata rather than
+- `src/core/fix-report.ts` applies the replacements diagnostics carry in their `fix` field and writes
+  nothing else. It is the only module that writes to an authored source; the analysis and build modules
+  above never do. Replacements whose ranges overlap within one round are deferred rather than merged, and
+  the run repeats validation until no applicable replacement is left or a bounded number of rounds is
+  reached, reporting whatever remains.
+- `src/cli.ts` adapts initialization, building, validation, inspection, repair, review binding, and discovery to
+  one diagnostic model, and `src/cli-output.ts` projects that model. The agent projection is the default
+  because the package is consumed by agents, and `--json` remains accepted for what already happens. Its
+  shape follows the kind of answer: a run reports through NDJSON records, while the discovery commands
+  return one reference document as a compact JSON line. `--human` selects the projection for a person —
+  prose where a run ends in a fact a sentence can carry, and the same document indented where the answer
+  is a catalog or a schema, which is the case for inspection and for discovery. A flag description states
+  which of the two a command gives. A projection selects the presentation, never the set of facts:
+  both show every independent violation of a run, each with `file:line:column`. The executable reads its version from the installed package metadata rather than
   carrying a second version literal. Before parsing a command it compares the running Node.js version with
   that same installed package's minimum engine and returns `NODE_VERSION_UNSUPPORTED` below the floor rather
   than relying on npm's warning-only behavior. `src/index.ts` is the ESM API and applies the same installed
@@ -126,12 +154,16 @@ Markdown + metadata + local assets + partials + semantic directives
 ## Public contracts
 
 The npm package exposes one `agentic-report` executable and one ESM root export. CLI discovery is
-available through `describe`/`discover`, scoped `schema`, and `examples`. The ESM root exposes
+available through `describe`/`discover`, scoped `schema`, and `examples`. `fix` and its ESM equivalent
+`fixReport()` apply the replacements diagnostics carry in their `fix` field — a file, a range in the
+authored text and the replacement — and write nothing else; a diagnostic carries that field only where
+applying it preserves every authored construction the range spans. The ESM root exposes
 `sourceContract`, defensive `getSourceContract()` and `getAuthoringSchema()` values, and example discovery;
 concrete Zod schemas remain internal. The root also exposes `initProject()`, which selects the default or
 any initializable named starter or alias from the typed registry, resolves its complete tree beside the installed
 package, rejects symlinks/special files, fully reads it, and requires the declared entry before publication.
-The destination must be absent and its immediate parent an existing ordinary non-symlink directory. Init
+The destination must be absent and its immediate parent an existing directory; a symbolic-link parent is
+resolved and the reported project path names the resolved location. Init
 claims the destination exclusively and creates files without overwrite. A later failure may leave the new
 destination incomplete; init reports it and never deletes or rolls back destination content. The CLI
 exposes the same operation as `init <destination> [--starter <id>] [--json]`. The root also exposes
@@ -244,7 +276,8 @@ The registry owns a closed data vocabulary for `chart`/`series`/`point`,
 `diagram`/`group`/`node`/`edge`, and
 `timeline`/`event`. Charts support `bar`, `line`, and `pie`; series are bounded, share an ordered category
 domain, and use finite numeric values. Flow diagrams contain up to twenty uniquely identified nodes, bounded
-directed references, and optionally two or three complete subsystem groups. Sequence diagrams retain
+directed references, and optionally two or three complete subsystem groups; a single group builds with an
+authored warning so grouping can be finished later. Sequence diagrams retain
 participant and labelled message order. The registry owns both form-specific bounds and unsupported
 combinations. Timeline events retain ordinary Markdown bodies. Every top-level visual requires a visible
 title and meaningful description.
@@ -320,8 +353,10 @@ creating an orphan target after compile-time SVG enhancement. The
 manifest contains source-root-relative ranges and SHA-256 fingerprints, not source bodies or workstation
 paths. Its report revision covers the confined entry, manifest, expanded partials, referenced local resource
 bytes, review/source-contract versions, target-algorithm version, and canonical target inventory; it is
-independent of output destination and format. A 500-target and 750,000-byte manifest limit bounds
-artifact/runtime input; review files are limited separately before JSON parsing.
+independent of output destination and format. A 5,000-target and 750,000-byte manifest limit bounds
+artifact/runtime input; review files are limited separately before JSON parsing. Node-side target collection
+passes the count bound into shared validation explicitly, so the browser bundle has no process-environment
+lookup and the default is identical in both output formats.
 
 When at least one target exists, the shared document shell includes one Review entry and one native review
 dialog. Normal reading exposes no target controls. Review mode creates one button sibling per actual DOM

@@ -1,5 +1,5 @@
 import type { Dirent, Stats } from 'node:fs';
-import { lstat, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,7 +17,12 @@ interface PreparedFile {
 export async function initProject(options: InitProjectOptions): Promise<InitProjectResult> {
   const parsed = validateInitOptions(options);
   const starter = selectStarter(parsed.starter);
-  const projectPath = path.resolve(parsed.destination);
+  const requestedPath = path.resolve(parsed.destination);
+  await requireAbsentDestination(requestedPath);
+  // The parent may be a symbolic link — on macOS `/tmp` is one — and the destination is then created
+  // through it. Resolving the parent first means every later step, and the result the caller reads,
+  // names where the files actually are.
+  const projectPath = await resolveDestinationThroughParent(requestedPath);
   await requireAbsentDestination(projectPath);
 
   const starterRoot = await resolveConfinedStarterRoot(resolvePackageExamplesRoot(), starter.path);
@@ -149,16 +154,58 @@ function destinationExistsError(): AgenticReportError {
   });
 }
 
+/**
+ * The destination as it exists on disk: the parent resolved through any symbolic links, with the
+ * requested name below it. A link in the parent is not the danger the rule was written against —
+ * writing into an existing directory is, and the absent-destination refusal is what prevents that.
+ */
+async function resolveDestinationThroughParent(destination: string): Promise<string> {
+  const parent = path.dirname(destination);
+  try {
+    return path.join(await realpath(parent), path.basename(destination));
+  } catch (error) {
+    if (isFileSystemError(error, 'ENOENT')) throw parentMissingError(error);
+    throw parentInvalidError(error);
+  }
+}
+
 async function requireValidParent(parent: string): Promise<void> {
   try {
     const parentStat = await lstat(parent);
-    if (!parentStat.isDirectory() || parentStat.isSymbolicLink()) {
-      throw parentInvalidError();
+    if (!parentStat.isDirectory()) {
+      throw parentNotDirectoryError();
     }
   } catch (error) {
     if (error instanceof AgenticReportError) throw error;
+    if (isFileSystemError(error, 'ENOENT')) throw parentMissingError(error);
     throw parentInvalidError(error);
   }
+}
+
+/**
+ * The three refusals below share a code and differ in message, because an author who reads only the
+ * message must learn which check failed: a missing parent, a parent that is not a directory, and a
+ * parent that cannot be inspected call for different actions.
+ */
+function parentMissingError(cause?: unknown): AgenticReportError {
+  return new AgenticReportError(
+    {
+      level: 'error',
+      code: 'INIT_PARENT_INVALID',
+      message: 'Initialization destination parent does not exist.',
+      remediation: 'Create the parent directory, then retry with the same destination.',
+    },
+    cause === undefined ? undefined : { cause },
+  );
+}
+
+function parentNotDirectoryError(): AgenticReportError {
+  return new AgenticReportError({
+    level: 'error',
+    code: 'INIT_PARENT_INVALID',
+    message: 'Initialization destination parent is not a directory.',
+    remediation: 'Choose a destination whose parent is a directory, then retry.',
+  });
 }
 
 function parentInvalidError(cause?: unknown): AgenticReportError {
@@ -166,9 +213,8 @@ function parentInvalidError(cause?: unknown): AgenticReportError {
     {
       level: 'error',
       code: 'INIT_PARENT_INVALID',
-      message: 'Initialization destination parent must be an existing ordinary directory.',
-      remediation:
-        'Create or choose a writable parent directory that is not a symbolic link, then retry.',
+      message: 'Initialization destination parent could not be inspected.',
+      remediation: 'Choose a parent directory this process can read, then retry.',
     },
     cause === undefined ? undefined : { cause },
   );

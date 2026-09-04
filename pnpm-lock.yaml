@@ -105,8 +105,8 @@ importers:
         specifier: 3.9.6
         version: 3.9.6
       testfold:
-        specifier: 0.3.0
-        version: 0.3.0
+        specifier: 0.4.0
+        version: 0.4.0
       typescript:
         specifier: 7.0.2
         version: 7.0.2
@@ -2160,12 +2160,12 @@ packages:
       }
     engines: { node: '>=8' }
 
-  testfold@0.3.0:
+  testfold@0.4.0:
     resolution:
       {
-        integrity: sha512-uSVCurvZcyjgWDwQCOVcERFuw2lXEPT2oBbqA3NHdACvd4yzQjn2Qa4YRonx9ETxMylT3iNKyPOD0coHTFi76A==,
+        integrity: sha512-6zQdd1q+LOSYIzyY+M7GGy12xBvwQUp385erz5aJExA9d61IeUyLWvVSXV6PUBiq/NucnFjdjrzYyjC9ss2Wqw==,
       }
-    engines: { node: '>=20.0.0' }
+    engines: { node: '>=22.18.0' }
     hasBin: true
 
   tinybench@2.9.0:
@@ -3628,7 +3628,7 @@ snapshots:
     dependencies:
       has-flag: 4.0.0
 
-  testfold@0.3.0:
+  testfold@0.4.0:
     dependencies:
       dotenv: 16.6.1
       minimist: 1.2.8

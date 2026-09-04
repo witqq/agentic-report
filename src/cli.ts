@@ -10,6 +10,7 @@ import {
   type BuildReportResult,
   type Diagnostic,
   type InitProjectResult,
+  type FixReportResult,
   type InspectReportResult,
   type InspectReviewResult,
   type OutputFormat,
@@ -18,9 +19,16 @@ import {
 import { inspectReport, validateReport } from './core/analyze-report.js';
 import { buildReport } from './core/compiler.js';
 import { inspectReview } from './core/inspect-review.js';
+import { fixReport } from './core/fix-report.js';
+import {
+  emitDiagnostic,
+  emitResultRecord,
+  emitWarnings,
+  resolveOutputMode,
+  type OutputMode,
+} from './cli-output.js';
 import {
   exitCodeForDiagnostic,
-  sanitizeDiagnostic,
   sanitizeTransportPath,
   sanitizeTransportValue,
   toDiagnostic,
@@ -54,19 +62,15 @@ interface AnalysisCommandOptions {
   readonly review?: string;
 }
 
-interface ReviewCommandOptions {
-  readonly json?: boolean;
-}
-
 const program = new Command();
 const schemaScopes: readonly SchemaScope[] = ['manifest', 'directives', 'source'];
 const invocationRunId = randomUUID();
-const jsonRequested = process.argv.slice(2).includes('--json');
+const outputMode: OutputMode = resolveOutputMode(process.argv.slice(2));
 const packageMetadata = readInstalledPackageMetadata();
 program.exitOverride();
 program.configureOutput({
   writeErr: (value) => {
-    if (!jsonRequested) {
+    if (outputMode === 'human') {
       process.stderr.write(value);
     }
   },
@@ -81,17 +85,18 @@ program
   .description('Initialize a packaged declarative starter.')
   .argument('<destination>', 'Absent destination directory to create')
   .option('--starter <id>', 'Packaged starter ID')
-  .option('--json', 'Emit NDJSON suitable for agents')
+  .option('--json', 'Accepted; agent NDJSON is the default output')
+  .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
   .action(async (destination: string, commandOptions: InitCommandOptions) => {
     try {
       const result = await initProject({
         destination,
         ...(commandOptions.starter === undefined ? {} : { starter: commandOptions.starter }),
       });
-      writeInitSuccess(result, invocationRunId, commandOptions.json === true);
+      writeInitSuccess(result, invocationRunId, outputMode);
     } catch (error) {
       const diagnostic = toDiagnostic(error);
-      writeFailure(diagnostic, invocationRunId, commandOptions.json === true);
+      emitDiagnostic(diagnostic, invocationRunId, outputMode);
       process.exitCode = exitCodeForDiagnostic(diagnostic);
     }
   });
@@ -104,7 +109,8 @@ program
   .option('--format <format>', 'single-file or directory', parseFormat)
   .option('--review <path>', 'Confined prior review JSON sidecar')
   .option('--share', 'Neutralize workstation source links for distribution')
-  .option('--json', 'Emit NDJSON suitable for agents')
+  .option('--json', 'Accepted; agent NDJSON is the default output')
+  .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
   .action(async (input: string, commandOptions: BuildCommandOptions) => {
     try {
       const result = await buildReport({
@@ -114,10 +120,10 @@ program
         ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
         share: commandOptions.share === true,
       });
-      writeSuccess(result, invocationRunId, commandOptions.json === true);
+      writeSuccess(result, invocationRunId, outputMode);
     } catch (error) {
       const diagnostic = toDiagnostic(error);
-      writeFailure(diagnostic, invocationRunId, commandOptions.json === true);
+      emitDiagnostic(diagnostic, invocationRunId, outputMode);
       process.exitCode = exitCodeForDiagnostic(diagnostic);
     }
   });
@@ -130,7 +136,8 @@ program
   .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
   .option('--format <format>', 'single-file or directory', parseFormat)
   .option('--review <path>', 'Confined prior review JSON sidecar')
-  .option('--json', 'Emit NDJSON suitable for agents')
+  .option('--json', 'Accepted; agent NDJSON is the default output')
+  .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
   .action(async (input: string, commandOptions: AnalysisCommandOptions) => {
     try {
       const result = await validateReport({
@@ -138,10 +145,10 @@ program
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
         ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
       });
-      writeValidateSuccess(result, invocationRunId, commandOptions.json === true);
+      writeValidateSuccess(result, invocationRunId, outputMode);
     } catch (error) {
       const diagnostic = toDiagnostic(error);
-      writeFailure(diagnostic, invocationRunId, commandOptions.json === true);
+      emitDiagnostic(diagnostic, invocationRunId, outputMode);
       process.exitCode = exitCodeForDiagnostic(diagnostic);
     }
   });
@@ -152,7 +159,8 @@ program
   .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
   .option('--format <format>', 'single-file or directory', parseFormat)
   .option('--review <path>', 'Confined prior review JSON sidecar')
-  .option('--json', 'Emit NDJSON suitable for agents')
+  .option('--json', 'Accepted; agent NDJSON is the default output')
+  .option('--human', 'Emit the indented catalog for a human reader instead of agent NDJSON')
   .action(async (input: string, commandOptions: AnalysisCommandOptions) => {
     try {
       const result = await inspectReport({
@@ -160,10 +168,31 @@ program
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
         ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
       });
-      writeInspectSuccess(result, invocationRunId, commandOptions.json === true);
+      writeInspectSuccess(result, invocationRunId, outputMode);
     } catch (error) {
       const diagnostic = toDiagnostic(error);
-      writeFailure(diagnostic, invocationRunId, commandOptions.json === true);
+      emitDiagnostic(diagnostic, invocationRunId, outputMode);
+      process.exitCode = exitCodeForDiagnostic(diagnostic);
+    }
+  });
+
+program
+  .command('fix')
+  .description('Apply the replacements the product computed exactly, and nothing else.')
+  .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
+  .option('--format <format>', 'single-file or directory', parseFormat)
+  .option('--json', 'Accepted; agent NDJSON is the default output')
+  .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
+  .action(async (input: string, commandOptions: AnalysisCommandOptions) => {
+    try {
+      const result = await fixReport({
+        input,
+        ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
+      });
+      writeFixSuccess(result, invocationRunId, outputMode);
+    } catch (error) {
+      const diagnostic = toDiagnostic(error);
+      emitDiagnostic(diagnostic, invocationRunId, outputMode);
       process.exitCode = exitCodeForDiagnostic(diagnostic);
     }
   });
@@ -173,14 +202,15 @@ program
   .description('Resolve a versioned review artifact against its current Markdown source.')
   .argument('<review>', 'Confined relative review JSON path')
   .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
-  .option('--json', 'Emit NDJSON suitable for agents')
-  .action(async (review: string, input: string, commandOptions: ReviewCommandOptions) => {
+  .option('--json', 'Accepted; agent NDJSON is the default output')
+  .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
+  .action(async (review: string, input: string) => {
     try {
       const result = await inspectReview({ input, review });
-      writeReviewSuccess(result, invocationRunId, commandOptions.json === true);
+      writeReviewSuccess(result, invocationRunId, outputMode);
     } catch (error) {
       const diagnostic = toDiagnostic(error);
-      writeFailure(diagnostic, invocationRunId, commandOptions.json === true);
+      emitDiagnostic(diagnostic, invocationRunId, outputMode);
       process.exitCode = exitCodeForDiagnostic(diagnostic);
     }
   });
@@ -189,18 +219,26 @@ program
   .command('schema')
   .description('Print manifest, directive, or complete source schema data.')
   .option('--scope <scope>', 'manifest, directives, or source', parseSchemaScope, 'manifest')
+  .option('--json', 'Accepted; compact agent JSON is the default output')
+  .option('--human', 'Emit indented JSON for a human reader instead of compact agent JSON')
   .action((options: { readonly scope: SchemaScope }) => {
-    process.stdout.write(`${JSON.stringify(getAuthoringSchema(options.scope), null, 2)}\n`);
+    const schema = getAuthoringSchema(options.scope);
+    process.stdout.write(
+      outputMode === 'agent'
+        ? `${JSON.stringify(schema)}\n`
+        : `${JSON.stringify(schema, null, 2)}\n`,
+    );
   });
 
 program
   .command('describe')
   .alias('discover')
   .description('Describe supported source and output abstractions for agents.')
-  .option('--json', 'Emit JSON')
-  .action((options: { readonly json?: boolean }) => {
+  .option('--json', 'Accepted; compact agent JSON is the default output')
+  .option('--human', 'Emit indented JSON for a human reader instead of compact agent JSON')
+  .action(() => {
     process.stdout.write(
-      options.json === true
+      outputMode === 'agent'
         ? `${JSON.stringify(getSourceContract())}\n`
         : `${JSON.stringify(getSourceContract(), null, 2)}\n`,
     );
@@ -209,8 +247,9 @@ program
 program
   .command('examples')
   .description('List source examples shipped with the installed package.')
-  .option('--json', 'Emit JSON')
-  .action((options: { readonly json?: boolean }) => {
+  .option('--json', 'Accepted; compact agent JSON is the default output')
+  .option('--human', 'Emit prose for a human reader instead of compact agent JSON')
+  .action(() => {
     const examplesRoot = sanitizeTransportPath(
       fileURLToPath(new URL('../../examples/', import.meta.url)),
     );
@@ -219,7 +258,7 @@ program
         examplesRoot,
         getSourceContract().contractVersion,
         listExamples(),
-        options.json === true,
+        outputMode === 'agent',
       ),
     );
   });
@@ -229,7 +268,7 @@ const compatibilityDiagnostic = getNodeCompatibilityDiagnostic(
   packageMetadata.nodeEngine,
 );
 if (compatibilityDiagnostic !== undefined) {
-  writeFailure(compatibilityDiagnostic, invocationRunId, jsonRequested);
+  emitDiagnostic(compatibilityDiagnostic, invocationRunId, outputMode);
   process.exitCode = exitCodeForDiagnostic(compatibilityDiagnostic);
 } else {
   try {
@@ -245,7 +284,7 @@ if (compatibilityDiagnostic !== undefined) {
               remediation: 'Run `agentic-report --help` and correct the command or option value.',
             }
           : toDiagnostic(error);
-      writeFailure(diagnostic, invocationRunId, jsonRequested);
+      emitDiagnostic(diagnostic, invocationRunId, outputMode);
       process.exitCode = exitCodeForDiagnostic(diagnostic);
     }
   }
@@ -266,11 +305,11 @@ function parseSchemaScope(value: string): SchemaScope {
   return value as SchemaScope;
 }
 
-function writeSuccess(result: BuildReportResult, runId: string, json: boolean): void {
+function writeSuccess(result: BuildReportResult, runId: string, mode: OutputMode): void {
   const sanitized = sanitizeTransportValue(result);
-  writeWarnings(sanitized.warnings, runId, json);
-  if (json) {
-    writeResultRecord(sanitized, runId);
+  emitWarnings(sanitized.warnings, runId, mode);
+  if (mode === 'agent') {
+    emitResultRecord(sanitized, runId);
     return;
   }
   process.stdout.write(
@@ -280,10 +319,10 @@ function writeSuccess(result: BuildReportResult, runId: string, json: boolean): 
   );
 }
 
-function writeInitSuccess(result: InitProjectResult, runId: string, json: boolean): void {
+function writeInitSuccess(result: InitProjectResult, runId: string, mode: OutputMode): void {
   const sanitized = sanitizeTransportValue(result);
-  if (json) {
-    writeResultRecord(sanitized, runId);
+  if (mode === 'agent') {
+    emitResultRecord(sanitized, runId);
     return;
   }
   process.stdout.write(
@@ -291,10 +330,10 @@ function writeInitSuccess(result: InitProjectResult, runId: string, json: boolea
   );
 }
 
-function writeValidateSuccess(result: ValidateReportResult, runId: string, json: boolean): void {
-  writeWarnings(result.warnings, runId, json);
-  if (json) {
-    writeResultRecord(result, runId);
+function writeValidateSuccess(result: ValidateReportResult, runId: string, mode: OutputMode): void {
+  emitWarnings(result.warnings, runId, mode);
+  if (mode === 'agent') {
+    emitResultRecord(result, runId);
     return;
   }
   process.stdout.write(
@@ -302,19 +341,37 @@ function writeValidateSuccess(result: ValidateReportResult, runId: string, json:
   );
 }
 
-function writeInspectSuccess(result: InspectReportResult, runId: string, json: boolean): void {
-  writeWarnings(result.warnings, runId, json);
-  if (json) {
-    writeResultRecord(result, runId);
+function writeFixSuccess(result: FixReportResult, runId: string, mode: OutputMode): void {
+  if (mode === 'agent') {
+    emitResultRecord(result, runId);
+    return;
+  }
+  if (result.applied.length === 0) {
+    process.stdout.write(`No applicable repair in ${result.entryPath}\n`);
+  }
+  for (const fix of result.applied) {
+    process.stdout.write(
+      `${fix.file}:${fix.line}:${fix.column}  ${fix.code} → ${fix.replacement}\n`,
+    );
+  }
+  if (result.remaining.length > 0) {
+    process.stdout.write(`${result.remaining.length} violations need an author decision\n`);
+  }
+}
+
+function writeInspectSuccess(result: InspectReportResult, runId: string, mode: OutputMode): void {
+  emitWarnings(result.warnings, runId, mode);
+  if (mode === 'agent') {
+    emitResultRecord(result, runId);
     return;
   }
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
-function writeReviewSuccess(result: InspectReviewResult, runId: string, json: boolean): void {
+function writeReviewSuccess(result: InspectReviewResult, runId: string, mode: OutputMode): void {
   const sanitized = sanitizeTransportValue(result);
-  if (json) {
-    writeResultRecord(sanitized, runId);
+  if (mode === 'agent') {
+    emitResultRecord(sanitized, runId);
     return;
   }
   const counts = Object.fromEntries(
@@ -326,30 +383,4 @@ function writeReviewSuccess(result: InspectReviewResult, runId: string, json: bo
   process.stdout.write(
     `Review ${sanitized.reportStatus}: ${counts.exact} exact, ${counts.changed} changed, ${counts.missing} missing, ${counts.ambiguous} ambiguous\n`,
   );
-}
-
-function writeWarnings(warnings: readonly Diagnostic[], runId: string, json: boolean): void {
-  for (const warning of warnings) {
-    const sanitized = sanitizeDiagnostic(warning);
-    if (json) {
-      process.stdout.write(`${JSON.stringify({ type: 'diagnostic', runId, ...sanitized })}\n`);
-    } else {
-      process.stderr.write(`warning ${sanitized.code}: ${sanitized.message}\n`);
-    }
-  }
-}
-
-function writeResultRecord(result: object, runId: string): void {
-  process.stdout.write(
-    `${JSON.stringify({ type: 'result', runId, ...sanitizeTransportValue(result) })}\n`,
-  );
-}
-
-function writeFailure(diagnostic: Diagnostic, runId: string, json: boolean): void {
-  const sanitized = sanitizeDiagnostic(diagnostic);
-  if (json) {
-    process.stdout.write(`${JSON.stringify({ type: 'diagnostic', runId, ...sanitized })}\n`);
-    return;
-  }
-  process.stderr.write(`${sanitized.code}: ${sanitized.message}\n${sanitized.remediation}\n`);
 }

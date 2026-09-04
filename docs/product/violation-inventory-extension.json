@@ -1,0 +1,29 @@
+{
+  "contractVersion": 1,
+  "id": "violation-inventory",
+  "summary": "Reports in a single diagnostic every authored violation of one directive phase that does not merely repeat a refusal already reported, keeping the earliest as the primary and the rest in an ordered related inventory; other stages still end a run with one diagnostic.",
+  "trustBoundary": {
+    "authorCode": "forbidden",
+    "callbacks": "forbidden",
+    "eval": "forbidden",
+    "dynamicImports": "forbidden",
+    "networkAccess": "forbidden",
+    "confinement": "source-root",
+    "offline": "required",
+    "deterministicSerialization": "required",
+    "cspCompatible": "required",
+    "packageOwnedRuntime": "required"
+  },
+  "evidence": {
+    "sourceGrammar": "The authored source grammar is unchanged: no directive, attribute or fence is added, removed or reinterpreted. A source that validated before validates now, and a source refused before is refused now — with the same set of authored facts, though the primary code can differ where a violation that used to be dropped now joins the inventory and stands earlier in the source: a term reference to a key nothing ever defined is such a violation.",
+    "executionCapabilities": "The directive phase collects refusals instead of ending on the first one: the tree walk, each check inside it and each independent element a check iterates all contribute their own facts. Descendants of a rejected directive are not traversed, a check that reads an interpretation already refused contributes nothing, and an annotation pointing at a key whose own glossary definition was refused — a term reference or an annotated code fence — is dropped. Suppression is exactly these three mechanisms and no wider rule: an annotation pointing at a key nothing ever defined joins the inventory in both forms, and so does one whose definition was never read because its container was rejected, since that key never became known or refused. With nothing refused, an unexpected internal error still surfaces as INTERNAL_ERROR exactly as before.",
+    "confinement": "No path, resource, include or additional read is introduced. The inventory is built from diagnostics already produced inside the confined Markdown graph.",
+    "offlineBehavior": "Validation and compilation remain local; collecting refusals adds no service, network request or background work.",
+    "deterministicSerialization": "Inventory order derives only from resolved source position, with arrival order as the stable tiebreak for entries whose position did not resolve, so the same source yields the same serialized diagnostic on every run.",
+    "cspAndRuntime": "The change is confined to Node-side validation. No browser runtime, script, style, storage or CSP source is involved, and the built page is byte-identical for sources that build.",
+    "accessibility": "No rendered output changes, so no accessible name, role, focus order or contrast is affected. The inventory is machine-readable diagnostic transport, and the human CLI rendering keeps its single-violation summary.",
+    "byteAndPerformanceBudgets": "Artifact bytes are unaffected because the inventory exists only on the failure path. Cost is bounded by the number of authored violations in one source and adds no listener, observer or additional traversal beyond the one already performed.",
+    "packageDependenciesAndLicenses": "No dependency or license is added. The implementation composes the existing diagnostic type, its sanitizer and the directive phase already present in the package.",
+    "compatibility": "The diagnostic gains one optional field, related, shaped like the diagnostic itself and sanitized by the same boundary. It is absent when a run found exactly one violation, so existing consumers that read code, level, message, remediation, source and details are unchanged. Exit codes, NDJSON framing, the run identity and successful records are untouched. The inventory stays inside the directive phase: failures of source loading, asset embedding or publication keep their single-diagnostic shape."
+  }
+}

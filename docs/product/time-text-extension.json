@@ -1,7 +1,7 @@
 {
   "contractVersion": 1,
   "id": "numeric-time-text",
-  "summary": "Keeps bounded numeric clock and duration notation as literal Markdown text without weakening directive diagnostics.",
+  "summary": "Keeps a colon that no authored directive could have opened as literal Markdown text without weakening directive diagnostics. Supersedes the narrower clock and duration rule.",
   "trustBoundary": {
     "authorCode": "forbidden",
     "callbacks": "forbidden",
@@ -15,15 +15,15 @@
     "packageOwnedRuntime": "required"
   },
   "evidence": {
-    "sourceGrammar": "Only a leaf numeric text-directive node whose complete source token has two or three numeric groups is restored. Trailing groups require exactly two digits in the 00-59 domain and word-adjacent, malformed, four-part, attributed, child-bearing, and alphabetic directive forms remain directives.",
-    "executionCapabilities": "The compile-time mdast pass reconstructs the exact source slice before registry lookup. Registered directives and unknown alphabetic names continue through the existing typed interpretation and source-mapped diagnostics.",
+    "sourceGrammar": "Only a leaf text-directive node without attributes or children is restored, and only when its name begins with a decimal digit or its colon is written against the preceding letter, digit, combining mark or connector. No registered directive name begins with a digit and no authored directive is written against a preceding word, so ratios, scales, host:port pairs, arXiv identifiers and key:value phrases become text. The digit condition is independent of the preceding code point, so a digit-initial name separated by a space is text as well. A spaced alphabetic name, any attributed or child-bearing form, and every block-level form stay on the directive path, so an unregistered name among them keeps its diagnostic and a registered one is interpreted by its own rules, including its required attributes.",
+    "executionCapabilities": "The compile-time mdast pass reconstructs the exact source slice before registry lookup. Registered directives continue through the existing typed interpretation, and so do the forms the rule leaves alone: a spaced alphabetic name, any attributed or child-bearing form, and every block-level form still reach the registry lookup, where an unregistered name among them produces its source-mapped diagnostic. An unknown alphabetic name written against the preceding word is restored as text and no longer reaches them.",
     "confinement": "The rule reads only offsets in the already confined and partial-expanded Markdown string. It creates no path, resource, file read, include, or external reference.",
     "offlineBehavior": "Parsing and exact text reconstruction are deterministic local compiler work shared by single-file and directory output. No reader runtime or service is involved.",
     "deterministicSerialization": "The replacement bytes and position come only from the authored source range. There is no clock read, locale inference, random identity, placeholder, entity, or output-format branch.",
     "cspAndRuntime": "The extension adds no browser code, script, style, event, raw HTML, URL, eval, callback, import, or CSP source. Restored nodes use ordinary Markdown text rendering.",
     "accessibility": "Time and duration notation remains ordinary readable text in document flow with no generated control or alternate interaction.",
-    "byteAndPerformanceBudgets": "One bounded scan around a candidate numeric text-directive node inspects only adjacent digits and colons. The pass adds no runtime bytes or work.",
+    "byteAndPerformanceBudgets": "For each leaf text-directive node the rule inspects the first character of the directive name and one code point to the left of the colon; no surrounding token is scanned. The pass adds no runtime bytes or work.",
     "packageDependenciesAndLicenses": "No dependency or license is added. The implementation composes the installed remark-directive AST, unist traversal, and project compiler.",
-    "compatibility": "Valid existing directives, unknown-name diagnostics, source maps, frontmatter parsing, partials, review targets, both output formats, CLI and ESM contracts retain their behavior. Only the previously failing numeric clock/duration ambiguity changes."
+    "compatibility": "Valid existing directives, source maps, frontmatter parsing, partials, review targets, both output formats, CLI and ESM contracts retain their behavior. The accepted source set only grows: sources that previously failed with UNSUPPORTED_DIRECTIVE on a colon inside or after a word now build. The diagnostic for a spaced unknown alphabetic name is unchanged except that it now names the backslash escape as the remedy for ordinary prose."
   }
 }

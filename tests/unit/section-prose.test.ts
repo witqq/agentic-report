@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { Diagnostic } from '../../src/contracts.js';
+import type { AgenticReportError } from '../../src/diagnostics.js';
 import { buildReport } from '../../src/core/compiler.js';
 import type { ReviewTargetManifest } from '../../src/review/contract.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
@@ -163,14 +165,22 @@ describe('section lead and nearby appendix definitions', () => {
       const workspace = await trackedWorkspace('invalid-section-glossary');
       const source = path.join(workspace, 'report.md');
       await writeFile(source, markdown);
-      await expect(
-        buildReport({ input: source, output: path.join(workspace, 'report.html') }),
-      ).rejects.toMatchObject({
-        diagnostic: {
+      // A source may violate more than one rule at once, and the run now reports the earliest by
+      // position; the refusal this case is about must appear in that inventory at its own place.
+      const refused = await buildReport({
+        input: source,
+        output: path.join(workspace, 'report.html'),
+      }).then(
+        () => undefined,
+        (error: unknown) => (error as AgenticReportError).diagnostic,
+      );
+      expect(refused).toBeDefined();
+      expect([refused as Diagnostic, ...(refused?.related ?? [])]).toContainEqual(
+        expect.objectContaining({
           code: 'INVALID_DIRECTIVE_PLACEMENT',
-          source: { file: source, line, column },
-        },
-      });
+          source: expect.objectContaining({ file: source, line, column }),
+        }),
+      );
     },
   );
 });

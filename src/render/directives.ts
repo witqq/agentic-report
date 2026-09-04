@@ -4,7 +4,7 @@ import type { Element, ElementContent, Root as HastRoot } from 'hast';
 import type { Code, Root as MdastRoot } from 'mdast';
 import { decodeString } from 'micromark-util-decode-string';
 import type { Plugin } from 'unified';
-import { visit } from 'unist-util-visit';
+import { SKIP, visit } from 'unist-util-visit';
 
 import {
   authoringRegistry,
@@ -15,8 +15,9 @@ import {
   type CodeFenceMetadataDefinition,
 } from '../authoring/registry.js';
 import { interpretDirectiveAttributes } from '../authoring/schemas.js';
-import type { SourceMapSegment } from '../contracts.js';
-import { AgenticReportError } from '../diagnostics.js';
+import type { Diagnostic, DiagnosticFix, SourceMapSegment } from '../contracts.js';
+import { AgenticReportError, isTransportSafeReplacement } from '../diagnostics.js';
+import { declareAuthoredRules, runAuthoredRules } from './authored-rules.js';
 import { packageStrings, type PackageStrings } from '../localization.js';
 import { MAX_REVIEW_RESPONSES } from '../review/contract.js';
 import {
@@ -30,7 +31,7 @@ import {
   type ResponseQuestionDefinition,
   type ResponseQuestionKind,
 } from '../response/contract.js';
-import { resolveSourceLocation } from '../source/source-map.js';
+import { resolveSourceLocation, resolveSourceRange } from '../source/source-map.js';
 import { decorativeIcon } from './icons.js';
 import { resolveDocumentNavigation, type NavigationItem } from './navigation.js';
 import { enhanceVisualization } from './visualizations.js';
@@ -64,6 +65,8 @@ interface DirectivePluginOptions {
   readonly sourceMap: readonly SourceMapSegment[];
   readonly markdown: string;
   readonly observedDirectives?: Set<string>;
+  /** Sink for authored warnings; a run without one keeps them silent rather than failing. */
+  readonly warnings?: Diagnostic[];
 }
 
 interface DirectiveEnhancementOptions {
@@ -156,7 +159,7 @@ function unsupportedCodeMetadataContract(value: never): never {
 
 export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoot> =
   (options) => (tree) => {
-    restoreNumericColonText(tree, options.markdown);
+    restoreLiteralColonText(tree, options.markdown);
     const glossaryByKey = new Map<string, GlossaryDefinition>();
     const glossaryTerms = new Map<string, GlossaryDefinition>();
     const termReferences: Array<{ readonly key: string; readonly node: DirectiveNode }> = [];
@@ -167,20 +170,28 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
     >();
     const sectionIds = collectAuthoredSectionIds(tree);
     const claimedAuthoredSectionIds = new Set<string>();
+    const violations: AgenticReportError[] = [];
+    // Keys whose own glossary definition was refused: a later annotation pointing at such a key —
+    // a term reference or an annotated code fence — repeats that refusal instead of reporting an
+    // independent fact.
+    const refusedGlossaryKeys = new Set<string>();
     visit(tree, (node, _index, parent) => {
       if (isCodeNode(node)) {
         const metadata = parseCodeTermMetadata(node.meta);
         if (metadata.kind === 'invalid') {
-          throw attachNodeSource(
-            new AgenticReportError({
-              level: 'error',
-              code: 'INVALID_CODE_TERM_METADATA',
-              message: metadata.message,
-              remediation: metadata.remediation,
-            }),
-            node,
-            options,
+          violations.push(
+            attachNodeSource(
+              new AgenticReportError({
+                level: 'error',
+                code: 'INVALID_CODE_TERM_METADATA',
+                message: metadata.message,
+                remediation: metadata.remediation,
+              }),
+              node,
+              options,
+            ),
           );
+          return;
         }
         if (metadata.kind === 'valid') {
           codeTermBlocks.push({ node, keys: metadata.keys });
@@ -191,95 +202,75 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
       if (!isDirectiveNode(node)) {
         return;
       }
-      try {
-        const directive = directiveByName.get(node.name);
-        if (directive === undefined) throw unsupportedDirectiveError(node);
-        requireNoPrototypeLikeAttributes(node, options.markdown);
-        requireDirectiveForm(node, directive);
-        requireDirectivePlacement(node, directive, parent);
-        requireDirectiveChildren(node, directive);
-        const interpretation = interpretDirectiveAttributes(directive, node.attributes ?? {});
-        if (!interpretation.ok) throw directiveAttributeError(node, interpretation);
+      const found: AgenticReportError[] = [];
+      const parsed: { values?: Readonly<Record<string, string | number | boolean>> } = {};
+      const outcome = runAuthoredRules(
+        directiveNodeRules,
+        {
+          node,
+          parent,
+          markdown: options.markdown,
+          sectionIds,
+          claimedAuthoredSectionIds,
+          glossaryByKey,
+          glossaryTerms,
+          parsed,
+        },
+        found,
+      );
+      if (outcome === 'accepted') {
+        // Names are claimed only now: every rule of the set accepted this node, so it is a section
+        // the document really has.
         const values =
-          directive.name === 'section'
-            ? normalizeSectionAttributes(
-                node,
-                interpretation.values,
-                sectionIds,
-                claimedAuthoredSectionIds,
-              )
-            : interpretation.values;
-        if (directive.name === 'action') {
-          requireActionLabel(node);
-        }
-        if (
-          directive.name === 'glossary' &&
-          values.placement === 'appendix' &&
-          !isAppendixGlossaryParent(parent)
-        ) {
-          throw directiveError(
-            node,
-            'INVALID_DIRECTIVE_PLACEMENT',
-            'A glossary definition placed in the appendix must be top-level or directly inside a section.',
-            'Move this appendix glossary outside lists, blockquotes, and unrelated directives, or make it a direct section child.',
-          );
-        }
+          node.name === 'section' && parsed.values !== undefined
+            ? claimSectionIdentity(parsed.values, sectionIds, claimedAuthoredSectionIds)
+            : (parsed.values ?? {});
         attributesByNode.set(node, values);
-        if (directive.name === 'glossary') {
-          const key = String(interpretation.values.key);
-          const term = String(interpretation.values.term);
-          const normalizedTerm = term.toLocaleLowerCase('und');
-          if (glossaryByKey.has(key) || glossaryTerms.has(normalizedTerm)) {
-            throw directiveError(
-              node,
-              'DUPLICATE_GLOSSARY_DEFINITION',
-              `Glossary key or term is defined more than once: ${key}.`,
-              'Use one unique key and canonical term for each glossary definition.',
-            );
-          }
-          const definition = { key, term, node };
-          glossaryByKey.set(key, definition);
-          glossaryTerms.set(normalizedTerm, definition);
-        }
-        if (directive.name === 'term') {
-          termReferences.push({ key: String(interpretation.values.key), node });
-        }
-        options.observedDirectives?.add(directive.name);
-        node.data = renderDirective(directive, values, new Set(Object.keys(node.attributes ?? {})));
-      } catch (error) {
-        if (
-          error instanceof AgenticReportError &&
-          node.position?.start.offset !== undefined &&
-          node.position.end.offset !== undefined
-        ) {
-          const source = resolveSourceLocation(
-            options.sourceMap,
-            node.position.start.offset,
-            node.position.end.offset,
+        const directive = directiveByName.get(node.name);
+        if (directive !== undefined) {
+          if (directive.name === 'glossary') registerGlossaryDefinition(node, values);
+          if (directive.name === 'term') termReferences.push({ key: String(values.key), node });
+          options.observedDirectives?.add(directive.name);
+          node.data = renderDirective(
+            directive,
+            values,
+            new Set(Object.keys(node.attributes ?? {})),
           );
-          if (source !== undefined) {
-            const details = {
-              ...error.diagnostic.details,
-              ...(error.diagnostic.source?.file === undefined
-                ? {}
-                : { target: error.diagnostic.source.file }),
-            };
-            throw new AgenticReportError(
-              {
-                ...error.diagnostic,
-                source,
-                ...(Object.keys(details).length === 0 ? {} : { details }),
-              },
-              { cause: error },
-            );
-          }
         }
-        throw error;
+        return undefined;
+      }
+
+      if (node.name === 'glossary') {
+        const refusedKey = node.attributes?.key;
+        if (typeof refusedKey === 'string') refusedGlossaryKeys.add(refusedKey);
+      }
+      for (const violation of found)
+        violations.push(locatedNodeViolation(violation, node, options));
+      // Descendants of a rejected directive would only report consequences of this refusal.
+      return SKIP;
+
+      function registerGlossaryDefinition(
+        definitionNode: DirectiveNode,
+        values: Readonly<Record<string, string | number | boolean>>,
+      ): void {
+        const key = String(values.key);
+        const term = String(values.term);
+        // The forms rule accepted this definition, so re-reading them cannot fail here.
+        const forms = declaredGlossaryForms(values.forms, definitionNode);
+        if (forms instanceof AgenticReportError) return;
+        const definition = { key, term, forms, node: definitionNode };
+        glossaryByKey.set(key, definition);
+        glossaryTerms.set(term.toLocaleLowerCase('und'), definition);
+        for (const form of forms) glossaryTerms.set(form.toLocaleLowerCase('und'), definition);
       }
     });
     for (const reference of termReferences) {
-      if (!glossaryByKey.has(reference.key)) {
-        throw attachDirectiveSource(
+      if (glossaryByKey.has(reference.key)) continue;
+      // A reference whose own definition was refused repeats that refusal, so it is dropped; a
+      // reference to a key nothing ever defined is an independent fact and joins the inventory.
+      if (refusedGlossaryKeys.has(reference.key)) continue;
+      violations.push(
+        attachDirectiveSource(
           directiveError(
             reference.node,
             'UNKNOWN_GLOSSARY_TERM',
@@ -288,84 +279,191 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
           ),
           reference.node,
           options,
-        );
-      }
+        ),
+      );
     }
-    validateCodeTermBlocks(codeTermBlocks, glossaryByKey, options);
-    validateVisualizationData(tree, attributesByNode, options);
-    validateActionGroups(tree, options);
-    validateCopyableProse(tree, options);
-    validateLeadParagraphs(tree, options);
-    validateTypedReviewComponents(tree, attributesByNode, options);
-    validateResponseForms(tree, attributesByNode, options);
-    validateUnmarkedGlossaryTerms(tree, [...glossaryByKey.values()], options);
+    // Every check answers for its own subjects and returns; none of them ends the phase, so the run
+    // reports what the whole source says rather than what its first refused subject said.
+    validateCodeTermBlocks(codeTermBlocks, glossaryByKey, refusedGlossaryKeys, options, violations);
+    validateVisualizationData(tree, attributesByNode, options, violations);
+    validateActionGroups(tree, options, violations);
+    validateCopyableProse(tree, options, violations);
+    validateLeadParagraphs(tree, options, violations);
+    validateTypedReviewComponents(tree, attributesByNode, options, violations);
+    validateResponseForms(tree, attributesByNode, options, violations);
+    validateUnmarkedGlossaryTerms(tree, [...glossaryByKey.values()], options, violations);
+    if (violations.length > 0) throw aggregateViolations(violations);
   };
 
-function validateCopyableProse(tree: MdastRoot, options: DirectivePluginOptions): void {
+/**
+ * Reports the earliest authored violation and carries the rest with it, so one run answers for the
+ * whole source. Order follows the source, not the order the checks happen to run in; a violation
+ * without a resolved position keeps its arrival order at the end.
+ */
+function aggregateViolations(violations: readonly AgenticReportError[]): AgenticReportError {
+  const ordered = violations
+    .map((violation, arrival) => ({ violation, arrival }))
+    .sort((left, right) => {
+      const leftStart = left.violation.diagnostic.source?.line;
+      const rightStart = right.violation.diagnostic.source?.line;
+      if (leftStart === undefined && rightStart === undefined) return left.arrival - right.arrival;
+      if (leftStart === undefined) return 1;
+      if (rightStart === undefined) return -1;
+      if (leftStart !== rightStart) return leftStart - rightStart;
+      const leftColumn = left.violation.diagnostic.source?.column ?? 0;
+      const rightColumn = right.violation.diagnostic.source?.column ?? 0;
+      if (leftColumn !== rightColumn) return leftColumn - rightColumn;
+      return left.arrival - right.arrival;
+    })
+    .map((entry) => entry.violation);
+  const [first, ...rest] = ordered;
+  if (first === undefined) throw new Error('Aggregate requested without any violation.');
+  if (rest.length === 0) return first;
+  return new AgenticReportError(
+    { ...first.diagnostic, related: rest.map((violation) => violation.diagnostic) },
+    { cause: first },
+  );
+}
+
+interface CopyableSubject {
+  readonly node: DirectiveNode;
+  readonly placement: (node: DirectiveNode) => AgenticReportError;
+}
+
+/** The single rule of a copyable block, declared as data like every other rule of this phase. */
+const copyableRules = declareAuthoredRules<CopyableSubject>({
+  subject: 'copyable',
+  rules: [
+    {
+      id: 'prose-and-terms-only',
+      check: ({ node, placement }) => {
+        // Foreign children of one copyable block are independent of each other: a code fence says
+        // nothing about the directive beside it, so the block answers for all of them. Nothing below
+        // a refused child is read, because it lives inside the node just refused.
+        const pending = [...(node.children ?? [])];
+        const found: AgenticReportError[] = [];
+        while (pending.length > 0) {
+          const child = pending.pop();
+          if (isCodeNode(child) || (isDirectiveNode(child) && child.name !== 'term')) {
+            found.push(placement(child as DirectiveNode));
+            continue;
+          }
+          if (isTraversableNode(child)) pending.push(...(child.children ?? []));
+        }
+        return found;
+      },
+    },
+  ],
+});
+
+function validateCopyableProse(
+  tree: MdastRoot,
+  options: DirectivePluginOptions,
+  violations: AgenticReportError[],
+): void {
   visit(tree, (candidate) => {
     if (!isDirectiveNode(candidate) || candidate.name !== 'copyable') return;
-    const pending = [...(candidate.children ?? [])];
-    while (pending.length > 0) {
-      const child = pending.pop();
-      if (isCodeNode(child) || (isDirectiveNode(child) && child.name !== 'term')) {
-        const node = child as DirectiveNode;
-        throw attachDirectiveSource(
-          directiveError(
+    const outcome = runAuthoredRules(
+      copyableRules,
+      {
+        node: candidate,
+        placement: (node) =>
+          attachDirectiveSource(
+            directiveError(
+              node,
+              'INVALID_DIRECTIVE_PLACEMENT',
+              'copyable accepts prose Markdown and term references, not code blocks or other directives.',
+              'Move the code or interactive/data directive outside copyable.',
+            ),
             node,
-            'INVALID_DIRECTIVE_PLACEMENT',
-            'copyable accepts prose Markdown and term references, not code blocks or other directives.',
-            'Move the code or interactive/data directive outside copyable.',
+            options,
           ),
-          node,
-          options,
-        );
-      }
-      if (isTraversableNode(child)) pending.push(...(child.children ?? []));
-    }
+      },
+      violations,
+    );
+    return outcome === 'refused' ? SKIP : undefined;
   });
 }
 
-function validateLeadParagraphs(tree: MdastRoot, options: DirectivePluginOptions): void {
+interface LeadSubject {
+  readonly lead: DirectiveNode;
+  readonly index: number;
+  readonly siblings: NonNullable<DirectiveNode['children']>;
+  readonly fail: (lead: DirectiveNode, message: string, remediation: string) => AgenticReportError;
+}
+
+/**
+ * The rules of one lead paragraph. Shape and placement are independent questions — a lead holding
+ * two blocks is still in the wrong place or the right one — so both answer for the same lead.
+ */
+const leadRules = declareAuthoredRules<LeadSubject>({
+  subject: 'section/lead',
+  rules: [
+    {
+      id: 'single-paragraph',
+      check: ({ lead, fail }) => {
+        const blocks = lead.children ?? [];
+        const single =
+          blocks.length === 1 &&
+          typeof blocks[0] === 'object' &&
+          blocks[0] !== null &&
+          'type' in blocks[0] &&
+          blocks[0].type === 'paragraph';
+        return single
+          ? undefined
+          : fail(
+              lead,
+              'lead must contain exactly one Markdown paragraph.',
+              'Keep one prose paragraph inside lead and move every other block outside it.',
+            );
+      },
+    },
+    {
+      id: 'first-authored-block',
+      check: ({ lead, index, siblings, fail }) =>
+        index > 0 || siblings[0] !== lead
+          ? fail(
+              lead,
+              'A section accepts one lead as its first authored block.',
+              'Keep one lead first in the section and use ordinary paragraphs for the remaining prose.',
+            )
+          : undefined,
+    },
+  ],
+});
+
+function validateLeadParagraphs(
+  tree: MdastRoot,
+  options: DirectivePluginOptions,
+  violations: AgenticReportError[],
+): void {
   visit(tree, (candidate) => {
     if (!isDirectiveNode(candidate) || candidate.name !== 'section') return;
+    return inspectSection(candidate) === 'refused' ? SKIP : undefined;
+  });
+
+  function inspectSection(candidate: DirectiveNode): 'accepted' | 'refused' {
     const children = candidate.children ?? [];
     const leads = children.filter(
       (child): child is DirectiveNode => isDirectiveNode(child) && child.name === 'lead',
     );
+    const found: AgenticReportError[] = [];
+    // Each lead is its own subject: a malformed one says nothing about the next, so the section
+    // answers for every lead it holds.
     for (const [index, lead] of leads.entries()) {
-      const blocks = lead.children ?? [];
-      if (
-        blocks.length !== 1 ||
-        typeof blocks[0] !== 'object' ||
-        blocks[0] === null ||
-        !('type' in blocks[0]) ||
-        blocks[0].type !== 'paragraph'
-      ) {
-        throw attachDirectiveSource(
-          directiveError(
-            lead,
-            'INVALID_DIRECTIVE_PLACEMENT',
-            'lead must contain exactly one Markdown paragraph.',
-            'Keep one prose paragraph inside lead and move every other block outside it.',
-          ),
-          lead,
-          options,
-        );
-      }
-      if (index > 0 || children[0] !== lead) {
-        throw attachDirectiveSource(
-          directiveError(
-            lead,
-            'INVALID_DIRECTIVE_PLACEMENT',
-            'A section accepts one lead as its first authored block.',
-            'Keep one lead first in the section and use ordinary paragraphs for the remaining prose.',
-          ),
-          lead,
-          options,
-        );
-      }
+      runAuthoredRules(leadRules, { lead, index, siblings: children, fail }, found);
     }
-  });
+    violations.push(...found);
+    return found.length === 0 ? 'accepted' : 'refused';
+  }
+
+  function fail(lead: DirectiveNode, message: string, remediation: string): AgenticReportError {
+    return attachDirectiveSource(
+      directiveError(lead, 'INVALID_DIRECTIVE_PLACEMENT', message, remediation),
+      lead,
+      options,
+    );
+  }
 }
 
 function isAppendixGlossaryParent(parent: unknown): boolean {
@@ -375,12 +473,11 @@ function isAppendixGlossaryParent(parent: unknown): boolean {
   );
 }
 
-function restoreNumericColonText(tree: MdastRoot, markdown: string): void {
+function restoreLiteralColonText(tree: MdastRoot, markdown: string): void {
   visit(tree, (node, index, parent) => {
     if (
       !isDirectiveNode(node) ||
       node.type !== 'textDirective' ||
-      !/^\d+$/u.test(node.name) ||
       Object.keys(node.attributes ?? {}).length > 0 ||
       (node.children?.length ?? 0) > 0 ||
       index === undefined ||
@@ -389,7 +486,11 @@ function restoreNumericColonText(tree: MdastRoot, markdown: string): void {
       return;
     const start = node.position?.start.offset;
     const end = node.position?.end.offset;
-    if (start === undefined || end === undefined || !isTimeOrDurationToken(markdown, start, end))
+    if (
+      start === undefined ||
+      end === undefined ||
+      !isLiteralColonToken(markdown, start, node.name)
+    )
       return;
     parent.children[index] = {
       type: 'text',
@@ -399,26 +500,20 @@ function restoreNumericColonText(tree: MdastRoot, markdown: string): void {
   });
 }
 
-function isTimeOrDurationToken(
-  markdown: string,
-  directiveStart: number,
-  directiveEnd: number,
-): boolean {
-  let tokenStart = directiveStart;
-  let tokenEnd = directiveEnd;
-  while (tokenStart > 0 && /[\d:]/u.test(markdown[tokenStart - 1] ?? '')) tokenStart -= 1;
-  while (tokenEnd < markdown.length && /[\d:]/u.test(markdown[tokenEnd] ?? '')) tokenEnd += 1;
-  if (tokenStart === directiveStart || markdown[directiveStart] !== ':') return false;
-  const before = codePointBefore(markdown, tokenStart);
-  const after = codePointAt(markdown, tokenEnd);
-  if (
-    (before !== undefined && WORD_CONTINUATION_PATTERN.test(before)) ||
-    (after !== undefined && WORD_CONTINUATION_PATTERN.test(after))
-  )
-    return false;
-  const groups = markdown.slice(tokenStart, tokenEnd).split(':');
-  if (groups.length < 2 || groups.length > 3 || !/^\d+$/u.test(groups[0] ?? '')) return false;
-  return groups.slice(1).every((group) => /^\d{2}$/u.test(group) && Number(group) <= 59);
+/**
+ * Ordinary prose keeps a colon that no authored directive could have opened. Two shapes are
+ * literal: a name starting with a digit, because no registered directive name does, and a colon
+ * written against the preceding word, because authored directives always start a fresh token.
+ * Ratios, scales, host:port pairs, identifiers such as arXiv:2508.05775 and key:value phrases all
+ * fall under one of the two. The digit feature holds whatever precedes the colon, so `Пункт :2` is
+ * text as well; a spaced unknown *alphabetic* name keeps its diagnostic. The caller bounds this to
+ * the inline form without attributes or children, so block-level forms never reach here.
+ */
+function isLiteralColonToken(markdown: string, directiveStart: number, name: string): boolean {
+  if (markdown[directiveStart] !== ':') return false;
+  if (/^\p{Nd}/u.test(name)) return true;
+  const before = codePointBefore(markdown, directiveStart);
+  return before !== undefined && WORD_CONTINUATION_PATTERN.test(before);
 }
 
 function codePointBefore(value: string, index: number): string | undefined {
@@ -449,114 +544,255 @@ function isMutableChildrenParent(value: unknown): value is { children: Traversab
   );
 }
 
+interface ResponseQuestionSubject {
+  readonly node: DirectiveNode;
+  readonly values: Readonly<Record<string, string | number | boolean>>;
+  readonly kind: ResponseQuestionKind;
+  readonly buckets: readonly DirectiveNode[];
+  readonly choices: readonly DirectiveNode[];
+  readonly items: readonly DirectiveNode[];
+  readonly seenIds: Set<string>;
+  readonly fail: (node: DirectiveNode, message: string) => AgenticReportError;
+}
+
+/**
+ * The rules of one response question, declared as data. Independence is the point: a question whose
+ * option count is wrong is still judged on its numeric bounds, because neither answer needs the
+ * other. Where an answer does need another, the need is written in `dependsOn` instead of being
+ * implied by the order of statements.
+ */
+const responseQuestionRules = declareAuthoredRules<ResponseQuestionSubject>({
+  subject: 'response/question',
+  rules: [
+    {
+      id: 'unique-id',
+      check: ({ node, values, seenIds, fail }) => {
+        const id = String(values.id);
+        if (seenIds.has(id)) return fail(node, `Question id is duplicated: ${id}.`);
+        seenIds.add(id);
+        return undefined;
+      },
+    },
+    {
+      id: 'unique-child-ids',
+      check: ({ node, buckets, choices, items, fail }) => {
+        const duplicated = (children: readonly DirectiveNode[], label: string) => {
+          const ids = children.map((child) => String(responseAttributes(child)?.id));
+          return new Set(ids).size === ids.length
+            ? undefined
+            : fail(node, `${label} ids must be unique within the question.`);
+        };
+        return [
+          duplicated(buckets, 'bucket'),
+          duplicated(choices, 'option'),
+          duplicated(items, 'item'),
+        ].filter((violation): violation is AgenticReportError => violation !== undefined);
+      },
+    },
+    {
+      id: 'items-match-kind',
+      check: ({ node, kind, items, fail }) => {
+        const itemKind = ['bucket', 'item-single', 'item-multi', 'order', 'number'].includes(kind);
+        if (itemKind === items.length > 0) return undefined;
+        return fail(
+          node,
+          itemKind ? `${kind} requires response items.` : `${kind} does not accept items.`,
+        );
+      },
+    },
+    {
+      id: 'buckets-match-kind',
+      check: ({ node, kind, buckets, fail }) => {
+        if (kind === 'bucket') {
+          return buckets.length < 2 || buckets.length > 5
+            ? fail(node, 'Bucket questions require 2 to 5 buckets.')
+            : undefined;
+        }
+        return buckets.length > 0
+          ? fail(node, `${kind} does not accept bucket definitions.`)
+          : undefined;
+      },
+    },
+    {
+      // Items are read against accepted buckets: with the bucket set refused, an unknown reference
+      // would be a fact about buckets nobody accepted.
+      id: 'item-bucket-references',
+      dependsOn: ['buckets-match-kind'],
+      check: ({ kind, buckets, items, fail }) => {
+        if (kind !== 'bucket') return undefined;
+        const bucketIds = new Set(buckets.map((child) => String(responseAttributes(child)?.id)));
+        return items
+          .map((item) => {
+            const initial = responseAttributes(item)?.bucket;
+            return initial !== undefined && !bucketIds.has(String(initial))
+              ? fail(item, `Response item references an unknown bucket: ${String(initial)}.`)
+              : undefined;
+          })
+          .filter((violation): violation is AgenticReportError => violation !== undefined);
+      },
+    },
+    {
+      id: 'options-match-kind',
+      check: ({ node, kind, choices, fail }) => {
+        if (['item-single', 'item-multi', 'single'].includes(kind)) {
+          return choices.length < 2 || choices.length > MAX_RESPONSE_OPTIONS
+            ? fail(node, `${kind} requires 2 to ${MAX_RESPONSE_OPTIONS} options.`)
+            : undefined;
+        }
+        return choices.length > 0
+          ? fail(node, `${kind} does not accept option definitions.`)
+          : undefined;
+      },
+    },
+    {
+      id: 'numeric-domain',
+      check: ({ node, values, kind, fail }) => {
+        if (kind === 'number') {
+          const minimum = values.min;
+          const maximum = values.max;
+          const step = values.step;
+          if (typeof minimum !== 'number' || typeof maximum !== 'number')
+            return fail(node, 'Number questions require min and max.');
+          if (minimum > maximum) return fail(node, 'Number question min must not exceed max.');
+          return typeof step === 'number' && step <= 0
+            ? fail(node, 'Number question step must be positive.')
+            : undefined;
+        }
+        return values.min !== undefined || values.max !== undefined || values.step !== undefined
+          ? fail(node, `Numeric bounds are supported only by number questions, not ${kind}.`)
+          : undefined;
+      },
+    },
+  ],
+});
+
+let responseAttributeSource: WeakMap<
+  object,
+  Readonly<Record<string, string | number | boolean>>
+> = new WeakMap();
+
+/**
+ * The interpreted attributes of a node, or nothing when the node never reached interpretation. That
+ * happens only for a directive whose own form or attributes were already refused, and everything
+ * these checks would read comes from that unmade interpretation — so the subject is skipped rather
+ * than judged on values nobody accepted.
+ */
+function responseAttributes(
+  node: DirectiveNode,
+): Readonly<Record<string, string | number | boolean>> | undefined {
+  return responseAttributeSource.get(node);
+}
+
 function validateResponseForms(
   tree: MdastRoot,
   attributesByNode: WeakMap<object, Readonly<Record<string, string | number | boolean>>>,
   options: DirectivePluginOptions,
+  violations: AgenticReportError[],
 ): void {
+  responseAttributeSource = attributesByNode;
   const formIds = new Set<string>();
   let formCount = 0;
   visit(tree, (candidate) => {
     if (!isDirectiveNode(candidate) || candidate.name !== 'response') return;
-    formCount += 1;
-    if (formCount > MAX_RESPONSE_FORMS)
-      fail(candidate, `A document supports at most ${MAX_RESPONSE_FORMS} response forms.`);
-    const form = attributes(candidate);
-    const formId = String(form.id);
-    if (formIds.has(formId)) fail(candidate, `Response id is duplicated: ${formId}.`);
-    formIds.add(formId);
-    const questions = directChildren(candidate, ['question']);
-    if (questions.length < 1 || questions.length > MAX_RESPONSE_QUESTIONS)
-      fail(candidate, `Response requires 1 to ${MAX_RESPONSE_QUESTIONS} questions.`);
-    const questionIds = new Set<string>();
-    let itemTotal = 0;
-    for (const question of questions) {
-      const values = attributes(question);
-      const id = String(values.id);
-      const kind = String(values.kind) as ResponseQuestionKind;
-      if (questionIds.has(id)) fail(question, `Question id is duplicated: ${id}.`);
-      questionIds.add(id);
-      const children = directChildren(question, ['bucket', 'option', 'item']);
-      const buckets = children.filter((child) => child.name === 'bucket');
-      const choices = children.filter((child) => child.name === 'option');
-      const items = children.filter((child) => child.name === 'item');
-      itemTotal += items.length;
-      uniqueChildIds(question, buckets, 'bucket');
-      uniqueChildIds(question, choices, 'option');
-      uniqueChildIds(question, items, 'item');
-      const itemKind = ['bucket', 'item-single', 'item-multi', 'order', 'number'].includes(kind);
-      if (itemKind !== items.length > 0)
-        fail(
-          question,
-          itemKind ? `${kind} requires response items.` : `${kind} does not accept items.`,
-        );
-      if (kind === 'bucket') {
-        if (buckets.length < 2 || buckets.length > 5)
-          fail(question, 'Bucket questions require 2 to 5 buckets.');
-        const bucketIds = new Set(buckets.map((child) => String(attributes(child).id)));
-        for (const item of items) {
-          const initial = attributes(item).bucket;
-          if (initial !== undefined && !bucketIds.has(String(initial)))
-            fail(item, `Response item references an unknown bucket: ${String(initial)}.`);
-        }
-      } else if (buckets.length > 0) fail(question, `${kind} does not accept bucket definitions.`);
-      if (['item-single', 'item-multi', 'single'].includes(kind)) {
-        if (choices.length < 2 || choices.length > MAX_RESPONSE_OPTIONS)
-          fail(question, `${kind} requires 2 to ${MAX_RESPONSE_OPTIONS} options.`);
-      } else if (choices.length > 0) fail(question, `${kind} does not accept option definitions.`);
-      if (kind === 'number') {
-        const minimum = values.min;
-        const maximum = values.max;
-        const step = values.step;
-        if (typeof minimum !== 'number' || typeof maximum !== 'number')
-          fail(question, 'Number questions require min and max.');
-        if (minimum > maximum) fail(question, 'Number question min must not exceed max.');
-        if (typeof step === 'number' && step <= 0)
-          fail(question, 'Number question step must be positive.');
-      } else if (
-        values.min !== undefined ||
-        values.max !== undefined ||
-        values.step !== undefined
-      ) {
-        fail(question, `Numeric bounds are supported only by number questions, not ${kind}.`);
-      }
-    }
-    if (itemTotal > MAX_RESPONSE_ITEMS)
-      fail(candidate, `Response supports at most ${MAX_RESPONSE_ITEMS} items in total.`);
+    return inspectForm(candidate) === 'refused' ? SKIP : undefined;
   });
 
-  function attributes(node: DirectiveNode): Readonly<Record<string, string | number | boolean>> {
-    const values = attributesByNode.get(node);
-    if (!values) throw new Error(`Missing validated response attributes for ${node.name}.`);
-    return values;
+  function inspectForm(candidate: DirectiveNode): 'accepted' | 'refused' {
+    const form = attributes(candidate);
+    if (form === undefined) return 'refused';
+    const formViolations: AgenticReportError[] = [];
+    // Question ids and the item budget are properties of one form, not of the document: two forms
+    // may reuse an id, and each carries its own items.
+    const questionIds = new Set<string>();
+    let itemTotal = 0;
+    formCount += 1;
+    if (formCount > MAX_RESPONSE_FORMS)
+      formViolations.push(
+        fail(candidate, `A document supports at most ${MAX_RESPONSE_FORMS} response forms.`),
+      );
+    const formId = String(form.id);
+    if (formIds.has(formId))
+      formViolations.push(fail(candidate, `Response id is duplicated: ${formId}.`));
+    formIds.add(formId);
+
+    const questions = directChildren(candidate, ['question'], formViolations);
+    if (questions !== undefined) {
+      if (questions.length < 1 || questions.length > MAX_RESPONSE_QUESTIONS) {
+        formViolations.push(
+          fail(candidate, `Response requires 1 to ${MAX_RESPONSE_QUESTIONS} questions.`),
+        );
+      } else {
+        // Each question is its own subject: a refused one says nothing about the next, so the form
+        // answers for every question it holds.
+        for (const question of questions) {
+          itemTotal += inspectQuestion(question, formViolations, questionIds);
+        }
+        if (itemTotal > MAX_RESPONSE_ITEMS)
+          formViolations.push(
+            fail(candidate, `Response supports at most ${MAX_RESPONSE_ITEMS} items in total.`),
+          );
+      }
+    }
+
+    violations.push(...formViolations);
+    return formViolations.length === 0 ? 'accepted' : 'refused';
+  }
+
+  function inspectQuestion(
+    question: DirectiveNode,
+    formViolations: AgenticReportError[],
+    questionIds: Set<string>,
+  ): number {
+    const values = attributes(question);
+    if (values === undefined) return 0;
+    const children = directChildren(question, ['bucket', 'option', 'item'], formViolations);
+    if (children === undefined) return 0;
+    const items = children.filter((child) => child.name === 'item');
+    runAuthoredRules(
+      responseQuestionRules,
+      {
+        node: question,
+        values,
+        kind: String(values.kind) as ResponseQuestionKind,
+        buckets: children.filter((child) => child.name === 'bucket'),
+        choices: children.filter((child) => child.name === 'option'),
+        items,
+        seenIds: questionIds,
+        fail,
+      },
+      formViolations,
+    );
+    return items.length;
+  }
+
+  function attributes(
+    node: DirectiveNode,
+  ): Readonly<Record<string, string | number | boolean>> | undefined {
+    return responseAttributes(node);
   }
   function directChildren(
     parent: DirectiveNode,
     allowed: readonly string[],
-  ): readonly DirectiveNode[] {
+    collected: AgenticReportError[],
+  ): readonly DirectiveNode[] | undefined {
     const children = parent.children ?? [];
     const directives = children.filter(isDirectiveNode);
     if (
       directives.length !== children.length ||
       directives.some((child) => !allowed.includes(child.name))
-    )
-      fail(
-        parent,
-        `${parent.name} accepts only ${allowed.join(', ')} directives as direct children.`,
+    ) {
+      collected.push(
+        fail(
+          parent,
+          `${parent.name} accepts only ${allowed.join(', ')} directives as direct children.`,
+        ),
       );
+      return undefined;
+    }
     return directives;
   }
-  function uniqueChildIds(
-    parent: DirectiveNode,
-    children: readonly DirectiveNode[],
-    label: string,
-  ): void {
-    const ids = children.map((child) => String(attributes(child).id));
-    if (new Set(ids).size !== ids.length)
-      fail(parent, `${label} ids must be unique within the question.`);
-  }
-  function fail(node: DirectiveNode, message: string): never {
-    throw attachDirectiveSource(
+  function fail(node: DirectiveNode, message: string): AgenticReportError {
+    return attachDirectiveSource(
       directiveError(
         node,
         'INVALID_RESPONSE_DATA',
@@ -569,10 +805,113 @@ function validateResponseForms(
   }
 }
 
+interface ReviewComponentSubject {
+  readonly node: DirectiveNode;
+  readonly childName: string;
+  readonly children: readonly DirectiveNode[];
+  readonly values: Readonly<Record<string, string | number | boolean>>;
+  readonly childValues: (
+    child: DirectiveNode,
+  ) => Readonly<Record<string, string | number | boolean>>;
+  readonly placement: (
+    node: DirectiveNode,
+    message: string,
+    remediation: string,
+  ) => AgenticReportError;
+  readonly attribute: (
+    node: DirectiveNode,
+    message: string,
+    remediation: string,
+  ) => AgenticReportError;
+}
+
+/**
+ * The rules of one typed review component. Child composition, size, identity and child uniqueness
+ * are separate questions about the same component; only the ones that read an accepted child list
+ * say so through `dependsOn`.
+ */
+const reviewComponentRules = declareAuthoredRules<ReviewComponentSubject>({
+  subject: 'decision|checklist',
+  rules: [
+    {
+      id: 'children-not-mixed',
+      check: ({ node, childName, children, placement }) =>
+        (node.children ?? []).length === children.length
+          ? undefined
+          : placement(
+              node,
+              `${node.name} cannot mix Markdown content with ${childName} children.`,
+              node.name === 'decision'
+                ? 'Use Markdown-only legacy decision content or direct decision-option children, not both.'
+                : 'Use only direct check-item children inside checklist.',
+            ),
+    },
+    {
+      id: 'child-limit',
+      check: ({ node, children, placement }) =>
+        children.length > MAX_REVIEW_RESPONSES
+          ? placement(
+              node,
+              `${node.name} exceeds the ${MAX_REVIEW_RESPONSES}-child review limit.`,
+              `Split this ${node.name} into smaller components.`,
+            )
+          : undefined,
+    },
+    {
+      id: 'stable-decision-id',
+      check: ({ node, values, attribute }) =>
+        node.name === 'decision' && typeof values.id !== 'string'
+          ? attribute(
+              node,
+              'A typed decision requires a stable id.',
+              'Add id="..." to the decision or remove its decision-option children.',
+            )
+          : undefined,
+    },
+    {
+      id: 'child-present',
+      check: ({ node, childName, children, placement }) =>
+        children.length === 0
+          ? placement(
+              node,
+              `${node.name} must contain at least one ${childName}.`,
+              `Add a ${childName} text directive directly inside ${node.name}.`,
+            )
+          : undefined,
+    },
+    {
+      // Child ids are read against an accepted child list: with the composition refused, the list is
+      // not the author's own and duplicate ids inside it say nothing.
+      id: 'unique-child-ids',
+      dependsOn: ['children-not-mixed', 'child-present'],
+      check: ({ node, children, childValues, attribute }) => {
+        const seen = new Set<string>();
+        const found: AgenticReportError[] = [];
+        for (const child of children) {
+          const id = String(childValues(child).id ?? '');
+          if (seen.has(id)) {
+            found.push(
+              attribute(
+                child,
+                `${node.name} child id is duplicated: ${id}.`,
+                `Use a unique id inside this ${node.name}.`,
+              ),
+            );
+            continue;
+          }
+          seen.add(id);
+        }
+        return found;
+      },
+    },
+  ],
+});
+
 function validateTypedReviewComponents(
   tree: MdastRoot,
   attributesByNode: WeakMap<object, Readonly<Record<string, string | number | boolean>>>,
   options: DirectivePluginOptions,
+  violations: AgenticReportError[],
 ): void {
   visit(tree, (candidate) => {
     if (
@@ -580,100 +919,76 @@ function validateTypedReviewComponents(
       (candidate.name !== 'decision' && candidate.name !== 'checklist')
     )
       return;
+    return inspectComponent(candidate) === 'refused' ? SKIP : undefined;
+  });
+
+  function inspectComponent(candidate: DirectiveNode): 'accepted' | 'refused' {
     const childName = candidate.name === 'decision' ? 'decision-option' : 'check-item';
     const children = (candidate.children ?? []).filter(
       (child): child is DirectiveNode => isDirectiveNode(child) && child.name === childName,
     );
-    if (candidate.name === 'decision' && children.length === 0) return;
-    if ((candidate.children ?? []).length !== children.length) {
-      throw attachDirectiveSource(
-        directiveError(
-          candidate,
-          'INVALID_DIRECTIVE_PLACEMENT',
-          `${candidate.name} cannot mix Markdown content with ${childName} children.`,
-          candidate.name === 'decision'
-            ? 'Use Markdown-only legacy decision content or direct decision-option children, not both.'
-            : 'Use only direct check-item children inside checklist.',
-        ),
-        candidate,
-        options,
-      );
-    }
-    if (children.length > MAX_REVIEW_RESPONSES) {
-      throw attachDirectiveSource(
-        directiveError(
-          candidate,
-          'INVALID_DIRECTIVE_PLACEMENT',
-          `${candidate.name} exceeds the ${MAX_REVIEW_RESPONSES}-child review limit.`,
-          `Split this ${candidate.name} into smaller components.`,
-        ),
-        candidate,
-        options,
-      );
-    }
-    const values = attributesByNode.get(candidate) ?? {};
-    if (candidate.name === 'decision' && typeof values.id !== 'string') {
-      throw attachDirectiveSource(
-        directiveError(
-          candidate,
-          'INVALID_DIRECTIVE_ATTRIBUTE',
-          'A typed decision requires a stable id.',
-          'Add id="..." to the decision or remove its decision-option children.',
-        ),
-        candidate,
-        options,
-      );
-    }
-    if (children.length === 0) {
-      throw attachDirectiveSource(
-        directiveError(
-          candidate,
-          'INVALID_DIRECTIVE_PLACEMENT',
-          `${candidate.name} must contain at least one ${childName}.`,
-          `Add a ${childName} text directive directly inside ${candidate.name}.`,
-        ),
-        candidate,
-        options,
-      );
-    }
-    const ids = new Set<string>();
-    for (const child of children) {
-      const id = String(attributesByNode.get(child)?.id ?? '');
-      if (ids.has(id)) {
-        throw attachDirectiveSource(
-          directiveError(
-            child,
-            'INVALID_DIRECTIVE_ATTRIBUTE',
-            `${candidate.name} child id is duplicated: ${id}.`,
-            `Use a unique id inside this ${candidate.name}.`,
+    // A decision without typed children is ordinary Markdown content and none of these rules apply.
+    if (candidate.name === 'decision' && children.length === 0) return 'accepted';
+    const found: AgenticReportError[] = [];
+    runAuthoredRules(
+      reviewComponentRules,
+      {
+        node: candidate,
+        childName,
+        children,
+        values: attributesByNode.get(candidate) ?? {},
+        childValues: (child) => attributesByNode.get(child) ?? {},
+        placement: (node, message, remediation) =>
+          attachDirectiveSource(
+            directiveError(node, 'INVALID_DIRECTIVE_PLACEMENT', message, remediation),
+            node,
+            options,
           ),
-          child,
-          options,
-        );
-      }
-      ids.add(id);
-    }
-  });
+        attribute: (node, message, remediation) =>
+          attachDirectiveSource(
+            directiveError(node, 'INVALID_DIRECTIVE_ATTRIBUTE', message, remediation),
+            node,
+            options,
+          ),
+      },
+      found,
+    );
+    violations.push(...found);
+    return found.length === 0 ? 'accepted' : 'refused';
+  }
 }
 
-function normalizeSectionAttributes(
+/**
+ * Whether this section's authored id is already taken. Judging and claiming are separate because a
+ * node the set refuses must not claim anything: the name it would take belongs to whichever section
+ * the document actually keeps.
+ */
+function duplicateSectionIdViolation(
   node: DirectiveNode,
+  values: Readonly<Record<string, string | number | boolean>>,
+  claimedAuthored: ReadonlySet<string>,
+): AgenticReportError | undefined {
+  const authoredId = values.id;
+  return typeof authoredId === 'string' && claimedAuthored.has(authoredId)
+    ? directiveError(
+        node,
+        'DUPLICATE_SECTION_ID',
+        `Section id is defined more than once: ${authoredId}.`,
+        'Use a unique explicit id or omit it to generate a collision-free id from the title.',
+      )
+    : undefined;
+}
+
+/** Claims the identity of an accepted section, generating a collision-free one when none is authored. */
+function claimSectionIdentity(
   values: Readonly<Record<string, string | number | boolean>>,
   used: Set<string>,
   claimedAuthored: Set<string>,
 ): Readonly<Record<string, string | number | boolean>> {
   const authoredId = values.id;
   if (typeof authoredId === 'string') {
-    if (!claimedAuthored.has(authoredId)) {
-      claimedAuthored.add(authoredId);
-      return values;
-    }
-    throw directiveError(
-      node,
-      'DUPLICATE_SECTION_ID',
-      `Section id is defined more than once: ${authoredId}.`,
-      'Use a unique explicit id or omit it to generate a collision-free id from the title.',
-    );
+    claimedAuthored.add(authoredId);
+    return values;
   }
   const base = sectionSlug(String(values.title));
   let id = base;
@@ -714,7 +1029,7 @@ function suffixedIdentity(base: string, suffix: number): string {
   return `${base.slice(0, 64 - suffixText.length).replace(/-+$/gu, '')}${suffixText}`;
 }
 
-function requireActionLabel(node: DirectiveNode): void {
+function actionLabelViolation(node: DirectiveNode): AgenticReportError | undefined {
   const label = (node.children ?? [])
     .map((child) =>
       typeof child === 'object' && child !== null && 'value' in child
@@ -724,130 +1039,717 @@ function requireActionLabel(node: DirectiveNode): void {
     .join('')
     .trim();
   if (label.length === 0) {
-    throw directiveError(
+    return directiveError(
       node,
       'DIRECTIVE_LABEL_REQUIRED',
       'action requires a visible label.',
       'Use ::action[Visible label]{href="..."}.',
     );
   }
+  return undefined;
 }
 
-function validateActionGroups(tree: MdastRoot, options: DirectivePluginOptions): void {
+interface DirectiveNodeSubject {
+  readonly node: DirectiveNode;
+  readonly parent: unknown;
+  readonly markdown: string;
+  readonly sectionIds: Set<string>;
+  readonly claimedAuthoredSectionIds: Set<string>;
+  readonly glossaryByKey: ReadonlyMap<string, GlossaryDefinition>;
+  readonly glossaryTerms: ReadonlyMap<string, GlossaryDefinition>;
+  /** Where the attribute rule leaves its interpretation for the rules that read it. */
+  readonly parsed: { values?: Readonly<Record<string, string | number | boolean>> };
+}
+
+/**
+ * The rules of one directive node. The name, the written attributes, the form, the placement and the
+ * children are independent readings of the same node: an unknown attribute is an unknown attribute
+ * wherever the node sits, so one run answers for all of them. What genuinely needs an accepted
+ * reading says so — the interpreted values exist only after the attribute rule accepted them.
+ */
+const directiveNodeRules = declareAuthoredRules<DirectiveNodeSubject>({
+  subject: 'directive-node',
+  rules: [
+    {
+      id: 'registered-name',
+      check: ({ node }) =>
+        directiveByName.has(node.name) ? undefined : unsupportedDirectiveError(node),
+    },
+    {
+      id: 'no-prototype-like-attributes',
+      check: ({ node, markdown }) => prototypeLikeAttributeViolation(node, markdown),
+    },
+    {
+      id: 'declared-form',
+      dependsOn: ['registered-name'],
+      check: ({ node }) => {
+        const directive = directiveByName.get(node.name);
+        return directive === undefined ? undefined : directiveFormViolation(node, directive);
+      },
+    },
+    {
+      id: 'declared-placement',
+      dependsOn: ['registered-name'],
+      check: ({ node, parent }) => {
+        const directive = directiveByName.get(node.name);
+        return directive === undefined
+          ? undefined
+          : directivePlacementViolation(node, directive, parent);
+      },
+    },
+    {
+      id: 'declared-children',
+      dependsOn: ['registered-name'],
+      check: ({ node }) => {
+        const directive = directiveByName.get(node.name);
+        return directive === undefined ? undefined : directiveChildrenViolation(node, directive);
+      },
+    },
+    {
+      id: 'interpreted-attributes',
+      dependsOn: ['registered-name', 'no-prototype-like-attributes'],
+      check: ({ node, parsed }) => {
+        const directive = directiveByName.get(node.name);
+        if (directive === undefined) return undefined;
+        const interpretation = interpretDirectiveAttributes(directive, node.attributes ?? {});
+        if (!interpretation.ok) return directiveAttributeError(node, interpretation);
+        parsed.values = interpretation.values;
+        return undefined;
+      },
+    },
+    {
+      id: 'action-label',
+      dependsOn: ['registered-name'],
+      check: ({ node }) => (node.name === 'action' ? actionLabelViolation(node) : undefined),
+    },
+    {
+      // The identity is read from the interpreted attributes, so it cannot answer for a node whose
+      // attributes were refused. The rule only judges: claiming the name belongs to the accepted
+      // node, because a refused section must not take a name away from the section that keeps it.
+      id: 'section-identity',
+      dependsOn: ['interpreted-attributes'],
+      check: ({ node, parsed, claimedAuthoredSectionIds }) =>
+        node.name === 'section' && parsed.values !== undefined
+          ? duplicateSectionIdViolation(node, parsed.values, claimedAuthoredSectionIds)
+          : undefined,
+    },
+    {
+      id: 'appendix-glossary-placement',
+      dependsOn: ['interpreted-attributes'],
+      check: ({ node, parent, parsed }) =>
+        node.name === 'glossary' &&
+        parsed.values?.placement === 'appendix' &&
+        !isAppendixGlossaryParent(parent)
+          ? directiveError(
+              node,
+              'INVALID_DIRECTIVE_PLACEMENT',
+              'A glossary definition placed in the appendix must be top-level or directly inside a section.',
+              'Move this appendix glossary outside lists, blockquotes, and unrelated directives, or make it a direct section child.',
+            )
+          : undefined,
+    },
+    {
+      id: 'unique-glossary-identity',
+      dependsOn: ['interpreted-attributes'],
+      check: ({ node, parsed, glossaryByKey, glossaryTerms }) => {
+        if (node.name !== 'glossary' || parsed.values === undefined) return undefined;
+        const key = String(parsed.values.key);
+        const term = String(parsed.values.term);
+        return glossaryByKey.has(key) || glossaryTerms.has(term.toLocaleLowerCase('und'))
+          ? directiveError(
+              node,
+              'DUPLICATE_GLOSSARY_DEFINITION',
+              `Glossary key or term is defined more than once: ${key}.`,
+              'Use one unique key and canonical term for each glossary definition.',
+            )
+          : undefined;
+      },
+    },
+    {
+      // Declared forms are read against the identity this definition claims, so a refused identity
+      // leaves nothing to compare them with.
+      id: 'declared-glossary-forms',
+      dependsOn: ['interpreted-attributes', 'unique-glossary-identity'],
+      check: ({ node, parsed, glossaryTerms }) => {
+        if (node.name !== 'glossary' || parsed.values === undefined) return undefined;
+        const forms = declaredGlossaryForms(parsed.values.forms, node);
+        if (forms instanceof AgenticReportError) return forms;
+        const claimed = new Set<string>();
+        for (const form of forms) {
+          const normalized = form.toLocaleLowerCase('und');
+          // A spelling claimed by two definitions leaves the product deciding whose first mention an
+          // occurrence is, and it would decide silently.
+          if (glossaryTerms.has(normalized) || claimed.has(normalized)) {
+            return directiveError(
+              node,
+              'DUPLICATE_GLOSSARY_DEFINITION',
+              `Glossary form belongs to more than one definition: ${form}.`,
+              'Declare each spelling under one definition; a form shared by two terms leaves the first mention ambiguous.',
+            );
+          }
+          claimed.add(normalized);
+        }
+        return undefined;
+      },
+    },
+  ],
+});
+
+/**
+ * Re-anchors a node violation onto the node's own authored range and carries a referenced target
+ * path into details, as the phase has always reported it.
+ */
+function locatedNodeViolation(
+  violation: AgenticReportError,
+  node: DirectiveNode,
+  options: DirectivePluginOptions,
+): AgenticReportError {
+  const start = node.position?.start.offset;
+  const end = node.position?.end.offset;
+  if (start === undefined || end === undefined) return violation;
+  const source = resolveSourceLocation(options.sourceMap, start, end);
+  if (source === undefined) return violation;
+  const details = {
+    ...violation.diagnostic.details,
+    ...(violation.diagnostic.source?.file === undefined
+      ? {}
+      : { target: violation.diagnostic.source.file }),
+  };
+  return new AgenticReportError(
+    {
+      ...violation.diagnostic,
+      source,
+      ...(Object.keys(details).length === 0 ? {} : { details }),
+    },
+    { cause: violation },
+  );
+}
+
+interface ActionGroupSubject {
+  readonly node: DirectiveNode;
+  readonly placement: (
+    node: DirectiveNode,
+    message: string,
+    remediation: string,
+  ) => AgenticReportError;
+}
+
+/** The single rule of an action group, declared as data like every other rule of this phase. */
+const actionGroupRules = declareAuthoredRules<ActionGroupSubject>({
+  subject: 'actions',
+  rules: [
+    {
+      id: 'action-children-only',
+      check: ({ node, placement }) => {
+        const children = node.children ?? [];
+        const onlyActions =
+          children.length > 0 &&
+          children.every((child) => isDirectiveNode(child) && child.name === 'action');
+        return onlyActions
+          ? undefined
+          : placement(
+              node,
+              'actions accepts one or more action directives as direct children.',
+              'Move prose outside actions and add links with ::action[Label]{href="..."}.',
+            );
+      },
+    },
+  ],
+});
+
+function validateActionGroups(
+  tree: MdastRoot,
+  options: DirectivePluginOptions,
+  violations: AgenticReportError[],
+): void {
   visit(tree, (candidate) => {
     if (!isDirectiveNode(candidate) || candidate.name !== 'actions') return;
-    const children = candidate.children ?? [];
-    if (
-      children.length === 0 ||
-      children.some((child) => !isDirectiveNode(child) || child.name !== 'action')
-    ) {
-      throw attachDirectiveSource(
-        directiveError(
-          candidate,
-          'INVALID_DIRECTIVE_PLACEMENT',
-          'actions accepts one or more action directives as direct children.',
-          'Move prose outside actions and add links with ::action[Label]{href="..."}.',
-        ),
-        candidate,
-        options,
-      );
-    }
+    const found: AgenticReportError[] = [];
+    runAuthoredRules(
+      actionGroupRules,
+      {
+        node: candidate,
+        placement: (node, message, remediation) =>
+          attachDirectiveSource(
+            directiveError(node, 'INVALID_DIRECTIVE_PLACEMENT', message, remediation),
+            node,
+            options,
+          ),
+      },
+      found,
+    );
+    violations.push(...found);
+    return found.length === 0 ? undefined : SKIP;
   });
 }
+
+interface VisualizationContext {
+  readonly attributes: (node: DirectiveNode) => Readonly<Record<string, string | number | boolean>>;
+  readonly fail: (node: DirectiveNode, message: string, remediation: string) => AgenticReportError;
+  readonly warn: (node: DirectiveNode, code: string, message: string, remediation: string) => void;
+}
+
+interface ChartSubject extends VisualizationContext {
+  readonly chart: DirectiveNode;
+  readonly series: readonly DirectiveNode[];
+  readonly chartType: string;
+}
+
+interface ChartSeriesSubject extends VisualizationContext {
+  readonly seriesNode: DirectiveNode;
+  readonly points: readonly DirectiveNode[];
+  readonly chartType: string;
+  readonly canonicalLabels: () => readonly string[] | undefined;
+  readonly rememberLabels: (labels: readonly string[]) => void;
+}
+
+interface DiagramEdgeSubject extends VisualizationContext {
+  readonly edge: DirectiveNode;
+  readonly known: ReadonlySet<string>;
+  readonly type: string;
+}
+
+interface FlowDiagramSubject extends VisualizationContext {
+  readonly diagram: DirectiveNode;
+  readonly groups: readonly DirectiveNode[];
+  readonly nodes: readonly DirectiveNode[];
+  readonly edges: readonly DirectiveNode[];
+}
+
+interface FlowNodeSubject extends VisualizationContext {
+  readonly node: DirectiveNode;
+  readonly groups: readonly DirectiveNode[];
+  readonly knownGroups: ReadonlySet<string>;
+}
+
+interface FlowGroupSubject extends VisualizationContext {
+  readonly group: DirectiveNode;
+  readonly nodes: readonly DirectiveNode[];
+}
+
+interface SequenceDiagramSubject extends VisualizationContext {
+  readonly diagram: DirectiveNode;
+  readonly groups: readonly DirectiveNode[];
+  readonly participants: readonly DirectiveNode[];
+  readonly messages: readonly DirectiveNode[];
+}
+
+interface SequenceParticipantSubject extends VisualizationContext {
+  readonly participant: DirectiveNode;
+}
+
+interface SequenceMessageSubject extends VisualizationContext {
+  readonly message: DirectiveNode;
+}
+
+/** Series count and pie arity are separate questions about the same chart. */
+const chartRules = declareAuthoredRules<ChartSubject>({
+  subject: 'chart',
+  rules: [
+    {
+      id: 'pie-single-series',
+      check: ({ chart, series, chartType, fail }) =>
+        chartType === 'pie' && series.length !== 1
+          ? fail(
+              chart,
+              'Pie charts require exactly one series.',
+              'Keep one series or use a bar chart.',
+            )
+          : undefined,
+    },
+  ],
+});
+
+/**
+ * The rules of one chart series. Label uniqueness, pie values and alignment with the first series
+ * are independent readings of the same series; only alignment needs the labels this series declares,
+ * which is why it names that dependency instead of relying on statement order.
+ */
+const chartSeriesRules = declareAuthoredRules<ChartSeriesSubject>({
+  subject: 'chart/series',
+  rules: [
+    {
+      id: 'unique-point-labels',
+      check: ({ seriesNode, points, attributes, fail }) => {
+        const labels = points.map((point) => String(attributes(point).label));
+        return new Set(labels).size === labels.length
+          ? undefined
+          : fail(
+              seriesNode,
+              'Chart point labels must be unique within each series.',
+              'Use each category label once per series.',
+            );
+      },
+    },
+    {
+      id: 'pie-values',
+      check: ({ seriesNode, points, chartType, attributes, fail }) => {
+        if (chartType !== 'pie') return undefined;
+        const values = points.map((point) => Number(attributes(point).value));
+        return values.some((value) => value < 0) || values.every((value) => value === 0)
+          ? fail(
+              seriesNode,
+              'Pie chart values must be non-negative and include at least one positive value.',
+              'Use zero or positive values, or select a bar or line chart.',
+            )
+          : undefined;
+      },
+    },
+    {
+      id: 'aligned-categories',
+      dependsOn: ['unique-point-labels'],
+      check: ({ seriesNode, points, attributes, canonicalLabels, rememberLabels, fail }) => {
+        const labels = points.map((point) => String(attributes(point).label));
+        const canonical = canonicalLabels();
+        if (canonical === undefined) {
+          rememberLabels(labels);
+          return undefined;
+        }
+        return labels.length !== canonical.length ||
+          labels.some((label, index) => label !== canonical[index])
+          ? fail(
+              seriesNode,
+              'Every chart series must use the same point labels in the same order.',
+              'Align this series with the first series category list.',
+            )
+          : undefined;
+      },
+    },
+  ],
+});
+
+/** Reference validity and self-connection are separate readings of the same edge. */
+const diagramEdgeRules = declareAuthoredRules<DiagramEdgeSubject>({
+  subject: 'diagram/edge',
+  rules: [
+    {
+      id: 'known-endpoints',
+      check: ({ edge, known, attributes, fail }) => {
+        const from = String(attributes(edge).from);
+        const to = String(attributes(edge).to);
+        return known.has(from) && known.has(to)
+          ? undefined
+          : fail(
+              edge,
+              `Diagram edge references an unknown node: ${!known.has(from) ? from : to}.`,
+              'Use ids declared by node directives in this diagram.',
+            );
+      },
+    },
+    {
+      id: 'self-connection',
+      check: ({ edge, type, attributes, fail }) => {
+        const from = String(attributes(edge).from);
+        const to = String(attributes(edge).to);
+        const selfConnectionAllowed =
+          type === 'sequence'
+            ? DIAGRAM_CONTRACT.sequence.selfMessages
+            : DIAGRAM_CONTRACT.flow.selfEdges;
+        return from === to && !selfConnectionAllowed
+          ? fail(
+              edge,
+              type === 'sequence'
+                ? 'Sequence self-messages are not supported.'
+                : 'Diagram self-edges are not supported.',
+              'Connect two distinct nodes.',
+            )
+          : undefined;
+      },
+    },
+  ],
+});
+
+/** Size, grouping arity and direction are independent questions about one flow diagram. */
+const flowDiagramRules = declareAuthoredRules<FlowDiagramSubject>({
+  subject: 'diagram/flow',
+  rules: [
+    {
+      id: 'node-count',
+      check: ({ diagram, nodes, fail }) => {
+        const contract = DIAGRAM_CONTRACT.flow;
+        return nodes.length < contract.nodes.minimum || nodes.length > contract.nodes.maximum
+          ? fail(
+              diagram,
+              `Flow diagrams require ${contract.nodes.minimum} to ${contract.nodes.maximum} nodes.`,
+              'Add nodes or split a larger flow.',
+            )
+          : undefined;
+      },
+    },
+    {
+      id: 'edge-count',
+      check: ({ diagram, edges, fail }) => {
+        const contract = DIAGRAM_CONTRACT.flow;
+        return edges.length > contract.edges.maximum
+          ? fail(
+              diagram,
+              `Flow diagrams support at most ${contract.edges.maximum} edges.`,
+              'Split the flow or remove non-essential connections.',
+            )
+          : undefined;
+      },
+    },
+    {
+      id: 'group-count',
+      check: ({ diagram, groups, fail, warn }) => {
+        const contract = DIAGRAM_CONTRACT.flow;
+        if (groups.length === contract.groups.incomplete) {
+          // A single group is how a grouped flow looks while it is being written: the author has
+          // started grouping and has not finished. Refusing it would make the source unbuildable
+          // mid-edit, so the run continues and says what is still missing.
+          warn(
+            diagram,
+            'INCOMPLETE_DIAGRAM_GROUPING',
+            `A grouped flow with one group is incomplete: ${contract.groups.minimum} to ${contract.groups.maximum} groups are supported.`,
+            'Add the remaining subsystem groups or remove the only group for an ungrouped flow.',
+          );
+          return undefined;
+        }
+        return groups.length !== contract.groups.ungrouped &&
+          (groups.length < contract.groups.minimum || groups.length > contract.groups.maximum)
+          ? fail(
+              diagram,
+              `Grouped flows require ${contract.groups.minimum} to ${contract.groups.maximum} groups.`,
+              'Remove all groups or declare the supported number of subsystem groups.',
+            )
+          : undefined;
+      },
+    },
+    {
+      id: 'group-direction',
+      check: ({ diagram, groups, attributes, fail }) => {
+        const contract = DIAGRAM_CONTRACT.flow;
+        return groups.length > 0 && attributes(diagram).direction !== contract.groups.direction
+          ? fail(
+              diagram,
+              'Grouped flows support only rightward subsystem columns.',
+              'Use direction="right" or remove groups for an ungrouped down flow.',
+            )
+          : undefined;
+      },
+    },
+  ],
+});
+
+/** One node's group assignment, read against the groups the diagram declares. */
+const flowNodeRules = declareAuthoredRules<FlowNodeSubject>({
+  subject: 'diagram/flow/node',
+  rules: [
+    {
+      id: 'group-assignment',
+      check: ({ node, groups, knownGroups, attributes, fail }) => {
+        const contract = DIAGRAM_CONTRACT.flow;
+        const group = attributes(node).group;
+        if (groups.length === 0) {
+          return group === undefined
+            ? undefined
+            : fail(
+                node,
+                `Diagram node references an undeclared group: ${String(group)}.`,
+                'Declare the group or remove the group attribute.',
+              );
+        }
+        return contract.groups.requireEveryNode &&
+          (group === undefined || !knownGroups.has(String(group)))
+          ? fail(
+              node,
+              group === undefined
+                ? 'Every node in a grouped flow requires a group.'
+                : `Diagram node references an unknown group: ${String(group)}.`,
+              'Reference one of the groups declared in this diagram.',
+            )
+          : undefined;
+      },
+    },
+  ],
+});
+
+/** Whether a group holds nodes, read from the node assignments the diagram accepted. */
+const flowGroupRules = declareAuthoredRules<FlowGroupSubject>({
+  subject: 'diagram/flow/group',
+  rules: [
+    {
+      id: 'group-membership',
+      check: ({ group, nodes, attributes, fail }) => {
+        const id = String(attributes(group).id);
+        return nodes.some((node) => attributes(node).group === id)
+          ? undefined
+          : fail(
+              group,
+              `Diagram group has no nodes: ${id}.`,
+              'Assign at least one node to this group.',
+            );
+      },
+    },
+  ],
+});
+
+/** Group support, direction and the two arities are independent readings of one sequence diagram. */
+const sequenceDiagramRules = declareAuthoredRules<SequenceDiagramSubject>({
+  subject: 'diagram/sequence',
+  rules: [
+    {
+      id: 'no-groups',
+      check: ({ diagram, groups, fail }) =>
+        !DIAGRAM_CONTRACT.sequence.groups && groups.length > 0
+          ? fail(
+              groups[0] ?? diagram,
+              'Sequence diagrams do not support subsystem groups.',
+              'Remove group directives and node group attributes.',
+            )
+          : undefined,
+    },
+    {
+      id: 'no-direction',
+      check: ({ diagram, fail }) =>
+        DIAGRAM_CONTRACT.sequence.direction === 'forbidden' &&
+        diagram.attributes?.direction !== undefined
+          ? fail(
+              diagram,
+              'Sequence diagrams do not accept a flow direction.',
+              'Remove the direction attribute from this sequence diagram.',
+            )
+          : undefined,
+    },
+    {
+      id: 'participant-count',
+      check: ({ diagram, participants, fail }) => {
+        const contract = DIAGRAM_CONTRACT.sequence;
+        return participants.length < contract.participants.minimum ||
+          participants.length > contract.participants.maximum
+          ? fail(
+              diagram,
+              `Sequence diagrams require ${contract.participants.minimum} to ${contract.participants.maximum} participants.`,
+              'Adjust the number of node participants.',
+            )
+          : undefined;
+      },
+    },
+    {
+      id: 'message-count',
+      check: ({ diagram, messages, fail }) => {
+        const contract = DIAGRAM_CONTRACT.sequence;
+        return messages.length < contract.messages.minimum ||
+          messages.length > contract.messages.maximum
+          ? fail(
+              diagram,
+              `Sequence diagrams require ${contract.messages.minimum} to ${contract.messages.maximum} messages.`,
+              'Adjust the number of edge messages.',
+            )
+          : undefined;
+      },
+    },
+  ],
+});
+
+const sequenceParticipantRules = declareAuthoredRules<SequenceParticipantSubject>({
+  subject: 'diagram/sequence/participant',
+  rules: [
+    {
+      id: 'no-participant-group',
+      check: ({ participant, attributes, fail }) =>
+        !DIAGRAM_CONTRACT.sequence.participantGroups && attributes(participant).group !== undefined
+          ? fail(
+              participant,
+              'Sequence participants do not accept a group.',
+              'Remove the group attribute.',
+            )
+          : undefined,
+    },
+  ],
+});
+
+const sequenceMessageRules = declareAuthoredRules<SequenceMessageSubject>({
+  subject: 'diagram/sequence/message',
+  rules: [
+    {
+      id: 'label-required',
+      check: ({ message, attributes, fail }) =>
+        DIAGRAM_CONTRACT.sequence.messages.labelRequired && attributes(message).label === undefined
+          ? fail(message, 'Sequence messages require a label.', 'Add a label to this edge message.')
+          : undefined,
+    },
+  ],
+});
 
 function validateVisualizationData(
   tree: MdastRoot,
   attributesByNode: WeakMap<object, Readonly<Record<string, string | number | boolean>>>,
   options: DirectivePluginOptions,
+  violations: AgenticReportError[],
 ): void {
+  const context: VisualizationContext = { attributes, fail, warn };
   visit(tree, (candidate) => {
     if (!isDirectiveNode(candidate)) return;
-    if (candidate.name === 'chart') validateChart(candidate);
-    if (candidate.name === 'diagram') validateDiagram(candidate);
-    if (candidate.name === 'timeline') requireBoundedChildren(candidate, 'event', 1, 20);
+    if (candidate.name !== 'chart' && candidate.name !== 'diagram' && candidate.name !== 'timeline')
+      return;
+    if (!fullyInterpreted(candidate)) return SKIP;
+    const found: AgenticReportError[] = [];
+    if (candidate.name === 'chart') validateChart(candidate, found);
+    if (candidate.name === 'diagram') validateDiagram(candidate, found);
+    if (candidate.name === 'timeline') requireBoundedChildren(candidate, 'event', 1, 20, found);
+    violations.push(...found);
+    return found.length === 0 ? undefined : SKIP;
   });
 
-  function validateChart(chart: DirectiveNode): void {
-    const series = requireBoundedChildren(chart, 'series', 1, 6);
+  function validateChart(chart: DirectiveNode, found: AgenticReportError[]): void {
+    const series = requireBoundedChildren(chart, 'series', 1, 6, found);
+    if (series === undefined) return;
     const chartType = String(attributes(chart).type);
-    if (chartType === 'pie' && series.length !== 1) {
-      fail(chart, 'Pie charts require exactly one series.', 'Keep one series or use a bar chart.');
-    }
+    // Series are read against an accepted chart shape: with the arity of a pie chart refused, the
+    // second series is not a series the author meant to align, and judging it would only restate
+    // the refusal.
+    if (runAuthoredRules(chartRules, { ...context, chart, series, chartType }, found) === 'refused')
+      return;
     let canonicalLabels: readonly string[] | undefined;
+    // Series are read against the labels of the first accepted series, so a refused series says
+    // nothing about the next one: the chart answers for each of them.
     for (const seriesNode of series) {
-      const points = requireBoundedChildren(seriesNode, 'point', 1, 12);
-      const labels = points.map((point) => String(attributes(point).label));
-      if (new Set(labels).size !== labels.length) {
-        fail(
+      const points = requireBoundedChildren(seriesNode, 'point', 1, 12, found);
+      if (points === undefined) continue;
+      runAuthoredRules(
+        chartSeriesRules,
+        {
+          ...context,
           seriesNode,
-          'Chart point labels must be unique within each series.',
-          'Use each category label once per series.',
-        );
-      }
-      if (chartType === 'pie') {
-        const values = points.map((point) => Number(attributes(point).value));
-        if (values.some((value) => value < 0) || values.every((value) => value === 0)) {
-          fail(
-            seriesNode,
-            'Pie chart values must be non-negative and include at least one positive value.',
-            'Use zero or positive values, or select a bar or line chart.',
-          );
-        }
-      }
-      if (canonicalLabels === undefined) canonicalLabels = labels;
-      else if (
-        labels.length !== canonicalLabels.length ||
-        labels.some((label, index) => label !== canonicalLabels?.[index])
-      ) {
-        fail(
-          seriesNode,
-          'Every chart series must use the same point labels in the same order.',
-          'Align this series with the first series category list.',
-        );
-      }
+          points,
+          chartType,
+          canonicalLabels: () => canonicalLabels,
+          rememberLabels: (labels) => {
+            canonicalLabels = labels;
+          },
+        },
+        found,
+      );
     }
   }
 
-  function validateDiagram(diagram: DirectiveNode): void {
-    const children = requireOnlyDirectiveChildren(diagram, ['group', 'node', 'edge']);
+  function validateDiagram(diagram: DirectiveNode, found: AgenticReportError[]): void {
+    const children = requireOnlyDirectiveChildren(diagram, ['group', 'node', 'edge'], found);
+    if (children === undefined) return;
     const type = String(attributes(diagram).type);
     const groups = children.filter((child) => child.name === 'group');
     const nodes = children.filter((child) => child.name === 'node');
     const edges = children.filter((child) => child.name === 'edge');
     const ids = nodes.map((node) => String(attributes(node).id));
     if (new Set(ids).size !== ids.length) {
-      fail(diagram, 'Diagram node ids must be unique.', 'Give every node a distinct id.');
+      found.push(
+        fail(diagram, 'Diagram node ids must be unique.', 'Give every node a distinct id.'),
+      );
     }
     const groupIds = groups.map((group) => String(attributes(group).id));
     if (new Set(groupIds).size !== groupIds.length) {
-      fail(diagram, 'Diagram group ids must be unique.', 'Give every group a distinct id.');
+      found.push(
+        fail(diagram, 'Diagram group ids must be unique.', 'Give every group a distinct id.'),
+      );
     }
-    if (type === 'flow') validateFlowDiagram(diagram, groups, nodes, edges, groupIds);
-    else validateSequenceDiagram(diagram, groups, nodes, edges);
+    if (type === 'flow') validateFlowDiagram(diagram, groups, nodes, edges, groupIds, found);
+    else validateSequenceDiagram(diagram, groups, nodes, edges, found);
     const known = new Set(ids);
+    // Edges are read against the declared nodes, not against each other, so every edge answers for
+    // itself and a refused one does not hide the next.
     for (const edge of edges) {
-      const from = String(attributes(edge).from);
-      const to = String(attributes(edge).to);
-      if (!known.has(from) || !known.has(to)) {
-        fail(
-          edge,
-          `Diagram edge references an unknown node: ${!known.has(from) ? from : to}.`,
-          'Use ids declared by node directives in this diagram.',
-        );
-      }
-      const selfConnectionAllowed =
-        type === 'sequence'
-          ? DIAGRAM_CONTRACT.sequence.selfMessages
-          : DIAGRAM_CONTRACT.flow.selfEdges;
-      if (from === to && !selfConnectionAllowed) {
-        fail(
-          edge,
-          type === 'sequence'
-            ? 'Sequence self-messages are not supported.'
-            : 'Diagram self-edges are not supported.',
-          'Connect two distinct nodes.',
-        );
-      }
+      runAuthoredRules(diagramEdgeRules, { ...context, edge, known, type }, found);
     }
   }
 
@@ -857,72 +1759,20 @@ function validateVisualizationData(
     nodes: readonly DirectiveNode[],
     edges: readonly DirectiveNode[],
     groupIds: readonly string[],
+    found: AgenticReportError[],
   ): void {
-    const contract = DIAGRAM_CONTRACT.flow;
-    if (nodes.length < contract.nodes.minimum || nodes.length > contract.nodes.maximum) {
-      fail(
-        diagram,
-        `Flow diagrams require ${contract.nodes.minimum} to ${contract.nodes.maximum} nodes.`,
-        'Add nodes or split a larger flow.',
-      );
-    }
-    if (edges.length > contract.edges.maximum) {
-      fail(
-        diagram,
-        `Flow diagrams support at most ${contract.edges.maximum} edges.`,
-        'Split the flow or remove non-essential connections.',
-      );
-    }
-    if (
-      groups.length !== contract.groups.ungrouped &&
-      (groups.length < contract.groups.minimum || groups.length > contract.groups.maximum)
-    ) {
-      fail(
-        diagram,
-        `Grouped flows require ${contract.groups.minimum} to ${contract.groups.maximum} groups.`,
-        'Remove all groups or declare the supported number of subsystem groups.',
-      );
-    }
-    if (groups.length > 0 && attributes(diagram).direction !== contract.groups.direction) {
-      fail(
-        diagram,
-        'Grouped flows support only rightward subsystem columns.',
-        'Use direction="right" or remove groups for an ungrouped down flow.',
-      );
-    }
+    runAuthoredRules(flowDiagramRules, { ...context, diagram, groups, nodes, edges }, found);
     const knownGroups = new Set(groupIds);
+    // Nodes are read against the declared groups, not against each other.
+    const beforeNodes = found.length;
     for (const node of nodes) {
-      const group = attributes(node).group;
-      if (groups.length === 0 && group !== undefined) {
-        fail(
-          node,
-          `Diagram node references an undeclared group: ${String(group)}.`,
-          'Declare the group or remove the group attribute.',
-        );
-      }
-      if (
-        groups.length > 0 &&
-        contract.groups.requireEveryNode &&
-        (group === undefined || !knownGroups.has(String(group)))
-      ) {
-        fail(
-          node,
-          group === undefined
-            ? 'Every node in a grouped flow requires a group.'
-            : `Diagram node references an unknown group: ${String(group)}.`,
-          'Reference one of the groups declared in this diagram.',
-        );
-      }
+      runAuthoredRules(flowNodeRules, { ...context, node, groups, knownGroups }, found);
     }
+    // Whether a group holds nodes is read from the very assignments just refused, so an empty group
+    // beside a node without its group only repeats that refusal.
+    if (found.length !== beforeNodes) return;
     for (const group of groups) {
-      const id = String(attributes(group).id);
-      if (!nodes.some((node) => attributes(node).group === id)) {
-        fail(
-          group,
-          `Diagram group has no nodes: ${id}.`,
-          'Assign at least one node to this group.',
-        );
-      }
+      runAuthoredRules(flowGroupRules, { ...context, group, nodes }, found);
     }
   }
 
@@ -931,55 +1781,20 @@ function validateVisualizationData(
     groups: readonly DirectiveNode[],
     participants: readonly DirectiveNode[],
     messages: readonly DirectiveNode[],
+    found: AgenticReportError[],
   ): void {
-    const contract = DIAGRAM_CONTRACT.sequence;
-    if (!contract.groups && groups.length > 0) {
-      fail(
-        groups[0] ?? diagram,
-        'Sequence diagrams do not support subsystem groups.',
-        'Remove group directives and node group attributes.',
-      );
-    }
-    if (contract.direction === 'forbidden' && diagram.attributes?.direction !== undefined) {
-      fail(
-        diagram,
-        'Sequence diagrams do not accept a flow direction.',
-        'Remove the direction attribute from this sequence diagram.',
-      );
-    }
-    if (
-      participants.length < contract.participants.minimum ||
-      participants.length > contract.participants.maximum
-    ) {
-      fail(
-        diagram,
-        `Sequence diagrams require ${contract.participants.minimum} to ${contract.participants.maximum} participants.`,
-        'Adjust the number of node participants.',
-      );
-    }
-    if (
-      messages.length < contract.messages.minimum ||
-      messages.length > contract.messages.maximum
-    ) {
-      fail(
-        diagram,
-        `Sequence diagrams require ${contract.messages.minimum} to ${contract.messages.maximum} messages.`,
-        'Adjust the number of edge messages.',
-      );
-    }
+    runAuthoredRules(
+      sequenceDiagramRules,
+      { ...context, diagram, groups, participants, messages },
+      found,
+    );
+    // Participants and messages are read against the diagram contract, not against each other, so
+    // every one of them answers for itself.
     for (const participant of participants) {
-      if (!contract.participantGroups && attributes(participant).group !== undefined) {
-        fail(
-          participant,
-          'Sequence participants do not accept a group.',
-          'Remove the group attribute.',
-        );
-      }
+      runAuthoredRules(sequenceParticipantRules, { ...context, participant }, found);
     }
     for (const message of messages) {
-      if (contract.messages.labelRequired && attributes(message).label === undefined) {
-        fail(message, 'Sequence messages require a label.', 'Add a label to this edge message.');
-      }
+      runAuthoredRules(sequenceMessageRules, { ...context, message }, found);
     }
   }
 
@@ -988,14 +1803,19 @@ function validateVisualizationData(
     childName: string,
     minimum: number,
     maximum: number,
-  ): readonly DirectiveNode[] {
-    const children = requireOnlyDirectiveChildren(parent, [childName]);
+    found: AgenticReportError[],
+  ): readonly DirectiveNode[] | undefined {
+    const children = requireOnlyDirectiveChildren(parent, [childName], found);
+    if (children === undefined) return undefined;
     if (children.length < minimum || children.length > maximum) {
-      fail(
-        parent,
-        `${parent.name} requires ${minimum} to ${maximum} ${childName} directives.`,
-        `Adjust the number of direct ${childName} children.`,
+      found.push(
+        fail(
+          parent,
+          `${parent.name} requires ${minimum} to ${maximum} ${childName} directives.`,
+          `Adjust the number of direct ${childName} children.`,
+        ),
       );
+      return undefined;
     }
     return children;
   }
@@ -1003,127 +1823,221 @@ function validateVisualizationData(
   function requireOnlyDirectiveChildren(
     parent: DirectiveNode,
     allowed: readonly string[],
-  ): readonly DirectiveNode[] {
+    found: AgenticReportError[],
+  ): readonly DirectiveNode[] | undefined {
     const children = parent.children ?? [];
     const directives = children.filter(isDirectiveNode);
     if (directives.length !== children.length) {
-      fail(
-        parent,
-        `${parent.name} accepts only ${allowed.join(' or ')} directives as direct children.`,
-        'Move prose into an event body or outside this data container.',
+      found.push(
+        fail(
+          parent,
+          `${parent.name} accepts only ${allowed.join(' or ')} directives as direct children.`,
+          'Move prose into an event body or outside this data container.',
+        ),
       );
+      return undefined;
     }
     return directives;
   }
 
   function attributes(node: DirectiveNode): Readonly<Record<string, string | number | boolean>> {
-    const values = attributesByNode.get(node);
-    if (values === undefined) throw new Error(`Missing validated attributes for ${node.name}.`);
-    return values;
+    return attributesByNode.get(node) ?? {};
   }
 
-  function fail(node: DirectiveNode, message: string, remediation: string): never {
-    throw attachDirectiveSource(
+  /**
+   * Whether every node of this visualization reached interpretation. One that did not had its own
+   * form or attributes refused already, and every reading below — node identity, edge endpoints,
+   * group membership — is derived from that unmade interpretation, so the visualization is skipped
+   * instead of answering about values nobody accepted.
+   */
+  function fullyInterpreted(root: DirectiveNode): boolean {
+    if (attributesByNode.get(root) === undefined) return false;
+    return (root.children ?? []).every(
+      (child) => !isDirectiveNode(child) || attributesByNode.get(child) !== undefined,
+    );
+  }
+
+  function fail(node: DirectiveNode, message: string, remediation: string): AgenticReportError {
+    return attachDirectiveSource(
       directiveError(node, 'INVALID_VISUALIZATION_DATA', message, remediation),
       node,
       options,
     );
+  }
+
+  function warn(node: DirectiveNode, code: string, message: string, remediation: string): void {
+    const located = attachDirectiveSource(
+      new AgenticReportError({ level: 'warning', code, message, remediation }),
+      node,
+      options,
+    );
+    options.warnings?.push(located.diagnostic);
   }
 }
 
 interface GlossaryDefinition {
   readonly key: string;
   readonly term: string;
+  /** Author-declared spellings besides the canonical term; empty when none were declared. */
+  readonly forms: readonly string[];
   readonly node: DirectiveNode;
 }
+
+/** Bounds on the declared-form list, stated like every other list this registry accepts. */
+const MAX_GLOSSARY_FORMS = 24;
+const MAX_GLOSSARY_FORM_LENGTH = 64;
+
+interface CodeTermBlockSubject {
+  readonly block: { readonly node: Code; readonly keys: readonly string[] };
+  readonly glossaryByKey: ReadonlyMap<string, GlossaryDefinition>;
+  readonly refusedGlossaryKeys: ReadonlySet<string>;
+  readonly ranges: Array<{
+    readonly key: string;
+    readonly term: string;
+    readonly start: number;
+    readonly end: number;
+  }>;
+  readonly refuse: (
+    code: string,
+    message: string,
+    remediation: string,
+    details: Readonly<Record<string, unknown>>,
+  ) => AgenticReportError;
+}
+
+/**
+ * The rules of one annotated code fence. Locating the terms and comparing their ranges both read the
+ * definitions the keys name, so both declare that dependency: with a key undefined, a range is not
+ * missing — it does not exist.
+ */
+const codeTermBlockRules = declareAuthoredRules<CodeTermBlockSubject>({
+  subject: 'code-fence/terms',
+  rules: [
+    {
+      id: 'known-keys',
+      check: ({ block, glossaryByKey, refusedGlossaryKeys, refuse }) => {
+        // Each annotated key stands on its own: a key without a definition says nothing about the
+        // next one, so the block answers for all of them. A key whose own definition was refused
+        // repeats that refusal and is left out, exactly as a term reference is.
+        const missing = block.keys.filter((key) => !glossaryByKey.has(key));
+        if (missing.length === 0) return undefined;
+        const reportable = missing
+          .filter((key) => !refusedGlossaryKeys.has(key))
+          .map((key) =>
+            refuse(
+              'UNKNOWN_GLOSSARY_TERM',
+              `No glossary definition exists for code term key: ${key}.`,
+              'Add a glossary definition with the same key or correct the code metadata.',
+              { key },
+            ),
+          );
+        // Every missing key leaves the block unreadable, even when the record itself is suppressed
+        // as derived: the ranges the later rules compare simply do not exist.
+        return reportable.length === 0 ? 'refused' : reportable;
+      },
+    },
+    {
+      id: 'locatable-terms',
+      dependsOn: ['known-keys'],
+      check: ({ block, glossaryByKey, ranges, refuse }) => {
+        const found: AgenticReportError[] = [];
+        // Each key is located in the block text on its own, so a key that cannot be found says
+        // nothing about the next one.
+        for (const key of block.keys) {
+          const definition = glossaryByKey.get(key);
+          if (definition === undefined) {
+            throw new Error(`Missing glossary definition for validated code term key: ${key}.`);
+          }
+          const term = codeTermMatchText(definition, CODE_TERM_METADATA.matching.source);
+          const start = firstCodeTermIndex(block.node.value, term, CODE_TERM_METADATA.matching);
+          if (start === -1) {
+            found.push(
+              refuse(
+                'CODE_TERM_NOT_FOUND',
+                `Code term ${key} does not occur as canonical text: ${term}.`,
+                'Correct the key or include the exact canonical term in this code block.',
+                { key },
+              ),
+            );
+            continue;
+          }
+          const end = start + term.length;
+          if (
+            CODE_TERM_METADATA.matching.lineBoundary === 'reject' &&
+            block.node.value.slice(start, end).includes('\n')
+          ) {
+            found.push(
+              refuse(
+                'INVALID_CODE_TERM_METADATA',
+                `Code term ${key} crosses a line boundary.`,
+                'Use a glossary term that occurs within one code line.',
+                { key },
+              ),
+            );
+            continue;
+          }
+          ranges.push({ key, term, start, end });
+        }
+        return found;
+      },
+    },
+    {
+      // Overlap is computed from the ranges of every annotated key, so it cannot answer for a block
+      // whose keys were refused or could not be located.
+      id: 'no-overlap',
+      dependsOn: ['known-keys', 'locatable-terms'],
+      check: ({ block, ranges, refuse }) => {
+        if (ranges.length !== block.keys.length) return undefined;
+        const ordered = [...ranges].sort(
+          (left, right) => left.start - right.start || right.end - left.end,
+        );
+        for (let index = 1; index < ordered.length; index += 1) {
+          const previous = ordered[index - 1];
+          const current = ordered[index];
+          if (
+            CODE_TERM_METADATA.matching.overlap === 'reject' &&
+            previous !== undefined &&
+            current !== undefined &&
+            current.start < previous.end
+          ) {
+            return refuse(
+              'OVERLAPPING_CODE_TERMS',
+              `Code terms ${previous.key} and ${current.key} overlap in their first occurrences.`,
+              'Annotate only one of the overlapping glossary terms in this code block.',
+              { keys: [previous.key, current.key] },
+            );
+          }
+        }
+        return undefined;
+      },
+    },
+  ],
+});
 
 function validateCodeTermBlocks(
   blocks: readonly { readonly node: Code; readonly keys: readonly string[] }[],
   glossaryByKey: ReadonlyMap<string, GlossaryDefinition>,
+  refusedGlossaryKeys: ReadonlySet<string>,
   options: DirectivePluginOptions,
+  violations: AgenticReportError[],
 ): void {
   for (const block of blocks) {
-    const ranges: Array<{
-      readonly key: string;
-      readonly term: string;
-      readonly start: number;
-      readonly end: number;
-    }> = [];
-    for (const key of block.keys) {
-      const definition = glossaryByKey.get(key);
-      if (definition === undefined) {
-        throw attachNodeSource(
-          new AgenticReportError({
-            level: 'error',
-            code: 'UNKNOWN_GLOSSARY_TERM',
-            message: `No glossary definition exists for code term key: ${key}.`,
-            remediation:
-              'Add a glossary definition with the same key or correct the code metadata.',
-            details: { key },
-          }),
-          block.node,
-          options,
-        );
-      }
-      const term = codeTermMatchText(definition, CODE_TERM_METADATA.matching.source);
-      const start = firstCodeTermIndex(block.node.value, term, CODE_TERM_METADATA.matching);
-      if (start === -1) {
-        throw attachNodeSource(
-          new AgenticReportError({
-            level: 'error',
-            code: 'CODE_TERM_NOT_FOUND',
-            message: `Code term ${key} does not occur as canonical text: ${term}.`,
-            remediation: 'Correct the key or include the exact canonical term in this code block.',
-            details: { key },
-          }),
-          block.node,
-          options,
-        );
-      }
-      const end = start + term.length;
-      if (
-        CODE_TERM_METADATA.matching.lineBoundary === 'reject' &&
-        block.node.value.slice(start, end).includes('\n')
-      ) {
-        throw attachNodeSource(
-          new AgenticReportError({
-            level: 'error',
-            code: 'INVALID_CODE_TERM_METADATA',
-            message: `Code term ${key} crosses a line boundary.`,
-            remediation: 'Use a glossary term that occurs within one code line.',
-            details: { key },
-          }),
-          block.node,
-          options,
-        );
-      }
-      ranges.push({ key, term, start, end });
-    }
-    const ordered = [...ranges].sort(
-      (left, right) => left.start - right.start || right.end - left.end,
+    runAuthoredRules(
+      codeTermBlockRules,
+      {
+        block,
+        glossaryByKey,
+        refusedGlossaryKeys,
+        ranges: [],
+        refuse: (code, message, remediation, details) =>
+          attachNodeSource(
+            new AgenticReportError({ level: 'error', code, message, remediation, details }),
+            block.node,
+            options,
+          ),
+      },
+      violations,
     );
-    for (let index = 1; index < ordered.length; index += 1) {
-      const previous = ordered[index - 1];
-      const current = ordered[index];
-      if (
-        CODE_TERM_METADATA.matching.overlap === 'reject' &&
-        previous !== undefined &&
-        current !== undefined &&
-        current.start < previous.end
-      ) {
-        throw attachNodeSource(
-          new AgenticReportError({
-            level: 'error',
-            code: 'OVERLAPPING_CODE_TERMS',
-            message: `Code terms ${previous.key} and ${current.key} overlap in their first occurrences.`,
-            remediation: 'Annotate only one of the overlapping glossary terms in this code block.',
-            details: { keys: [previous.key, current.key] },
-          }),
-          block.node,
-          options,
-        );
-      }
-    }
   }
 }
 
@@ -1201,35 +2115,75 @@ const INLINE_WRAPPERS = new Set(['delete', 'emphasis', 'link', 'linkReference', 
 const COMMONMARK_ESCAPE_OR_REFERENCE =
   /\\([!-/:-@[-`{-~])|&(#(?:\d{1,7}|x[\da-f]{1,6})|[\da-z]{1,31});/giu;
 
+/**
+ * A registered term must be introduced by an explicit reference the first time it appears in a
+ * section; later mentions in that same section may stay plain prose. Marking every occurrence is
+ * what made the glossary unusable for inflected languages, where one term is written many times.
+ */
 function validateUnmarkedGlossaryTerms(
   tree: MdastRoot,
   definitions: readonly GlossaryDefinition[],
   options: DirectivePluginOptions,
+  violations: AgenticReportError[],
 ): void {
   if (definitions.length === 0) return;
   const ordered = [...definitions].sort((left, right) => right.term.length - left.term.length);
-  walk(tree as TraversableNode, false);
+  walk(tree as TraversableNode, new Set<string>());
 
-  function walk(node: TraversableNode, excluded: boolean): void {
-    const nextExcluded =
-      excluded ||
-      (node.type?.endsWith('Directive') === true &&
-        (node.name === 'glossary' || node.name === 'term')) ||
-      node.type === 'code' ||
-      node.type === 'inlineCode';
-    if (nextExcluded) return;
-    if (node.type !== undefined && PROSE_CONTAINERS.has(node.type)) {
-      validateProseContainer(node, ordered, options);
+  function walk(node: TraversableNode, introduced: Set<string>): void {
+    if (node.type === 'code' || node.type === 'inlineCode') return;
+    if (isDirectiveNode(node) && (node.name === 'glossary' || node.name === 'term')) {
+      if (node.name === 'term') introduced.add(String(node.attributes?.key ?? ''));
       return;
     }
-    for (const child of node.children ?? []) walk(child, nextExcluded);
+    if (node.type !== undefined && PROSE_CONTAINERS.has(node.type)) {
+      // Prose containers are independent subjects: an unmarked term in one paragraph says nothing
+      // about the next, so the walk continues and every container answers for itself.
+      runAuthoredRules(
+        proseContainerRules,
+        { container: node, definitions: ordered, options, introduced },
+        violations,
+      );
+      return;
+    }
+    // Each section carries its own introductions, so a reader entering mid-document still meets the
+    // term explained where they are reading.
+    const scope = isDirectiveNode(node) && node.name === 'section' ? new Set<string>() : introduced;
+    for (const child of node.children ?? []) walk(child, scope);
   }
 }
+
+interface ProseContainerSubject {
+  readonly container: TraversableNode;
+  readonly definitions: readonly GlossaryDefinition[];
+  readonly options: DirectivePluginOptions;
+  readonly introduced: Set<string>;
+}
+
+/**
+ * The rule of one prose container. Every registered term left unmarked in it is an independent fact,
+ * so the rule answers with all of them rather than with the first.
+ */
+const proseContainerRules = declareAuthoredRules<ProseContainerSubject>({
+  subject: 'prose-container/glossary',
+  rules: [
+    {
+      id: 'first-occurrence-marked',
+      check: ({ container, definitions, options, introduced }) => {
+        const found: AgenticReportError[] = [];
+        validateProseContainer(container, definitions, options, introduced, found);
+        return found;
+      },
+    },
+  ],
+});
 
 function validateProseContainer(
   container: TraversableNode,
   definitions: readonly GlossaryDefinition[],
   options: DirectivePluginOptions,
+  introduced: Set<string>,
+  violations: AgenticReportError[],
 ): void {
   let visible = '';
   let segments: ProseSegment[] = [];
@@ -1237,9 +2191,16 @@ function validateProseContainer(
 
   const flush = (): void => {
     if (visible.length === 0) return;
-    const match = earliestGlossaryMatch(visible, definitions);
-    if (match !== undefined)
-      throw unmarkedGlossaryError(match, visible, segments, wrappers, options);
+    // Different terms left unmarked in the same prose are independent facts, so the container
+    // answers for all of them. A term already reported is answered for: every later mention of it
+    // would only repeat that refusal, so the section treats it as introduced from here on.
+    for (;;) {
+      const pending = definitions.filter((definition) => !introduced.has(definition.key));
+      const match = pending.length === 0 ? undefined : earliestGlossaryMatch(visible, pending);
+      if (match === undefined) break;
+      introduced.add(match.definition.key);
+      violations.push(unmarkedGlossaryError(match, visible, segments, wrappers, options));
+    }
     visible = '';
     segments = [];
     wrappers.length = 0;
@@ -1252,7 +2213,10 @@ function validateProseContainer(
       node.type === 'code' ||
       node.type === 'inlineCode'
     ) {
+      // Text before an explicit reference is still unintroduced; the reference counts only after it.
       flush();
+      if (isDirectiveNode(node) && node.name === 'term')
+        introduced.add(String(node.attributes?.key ?? ''));
       return;
     }
     if (node.type === 'text' && typeof node.value === 'string') {
@@ -1342,6 +2306,7 @@ function unmarkedGlossaryError(
     readonly definition: GlossaryDefinition;
     readonly index: number;
     readonly length: number;
+    readonly label: string;
   },
   visible: string,
   segments: readonly ProseSegment[],
@@ -1406,16 +2371,51 @@ function unmarkedGlossaryError(
     }
   }
 
-  const replacement = `${visible.slice(visibleStart, match.index)}:term[${escapeDirectiveLabel(match.definition.term)}]{key="${match.definition.key}"}${visible.slice(matchEnd, visibleEnd)}`;
+  const replacement = `${visible.slice(visibleStart, match.index)}:term[${escapeDirectiveLabel(match.label)}]{key="${match.definition.key}"}${visible.slice(matchEnd, visibleEnd)}`;
   const source = resolveSourceLocation(options.sourceMap, sourceStart, sourceEnd);
+  const fix = applicableGlossaryFix({
+    replacement,
+    options,
+    sourceStart,
+    sourceEnd,
+    // The envelope is compared in authored coordinates, not visible ones. A link whose label is
+    // exactly the term occupies the same visible span as the term itself while its authored span
+    // covers `[label](url)` entirely, so a visible-only comparison sees no expansion and hands out a
+    // replacement that deletes the author's URL.
+    envelopeExpanded:
+      mappedSourceStart === undefined ||
+      mappedSourceEnd === undefined ||
+      sourceStart !== mappedSourceStart ||
+      sourceEnd !== mappedSourceEnd,
+  });
   return new AgenticReportError({
     level: 'error',
     code: 'UNMARKED_GLOSSARY_TERM',
     message: `Registered glossary term must use a term reference: ${match.definition.term}.`,
     remediation: `Replace this occurrence with ${replacement}.`,
     ...(source === undefined ? {} : { source }),
+    ...(fix === undefined ? {} : { fix }),
     details: { key: match.definition.key },
   });
+}
+
+/**
+ * The replacement as applicable data, or nothing when applying it would not be safe. Withholding is
+ * the deliberate answer rather than a best effort: a consumer that receives the field is entitled to
+ * write it into the file unread.
+ */
+function applicableGlossaryFix(input: {
+  readonly replacement: string;
+  readonly options: DirectivePluginOptions;
+  readonly sourceStart: number;
+  readonly sourceEnd: number;
+  readonly envelopeExpanded: boolean;
+}): DiagnosticFix | undefined {
+  if (input.envelopeExpanded) return undefined;
+  if (!isTransportSafeReplacement(input.replacement)) return undefined;
+  const range = resolveSourceRange(input.options.sourceMap, input.sourceStart, input.sourceEnd);
+  if (range === undefined) return undefined;
+  return { ...range, replacement: input.replacement };
 }
 
 function visibleSourceMapping(
@@ -1485,22 +2485,99 @@ function segmentAt(
   );
 }
 
+/**
+ * Reads the declared-form list of one glossary definition. Bounds are enforced here rather than in
+ * the attribute constraint because the attribute carries a list in one string: the registry can
+ * bound the whole string, not its items.
+ */
+/**
+ * The spellings this definition declares, or the violation that prevents reading them. Bounds are
+ * enforced here rather than in the attribute constraint because the attribute carries a list in one
+ * string: the registry can bound the whole string, not its items.
+ */
+function declaredGlossaryForms(
+  value: unknown,
+  node: DirectiveNode,
+): readonly string[] | AgenticReportError {
+  if (value === undefined) return [];
+  const declared = String(value)
+    .split(',')
+    .map((form) => form.trim())
+    .filter((form) => form.length > 0);
+  if (declared.length === 0) {
+    return directiveError(
+      node,
+      'INVALID_DIRECTIVE_ATTRIBUTE',
+      'Glossary forms must list at least one spelling.',
+      'Remove the empty forms attribute or list the spellings, separated by commas.',
+    );
+  }
+  if (declared.length > MAX_GLOSSARY_FORMS) {
+    return directiveError(
+      node,
+      'INVALID_DIRECTIVE_ATTRIBUTE',
+      `Glossary forms must list at most ${MAX_GLOSSARY_FORMS} spellings.`,
+      'Keep the declared spellings to the ones the text actually uses.',
+    );
+  }
+  for (const form of declared) {
+    if (form.length > MAX_GLOSSARY_FORM_LENGTH) {
+      return directiveError(
+        node,
+        'INVALID_DIRECTIVE_ATTRIBUTE',
+        `Glossary form must be at most ${MAX_GLOSSARY_FORM_LENGTH} characters: ${form}.`,
+        'Declare one spelling per list item rather than a phrase.',
+      );
+    }
+  }
+  const unique = new Set(declared.map((form) => form.toLocaleLowerCase('und')));
+  if (unique.size !== declared.length) {
+    return directiveError(
+      node,
+      'INVALID_DIRECTIVE_ATTRIBUTE',
+      'Glossary forms must not repeat a spelling.',
+      'List each spelling once; case alone does not make two forms.',
+    );
+  }
+  return declared;
+}
+
+/**
+ * The earliest occurrence of any registered term, matched through the canonical spelling and every
+ * spelling its author declared. The visible text of the match is carried back, because the term
+ * reference that replaces it must keep the spelling the sentence used, not the dictionary headword.
+ */
 function earliestGlossaryMatch(
   value: string,
   definitions: readonly GlossaryDefinition[],
 ):
-  | { readonly definition: GlossaryDefinition; readonly index: number; readonly length: number }
+  | {
+      readonly definition: GlossaryDefinition;
+      readonly index: number;
+      readonly length: number;
+      readonly label: string;
+    }
   | undefined {
   let earliest:
-    | { readonly definition: GlossaryDefinition; readonly index: number; readonly length: number }
+    | {
+        readonly definition: GlossaryDefinition;
+        readonly index: number;
+        readonly length: number;
+        readonly label: string;
+      }
     | undefined;
   for (const definition of definitions) {
-    const visibleTerm = escapeRegExp(definition.term).replace(/\s+/gu, '\\s+');
-    const pattern = new RegExp(`(?<![\\p{L}\\p{N}_])${visibleTerm}(?![\\p{L}\\p{N}_])`, 'iu');
-    const match = pattern.exec(value);
-    if (match === null) continue;
-    if (earliest === undefined || match.index < earliest.index) {
-      earliest = { definition, index: match.index, length: match[0].length };
+    for (const spelling of [definition.term, ...definition.forms]) {
+      const visibleTerm = escapeRegExp(spelling).replace(/\s+/gu, '\\s+');
+      const pattern = new RegExp(`(?<![\\p{L}\\p{N}_])${visibleTerm}(?![\\p{L}\\p{N}_])`, 'iu');
+      const match = pattern.exec(value);
+      if (match === null) continue;
+      if (earliest === undefined || match.index < earliest.index) {
+        // The label collapses the whitespace the match spanned: a term split across a soft line
+        // break is one occurrence, and a directive label may not carry the break.
+        const label = match[0].replace(/\s+/gu, ' ');
+        earliest = { definition, index: match.index, length: match[0].length, label };
+      }
     }
   }
   return earliest;
@@ -1538,16 +2615,19 @@ function attachNodeSource(
 
 const PROTOTYPE_LIKE_ATTRIBUTES = new Set(['__proto__', 'prototype', 'constructor']);
 
-function requireNoPrototypeLikeAttributes(node: DirectiveNode, markdown: string): void {
+function prototypeLikeAttributeViolation(
+  node: DirectiveNode,
+  markdown: string,
+): AgenticReportError | undefined {
   const start = node.position?.start.offset;
   const end = node.position?.end.offset;
-  if (start === undefined || end === undefined) return;
+  if (start === undefined || end === undefined) return undefined;
   const directiveSource = markdown.slice(start, end);
   const attributes = directiveAttributeNames(directiveSource).filter((name) =>
     PROTOTYPE_LIKE_ATTRIBUTES.has(name),
   );
-  if (attributes.length === 0) return;
-  throw directiveError(
+  if (attributes.length === 0) return undefined;
+  return directiveError(
     node,
     'UNKNOWN_DIRECTIVE_ATTRIBUTE',
     `${node.name} does not support: ${attributes.join(', ')}.`,
@@ -2687,30 +3767,34 @@ function isCodeNode(node: unknown): node is Code {
   return typeof node === 'object' && node !== null && 'type' in node && node.type === 'code';
 }
 
-function requireDirectiveForm(node: DirectiveNode, directive: DirectiveDefinition): void {
+function directiveFormViolation(
+  node: DirectiveNode,
+  directive: DirectiveDefinition,
+): AgenticReportError | undefined {
   const form = directiveForm(node.type);
   if (form === undefined || !directive.forms.includes(form)) {
-    throw directiveError(
+    return directiveError(
       node,
       'INVALID_DIRECTIVE_FORM',
       `${node.name} cannot use the ${node.type} form.`,
       `Use one of these directive forms: ${directive.forms.map(formNodeType).join(', ')}.`,
     );
   }
+  return undefined;
 }
 
-function requireDirectivePlacement(
+function directivePlacementViolation(
   node: DirectiveNode,
   directive: DirectiveDefinition,
   parent: unknown,
-): void {
+): AgenticReportError | undefined {
   const parentDirective = isDirectiveNode(parent) ? directiveByName.get(parent.name) : undefined;
   const requiredParent = directive.placement.requiredParent;
   if (
     directive.placement.topLevelOnly === true &&
     (!isTraversableNode(parent) || parent.type !== 'root')
   ) {
-    throw directiveError(
+    return directiveError(
       node,
       'INVALID_DIRECTIVE_PLACEMENT',
       `${directive.name} must be a top-level directive.`,
@@ -2718,7 +3802,7 @@ function requireDirectivePlacement(
     );
   }
   if (requiredParent !== undefined && parentDirective?.name !== requiredParent) {
-    throw directiveError(
+    return directiveError(
       node,
       'INVALID_DIRECTIVE_PLACEMENT',
       `${directive.name} must be nested directly inside ${requiredParent}.`,
@@ -2728,18 +3812,22 @@ function requireDirectivePlacement(
   const allowedChildren = allowedDirectiveChildren(parentDirective?.children);
   if (allowedChildren !== undefined && !allowedChildren.includes(directive.name)) {
     const parentName = parentDirective?.name ?? 'parent';
-    throw directiveError(
+    return directiveError(
       node,
       'INVALID_DIRECTIVE_PLACEMENT',
       `${parentName} accepts only ${allowedChildren.join(' or ')} directives as directive children.`,
       `Move this ${directive.name} directive outside ${parentName} or use an allowed child.`,
     );
   }
+  return undefined;
 }
 
-function requireDirectiveChildren(node: DirectiveNode, directive: DirectiveDefinition): void {
-  if (directive.children !== 'none' || (node.children ?? []).length === 0) return;
-  throw directiveError(
+function directiveChildrenViolation(
+  node: DirectiveNode,
+  directive: DirectiveDefinition,
+): AgenticReportError | undefined {
+  if (directive.children !== 'none' || (node.children ?? []).length === 0) return undefined;
+  return directiveError(
     node,
     'INVALID_DIRECTIVE_PLACEMENT',
     `${directive.name} accepts no label or child content.`,
@@ -2930,7 +4018,7 @@ function unsupportedDirectiveError(node: DirectiveNode): AgenticReportError {
     node,
     'UNSUPPORTED_DIRECTIVE',
     `Unsupported semantic directive: ${node.name}`,
-    `Use ${authoringRegistry.directives.map((directive) => directive.name).join(', ')}.`,
+    `Use ${authoringRegistry.directives.map((directive) => directive.name).join(', ')}. Escape the colon as \\: when this text is ordinary prose.`,
   );
 }
 

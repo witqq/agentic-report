@@ -124,6 +124,7 @@ export const DIAGRAM_CONTRACT = {
     selfEdges: false,
     groups: {
       ungrouped: 0,
+      incomplete: 1,
       minimum: 2,
       maximum: 3,
       requireEveryNode: true,
@@ -391,7 +392,7 @@ export const authoringRegistry = {
       leaf: '::name{attributes}',
       text: ':name[label]{attributes}',
       numericColonText:
-        'Two- or three-part numeric time/duration tokens such as 21:01 and 1:30:05 remain literal Markdown text.',
+        'A colon that opens a digit-initial name, and a colon written against the preceding word, remain literal Markdown text: 21:01, 1:30:05, 3:1, 1:10:100, localhost:9000, ключ:значение and Пункт :2. Only the inline form without attributes or children is restored: a spaced unknown alphabetic name, any attributed or child-bearing form, and every block-level form stay directives; write \\: for ordinary prose.',
     },
     codeFenceMetadata: {
       terms: {
@@ -696,6 +697,10 @@ export const authoringRegistry = {
     {
       id: 'build',
       description: 'Compile a source into a default or share-safe static artifact.',
+    },
+    {
+      id: 'fix',
+      description: 'Apply the replacements the product computed exactly, and nothing else.',
     },
     { id: 'describe', description: 'Return the complete source contract.' },
     {
@@ -1166,6 +1171,7 @@ function interactiveDirectives(): readonly DirectiveDefinition[] {
         attributes: [
           keyAttribute('Stable glossary definition key.'),
           textAttribute('term', 'Canonical glossary identity and explanation title.', true),
+          glossaryFormsAttribute(),
           enumAttribute(
             'placement',
             'Definition location in the authored flow or, from the document root or a direct section child, one package-owned reference appendix.',
@@ -1178,7 +1184,8 @@ function interactiveDirectives(): readonly DirectiveDefinition[] {
     ),
     {
       name: 'term',
-      description: 'Inline or standalone reference that opens a registered glossary explanation.',
+      description:
+        'Inline or standalone reference that opens a registered glossary explanation. Prose must carry one for the first occurrence of a registered term in each section; later occurrences of that term in the same section stay ordinary prose.',
       forms: ['leaf', 'text'],
       attributes: [keyAttribute('Key of the glossary definition to reference.')],
       children: 'label-or-generated-label',
@@ -1551,6 +1558,25 @@ function textAttribute(
     ...(defaultValue === undefined ? {} : { default: defaultValue }),
     constraint: { kind: 'string', normalization: 'trim', minLength: 1, maxLength: 160 },
     renderProperty: attributeRenderProperty(name),
+    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
+  };
+}
+
+/**
+ * Inflected spellings the author declares for one glossary term, comma separated. The package does
+ * not inflect words itself: a morphology library would put language data and someone else's
+ * dictionary quality inside a product whose every other rule is declared in the source and checked
+ * offline. Declared forms cannot produce a false match, because the author names exactly what counts
+ * as a form.
+ */
+function glossaryFormsAttribute(): DirectiveAttributeDefinition {
+  return {
+    name: 'forms',
+    description:
+      'Additional declared spellings of the canonical term, comma separated. An occurrence of any declared form counts as an occurrence of the term.',
+    required: false,
+    constraint: { kind: 'string', normalization: 'trim', minLength: 1, maxLength: 640 },
+    renderProperty: attributeRenderProperty('forms'),
     invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
   };
 }

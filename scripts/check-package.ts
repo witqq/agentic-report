@@ -1,6 +1,15 @@
 import { execFile, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  realpath,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
@@ -109,16 +118,56 @@ const consumersDirectory = path.resolve('test-results/package-consumers');
 await mkdir(consumersDirectory, { recursive: true });
 const consumerDirectory = await mkdtemp(path.join(consumersDirectory, 'consumer-'));
 const npmCacheDirectory = path.join(consumerDirectory, '.npm-cache');
+// The run owns its toolchain directory and its global prefix instead of demanding a clean machine:
+// only the interpreters it links are reachable, so a globally installed product cannot serve the
+// consumer even when the developer works through `npm link`.
+const runtimeDirectory = path.join(consumerDirectory, '.toolchain');
+const runtimeBinDirectory = path.join(runtimeDirectory, 'bin');
+const globalPrefixDirectory = path.join(consumerDirectory, '.npm-global');
+await mkdir(runtimeBinDirectory, { recursive: true });
+await mkdir(path.join(globalPrefixDirectory, 'bin'), { recursive: true });
+const linkedToolchainExecutables =
+  process.platform === 'win32'
+    ? (['node.exe', 'npm.cmd', 'npx.cmd'] as const)
+    : (['node', 'npm', 'npx'] as const);
+for (const executable of linkedToolchainExecutables) {
+  const machinePath = path.join(executableDirectory, executable);
+  if (!(await pathExists(machinePath))) continue;
+  await symlink(machinePath, path.join(runtimeBinDirectory, executable));
+}
+// System utility directories stay reachable because npm and npx shell out; the directories that can
+// carry an installed product — the interpreter directory and /usr/local/bin — are replaced by the
+// run's own toolchain and global prefix.
 const candidateExecutableSearchDirectories = [
   ...new Set(
     process.platform === 'win32'
       ? [
-          executableDirectory,
-          ...(process.env.PATH ?? '').split(path.delimiter).filter((value) => value !== ''),
+          runtimeBinDirectory,
+          path.join(globalPrefixDirectory, 'bin'),
+          ...(process.env.SystemRoot === undefined
+            ? []
+            : [path.join(process.env.SystemRoot, 'System32')]),
         ]
-      : [executableDirectory, '/usr/local/bin', '/usr/bin', '/bin'],
+      : [runtimeBinDirectory, path.join(globalPrefixDirectory, 'bin'), '/usr/bin', '/bin'],
   ),
 ];
+// The isolation invariant is asserted rather than assumed: a search directory that is neither owned by
+// this run nor a system utility directory would let a machine-installed product serve the consumer, and
+// that mistake must fail everywhere, not only on a machine that happens to have one installed.
+const systemUtilityDirectories =
+  process.platform === 'win32'
+    ? process.env.SystemRoot === undefined
+      ? []
+      : [path.join(process.env.SystemRoot, 'System32')]
+    : ['/usr/bin', '/bin'];
+for (const directory of candidateExecutableSearchDirectories) {
+  const ownedByRun = directory.startsWith(`${consumerDirectory}${path.sep}`);
+  if (!ownedByRun && !systemUtilityDirectories.includes(directory)) {
+    throw new Error(
+      `Consumer executable search escapes the run: ${directory} is neither inside ${consumerDirectory} nor a system utility directory.`,
+    );
+  }
+}
 const candidateExecutableNames =
   process.platform === 'win32'
     ? ([
@@ -135,6 +184,7 @@ const candidateInstallEnvironment: NodeJS.ProcessEnv = {
   CI: 'true',
   NO_COLOR: '1',
   npm_config_cache: npmCacheDirectory,
+  npm_config_prefix: globalPrefixDirectory,
   npm_config_update_notifier: 'false',
   ...(process.platform === 'win32' && process.env.SystemRoot !== undefined
     ? { SystemRoot: process.env.SystemRoot }
@@ -156,7 +206,7 @@ if (
   (await pathExists(npmCacheDirectory))
 ) {
   throw new Error(
-    'Clean consumer preflight found a checkout link, global executable, or reused cache.',
+    'Clean consumer preflight found a checkout link, a product executable inside the run environment, or a reused cache.',
   );
 }
 await writeFile(
@@ -1321,6 +1371,14 @@ const candidateEvidenceBytes = `${JSON.stringify(
       consumerDirectory,
       npmCacheDirectory,
       checkoutLinkAbsent: true,
+      isolation: {
+        runtimeBinDirectory,
+        globalPrefixDirectory,
+        path: candidateInstallEnvironment.PATH,
+        insideConsumerDirectory:
+          runtimeBinDirectory.startsWith(consumerDirectory) &&
+          globalPrefixDirectory.startsWith(consumerDirectory),
+      },
       executableSearchDirectories: candidateExecutableSearchDirectories,
       globalExecutableChecks,
       globalExecutableAbsent,
@@ -1458,6 +1516,7 @@ async function expectedTarballFiles(): Promise<string[]> {
       'product/share-safe-build-extension.json',
       'product/time-text-extension.json',
       'product/source-link-extension.json',
+      'product/violation-inventory-extension.json',
       'product/source-contract.md',
     ].map((file) => `package/docs/${file}`),
   ]);

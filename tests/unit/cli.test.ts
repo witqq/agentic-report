@@ -1,16 +1,21 @@
 import { spawn } from 'node:child_process';
-import { chmod, cp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { chmod, cp, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  fixReport,
   getAuthoringSchema,
   getSourceContract,
   initProject,
+  inspectReport,
   listExamples,
   serializeReviewArtifact,
+  validateReport,
+  type AgenticReportError,
+  type Diagnostic,
 } from '../../src/index.js';
 import { formatInstalledExamples } from '../../src/cli-examples.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
@@ -21,15 +26,43 @@ afterEach(async () => {
   await Promise.all(workspaces.splice(0).map(removeTestWorkspace));
 });
 
+function glossarySource(...body: readonly string[]): string {
+  return [
+    '---',
+    'contractVersion: 1',
+    'title: Fix probe',
+    'language: en',
+    '---',
+    '',
+    '# Fix probe',
+    '',
+    ':::glossary{key="spec" term="spec"}',
+    'A written contract.',
+    ':::',
+    '',
+    ...body,
+  ].join('\n');
+}
+
+async function refusedDiagnostic(source: string): Promise<Diagnostic> {
+  return await validateReport({ input: source }).then(
+    () => {
+      throw new Error('The source was expected to be refused.');
+    },
+    (error: unknown) => (error as AgenticReportError).diagnostic,
+  );
+}
+
 describe('CLI transport', () => {
   it('rejects a below-floor runtime through human and JSON CLI transports', async () => {
-    const human = await runCliAsNodeVersion(['--version'], '22.18.0');
+    const human = await runCliAsNodeVersion(['--version', '--human'], '22.18.0');
     expect(human).toEqual({
       exitCode: 1,
       stdout: '',
       stderr:
-        'NODE_VERSION_UNSUPPORTED: Node.js 22.18.0 is unsupported; agentic-report requires Node.js 24.18.0 or newer.\n' +
-        'Install Node.js 24.18.0 or newer, then rerun the same command.\n',
+        'NODE_VERSION_UNSUPPORTED\n' +
+        '  Node.js 22.18.0 is unsupported; agentic-report requires Node.js 24.18.0 or newer.\n' +
+        '  \u2192 Install Node.js 24.18.0 or newer, then rerun the same command.\n',
     });
 
     const machine = await runCliAsNodeVersion(['--version', '--json'], '22.18.0');
@@ -163,7 +196,7 @@ describe('CLI transport', () => {
       }),
     );
 
-    const result = await runCli(['review', 'review.json', workspace]);
+    const result = await runCli(['review', 'review.json', workspace, '--human']);
 
     expect(result).toEqual({
       exitCode: 0,
@@ -220,7 +253,7 @@ describe('CLI transport', () => {
   it('keeps describe/discover, all schema scopes and examples equal to the ESM API', async () => {
     for (const command of ['describe', 'discover']) {
       const compact = await runCli([command, '--json']);
-      const pretty = await runCli([command]);
+      const pretty = await runCli([command, '--human']);
       expect(compact).toMatchObject({ exitCode: 0, stderr: '' });
       expect(pretty).toMatchObject({ exitCode: 0, stderr: '' });
       expect(JSON.parse(compact.stdout)).toEqual(getSourceContract());
@@ -250,6 +283,90 @@ describe('CLI transport', () => {
         ),
       ).toBe(true);
     }
+  });
+
+  it('describes the human projection each command actually produces', async () => {
+    // The distributed documents divide the commands into the ones whose human projection is prose
+    // and the ones that answer with an indented document. A flag description that promises prose
+    // from a command that emits a document makes those documents false, and the promise is what a
+    // reader acts on — so the division is observed against the help text of every command below, and
+    // the two lists together must name every command the CLI registers.
+    const prose = ['init', 'build', 'validate', 'fix', 'review', 'examples'];
+    const indented = ['inspect', 'schema', 'describe'];
+
+    // The two lists are checked against the CLI itself, not against a number written here: a command
+    // added later would otherwise keep its promise unobserved, which is exactly how `fix` first
+    // slipped through while every other place claimed the rule was universal.
+    const rootHelp = await runCli(['--help']);
+    const commandSection = rootHelp.stdout.slice(rootHelp.stdout.indexOf('Commands:'));
+    const registered = [...commandSection.matchAll(/^ {2}([a-z][a-z-]*)[ |]/gmu)]
+      .map(([, name]) => name)
+      // `help` is commander's own, not a product command, and answers no report.
+      .filter((name) => name !== 'help');
+    expect(registered.length).toBeGreaterThan(0);
+    expect([...registered].sort()).toEqual([...prose, ...indented].sort());
+
+    for (const command of [...prose, ...indented]) {
+      const help = await runCli([command, '--help']);
+      expect(help).toMatchObject({ exitCode: 0, stderr: '' });
+      const promisesProse = / --human +Emit prose /u.test(help.stdout.replace(/\s+/gu, ' '));
+      expect({ command, promisesProse }).toEqual({
+        command,
+        promisesProse: prose.includes(command),
+      });
+    }
+  });
+
+  it('lists every registered command in the machine-readable catalog', async () => {
+    // The catalog is what an agent reads: the machine route is the default, so a command missing
+    // from it does not exist for the consumer the product is written for. Registration and catalog
+    // live in different files, and nothing sliced them together before — which is how `fix` reached
+    // the distributed contract unlisted. Sets are compared in both directions, so the next command
+    // added on one side alone fails here rather than at a later reading of the contract.
+    const rootHelp = await runCli(['--help']);
+    const commandSection = rootHelp.stdout.slice(rootHelp.stdout.indexOf('Commands:'));
+    const registered = [...commandSection.matchAll(/^ {2}([a-z][a-z-]*)[ |]/gmu)]
+      .map(([, name]) => name)
+      // `help` is commander's own, not a product command.
+      .filter((name) => name !== 'help');
+    expect(registered.length).toBeGreaterThan(0);
+
+    const described = await runCli(['describe']);
+    expect(described).toMatchObject({ exitCode: 0, stderr: '' });
+    const catalog = Object.keys(
+      (JSON.parse(described.stdout) as { readonly commands: Record<string, string> }).commands,
+    );
+
+    expect([...catalog].sort()).toEqual([...registered].sort());
+    expect(getSourceContract().commands).toEqual(
+      (JSON.parse(described.stdout) as { readonly commands: Record<string, string> }).commands,
+    );
+  });
+
+  it('applies the output rule to every command the agent reference lists', async () => {
+    // The rule is stated as a property of the CLI, so it is observed on every command rather than
+    // on the ones that were convenient to change: a command that rejects the flags, or answers the
+    // same way with and without them, breaks the statement the distributed documents make.
+    for (const command of ['schema', 'describe', 'examples']) {
+      const agent = await runCli([command]);
+      const accepted = await runCli([command, '--json']);
+      const human = await runCli([command, '--human']);
+      expect(agent).toMatchObject({ exitCode: 0, stderr: '' });
+      expect(accepted).toMatchObject({ exitCode: 0, stderr: '' });
+      expect(human).toMatchObject({ exitCode: 0, stderr: '' });
+      // `--json` names the default rather than selecting a second shape.
+      expect(accepted.stdout).toBe(agent.stdout);
+      // The agent projection is one compact record; the human projection is not that same line.
+      expect(agent.stdout.trimEnd()).not.toContain('\n');
+      expect(human.stdout).not.toBe(agent.stdout);
+    }
+
+    // Reference data stays reference data: the human projection of a schema is the same document,
+    // only indented, so an agent that reads either form gets equal facts.
+    const compactSchema = await runCli(['schema']);
+    const indentedSchema = await runCli(['schema', '--human']);
+    expect(JSON.parse(indentedSchema.stdout)).toEqual(JSON.parse(compactSchema.stdout));
+    expect(indentedSchema.stdout.split('\n').length).toBeGreaterThan(2);
   });
 
   it('initializes through the CLI with exact human and machine results matching the ESM API', async () => {
@@ -283,7 +400,7 @@ describe('CLI transport', () => {
     });
     expect(machine.stdout.split('\n')).toHaveLength(2);
 
-    const human = await runCli(['init', humanDestination]);
+    const human = await runCli(['init', humanDestination, '--human']);
     expect(human).toEqual({
       exitCode: 0,
       stderr: '',
@@ -310,10 +427,10 @@ describe('CLI transport', () => {
     await mkdir(unwritableParent);
     await chmod(unwritableParent, 0o500);
     try {
-      const human = await runCli(['init', path.join(unwritableParent, 'project')]);
+      const human = await runCli(['init', path.join(unwritableParent, 'project'), '--human']);
       expect(human.exitCode).toBe(1);
       expect(human.stdout).toBe('');
-      expect(human.stderr).toContain('INIT_PUBLICATION_FAILED:');
+      expect(human.stderr).toContain('INIT_PUBLICATION_FAILED');
       expect(human.stderr).toContain('Inspect the destination state');
     } finally {
       await chmod(unwritableParent, 0o700);
@@ -380,7 +497,7 @@ describe('CLI transport', () => {
     const humanOutput = path.join(workspace, 'share.human.html');
     const [json, human] = await Promise.all([
       runCli(['build', source, '--share', '--output', jsonOutput, '--json']),
-      runCli(['build', plainSource, '--share', '--output', humanOutput]),
+      runCli(['build', plainSource, '--share', '--output', humanOutput, '--human']),
     ]);
     expect(json).toMatchObject({ exitCode: 0, stderr: '' });
     expect(JSON.parse(json.stdout)).toMatchObject({
@@ -450,12 +567,239 @@ describe('CLI transport', () => {
     await expect(readFile(directorySentinel, 'utf8')).resolves.toBe('keep directory');
   });
 
+  it('shows every violation with its place in both projections and defaults to the agent one', async () => {
+    const workspace = await createTestWorkspace('cli-inventory-projection');
+    workspaces.push(workspace);
+    const source = path.join(workspace, 'report.md');
+    await writeFile(
+      source,
+      ['# Inventory', '', ':unknown-one', '', ':unknown-two', '', ':unknown-three', ''].join('\n'),
+    );
+
+    // Without any flag the consumer is an agent: the run answers in NDJSON.
+    const machine = await runCli(['validate', source], workspace);
+    expect(machine).toMatchObject({ exitCode: 1, stderr: '' });
+    const record = JSON.parse(machine.stdout) as {
+      readonly code: string;
+      readonly related?: readonly { readonly code: string }[];
+    };
+    expect([record.code, ...(record.related ?? []).map((entry) => entry.code)]).toEqual([
+      'UNSUPPORTED_DIRECTIVE',
+      'UNSUPPORTED_DIRECTIVE',
+      'UNSUPPORTED_DIRECTIVE',
+    ]);
+
+    // The human projection shows the same three facts, each with a place a terminal can open, and
+    // says how many there are; it is a projection of one model, not a shorter second report.
+    const human = await runCli(['validate', source, '--human'], workspace);
+    expect(human).toMatchObject({ exitCode: 1, stdout: '' });
+    expect(human.stderr.match(/UNSUPPORTED_DIRECTIVE/gu)).toHaveLength(3);
+    expect(human.stderr).toContain(`${source}:3:1`);
+    expect(human.stderr).toContain(`${source}:5:1`);
+    expect(human.stderr).toContain(`${source}:7:1`);
+    expect(human.stderr.trimEnd().endsWith('3 violations')).toBe(true);
+  });
+
+  it('carries a computed replacement as data and withholds unsafe replacements', async () => {
+    const workspace = await createTestWorkspace('cli-fix-data');
+    workspaces.push(workspace);
+    const source = path.join(workspace, 'report.md');
+
+    await writeFile(source, glossarySource('The spec explains it.', ''));
+    const violation = await refusedDiagnostic(source);
+    expect(violation.fix).toMatchObject({ replacement: ':term[spec]{key="spec"}' });
+
+    // The replacement is data, so a consumer applies it without parsing prose: these bytes at these
+    // offsets must produce a source that validates.
+    const authored = await readFile(source, 'utf8');
+    const fix = violation.fix;
+    if (fix === undefined) throw new Error('The violation carried no applicable fix.');
+    await writeFile(
+      source,
+      `${authored.slice(0, fix.start)}${fix.replacement}${authored.slice(fix.end)}`,
+    );
+    await expect(validateReport({ input: source })).resolves.toMatchObject({
+      format: 'single-file',
+    });
+
+    // An occurrence inside a link carries no fix at all. Applying one would have to replace the
+    // whole link — the envelope the term sits in — and the author's URL would be gone; a green
+    // validate afterwards would not notice, because the loss happens inside the replaced range.
+    //
+    // Both link shapes are exercised because they fail differently. When the label is longer than
+    // the term, the visible span grows too, so a check written in visible coordinates already sees
+    // the expansion. When the label is exactly the term, the visible span does not move at all while
+    // the authored span covers `[spec](url)`, and only a check in authored coordinates notices.
+    for (const authored of [
+      'Read the [spec guide](https://example.com/s).',
+      'Read the [spec](https://example.com/s).',
+      'Read the [spec][handle].\n\n[handle]: https://example.com/s',
+    ]) {
+      await writeFile(source, glossarySource(authored, ''));
+      const linked = await refusedDiagnostic(source);
+      expect(linked.code).toBe('UNMARKED_GLOSSARY_TERM');
+      expect(linked.fix).toBeUndefined();
+    }
+
+    // A replacement sanitization would alter is withheld: applying it would write `[REDACTED]` over
+    // the author's own bytes. The prose remediation still answers, redacted as every other field is.
+    await writeFile(
+      source,
+      [
+        '---',
+        'contractVersion: 1',
+        'title: Fix probe',
+        'language: en',
+        '---',
+        '',
+        '# Fix probe',
+        '',
+        ':::glossary{key="creds" term="token=abc123"}',
+        'A credential-shaped term.',
+        ':::',
+        '',
+        'We write token=abc123 in prose.',
+        '',
+      ].join('\n'),
+    );
+    const credentialed = await refusedDiagnostic(source);
+    expect(credentialed.code).toBe('UNMARKED_GLOSSARY_TERM');
+    expect(credentialed.fix).toBeUndefined();
+    expect(credentialed.remediation).toContain('[REDACTED]');
+  });
+
+  it('applies computed fixes exactly and remains idempotent', async () => {
+    const workspace = await createTestWorkspace('cli-fix-apply');
+    workspaces.push(workspace);
+    const source = path.join(workspace, 'report.md');
+    // `fix` writes those replacements and nothing else: every other byte is untouched, which a green
+    // validate alone would not distinguish from a reformatted file. Three violations in one file are
+    // the point — every replacement is addressed in the bytes of the file as it was read, so a run
+    // that writes one after another without accounting for the shift corrupts the later ones. A
+    // single-violation source cannot tell that implementation from this one.
+    const beforeFix = glossarySource(
+      ':::section{title="First"}',
+      'The spec appears here.',
+      ':::',
+      '',
+      ':::section{title="Second"}',
+      'The spec appears again.',
+      ':::',
+      '',
+      ':::section{title="Third"}',
+      'The spec appears once more.',
+      ':::',
+      '',
+      '<!-- a comment kept verbatim -->',
+      '',
+    );
+    await writeFile(source, beforeFix);
+    const applied = await runCli(['fix', source], workspace);
+    expect(applied).toMatchObject({ exitCode: 0, stderr: '' });
+    const afterFix = await readFile(source, 'utf8');
+    expect(afterFix).toBe(beforeFix.replaceAll('The spec', 'The :term[spec]{key="spec"}'));
+    await expect(validateReport({ input: source })).resolves.toMatchObject({
+      format: 'single-file',
+    });
+
+    // Running it again changes nothing: repairs do not accumulate.
+    await expect(fixReport({ input: source })).resolves.toMatchObject({ applied: [] });
+    expect(await readFile(source, 'utf8')).toBe(afterFix);
+  });
+
+  it('keeps checking commands read-only and identifies an unrepairable source', async () => {
+    const workspace = await createTestWorkspace('cli-fix-read-only');
+    workspaces.push(workspace);
+    const source = path.join(workspace, 'report.md');
+    const beforeFix = glossarySource(
+      ':::section{title="First"}',
+      'The spec appears here.',
+      ':::',
+      '',
+      ':::section{title="Second"}',
+      'The spec appears again.',
+      ':::',
+      '',
+      ':::section{title="Third"}',
+      'The spec appears once more.',
+      ':::',
+      '',
+      '<!-- a comment kept verbatim -->',
+      '',
+    );
+    // The commands that check never write, and that rule is what `fix` exists to keep intact.
+    await writeFile(source, beforeFix);
+    await validateReport({ input: source }).catch(() => undefined);
+    await inspectReport({ input: source }).catch(() => undefined);
+    expect(await readFile(source, 'utf8')).toBe(beforeFix);
+
+    // A source whose only violation has no applicable repair still gets its identities named: the
+    // command answers about the project it read, not about the argument it was handed. A directory
+    // argument would otherwise be reported where the entry file belongs.
+    await writeFile(source, glossarySource('Read the [spec](https://example.com/s).', ''));
+    const unrepairable = await fixReport({ input: workspace });
+    expect(unrepairable).toMatchObject({
+      applied: [],
+      projectPath: await realpath(workspace),
+      entryPath: path.join(await realpath(workspace), 'report.md'),
+    });
+    expect(unrepairable.remaining).toHaveLength(1);
+
+    expect(await readFile(source, 'utf8')).toBe(
+      glossarySource('Read the [spec](https://example.com/s).', ''),
+    );
+  });
+
+  it('names the unknown manifest key and proposes a replacement only when one is close', async () => {
+    const workspace = await createTestWorkspace('cli-manifest-key');
+    workspaces.push(workspace);
+    const source = path.join(workspace, 'report.md');
+
+    // A key the closeness measure actually accepts: `layuot` is two edits from `layout`, and a
+    // six-character key tolerates two. The refusal names the key and the field to use instead of
+    // sending the author to read the whole schema. Asserting the proposal itself matters: the
+    // accepted-key list contains every field name, so a substring check on a field name stays green
+    // even when the proposal branch is gone.
+    await writeFile(
+      source,
+      ['---', 'title: Probe', 'layuot: Probe', '---', '', '# Probe', ''].join('\n'),
+    );
+    const near = await runCli(['validate', source], workspace);
+    expect(near).toMatchObject({ exitCode: 1, stderr: '' });
+    const nearRecord = JSON.parse(near.stdout) as {
+      readonly code: string;
+      readonly message: string;
+      readonly remediation: string;
+    };
+    expect(nearRecord.code).toBe('INVALID_MANIFEST');
+    expect(nearRecord.message).toContain('layuot');
+    expect(nearRecord.remediation).toMatch(/^Use layout instead of layuot\b/u);
+
+    // A key resembling nothing gets the accepted set, not an invented suggestion. `kind` is real
+    // elsewhere in the product — it is a callout attribute — and still resembles no manifest field:
+    // four characters tolerate one edit, and the nearest field is four away.
+    for (const distantKey of ['kind', 'фывапролдж']) {
+      await writeFile(
+        source,
+        ['---', 'title: Probe', `${distantKey}: Probe`, '---', '', '# Probe', ''].join('\n'),
+      );
+      const far = await runCli(['validate', source], workspace);
+      const farRecord = JSON.parse(far.stdout) as {
+        readonly message: string;
+        readonly remediation: string;
+      };
+      expect(farRecord.message).toContain(distantKey);
+      expect(farRecord.remediation).toContain('Accepted keys are');
+      expect(farRecord.remediation).not.toMatch(/Use \w+ instead/u);
+    }
+  });
+
   it('prints a useful human validate result', async () => {
     const workspace = await createTestWorkspace('cli-validate-human');
     workspaces.push(workspace);
     const source = path.resolve('tests/fixtures/analysis/parity');
 
-    const humanValidate = await runCli(['validate', source], workspace);
+    const humanValidate = await runCli(['validate', source, '--human'], workspace);
     expect(humanValidate).toEqual({
       exitCode: 0,
       stderr: '',
@@ -467,7 +811,7 @@ describe('CLI transport', () => {
     const workspace = await createTestWorkspace('cli-inspect-human');
     workspaces.push(workspace);
     const source = path.resolve('tests/fixtures/analysis/parity');
-    const humanInspect = await runCli(['inspect', source], workspace);
+    const humanInspect = await runCli(['inspect', source, '--human'], workspace);
     expect(humanInspect).toMatchObject({ exitCode: 0, stderr: '' });
     expect(JSON.parse(humanInspect.stdout)).toMatchObject({
       entryPath: path.join(source, 'report.md'),
@@ -478,7 +822,7 @@ describe('CLI transport', () => {
 
   it('redacts signed URLs and source paths from a human analysis failure', async () => {
     const { workspace, source } = await createCredentialAnalysisSource(true);
-    const brokenHuman = await runCli(['validate', source], workspace);
+    const brokenHuman = await runCli(['validate', source, '--human'], workspace);
     for (const output of [brokenHuman.stdout, brokenHuman.stderr]) {
       expect(output).not.toMatch(
         /alice|password|path-sentinel|credential-sentinel|signature-sentinel|security-token-sentinel/u,
@@ -500,7 +844,7 @@ describe('CLI transport', () => {
 
   it('redacts a successful credential-bearing path from human analysis output', async () => {
     const { workspace, source } = await createCredentialAnalysisSource(false);
-    const fixedHuman = await runCli(['validate', source], workspace);
+    const fixedHuman = await runCli(['validate', source, '--human'], workspace);
     const expectedEntry = path.join(workspace, 'token=[REDACTED]', 'report.md');
     expect(fixedHuman).toEqual({
       exitCode: 0,

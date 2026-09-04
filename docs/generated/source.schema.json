@@ -731,6 +731,11 @@
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
               "description": "Canonical glossary identity and explanation title."
             },
+            "forms": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,638}\\S))\\s*$",
+              "description": "Additional declared spellings of the canonical term, comma separated. An occurrence of any declared form counts as an occurrence of the term."
+            },
             "placement": {
               "type": "string",
               "enum": ["inline", "appendix"],

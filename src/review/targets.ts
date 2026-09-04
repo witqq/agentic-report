@@ -22,6 +22,8 @@ interface ReviewTargetPluginOptions {
   readonly sourceRoot: string;
   readonly sourceMap: readonly SourceMapSegment[];
   readonly targets: ReviewTargetReference[];
+  /** Ceiling on collected targets; defaults to the contract value. */
+  readonly targetLimit?: number;
 }
 
 type PositionedNode = {
@@ -107,10 +109,11 @@ export const remarkReviewTargets: Plugin<[ReviewTargetPluginOptions], Root> =
         },
       };
       options.targets.push(target);
-      if (options.targets.length > MAX_REVIEW_TARGETS) {
+      const targetLimit = options.targetLimit ?? MAX_REVIEW_TARGETS;
+      if (options.targets.length > targetLimit) {
         throw reviewTargetError(
           'REVIEW_TARGET_LIMIT_EXCEEDED',
-          `Report contains more than ${MAX_REVIEW_TARGETS} reviewable targets.`,
+          `Report contains more than ${targetLimit} reviewable targets.`,
           'Split the report into smaller artifacts or reduce reviewable block count.',
           source,
         );

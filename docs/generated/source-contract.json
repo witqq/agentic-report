@@ -9,7 +9,7 @@
       "nestedContainer": "Use a longer outer colon fence than nested directives.",
       "leaf": "::name{attributes}",
       "text": ":name[label]{attributes}",
-      "numericColonText": "Two- or three-part numeric time/duration tokens such as 21:01 and 1:30:05 remain literal Markdown text."
+      "numericColonText": "A colon that opens a digit-initial name, and a colon written against the preceding word, remain literal Markdown text: 21:01, 1:30:05, 3:1, 1:10:100, localhost:9000, ключ:значение and Пункт :2. Only the inline form without attributes or children is restored: a spaced unknown alphabetic name, any attributed or child-bearing form, and every block-level form stay directives; write \\: for ordinary prose."
     },
     "codeFenceMetadata": {
       "terms": {
@@ -670,6 +670,14 @@
           "required": true,
           "description": "Canonical glossary identity and explanation title."
         },
+        "forms": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 640,
+          "required": false,
+          "description": "Additional declared spellings of the canonical term, comma separated. An occurrence of any declared form counts as an occurrence of the term."
+        },
         "placement": {
           "kind": "enum",
           "values": ["inline", "appendix"],
@@ -686,7 +694,7 @@
       "handoffs": ["semantic-document", "reader-runtime"]
     },
     "term": {
-      "description": "Inline or standalone reference that opens a registered glossary explanation.",
+      "description": "Inline or standalone reference that opens a registered glossary explanation. Prose must carry one for the first occurrence of a registered term in each section; later occurrences of that term in the same section stay ordinary prose.",
       "forms": ["leaf", "text"],
       "attributes": {
         "key": {
@@ -1416,6 +1424,7 @@
         "selfEdges": false,
         "groups": {
           "ungrouped": 0,
+          "incomplete": 1,
           "minimum": 2,
           "maximum": 3,
           "requireEveryNode": true,
@@ -1432,6 +1441,117 @@
       }
     }
   },
+  "authoredRules": [
+    { "subject": "copyable", "rules": [{ "id": "prose-and-terms-only", "dependsOn": [] }] },
+    {
+      "subject": "section/lead",
+      "rules": [
+        { "id": "single-paragraph", "dependsOn": [] },
+        { "id": "first-authored-block", "dependsOn": [] }
+      ]
+    },
+    {
+      "subject": "response/question",
+      "rules": [
+        { "id": "unique-id", "dependsOn": [] },
+        { "id": "unique-child-ids", "dependsOn": [] },
+        { "id": "items-match-kind", "dependsOn": [] },
+        { "id": "buckets-match-kind", "dependsOn": [] },
+        { "id": "item-bucket-references", "dependsOn": ["buckets-match-kind"] },
+        { "id": "options-match-kind", "dependsOn": [] },
+        { "id": "numeric-domain", "dependsOn": [] }
+      ]
+    },
+    {
+      "subject": "decision|checklist",
+      "rules": [
+        { "id": "children-not-mixed", "dependsOn": [] },
+        { "id": "child-limit", "dependsOn": [] },
+        { "id": "stable-decision-id", "dependsOn": [] },
+        { "id": "child-present", "dependsOn": [] },
+        { "id": "unique-child-ids", "dependsOn": ["children-not-mixed", "child-present"] }
+      ]
+    },
+    {
+      "subject": "directive-node",
+      "rules": [
+        { "id": "registered-name", "dependsOn": [] },
+        { "id": "no-prototype-like-attributes", "dependsOn": [] },
+        { "id": "declared-form", "dependsOn": ["registered-name"] },
+        { "id": "declared-placement", "dependsOn": ["registered-name"] },
+        { "id": "declared-children", "dependsOn": ["registered-name"] },
+        {
+          "id": "interpreted-attributes",
+          "dependsOn": ["registered-name", "no-prototype-like-attributes"]
+        },
+        { "id": "action-label", "dependsOn": ["registered-name"] },
+        { "id": "section-identity", "dependsOn": ["interpreted-attributes"] },
+        { "id": "appendix-glossary-placement", "dependsOn": ["interpreted-attributes"] },
+        { "id": "unique-glossary-identity", "dependsOn": ["interpreted-attributes"] },
+        {
+          "id": "declared-glossary-forms",
+          "dependsOn": ["interpreted-attributes", "unique-glossary-identity"]
+        }
+      ]
+    },
+    { "subject": "actions", "rules": [{ "id": "action-children-only", "dependsOn": [] }] },
+    { "subject": "chart", "rules": [{ "id": "pie-single-series", "dependsOn": [] }] },
+    {
+      "subject": "chart/series",
+      "rules": [
+        { "id": "unique-point-labels", "dependsOn": [] },
+        { "id": "pie-values", "dependsOn": [] },
+        { "id": "aligned-categories", "dependsOn": ["unique-point-labels"] }
+      ]
+    },
+    {
+      "subject": "diagram/edge",
+      "rules": [
+        { "id": "known-endpoints", "dependsOn": [] },
+        { "id": "self-connection", "dependsOn": [] }
+      ]
+    },
+    {
+      "subject": "diagram/flow",
+      "rules": [
+        { "id": "node-count", "dependsOn": [] },
+        { "id": "edge-count", "dependsOn": [] },
+        { "id": "group-count", "dependsOn": [] },
+        { "id": "group-direction", "dependsOn": [] }
+      ]
+    },
+    { "subject": "diagram/flow/node", "rules": [{ "id": "group-assignment", "dependsOn": [] }] },
+    { "subject": "diagram/flow/group", "rules": [{ "id": "group-membership", "dependsOn": [] }] },
+    {
+      "subject": "diagram/sequence",
+      "rules": [
+        { "id": "no-groups", "dependsOn": [] },
+        { "id": "no-direction", "dependsOn": [] },
+        { "id": "participant-count", "dependsOn": [] },
+        { "id": "message-count", "dependsOn": [] }
+      ]
+    },
+    {
+      "subject": "diagram/sequence/participant",
+      "rules": [{ "id": "no-participant-group", "dependsOn": [] }]
+    },
+    {
+      "subject": "diagram/sequence/message",
+      "rules": [{ "id": "label-required", "dependsOn": [] }]
+    },
+    {
+      "subject": "code-fence/terms",
+      "rules": [
+        { "id": "known-keys", "dependsOn": [] },
+        { "id": "locatable-terms", "dependsOn": ["known-keys"] },
+        { "id": "no-overlap", "dependsOn": ["known-keys", "locatable-terms"] }
+      ]
+    },
+    {
+      "subject": "prose-container/glossary",
+      "rules": [{ "id": "first-occurrence-marked", "dependsOn": [] }]
+    }
+  ],
   "safety": [
     "canonical source-root confinement",
     "local resources only",
@@ -1450,6 +1570,7 @@
     "inspect": "Inspect source usage and the available authoring catalog without writing output.",
     "review": "Resolve a confined review artifact without changing report sources.",
     "build": "Compile a source into a default or share-safe static artifact.",
+    "fix": "Apply the replacements the product computed exactly, and nothing else.",
     "describe": "Return the complete source contract.",
     "schema": "Return manifest, directive, or complete source JSON Schema.",
     "examples": "List packaged buildable examples."

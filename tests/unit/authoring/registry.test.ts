@@ -227,6 +227,7 @@ describe('authoring registry', () => {
       'inspect',
       'review',
       'build',
+      'fix',
       'describe',
       'schema',
       'examples',

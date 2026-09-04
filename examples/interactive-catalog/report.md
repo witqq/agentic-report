@@ -22,7 +22,7 @@ This page demonstrates package-owned behavior authored entirely as Markdown dire
 :term[Decision packet]{key="decision-packet"} keeps a reusable definition close to the exact language it
 explains.
 
-:::glossary{key="decision-packet" term="Decision packet"}
+:::glossary{key="decision-packet" term="Decision packet" forms="decision packets, decision-packet"}
 A compact bundle of evidence, constraints, and a recommendation that another agent can review.
 :::
 

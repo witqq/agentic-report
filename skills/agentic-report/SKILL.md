@@ -3,7 +3,7 @@ name: agentic-report
 description: Create, validate, inspect, or build polished local interactive reports, research pages, architecture pages, tutorials, dashboards, decisions, and landing pages from declarative Markdown. Use for static agent-to-human page handoff; do not use for hosted apps, live collaboration, deployment, publication, or bespoke frontend development.
 license: MIT
 metadata:
-  version: '0.6.0'
+  version: '0.7.0'
   homepage: https://agentic-report.witqq.dev/
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run.
 ---
@@ -12,7 +12,8 @@ Use Review Workspace for local fragment discussion threads: ordered user/agent m
 resolved/reopened state exported together as deterministic version-2 `review.json`. Never imply an account
 or signature. For a follow-up build, pass a confined prior artifact with `build --review review.json`; treat
 stale bindings as immutable prior revision segments, append a current segment when continuing a changed
-fragment, and export the next revision. Never rewrite Markdown. Ordinary typed
+fragment, and export the next revision. A report may contain at most 5,000 reviewable targets and a
+750,000-byte target manifest; reduce or split it when either bound is reached. Never rewrite Markdown. Ordinary typed
 `decision`/`decision-option` and `checklist`/`check-item` syntax remains static report content.
 
 # agentic-report
@@ -30,8 +31,33 @@ Create a local declarative source, verify it, and hand the user a finished inter
 - Use Response Workspace when the human must return structured triage, choices, ordering, scores, text, or
   item comments. Keep it separate from Review Workspace discussion threads, and tell the user to copy or
   download `response.json` after completing the local page.
-- Write clock times and durations normally (`21:01`, `1:30:05`); do not add backslash escaping in prose or
-  frontmatter.
+- Write an ordinary colon normally in prose and frontmatter: a colon that opens a digit-initial name and a
+  colon written against the preceding word are literal text, so `21:01`, `1:30:05`, `3:1`, `1:10:100`,
+  `localhost:9000`, `arXiv:2508.05775` and `ключ:значение` need no escape. The digit feature holds whatever
+  precedes the colon, so `Пункт :2 списка.` is text too. This covers the inline form without attributes or
+  children only: a colon that carries attributes or children, such as `слово:name{key="1"}`, stays a
+  directive, and so do block-level forms such as `::2` and an unknown **alphabetic** name standing alone
+  after a space. Those are validated as directives and fail on an unregistered name; write `\:` when such
+  prose is not a directive, and do not turn it into a code span to hide it.
+- Introduce a registered glossary term with `:term[...]{key="..."}` at its first occurrence in each
+  `section` directive; later occurrences of that term in the same section stay ordinary prose. A term that
+  is never introduced still fails. Declare inflected spellings with `forms="…, …"` on the definition when
+  the text uses them: a declared form counts as an occurrence and is proposed with the spelling the
+  sentence used, while an undeclared inflection stays ordinary prose.
+- Run `agentic-report fix <source>` to apply the replacements the product computed exactly; it is the only
+  command that writes to your Markdown, and it leaves every other byte alone. Violations it reports as
+  remaining need your decision.
+- A grouped flow diagram with a single group builds and returns the `INCOMPLETE_DIAGRAM_GROUPING` warning:
+  unfinished grouping does not block the page, so finish the remaining groups or remove the only one.
+- One failed run reports every authored violation it found while interpreting directives, including
+  several over the same element, minus the ones that only repeat a refusal already reported: a descendant
+  of a rejected directive, an annotation pointing at a key whose own `glossary` definition was refused,
+  and any rule whose declared dependency refused. Which rule depends on which is data — `describe` returns
+  it as `authoredRules` — so silence is explicable instead of guessed. The earliest survivor is the
+  diagnostic and the rest are in its `related` inventory, in source order. Fix them together instead of rerunning once per violation. A definition lost with a rejected
+  container leaves its key unknown, so a reference to it is still listed beside that container's refusal.
+  A failure of another stage — an unreadable source graph, a refused output path — still ends the run with
+  a single diagnostic.
 - Use `copyable` for prose the reader should paste elsewhere; do not misrepresent ordinary language as a
   code fence merely to obtain a Copy button.
 - Keep the default bottom **Made with Agentic Report** link. When the user explicitly needs an unbranded
@@ -55,17 +81,24 @@ Create a local declarative source, verify it, and hand the user a finished inter
 Use the release pinned in this skill:
 
 ```sh
-npx --yes agentic-report@0.6.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.6.0 validate ./my-page --json
-npx --yes agentic-report@0.6.0 inspect ./my-page --json
-npx --yes agentic-report@0.6.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.7.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.7.0 validate ./my-page --json
+npx --yes agentic-report@0.7.0 inspect ./my-page --json
+npx --yes agentic-report@0.7.0 build ./my-page --output ./my-page.html --json
 ```
 
 Choose a different starter or destination name when the task requires it. `init` requires an absent
-destination whose immediate parent already exists. The first `npx` call requires registry/network access.
+destination whose immediate parent already exists and is a directory; the parent may be a symbolic link,
+and the reported `projectPath` then names the resolved location. An existing destination is refused with
+`INIT_DESTINATION_EXISTS`. The first `npx` call requires registry/network access.
 
 Edit the generated source before validation. Resolve every structured diagnostic at its reported file and
-range, then rerun `validate --json` and `inspect --json`. Build only after both succeed. Open the result
+range, then rerun `validate` and `inspect`. Every command answers an agent without a flag and accepts
+`--json` as the name of that default: the run commands `init`, `build`, `validate`, `inspect`, `fix` and
+`review` write NDJSON records, while `schema`, `describe` and `examples` write their one reference document
+as a compact JSON line. `--human` selects the form for a person — prose from `init`, `build`, `validate`,
+`fix`, `review` and `examples`, the same document indented from `inspect`, `schema` and `describe`. One failed run lists every independent
+violation it found, so fix them together. Build only after both succeed. Open the result
 through normal `file://`; use `--format directory` only when a multi-file output is intentionally needed.
 
 Report the source path, artifact path, chosen starter/output format, warnings, and unresolved content facts.
@@ -76,7 +109,7 @@ If the user does not trust the published npm package, do not run it through `npx
 pinned by this skill, expose the checked commit for review, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.6.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.7.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -86,7 +119,7 @@ pnpm build
 node dist/node/cli.js init ../my-page --starter report --json
 ```
 
-Substitute `node dist/node/cli.js` for every `npx --yes agentic-report@0.6.0` command above. Keep page
+Substitute `node dist/node/cli.js` for every `npx --yes agentic-report@0.7.0` command above. Keep page
 sources and outputs outside the cloned repository.
 
 Explain that this avoids executing the `agentic-report` npm package but is not registry-free:

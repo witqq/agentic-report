@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import { cp, link, mkdir, readFile, readdir, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import remarkParse from 'remark-parse';
+import { unified } from 'unified';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type {
@@ -10,6 +12,8 @@ import type {
   OutputFormat,
   ValidateReportOptions,
 } from '../../src/contracts.js';
+import { remarkReviewTargets } from '../../src/review/targets.js';
+import type { ReviewTargetReference } from '../../src/review/contract.js';
 import {
   buildReport,
   inspectReport,
@@ -91,6 +95,7 @@ describe('report analysis', () => {
             'Inspect source usage and the available authoring catalog without writing output.',
           review: 'Resolve a confined review artifact without changing report sources.',
           build: 'Compile a source into a default or share-safe static artifact.',
+          fix: 'Apply the replacements the product computed exactly, and nothing else.',
           describe: 'Return the complete source contract.',
           schema: 'Return manifest, directive, or complete source JSON Schema.',
           examples: 'List packaged buildable examples.',
@@ -550,18 +555,53 @@ describe('report analysis', () => {
     await expect(readFile(sentinel, 'utf8')).resolves.toBe('preserve output');
   });
 
-  it('rejects a report whose finite review target inventory exceeds the public bound', async () => {
+  it('refuses a target inventory past its bound', async () => {
+    // The bound is passed to the collector instead of writing a document past the default: a fixture
+    // of thousands of paragraphs would prove the same thing and cost seconds on every run.
+    const markdown = [
+      '# Target limit',
+      ...Array.from({ length: 40 }, (_, index) => `Paragraph ${index}.`),
+    ].join('\n\n');
     const workspace = await createTestWorkspace('analysis-review-target-limit');
+    workspaces.push(workspace);
+    const sourceFile = path.join(workspace, 'report.md');
+    const targets: ReviewTargetReference[] = [];
+    const processor = unified()
+      .use(remarkParse)
+      .use(remarkReviewTargets, {
+        sourceRoot: workspace,
+        sourceMap: [
+          {
+            generatedStart: 0,
+            generatedEnd: markdown.length,
+            sourceFile,
+            sourceStart: 0,
+            sourceText: markdown,
+          },
+        ],
+        targets,
+        targetLimit: 10,
+      });
+
+    await expect(processor.run(processor.parse(markdown))).rejects.toMatchObject({
+      diagnostic: { code: 'REVIEW_TARGET_LIMIT_EXCEEDED' },
+    });
+  });
+
+  it('accepts the same report under the default bound', async () => {
+    // The other half of the pair: without it the observation above would stay green if the limit
+    // rejected every document, and the whole point of the change is that ordinary long reports pass.
+    const workspace = await createTestWorkspace('analysis-review-target-default');
     workspaces.push(workspace);
     await writeFile(
       path.join(workspace, 'report.md'),
-      ['# Target limit', ...Array.from({ length: 500 }, (_, index) => `Paragraph ${index}.`)].join(
+      ['# Target limit', ...Array.from({ length: 600 }, (_, index) => `Paragraph ${index}.`)].join(
         '\n\n',
       ),
     );
     await expect(
       buildReport({ input: workspace, output: path.join(workspace, 'report.html') }),
-    ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_TARGET_LIMIT_EXCEEDED' } });
+    ).resolves.toMatchObject({ outputPath: path.join(workspace, 'report.html') });
   });
 
   it('never publishes output and rejects an invalid format before source discovery', async () => {

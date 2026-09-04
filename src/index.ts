@@ -14,11 +14,16 @@ if (compatibilityDiagnostic !== undefined) {
 export { buildReport } from './core/compiler.js';
 export { inspectReport, validateReport } from './core/analyze-report.js';
 export { inspectReview } from './core/inspect-review.js';
+export { fixReport } from './core/fix-report.js';
 export { initProject } from './authoring/init-project.js';
 export type {
+  AppliedFix,
   BuildReportOptions,
   BuildReportResult,
   Diagnostic,
+  DiagnosticFix,
+  FixReportOptions,
+  FixReportResult,
   InitProjectOptions,
   InitProjectResult,
   InspectReportOptions,

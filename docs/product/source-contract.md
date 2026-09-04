@@ -55,7 +55,8 @@ and [`../../examples/manifest.json`](../../examples/manifest.json) binds package
 their source-file SHA-256 hashes.
 
 The ESM `initProject({ destination, starter? })` operation initializes a registry-owned packaged starter
-into an absent directory whose immediate parent is an existing ordinary non-symlink directory. It rejects
+into an absent directory whose immediate parent is an existing directory. A symbolic-link parent is
+resolved, and `projectPath` reports the resolved destination. It rejects
 unknown starters, unsafe runtime option shapes, symlinks and special files, then fully reads the complete
 local tree and verifies the registry entry before publication. The destination is claimed exclusively and
 ordinary files use no-overwrite creation. Existing destinations are rejected unchanged. A later write
@@ -131,6 +132,11 @@ reader activates that control. In review mode each actual block target receives 
 it opens the target editor. Tight-list paragraphs do not become separate targets because they render without
 their own paragraph element—the containing list remains reviewable.
 
+The inert manifest contains at most 5,000 targets and at most 750,000 serialized bytes. These are independent
+bounds, so verbose relative source locations can make the byte ceiling bind before the target count. Target
+validation receives the count bound from the Node-side compiler; the shared browser-safe review contract
+contains no environment-variable lookup.
+
 The interface supports one thread per target, ordered user and agent messages, message editing, and
 resolved/reopened state. A compact target indicator opens the thread and a separate control resolves it.
 Canonical version-2 `review.json` download and exact-revision import preserve the full conversation. Import
@@ -181,10 +187,17 @@ CommonMark plus GitHub Flavored Markdown tables, strikethrough, task-list syntax
 converted through a typed unified AST. Raw HTML is not enabled. Sanitization occurs before package-trusted
 syntax highlighting and semantic enhancement.
 
-Numeric clock and duration tokens with two or three groups remain ordinary text: the trailing groups contain
-exactly two digits in the `00`–`59` domain, as in `21:01`, `21:01 — 00:12`, and `1:30:05`. They require no
-backslash in Markdown or frontmatter. This narrow lexical rule does not accept malformed times or suppress
-unknown alphabetic directives; those continue through the normal directive diagnostic.
+A colon in ordinary prose remains ordinary text under either of two lexical conditions: the name it opens
+begins with a decimal digit, which no registered directive name does, or the colon is written against the
+preceding letter, digit, combining mark or connector, whereas an authored directive always starts a fresh
+token. So `21:01`, `21:01 — 00:12`, `1:30:05`, `3:1`, `1:10:100`, `localhost:9000`, `arXiv:2508.05775` and
+`ключ:значение` require no backslash in Markdown or frontmatter. The first condition is independent of the
+second, so `Пункт :2 списка.` is text as well. The rule restores only a leaf text directive without
+attributes or children; an alphabetic name standing on its own after a space, any attributed or
+child-bearing form, and every block-level form such as `::2` stay on the directive path, where an
+unregistered name produces the normal directive diagnostic naming `\:` as the escape for ordinary prose
+and a registered one is interpreted by its own rules, so a bare `:term` without its required attribute
+reports the missing attribute instead of becoming text.
 
 ## Semantic primitives
 
@@ -228,8 +241,8 @@ rewriting their historical targets. Invalid sidecars fail before authoritative o
 
 - `cards` and nested `card`: responsive content grid;
 - `steps`: styled process container whose authored Markdown supplies the ordered or explanatory content;
-- `glossary`: reusable definition with required stable `key`, canonical `term` text, and optional
-  `placement="inline|appendix"`;
+- `glossary`: reusable definition with required stable `key`, canonical `term` text, optional declared
+  `forms`, and optional `placement="inline|appendix"`;
 - `term`: inline or standalone reference to a glossary `key`; an inline authored label remains the visible
   grammatical form while the detached form uses canonical text; both open a contextual explanation on hover,
   focus, or tap and link to the canonical full definition;
@@ -314,7 +327,7 @@ Top-level visuals require `title` and `description`. A chart accepts 1–6 `seri
 leaf `point` values, and every series must use the same unique labels in the same order. Values are finite
 decimal numbers between `-999999999` and `999999999`, with at most four decimal places. Pie charts require
 one series, non-negative values, and at least one positive value. `diagram.type` defaults to `flow`. A flow
-accepts 1–20 unique nodes and up to 40 edges; it is ungrouped or declares 2–3 non-empty groups and gives every
+accepts 1–20 unique nodes and up to 40 edges; it is ungrouped or declares 2–3 non-empty groups, with one group accepted as unfinished grouping and warned about, and gives every
 node a declared group. Ungrouped flows accept `direction="right|down"`; grouped subsystem columns are
 rightward. A `sequence` accepts 2–6 node participants and 1–40
 labelled edge messages in authored order; group records, group membership, direction and self-messages fail.
@@ -335,14 +348,23 @@ from package-owned theme variables. There is no visualization-time JavaScript, c
 author CSS, executable graph DSL, or separate behavior between `single-file` and `directory`.
 
 Every glossary key and canonical term must be unique. A term reference to an unknown key fails. Once a
-canonical glossary term is registered, an ordinary prose occurrence must use
-`:term[Canonical term]{key="..."}`; the validator excludes the definition itself, marked references, inline
-code, and code blocks and reports the unmarked authored range with a valid inline replacement. This keeps
-terminology machine-checkable without splitting sentences or rewriting code samples.
+canonical glossary term is registered, its **first** ordinary prose occurrence in a section must use
+`:term[Canonical term]{key="..."}`; later occurrences in that same section may stay plain prose, and each
+section is introduced on its own. The validator excludes the definition itself, marked references, inline
+code, and code blocks and reports the unmarked authored range with a valid inline replacement.
 
-The occurrence validator deliberately recognizes only the exact canonical prose form. Explicitly marked
-labels such as `:term[атомам]{key="atom"}` are accepted as author-owned grammatical forms of the same key;
-unmarked inflected forms are not guessed or reported as checked.
+`forms` declares the inflected spellings of the term, comma separated, at most 24 items of at most 64
+characters each, none repeated and none claimed by another definition. An occurrence of a declared form is
+an occurrence of the term, and the proposed replacement keeps the spelling the sentence used rather than
+the canonical headword. The package does not inflect words itself: an undeclared inflection stays ordinary
+prose, and that is the price of never producing a false match on a word that merely shares a stem. This keeps
+terminology machine-checkable without splitting sentences, rewriting code samples, or forcing every mention
+of a frequently repeated term to be annotated.
+
+The occurrence validator recognizes the canonical prose form and every spelling declared in `forms`.
+Explicitly marked labels such as `:term[атомам]{key="atom"}` are accepted as author-owned grammatical forms
+of the same key. An inflection that is neither canonical nor declared is not guessed: the package performs
+no morphological inference, and such a mention stays ordinary prose.
 
 To explain code where a term first appears, use one closed fence field:
 
@@ -468,12 +490,36 @@ rename. Injected partial-write and rename failures preserve the previous authori
 compiler-owned staging, and permit immediate retry. The product does not attempt to defeat hostile
 concurrent path swaps or provide process/OS crash recovery.
 
+## Authored rules
+
+The directive phase judges many authored subjects — a question, a section lead, a chart series, an
+annotated code fence — through a declared set of rules. A rule answers with a violation or with
+nothing; it never ends the phase, so one run reports every independent violation the source holds,
+including several over the same element. A rule that reads what another rule accepted declares that
+dependency, and it stays silent when the dependency refused: the record it would produce describes an
+interpretation nobody accepted.
+
+A rule only judges; what a judgement changes for the rest of the document — the identity a section
+claims, the definition a glossary key registers — happens once the whole set accepted the subject, so a
+refused subject takes nothing away from an accepted one.
+
+`getSourceContract().authoredRules` and `describe` expose the rule sets, their rule ids and those
+dependencies as data, readable without compiling a source. The sets are the declared ones, not every
+judgement the phase makes: checks written before this arrangement — among them the children a
+question accepts, code-fence metadata, the shape of a response form, and document-wide checks — are
+ordinary code and are absent from the list, though they report violations the same way. Read the list
+as what the phase declares, not as an inventory of everything it checks.
+
 ## Diagnostics and safety
 
-`build --json`, `validate --json`, and `inspect --json` write only NDJSON records to stdout, including
+`build`, `validate`, and `inspect` write only NDJSON records to stdout by default — `--json` names that
+default and `--human` selects the prose projection of the same records — including
 failures detected while parsing CLI arguments. Every record has a per-invocation `runId`, but no
 independent transport version. Diagnostics contain a code, level, message, remediation, and optional
-source/details. Unexpected internal causes do not cross the transport. Expected diagnostics sanitize
+source/details, plus an optional `related` inventory carrying the remaining authored violations
+of the same directive phase in source order and shaped like the diagnostic itself, minus the three that only
+repeat a refusal already reported; it is absent when the run
+found exactly one, and a failure of another stage ends the run with a single diagnostic. Unexpected internal causes do not cross the transport. Expected diagnostics sanitize
 credential-bearing URL user information, signed-URL and other recognized credential
 query/fragment/assignment values, credential-named detail fields, and corresponding path text to
 `[REDACTED]`. Successful CLI records and ESM analysis identities use the same boundary; a redacted path is
@@ -481,6 +527,17 @@ not intended for subsequent filesystem access. Source bodies are not included. D
 references as secret storage. Source-backed errors use
 `source.file`, `line`, `column`, `endLine`, and `endColumn` for the authored manifest, frontmatter,
 Markdown, or partial; a referenced/missing target path is reported separately as `details.target`.
+
+A diagnostic whose repair the product computed exactly also carries `fix`: the authored `file`, the
+`start` and `end` of the replaced range, and the `replacement` text. The range is measured in UTF-16 code
+units of the decoded file — the unit a JavaScript string index uses — and not in bytes: read the file as
+text, slice by these numbers, and write it back. The field is present only where
+applying it preserves every authored construction it spans, so an occurrence inside a link or other
+wrapper carries none — replacing the wrapper would delete the author's own syntax, and no later check
+would notice, because the loss happens inside the replaced range. A replacement that transport
+sanitization would alter is withheld for the same reason. The `fix` command applies exactly these
+replacements and nothing else; `build`, `validate`, `inspect` and `review` never write to an authored
+source.
 
 The compiler does not fetch remote assets, execute author code or template helpers, enable raw HTML,
 start a server, publish, or deploy. Unknown directives fail instead of silently producing ambiguous

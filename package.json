@@ -1,6 +1,6 @@
 {
   "name": "agentic-report",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Local declarative page builder for agent-authored interactive HTML artifacts.",
   "type": "module",
   "license": "MIT",
@@ -46,6 +46,7 @@
     "docs/product/share-safe-build-extension.json",
     "docs/product/time-text-extension.json",
     "docs/product/source-link-extension.json",
+    "docs/product/violation-inventory-extension.json",
     "skills",
     "README.md",
     "LICENSE",
@@ -109,7 +110,7 @@
     "husky": "9.1.7",
     "lint-staged": "17.3.0",
     "prettier": "3.9.6",
-    "testfold": "0.3.0",
+    "testfold": "0.4.0",
     "typescript": "7.0.2",
     "vite": "8.2.1",
     "vitest": "4.1.10"
