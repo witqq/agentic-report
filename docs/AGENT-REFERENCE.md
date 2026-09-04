@@ -184,6 +184,9 @@ The equivalent ESM API is `fixReport({ input, format? })`.
 A generated report contains an inert review-target manifest bound to the local source graph. A versioned
 review artifact created for that report can be resolved without writing output or changing Markdown:
 
+The manifest accepts at most 5,000 reviewable targets and 750,000 serialized bytes. Both bounds apply; a
+report with long source-location records can reach the byte limit before the target-count limit.
+
 ```bash
 agentic-report review ./review.json ./my-report
 agentic-report review ./review.json ./my-report --json

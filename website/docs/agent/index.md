@@ -50,7 +50,7 @@ When the user does not trust the published package, do not silently fall back to
 release tag, let the user inspect the repository, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.6.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.7.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -76,14 +76,14 @@ and use an isolated environment when the user's threat model calls for one.
 Use Node.js 24.18.0 or newer. The first `npx` command needs npm registry and network access; the generated
 page itself opens locally through `file://` with its included package-owned browser runtime.
 
-For a reproducible 0.6.0 run, create a new landing-page source and keep the package version pinned through
+For a reproducible 0.7.0 run, create a new landing-page source and keep the package version pinned through
 validation, inspection, and build:
 
 ```sh
-npx --yes agentic-report@0.6.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.6.0 validate ./my-page --json
-npx --yes agentic-report@0.6.0 inspect ./my-page --json
-npx --yes agentic-report@0.6.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.7.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.7.0 validate ./my-page --json
+npx --yes agentic-report@0.7.0 inspect ./my-page --json
+npx --yes agentic-report@0.7.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Edit only the declarative source: Markdown, YAML frontmatter or the
@@ -102,6 +102,19 @@ npx --yes agentic-report validate ./my-page --json
 npx --yes agentic-report inspect ./my-page --json
 npx --yes agentic-report build ./my-page --output ./my-page.html --json
 ```
+
+Every command already defaults to agent output: run commands emit NDJSON and reference commands emit one
+compact JSON line; `--json` names that default, while `--human` selects prose or indented JSON. One refused
+directive pass reports its earliest authored violation plus the remaining independent violations in
+`related`, so fix the whole inventory together. When a diagnostic carries an exact `fix`, run
+`npx --yes agentic-report fix ./my-page`; this is the only command that writes authored Markdown, and it
+leaves all other bytes unchanged. `describe` exposes all nine commands and the declared directive rule
+dependencies as `commands` and `authoredRules`.
+
+`init` requires an absent destination below an existing directory. A symbolic-link parent such as macOS
+`/tmp` is accepted and the result reports the resolved `projectPath`; an existing destination is always
+refused. For glossary inflections, declare only the spellings you intend with
+`forms="spelling, other-spelling"`; the validator recognizes those exact forms and performs no morphology.
 
 Add top-level `::contents` when the handoff needs a route map inside the article. The compiler uses exact
 final section headings and anchors; do not duplicate them in an authored Markdown list. Optional short
@@ -123,6 +136,9 @@ reader downloads `review.json`, map it back to the authored files with:
 ```sh
 npx --yes agentic-report review review.json ./my-page --json
 ```
+
+One report may contain at most 5,000 reviewable targets and 750,000 serialized target-manifest bytes. Split
+an unusually large handoff when either bound is reached.
 
 Use the separate `response`/`question` directives when the reader must return structured triage, choices,
 priority order, scores, text, or per-item comments. The generated page keeps answers in the current tab and
@@ -168,9 +184,9 @@ registry's current `latest` release.
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.6.0 describe --json
-npx --yes agentic-report@0.6.0 schema --scope source
-npx --yes agentic-report@0.6.0 examples --json
+npx --yes agentic-report@0.7.0 describe --json
+npx --yes agentic-report@0.7.0 schema --scope source
+npx --yes agentic-report@0.7.0 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),

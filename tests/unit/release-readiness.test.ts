@@ -58,6 +58,30 @@ describe('release readiness', () => {
     ).resolves.toMatchObject({ format: 'single-file' });
   });
 
+  it('keeps the current authoring workflow visible across public entry points', async () => {
+    const surfaces = await Promise.all(
+      [
+        'README.md',
+        'skills/agentic-report/SKILL.md',
+        'website/landing/report.md',
+        'website/docs/report.md',
+        'website/docs/agent/index.md',
+      ].map(async (file) => ({ file, source: await readFile(path.resolve(file), 'utf8') })),
+    );
+    for (const { file, source } of surfaces) {
+      for (const fact of ['fix', 'forms', '5,000'])
+        expect(source, `${file}: ${fact}`).toContain(fact);
+    }
+    for (const { file, source } of surfaces.filter(({ file }) => file !== 'README.md')) {
+      for (const fact of ['related', '--human']) expect(source, `${file}: ${fact}`).toContain(fact);
+      expect(source, `${file}: symlink parent`).toMatch(/symbolic(?:-| )link|symlink/u);
+    }
+
+    const development = await readFile(path.resolve('docs/DEVELOPMENT.md'), 'utf8');
+    expect(development).toContain('sets its own npm global prefix');
+    expect(development).toContain('does not have to be removed first');
+  });
+
   it('keeps all shipped review pillars in normative product requirements', async () => {
     const requirements = await readFile(path.resolve('PRODUCT-REQUIREMENTS.md'), 'utf8');
     for (const required of [
@@ -135,7 +159,7 @@ describe('release readiness', () => {
     expect(runbook).toContain('do not run its constituent checks again');
     expect(runbook).toContain('do not duplicate it with a second download or isolated install');
     expect(runbook).toContain(
-      'gh workflow run publish-npm.yml --ref main -f tag=v0.6.0 -f sha256="$candidate_sha256"',
+      'gh workflow run publish-npm.yml --ref main -f tag=v0.7.0 -f sha256="$candidate_sha256"',
     );
     expect(runbook).toContain('gh run watch "<databaseId>" --exit-status');
     expect(runbook).toContain('npm view agentic-report dist-tags version --json');

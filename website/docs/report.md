@@ -39,7 +39,7 @@ If you prefer to inspect the implementation instead of executing the published `
 package, clone a specific release tag and run the compiler directly from its build:
 
 ```sh
-git clone --branch v0.6.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.7.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -57,6 +57,26 @@ This path does not install or execute the `agentic-report` package from npm. It 
 for the exact dependencies pinned by `pnpm-lock.yaml`; dependencies are not vendored. Review the lockfile
 and scripts before installation, use an isolated environment if your threat model requires it, and keep the
 tag pinned so later commands continue to use the revision you inspected.
+
+::::
+
+::::section{title="Validate, explain, and repair" id="diagnostics" nav="Diagnostics" width="standard" align="start" tone="soft" reveal="true"}
+
+The CLI registers nine discoverable commands: `init`, `validate`, `inspect`, `build`, `fix`, `review`,
+`describe`, `schema`, and `examples`. Agent output is the default—NDJSON for run commands and one compact
+JSON line for reference commands. `--json` explicitly names that default; `--human` selects prose or
+indented JSON without dropping diagnostic facts.
+
+One directive pass returns every independent authored violation it found. The first diagnostic carries the
+rest in `related`, ordered by source position, while declared dependencies suppress only conclusions that
+would rely on an already refused interpretation. Inspect those dependencies without compiling through
+`describe` → `authoredRules`.
+
+When a diagnostic contains an exact source-range `fix`, run `agentic-report fix ./my-page`. It is the only
+command that writes authored Markdown and changes only the computed ranges; `validate`, `inspect`, `build`,
+and `review` remain read-only. Glossary definitions may declare exact inflections with `forms`; the compiler
+does not guess morphology. `init` accepts a symbolic-link parent such as macOS `/tmp`, reports the resolved
+destination, and still refuses every existing destination.
 
 ::::
 
@@ -91,6 +111,8 @@ Generated pages include a local Review Workspace. A reader opens a discussion th
 adds or edits messages, reads agent replies, resolves or reopens the thread, and downloads deterministic
 version-2 `review.json`. Desktop uses a non-modal rail; mobile uses a modal sheet. Nothing is uploaded or
 stored in an account; ordinary decisions and checklists remain static report content.
+The target manifest is bounded to 5,000 reviewable blocks and 750,000 serialized bytes; unusually large
+handoffs must stay under both limits or be split.
 
 An agent resolves the downloaded review against the current source with:
 

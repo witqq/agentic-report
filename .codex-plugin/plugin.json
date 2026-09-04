@@ -1,6 +1,6 @@
 {
   "name": "agentic-report",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Create polished local interactive pages from declarative Markdown with agentic-report.",
   "author": {
     "name": "witqq",

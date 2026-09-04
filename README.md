@@ -38,7 +38,7 @@ If you do not want to execute the published `agentic-report` npm package, clone 
 inspect the repository, run its checks, and invoke the compiled CLI directly:
 
 ```sh
-git clone --branch v0.6.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.7.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -142,7 +142,7 @@ Inspect :source-link{label="src/render/directives.ts:42" href="http://127.0.0.1:
 const concept = compileSource();
 ```
 
-:::glossary{key="concept" term="concept" placement="appendix"}
+:::glossary{key="concept" term="concept" forms="concepts" placement="appendix"}
 One canonical definition shared by prose forms and selected first code occurrences.
 :::
 ::::
@@ -167,7 +167,8 @@ The package includes report, research, architecture, tutorial, dashboard, and la
 report starter is the default; its stable canonical ID is `basic`, and the clearer `report` alias is also
 accepted. The other IDs are `research`, `architecture`, `tutorial`, `dashboard`, and `landing`.
 `listExamples()` and `agentic-report examples --json` return starter eligibility, default selection, and
-aliases from the same registry metadata. The immediate parent must already be an ordinary directory. The starter is read completely
+aliases from the same registry metadata. The immediate parent must resolve to an ordinary directory. It may
+be a symbolic link, including macOS `/tmp`; `projectPath` reports the resolved destination. The starter is read completely
 before the destination is created exclusively; files use no-overwrite creation. A later failure is reported
 and may leave the new destination incomplete for explicit inspection and removal. The initializer never
 deletes or rolls back destination content.
@@ -181,6 +182,8 @@ Generated pages also carry an inert deterministic review-target manifest. Use
 `inspectReview({ input, review })` or `agentic-report review <review> [input] --json` to validate a confined
 version-2 `review.json` and resolve each discussion thread to the current Markdown or partial range. Stale, changed,
 missing, and ambiguous targets remain explicit; the command never rewrites source.
+The manifest accepts at most 5,000 reviewable targets and 750,000 serialized bytes; the byte ceiling may
+bind first when source-location records are unusually long.
 
 In the generated page, `Review` opens a local discussion layer. Readers open a thread on an exact block,
 accumulate and edit messages, read agent replies, resolve or reopen the thread, and download all threads as

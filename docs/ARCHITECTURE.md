@@ -353,8 +353,10 @@ creating an orphan target after compile-time SVG enhancement. The
 manifest contains source-root-relative ranges and SHA-256 fingerprints, not source bodies or workstation
 paths. Its report revision covers the confined entry, manifest, expanded partials, referenced local resource
 bytes, review/source-contract versions, target-algorithm version, and canonical target inventory; it is
-independent of output destination and format. A 500-target and 750,000-byte manifest limit bounds
-artifact/runtime input; review files are limited separately before JSON parsing.
+independent of output destination and format. A 5,000-target and 750,000-byte manifest limit bounds
+artifact/runtime input; review files are limited separately before JSON parsing. Node-side target collection
+passes the count bound into shared validation explicitly, so the browser bundle has no process-environment
+lookup and the default is identical in both output formats.
 
 When at least one target exists, the shared document shell includes one Review entry and one native review
 dialog. Normal reading exposes no target controls. Review mode creates one button sibling per actual DOM

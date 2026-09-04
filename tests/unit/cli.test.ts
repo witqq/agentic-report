@@ -26,6 +26,33 @@ afterEach(async () => {
   await Promise.all(workspaces.splice(0).map(removeTestWorkspace));
 });
 
+function glossarySource(...body: readonly string[]): string {
+  return [
+    '---',
+    'contractVersion: 1',
+    'title: Fix probe',
+    'language: en',
+    '---',
+    '',
+    '# Fix probe',
+    '',
+    ':::glossary{key="spec" term="spec"}',
+    'A written contract.',
+    ':::',
+    '',
+    ...body,
+  ].join('\n');
+}
+
+async function refusedDiagnostic(source: string): Promise<Diagnostic> {
+  return await validateReport({ input: source }).then(
+    () => {
+      throw new Error('The source was expected to be refused.');
+    },
+    (error: unknown) => (error as AgenticReportError).diagnostic,
+  );
+}
+
 describe('CLI transport', () => {
   it('rejects a below-floor runtime through human and JSON CLI transports', async () => {
     const human = await runCliAsNodeVersion(['--version', '--human'], '22.18.0');
@@ -573,37 +600,13 @@ describe('CLI transport', () => {
     expect(human.stderr.trimEnd().endsWith('3 violations')).toBe(true);
   });
 
-  it('carries the computed replacement as data and applies it only through fix', async () => {
-    const workspace = await createTestWorkspace('cli-fix');
+  it('carries a computed replacement as data and withholds unsafe replacements', async () => {
+    const workspace = await createTestWorkspace('cli-fix-data');
     workspaces.push(workspace);
     const source = path.join(workspace, 'report.md');
-    const glossarySource = (...body: readonly string[]): string =>
-      [
-        '---',
-        'contractVersion: 1',
-        'title: Fix probe',
-        'language: en',
-        '---',
-        '',
-        '# Fix probe',
-        '',
-        ':::glossary{key="spec" term="spec"}',
-        'A written contract.',
-        ':::',
-        '',
-        ...body,
-      ].join('\n');
-
-    const refusal = async (): Promise<Diagnostic> =>
-      await validateReport({ input: source }).then(
-        () => {
-          throw new Error('The source was expected to be refused.');
-        },
-        (error: unknown) => (error as AgenticReportError).diagnostic,
-      );
 
     await writeFile(source, glossarySource('The spec explains it.', ''));
-    const violation = await refusal();
+    const violation = await refusedDiagnostic(source);
     expect(violation.fix).toMatchObject({ replacement: ':term[spec]{key="spec"}' });
 
     // The replacement is data, so a consumer applies it without parsing prose: these bytes at these
@@ -633,7 +636,7 @@ describe('CLI transport', () => {
       'Read the [spec][handle].\n\n[handle]: https://example.com/s',
     ]) {
       await writeFile(source, glossarySource(authored, ''));
-      const linked = await refusal();
+      const linked = await refusedDiagnostic(source);
       expect(linked.code).toBe('UNMARKED_GLOSSARY_TERM');
       expect(linked.fix).toBeUndefined();
     }
@@ -659,11 +662,16 @@ describe('CLI transport', () => {
         '',
       ].join('\n'),
     );
-    const credentialed = await refusal();
+    const credentialed = await refusedDiagnostic(source);
     expect(credentialed.code).toBe('UNMARKED_GLOSSARY_TERM');
     expect(credentialed.fix).toBeUndefined();
     expect(credentialed.remediation).toContain('[REDACTED]');
+  });
 
+  it('applies computed fixes exactly and remains idempotent', async () => {
+    const workspace = await createTestWorkspace('cli-fix-apply');
+    workspaces.push(workspace);
+    const source = path.join(workspace, 'report.md');
     // `fix` writes those replacements and nothing else: every other byte is untouched, which a green
     // validate alone would not distinguish from a reformatted file. Three violations in one file are
     // the point — every replacement is addressed in the bytes of the file as it was read, so a run
@@ -697,7 +705,28 @@ describe('CLI transport', () => {
     // Running it again changes nothing: repairs do not accumulate.
     await expect(fixReport({ input: source })).resolves.toMatchObject({ applied: [] });
     expect(await readFile(source, 'utf8')).toBe(afterFix);
+  });
 
+  it('keeps checking commands read-only and identifies an unrepairable source', async () => {
+    const workspace = await createTestWorkspace('cli-fix-read-only');
+    workspaces.push(workspace);
+    const source = path.join(workspace, 'report.md');
+    const beforeFix = glossarySource(
+      ':::section{title="First"}',
+      'The spec appears here.',
+      ':::',
+      '',
+      ':::section{title="Second"}',
+      'The spec appears again.',
+      ':::',
+      '',
+      ':::section{title="Third"}',
+      'The spec appears once more.',
+      ':::',
+      '',
+      '<!-- a comment kept verbatim -->',
+      '',
+    );
     // The commands that check never write, and that rule is what `fix` exists to keep intact.
     await writeFile(source, beforeFix);
     await validateReport({ input: source }).catch(() => undefined);

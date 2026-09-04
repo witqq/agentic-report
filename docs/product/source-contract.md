@@ -132,6 +132,11 @@ reader activates that control. In review mode each actual block target receives 
 it opens the target editor. Tight-list paragraphs do not become separate targets because they render without
 their own paragraph element—the containing list remains reviewable.
 
+The inert manifest contains at most 5,000 targets and at most 750,000 serialized bytes. These are independent
+bounds, so verbose relative source locations can make the byte ceiling bind before the target count. Target
+validation receives the count bound from the Node-side compiler; the shared browser-safe review contract
+contains no environment-variable lookup.
+
 The interface supports one thread per target, ordered user and agent messages, message editing, and
 resolved/reopened state. A compact target indicator opens the thread and a separate control resolves it.
 Canonical version-2 `review.json` download and exact-revision import preserve the full conversation. Import

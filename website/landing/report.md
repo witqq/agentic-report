@@ -146,14 +146,26 @@ package; compilation and the generated page then run locally.
 
 1. Initialize with `npx --yes agentic-report init ./my-page --starter landing --json`.
 2. Edit the generated declarative Markdown and add only confined partials or local assets.
-3. Run `npx --yes agentic-report validate ./my-page --json` and `npx --yes agentic-report inspect ./my-page --json`.
-4. Run `npx --yes agentic-report build ./my-page --output ./my-page.html --json`, then open the result through `file://`.
+3. Run `npx --yes agentic-report validate ./my-page --json`; fix all reported violations together.
+4. Apply exact computed repairs with `npx --yes agentic-report fix ./my-page`, then run `inspect`.
+5. Run `npx --yes agentic-report build ./my-page --output ./my-page.html --json`, then open the result through `file://`.
    :::
+
+:::callout{kind="info" title="Agent-first diagnostics, human-readable on demand"}
+All nine CLI commands are machine-discoverable. Run commands default to NDJSON and reference commands to
+one compact JSON line; `--json` names that default and `--human` selects prose or indented JSON. One refused
+directive pass returns the first authored violation plus every independent one in `related`, with declared
+rule dependencies visible through `describe`. `fix` is the only command that writes Markdown and applies
+only exact computed ranges. Glossary authors declare intended inflections with `forms`; none are guessed.
+`init` accepts a symlink parent such as macOS `/tmp`, reports the resolved path, and still refuses an
+existing destination.
+:::
 
 :::callout{kind="success" title="Return structured feedback to the agent"}
 Select **Review** in the generated page to open threads on exact blocks, exchange user/agent messages,
 resolve or reopen them, and download deterministic `review.json`. The review stays local; use the CLI review command to map it back to
-the current Markdown or partial ranges.
+the current Markdown or partial ranges. One artifact supports at most 5,000 reviewable targets and a
+750,000-byte target manifest; split an unusually large handoff when either bound is reached.
 :::
 
 :::callout{kind="warning" title="The runtime is part of the artifact"}
@@ -255,7 +267,7 @@ npx --yes agentic-report build ./website/landing --output ./site/index.html --js
 :::
 :::card{title="Ordinary engine features"}
 
-- eight semantic sections derived into navigation;
+- nine semantic sections derived into navigation;
 - the reusable Field Manual `editorial` preset and responsive content tracks;
 - ordinary safe action links and local screenshots;
 - one optional progress line and three bounded one-time reveals.
@@ -269,7 +281,8 @@ npx --yes agentic-report build ./website/landing --output ./site/index.html --js
 
 - a local declarative compiler;
 - confined Markdown, partials, and local assets;
-- deterministic validate, inspect, and build commands with structured JSON output;
+- nine discoverable CLI commands with agent JSON/NDJSON by default and `--human` projections;
+- multi-violation diagnostics plus exact, opt-in Markdown repair through `fix`;
 - a required package-owned interactive runtime;
 - single-file output by default and optional directory output.
   :::
