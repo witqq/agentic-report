@@ -3,7 +3,7 @@ name: agentic-report
 description: Create, validate, inspect, or build polished local interactive reports, research pages, architecture pages, tutorials, dashboards, decisions, and landing pages from declarative Markdown. Use for static agent-to-human page handoff; do not use for hosted apps, live collaboration, deployment, publication, or bespoke frontend development.
 license: MIT
 metadata:
-  version: '0.7.0'
+  version: '0.8.0'
   homepage: https://agentic-report.witqq.dev/
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run.
 ---
@@ -84,10 +84,10 @@ Create a local declarative source, verify it, and hand the user a finished inter
 Use the release pinned in this skill:
 
 ```sh
-npx --yes agentic-report@0.7.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.7.0 validate ./my-page --json
-npx --yes agentic-report@0.7.0 inspect ./my-page --json
-npx --yes agentic-report@0.7.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.8.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.8.0 validate ./my-page --json
+npx --yes agentic-report@0.8.0 inspect ./my-page --json
+npx --yes agentic-report@0.8.0 build ./my-page --output ./my-page.html --json
 ```
 
 Choose a different starter or destination name when the task requires it. `init` requires an absent
@@ -112,7 +112,7 @@ If the user does not trust the published npm package, do not run it through `npx
 pinned by this skill, expose the checked commit for review, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.7.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.8.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -122,7 +122,7 @@ pnpm build
 node dist/node/cli.js init ../my-page --starter report --json
 ```
 
-Substitute `node dist/node/cli.js` for every `npx --yes agentic-report@0.7.0` command above. Keep page
+Substitute `node dist/node/cli.js` for every `npx --yes agentic-report@0.8.0` command above. Keep page
 sources and outputs outside the cloned repository.
 
 Explain that this avoids executing the `agentic-report` npm package but is not registry-free:

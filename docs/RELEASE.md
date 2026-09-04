@@ -40,9 +40,9 @@ Create an annotated tag on the accepted merge commit and one GitHub Release whos
 accepted tarball. The release description must end with `[Made with Moira](https://moira-mcp.com/)`.
 
 ```sh
-git tag -a v0.7.0 -m "agentic-report 0.7.0"
-git push origin v0.7.0
-gh release create v0.7.0 "$candidate_path" --title "agentic-report 0.7.0" --notes-file ./release-notes.md
+git tag -a v0.8.0 -m "agentic-report 0.8.0"
+git push origin v0.8.0
+gh release create v0.8.0 "$candidate_path" --title "agentic-report 0.8.0" --notes-file ./release-notes.md
 ```
 
 Dispatch the trusted OIDC workflow. It downloads the canonical GitHub Release asset, verifies the supplied
@@ -50,13 +50,13 @@ SHA-256 and package/tag identity, and publishes those exact bytes. A successful 
 gate; do not duplicate it with a second download or isolated install.
 
 ```sh
-gh workflow run publish-npm.yml --ref main -f tag=v0.7.0 -f sha256="$candidate_sha256"
+gh workflow run publish-npm.yml --ref main -f tag=v0.8.0 -f sha256="$candidate_sha256"
 gh run list --workflow publish-npm.yml --limit 1 --json databaseId,status,conclusion,headSha,url
 gh run watch "<databaseId>" --exit-status
 npm view agentic-report dist-tags version --json
 ```
 
-Continue only when the workflow succeeds and npm reports `latest` and `version` as `0.7.0`. Do not run
+Continue only when the workflow succeeds and npm reports `latest` and `version` as `0.8.0`. Do not run
 `npm publish` locally and do not move or overwrite a public tag or release asset.
 
 ## Deploy
@@ -79,7 +79,7 @@ curl --fail --silent --show-error https://agentic-report.witqq.dev/release.json
 curl --fail --silent --show-error --output /dev/null https://agentic-report.witqq.dev/
 ```
 
-Confirm `release.json` reports package `0.7.0` and the accepted merge commit, the landing returns HTML over
+Confirm `release.json` reports package `0.8.0` and the accepted merge commit, the landing returns HTML over
 trusted TLS, and then update `/Users/mike/WebstormProjects/DEPLOYMENT-INVENTORY.md`. This single smoke checks
 the public route and deployed identity; deterministic route and browser behavior were already covered by
 `pnpm verify`.

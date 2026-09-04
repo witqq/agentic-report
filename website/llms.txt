@@ -27,11 +27,11 @@ selected-text note and whole-block thread together in one local `review.json`.
 
 Requires Node.js 24.18.0 or newer. The first npx run requires npm registry access. Start with:
 
-    npx --yes agentic-report@0.7.0 init ./my-page --starter landing --json
-    npx --yes agentic-report@0.7.0 validate ./my-page --json
-    npx --yes agentic-report@0.7.0 fix ./my-page --json
-    npx --yes agentic-report@0.7.0 inspect ./my-page --json
-    npx --yes agentic-report@0.7.0 build ./my-page --output ./my-page.html --json
+    npx --yes agentic-report@0.8.0 init ./my-page --starter landing --json
+    npx --yes agentic-report@0.8.0 validate ./my-page --json
+    npx --yes agentic-report@0.8.0 fix ./my-page --json
+    npx --yes agentic-report@0.8.0 inspect ./my-page --json
+    npx --yes agentic-report@0.8.0 build ./my-page --output ./my-page.html --json
 
 Generated reports include a bottom Made with Agentic Report link by default. Set root metadata
 `attribution: false` only when an unbranded artifact is explicitly required.
