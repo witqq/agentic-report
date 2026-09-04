@@ -8,10 +8,13 @@ metadata:
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run.
 ---
 
-Use Review Workspace for local discussion threads and selected-text notes. A reader selects eligible text,
-chooses **Create note**, writes in the existing editor, and exports every whole-block thread and selection
-note together as deterministic version-3 `review.json`; valid version-2 whole-block files remain accepted.
-Selection anchors contain the exact quote plus bounded target endpoints and Unicode code-point offsets.
+Use Review Workspace for always-on local selected-text discussion. A reader selects eligible text, chooses
+**Create note**, and writes in the anchored full-thread popover; saved open/resolved ranges stay highlighted,
+and **View thread** reopens the same popover by pointer, touch, or focusable marker. The topbar **Review**
+action opens only a non-reflowing list/import/export overlay. It exports every selection plus imported legacy
+whole-block threads as deterministic version-3 `review.json`; valid version-2 whole-block files remain
+accepted and list-only. Selection anchors contain the exact quote plus bounded target endpoints and Unicode
+code-point offsets.
 Never imply an account or signature. For a follow-up build, pass a confined prior artifact with
 `build --review review.json`; treat stale bindings as immutable prior revision segments, append a current
 segment when continuing a changed fragment, and export the next revision. A report may contain at most 5,000

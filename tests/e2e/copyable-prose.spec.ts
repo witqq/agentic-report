@@ -64,12 +64,9 @@ for (const fixture of cases) {
     await expect(copyable.locator('p')).toHaveCount(2);
     await expect(copyable.locator('pre, code')).toHaveCount(0);
     await expect(content).not.toContainText(/Copy|Копировать/u);
-    const reviewControls = copyable.locator(
-      '[data-review-target-control], [data-review-target-resolve]',
-    );
-    await reviewControls.evaluateAll((controls) => {
-      for (const control of controls) (control as HTMLElement).hidden = false;
-    });
+    await expect(
+      copyable.locator('[data-review-target-control], [data-review-target-resolve]'),
+    ).toHaveCount(0);
     const style = await content.evaluate((element) => {
       const computed = getComputedStyle(element);
       return { fontFamily: computed.fontFamily, whiteSpace: computed.whiteSpace };
@@ -84,10 +81,6 @@ for (const fixture of cases) {
     expect(await page.evaluate(() => Reflect.get(globalThis, '__copiedProse'))).toBe(
       fixture.expected,
     );
-    await reviewControls.evaluateAll((controls) => {
-      for (const control of controls) (control as HTMLElement).hidden = true;
-    });
-
     const authoredText = await content.innerText();
     await expect(button).toContainText(fixture.locale === 'ru' ? 'Копировать' : 'Copy');
     await page.evaluate(() => Reflect.set(globalThis, '__copyProseFails', true));

@@ -13,7 +13,7 @@
       "liveRoute": "examples/incident-review/index.html",
       "publicSourceRoute": "examples/incident-review/report.md",
       "sourceSha256": "3aad026526695ad3ac2f4752416159f8fb5c3834e4fe3ee21cdf6c4e80d36b12",
-      "artifactSha256": "ab9ec1834d61bfe5b477382c8b649ffc81c03d6cd9acea58461b1e0366d63665",
+      "artifactSha256": "8a8183a2b820e05c612f67594e02b2f3447d620c73917305f7d6cb9ab2a83744",
       "file": "incident-review.png",
       "sha256": "4799119d029d4eac830cde76639aea0a5bb5e3987deb59e416585a6c436765d6"
     },
@@ -23,7 +23,7 @@
       "liveRoute": "examples/vendor-decision/index.html",
       "publicSourceRoute": "examples/vendor-decision/report.md",
       "sourceSha256": "d389a0038a7d8450a46bdb2115bf26a469df849a8e6fa4b24407ed6e81468535",
-      "artifactSha256": "68d6c1f2476d9a0d50ac38ed3f64eee40c69bc58ab76e84b9988fc2c06dafbe7",
+      "artifactSha256": "c1ba1b2bdabf585f595496dc275a57386769b1ae430af38264ca314e165ae7a6",
       "file": "vendor-decision.png",
       "sha256": "545207ca6dc15d953cfb1e3e1c90e551f2817b633ab346f67b9e7d4cd3290d46"
     },
@@ -33,7 +33,7 @@
       "liveRoute": "examples/launch-readiness/index.html",
       "publicSourceRoute": "examples/launch-readiness/report.md",
       "sourceSha256": "e3674fffe5a1955e2dbb0be958cfae6c27cfd65d2e48d102f3e746d4045b0cfc",
-      "artifactSha256": "ba794a7636af224eff509047a668acd0ebc58a72a6544c0eb536a9e508cd313f",
+      "artifactSha256": "b7a0b4089170489155cbb2cd41576f64d1cb70204ffd0a4a4dfc79ee62346da5",
       "file": "launch-readiness.png",
       "sha256": "8f30d472d2b25980e6fa968e57d3979c0b84e653c59613bf202859e08159aa62",
       "proofExcerpt": {

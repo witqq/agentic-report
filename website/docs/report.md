@@ -107,14 +107,16 @@ runtime truth.
 
 ::::section{title="Review and return feedback" id="review" nav="Review" width="standard" align="start" tone="accent" reveal="true"}
 
-Generated pages include a local Review Workspace. Select an eligible passage and choose **Create note**;
-the existing editor opens with the exact quote. A selection may stay within one block or cross adjacent
-review targets. Whole-block discussions remain available through **Review**. The panel reopens every current
-note, and one export downloads all block threads and selection notes as deterministic version-3
-`review.json`; valid version-2 whole-block files remain accepted. Desktop uses a non-modal rail; mobile uses
-a modal sheet. Nothing is uploaded or stored in an account; ordinary decisions and checklists remain static
-report content. [Try the complete Review Workspace example](../examples/review-workspace/index.html) or
-[read its declarative source](../examples/review-workspace/report.md).
+Generated pages include always-on local Review Workspace annotations. Select an eligible passage and choose
+**Create note**; the anchored popover opens with the exact quote and keeps reply, edit, resolve, and reopen
+beside the text. A selection may cross inline markup or adjacent review targets. Saved open/resolved ranges
+stay visibly distinct; hover/tap exposes **View thread**, and focusable markers provide the keyboard route.
+The topbar **Review** action opens only a non-reflowing overlay list, prior evidence, import, and one export
+of every thread as deterministic version-3 `review.json`. Valid version-2 whole-block files remain accepted
+and list-accessible, but new threads begin with selected text. Desktop uses a non-modal list overlay; mobile
+uses a modal sheet. Nothing is uploaded or stored in an account; ordinary decisions and checklists remain
+static report content. [Try the complete Review Workspace example](../examples/review-workspace/index.html)
+or [read its declarative source](../examples/review-workspace/report.md).
 The target manifest is bounded to 5,000 reviewable blocks and 750,000 serialized bytes; unusually large
 handoffs must stay under both limits or be split.
 
@@ -146,6 +148,8 @@ copies only visible rendered text through the localized package control.
 - `single-file` is the default: one portable HTML file with embedded local resources and runtime.
 - `directory` writes `index.html` plus content-hashed resources for larger pages.
 - Both formats open through normal `file://` and preserve the same supported interactions.
+- On the reference static host, mutable HTML, Markdown, and release metadata revalidate on every use;
+  content-hashed directory assets alone receive a one-year immutable cache policy.
 - Both formats show a bottom **Made with Agentic Report** link by default. Set root metadata
   `attribution: false` to omit only that package footer.
 - Top-level `::contents` keeps an exact compiler-generated section map in the article and on narrow screens;
@@ -167,7 +171,8 @@ The public [landing](../index.html), [incident review](../examples/incident-revi
 
 [`release.json`](../release.json) records the package version, source revision, and hashes for the exact
 staged files. The hosted site is accepted only after ordinary trusted HTTPS, real route/MIME checks, and
-a real 404 prove that a static host is not serving a catch-all shell.
+a real 404 prove that a static host is not serving a catch-all shell. Acceptance also verifies revalidation
+for mutable routes and immutable caching only for filenames carrying the compiler's content hash.
 
 :::actions
 ::action[Inspect release metadata]{href="../release.json" kind="secondary"}

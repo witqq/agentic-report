@@ -52,6 +52,12 @@ that directory, the nginx configuration, and the Dockerfile, so source, Git stat
 and agent workspaces are outside the image build context. nginx serves explicit files and directory indexes
 without an SPA fallback; an absent path remains a real 404.
 
+Nginx requires revalidation for mutable HTML, `release.json`, direct Markdown/documentation, manifests, and
+other unhashed routes, so a release cannot leave an old shell or identity current. Files whose compiler-owned
+name contains a twelve-hex content digest—runtime, stylesheet, image, font, data, or another directory asset—
+receive `public, max-age=31536000, immutable`. ETag remains enabled for both families; acceptance includes a
+conditional `304 Not Modified`, correct MIME, the health route, and a deliberate 404.
+
 The production command builds the same image and deploys it through the configured `infra-tools` and Traefik
 contract:
 

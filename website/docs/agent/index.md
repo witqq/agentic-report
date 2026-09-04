@@ -130,11 +130,13 @@ filename/line text from each validated source helper and uses `source:line` for 
 compiler-owned local paths and authored directory/free-form labels are omitted, and the JSON result reports
 `neutralizedSourceLinks`. The default build keeps every authored label and working editor link.
 
-Open the generated page and select the exact text the human wants to discuss. Choose **Create note**, enter
-the message in Review Workspace, and repeat for any other passage; a selection can cross adjacent report
-blocks. Whole-block threads remain available through **Review**. The panel lists every current note and one
-**Export review.json** action downloads them all. After the reader downloads `review.json`, map it back to
-the authored files with:
+Open the generated page and select the exact text the human wants to discuss. Choose **Create note** and use
+the anchored popover to add the first message, reply, edit, resolve, or reopen without entering a separate
+mode; a selection can cross inline markup or adjacent report targets. Saved open and resolved ranges stay
+visibly distinct, and their **View thread** action reopens the same popover. **Review** opens only an overlay
+list with prior evidence, import, and one **Export review.json** action; it never divides or shifts the page.
+Valid version-2 whole-block threads remain list-accessible, but new threads begin with selected text. After
+the reader downloads `review.json`, map it back to the authored files with:
 
 ```sh
 npx --yes agentic-report review review.json ./my-page --json

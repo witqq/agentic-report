@@ -355,5 +355,8 @@ describe('review thread protocol v3', () => {
       expect(source).not.toContain(removed);
     expect(source).toContain('toggleResolved');
     expect(source).toContain('data-review-thread-messages');
+    expect(source).not.toContain('data-review-active');
+    expect(source).not.toContain('data-review-target-control');
+    expect(source).not.toContain('data-review-exit');
   });
 });

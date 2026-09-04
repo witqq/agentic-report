@@ -110,12 +110,13 @@ Markdown + metadata + local assets + partials + semantic directives
   clipping or relocating the panel. Interaction instances otherwise keep state in their own semantic DOM
   subtree, so repeated components do not share accidental state.
 - `src/browser/review-workspace.ts` is a cohesive package-owned controller over the shared review contract.
-  It parses the inert manifest once, creates bounded target affordances, maps native in-block or cross-block
-  text ranges to deterministic anchors, owns in-memory discussion threads, ordered user/agent messages and
-  segment-local resolution, validates exact-revision imports against reconstructed DOM ranges, and exports
-  canonical JSON through a revoked local object URL. The contextual action, existing editor, and current-note
-  list share that state machine. It never evaluates or injects messages as HTML, writes storage, starts a
-  service, or performs a network request.
+  It parses the inert manifest once, maps native in-target or cross-target text ranges to deterministic
+  anchors, owns in-memory discussion threads, ordered user/agent messages and segment-local resolution,
+  validates exact-revision imports against reconstructed DOM ranges, and exports canonical JSON through a
+  revoked local object URL. CSS Custom Highlight ranges, focusable overlay markers, the selection/highlight
+  action, anchored thread popover, and overlay comment list share that state machine. Geometry work is
+  animation-frame-coalesced and dormant when no annotation UI exists. It never evaluates or injects messages
+  as HTML, writes storage, starts a service, or performs a network request.
 - `src/browser/response-workspace.ts` reads each inert response manifest and creates native question controls.
   It owns current-tab answer state, select-based bucket assignment plus drag-and-drop, explicit order moves,
   sparse item comments, clipboard and Blob-file export, and validate-before-swap file import. It uses DOM
@@ -365,17 +366,27 @@ artifact/runtime input; review files are limited separately before JSON parsing.
 passes the count bound into shared validation explicitly, so the browser bundle has no process-environment
 lookup and the default is identical in both output formats.
 
-When at least one target exists, the shared document shell includes one Review entry and one native review
-dialog. Normal reading exposes no persistent target controls, but a valid native text selection in report
-content exposes one localized, viewport-clamped **Create note** button. The controller snapshots its exact
-range before focus changes, opens the existing editor, and supports ranges within one target or across
-targets. Empty, whitespace-only, oversized, outside-report, and package-control selections expose no action.
-Review mode also creates one button sibling per actual DOM target; tight-list paragraphs that do not render
-their own element are represented by the containing list, so manifest and DOM inventories remain equal.
-Desktop opens the dialog non-modally as a fixed rail and reserves page width; mobile opens the same dialog
-modally as a bottom sheet. The panel lists every current whole-block or selected-text thread. Close returns
-focus to the exact external opener, while Exit removes all review affordances. State remains in memory until
-explicit canonical import or download.
+When at least one target exists, the shared document shell includes one Review entry, one native review-list
+dialog, one anchored thread popover, and one contextual action. There is no review mode and no control or
+outline is injected beside a target. A valid native text selection in report content exposes the localized,
+viewport-clamped **Create note** action. The controller snapshots its exact range before focus changes and
+opens the popover beside the selection; compose, ordered history, edit, resolve, and reopen stay at that text
+locus. Empty, whitespace-only, oversized, outside-report, and package-control selections expose no action.
+
+Current exact ranges are reconstructed from version-3 anchors and registered as separate open and resolved
+CSS highlights without rewriting authored DOM. A pointer or touch point is compared with the actual range
+rectangles; overlapping matches choose the unresolved, shortest, then lexically stable thread. Focusable
+fixed overlay markers give each highlight a keyboard route without affecting layout. Re-selecting an exact
+saved subject resolves the contextual action to its existing thread instead of creating a duplicate. Scroll
+and resize updates are coalesced and run only while an action, popover, or saved range exists.
+
+The topbar Review action opens only the current/prior thread list plus import/export. Desktop shows a fixed
+non-modal overlay and mobile a native modal bottom sheet; neither mode changes report width, margin, or
+authored flow. Choosing a current or bindable prior item closes the list, brings its target into view, and
+opens the same anchored popover. Valid legacy whole-block threads remain list-accessible but the reader
+cannot create a new one. List-origin popovers return focus to the visible Review entry rather than a control in
+the closed list; other close paths return to their relevant opener. State remains in memory until explicit
+canonical import or download.
 
 Review protocol version 3 stores discussion threads as ordered revision segments. Each segment owns its
 report revision, source target, optional selected-text anchor, ordered user/agent messages and resolved flag.
@@ -419,7 +430,11 @@ and revision produce identical staged bytes.
 The human docs, direct agent quickstart, complete agent reference, source contract, canonical skill, and
 `llms.txt` are available under the same static origin as the product-built landing and separately built
 examples. Hosting is outside the compiler. A valid deployment serves these files directly with appropriate
-MIME types, a real 404 rather than an SPA fallback, and ordinary publicly trusted HTTPS.
+MIME types, a real 404 rather than an SPA fallback, and ordinary publicly trusted HTTPS. The reference
+Nginx policy requires every mutable HTML, Markdown, manifest, and release-metadata route to revalidate while
+allowing a one-year immutable cache only for filenames containing the compiler's 12-hex content hash. ETag
+remains enabled for both families so unchanged conditional requests can return `304` without risking a stale
+mutable landing or document.
 
 The canonical skill is instruction-only. Its OpenAI and Claude plugin manifests point to the same
 `skills/` folder and carry the same package version, license, homepage, and compatibility contract.

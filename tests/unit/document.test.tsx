@@ -212,9 +212,12 @@ describe('renderDocument runtime boundary', () => {
     expect(html).toContain(
       'class="review-dialog" id="report-review-dialog-2" aria-labelledby="report-review-dialog-title"',
     );
-    expect(html).toContain('data-review-target-editor="true" hidden=""');
+    expect(html).toContain('class="review-popover" id="report-review-popover" role="dialog"');
+    expect(html).toContain('data-review-popover-close="true"');
     expect(html).toContain('data-review-import="true"');
     expect(html).toContain('data-review-export="true"');
+    expect(html).not.toContain('data-review-exit');
+    expect(html).not.toContain('data-review-target-editor');
     expect(renderDocument(inlineOptions)).not.toContain('data-review-toggle');
   });
 });

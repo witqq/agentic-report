@@ -568,6 +568,106 @@ a {
   display: none;
 }
 
+::highlight(agentic-review-open) {
+  background: color-mix(in srgb, var(--color-accent) 34%, transparent);
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--color-accent-strong);
+  text-decoration-thickness: 0.12em;
+}
+
+::highlight(agentic-review-resolved) {
+  background: color-mix(in srgb, var(--color-border-strong) 24%, transparent);
+  color: inherit;
+  text-decoration: underline dotted var(--color-text-muted);
+}
+
+.review-highlight-marker {
+  position: fixed;
+  z-index: 39;
+  width: 1.65rem;
+  height: 1.65rem;
+  border: 1px solid var(--color-accent-strong);
+  border-radius: 999px;
+  padding: 0;
+  background: var(--color-accent);
+  color: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+  font: inherit;
+  font-size: 0.68rem;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.review-highlight-marker[data-review-thread-state='resolved'] {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+}
+
+.review-highlight-marker:focus-visible {
+  opacity: 1;
+  outline: 0.2rem solid var(--color-focus);
+  outline-offset: 0.12rem;
+}
+
+.review-popover {
+  position: fixed;
+  z-index: 41;
+  width: min(25rem, calc(100vw - 1rem));
+  max-height: min(34rem, calc(100dvh - 1rem));
+  overflow: auto;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-medium);
+  padding: 0.9rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-raised);
+  overscroll-behavior: contain;
+}
+
+.review-popover[hidden] {
+  display: none;
+}
+
+.review-popover-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.review-thread-messages {
+  max-height: 12rem;
+  overflow: auto;
+}
+
+.review-popover button {
+  min-height: var(--control-height);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  padding: 0 var(--control-inline-padding);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.review-popover button:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.review-popover button.review-primary {
+  border-color: var(--color-accent-strong);
+  background: var(--color-accent);
+  color: var(--color-surface);
+  font-weight: 760;
+}
+
 .review-dialog[open] {
   position: fixed;
   z-index: 30;
@@ -817,70 +917,6 @@ a {
   resize: vertical;
 }
 
-.review-target-control {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  width: fit-content;
-  min-width: var(--control-height);
-  min-height: var(--control-height);
-  margin: 0.45rem 0 0.35rem auto;
-  border: 1px solid var(--color-accent);
-  border-radius: var(--radius-small);
-  padding: 0 var(--control-inline-padding);
-  background: var(--color-accent-soft);
-  color: var(--color-accent-strong);
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 720;
-  cursor: pointer;
-}
-
-.review-target-resolve {
-  float: right;
-  min-width: var(--control-height);
-  min-height: var(--control-height);
-  margin: 0.45rem 0 0.35rem 0.4rem;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-small);
-  padding: 0 var(--control-inline-padding);
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  font: inherit;
-  font-size: 0.78rem;
-  cursor: pointer;
-}
-
-.review-target-control[data-review-thread-state='open'] {
-  box-shadow: 0 0 0 0.16rem color-mix(in srgb, var(--color-accent) 22%, transparent);
-}
-
-.review-target-control[data-review-thread-state='resolved'] {
-  border-color: var(--color-border-strong);
-  background: var(--color-surface-muted);
-  color: var(--color-text-muted);
-}
-
-:root[data-review-active] [data-review-target] {
-  transition: outline-color 120ms ease-out;
-}
-
-:root[data-review-active] [data-review-target]:hover,
-[data-review-target][data-review-selected] {
-  border-radius: var(--radius-small);
-  outline: 0.16rem solid var(--color-accent);
-  outline-offset: 0.28rem;
-}
-
-@media (min-width: 57rem) {
-  :root[data-review-open] .report-shell,
-  :root[data-review-open][data-layout='dashboard'] .report-shell,
-  :root[data-review-open][data-layout='landing'] .report-shell {
-    width: min(calc(100% - 25rem), var(--content-width));
-    margin-right: 25rem;
-  }
-}
-
 .scroll-progress {
   position: fixed;
   z-index: 21;
@@ -970,6 +1006,11 @@ li {
 
 .review-panel-header h2 {
   font-size: 1.15rem;
+}
+
+.review-popover-header h2 {
+  margin: 0;
+  font-size: 1rem;
 }
 
 .review-form-section h3 {
@@ -2579,18 +2620,6 @@ span.semantic-source-link[data-source-link-neutralized] {
 
   .review-panel-footer {
     padding-bottom: max(0.85rem, env(safe-area-inset-bottom));
-  }
-
-  .review-target-control {
-    float: none;
-    width: 100%;
-    margin: 0.45rem 0;
-  }
-
-  .review-target-resolve {
-    float: none;
-    width: 100%;
-    margin: 0.35rem 0;
   }
 
   .nav-dialog::backdrop {

@@ -49,6 +49,7 @@ export function renderDocument(options: DocumentRenderOptions): string {
   const navigationDialogTitleId = allocateShellId('report-navigation-dialog-title', usedIds);
   const reviewDialogId = allocateShellId('report-review-dialog', usedIds);
   const reviewDialogTitleId = allocateShellId('report-review-dialog-title', usedIds);
+  const reviewPopoverId = allocateShellId('report-review-popover', usedIds);
   const reviewTargetTitleId = allocateShellId('report-review-target-title', usedIds);
   const reviewThreadTitleId = allocateShellId('report-review-thread-title', usedIds);
   const markup = renderToStaticMarkup(
@@ -213,40 +214,6 @@ export function renderDocument(options: DocumentRenderOptions): string {
                   <h3>{strings.currentNotes}</h3>
                   <ol className="review-response-list" data-review-current-list />
                 </section>
-                <section
-                  className="review-form-section review-target-editor"
-                  aria-labelledby={reviewTargetTitleId}
-                  data-review-target-editor
-                  hidden
-                >
-                  <h3 id={reviewTargetTitleId} data-review-editor-title>
-                    {strings.discussionSelected}
-                  </h3>
-                  <p className="review-target-label" data-review-target-label />
-                  <ol
-                    className="review-response-list"
-                    aria-labelledby={reviewThreadTitleId}
-                    data-review-thread-messages
-                  />
-                  <p id={reviewThreadTitleId} data-review-thread-empty>
-                    {strings.noMessages}
-                  </p>
-                  <label className="review-field">
-                    <span>{strings.newMessage}</span>
-                    <textarea rows={4} data-review-message />
-                  </label>
-                  <div className="review-inline-actions">
-                    <button type="button" className="review-primary" data-review-add-message>
-                      {strings.addMessage}
-                    </button>
-                    <button type="button" data-review-cancel-message-edit hidden>
-                      {strings.cancelEdit}
-                    </button>
-                    <button type="button" data-review-resolve-thread hidden>
-                      {strings.resolveThread}
-                    </button>
-                  </div>
-                </section>
                 <section className="review-form-section" data-review-prior-section hidden>
                   <h3>{strings.previousThreads}</h3>
                   <ol className="review-response-list" data-review-prior-list />
@@ -260,12 +227,55 @@ export function renderDocument(options: DocumentRenderOptions): string {
                 <button type="button" className="review-primary" data-review-export>
                   {strings.exportReview}
                 </button>
-                <button type="button" data-review-exit>
-                  {strings.exitReview}
-                </button>
               </footer>
             </div>
           </dialog>
+        ) : null}
+        {hasReviewTargets ? (
+          <section
+            className="review-popover"
+            id={reviewPopoverId}
+            role="dialog"
+            aria-labelledby={reviewTargetTitleId}
+            data-review-popover
+            hidden
+          >
+            <header className="review-popover-header">
+              <div>
+                <h2 id={reviewTargetTitleId} data-review-editor-title>
+                  {strings.noteForSelection}
+                </h2>
+                <p className="review-target-label" data-review-target-label />
+              </div>
+              <button type="button" className="review-close" data-review-popover-close>
+                {strings.close}
+              </button>
+            </header>
+            <p className="review-error" role="alert" data-review-popover-error hidden />
+            <ol
+              className="review-response-list review-thread-messages"
+              aria-labelledby={reviewThreadTitleId}
+              data-review-thread-messages
+            />
+            <p id={reviewThreadTitleId} data-review-thread-empty>
+              {strings.noMessages}
+            </p>
+            <label className="review-field">
+              <span>{strings.newMessage}</span>
+              <textarea rows={4} data-review-message />
+            </label>
+            <div className="review-inline-actions">
+              <button type="button" className="review-primary" data-review-add-message>
+                {strings.addMessage}
+              </button>
+              <button type="button" data-review-cancel-message-edit hidden>
+                {strings.cancelEdit}
+              </button>
+              <button type="button" data-review-resolve-thread hidden>
+                {strings.resolveThread}
+              </button>
+            </div>
+          </section>
         ) : null}
         {hasReviewTargets ? (
           <button
