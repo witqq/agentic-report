@@ -354,6 +354,38 @@ describe('agent discovery contract', () => {
     expect(ajvValidate(incomplete)).toBe(false);
   });
 
+  it('describes the authored rules and their dependencies without running a check', async () => {
+    // The contract is read from the module surface alone: no source is compiled, nothing is
+    // validated, no file is touched. Under a phase that reports by throwing, this answer does not
+    // exist — a dependency is then only the order of statements, visible to nobody.
+    const contract = getSourceContract();
+    const sets = contract.authoredRules;
+    expect(sets.length).toBeGreaterThan(0);
+
+    // Every declared dependency names a rule of the same set: a dangling name would silently never
+    // suppress anything.
+    for (const set of sets) {
+      const declared = new Set(set.rules.map((rule) => rule.id));
+      expect(declared.size, set.subject).toBe(set.rules.length);
+      for (const rule of set.rules) {
+        for (const dependency of rule.dependsOn) {
+          expect(declared.has(dependency), `${set.subject}/${rule.id} → ${dependency}`).toBe(true);
+        }
+      }
+    }
+
+    // The dependency the product actually relies on is visible here, which is what makes silence
+    // explicable: an item's bucket reference is only read once the bucket set itself was accepted.
+    const question = sets.find((set) => set.subject === 'response/question');
+    expect(question?.rules.find((rule) => rule.id === 'item-bucket-references')?.dependsOn).toEqual(
+      ['buckets-match-kind'],
+    );
+    // Independent rules of the same subject declare nothing, and that is what lets one element
+    // answer with several violations at once.
+    expect(question?.rules.find((rule) => rule.id === 'options-match-kind')?.dependsOn).toEqual([]);
+    expect(question?.rules.find((rule) => rule.id === 'numeric-domain')?.dependsOn).toEqual([]);
+  });
+
   it('keeps the root API and product source free of public executable extension surfaces', async () => {
     const indexSource = await readFile(new URL('../../src/index.ts', import.meta.url), 'utf8');
     const productSources = await readTypeScriptSources(path.resolve('src'));
@@ -363,6 +395,7 @@ describe('agent discovery contract', () => {
       'EXTENSION_PROPOSAL_CONTRACT_VERSION',
       'REVIEW_CONTRACT_VERSION',
       'buildReport',
+      'fixReport',
       'getAuthoringSchema',
       'getExtensionProposalSchema',
       'getExtensionProposalTemplate',
@@ -386,14 +419,18 @@ describe('agent discovery contract', () => {
     const rootDeclaration = await readFile(rootDeclarationPath, 'utf8');
     const expectedDeclarationInventory = {
       types: [
+        'AppliedFix',
         'BuildReportOptions',
         'BuildReportResult',
         'Diagnostic',
+        'DiagnosticFix',
         'DirectiveName',
         'ExampleContract',
         'ExtensionProposal',
         'ExtensionProposalValidation',
         'ExtensionTrustBoundary',
+        'FixReportOptions',
+        'FixReportResult',
         'InitProjectOptions',
         'InitProjectResult',
         'InspectReportOptions',

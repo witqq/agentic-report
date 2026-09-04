@@ -1,5 +1,14 @@
 import { execFile } from 'node:child_process';
-import { lstat, mkdir, readFile, readdir, readlink, symlink, writeFile } from 'node:fs/promises';
+import {
+  lstat,
+  mkdir,
+  readFile,
+  readdir,
+  readlink,
+  realpath,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
@@ -317,34 +326,55 @@ describe('starter initialization', () => {
     },
   );
 
-  it.each(['missing', 'file', 'symlink'] as const)(
+  // The two remaining refusals are named apart on purpose: an author who reads only the message has
+  // to learn which check failed, and both used to answer with one sentence about symbolic links.
+  it.each([
+    ['missing', 'Initialization destination parent does not exist.'],
+    ['file', 'Initialization destination parent is not a directory.'],
+  ] as const)(
     'rejects a %s immediate parent without creating the destination',
-    async (kind) => {
+    async (kind, message) => {
       const workspace = await createWorkspace(`init-parent-${kind}`);
       const parent = path.join(workspace, 'parent');
       const destination = path.join(parent, 'project');
       if (kind === 'file') await writeFile(parent, 'parent bytes');
-      if (kind === 'symlink') {
-        const target = path.join(workspace, 'target');
-        await mkdir(target);
-        await symlink(target, parent, 'dir');
-      }
 
       await expect(initProject({ destination })).rejects.toMatchObject({
-        diagnostic: {
-          code: 'INIT_PARENT_INVALID',
-          remediation:
-            'Create or choose a writable parent directory that is not a symbolic link, then retry.',
-        },
+        diagnostic: { code: 'INIT_PARENT_INVALID', message },
       });
       if (kind === 'missing') await expect(lstat(parent)).rejects.toMatchObject({ code: 'ENOENT' });
       if (kind === 'file') await expect(readFile(parent, 'utf8')).resolves.toBe('parent bytes');
-      if (kind === 'symlink') expect((await lstat(parent)).isSymbolicLink()).toBe(true);
       await expect(lstat(destination)).rejects.toMatchObject({
         code: kind === 'file' ? 'ENOTDIR' : 'ENOENT',
       });
     },
   );
+
+  // A symbolic-link parent used to be refused, which made the most obvious first probe on macOS —
+  // anything under `/tmp` — fail. What the rule was written against is writing into an existing
+  // directory, and the absent-destination refusal below still prevents exactly that.
+  it('initializes through a symbolic-link parent and returns the resolved destination', async () => {
+    const workspace = await createWorkspace('init-parent-link');
+    const target = path.join(workspace, 'target');
+    const parent = path.join(workspace, 'parent');
+    await mkdir(target);
+    await symlink(target, parent, 'dir');
+    const destination = path.join(parent, 'project');
+
+    const project = await initProject({ destination });
+
+    // The result names where the files are, not what was typed: a caller that reads the typed path
+    // back would look in a directory that holds nothing.
+    expect(project.projectPath).toBe(path.join(await realpath(target), 'project'));
+    expect(project.projectPath).not.toBe(destination);
+    expect(await readdir(project.projectPath)).toContain('report.md');
+    expect((await lstat(parent)).isSymbolicLink()).toBe(true);
+
+    // The protection that matters is unchanged: the same destination is refused the second time.
+    await expect(initProject({ destination })).rejects.toMatchObject({
+      diagnostic: { code: 'INIT_DESTINATION_EXISTS' },
+    });
+  });
 
   it('supports a nested destination when its immediate parent is an ordinary directory', async () => {
     const workspace = await createWorkspace('init-nested');

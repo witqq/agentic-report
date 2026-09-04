@@ -91,6 +91,7 @@ describe('report analysis', () => {
             'Inspect source usage and the available authoring catalog without writing output.',
           review: 'Resolve a confined review artifact without changing report sources.',
           build: 'Compile a source into a default or share-safe static artifact.',
+          fix: 'Apply the replacements the product computed exactly, and nothing else.',
           describe: 'Return the complete source contract.',
           schema: 'Return manifest, directive, or complete source JSON Schema.',
           examples: 'List packaged buildable examples.',

@@ -206,6 +206,7 @@ export async function renderMarkdown(
       sourceMap: options.sourceMap,
       markdown,
       observedDirectives,
+      warnings: collector.warnings,
     })
     .use(remarkReviewTargets, {
       sourceRoot: options.sourceRoot,

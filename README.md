@@ -267,6 +267,16 @@ Open the HTML file or directory `index.html` directly through `file://`. In an i
 `agentic-report examples --json` returns each absolute installed entry path; use its containing directory as
 the build input. These examples remain discovery-only and do not change the six `init` starters.
 
+`agentic-report fix ./my-report` applies the replacements the product computed exactly and leaves every
+other byte alone. Today one check computes them: the term reference that a registered glossary term is
+missing. It is the only command that writes to an authored source.
+
+Every command answers an agent without a flag, because agents are who run this package: `init`, `build`,
+`validate`, `inspect`, `fix` and `review` write NDJSON records, and `schema`, `describe` and `examples`
+write their one reference document as a compact JSON line. `--json` is accepted and names that default. Add
+`--human` when a person is reading — it prints prose from `init`, `build`, `validate`, `fix`, `review` and
+`examples`, and the same document indented from `inspect`, `schema` and `describe`.
+
 ## Product-built landing
 
 The canonical public landing is itself an ordinary compiler input at

@@ -24,7 +24,7 @@
       "nestedContainer": "Use a longer outer colon fence than nested directives.",
       "leaf": "::name{attributes}",
       "text": ":name[label]{attributes}",
-      "numericColonText": "Two- or three-part numeric time/duration tokens such as 21:01 and 1:30:05 remain literal Markdown text."
+      "numericColonText": "A colon that opens a digit-initial name, and a colon written against the preceding word, remain literal Markdown text: 21:01, 1:30:05, 3:1, 1:10:100, localhost:9000, ключ:значение and Пункт :2. Only the inline form without attributes or children is restored: a spaced unknown alphabetic name, any attributed or child-bearing form, and every block-level form stay directives; write \\: for ordinary prose."
     },
     "codeFenceMetadata": {
       "terms": {
@@ -159,6 +159,7 @@
         "selfEdges": false,
         "groups": {
           "ungrouped": 0,
+          "incomplete": 1,
           "minimum": 2,
           "maximum": 3,
           "requireEveryNode": true,
@@ -1303,6 +1304,19 @@
           "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
         },
         {
+          "name": "forms",
+          "description": "Additional declared spellings of the canonical term, comma separated. An occurrence of any declared form counts as an occurrence of the term.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 640
+          },
+          "renderProperty": "dataForms",
+          "invalidDiagnostic": "INVALID_DIRECTIVE_ATTRIBUTE"
+        },
+        {
           "name": "placement",
           "description": "Definition location in the authored flow or, from the document root or a direct section child, one package-owned reference appendix.",
           "required": false,
@@ -1318,14 +1332,14 @@
       "sanitizer": {
         "tagName": "section",
         "className": "semantic-glossary",
-        "properties": ["dataSemantic", "dataKey", "dataTerm", "dataPlacement"]
+        "properties": ["dataSemantic", "dataKey", "dataTerm", "dataForms", "dataPlacement"]
       },
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
       "handoffs": ["semantic-document", "reader-runtime"]
     },
     {
       "name": "term",
-      "description": "Inline or standalone reference that opens a registered glossary explanation.",
+      "description": "Inline or standalone reference that opens a registered glossary explanation. Prose must carry one for the first occurrence of a registered term in each section; later occurrences of that term in the same section stay ordinary prose.",
       "forms": ["leaf", "text"],
       "attributes": [
         {
@@ -2339,6 +2353,10 @@
     {
       "id": "build",
       "description": "Compile a source into a default or share-safe static artifact."
+    },
+    {
+      "id": "fix",
+      "description": "Apply the replacements the product computed exactly, and nothing else."
     },
     { "id": "describe", "description": "Return the complete source contract." },
     {

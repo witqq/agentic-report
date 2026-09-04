@@ -30,8 +30,33 @@ Create a local declarative source, verify it, and hand the user a finished inter
 - Use Response Workspace when the human must return structured triage, choices, ordering, scores, text, or
   item comments. Keep it separate from Review Workspace discussion threads, and tell the user to copy or
   download `response.json` after completing the local page.
-- Write clock times and durations normally (`21:01`, `1:30:05`); do not add backslash escaping in prose or
-  frontmatter.
+- Write an ordinary colon normally in prose and frontmatter: a colon that opens a digit-initial name and a
+  colon written against the preceding word are literal text, so `21:01`, `1:30:05`, `3:1`, `1:10:100`,
+  `localhost:9000`, `arXiv:2508.05775` and `ключ:значение` need no escape. The digit feature holds whatever
+  precedes the colon, so `Пункт :2 списка.` is text too. This covers the inline form without attributes or
+  children only: a colon that carries attributes or children, such as `слово:name{key="1"}`, stays a
+  directive, and so do block-level forms such as `::2` and an unknown **alphabetic** name standing alone
+  after a space. Those are validated as directives and fail on an unregistered name; write `\:` when such
+  prose is not a directive, and do not turn it into a code span to hide it.
+- Introduce a registered glossary term with `:term[...]{key="..."}` at its first occurrence in each
+  `section` directive; later occurrences of that term in the same section stay ordinary prose. A term that
+  is never introduced still fails. Declare inflected spellings with `forms="…, …"` on the definition when
+  the text uses them: a declared form counts as an occurrence and is proposed with the spelling the
+  sentence used, while an undeclared inflection stays ordinary prose.
+- Run `agentic-report fix <source>` to apply the replacements the product computed exactly; it is the only
+  command that writes to your Markdown, and it leaves every other byte alone. Violations it reports as
+  remaining need your decision.
+- A grouped flow diagram with a single group builds and returns the `INCOMPLETE_DIAGRAM_GROUPING` warning:
+  unfinished grouping does not block the page, so finish the remaining groups or remove the only one.
+- One failed run reports every authored violation it found while interpreting directives, including
+  several over the same element, minus the ones that only repeat a refusal already reported: a descendant
+  of a rejected directive, an annotation pointing at a key whose own `glossary` definition was refused,
+  and any rule whose declared dependency refused. Which rule depends on which is data — `describe` returns
+  it as `authoredRules` — so silence is explicable instead of guessed. The earliest survivor is the
+  diagnostic and the rest are in its `related` inventory, in source order. Fix them together instead of rerunning once per violation. A definition lost with a rejected
+  container leaves its key unknown, so a reference to it is still listed beside that container's refusal.
+  A failure of another stage — an unreadable source graph, a refused output path — still ends the run with
+  a single diagnostic.
 - Use `copyable` for prose the reader should paste elsewhere; do not misrepresent ordinary language as a
   code fence merely to obtain a Copy button.
 - Keep the default bottom **Made with Agentic Report** link. When the user explicitly needs an unbranded
@@ -62,10 +87,17 @@ npx --yes agentic-report@0.6.0 build ./my-page --output ./my-page.html --json
 ```
 
 Choose a different starter or destination name when the task requires it. `init` requires an absent
-destination whose immediate parent already exists. The first `npx` call requires registry/network access.
+destination whose immediate parent already exists and is a directory; the parent may be a symbolic link,
+and the reported `projectPath` then names the resolved location. An existing destination is refused with
+`INIT_DESTINATION_EXISTS`. The first `npx` call requires registry/network access.
 
 Edit the generated source before validation. Resolve every structured diagnostic at its reported file and
-range, then rerun `validate --json` and `inspect --json`. Build only after both succeed. Open the result
+range, then rerun `validate` and `inspect`. Every command answers an agent without a flag and accepts
+`--json` as the name of that default: the run commands `init`, `build`, `validate`, `inspect`, `fix` and
+`review` write NDJSON records, while `schema`, `describe` and `examples` write their one reference document
+as a compact JSON line. `--human` selects the form for a person — prose from `init`, `build`, `validate`,
+`fix`, `review` and `examples`, the same document indented from `inspect`, `schema` and `describe`. One failed run lists every independent
+violation it found, so fix them together. Build only after both succeed. Open the result
 through normal `file://`; use `--format directory` only when a multi-file output is intentionally needed.
 
 Report the source path, artifact path, chosen starter/output format, warnings, and unresolved content facts.

@@ -6,6 +6,7 @@ import matter from 'gray-matter';
 import { parse as parseYaml } from 'yaml';
 import type { ZodIssue } from 'zod';
 
+import { authoringRegistry } from '../authoring/registry.js';
 import { normalizePackageRelativePosixReference } from '../authoring/local-reference.js';
 import {
   ReportManifestSchema,
@@ -61,11 +62,12 @@ export async function loadSource(input: string): Promise<SourceDocument> {
   const manifestResult = ReportManifestSchema.safeParse(withDerivedTitle);
 
   if (!manifestResult.success) {
+    const firstIssue = manifestResult.error.issues[0];
     throw new AgenticReportError({
       level: 'error',
       code: 'INVALID_MANIFEST',
-      message: 'Invalid report metadata.',
-      remediation: 'Run `agentic-report schema` and update the manifest or frontmatter.',
+      message: manifestIssueMessage(firstIssue),
+      remediation: manifestIssueRemediation(firstIssue),
       source: metadataIssueLocation(
         manifestResult.error.issues[0],
         manifestDocument,
@@ -253,6 +255,72 @@ function requireOutputRecord(
     remediation: 'Run `agentic-report schema` and use output key-value fields.',
     ...(origin === undefined ? {} : { source: metadataPathLocation(origin, ['output']) }),
   });
+}
+
+const MANIFEST_FIELD_NAMES = authoringRegistry.manifestFields.map((field) => field.name);
+
+/**
+ * Names the metadata the schema could not accept. A refusal that only says "invalid metadata" makes
+ * the author read the whole schema to find a word the product already holds.
+ */
+function manifestIssueMessage(issue: ZodIssue | undefined): string {
+  const unrecognized = unrecognizedManifestKeys(issue);
+  if (unrecognized.length > 0) {
+    return `Report metadata has ${unrecognized.length === 1 ? 'an unknown key' : 'unknown keys'}: ${unrecognized.join(', ')}.`;
+  }
+  return 'Invalid report metadata.';
+}
+
+/**
+ * Proposes a replacement only when one registered field is close enough to be what the author meant;
+ * otherwise it lists what is accepted rather than inventing a confident guess.
+ */
+function manifestIssueRemediation(issue: ZodIssue | undefined): string {
+  const unrecognized = unrecognizedManifestKeys(issue);
+  if (unrecognized.length === 0) {
+    return 'Run `agentic-report schema` and update the manifest or frontmatter.';
+  }
+  const [first] = unrecognized;
+  const nearest = first === undefined ? undefined : nearestManifestField(first);
+  if (nearest !== undefined) {
+    return `Use ${nearest} instead of ${first}, or run \`agentic-report schema\` for the complete manifest.`;
+  }
+  return `Accepted keys are ${MANIFEST_FIELD_NAMES.join(', ')}; run \`agentic-report schema\` for their shapes.`;
+}
+
+function unrecognizedManifestKeys(issue: ZodIssue | undefined): readonly string[] {
+  if (issue === undefined || issue.code !== 'unrecognized_keys') return [];
+  return issue.keys.filter((key): key is string => typeof key === 'string');
+}
+
+/**
+ * Edit distance stays below a third of the written key, so a typo resolves and an unrelated word
+ * does not: the author must not be sent to a field they never meant.
+ */
+function nearestManifestField(key: string): string | undefined {
+  let best: { readonly name: string; readonly distance: number } | undefined;
+  for (const name of MANIFEST_FIELD_NAMES) {
+    const distance = editDistance(key.toLowerCase(), name.toLowerCase());
+    if (best === undefined || distance < best.distance) best = { name, distance };
+  }
+  if (best === undefined) return undefined;
+  return best.distance <= Math.max(1, Math.floor(key.length / 3)) ? best.name : undefined;
+}
+
+function editDistance(left: string, right: string): number {
+  let previous = Array.from({ length: right.length + 1 }, (_value, index) => index);
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    const current = [leftIndex];
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      const substitution =
+        (previous[rightIndex - 1] ?? 0) + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1);
+      current.push(
+        Math.min(substitution, (previous[rightIndex] ?? 0) + 1, (current[rightIndex - 1] ?? 0) + 1),
+      );
+    }
+    previous = current;
+  }
+  return previous[right.length] ?? 0;
 }
 
 function metadataIssueLocation(

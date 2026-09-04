@@ -31,6 +31,7 @@ describe('release readiness', () => {
       'docs/product/share-safe-build-extension.json',
       'docs/product/time-text-extension.json',
       'docs/product/source-link-extension.json',
+      'docs/product/violation-inventory-extension.json',
     ]) {
       const proposal = JSON.parse(await readFile(path.resolve(file), 'utf8')) as unknown;
       expect(validateExtensionProposal(proposal), file).toEqual({ accepted: true, issues: [] });

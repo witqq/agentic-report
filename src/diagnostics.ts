@@ -1,4 +1,4 @@
-import type { Diagnostic, SourceLocation } from './contracts.js';
+import type { Diagnostic, DiagnosticFix, SourceLocation } from './contracts.js';
 
 const REDACTED = '[REDACTED]';
 const credentialKeys = new Set([
@@ -56,9 +56,13 @@ export function sanitizeDiagnostic(diagnostic: Diagnostic): Diagnostic {
     message: sanitizeText(diagnostic.message),
     remediation: sanitizeText(diagnostic.remediation),
     ...(diagnostic.source === undefined ? {} : { source: sanitizeSource(diagnostic.source) }),
+    ...(diagnostic.fix === undefined ? {} : { fix: sanitizeFix(diagnostic.fix) }),
     ...(diagnostic.details === undefined
       ? {}
       : { details: sanitizeValue(diagnostic.details) as Readonly<Record<string, unknown>> }),
+    ...(diagnostic.related === undefined
+      ? {}
+      : { related: diagnostic.related.map((entry) => sanitizeDiagnostic(entry)) }),
   };
 }
 
@@ -90,6 +94,24 @@ export function exitCodeForDiagnostic(diagnostic: Diagnostic): 1 | 2 | 3 {
     return 2;
   }
   return 1;
+}
+
+function sanitizeFix(fix: DiagnosticFix): DiagnosticFix {
+  return {
+    file: sanitizePathText(fix.file),
+    start: fix.start,
+    end: fix.end,
+    replacement: sanitizeText(fix.replacement),
+  };
+}
+
+/**
+ * Whether this replacement survives transport untouched. A replacement sanitization would alter
+ * carries a credential in authored bytes, and shipping the redacted form would invite a consumer to
+ * write `[REDACTED]` over the author's own text, so such a fix is withheld at the source instead.
+ */
+export function isTransportSafeReplacement(replacement: string): boolean {
+  return sanitizeText(replacement) === replacement;
 }
 
 function sanitizeSource(source: SourceLocation): SourceLocation {

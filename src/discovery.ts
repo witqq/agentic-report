@@ -9,6 +9,11 @@ import {
   getSourceSchema,
   type JsonSchema,
 } from './authoring/schemas.js';
+import { describeAuthoredRules } from './render/authored-rules.js';
+import type { AuthoredRuleDescription } from './render/authored-rule-contract.js';
+// The rule sets register themselves when the phase module is loaded, and discovery must not depend
+// on a run having happened first.
+import './render/directives.js';
 
 export type SchemaScope = 'manifest' | 'directives' | 'source';
 
@@ -36,6 +41,13 @@ export interface SourceContract {
   };
   readonly page: PublicPageContract;
   readonly visualizations: typeof authoringRegistry.visualizations;
+  /**
+   * The authored checks of the directive phase and the dependencies between them, readable without
+   * running a single one. A consumer can see what is judged about each subject and why a rule stays
+   * silent when another refused; under a phase built on thrown failures that answer existed only as
+   * the order of statements.
+   */
+  readonly authoredRules: readonly AuthoredRuleDescription[];
   readonly safety: readonly string[];
   readonly capabilities: Readonly<Record<string, string>>;
   readonly commands: Readonly<Record<string, string>>;
@@ -136,6 +148,7 @@ function createSourceContract(): SourceContract {
       },
     },
     visualizations: authoringRegistry.visualizations,
+    authoredRules: describeAuthoredRules(),
     safety: [
       'canonical source-root confinement',
       'local resources only',

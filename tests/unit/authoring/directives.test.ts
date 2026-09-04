@@ -277,6 +277,41 @@ describe('registry-driven semantic directives', () => {
     }
   });
 
+  it('leaves the name to the section the document keeps when a refused one asks for it too', async () => {
+    const workspace = await trackedWorkspace('refused-section-identity');
+    const contested = [
+      '# Contested identity',
+      '> :::section{title="Quoted" id="keeps"}',
+      '> Quoted body.',
+      '> :::',
+      '',
+      ':::section{title="Kept" id="keeps"}',
+      'Kept body.',
+      ':::',
+      '',
+    ].join('\n');
+
+    const refusal = await render(contested, workspace).then(
+      () => undefined,
+      (error: unknown) => (error instanceof AgenticReportError ? error : undefined),
+    );
+
+    expect(refusal?.diagnostic.code).toBe('INVALID_DIRECTIVE_PLACEMENT');
+    // The quoted section is not a section of this document, so it must not take the identity away
+    // from the one that is: the kept section is answered for on its own terms.
+    expect(
+      [refusal?.diagnostic, ...(refusal?.diagnostic.related ?? [])].map(
+        (entry) => entry?.code ?? '',
+      ),
+    ).not.toContain('DUPLICATE_SECTION_ID');
+
+    const kept = await render(
+      '# Kept\n:::section{title="Kept" id="keeps"}\nKept body.\n:::\n',
+      workspace,
+    );
+    expect(kept.html).toContain('id="keeps"');
+  });
+
   it('renders bounded source links in a protected browsing context and rejects non-helper targets', async () => {
     const workspace = await trackedWorkspace('source-link');
     const href =
@@ -1066,16 +1101,6 @@ describe('registry-driven semantic directives', () => {
           ':::diagram{title="Loop" description="Self edge."}',
           '::node{id="a" label="A"}',
           '::edge{from="a" to="a"}',
-          ':::',
-        ],
-      },
-      {
-        name: 'grouped flow with only one group',
-        line: 2,
-        source: [
-          ':::diagram{title="One group" description="Unsupported group count."}',
-          '::group{id="only" label="Only"}',
-          '::node{id="a" label="A" group="only"}',
           ':::',
         ],
       },
@@ -2410,6 +2435,9 @@ function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
   }
   if (attribute.name === 'href') return '#valid-target';
   if (['key', 'id', 'group', 'from', 'to', 'bucket'].includes(attribute.name)) return 'valid-key';
+  // A declared glossary form may not repeat the term it belongs to, so this generator cannot reuse
+  // the value it gives every other text attribute.
+  if (attribute.name === 'forms') return 'Valid titles';
   return 'Valid title';
 }
 
@@ -2431,6 +2459,7 @@ function renderedAttributeValue(attribute: DirectiveAttributeDefinition): string
   }
   if (attribute.name === 'href') return '#valid-target';
   if (['key', 'id', 'group', 'from', 'to', 'bucket'].includes(attribute.name)) return 'valid-key';
+  if (attribute.name === 'forms') return 'Tf';
   return 'T';
 }
 

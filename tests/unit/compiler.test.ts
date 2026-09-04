@@ -4,7 +4,8 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { BuildReportOptions } from '../../src/contracts.js';
+import type { BuildReportOptions, Diagnostic } from '../../src/contracts.js';
+import { type AgenticReportError, exitCodeForDiagnostic } from '../../src/diagnostics.js';
 import { buildReport } from '../../src/core/compiler.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
 
@@ -648,8 +649,1072 @@ describe('buildReport', () => {
     ).rejects.toMatchObject({ diagnostic: { code: 'UNSUPPORTED_DIRECTIVE' } });
   });
 
-  it('keeps clock times, ranges, durations and frontmatter titles as exact authored text', async () => {
-    const workspace = await trackedWorkspace('numeric-time-text');
+  it('requires a registered term once per section instead of at every mention', async () => {
+    const workspace = await trackedWorkspace('glossary-introduction');
+    const entry = path.join(workspace, 'report.md');
+    const output = path.join(workspace, 'report.html');
+    const source = (...body: readonly string[]): string =>
+      [
+        '---',
+        'contractVersion: 1',
+        'title: Словарь',
+        'language: ru',
+        '---',
+        '',
+        ':::glossary{key="spec" term="спека"}',
+        'Согласованное требование.',
+        ':::',
+        '',
+        ...body,
+      ].join('\n');
+    const refused = async (): Promise<Diagnostic | undefined> =>
+      await buildReport({ input: workspace, output }).then(
+        () => undefined,
+        (error: unknown) => (error as AgenticReportError).diagnostic,
+      );
+
+    // Accepted: the section introduces the term once, later mentions stay ordinary prose.
+    await writeFile(
+      entry,
+      source('## Раздел', '', 'Тут :term[спека]{key="spec"} есть, а вторая спека нет.'),
+    );
+    await expect(buildReport({ input: workspace, output })).resolves.toMatchObject({
+      format: 'single-file',
+    });
+
+    // Order matters: an unmarked first mention is still refused even when a later one is marked, so
+    // a check that merely looks for "any marked reference in the document" cannot pass here.
+    await writeFile(
+      entry,
+      source('## Раздел', '', 'Тут спека без разметки, а потом :term[спека]{key="spec"}.'),
+    );
+    expect((await refused())?.code).toBe('UNMARKED_GLOSSARY_TERM');
+
+    // Every section is introduced on its own.
+    await writeFile(
+      entry,
+      source(
+        '## Свод',
+        '',
+        ':::section{title="Первый"}',
+        'Тут :term[спека]{key="spec"} есть.',
+        ':::',
+        '',
+        ':::section{title="Второй"}',
+        'А тут спека без разметки.',
+        ':::',
+      ),
+    );
+    expect((await refused())?.code).toBe('UNMARKED_GLOSSARY_TERM');
+
+    // Nothing was relaxed for a term that is never introduced at all.
+    await writeFile(entry, source('## Раздел', '', 'Совсем без разметки: спека.'));
+    expect((await refused())?.code).toBe('UNMARKED_GLOSSARY_TERM');
+
+    // An inflected form nobody declared stays outside the check: the package does not inflect words
+    // itself, so it cannot know that this spelling belongs to the term.
+    await writeFile(entry, source('## Раздел', '', 'Упомянуты спеки без разметки.'));
+    await expect(buildReport({ input: workspace, output })).resolves.toMatchObject({
+      format: 'single-file',
+    });
+  });
+
+  it('finds the declared spellings of a glossary term and keeps the one the sentence used', async () => {
+    const workspace = await trackedWorkspace('glossary-declared-forms');
+    const entry = path.join(workspace, 'report.md');
+    const output = path.join(workspace, 'report.html');
+    const source = (definition: string, ...body: readonly string[]): string =>
+      [
+        '---',
+        'contractVersion: 1',
+        'title: Словарь',
+        'language: ru',
+        '---',
+        '',
+        definition,
+        'Согласованное требование.',
+        ':::',
+        '',
+        ...body,
+      ].join('\n');
+    const declared = ':::glossary{key="spec" term="спека" forms="спеки, спеке"}';
+    const refused = async (): Promise<Diagnostic | undefined> =>
+      await buildReport({ input: workspace, output }).then(
+        () => undefined,
+        (error: unknown) => (error as AgenticReportError).diagnostic,
+      );
+
+    // A declared form is now a first mention, and the proposed replacement keeps the spelling the
+    // sentence used rather than the dictionary headword — the reader would otherwise find a word in
+    // the wrong case inserted into their own text.
+    await writeFile(entry, source(declared, '## Раздел', '', 'Упомянуты спеки без разметки.'));
+    const inflected = await refused();
+    expect(inflected?.code).toBe('UNMARKED_GLOSSARY_TERM');
+    expect(inflected?.remediation).toContain(':term[спеки]{key="spec"}');
+
+    // Same stem, not declared: the author decides what counts as a form, so `спектр` is prose.
+    await writeFile(entry, source(declared, '## Раздел', '', 'Тут спектр и спекуляция.'));
+    await expect(buildReport({ input: workspace, output })).resolves.toMatchObject({
+      format: 'single-file',
+    });
+
+    // One spelling claimed by two definitions is refused: the product would otherwise decide
+    // silently whose first mention an occurrence is.
+    await writeFile(
+      entry,
+      [
+        source(declared, '## Раздел', '', 'Текст без упоминаний.'),
+        '',
+        ':::glossary{key="other" term="другое" forms="спеки"}',
+        'Другое определение.',
+        ':::',
+      ].join('\n'),
+    );
+    expect((await refused())?.code).toBe('DUPLICATE_GLOSSARY_DEFINITION');
+  });
+
+  it('answers with every independent rule of one element and stays silent below a refused one', async () => {
+    const workspace = await trackedWorkspace('authored-rules');
+    const entry = path.join(workspace, 'report.md');
+    const output = path.join(workspace, 'report.html');
+    const source = (...body: readonly string[]): string =>
+      ['---', 'contractVersion: 1', 'title: Правила', 'language: ru', '---', '', ...body].join(
+        '\n',
+      );
+    const refused = async (): Promise<Diagnostic | undefined> =>
+      await buildReport({ input: workspace, output }).then(
+        () => undefined,
+        (error: unknown) => (error as AgenticReportError).diagnostic,
+      );
+
+    // Two independent rules over ONE element: the option count and the numeric bounds of the same
+    // question. Neither answer needs the other, so both belong to one run. This is the case a phase
+    // built on thrown failures cannot report, however finely its subjects are split.
+    await writeFile(
+      entry,
+      source(
+        '# Свод',
+        '',
+        '::::response{title="Форма" id="one"}',
+        ':::question{id="a" kind="single" title="Первый" prompt="Выберите" min="1"}',
+        '::option{id="only" label="A"}',
+        ':::',
+        '::::',
+      ),
+    );
+    const independent = await refused();
+    expect([independent?.message, ...(independent?.related ?? []).map((e) => e.message)]).toEqual([
+      'single requires 2 to 20 options.',
+      'Numeric bounds are supported only by number questions, not single.',
+    ]);
+
+    // The same holds for the directive node itself, not only for the subjects inside it: an unknown
+    // attribute is an unknown attribute wherever the node sits, so placement and attributes answer
+    // together. This is the part of the phase that stayed on thrown failures the longest.
+    await writeFile(
+      entry,
+      source('# Свод', '', '::decision-option{id="ship" label="Ship" bogus="x"}'),
+    );
+    const node = await refused();
+    expect([node?.code, ...(node?.related ?? []).map((e) => e.code)]).toEqual([
+      'INVALID_DIRECTIVE_PLACEMENT',
+      'UNKNOWN_DIRECTIVE_ATTRIBUTE',
+    ]);
+
+    // A label required by the directive is independent of its attributes in the same way.
+    await writeFile(
+      entry,
+      source('# Свод', '', ':::actions', '::action{href="#a" bogus="x"}', ':::'),
+    );
+    const action = await refused();
+    expect([action?.code, ...(action?.related ?? []).map((e) => e.code)]).toEqual([
+      'UNKNOWN_DIRECTIVE_ATTRIBUTE',
+      'DIRECTIVE_LABEL_REQUIRED',
+    ]);
+
+    // The reverse side: a rule whose declared dependency refused says nothing. The bucket set of
+    // this question is wrong, so the reference an item makes into it is not an authored fact.
+    await writeFile(
+      entry,
+      source(
+        '# Свод',
+        '',
+        '::::response{title="Форма" id="one"}',
+        ':::question{id="a" kind="bucket" title="Первый" prompt="Разложите"}',
+        '::bucket{id="b1" label="Один"}',
+        '::item{id="i1" label="Раз" note="Раз." meta="Один" href="#one" bucket="missing-one"}',
+        ':::',
+        '::::',
+      ),
+    );
+    const dependent = await refused();
+    expect([dependent?.message, ...(dependent?.related ?? []).map((e) => e.message)]).toEqual([
+      'Bucket questions require 2 to 5 buckets.',
+    ]);
+  });
+
+  it('builds a flow whose grouping is unfinished and says what is still missing', async () => {
+    const workspace = await trackedWorkspace('incomplete-grouping');
+    const entry = path.join(workspace, 'report.md');
+    const output = path.join(workspace, 'report.html');
+    const diagram = (...body: readonly string[]): string =>
+      [
+        '---',
+        'contractVersion: 1',
+        'title: Поток',
+        'language: ru',
+        '---',
+        '',
+        '# Поток',
+        '',
+        ...body,
+      ].join('\n');
+    const ungrouped = [
+      ':::diagram{title="F" description="Ungrouped flow."}',
+      '::node{id="a" label="Аккаунт"}',
+      '::node{id="b" label="Бюджет"}',
+      '::edge{from="a" to="b" label="n"}',
+      ':::',
+    ];
+    const oneGroup = [
+      ':::diagram{title="F" description="One group." direction="right"}',
+      '::group{id="g1" label="Первая"}',
+      '::node{id="a" label="Аккаунт" group="g1"}',
+      '::node{id="b" label="Бюджет" group="g1"}',
+      '::edge{from="a" to="b" label="n"}',
+      ':::',
+    ];
+    const twoGroups = [
+      ':::diagram{title="F" description="Two groups." direction="right"}',
+      '::group{id="g1" label="Первая"}',
+      '::group{id="g2" label="Вторая"}',
+      '::node{id="a" label="Аккаунт" group="g1"}',
+      '::node{id="b" label="Бюджет" group="g2"}',
+      '::edge{from="a" to="b" label="n"}',
+      ':::',
+    ];
+
+    // Three observations at once per case: the outcome, the presence or absence of the warning, and
+    // the nodes in the built page. The outcome alone cannot tell an accepted-with-warning flow from
+    // one accepted silently.
+    for (const [label, body, expected] of [
+      ['ungrouped', ungrouped, []],
+      ['one group', oneGroup, ['INCOMPLETE_DIAGRAM_GROUPING']],
+      ['two groups', twoGroups, []],
+    ] as const) {
+      await writeFile(entry, diagram(...body));
+      const result = await buildReport({ input: workspace, output });
+      expect(
+        result.warnings.map((warning) => warning.code),
+        label,
+      ).toEqual(expected);
+      const html = await readFile(output, 'utf8');
+      expect(html, label).toContain('Аккаунт');
+      expect(html, label).toContain('Бюджет');
+    }
+
+    await writeFile(entry, diagram(...oneGroup));
+    const warned = (await buildReport({ input: workspace, output })).warnings[0];
+    expect(warned?.level).toBe('warning');
+    expect(warned?.source?.file).toBe(entry);
+    expect(warned?.message).toContain('2 to 3 groups');
+
+    // Unfinished grouping does not suspend the rules around it: the warning must not end the
+    // check, or a one-group flow would stop being validated for membership at all.
+    await writeFile(
+      entry,
+      diagram(
+        ':::diagram{title="F" description="One group, stray node." direction="right"}',
+        '::group{id="g1" label="Первая"}',
+        '::node{id="a" label="Аккаунт" group="g1"}',
+        '::node{id="b" label="Бюджет"}',
+        '::edge{from="a" to="b" label="n"}',
+        ':::',
+      ),
+    );
+    await expect(buildReport({ input: workspace, output })).rejects.toMatchObject({
+      diagnostic: {
+        code: 'INVALID_VISUALIZATION_DATA',
+        message: 'Every node in a grouped flow requires a group.',
+      },
+    });
+  });
+
+  it('reports every independent authored violation of one run and drops the dependent ones', async () => {
+    const workspace = await trackedWorkspace('violation-inventory');
+    const entry = path.join(workspace, 'report.md');
+    const output = path.join(workspace, 'report.html');
+    const frontmatter = ['---', 'contractVersion: 1', 'title: Свод', 'language: ru', '---', ''];
+    const diagnosticOf = async (): Promise<Diagnostic> => {
+      try {
+        await buildReport({ input: workspace, output });
+      } catch (error) {
+        return (error as AgenticReportError).diagnostic;
+      }
+      throw new Error('The source was expected to be refused.');
+    };
+
+    // One violated kind repeated: the case the single-diagnostic run could not report at all.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        '# Свод',
+        '',
+        'Раз :foo рядом.',
+        '',
+        'Два :bar рядом.',
+        '',
+        'Три :baz рядом.',
+      ].join('\n'),
+    );
+    const homogeneous = await diagnosticOf();
+    expect(homogeneous.code).toBe('UNSUPPORTED_DIRECTIVE');
+    expect(homogeneous.related?.map((entry_) => entry_.code)).toEqual([
+      'UNSUPPORTED_DIRECTIVE',
+      'UNSUPPORTED_DIRECTIVE',
+    ]);
+    expect(homogeneous.related?.map((entry_) => entry_.source?.line)).toEqual([11, 13]);
+    expect(homogeneous.source?.line).toBe(9);
+
+    // A single violation keeps the previous shape exactly: no empty inventory appears.
+    await writeFile(entry, [...frontmatter, '# Свод', '', 'Раз :foo рядом.'].join('\n'));
+    expect((await diagnosticOf()).related).toBeUndefined();
+
+    // Violated kinds found by different checks, with the earliest in the source reported first even
+    // though its check runs last.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        '# Свод',
+        '',
+        ':::glossary{key="spec" term="спека"}',
+        'Согласованное требование.',
+        ':::',
+        '',
+        'Тут спека без разметки в первом же упоминании.',
+        '',
+        'Дальше :foo рядом.',
+      ].join('\n'),
+    );
+    const mixed = await diagnosticOf();
+    expect([mixed.code, ...(mixed.related ?? []).map((entry_) => entry_.code)]).toEqual([
+      'UNMARKED_GLOSSARY_TERM',
+      'UNSUPPORTED_DIRECTIVE',
+    ]);
+
+    // A node whose attributes were refused must not be read again by its container: a naive
+    // inventory reports INTERNAL_ERROR with exit code 3 instead of the authored violations.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        '# Свод',
+        '',
+        ':::diagram{title="Flow" description="A validated edge."}',
+        '::node{id="a" label="A"}',
+        '::node{id="b" label="B" kind="нет-такого"}',
+        '::edge{from="a" to="b" label="next"}',
+        ':::',
+        '',
+        'Дальше :foo рядом.',
+      ].join('\n'),
+    );
+    const dependent = await diagnosticOf();
+    expect([dependent.code, ...(dependent.related ?? []).map((entry_) => entry_.code)]).toEqual([
+      'INVALID_DIRECTIVE_ATTRIBUTE',
+      'UNSUPPORTED_DIRECTIVE',
+    ]);
+    expect(exitCodeForDiagnostic(dependent)).toBe(1);
+  });
+
+  it('reports every subject a single check refuses, not the first one it meets', async () => {
+    const workspace = await trackedWorkspace('violation-inventory-subjects');
+    const entry = path.join(workspace, 'report.md');
+    const output = path.join(workspace, 'report.html');
+    const frontmatter = ['---', 'contractVersion: 1', 'title: Свод', 'language: ru', '---', ''];
+    const diagnosticOf = async (): Promise<Diagnostic> => {
+      try {
+        await buildReport({ input: workspace, output });
+      } catch (error) {
+        return (error as AgenticReportError).diagnostic;
+      }
+      throw new Error('The source was expected to be refused.');
+    };
+
+    // Two pie charts, each carrying two series where the shape allows one. One check meets both,
+    // and they are independent of each other: the second chart is not read through the first.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        '# Свод',
+        '',
+        '::::chart{type="pie" title="Первый" description="Two series in a pie chart."}',
+        ':::series{label="Один"}',
+        '::point{label="A" value="1"}',
+        ':::',
+        ':::series{label="Два"}',
+        '::point{label="B" value="2"}',
+        ':::',
+        '::::',
+        '',
+        '::::chart{type="pie" title="Второй" description="Two series in a pie chart."}',
+        ':::series{label="Три"}',
+        '::point{label="C" value="3"}',
+        ':::',
+        ':::series{label="Четыре"}',
+        '::point{label="D" value="4"}',
+        ':::',
+        '::::',
+      ].join('\n'),
+    );
+    const charts = await diagnosticOf();
+    expect([charts.code, ...(charts.related ?? []).map((entry_) => entry_.code)]).toEqual([
+      'INVALID_VISUALIZATION_DATA',
+      'INVALID_VISUALIZATION_DATA',
+    ]);
+    expect([charts.source?.line, ...(charts.related ?? []).map((e) => e.source?.line)]).toEqual([
+      9, 18,
+    ]);
+
+    // The same for a check that walks prose: three sections, each leaving the term unmarked at its
+    // own first mention.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        ':::glossary{key="spec" term="спека"}',
+        'Согласованное требование.',
+        ':::',
+        '',
+        ':::section{title="Первый"}',
+        'Тут спека без разметки.',
+        ':::',
+        '',
+        ':::section{title="Второй"}',
+        'И тут спека без разметки.',
+        ':::',
+        '',
+        ':::section{title="Третий"}',
+        'И здесь спека без разметки.',
+        ':::',
+      ].join('\n'),
+    );
+    const sections = await diagnosticOf();
+    expect([sections.code, ...(sections.related ?? []).map((entry_) => entry_.code)]).toEqual([
+      'UNMARKED_GLOSSARY_TERM',
+      'UNMARKED_GLOSSARY_TERM',
+      'UNMARKED_GLOSSARY_TERM',
+    ]);
+
+    // A term already reported unmarked in a section is answered for: its later mentions in the same
+    // section repeat that refusal and stay out of the inventory.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        ':::glossary{key="spec" term="спека"}',
+        'Согласованное требование.',
+        ':::',
+        '',
+        ':::section{title="Первый"}',
+        'Тут спека без разметки.',
+        '',
+        'И снова спека в том же разделе.',
+        ':::',
+      ].join('\n'),
+    );
+    const repeated = await diagnosticOf();
+    expect(repeated.code).toBe('UNMARKED_GLOSSARY_TERM');
+    expect(repeated.related).toBeUndefined();
+
+    // Independent facts inside one subject are all reported: two different unmarked terms in one
+    // paragraph, two undefined keys on one code fence, two malformed leads in one section, and two
+    // refused questions in one form.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        ':::glossary{key="spec" term="спека"}',
+        'Согласованное требование.',
+        ':::',
+        '',
+        ':::glossary{key="probe" term="проба"}',
+        'Наблюдение, различающее состояния.',
+        ':::',
+        '',
+        ':::section{title="Первый"}',
+        'Тут спека и проба без разметки.',
+        ':::',
+      ].join('\n'),
+    );
+    const terms = await diagnosticOf();
+    expect([terms.code, ...(terms.related ?? []).map((entry_) => entry_.code)]).toEqual([
+      'UNMARKED_GLOSSARY_TERM',
+      'UNMARKED_GLOSSARY_TERM',
+    ]);
+
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        '# Свод',
+        '',
+        '```text terms="missing-one,missing-two"',
+        'первый',
+        '```',
+      ].join('\n'),
+    );
+    const keys = await diagnosticOf();
+    expect([keys.code, ...(keys.related ?? []).map((entry_) => entry_.code)]).toEqual([
+      'UNKNOWN_GLOSSARY_TERM',
+      'UNKNOWN_GLOSSARY_TERM',
+    ]);
+    expect((keys.related ?? []).length + 1).toBe(2);
+
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        ':::section{title="Первый"}',
+        ':::lead',
+        'Один.',
+        '',
+        'Два.',
+        ':::',
+        '',
+        ':::lead',
+        'Три.',
+        ':::',
+        ':::',
+      ].join('\n'),
+    );
+    const leads = await diagnosticOf();
+    expect([leads.code, ...(leads.related ?? []).map((entry_) => entry_.code)]).toEqual([
+      'INVALID_DIRECTIVE_PLACEMENT',
+      'INVALID_DIRECTIVE_PLACEMENT',
+    ]);
+
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        '::::response{title="Форма" id="one"}',
+        ':::question{id="a" kind="single" title="Первый" prompt="Выберите"}',
+        '::option{id="one" label="A"}',
+        ':::',
+        ':::question{id="b" kind="single" title="Второй" prompt="Выберите"}',
+        '::option{id="two" label="B"}',
+        ':::',
+        '::::',
+      ].join('\n'),
+    );
+    const questions = await diagnosticOf();
+    expect([questions.code, ...(questions.related ?? []).map((entry_) => entry_.code)]).toEqual([
+      'INVALID_RESPONSE_DATA',
+      'INVALID_RESPONSE_DATA',
+    ]);
+
+    // The same test applied to the loops inside a visualization: three edges pointing at nodes that
+    // do not exist, and two foreign children of one copyable block.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        '# Свод',
+        '',
+        ':::diagram{title="Поток" description="Three edges to undeclared nodes." type="flow"}',
+        '::node{id="a" label="A"}',
+        '::node{id="b" label="B"}',
+        '::node{id="c" label="C"}',
+        '::edge{from="a" to="missing-one" label="one"}',
+        '::edge{from="b" to="missing-two" label="two"}',
+        '::edge{from="c" to="missing-three" label="three"}',
+        ':::',
+      ].join('\n'),
+    );
+    const edges = await diagnosticOf();
+    expect([edges.code, ...(edges.related ?? []).map((entry_) => entry_.code)]).toEqual([
+      'INVALID_VISUALIZATION_DATA',
+      'INVALID_VISUALIZATION_DATA',
+      'INVALID_VISUALIZATION_DATA',
+    ]);
+
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        '# Свод',
+        '',
+        ':::copyable',
+        'Один.',
+        '',
+        '```text',
+        'код',
+        '```',
+        '',
+        '```text',
+        'ещё код',
+        '```',
+        ':::',
+      ].join('\n'),
+    );
+    const foreign = await diagnosticOf();
+    expect([foreign.code, ...(foreign.related ?? []).map((entry_) => entry_.code)]).toEqual([
+      'INVALID_DIRECTIVE_PLACEMENT',
+      'INVALID_DIRECTIVE_PLACEMENT',
+    ]);
+
+    // Two loops repaired earlier without an observation of their own: series of one chart and node
+    // group assignments of one grouped flow.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        '# Свод',
+        '',
+        '::::chart{type="bar" title="Ряды" description="Two series with duplicate labels."}',
+        ':::series{label="Один"}',
+        '::point{label="A" value="1"}',
+        '::point{label="A" value="2"}',
+        ':::',
+        ':::series{label="Два"}',
+        '::point{label="B" value="3"}',
+        '::point{label="B" value="4"}',
+        ':::',
+        '::::',
+      ].join('\n'),
+    );
+    const series = await diagnosticOf();
+    expect([series.code, ...(series.related ?? []).map((e) => e.code)]).toEqual([
+      'INVALID_VISUALIZATION_DATA',
+      'INVALID_VISUALIZATION_DATA',
+    ]);
+
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        '# Свод',
+        '',
+        ':::diagram{title="Поток" description="Nodes referencing unknown groups." type="flow" direction="right"}',
+        '::group{id="one" label="Один"}',
+        '::group{id="two" label="Два"}',
+        '::node{id="a" label="A" group="one"}',
+        '::node{id="b" label="B" group="missing-one"}',
+        '::node{id="c" label="C" group="missing-two"}',
+        '::edge{from="a" to="b" label="one"}',
+        '::edge{from="b" to="c" label="two"}',
+        ':::',
+      ].join('\n'),
+    );
+    const assignments = await diagnosticOf();
+    expect([assignments.code, ...(assignments.related ?? []).map((e) => e.code)]).toEqual([
+      'INVALID_VISUALIZATION_DATA',
+      'INVALID_VISUALIZATION_DATA',
+    ]);
+
+    // The remaining places of the denominator: two sequence participants carrying a group, two
+    // sequence messages without a label, two response items pointing at an undeclared bucket, and
+    // two annotated code keys whose terms do not occur in the block.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        '# Свод',
+        '',
+        ':::diagram{title="Обмен" description="Participants carrying a group." type="sequence"}',
+        '::node{id="a" label="A" group="one"}',
+        '::node{id="b" label="B" group="two"}',
+        '::edge{from="a" to="b" label="one"}',
+        ':::',
+      ].join('\n'),
+    );
+    const participants = await diagnosticOf();
+    expect([participants.code, ...(participants.related ?? []).map((e) => e.code)]).toEqual([
+      'INVALID_VISUALIZATION_DATA',
+      'INVALID_VISUALIZATION_DATA',
+    ]);
+
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        '# Свод',
+        '',
+        ':::diagram{title="Обмен" description="Messages without labels." type="sequence"}',
+        '::node{id="a" label="A"}',
+        '::node{id="b" label="B"}',
+        '::edge{from="a" to="b"}',
+        '::edge{from="b" to="a"}',
+        ':::',
+      ].join('\n'),
+    );
+    const messages = await diagnosticOf();
+    expect([messages.code, ...(messages.related ?? []).map((e) => e.code)]).toEqual([
+      'INVALID_VISUALIZATION_DATA',
+      'INVALID_VISUALIZATION_DATA',
+    ]);
+
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        '::::response{title="Форма" id="one"}',
+        ':::question{id="scope" kind="bucket" title="Куда" prompt="Разложите"}',
+        '::bucket{id="now" label="Сейчас"}',
+        '::bucket{id="later" label="Потом"}',
+        '::item{id="one" label="Первый" note="Раз." meta="Один" href="https://example.com/1" bucket="missing-one"}',
+        '::item{id="two" label="Второй" note="Два." meta="Два" href="https://example.com/2" bucket="missing-two"}',
+        ':::',
+        '::::',
+      ].join('\n'),
+    );
+    const items = await diagnosticOf();
+    expect([items.code, ...(items.related ?? []).map((e) => e.code)]).toEqual([
+      'INVALID_RESPONSE_DATA',
+      'INVALID_RESPONSE_DATA',
+    ]);
+
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        ':::glossary{key="spec" term="спека"}',
+        'Согласованное требование.',
+        ':::',
+        '',
+        ':::glossary{key="probe" term="проба"}',
+        'Наблюдение.',
+        ':::',
+        '',
+        ':::section{title="Раздел"}',
+        'Тут :term[спека]{key="spec"} и :term[проба]{key="probe"}.',
+        '',
+        '```text terms="spec,probe"',
+        'ни того ни другого тут нет',
+        '```',
+        ':::',
+      ].join('\n'),
+    );
+    const codeKeys = await diagnosticOf();
+    expect([codeKeys.code, ...(codeKeys.related ?? []).map((e) => e.code)]).toEqual([
+      'CODE_TERM_NOT_FOUND',
+      'CODE_TERM_NOT_FOUND',
+    ]);
+
+    // A reference to a key nothing ever defined is an independent fact: it joins the inventory
+    // instead of ending the run before the remaining checks.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        '# Свод',
+        '',
+        'Раз :foo рядом.',
+        '',
+        'Тут :term[спека]{key="nope"} без определения.',
+      ].join('\n'),
+    );
+    const unknownKey = await diagnosticOf();
+    expect([unknownKey.code, ...(unknownKey.related ?? []).map((e) => e.code)]).toEqual([
+      'UNSUPPORTED_DIRECTIVE',
+      'UNKNOWN_GLOSSARY_TERM',
+    ]);
+
+    // The same reference no longer ends the run before the later checks: a bad action group after
+    // it is reported in the same run.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        '# Свод',
+        '',
+        'Тут :term[спека]{key="nope"} без определения.',
+        '',
+        ':::actions',
+        'Проза.',
+        ':::',
+      ].join('\n'),
+    );
+    const withLaterCheck = await diagnosticOf();
+    expect([withLaterCheck.code, ...(withLaterCheck.related ?? []).map((e) => e.code)]).toEqual([
+      'UNKNOWN_GLOSSARY_TERM',
+      'INVALID_DIRECTIVE_PLACEMENT',
+    ]);
+
+    // Suppression keeps its declared meaning: a reference whose own definition was refused repeats
+    // that refusal and stays out of the inventory. The definition here is refused for a missing
+    // required attribute, so its key never reaches the accepted map and only the refused-key set
+    // tells this reference apart from one nothing ever defined.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        ':::glossary{key="spec"}',
+        'Согласованное требование.',
+        ':::',
+        '',
+        ':::section{title="Раздел"}',
+        'Тут :term[спека]{key="spec"} рядом.',
+        ':::',
+      ].join('\n'),
+    );
+    const refusedDefinition = await diagnosticOf();
+    expect([
+      refusedDefinition.code,
+      ...(refusedDefinition.related ?? []).map((e) => e.code),
+    ]).toEqual(['DIRECTIVE_ATTRIBUTE_REQUIRED']);
+
+    // The same rule holds for the other annotation pointing at a definition key: an annotated code
+    // fence naming the refused key repeats that refusal and stays out, while the key beside it that
+    // nothing ever defined is an independent fact and joins the inventory.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        ':::glossary{key="spec"}',
+        'Согласованное требование.',
+        ':::',
+        '',
+        ':::section{title="Раздел"}',
+        '```text terms="spec,ghost"',
+        'спека и призрак рядом',
+        '```',
+        ':::',
+      ].join('\n'),
+    );
+    const refusedCodeKey = await diagnosticOf();
+    expect([refusedCodeKey.code, ...(refusedCodeKey.related ?? []).map((e) => e.code)]).toEqual([
+      'DIRECTIVE_ATTRIBUTE_REQUIRED',
+      'UNKNOWN_GLOSSARY_TERM',
+    ]);
+
+    // Suppression drops the record, not the reason to stop reading the block: a fence whose only key
+    // was refused still has no definition to locate, so it must end quietly and leave the next fence
+    // to answer for itself.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        ':::glossary{key="spec"}',
+        'Согласованное требование.',
+        ':::',
+        '',
+        ':::section{title="Раздел"}',
+        '```text terms="spec"',
+        'спека рядом',
+        '```',
+        '',
+        '```text terms="ghost"',
+        'призрак рядом',
+        '```',
+        ':::',
+      ].join('\n'),
+    );
+    const refusedThenUnknownFence = await diagnosticOf();
+    expect([
+      refusedThenUnknownFence.code,
+      ...(refusedThenUnknownFence.related ?? []).map((e) => e.code),
+    ]).toEqual(['DIRECTIVE_ATTRIBUTE_REQUIRED', 'UNKNOWN_GLOSSARY_TERM']);
+
+    // The boundary of suppression, which the agent reference and the inventory record both state: a
+    // definition inside a rejected container is never read, so its key becomes neither known nor
+    // refused and a reference to it is still an unknown key beside the refusal of that container.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        ':::section',
+        ':::glossary{key="spec" term="спека"}',
+        'Согласованное требование.',
+        ':::',
+        ':::',
+        '',
+        ':::section{title="Раздел"}',
+        'Тут :term[спека]{key="spec"} рядом.',
+        ':::',
+      ].join('\n'),
+    );
+    const definitionLostWithContainer = await diagnosticOf();
+    expect([
+      definitionLostWithContainer.code,
+      ...(definitionLostWithContainer.related ?? []).map((e) => e.code),
+    ]).toEqual(['DIRECTIVE_ATTRIBUTE_REQUIRED', 'UNKNOWN_GLOSSARY_TERM']);
+
+    // The dependency this unit introduced: overlap detection reads the ranges of every annotated
+    // key, so a block with a key that never occurs reports only that key and not an overlap
+    // computed from the ranges it just refused.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        ':::glossary{key="spec" term="спека"}',
+        'Согласованное требование.',
+        ':::',
+        '',
+        ':::glossary{key="probe" term="спека и проба"}',
+        'Наблюдение.',
+        ':::',
+        '',
+        ':::glossary{key="absent" term="отсутствующее"}',
+        'Нет в блоке.',
+        ':::',
+        '',
+        ':::section{title="Раздел"}',
+        'Тут :term[спека]{key="spec"}, :term[спека и проба]{key="probe"} и :term[отсутствующее]{key="absent"}.',
+        '',
+        '```text terms="spec,probe,absent"',
+        'спека и проба рядом',
+        '```',
+        ':::',
+      ].join('\n'),
+    );
+    const refusedRanges = await diagnosticOf();
+    expect([refusedRanges.code, ...(refusedRanges.related ?? []).map((e) => e.code)]).toEqual([
+      'CODE_TERM_NOT_FOUND',
+    ]);
+
+    // Inside one refused subject nothing is read further: a pie chart that breaks two rules at once
+    // — two series, and a second series without points — answers with one violation, not two.
+    await writeFile(
+      entry,
+      [
+        ...frontmatter,
+        '# Свод',
+        '',
+        '::::chart{type="pie" title="Первый" description="Two series, one of them empty."}',
+        ':::series{label="Один"}',
+        '::point{label="A" value="1"}',
+        ':::',
+        ':::series{label="Два"}',
+        ':::',
+        '::::',
+      ].join('\n'),
+    );
+    const refusedSubject = await diagnosticOf();
+    expect(refusedSubject.code).toBe('INVALID_VISUALIZATION_DATA');
+    expect(refusedSubject.related).toBeUndefined();
+
+    // Every remaining check answers for both of its subjects too: a check left reporting only its
+    // first one would keep the whole set green without this table.
+    for (const [label, code, body] of [
+      [
+        'copyable prose',
+        'INVALID_DIRECTIVE_PLACEMENT',
+        [
+          ':::copyable',
+          'Один.',
+          '',
+          '```text',
+          'код',
+          '```',
+          ':::',
+          '',
+          ':::copyable',
+          'Два.',
+          '',
+          '```text',
+          'код',
+          '```',
+          ':::',
+        ],
+      ],
+      [
+        'action groups',
+        'INVALID_DIRECTIVE_PLACEMENT',
+        [':::actions', 'Проза.', ':::', '', ':::actions', 'Проза.', ':::'],
+      ],
+      [
+        'lead paragraphs',
+        'INVALID_DIRECTIVE_PLACEMENT',
+        [
+          ':::section{title="Первый"}',
+          ':::lead',
+          'Один.',
+          '',
+          'Два.',
+          ':::',
+          ':::',
+          '',
+          ':::section{title="Второй"}',
+          ':::lead',
+          'Три.',
+          '',
+          'Четыре.',
+          ':::',
+          ':::',
+        ],
+      ],
+      [
+        'typed review components',
+        'INVALID_DIRECTIVE_PLACEMENT',
+        [
+          ':::checklist{title="Первый" id="one"}',
+          'Проза.',
+          '::check-item{id="a" label="A"}',
+          ':::',
+          '',
+          ':::checklist{title="Второй" id="two"}',
+          'Проза.',
+          '::check-item{id="b" label="B"}',
+          ':::',
+        ],
+      ],
+      [
+        'response forms',
+        'INVALID_RESPONSE_DATA',
+        [
+          '::::response{title="Первый" id="one"}',
+          ':::question{id="dup" kind="single" title="Вопрос" prompt="Выберите"}',
+          '::option{id="a" label="A"}',
+          '::option{id="b" label="B"}',
+          ':::',
+          ':::question{id="dup" kind="single" title="Вопрос" prompt="Выберите"}',
+          '::option{id="c" label="C"}',
+          '::option{id="d" label="D"}',
+          ':::',
+          '::::',
+          '',
+          '::::response{title="Второй" id="two"}',
+          ':::question{id="same" kind="single" title="Вопрос" prompt="Выберите"}',
+          '::option{id="e" label="E"}',
+          '::option{id="f" label="F"}',
+          ':::',
+          ':::question{id="same" kind="single" title="Вопрос" prompt="Выберите"}',
+          '::option{id="g" label="G"}',
+          '::option{id="h" label="H"}',
+          ':::',
+          '::::',
+        ],
+      ],
+      [
+        'code term blocks',
+        'UNKNOWN_GLOSSARY_TERM',
+        [
+          '```text terms="missing-one"',
+          'первый',
+          '```',
+          '',
+          '```text terms="missing-two"',
+          'второй',
+          '```',
+        ],
+      ],
+    ] as [string, string, readonly string[]][]) {
+      await writeFile(entry, [...frontmatter, '# Свод', '', ...body].join('\n'));
+      const reported = await diagnosticOf();
+      expect(
+        [reported.code, ...(reported.related ?? []).map((entry_) => entry_.code)],
+        label,
+      ).toEqual([code, code]);
+    }
+  });
+
+  it('keeps ordinary colon prose as exact authored text while a spaced unknown alphabetic name still fails', async () => {
+    const workspace = await trackedWorkspace('literal-colon-text');
     const entry = path.join(workspace, 'report.md');
     const output = path.join(workspace, 'report.html');
     await writeFile(
@@ -677,25 +1742,58 @@ describe('buildReport', () => {
     expect(html).toMatch(/<p[^>]*>Диапазон 21:01 — 00:12\.<\/p>/u);
     expect(html).toMatch(/<p[^>]*>Длительность 1:30:05\.<\/p>/u);
 
-    for (const [label, invalid] of [
-      ['unknown alphabetic directive', 'Текст :unknown рядом.'],
-      ['invalid minute domain', 'Неверное время 21:99.'],
-      ['short subordinate field', 'Не время 1:2.'],
+    // One row per distinguishing feature of the rule, not per reported case: a digit opening the
+    // name — which holds whatever precedes the colon — a colon written against the preceding word,
+    // group counts outside the clock shape, and the escape that stays available where neither
+    // feature applies.
+    for (const [label, authored, rendered] of [
+      ['digit opens the name', 'Работа arXiv:2607.05775 в списке.'],
+      ['digit opens the name after a space', 'Пункт :2 списка.'],
+      ['digit opens the name after a bracket', 'Сноска (:2) рядом.'],
+      ['letter after a word-adjacent colon', 'Формат ключ:значение в конфиге.'],
+      ['host and port', 'Адрес localhost:9000 открыт.'],
+      ['alphanumeric tail', 'Версия v21:01alpha.'],
+      ['two groups', 'Правило 3:1 и масштаб 1:100.'],
+      ['three groups', 'Коэффициент 1:10:100.'],
+      ['minute domain outside the clock shape', 'Неверное время 21:99.'],
       ['four numeric groups', 'Не длительность 1:20:30:40.'],
-      ['word-adjacent token', 'Версия v21:01alpha.'],
-      ['left astral letter', '𐐀21:01'],
-      ['right astral letter', '21:01𐐀'],
-      ['left combining mark', 'á21:01'],
-      ['right combining mark', '21:01́a'],
-    ] as const) {
-      await writeFile(entry, `# Проверка\n\n${invalid}\n`);
-      await expect(buildReport({ input: workspace, output }), label).rejects.toMatchObject({
+      ['left astral letter', 'Знак \u{10400}21:01 рядом.'],
+      ['right astral letter', 'Знак 21:01\u{10400} рядом.'],
+      ['left combining mark', 'Знак a\u{301}21:01 рядом.'],
+      ['right combining mark', 'Знак 21:01\u{301}a рядом.'],
+      ['escaped colon', 'Ссылка arXiv\\:2607.05775 здесь.', 'Ссылка arXiv:2607.05775 здесь.'],
+    ] as [string, string, string?][]) {
+      await writeFile(entry, `# Проверка\n\n${authored}\n`);
+      await expect(buildReport({ input: workspace, output }), label).resolves.toMatchObject({
+        format: 'single-file',
+      });
+      expect(await readFile(output, 'utf8'), label).toContain(rendered ?? authored);
+    }
+
+    // The restore is bounded to leaf text directives without attributes or children, so a
+    // word-adjacent colon that carries attributes stays a directive and keeps its diagnostic, and
+    // a digit-initial name written as a block-level form is never restored either.
+    for (const authored of [
+      'Текст :unknown рядом.',
+      'Запись слово:unknown{ключ="1"} в прозе.',
+      '::2',
+    ]) {
+      await writeFile(entry, `# Проверка\n\n${authored}\n`);
+      await expect(buildReport({ input: workspace, output }), authored).rejects.toMatchObject({
         diagnostic: {
           code: 'UNSUPPORTED_DIRECTIVE',
           source: { file: entry, line: 3 },
+          remediation: expect.stringContaining('Escape the colon as \\:'),
         },
       });
     }
+
+    // A spaced registered name is not restored either, so it reaches its own directive rules rather
+    // than the unsupported-name diagnostic: every registered text directive requires an attribute.
+    await writeFile(entry, '# Проверка\n\nСмотри :term рядом.\n');
+    await expect(buildReport({ input: workspace, output })).rejects.toMatchObject({
+      diagnostic: { code: 'DIRECTIVE_ATTRIBUTE_REQUIRED', source: { file: entry, line: 3 } },
+    });
   });
 
   it('renders copyable prose as a marked ordinary Markdown content owner', async () => {

@@ -30,7 +30,28 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
 - `unit` uses Vitest for source loading, validation, lexical and symlink partial/asset confinement,
   Markdown/directive rendering, image/download/font embedding and copying, absent-only starter
   initialization, installed starter-root resolution, no-overwrite/incomplete-state behavior, CLI
-  diagnostics, both output formats and their derived runtime placement, truthful discovery/schema defaults,
+  diagnostics — including one run whose three independent violations appear in both projections, the
+  agent one without any flag and the prose one under `--human` with a `file:line:column` place per
+  violation and a closing count, a manifest refusal that names the unknown key and proposes a
+  replacement only when a registered field is close enough for the implemented measure — the proposal
+  itself is asserted, because the accepted-key list already contains every field name and a substring
+  check on one would stay green with the proposal branch removed — and the output rule observed on
+  every discovery command, where the flagless answer is one compact agent line, `--json` reproduces it
+  byte for byte, and `--human` differs from it; the help text of every command the CLI registers, where
+  the promise of prose stands at exactly the commands that emit prose; the computed replacement carried as data and
+  applied to the authored text, its absence on every occupied envelope — a term inside a link whose label
+  is longer than the term, one whose label is exactly the term, and one written through a reference — and
+  `fix` writing those replacements while every other byte and a second run stay unchanged, with
+  `validate` and `inspect` still writing nothing; declared glossary forms, where a declared inflection is
+  found and proposed in the spelling the sentence used, an undeclared word sharing the stem is not, and
+  one form claimed by two definitions is refused; initialization through a symbolic-link parent returning
+  the resolved destination while an existing destination stays refused; the directive phase answering
+  with every independent rule of one element — a question judged on both its options and its numeric
+  bounds, a misplaced directive judged on its attributes as well — and staying silent below a rule whose
+  declared dependency refused, a refused section leaving its identity to the section the document keeps,
+  and the declared rules with their dependencies read from the contract without
+  compiling a source —
+  both output formats and their derived runtime placement, truthful discovery/schema defaults,
   declared Node.js floor comparison and below-floor diagnostic behavior,
   manifest/frontmatter provenance, entry/partial diagnostic source maps, source/output collision protection,
   closed en/ru reader-locale resolution, unsupported/`und` English fallback, Russian count forms,
@@ -38,9 +59,27 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   deterministic review-target manifests and local-input revisions, strict canonical review JSON,
   strict response form/artifact parsing, kind-specific answer domains, untouched/default distinction,
   canonical response JSON and foreign/stale/prototype-like rejection,
-  exact unescaped clock/range/duration Markdown and frontmatter titles while malformed numeric or unknown
-  alphabetic directives—including astral-letter and combining-mark word adjacency—retain source-mapped
-  rejection,
+  exact unescaped colon prose and frontmatter titles—clock, range and duration notation, ratios, host/port
+  pairs, identifiers and key/value phrases, including astral-letter and combining-mark word adjacency and a
+  digit-initial name after a space or bracket—while a spaced unknown alphabetic name, any attributed
+  word-adjacent form and a block-level digit-initial form retain source-mapped rejection and a spaced
+  registered name without its required attribute reports that attribute instead of becoming text,
+  one run reporting several independent authored violations — repeated across the tree walk, repeated
+  inside one check across independent subjects, and repeated inside one subject across independent
+  elements such as two unmarked terms in a paragraph, two undefined keys on a code fence, two
+  malformed leads in a section, two refused questions in a form, three diagram edges pointing at
+  undeclared nodes, two chart series with duplicate labels, two nodes referencing unknown groups,
+  two sequence participants carrying a group, two unlabelled sequence messages, two response items
+  pointing at an undeclared bucket, two annotated code keys absent from the block and two foreign
+  children of one copyable block, plus mixed across checks in source order and a reference to a key nothing
+  ever defined joining the inventory instead of ending the run before the remaining checks — while
+  violations that only repeat a refusal already reported stay out of it: a term reference whose own
+  definition was refused, an annotated code fence naming that same refused key beside a key nothing ever
+  defined, a second fence answering for itself after one whose only key was refused, an empty group beside a
+  node whose own group assignment was refused, and an overlap computed
+  from code-term ranges whose key was just refused — while the boundary of that rule is itself observed: a
+  definition lost with a rejected container leaves its key unknown, so a reference to it stays in the
+  inventory beside the container's refusal,
   semantic copyable-prose ownership and nested behavior/code rejection,
   generated in-flow contents in both formats with exact-heading/short-navigation divergence, final ID
   collision handling, rename/reorder synchronization, repeated declarations, legacy/explicit H3 and

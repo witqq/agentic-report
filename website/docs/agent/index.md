@@ -129,8 +129,14 @@ priority order, scores, text, or per-item comments. The generated page keeps ans
 offers both **Copy response** and **Download response.json**; a rejected import preserves existing answers.
 The installed example catalog includes the complete `response-workspace` source.
 
-Write times and durations directly—`21:01`, `21:01 — 00:12`, and `1:30:05` remain literal text in Markdown,
-and frontmatter titles need no backslash. Real unknown directive names still fail with a source diagnostic.
+Write an ordinary colon directly—a digit-initial name and a colon written against the preceding word remain
+literal text in Markdown, so `21:01`, `1:30:05`, `3:1`, `1:10:100`, `localhost:9000`, `arXiv:2508.05775` and
+`ключ:значение` need no backslash, and neither do frontmatter titles. The digit feature does not depend on
+what precedes the colon, so `Пункт :2 списка.` is text as well. Only the inline form without attributes or
+children is restored: a colon carrying attributes or children, such as `слово:name{key="1"}`, remains a
+directive, and so do block-level forms such as `::2` and an unknown **alphabetic** name standing alone after
+a space. Those continue as directives and fail with a source diagnostic when the name is unregistered; write
+`\:` when such prose is not a directive.
 
 Use `:::copyable` for prose handoffs. It remains ordinary wrapped Markdown and copies visible text only;
 do not use a `text` code fence just to get a Copy button.

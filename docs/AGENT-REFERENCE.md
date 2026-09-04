@@ -44,7 +44,16 @@ agentic-report examples --json
 ```
 
 `describe` returns the current source-contract description, including directive forms, attributes,
-constraints, nesting, resource/runtime behavior, and output formats. `schema` defaults to the
+constraints, nesting, resource/runtime behavior, output formats, the `commands` catalog — which names
+every command this CLI registers, so a command is discoverable through the machine route without
+reading prose — and `authoredRules` — the declared rules of the
+directive phase with the dependencies between them, listed per authored subject. The list is the
+declared sets, not every judgement the phase makes: checks written before this arrangement — among
+them the children a question accepts, code-fence metadata, the shape of a response form, and
+document-wide checks — are ordinary code and do not appear here, though they report violations the
+same way. A rule that
+declares a dependency stays silent when that dependency refused, which is why one run can report
+several violations of the same element yet none derived from a refused reading. `schema` defaults to the
 accepted manifest-input JSON Schema; `--scope directives` returns directive grammar and constraints, and
 `--scope source` describes a complete source object. `examples` returns installed example metadata plus
 absolute entry paths from the CLI adapter.
@@ -74,8 +83,12 @@ const project = await initProject({ destination: './my-report' });
 console.log(project.entryPath);
 ```
 
-The destination must be absent and its immediate parent must already be an ordinary non-symlink
-directory. Any existing file, directory (including empty), or symlink is rejected unchanged.
+The destination must be absent and its immediate parent must already exist and be a directory. The
+parent may be a symbolic link — on macOS `/tmp` is one — and the destination is then created through it;
+`projectPath` in the result names the resolved location rather than the path you typed. Any existing
+file, directory (including empty), or symlink at the destination itself is rejected unchanged, and that
+refusal, not a rule about the parent, is what protects an existing tree. The three parent refusals name
+which check failed: the parent does not exist, is not a directory, or cannot be inspected.
 Initialization selects the single registry-owned default unless `starter` names any other initializable
 packaged example or alias. Six starter trees are packaged:
 
@@ -97,7 +110,18 @@ failure may leave the newly created destination incomplete; inspect it and remov
 retrying. The result contains starter, project and entry identity plus a sorted package-relative file
 inventory; it does not contain source file contents.
 
-Human success is `Created <projectPath> from starter <starterId> (<count> files)`. With `--json`, stdout
+Every command answers an agent without a flag, accepts `--json` as the name of that default, and offers
+`--human` for a person. The agent shape follows what the command returns: `init`, `build`, `validate`,
+`inspect`, `fix` and `review` report a run and write NDJSON records; `schema`, `describe` and `examples`
+return one reference document and write it as a single compact JSON line. The human projection is prose
+wherever prose exists — `init`, `build`, `validate`, `fix`, `review` and `examples` — and the same
+document indented for `inspect`, `schema` and `describe`, whose answer is a catalog or a schema that no
+summary line can carry.
+Both projections of a run carry the same facts — every
+independent violation, each with its `file:line:column` place — so choosing prose never hides a
+violation.
+
+Human success is `Created <projectPath> from starter <starterId> (<count> files)`. By default, stdout
 contains one NDJSON result record with `type`, `runId`, `starterId`, `starterTitle`, `projectPath`,
 `entryPath`, and `files`. Expected failures use the common diagnostic record and exit code `1`.
 
@@ -115,8 +139,8 @@ Markdown rendering, output selection, package-asset resolution, and warning calc
 they do not publish `report.html`, `report-artifact`, or any other output. `--format` checks either
 supported output path without changing the manifest.
 
-Human validation prints the resolved entry plus format and runtime placement. Human inspection prints the
-inspection result as formatted JSON. With `--json`, warnings are NDJSON diagnostic records followed by
+With `--human`, validation prints the resolved entry plus format and runtime placement, and inspection
+prints the inspection result as formatted JSON. By default, warnings are NDJSON diagnostic records followed by
 one result record. Validation returns `contractVersion`, absolute `projectPath` and `entryPath`,
 `format`, derived `runtimePlacement`, and sanitized `warnings`. Inspection returns those identities
 plus:
@@ -137,6 +161,23 @@ import { inspectReport, validateReport } from 'agentic-report';
 const validation = await validateReport({ input: './my-report' });
 const inspection = await inspectReport({ input: './my-report', format: 'directory' });
 ```
+
+## Apply the repairs the product computed
+
+```bash
+agentic-report fix ./my-report
+agentic-report fix ./my-report --human
+```
+
+`fix` is the only command that writes to an authored source. It applies the `fix` field of the
+diagnostics a run produced — the replaced range and its replacement, both computed exactly — and touches
+no other byte. Diagnostics without that field are left alone and reported as `remaining`: their repair
+needs an author decision, and guessing it would be a different product. Running it twice changes nothing
+the first run already repaired.
+
+The result carries `applied` — file, line, column, diagnostic code and the written replacement for each
+repair — and `remaining`. With `--human` each repair prints as `file:line:column  CODE → replacement`.
+The equivalent ESM API is `fixReport({ input, format? })`.
 
 ## Resolve review feedback to source
 
@@ -249,9 +290,15 @@ paragraph breaks and link labels, without Markdown syntax, URLs, HTML, control l
 
 ## Minimal source
 
-Write clock times, ranges, and durations directly: `21:01`, `21:01 — 00:12`, and `1:30:05` are literal
-Markdown text, and a frontmatter title such as `title: Отчёт за 9 июля (ночь до 05:24)` needs no backslash.
-Unknown directive names still fail validation.
+Write an ordinary colon directly. A colon whose name begins with a digit, and a colon written against the
+preceding word, are literal Markdown text: `21:01`, `21:01 — 00:12`, `1:30:05`, `3:1`, `1:10:100`,
+`localhost:9000`, `arXiv:2508.05775` and `ключ:значение` all render as authored, and a frontmatter title
+such as `title: Отчёт за 9 июля (ночь до 05:24)` needs no backslash. The digit feature does not depend on
+what precedes the colon, so `Пункт :2 списка.` is text as well. Only the inline form without attributes or
+children is restored: a colon carrying attributes or children, such as `слово:name{key="1"}`, remains a
+directive, and so do block-level forms such as `::2` and an unknown **alphabetic** name standing on its own
+after a space. Such a form is validated as a directive and fails when its name is unregistered; write `\:`
+when the prose is not a directive.
 
 ```text
 my-report/
@@ -540,7 +587,8 @@ Open the result directly through `file://`.
 `chart.type` is `bar`, `line`, or `pie`. Charts accept 1–6 series with 1–12 points each; series share the
 same unique ordered labels. Pie charts accept exactly one non-negative series with a positive total.
 `diagram.type` is `flow` by default or `sequence`. A flow accepts 1–20 unique nodes and up to 40 validated
-edges. It is either ungrouped or declares 2–3 non-empty groups and assigns every node to one. Ungrouped flows
+edges. It is either ungrouped or declares 2–3 non-empty groups and assigns every node to one; a single
+group builds and reports `INCOMPLETE_DIAGRAM_GROUPING` so grouping can be finished later. Ungrouped flows
 accept `direction="right|down"`; grouped subsystem columns are rightward. A sequence accepts 2–6 node participants and 1–40 labelled edge messages;
 participant and message order is source order, while groups, direction and self-messages are rejected.
 Grouped members use authored row order; longer intra-group connections route through the group's inner
@@ -599,7 +647,11 @@ authored label; the leaf asset form receives `Download <filename>` so it remains
 `tab` must be directly nested in `tabs`. Glossary keys and canonical terms are unique. In prose,
 `:term[authored form]{key="..."}` renders the authored grammatical form while the popover and full definition
 retain the canonical title; detached `::term{key="..."}` uses canonical text. Unmarked validation recognizes
-only exact canonical forms and deliberately does not claim morphological inference.
+the canonical form and every spelling the definition declares in `forms` — a comma-separated list of at most
+24 items of at most 64 characters, none repeated and none claimed by another definition — and the proposed
+replacement keeps the spelling the sentence used. An inflection nobody declared is not guessed: the package
+claims no morphological inference, and that mention stays ordinary prose. Validation requires the first
+occurrence in each section and leaves later mentions of the same term in that section as ordinary prose.
 
 `glossary.placement` is `inline` by default. A top-level or direct-section definition may use `appendix` for
 one visible package-owned reference section outside primary navigation; list, quote, lead, and unrelated
@@ -651,7 +703,17 @@ agentic-report build ./my-report --output ./architecture.html --json
 Each stdout line is JSON. A diagnostic line contains `type`, `runId`, `level`, `code`, `message`, and
 `remediation`; a content-backed error includes the authored `source.file`, start/end line and column, while
 the referenced local path is kept in structured `details.target`. Process-level errors omit source
-locations. The final result contains an absolute output path, format, HTML byte size, embedded/external
+locations. When one run finds several authored violations while interpreting directives, the
+line reports the earliest one and carries the rest in `related`, ordered by position in the source and
+shaped like the diagnostic itself; the field is absent when the run found exactly one. Three refusals are
+dropped because each only repeats one already reported: a descendant of a rejected directive, a term
+reference or an annotated code fence pointing at a key whose own `glossary` definition was refused, and a
+check reading an interpretation already refused. A key nothing ever defined stays an independent fact in
+both forms. Suppression follows those three mechanisms and claims nothing wider: a definition that was
+never read because its container was rejected leaves its key unknown, so a reference to it is still
+listed beside the refusal of that container. The
+inventory covers the directive phase: a failure of another stage, such as reading the source graph or
+publishing the artifact, still ends the run with one diagnostic. The final result contains an absolute output path, format, HTML byte size, embedded/external
 occurrence counts, an HTML SHA-256 content hash, the selected share profile, exact neutralized source-link
 count, and warnings. Asset counters describe authored/generated
 occurrences, while `contentHash` hashes the generated HTML rather than an entire directory tree.

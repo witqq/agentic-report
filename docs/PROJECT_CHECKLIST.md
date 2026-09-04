@@ -13,7 +13,7 @@ Use this checklist before each commit. It contains quality gates only.
 
 - [ ] Relevant unit tests pass through `pnpm test:unit`.
 - [ ] Generated-artifact browser tests pass through `pnpm test:e2e` when behavior or rendering changed.
-- [ ] `pnpm pack:check` confirms the npm tarball contract when exports, bin, build, or package metadata changed.
+- [ ] `pnpm pack:check` confirms the npm tarball contract when exports, bin, build, or package metadata changed. The run isolates its own toolchain and npm global prefix, so it needs no change to the machine.
 - [ ] Failure artifacts were read before any rerun.
 
 ## Content compiler

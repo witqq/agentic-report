@@ -15,7 +15,7 @@
     "packageOwnedRuntime": "required"
   },
   "evidence": {
-    "sourceGrammar": "The registry owns flow and sequence forms, one-to-twenty flow nodes, up to forty flow edges, zero or two-to-three labelled rightward groups with complete membership, two-to-six sequence participants, and one-to-forty labelled ordered messages. Unknown identities, duplicates, empty groups, unsupported direction/form combinations, self-connections, and bounds fail at authored directives.",
+    "sourceGrammar": "The registry owns flow and sequence forms, one-to-twenty flow nodes, up to forty flow edges, zero or two-to-three labelled rightward groups with complete membership, with a single group accepted as unfinished grouping and reported as a warning, two-to-six sequence participants, and one-to-forty labelled ordered messages. Unknown identities, duplicates, empty groups, unsupported direction/form combinations, self-connections, and bounds fail at authored directives.",
     "executionCapabilities": "Validated records become package-owned deterministic SVG geometry after sanitization. Flow groups use bounded columns and ordered members; sequences use authored participant and message order. No source string becomes executable syntax or a general graph program.",
     "confinement": "Groups, participants, nodes, edges, labels, and messages are ordinary bounded directive attributes and cause no filesystem lookup or resource resolution beyond the existing Markdown source graph.",
     "offlineBehavior": "Compilation and both file-URL output formats use local package code and CSS only. No visualization server, browser renderer, worker, font request, network request, or external layout engine is required.",
@@ -24,6 +24,6 @@
     "accessibility": "Each diagram remains one labelled atomic image. Grouped-flow descriptions include every group, member, node, and connection; sequence descriptions include every participant and ordered message. Visible labels may wrap or shorten without truncating accessible data.",
     "byteAndPerformanceBudgets": "Validation and layout are finite at registry-owned bounds. Rendering adds no listener, observer, timer, animation, network work, or per-frame computation; SVG and description bytes remain covered by compiler accounting and package checks.",
     "packageDependenciesAndLicenses": "No dependency or license is added. The implementation extends the existing project-owned registry, validator, HAST/SVG renderer, CSS, deterministic tests, and package assets.",
-    "compatibility": "Existing ungrouped flow diagrams remain the default and preserve node, edge, direction, theme, output-format, CLI, ESM, CSP, and review contracts. New source is additive within source-contract major 1; unsupported shapes fail instead of invoking a compatibility fallback."
+    "compatibility": "Existing ungrouped flow diagrams remain the default and preserve node, edge, direction, theme, output-format, CLI, ESM, CSP, and review contracts. New source is additive within source-contract major 1; a single group builds and reports INCOMPLETE_DIAGRAM_GROUPING, while every other unsupported shape fails instead of invoking a compatibility fallback."
   }
 }

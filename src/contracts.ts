@@ -47,13 +47,44 @@ export interface SourceMapSegment {
   readonly sourceText: string;
 }
 
+/**
+ * A replacement the product computed exactly, addressed in the authored text so a consumer can apply
+ * it without parsing prose. Present only where applying it preserves every authored construction the
+ * range spans; a diagnostic whose repair would need a judgement carries none.
+ */
+export interface DiagnosticFix {
+  readonly file: string;
+  /**
+   * Offset of the first replaced character, counted in UTF-16 code units of the file decoded as
+   * UTF-8 — the unit a JavaScript string index uses. It is not a byte offset: a source with
+   * non-ASCII text ahead of the range has more bytes than code units, and slicing the file buffer by
+   * these numbers would cut mid-character.
+   */
+  readonly start: number;
+  /** Offset just past the last replaced character, in the same units as `start`. */
+  readonly end: number;
+  readonly replacement: string;
+}
+
 export interface Diagnostic {
   readonly level: 'warning' | 'error';
   readonly code: string;
   readonly message: string;
   readonly remediation: string;
   readonly source?: SourceLocation;
+  /**
+   * The computed replacement for this violation, when one exists. Transport sanitization applies to
+   * it like every other field; a replacement that sanitization would alter carries a credential in
+   * authored bytes and is withheld rather than shipped redacted, because applying a redacted
+   * replacement would destroy what it redacted.
+   */
+  readonly fix?: DiagnosticFix;
   readonly details?: Readonly<Record<string, unknown>>;
+  /**
+   * Further independent violations found in the same run, ordered by position in the source. Absent
+   * when the run found exactly one.
+   */
+  readonly related?: readonly Diagnostic[];
 }
 
 export interface BuildReportOptions {
@@ -102,6 +133,33 @@ export interface ValidateReportResult {
   readonly format: OutputFormat;
   readonly runtimePlacement: 'inline' | 'external';
   readonly warnings: readonly Diagnostic[];
+}
+
+export interface FixReportOptions {
+  readonly input: string;
+  readonly format?: OutputFormat;
+}
+
+/** One replacement the run wrote, reported so the author can see what changed without a diff. */
+export interface AppliedFix {
+  readonly file: string;
+  readonly line: number;
+  readonly column: number;
+  readonly code: string;
+  readonly replacement: string;
+}
+
+export interface FixReportResult {
+  readonly contractVersion: number;
+  readonly projectPath: string;
+  readonly entryPath: string;
+  /** Empty when the source needed no applicable repair; the command is then a no-op by design. */
+  readonly applied: readonly AppliedFix[];
+  /**
+   * Violations that remain after every applicable replacement was written. A repair the product
+   * cannot derive from authored bytes stays here rather than being guessed.
+   */
+  readonly remaining: readonly Diagnostic[];
 }
 
 export interface InspectReportOptions {
