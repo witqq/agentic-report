@@ -10,28 +10,13 @@ export const MAX_REVIEW_NAME_LENGTH = 200;
 /**
  * Ceiling on reviewable blocks in one report.
  *
- * The limit exists to keep a review manifest addressable, not to cap document size: a long
+ * The limit keeps a review manifest addressable; it does not cap document length. A long
  * engineering walkthrough legitimately holds thousands of paragraphs, code fences and tables, and
- * splitting it into several artifacts breaks the single-file distribution the package exists for.
- * The value is therefore configurable through `AGENTIC_REPORT_MAX_REVIEW_TARGETS`; anything that is
- * not a positive integer falls back to the default.
+ * splitting it into several artifacts would defeat the single-file distribution this package exists
+ * for. Callers that need a different bound pass it explicitly.
  */
-export const DEFAULT_MAX_REVIEW_TARGETS = 5000;
+export const MAX_REVIEW_TARGETS = 5000;
 
-/**
- * Effective ceiling, read at the moment of use.
- *
- * Reading the environment lazily rather than at module load keeps the value overridable by the
- * process that is running a build — including a test that lowers it to observe the refusal — and
- * leaves a single source of truth: no exported constant can disagree with the limit actually
- * enforced.
- */
-export const reviewTargetLimit = (): number => {
-  const raw = process.env['AGENTIC_REPORT_MAX_REVIEW_TARGETS'];
-  if (raw === undefined) return DEFAULT_MAX_REVIEW_TARGETS;
-  const parsed = Number(raw);
-  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_REVIEW_TARGETS;
-};
 export const MAX_REVIEW_MANIFEST_BYTES = 750_000;
 export const MAX_REVIEW_FILE_BYTES = 3_000_000;
 export const MAX_REVIEW_TEXT_LENGTH = 4_000;
@@ -167,13 +152,15 @@ export function parseReviewArtifact(input: unknown): ReviewArtifact {
   return { contractVersion: REVIEW_CONTRACT_VERSION, report: { revision }, threads };
 }
 
-export function parseReviewTargetManifest(input: unknown): ReviewTargetManifest {
+export function parseReviewTargetManifest(
+  input: unknown,
+  targetLimit: number = MAX_REVIEW_TARGETS,
+): ReviewTargetManifest {
   const record = versioned(input);
   const issues: ReviewContractIssue[] = [];
   exact(record, ['contractVersion', 'reportRevision', 'targets'], '$', issues);
   const reportRevision = fingerprint(record.reportRevision, '$.reportRevision', issues);
   const targets: ReviewTargetReference[] = [];
-  const targetLimit = reviewTargetLimit();
   if (!Array.isArray(record.targets)) add(issues, '$.targets', 'must be an array');
   else if (record.targets.length > targetLimit)
     add(issues, '$.targets', `must contain at most ${targetLimit} targets`);
