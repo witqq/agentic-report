@@ -3,24 +3,24 @@
     "result": {
       "outputPath": "<single>",
       "format": "single-file",
-      "bytes": 133638,
+      "bytes": 138679,
       "embeddedAssets": 6,
       "externalAssets": 0,
-      "contentHash": "ed1d25dccd62688dceb2d43ef5c1b1cabd924b6cdfcd9a38f527b93203f100d5",
+      "contentHash": "d6c0d268225d332f4be1cd9788be32c15bcd299ff2f65fde21be79df48a00418",
       "share": false,
       "neutralizedSourceLinks": 0,
       "warnings": []
     },
-    "sha256": "ed1d25dccd62688dceb2d43ef5c1b1cabd924b6cdfcd9a38f527b93203f100d5"
+    "sha256": "d6c0d268225d332f4be1cd9788be32c15bcd299ff2f65fde21be79df48a00418"
   },
   "directory": {
     "result": {
       "outputPath": "<directory>/index.html",
       "format": "directory",
-      "bytes": 9991,
+      "bytes": 10182,
       "embeddedAssets": 0,
       "externalAssets": 6,
-      "contentHash": "4f792ce6d2e40f963b7aa94b4d61a18fb8eeee5e04c301ce27464549e9726e7a",
+      "contentHash": "d453c56221d859eae1b49fc9a590f0cdf9599df88d720811530ad82cbe35c55c",
       "share": false,
       "neutralizedSourceLinks": 0,
       "warnings": []
@@ -28,10 +28,10 @@
     "tree": {
       "assets/data.b5a2226aa8dc.json": "b5a2226aa8dc989b18f2db6775a56448e7cdbe706e17e07d5110a43ef106b4d7",
       "assets/diagram.56b7b89f0860.svg": "56b7b89f0860520e4c8e1333aba1bbaa9b1e4711026a752b848fbf6190398c5f",
-      "assets/document.f535593f5936.css": "f535593f59360368704e41e90bcb2064f431af79e1ec4559e20d831c55e88364",
+      "assets/document.d244830ca497.css": "d244830ca49765d8126f228fd0eccac8fadce3aed49a02da237117103719b70d",
       "assets/report.8c8ee5dd216c.woff2": "8c8ee5dd216cadd374fdce346b787ea7bf1d0ed7000f45c87de79edd68bdf7be",
-      "assets/runtime.6d6f7328b4cf.js": "6d6f7328b4cf2b76f0ac4176bd0fbd9db3b8759e7afd351f5642038fa8a2e71f",
-      "index.html": "4f792ce6d2e40f963b7aa94b4d61a18fb8eeee5e04c301ce27464549e9726e7a"
+      "assets/runtime.19aa97ce0ec3.js": "19aa97ce0ec3d81107a46919e784aa1afaa744d9de1acc90dc553441b7adaf5c",
+      "index.html": "d453c56221d859eae1b49fc9a590f0cdf9599df88d720811530ad82cbe35c55c"
     }
   }
 }

@@ -1690,16 +1690,44 @@ async function inspectCandidateArtifacts(
       if ((await reviewToggle.count()) !== 1) {
         throw new Error(`Installed ${artifact.format} candidate is missing Review Workspace.`);
       }
+      const shellBefore = await page.locator('.report-shell').boundingBox();
       await reviewToggle.click();
       const reviewDialog = page.locator('[data-review-dialog]');
-      if ((await reviewDialog.getAttribute('open')) === null) await reviewToggle.click();
       const reviewOpen = await reviewDialog.getAttribute('open');
-      const reviewTargets = await page.locator('[data-review-target-control]:visible').count();
+      const shellAfter = await page.locator('.report-shell').boundingBox();
+      const reviewOwners = await page.locator('[data-review-target]').count();
+      const blockControls = await page.locator('[data-review-target-control]').count();
       const reviewThreads = await page
-        .locator('[data-review-thread-state="open"], [data-review-thread-state="resolved"]')
+        .locator('[data-review-current-list] [data-review-thread-open]')
         .count();
       const reviewModal = await reviewDialog.evaluate((element) => element.matches(':modal'));
-      await page.locator('[data-review-exit]').click();
+      await page.locator('[data-review-close]').click();
+      const selectionAction = await page
+        .locator('[data-review-target]')
+        .filter({ hasText: /\S/u })
+        .first()
+        .evaluate((owner) => {
+          const walker = document.createTreeWalker(owner, NodeFilter.SHOW_TEXT);
+          for (
+            let candidate = walker.nextNode();
+            candidate !== null;
+            candidate = walker.nextNode()
+          ) {
+            if (!(candidate instanceof Text) || candidate.data.trim().length === 0) continue;
+            const start = candidate.data.search(/\S/u);
+            const range = document.createRange();
+            range.setStart(candidate, start);
+            range.setEnd(candidate, Math.min(start + 4, candidate.data.length));
+            const selection = window.getSelection();
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+            document.dispatchEvent(new Event('selectionchange'));
+            return true;
+          }
+          return false;
+        });
+      if (selectionAction) await page.locator('[data-review-selection-action]').click();
+      const popoverOpen = await page.locator('[data-review-popover]').isVisible();
       const observed = await page.evaluate(() => ({
         title: document.title,
         heading: document.querySelector('h1')?.textContent ?? '',
@@ -1712,7 +1740,11 @@ async function inspectCandidateArtifacts(
         observed.horizontalOverflow ||
         themeBefore === themeAfter ||
         reviewOpen === null ||
-        reviewTargets === 0 ||
+        reviewOwners === 0 ||
+        blockControls !== 0 ||
+        !selectionAction ||
+        !popoverOpen ||
+        JSON.stringify(shellBefore) !== JSON.stringify(shellAfter) ||
         (artifact.expectReviewThreads === true && reviewThreads === 0) ||
         reviewModal !== (artifact.format === 'directory')
       ) {
@@ -1726,9 +1758,11 @@ async function inspectCandidateArtifacts(
         errors,
         themeBefore,
         themeAfter,
-        reviewTargets,
+        reviewOwners,
+        blockControls,
         reviewResponses: reviewThreads,
         reviewModal,
+        popoverOpen,
         ...observed,
       });
     }

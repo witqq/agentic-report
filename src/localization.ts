@@ -57,6 +57,7 @@ export interface PackageStrings {
   readonly discussionSelected: string;
   readonly noteForSelection: string;
   readonly createNote: string;
+  readonly viewThread: string;
   readonly currentNotes: string;
   readonly noMessages: string;
   readonly newMessage: string;
@@ -169,6 +170,7 @@ const en: PackageStrings = {
   discussionSelected: 'Discussion for selected block',
   noteForSelection: 'Note for selected text',
   createNote: 'Create note',
+  viewThread: 'View thread',
   currentNotes: 'Notes in this report',
   noMessages: 'No messages yet.',
   newMessage: 'New message',
@@ -184,7 +186,7 @@ const en: PackageStrings = {
   openReview: 'Open review',
   closeReview: 'Close review',
   reviewUnavailable: 'Review unavailable',
-  enterMessage: 'Enter a message for the selected block.',
+  enterMessage: 'Enter a message for the selected text.',
   agent: 'Agent',
   you: 'You',
   edit: 'Edit',
@@ -286,6 +288,7 @@ const ru: PackageStrings = {
   discussionSelected: 'Обсуждение выбранного блока',
   noteForSelection: 'Заметка к выделенному тексту',
   createNote: 'Создать заметку',
+  viewThread: 'Открыть тред',
   currentNotes: 'Заметки в этом отчёте',
   noMessages: 'Сообщений пока нет.',
   newMessage: 'Новое сообщение',
@@ -301,7 +304,7 @@ const ru: PackageStrings = {
   openReview: 'Открыть ревью',
   closeReview: 'Закрыть ревью',
   reviewUnavailable: 'Ревью недоступно',
-  enterMessage: 'Введите сообщение для выбранного блока.',
+  enterMessage: 'Введите сообщение для выделенного текста.',
   agent: 'Агент',
   you: 'Вы',
   edit: 'Изменить',

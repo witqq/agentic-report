@@ -50,7 +50,7 @@ When the user does not trust the published package, do not silently fall back to
 release tag, let the user inspect the repository, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.8.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.9.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -76,14 +76,14 @@ and use an isolated environment when the user's threat model calls for one.
 Use Node.js 24.18.0 or newer. The first `npx` command needs npm registry and network access; the generated
 page itself opens locally through `file://` with its included package-owned browser runtime.
 
-For a reproducible 0.8.0 run, create a new landing-page source and keep the package version pinned through
+For a reproducible 0.9.0 run, create a new landing-page source and keep the package version pinned through
 validation, inspection, and build:
 
 ```sh
-npx --yes agentic-report@0.8.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.8.0 validate ./my-page --json
-npx --yes agentic-report@0.8.0 inspect ./my-page --json
-npx --yes agentic-report@0.8.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.9.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.9.0 validate ./my-page --json
+npx --yes agentic-report@0.9.0 inspect ./my-page --json
+npx --yes agentic-report@0.9.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Edit only the declarative source: Markdown, YAML frontmatter or the
@@ -130,11 +130,13 @@ filename/line text from each validated source helper and uses `source:line` for 
 compiler-owned local paths and authored directory/free-form labels are omitted, and the JSON result reports
 `neutralizedSourceLinks`. The default build keeps every authored label and working editor link.
 
-Open the generated page and select the exact text the human wants to discuss. Choose **Create note**, enter
-the message in Review Workspace, and repeat for any other passage; a selection can cross adjacent report
-blocks. Whole-block threads remain available through **Review**. The panel lists every current note and one
-**Export review.json** action downloads them all. After the reader downloads `review.json`, map it back to
-the authored files with:
+Open the generated page and select the exact text the human wants to discuss. Choose **Create note** and use
+the anchored popover to add the first message, reply, edit, resolve, or reopen without entering a separate
+mode; a selection can cross inline markup or adjacent report targets. Saved open and resolved ranges stay
+visibly distinct, and their **View thread** action reopens the same popover. **Review** opens only an overlay
+list with prior evidence, import, and one **Export review.json** action; it never divides or shifts the page.
+Valid version-2 whole-block threads remain list-accessible, but new threads begin with selected text. After
+the reader downloads `review.json`, map it back to the authored files with:
 
 ```sh
 npx --yes agentic-report review review.json ./my-page --json
@@ -189,9 +191,9 @@ registry's current `latest` release.
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.8.0 describe --json
-npx --yes agentic-report@0.8.0 schema --scope source
-npx --yes agentic-report@0.8.0 examples --json
+npx --yes agentic-report@0.9.0 describe --json
+npx --yes agentic-report@0.9.0 schema --scope source
+npx --yes agentic-report@0.9.0 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),

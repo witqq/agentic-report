@@ -12,13 +12,13 @@ preset: studio
 
 **Fictional sample.** Replace every metric and decision with evidence from the real review context.
 
-Select the words **68% in the revised cohort**, then choose **Create note** and enter a message in the existing
-Review Workspace editor. Select from the end of the first evidence paragraph into the second section to try
-a cross-block note. Open **Review** for a whole-block thread or to revisit every current note, then export all
-notes and discussions in one local version-3 `review.json` handoff.
+Select **68% in the revised cohort**, choose **Create note**, and use the anchored popover to reply, edit,
+resolve, or reopen without a mode. The range stays highlighted; hover, tap, or focus its marker for **View
+thread**. A selection can cross adjacent targets. **Review** opens only the non-reflowing list, import, and one
+local version-3 `review.json` export of every discussion.
 
-The bundled `prior-review.json` remains a valid version-2 whole-block handoff so this page also demonstrates
-backward-compatible import and stale binding.
+The bundled `prior-review.json` remains a valid version-2 whole-block handoff. Its legacy thread stays
+list-accessible after import, demonstrating backward-compatible binding without offering new block controls.
 
 After editing this source, rebuild with `--review review.json` to display truthful prior bindings and complete
 the next review round without a server or automatic Markdown rewriting.

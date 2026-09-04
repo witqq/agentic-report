@@ -162,7 +162,7 @@ describe('release readiness', () => {
     expect(runbook).toContain('do not run its constituent checks again');
     expect(runbook).toContain('do not duplicate it with a second download or isolated install');
     expect(runbook).toContain(
-      'gh workflow run publish-npm.yml --ref main -f tag=v0.8.0 -f sha256="$candidate_sha256"',
+      'gh workflow run publish-npm.yml --ref main -f tag=v0.9.0 -f sha256="$candidate_sha256"',
     );
     expect(runbook).toContain('gh run watch "<databaseId>" --exit-status');
     expect(runbook).toContain('npm view agentic-report dist-tags version --json');

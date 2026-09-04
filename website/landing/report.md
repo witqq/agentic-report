@@ -79,7 +79,8 @@ browser runtime.
 The page you are reading is separately compiled from the [complete canonical landing source](source/landing/report.md).
 The local compiler writes one self-contained HTML file by default. Directory output keeps the same page and runtime
 behavior while moving content-addressed assets beside `index.html`; staging records the deployed identity in
-[`release.json`](release.json).
+[`release.json`](release.json). On the reference static host, mutable HTML, Markdown, and release metadata
+must revalidate, while content-hashed directory assets may be cached as immutable for one year.
 :::
 
 ```sh
@@ -162,9 +163,12 @@ existing destination.
 :::
 
 :::callout{kind="success" title="Return structured feedback to the agent"}
-Select any eligible passage in the generated page and choose **Create note**. The existing Review Workspace
-opens with the exact quote; selections can stay inside one block or cross adjacent blocks. Add more notes or
-whole-block threads, then export all of them together as deterministic version-3 `review.json`. The review
+Select any eligible passage in the generated page and choose **Create note**. An anchored popover opens with
+the exact quote and keeps reply, edit, resolve, and reopen beside the text—there is no review mode or layout
+shift. Selections can cross inline markup or adjacent report targets. Saved open and resolved ranges remain
+highlighted; **View thread** reopens the conversation, while **Review** opens only an overlay list with prior
+evidence, import, and export. Export every thread together as deterministic version-3 `review.json`. Valid
+version-2 whole-block threads remain list-accessible, but new threads begin with selected text. The review
 stays local; use the CLI review command to map its targets back to the current Markdown or partial ranges.
 One artifact supports at most 5,000 reviewable targets and a 750,000-byte target manifest; split an unusually
 large handoff when either bound is reached. [Try selection notes now](examples/review-workspace/index.html).
@@ -237,8 +241,9 @@ Separate gates, evidence, alternatives, conditions, and reversibility. Use the e
 not a made-up seventh starter.
 :::
 :::card{title="Review and re-review"}
-Select any passage, choose **Create note**, collect multiple text notes and whole-block discussions locally,
-export one `review.json`, then rebuild against the prior handoff.
+Select any passage, choose **Create note**, discuss and resolve it in the anchored popover, collect multiple
+highlighted text notes locally, export one `review.json`, then rebuild against the prior handoff. Imported
+version-2 whole-block discussions remain available through the overlay list.
 [Open the fictional review workspace](examples/review-workspace/index.html) ·
 [View its revised declarative source](examples/review-workspace/report.md) ·
 [Inspect the fictional prior handoff](examples/review-workspace/prior-review.json).

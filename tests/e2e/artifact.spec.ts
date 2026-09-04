@@ -213,24 +213,33 @@ for (const artifact of russianChromeArtifacts) {
     );
 
     const review = page.locator('[data-review-toggle]');
-    await review.click();
-    await expect(
-      page.getByRole('button', { name: 'Открыть обсуждение: Разделитель' }),
-    ).toBeVisible();
     const dialog = page.locator('[data-review-dialog]');
-    const target = page.locator('[data-review-target-control]').first();
-    await target.click();
-    await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText('Пространство ревью');
-    await expect(dialog).toContainText('0 обсуждений · открыто: 0');
+    const target = page
+      .locator('p[data-review-target]')
+      .filter({ hasText: 'Пакет локализует собственные элементы' });
+    await target.evaluate((owner) => {
+      const node = owner.firstChild;
+      if (!(node instanceof Text)) throw new Error('Missing localized review text.');
+      const start = node.data.indexOf('локализует');
+      const range = document.createRange();
+      range.setStart(node, start);
+      range.setEnd(node, start + 'локализует'.length);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      document.dispatchEvent(new Event('selectionchange'));
+    });
+    await page.getByRole('button', { name: 'Создать заметку' }).click();
+    const popover = page.locator('[data-review-popover]');
+    await expect(popover).toBeVisible();
+    await expect(dialog).not.toBeVisible();
 
     await page.locator('[data-review-add-message]').click();
-    await expect(page.locator('[data-review-error]')).toHaveText(
-      'Введите сообщение для выбранного блока.',
+    await expect(page.locator('[data-review-popover-error]')).toHaveText(
+      'Введите сообщение для выделенного текста.',
     );
     await page.locator('[data-review-message]').fill('Первоначальный комментарий.');
     await page.locator('[data-review-add-message]').click();
-    await expect(dialog).toContainText('1 обсуждение · открыто: 1');
     await expect(page.locator('[data-review-thread-messages]')).toContainText(
       'Первоначальный комментарий.',
     );
@@ -248,6 +257,10 @@ for (const artifact of russianChromeArtifacts) {
     await expect(resolution).toHaveText('Возобновить обсуждение');
     await resolution.click();
     await expect(resolution).toHaveText('Закрыть обсуждение');
+    await review.click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Пространство ревью');
+    await expect(dialog).toContainText('1 обсуждение · открыто: 1');
     await page.locator('[data-review-import]').setInputFiles({
       name: 'invalid.json',
       mimeType: 'application/json',
@@ -277,7 +290,6 @@ for (const artifact of russianPriorArtifacts) {
   test(`${artifact.format} localizes stale prior-review classifications`, async ({ page }) => {
     await page.goto(artifact.url);
     await page.locator('[data-review-toggle]').click();
-    await page.locator('[data-review-target-control]').first().click();
     const prior = page.locator('[data-review-prior-section]');
     await expect(prior).toBeVisible();
     await expect(prior).toContainText('Предыдущее · изменено · открыто');

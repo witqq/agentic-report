@@ -38,7 +38,7 @@ If you do not want to execute the published `agentic-report` npm package, clone 
 inspect the repository, run its checks, and invoke the compiled CLI directly:
 
 ```sh
-git clone --branch v0.8.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.9.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -186,22 +186,26 @@ ambiguous targets remain explicit; the command never rewrites source.
 The manifest accepts at most 5,000 reviewable targets and 750,000 serialized bytes; the byte ceiling may
 bind first when source-location records are unusually long.
 
-In the generated page, select any eligible text and choose **Create note** to open the existing Review
-Workspace editor with that exact quote. A selection may stay within one review target or cross adjacent
-targets; its version-3 anchor records both target references and Unicode code-point offsets. Whole-block
-threads remain available through **Review**. Readers can accumulate and edit messages, read agent replies,
-resolve or reopen threads, revisit every current note from the panel, and download all block threads and
-selection notes in one deterministic `review.json`. Empty, whitespace-only, oversized, package-control, and
-outside-report selections create nothing. Ordinary `decision` and `checklist` directives remain static
-report content. The complete local flow is in the
+In the generated page, select any eligible text and choose **Create note**; annotation is always available
+without a review mode or block controls. A selection may cross inline markup or adjacent review targets; its
+version-3 anchor records both target references and Unicode code-point offsets. The anchored popover shows
+the exact quote and keeps compose, reply, edit, resolve, and reopen beside it. Saved open/resolved ranges
+remain visibly distinct; hover/tap exposes **View thread**, and focusable markers provide the keyboard route.
+
+The topbar **Review** action opens only a non-reflowing overlay list, prior evidence, import, and one complete
+export. Choosing an entry returns to the same anchored popover. Existing whole-block threads remain
+list-accessible for version-2/version-3 compatibility, but new threads begin from selected text. Empty,
+whitespace-only, oversized, package-control, and outside-report selections create nothing. Ordinary
+`decision` and `checklist` directives remain static report content. The complete local flow is in the
 [`review-workspace` example](examples/review-workspace/report.md).
 
 Pass `--review review.json` to `build`, `validate`, or `inspect` to consume a confined prior sidecar. Exact
 revisions resume current state; stale threads remain prior exact/changed/missing/ambiguous evidence. Continuing
 a changed target appends a current revision segment to the same thread, so prior messages and resolution stay
 in the one exported sidecar instead of being copied onto a different source target.
-Desktop uses a non-modal rail; mobile uses a modal sheet. State leaves the page only through explicit local
-import/export—there is no account, backend, network sync, or authenticated signature.
+Desktop uses a non-modal list overlay; mobile uses a modal sheet. Neither moves the report. State leaves the
+page only through explicit local import/export—there is no account, backend, network sync, or authenticated
+signature.
 
 Response Workspace is the separate typed-answer layer for triage and decisions. Declarative questions cover
 bucket assignment, one or several choices per item, one global choice, priority order, bounded item scores,

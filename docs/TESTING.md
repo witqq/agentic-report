@@ -131,13 +131,17 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   containment, and produce inspected captures. Dedicated semantic-tabs coverage builds every current
   tab-bearing starter, example, and fixture for desktop and mobile `file://` artifacts; it asserts readable
   non-shrinking single-line labels, list-owned overflow where needed, document containment, and pointer and
-  keyboard selection and focus. Dedicated Review Workspace coverage builds both formats, exercises clean
-  enter/exit, desktop/mobile dialog semantics, equal-text target isolation, ordered user/agent messages,
-  message editing, resolved/reopened state, version-1 rejection and legacy version-2 import without state
-  loss, strict-substring and cross-target selection anchors, keyboard-focused localized **Create note**,
-  whole-block plus multiple same-target notes in one canonical download, exact selected-note import,
-  malformed/mismatched range preservation, topbar/control/whitespace selection suppression, and stale prior-
-  thread classification, and produces the required visually inspected tooltip/editor state captures.
+  keyboard selection and focus. Dedicated Review Workspace coverage builds both formats and distinguishes
+  always-on annotation from the retired mode/block-control and layout-shifting designs. It exercises
+  desktop/mobile list-overlay semantics, unchanged report geometry, ordered user/agent messages, reply/edit,
+  resolved/reopened highlights, version-1 rejection, list-only version-2 whole-block import, strict
+  substring, inline-markup, adjacent, overlapping, and cross-target anchors, keyboard-focused localized
+  **Create note**, exact saved-range **View thread**, focus markers, pointer/touch **View thread**, cancelled
+  pointer-state isolation, visible current/prior list-origin focus return, offscreen list navigation, multiple
+  notes in one canonical download, exact imported highlight restoration, malformed/mismatched range
+  preservation, topbar/control/whitespace suppression, stale prior classification/continuation, and
+  idle-versus-active animation-frame bounds. The same cases produce the inspected selection, popover,
+  highlight, and populated desktop/mobile drawer captures.
   Dedicated Response Workspace coverage builds both formats for desktop/mobile, completes all
   seven answer kinds, uses bucket select/drag and explicit ordering controls, preserves original-link state,
   asserts every exported answer shape, compares clipboard/file bytes, forces clipboard failure, rejects
@@ -180,6 +184,11 @@ evidence.
 
 Tests do not need a URL, port, service, credential, database, or external API. Test workspaces and failure
 artifacts live under ignored `test-results/`.
+
+The deployment cache configuration has a unit contract check and a real-image acceptance check. Mutable
+HTML, release identity, direct documentation/source, and other unhashed routes must revalidate; twelve-hex
+content-addressed assets receive the long immutable policy. The running Nginx image must preserve MIME,
+ETag/conditional `304`, health, and real `404` behavior.
 
 ## Writing tests
 

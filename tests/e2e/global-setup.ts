@@ -357,7 +357,7 @@ export default async function globalSetup(): Promise<void> {
       '---',
       '# Review Workspace fixture',
       ':::section{title="Alpha evidence" id="alpha" nav="Alpha"}',
-      'Shared evidence statement.',
+      'Shared **evidence** statement.',
       ':::',
       ':::section{title="Beta evidence" id="beta" nav="Beta" tone="soft"}',
       'Shared evidence statement.',
