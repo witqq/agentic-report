@@ -180,14 +180,21 @@ command/format/starter/capability catalog.
 
 Generated pages also carry an inert deterministic review-target manifest. Use
 `inspectReview({ input, review })` or `agentic-report review <review> [input] --json` to validate a confined
-version-2 `review.json` and resolve each discussion thread to the current Markdown or partial range. Stale, changed,
-missing, and ambiguous targets remain explicit; the command never rewrites source.
+version-3 `review.json` and resolve each discussion thread to the current Markdown or partial range. Valid
+version-2 whole-block reviews remain accepted and normalize to version 3. Stale, changed, missing, and
+ambiguous targets remain explicit; the command never rewrites source.
 The manifest accepts at most 5,000 reviewable targets and 750,000 serialized bytes; the byte ceiling may
 bind first when source-location records are unusually long.
 
-In the generated page, `Review` opens a local discussion layer. Readers open a thread on an exact block,
-accumulate and edit messages, read agent replies, resolve or reopen the thread, and download all threads as
-deterministic `review.json`. Ordinary `decision` and `checklist` directives remain static report content.
+In the generated page, select any eligible text and choose **Create note** to open the existing Review
+Workspace editor with that exact quote. A selection may stay within one review target or cross adjacent
+targets; its version-3 anchor records both target references and Unicode code-point offsets. Whole-block
+threads remain available through **Review**. Readers can accumulate and edit messages, read agent replies,
+resolve or reopen threads, revisit every current note from the panel, and download all block threads and
+selection notes in one deterministic `review.json`. Empty, whitespace-only, oversized, package-control, and
+outside-report selections create nothing. Ordinary `decision` and `checklist` directives remain static
+report content. The complete local flow is in the
+[`review-workspace` example](examples/review-workspace/report.md).
 
 Pass `--review review.json` to `build`, `validate`, or `inspect` to consume a confined prior sidecar. Exact
 revisions resume current state; stale threads remain prior exact/changed/missing/ambiguous evidence. Continuing

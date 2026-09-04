@@ -59,7 +59,7 @@ function baseSegment() {
   return value;
 }
 
-describe('review thread protocol v2', () => {
+describe('review thread protocol v3', () => {
   it('parses and serializes ordered discussion threads deterministically', () => {
     const value = artifact();
     expect(parseReviewArtifact(value)).toEqual(value);
@@ -174,6 +174,132 @@ describe('review thread protocol v2', () => {
       ],
     });
     expect(parseReviewArtifact(value).threads[0]?.segments[0]?.messages[0]?.message).toBe('café');
+  });
+
+  it('upgrades legacy version-2 whole-block threads without inventing a selection', () => {
+    const legacy = { ...artifact(), contractVersion: 2 };
+    const parsed = parseReviewArtifact(legacy);
+    expect(parsed.contractVersion).toBe(3);
+    expect(parsed.threads[0]?.segments[0]?.selection).toBeUndefined();
+    expect(JSON.parse(serializeReviewArtifact(parsed)).contractVersion).toBe(3);
+  });
+
+  it('validates exact Unicode selection boundaries and binds both endpoint targets', () => {
+    const endTarget = {
+      ...target,
+      id: 'target-b',
+      fingerprint: `sha256:${'c'.repeat(64)}`,
+      source: { ...target.source, line: 3, endLine: 3 },
+    };
+    const value = artifact({
+      threads: [
+        {
+          ...baseThread(),
+          segments: [
+            {
+              ...baseSegment(),
+              selection: {
+                start: { target, offset: 2 },
+                end: { target: endTarget, offset: 4 },
+                quote: 'fé → next',
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(parseReviewArtifact(value).threads[0]?.segments[0]?.selection).toEqual(
+      value.threads[0]?.segments[0]?.selection,
+    );
+    expect(() => parseReviewArtifact({ ...value, contractVersion: 2 })).toThrow();
+    expect(() =>
+      parseReviewArtifact({
+        ...value,
+        threads: [
+          {
+            ...baseThread(),
+            segments: [
+              {
+                ...baseSegment(),
+                selection: {
+                  start: { target, offset: 5 },
+                  end: { target, offset: 2 },
+                  quote: 'bad',
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow();
+    expect(() =>
+      parseReviewArtifact({
+        ...value,
+        threads: [
+          {
+            ...baseThread(),
+            segments: [
+              {
+                ...baseSegment(),
+                selection: {
+                  start: { target, offset: -1 },
+                  end: { target, offset: 1 },
+                  quote: 'x',
+                  extra: true,
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow();
+    expect(() =>
+      parseReviewArtifact({
+        ...value,
+        threads: [
+          {
+            ...baseThread(),
+            segments: [
+              {
+                ...baseSegment(),
+                selection: {
+                  start: { target, offset: 0 },
+                  end: { target, offset: MAX_REVIEW_TEXT_LENGTH + 1 },
+                  quote: 'x'.repeat(MAX_REVIEW_TEXT_LENGTH + 1),
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow();
+    expect(() =>
+      parseReviewArtifact({
+        ...value,
+        threads: [
+          {
+            ...baseThread(),
+            segments: [
+              {
+                ...baseSegment(),
+                selection: {
+                  start: { target: endTarget, offset: 0 },
+                  end: { target: endTarget, offset: 1 },
+                  quote: 'x',
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow();
+    expect(
+      bindReviewArtifact(value, {
+        contractVersion: 2,
+        reportRevision: `sha256:${'d'.repeat(64)}`,
+        targets: [target, { ...endTarget, fingerprint: `sha256:${'e'.repeat(64)}` }],
+      }).threads[0]?.binding,
+    ).toBe('changed');
   });
 
   it('strictly parses version-2 manifests without review requirements', () => {

@@ -53,7 +53,7 @@ for (const format of formats) {
     const review = await downloadedReview(page);
     const artifact = JSON.parse(review.toString('utf8'));
     expect(artifact).toMatchObject({
-      contractVersion: 2,
+      contractVersion: 3,
       threads: [
         {
           segments: [
@@ -73,6 +73,59 @@ for (const format of formats) {
       .locator('[data-review-import]')
       .setInputFiles({ name: 'review.json', mimeType: 'application/json', buffer: review });
     await expect(page.locator('[data-review-summary]')).toContainText('1 thread · unresolved: 0');
+  });
+
+  test(`${format.name} creates and restores a note for an exact selected substring`, async ({
+    page,
+  }, info) => {
+    await mkdir(captures, { recursive: true });
+    await page.goto(format.url);
+    const target = page
+      .locator('p[data-review-target]')
+      .filter({ hasText: 'Shared evidence statement.' })
+      .first();
+    await selectRange(page, target, 'evidence', 0, target, 'evidence', 'evidence'.length);
+    const action = page.getByRole('button', { name: 'Create note' });
+    await expect(action).toBeVisible();
+    await page.screenshot({
+      path: path.join(captures, `${format.name}-${info.project.name}-selection-tooltip.png`),
+    });
+    await page.keyboard.up('Shift');
+    await expect(action).toBeFocused();
+    await action.click();
+    await expect(page.locator('[data-review-editor-title]')).toHaveText('Note for selected text');
+    await expect(page.locator('[data-review-target-label]')).toHaveText('evidence');
+    await page.screenshot({
+      path: path.join(captures, `${format.name}-${info.project.name}-selection-editor.png`),
+    });
+    await page.locator('[data-review-message]').fill('Clarify this exact phrase.');
+    await page.getByRole('button', { name: 'Add message' }).click();
+
+    const review = await downloadedReview(page);
+    const artifact = JSON.parse(review.toString('utf8'));
+    const segment = artifact.threads[0].segments[0];
+    expect(artifact.contractVersion).toBe(3);
+    expect(segment.selection).toMatchObject({
+      start: { target: { id: segment.target.id } },
+      end: { target: { id: segment.target.id } },
+      quote: 'evidence',
+    });
+    expect(segment.selection.end.offset - segment.selection.start.offset).toBe('evidence'.length);
+
+    await page.reload();
+    await page.locator('[data-review-toggle]').click();
+    await page.locator('[data-review-import]').setInputFiles({
+      name: 'selection-review.json',
+      mimeType: 'application/json',
+      buffer: review,
+    });
+    if ((await page.locator('[data-review-dialog]').getAttribute('open')) === null)
+      await page.locator('[data-review-toggle]').click();
+    await page.getByRole('button', { name: /Open note for “evidence”/u }).click();
+    await expect(page.locator('[data-review-target-label]')).toHaveText('evidence');
+    await expect(page.locator('[data-review-thread-messages]')).toContainText(
+      'Clarify this exact phrase.',
+    );
   });
 
   test(`${format.name} rejects version 1 without losing current thread state`, async ({ page }) => {
@@ -162,6 +215,7 @@ test('valid sparse message identities append without collision', async ({ page }
   await page.getByRole('button', { name: 'Add message' }).click();
   const before = await downloadedReview(page);
   const exported = JSON.parse(before.toString('utf8'));
+  expect(exported.contractVersion).toBe(3);
   const sparseThread = exported.threads.find(
     (thread: { id: string }) => thread.id === 'thread-sparse',
   );
@@ -191,6 +245,147 @@ test('valid sparse message identities append without collision', async ({ page }
     expect.arrayContaining([`thread-${otherTarget.id}-1`, `thread-${otherTarget.id}-2`]),
   );
   expect(JSON.stringify(after)).toContain('Preserve me.');
+});
+
+test('selection note spans adjacent review targets without collapsing to the first block', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop-chromium');
+  await page.goto(formats[0].url);
+  const repeated = page
+    .locator('p[data-review-target]')
+    .filter({ hasText: 'Shared evidence statement.' });
+  const first = repeated.nth(0);
+  const second = repeated.nth(1);
+  await selectRange(page, first, 'evidence', 0, second, 'statement', 'statement'.length);
+  await page.getByRole('button', { name: 'Create note' }).click();
+  await page.locator('[data-review-message]').fill('Connect these two passages.');
+  await page.getByRole('button', { name: 'Add message' }).click();
+  const artifact = JSON.parse((await downloadedReview(page)).toString('utf8'));
+  const segment = artifact.threads[0].segments[0];
+  expect(segment.selection.start.target.id).not.toBe(segment.selection.end.target.id);
+  expect(segment.target.id).toBe(segment.selection.start.target.id);
+  expect(segment.selection.quote).toContain('evidence statement.');
+  expect(segment.selection.quote).toContain('Shared evidence statement');
+});
+
+test('invalid selected-text anchor cannot replace current review state', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop-chromium');
+  await page.goto(formats[0].url);
+  const target = page
+    .locator('p[data-review-target]')
+    .filter({ hasText: 'Shared evidence statement.' })
+    .first();
+  await selectRange(page, target, 'evidence', 0, target, 'evidence', 'evidence'.length);
+  await page.getByRole('button', { name: 'Create note' }).click();
+  await page.locator('[data-review-message]').fill('Keep the valid anchor.');
+  await page.getByRole('button', { name: 'Add message' }).click();
+  const valid = await downloadedReview(page);
+  const invalid = JSON.parse(valid.toString('utf8'));
+  invalid.threads[0].segments[0].selection.end.offset += 1000;
+  await page.locator('[data-review-import]').setInputFiles({
+    name: 'invalid-selection.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(invalid)),
+  });
+  await expect(page.locator('[data-review-error]')).toContainText(
+    'selected-text anchor that does not match',
+  );
+  expect(await downloadedReview(page)).toEqual(valid);
+
+  const reversed = JSON.parse(valid.toString('utf8'));
+  const anchor = reversed.threads[0].segments[0].selection;
+  [anchor.start, anchor.end] = [anchor.end, anchor.start];
+  await page.locator('[data-review-import]').setInputFiles({
+    name: 'reversed-selection.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(reversed)),
+  });
+  await expect(page.locator('[data-review-error]')).toContainText('Review import failed');
+  expect(await downloadedReview(page)).toEqual(valid);
+});
+
+test('one export keeps a whole-block thread and multiple selections from that block', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop-chromium');
+  await page.goto(formats[0].url);
+  await page.locator('[data-review-toggle]').click();
+  const target = page
+    .locator('p[data-review-target]')
+    .filter({ hasText: 'Shared evidence statement.' })
+    .first();
+  await openThread(page, target);
+  await page.locator('[data-review-message]').fill('Whole-block context.');
+  await page.getByRole('button', { name: 'Add message' }).click();
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+
+  for (const selected of ['evidence', 'statement']) {
+    await selectRange(page, target, selected, 0, target, selected, selected.length);
+    await page.getByRole('button', { name: 'Create note' }).click();
+    await page.locator('[data-review-message]').fill(`Note for ${selected}.`);
+    await page.getByRole('button', { name: 'Add message' }).click();
+    await page.getByRole('button', { name: 'Close', exact: true }).click();
+  }
+
+  await page.locator('[data-review-toggle]').click();
+  const artifact = JSON.parse((await downloadedReview(page)).toString('utf8'));
+  expect(artifact.threads).toHaveLength(3);
+  expect(
+    artifact.threads
+      .map(
+        (thread: { segments: Array<{ selection?: { quote: string } }> }) =>
+          thread.segments[0]?.selection?.quote ?? 'whole-block',
+      )
+      .sort(),
+  ).toEqual(['evidence', 'statement', 'whole-block']);
+});
+
+test('Russian report localizes the selection note action', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop-chromium');
+  await page.goto(pathToFileURL(path.join(root, 'russian-chrome.html')).href);
+  const target = page
+    .locator('p[data-review-target]')
+    .filter({ hasText: 'локализует собственные элементы' });
+  await selectRange(page, target, 'локализует', 0, target, 'локализует', 'локализует'.length);
+  await expect(page.getByRole('button', { name: 'Создать заметку' })).toBeVisible();
+});
+
+test('invalid native selections never expose the action or create a thread', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop-chromium');
+  await page.goto(formats[0].url);
+  const action = page.getByRole('button', { name: 'Create note' });
+
+  const paragraph = page
+    .locator('p[data-review-target]')
+    .filter({ hasText: 'Shared evidence statement.' })
+    .first();
+  await selectRange(page, paragraph, 'evidence', 0, paragraph, 'evidence', 'evidence'.length);
+  await expect(action).toBeVisible();
+  await page.evaluate(() => {
+    window.getSelection()?.removeAllRanges();
+    document.dispatchEvent(new Event('selectionchange'));
+  });
+  await expect(action).toBeHidden();
+
+  await selectElementRange(page.locator('.topbar-title-full'), 'Review', 0, 6);
+  await expect(action).toBeHidden();
+
+  await selectRange(page, paragraph, 'Shared ', 6, paragraph, 'Shared ', 7);
+  await expect(action).toBeHidden();
+
+  await page.locator('[data-review-toggle]').click();
+  await selectElementRange(
+    page.getByRole('button', { name: 'Export review.json' }),
+    'Export',
+    0,
+    6,
+  );
+  await expect(action).toBeHidden();
+  const artifact = JSON.parse((await downloadedReview(page)).toString('utf8'));
+  expect(artifact.threads).toEqual([]);
 });
 
 for (const prior of [
@@ -304,4 +499,69 @@ async function openThread(page: Page, target: Locator) {
   const control = page.locator(`[data-review-target-control="${id}"]`);
   await control.click();
   return control;
+}
+
+async function selectRange(
+  page: Page,
+  start: Locator,
+  startNeedle: string,
+  startAdvance: number,
+  end: Locator,
+  endNeedle: string,
+  endAdvance: number,
+): Promise<void> {
+  const startId = await start.getAttribute('data-review-target');
+  const endId = await end.getAttribute('data-review-target');
+  if (!startId || !endId) throw new Error('Missing selection target identity.');
+  await page.evaluate(
+    ({ startId, startNeedle, startAdvance, endId, endNeedle, endAdvance }) => {
+      const boundary = (id: string, needle: string, advance: number) => {
+        const owner = document.querySelector(`[data-review-target="${CSS.escape(id)}"]`);
+        if (!owner) throw new Error('Missing selection owner.');
+        const walker = document.createTreeWalker(owner, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+          const index = node.textContent?.indexOf(needle) ?? -1;
+          if (index >= 0) return { node, offset: index + advance };
+        }
+        throw new Error(`Missing selection text: ${needle}`);
+      };
+      const from = boundary(startId, startNeedle, startAdvance);
+      const to = boundary(endId, endNeedle, endAdvance);
+      const range = document.createRange();
+      range.setStart(from.node, from.offset);
+      range.setEnd(to.node, to.offset);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      document.dispatchEvent(new Event('selectionchange'));
+    },
+    { startId, startNeedle, startAdvance, endId, endNeedle, endAdvance },
+  );
+}
+
+async function selectElementRange(
+  element: Locator,
+  needle: string,
+  startAdvance: number,
+  endAdvance: number,
+): Promise<void> {
+  await element.evaluate(
+    (owner, { needle, startAdvance, endAdvance }) => {
+      const walker = document.createTreeWalker(owner, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+        const index = node.textContent?.indexOf(needle) ?? -1;
+        if (index < 0) continue;
+        const range = document.createRange();
+        range.setStart(node, index + startAdvance);
+        range.setEnd(node, index + endAdvance);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        document.dispatchEvent(new Event('selectionchange'));
+        return;
+      }
+      throw new Error(`Missing selection text: ${needle}`);
+    },
+    { needle, startAdvance, endAdvance },
+  );
 }

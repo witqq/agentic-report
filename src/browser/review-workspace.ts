@@ -9,6 +9,7 @@ import {
   serializeReviewArtifact,
   type ReviewArtifact,
   type ReviewMessage,
+  type ReviewSelectionAnchor,
   type ReviewTargetManifest,
   type ReviewTargetReference,
   type ReviewThread,
@@ -31,7 +32,11 @@ interface Elements {
   exit: HTMLButtonElement;
   error: HTMLElement;
   summary: HTMLOutputElement;
+  selectionAction: HTMLButtonElement;
+  currentSection: HTMLElement;
+  currentList: HTMLOListElement;
   editor: HTMLElement;
+  editorTitle: HTMLElement;
   label: HTMLElement;
   messages: HTMLOListElement;
   empty: HTMLElement;
@@ -50,6 +55,11 @@ interface TargetDom {
   open: HTMLButtonElement;
   quick: HTMLButtonElement;
   label: string;
+}
+interface ReviewSubject {
+  readonly target: ReviewTargetReference;
+  readonly label: string;
+  readonly selection?: ReviewSelectionAnchor;
 }
 
 export function installReviewWorkspace(): void {
@@ -82,7 +92,8 @@ function createController(
     ? { ...parseReviewArtifact(prior.artifact), report: { revision: manifest.reportRevision } }
     : emptyArtifact(manifest.reportRevision);
   let active = false;
-  let selected: string | undefined;
+  let selected: ReviewSubject | undefined;
+  let pendingSelection: ReviewSubject | undefined;
   let editing: string | undefined;
   let opener: HTMLButtonElement = el.toggle;
   limit(el.message);
@@ -99,6 +110,15 @@ function createController(
   el.dialog.addEventListener('click', (event) => {
     if (event.target === el.dialog && mobileReview.matches) close();
   });
+  document.addEventListener('selectionchange', () => updateSelectionAction(false));
+  document.addEventListener('pointerup', () => queueMicrotask(() => updateSelectionAction(false)));
+  document.addEventListener('keyup', (event) => {
+    if (event.key === 'Shift') updateSelectionAction(true);
+  });
+  window.addEventListener('resize', () => updateSelectionAction(false));
+  window.addEventListener('scroll', () => updateSelectionAction(false), true);
+  el.selectionAction.addEventListener('pointerdown', (event) => event.preventDefault());
+  el.selectionAction.addEventListener('click', createSelectionNote);
   mobileReview.addEventListener('change', () => {
     if (!el.dialog.open) return;
     el.dialog.close();
@@ -106,13 +126,23 @@ function createController(
   });
   for (const item of targets.values()) {
     item.open.addEventListener('click', () => {
-      select(item.target.id);
+      select(subjectForTarget(item));
       open(item.open);
     });
     item.quick.addEventListener('click', () => {
-      toggleResolved(item.target.id);
+      toggleResolved(subjectForTarget(item));
     });
   }
+  el.currentList.addEventListener('click', (event) => {
+    const node = event.target;
+    if (!(node instanceof Element)) return;
+    const button = node.closest<HTMLButtonElement>('[data-review-thread-open]');
+    const thread = artifact.threads.find((item) => item.id === button?.dataset.reviewThreadOpen);
+    const segment = thread === undefined ? undefined : currentSegment(thread);
+    if (!button || !segment) return;
+    select(subjectForSegment(segment));
+    open(button);
+  });
   el.add.addEventListener('click', saveMessage);
   el.cancel.addEventListener('click', clearEditor);
   el.messages.addEventListener('click', (event) => {
@@ -141,6 +171,8 @@ function createController(
   function exit(): void {
     active = false;
     selected = undefined;
+    pendingSelection = undefined;
+    hideSelectionAction();
     document.documentElement.removeAttribute('data-review-active');
     for (const item of targets.values()) {
       item.open.hidden = true;
@@ -151,9 +183,11 @@ function createController(
     else sync();
   }
   function open(button: HTMLButtonElement): void {
-    opener = button;
     if (!active) active = true;
-    if (!el.dialog.open) mobileReview.matches ? el.dialog.showModal() : el.dialog.show();
+    if (!el.dialog.open) {
+      opener = button;
+      mobileReview.matches ? el.dialog.showModal() : el.dialog.show();
+    }
     document.documentElement.dataset.reviewOpen = '';
     sync();
     (selected ? el.message : el.close).focus({ preventScroll: true });
@@ -161,21 +195,24 @@ function createController(
   function close(): void {
     if (el.dialog.open) el.dialog.close();
   }
-  function select(id: string): void {
-    selected = id;
+  function select(subject: ReviewSubject): void {
+    selected = subject;
     clearEditor();
     for (const item of targets.values())
-      item.element.toggleAttribute('data-review-selected', item.target.id === id);
+      item.element.toggleAttribute(
+        'data-review-selected',
+        item.target.id === subject.target.id || item.target.id === subject.selection?.end.target.id,
+      );
     renderEditor();
   }
   function saveMessage(): void {
-    const target = selected ? targets.get(selected)?.target : undefined;
+    const target = selected?.target;
     const text = normalize(el.message.value);
     if (!target || !text) {
       showError(strings.enterMessage);
       return;
     }
-    const existing = threadForTarget(target.id);
+    const existing = selected === undefined ? undefined : threadForSubject(selected);
     const current = existing === undefined ? undefined : currentSegment(existing);
     const messages = current?.messages ?? [];
     const message: ReviewMessage = editing
@@ -196,6 +233,7 @@ function createController(
           id: nextSegmentId(existing, target.id),
           reportRevision: manifest.reportRevision,
           target,
+          ...(selected?.selection === undefined ? {} : { selection: selected.selection }),
           resolved: false,
           messages: nextMessages,
         };
@@ -232,8 +270,8 @@ function createController(
     el.add.textContent = strings.addMessage;
     el.cancel.hidden = true;
   }
-  function toggleResolved(id: string): void {
-    const thread = threadForTarget(id);
+  function toggleResolved(subject: ReviewSubject): void {
+    const thread = threadForSubject(subject);
     const segment = thread === undefined ? undefined : currentSegment(thread);
     if (!thread || !segment) return;
     artifact = {
@@ -255,14 +293,19 @@ function createController(
     return thread.segments.find((segment) => segment.reportRevision === manifest.reportRevision);
   }
   function currentThread(): ReviewThread | undefined {
-    return selected === undefined ? undefined : threadForTarget(selected);
+    return selected === undefined ? undefined : threadForSubject(selected);
   }
   function threadForTarget(targetId: string): ReviewThread | undefined {
+    const item = targets.get(targetId);
+    return item === undefined ? undefined : threadForSubject(subjectForTarget(item));
+  }
+  function threadForSubject(subject: ReviewSubject): ReviewThread | undefined {
     return artifact.threads.find((thread) => {
       const current = currentSegment(thread);
-      if (current?.target.id === targetId) return true;
+      if (current && matchesSubject(current, subject)) return true;
+      if (subject.selection !== undefined) return false;
       return prior?.resolved.threads.some(
-        (entry) => entry.thread.id === thread.id && entry.currentTarget?.id === targetId,
+        (entry) => entry.thread.id === thread.id && entry.currentTarget?.id === subject.target.id,
       );
     });
   }
@@ -286,6 +329,7 @@ function createController(
   }
   function render(): void {
     renderEditor();
+    renderCurrent();
     renderPrior();
     for (const item of targets.values()) renderTarget(item);
     const openCount = artifact.threads.filter(
@@ -297,11 +341,14 @@ function createController(
     sync();
   }
   function renderEditor(): void {
-    const item = selected ? targets.get(selected) : undefined;
+    const item = selected ? targets.get(selected.target.id) : undefined;
     const thread = currentThread();
     el.editor.hidden = !item;
     if (!item) return;
-    el.label.textContent = item.label;
+    el.editorTitle.textContent = selected?.selection
+      ? strings.noteForSelection
+      : strings.discussionSelected;
+    el.label.textContent = selected?.label ?? item.label;
     el.messages.replaceChildren();
     el.empty.hidden = Boolean(thread);
     for (const segment of thread?.segments ?? [])
@@ -327,6 +374,29 @@ function createController(
     const segment = thread === undefined ? undefined : currentSegment(thread);
     el.resolve.hidden = !segment;
     el.resolve.textContent = segment?.resolved ? strings.reopenThread : strings.resolveThread;
+  }
+  function renderCurrent(): void {
+    el.currentList.replaceChildren();
+    const current = artifact.threads
+      .map((thread) => ({ thread, segment: currentSegment(thread) }))
+      .filter(
+        (entry): entry is { thread: ReviewThread; segment: ReviewThreadSegment } =>
+          entry.segment !== undefined,
+      );
+    el.currentSection.hidden = current.length === 0;
+    for (const entry of current) {
+      const subject = subjectForSegment(entry.segment);
+      const li = document.createElement('li');
+      li.className = 'review-response';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.reviewThreadOpen = entry.thread.id;
+      button.textContent = subject.selection
+        ? strings.openNote(subject.label)
+        : strings.openDiscussion(subject.label);
+      li.append(button);
+      el.currentList.append(li);
+    }
   }
   function renderTarget(item: TargetDom): void {
     const thread = threadForTarget(item.target.id);
@@ -374,6 +444,34 @@ function createController(
         el.priorList.append(li);
       }
     }
+  }
+  function createSelectionNote(): void {
+    const subject = pendingSelection;
+    if (!subject) return;
+    pendingSelection = undefined;
+    hideSelectionAction();
+    if (!active) activate();
+    select(subject);
+    open(el.toggle);
+  }
+  function updateSelectionAction(focus: boolean): void {
+    if (document.activeElement === el.selectionAction && pendingSelection) return;
+    const candidate = captureSelection(targets);
+    if (!candidate) {
+      pendingSelection = undefined;
+      hideSelectionAction();
+      return;
+    }
+    pendingSelection = candidate.subject;
+    el.selectionAction.hidden = false;
+    el.selectionAction.style.left = `${candidate.position.left}px`;
+    el.selectionAction.style.top = `${candidate.position.top}px`;
+    if (focus) el.selectionAction.focus({ preventScroll: true });
+  }
+  function hideSelectionAction(): void {
+    el.selectionAction.hidden = true;
+    el.selectionAction.style.removeProperty('left');
+    el.selectionAction.style.removeProperty('top');
   }
   async function importReview(): Promise<void> {
     const file = el.importInput.files?.[0];
@@ -445,7 +543,11 @@ function collect(toggle: HTMLButtonElement): Elements | undefined {
     exit: find<HTMLButtonElement>('[data-review-exit]'),
     error: find<HTMLElement>('[data-review-error]'),
     summary: find<HTMLOutputElement>('[data-review-summary]'),
+    selectionAction: find<HTMLButtonElement>('[data-review-selection-action]'),
+    currentSection: find<HTMLElement>('[data-review-current-section]'),
+    currentList: find<HTMLOListElement>('[data-review-current-list]'),
     editor: find<HTMLElement>('[data-review-target-editor]'),
+    editorTitle: find<HTMLElement>('[data-review-editor-title]'),
     label: find<HTMLElement>('[data-review-target-label]'),
     messages: find<HTMLOListElement>('[data-review-thread-messages]'),
     empty: find<HTMLElement>('[data-review-thread-empty]'),
@@ -484,6 +586,98 @@ function collectTargets(
   }
   return map;
 }
+function subjectForTarget(item: TargetDom): ReviewSubject {
+  return { target: item.target, label: item.label };
+}
+function subjectForSegment(segment: ReviewThreadSegment): ReviewSubject {
+  if (segment.selection !== undefined)
+    return {
+      target: segment.target,
+      selection: segment.selection,
+      label: compactQuote(segment.selection.quote),
+    };
+  const element = findTargetElement(segment.target.id);
+  return {
+    target: segment.target,
+    label:
+      element === undefined
+        ? strings.reviewTargetFallback(segment.target.kind)
+        : visibleLabel(segment.target, element),
+  };
+}
+function matchesSubject(segment: ReviewThreadSegment, subject: ReviewSubject): boolean {
+  return (
+    segment.target.id === subject.target.id &&
+    JSON.stringify(segment.selection) === JSON.stringify(subject.selection)
+  );
+}
+function captureSelection(
+  targets: ReadonlyMap<string, TargetDom>,
+):
+  | { readonly subject: ReviewSubject; readonly position: { left: number; top: number } }
+  | undefined {
+  const selection = window.getSelection();
+  if (selection?.rangeCount !== 1 || selection.isCollapsed) return;
+  const range = selection.getRangeAt(0);
+  const start = targetAt(range.startContainer, targets);
+  const end = targetAt(range.endContainer, targets);
+  const article = start?.element.closest('.report-content article');
+  if (!start || !end || !article || end.element.closest('.report-content article') !== article)
+    return;
+  try {
+    const startOffset = boundaryOffset(start.element, range.startContainer, range.startOffset);
+    const endOffset = boundaryOffset(end.element, range.endContainer, range.endOffset);
+    if (start.element === end.element && endOffset <= startOffset) return;
+    const quote = selectedQuote(range);
+    if (!quote.trim() || Array.from(quote).length > MAX_REVIEW_TEXT_LENGTH) return;
+    const anchor: ReviewSelectionAnchor = {
+      start: { target: start.target, offset: startOffset },
+      end: { target: end.target, offset: endOffset },
+      quote,
+    };
+    const rect = selectionRect(range, start.element);
+    return {
+      subject: { target: start.target, selection: anchor, label: compactQuote(quote) },
+      position: {
+        left: Math.min(Math.max(rect.left + rect.width / 2, 4), window.innerWidth - 4),
+        top: Math.max(rect.top, 3.5 * 16),
+      },
+    };
+  } catch {
+    return;
+  }
+}
+function targetAt(node: Node, targets: ReadonlyMap<string, TargetDom>): TargetDom | undefined {
+  const element = node instanceof Element ? node : node.parentElement;
+  const owner = element?.closest<HTMLElement>('[data-review-target]');
+  return owner === null || owner === undefined
+    ? undefined
+    : targets.get(owner.dataset.reviewTarget ?? '');
+}
+function boundaryOffset(owner: HTMLElement, node: Node, offset: number): number {
+  const prefix = document.createRange();
+  prefix.selectNodeContents(owner);
+  prefix.setEnd(node, offset);
+  return Array.from(prefix.toString()).length;
+}
+function selectedQuote(range: Range): string {
+  const fragment = range.cloneContents();
+  for (const control of fragment.querySelectorAll(
+    '[data-review-target-control], .review-target-resolve, [data-review-selection-action]',
+  ))
+    control.remove();
+  return (fragment.textContent ?? '').normalize('NFC');
+}
+function selectionRect(range: Range, fallback: HTMLElement): DOMRect {
+  const rectangles = [...range.getClientRects()].filter(
+    (rect) => rect.width > 0 || rect.height > 0,
+  );
+  return rectangles.at(-1) ?? range.getBoundingClientRect() ?? fallback.getBoundingClientRect();
+}
+function compactQuote(value: string): string {
+  const compact = value.replace(/\s+/gu, ' ').trim();
+  return compact.length <= 120 ? compact : `${compact.slice(0, 117)}…`;
+}
 function readPrior(): { artifact: ReviewArtifact; resolved: ResolvedReviewArtifact } | undefined {
   const template = document.querySelector<HTMLTemplateElement>('template[data-prior-review]');
   if (!template) return;
@@ -501,6 +695,8 @@ function emptyArtifact(revision: string): ReviewArtifact {
   return { contractVersion: REVIEW_CONTRACT_VERSION, report: { revision }, threads: [] };
 }
 function validateTargets(artifact: ReviewArtifact, manifest: ReviewTargetManifest): void {
+  const targets = collectTargetOwners(manifest);
+  if (!targets) throw new ReaderImportError(strings.unknownCurrentTarget);
   for (const thread of artifact.threads) {
     const currentSegments = thread.segments.filter(
       (segment) => segment.reportRevision === artifact.report.revision,
@@ -510,8 +706,76 @@ function validateTargets(artifact: ReviewArtifact, manifest: ReviewTargetManifes
       const current = manifest.targets.find((item) => item.id === segment.target.id);
       if (!current || JSON.stringify(current) !== JSON.stringify(segment.target))
         throw new ReaderImportError(strings.unknownCurrentTarget);
+      if (segment.selection !== undefined && !validSelectionAnchor(segment.selection, targets))
+        throw new ReaderImportError(strings.invalidSelectionAnchor);
     }
   }
+}
+function collectTargetOwners(
+  manifest: ReviewTargetManifest,
+):
+  | ReadonlyMap<string, { readonly target: ReviewTargetReference; readonly element: HTMLElement }>
+  | undefined {
+  const result = new Map<
+    string,
+    { readonly target: ReviewTargetReference; readonly element: HTMLElement }
+  >();
+  for (const target of manifest.targets) {
+    const element = findTargetElement(target.id);
+    if (!element) return;
+    result.set(target.id, { target, element });
+  }
+  return result;
+}
+function findTargetElement(id: string): HTMLElement | undefined {
+  return [...document.querySelectorAll<HTMLElement>('[data-review-target]')].find(
+    (element) => element.dataset.reviewTarget === id,
+  );
+}
+function validSelectionAnchor(
+  anchor: ReviewSelectionAnchor,
+  targets: ReadonlyMap<
+    string,
+    { readonly target: ReviewTargetReference; readonly element: HTMLElement }
+  >,
+): boolean {
+  const start = targets.get(anchor.start.target.id);
+  const end = targets.get(anchor.end.target.id);
+  if (
+    !start ||
+    !end ||
+    JSON.stringify(start.target) !== JSON.stringify(anchor.start.target) ||
+    JSON.stringify(end.target) !== JSON.stringify(anchor.end.target)
+  )
+    return false;
+  const startPoint = pointAtCodePointOffset(start.element, anchor.start.offset);
+  const endPoint = pointAtCodePointOffset(end.element, anchor.end.offset);
+  if (!startPoint || !endPoint) return false;
+  const range = document.createRange();
+  try {
+    range.setStart(startPoint.node, startPoint.offset);
+    range.setEnd(endPoint.node, endPoint.offset);
+  } catch {
+    return false;
+  }
+  return !range.collapsed && selectedQuote(range) === anchor.quote;
+}
+function pointAtCodePointOffset(
+  owner: HTMLElement,
+  offset: number,
+): { readonly node: Text; readonly offset: number } | undefined {
+  const walker = document.createTreeWalker(owner, NodeFilter.SHOW_TEXT);
+  let remaining = offset;
+  let last: Text | undefined;
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    if (!(node instanceof Text)) continue;
+    last = node;
+    const points = Array.from(node.data);
+    if (remaining <= points.length)
+      return { node, offset: points.slice(0, remaining).join('').length };
+    remaining -= points.length;
+  }
+  return remaining === 0 && last ? { node: last, offset: last.data.length } : undefined;
 }
 function limit(input: HTMLTextAreaElement): void {
   input.addEventListener('input', () => {

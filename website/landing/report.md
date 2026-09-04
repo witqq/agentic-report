@@ -162,10 +162,12 @@ existing destination.
 :::
 
 :::callout{kind="success" title="Return structured feedback to the agent"}
-Select **Review** in the generated page to open threads on exact blocks, exchange user/agent messages,
-resolve or reopen them, and download deterministic `review.json`. The review stays local; use the CLI review command to map it back to
-the current Markdown or partial ranges. One artifact supports at most 5,000 reviewable targets and a
-750,000-byte target manifest; split an unusually large handoff when either bound is reached.
+Select any eligible passage in the generated page and choose **Create note**. The existing Review Workspace
+opens with the exact quote; selections can stay inside one block or cross adjacent blocks. Add more notes or
+whole-block threads, then export all of them together as deterministic version-3 `review.json`. The review
+stays local; use the CLI review command to map its targets back to the current Markdown or partial ranges.
+One artifact supports at most 5,000 reviewable targets and a 750,000-byte target manifest; split an unusually
+large handoff when either bound is reached. [Try selection notes now](examples/review-workspace/index.html).
 :::
 
 :::callout{kind="warning" title="The runtime is part of the artifact"}
@@ -235,7 +237,8 @@ Separate gates, evidence, alternatives, conditions, and reversibility. Use the e
 not a made-up seventh starter.
 :::
 :::card{title="Review and re-review"}
-Collect fragment discussion threads locally, then rebuild against the prior handoff.
+Select any passage, choose **Create note**, collect multiple text notes and whole-block discussions locally,
+export one `review.json`, then rebuild against the prior handoff.
 [Open the fictional review workspace](examples/review-workspace/index.html) ·
 [View its revised declarative source](examples/review-workspace/report.md) ·
 [Inspect the fictional prior handoff](examples/review-workspace/prior-review.json).

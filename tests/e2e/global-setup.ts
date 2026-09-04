@@ -703,7 +703,7 @@ export default async function globalSetup(): Promise<void> {
   await writeFile(
     path.join(russianPriorSource, 'prior.json'),
     serializeReviewArtifact({
-      contractVersion: 2,
+      contractVersion: 3,
       report: { revision: russianPriorManifest.reportRevision },
       threads: [
         {
@@ -788,7 +788,7 @@ export default async function globalSetup(): Promise<void> {
   await writeFile(
     path.join(reviewSource, 'prior.json'),
     serializeReviewArtifact({
-      contractVersion: 2,
+      contractVersion: 3,
       report: { revision: reviewManifest.reportRevision },
       threads: [
         {

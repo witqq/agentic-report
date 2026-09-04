@@ -7,14 +7,17 @@ Install the ready-made agent skill with:
     npx skills add witqq/agentic-report --skill agentic-report
 
 Use it for static agent-to-human handoffs where evidence, relationships, code explanations, timelines,
-visualizations, or fragment-level review are clearer as a page than as a long chat response. A custom skill
-may own domain research and call the pinned agentic-report CLI as its final rendering stage.
+visualizations, selected-text notes, or fragment-level review are clearer as a page than as a long chat
+response. A custom skill may own domain research and call the pinned agentic-report CLI as its final rendering
+stage. In a generated report, select eligible text and choose **Create note**; Review Workspace exports every
+selected-text note and whole-block thread together in one local `review.json`.
 
 - Agent quickstart: docs/agent/index.md
 - Human documentation: docs/index.html
 - Complete agent reference: docs/AGENT-REFERENCE.md
 - Declarative source contract: docs/product/source-contract.md
 - Agent skill: skills/agentic-report/SKILL.md
+- Selected-text Review Workspace demo: examples/review-workspace/index.html
 - Incident review demo: examples/incident-review/index.html
 - Vendor decision demo: examples/vendor-decision/index.html
 - Launch readiness demo: examples/launch-readiness/index.html

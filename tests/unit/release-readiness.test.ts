@@ -69,7 +69,7 @@ describe('release readiness', () => {
       ].map(async (file) => ({ file, source: await readFile(path.resolve(file), 'utf8') })),
     );
     for (const { file, source } of surfaces) {
-      for (const fact of ['fix', 'forms', '5,000'])
+      for (const fact of ['fix', 'forms', '5,000', 'Create note', 'review.json'])
         expect(source, `${file}: ${fact}`).toContain(fact);
     }
     for (const { file, source } of surfaces.filter(({ file }) => file !== 'README.md')) {
@@ -89,11 +89,14 @@ describe('release readiness', () => {
       'AR-AUTHOR-REVIEW-BINDING',
       'AR-AUTHOR-REVIEW-RECONCILIATION',
       'AR-COMPONENT-REVIEW-WORKSPACE',
-      '`review.json` версии 2',
+      '`review.json` версии 3',
+      'точной привязкой к выделенному тексту',
+      '`Create note`',
       'сообщениями пользователя',
       'resolved или reopened',
       '`exact/changed/missing/ambiguous`',
-      'Формальные verdict, approval gate и review-чек-листы не входят',
+      'Формальные verdict, approval',
+      'gate и review-чек-листы не входят',
     ]) {
       expect(requirements, required).toContain(required);
     }

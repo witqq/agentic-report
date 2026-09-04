@@ -130,8 +130,11 @@ filename/line text from each validated source helper and uses `source:line` for 
 compiler-owned local paths and authored directory/free-form labels are omitted, and the JSON result reports
 `neutralizedSourceLinks`. The default build keeps every authored label and working editor link.
 
-Open the generated page and select **Review** when the human needs to discuss exact fragments. After the
-reader downloads `review.json`, map it back to the authored files with:
+Open the generated page and select the exact text the human wants to discuss. Choose **Create note**, enter
+the message in Review Workspace, and repeat for any other passage; a selection can cross adjacent report
+blocks. Whole-block threads remain available through **Review**. The panel lists every current note and one
+**Export review.json** action downloads them all. After the reader downloads `review.json`, map it back to
+the authored files with:
 
 ```sh
 npx --yes agentic-report review review.json ./my-page --json
@@ -157,8 +160,10 @@ a space. Those continue as directives and fail with a source diagnostic when the
 Use `:::copyable` for prose handoffs. It remains ordinary wrapped Markdown and copies visible text only;
 do not use a `text` code fence just to get a Copy button.
 
-Review version 2 stores ordered user/agent messages and resolved state in one local sidecar; it is not an
-account, signature, or hosted collaboration service. Decision/checklist directives remain document content.
+Review version 3 stores ordered user/agent messages, resolved state, and optional exact selected-text anchors
+in one local sidecar. Each anchor records its quote and bounded start/end target plus Unicode code-point
+offsets. Valid version-2 whole-block reviews remain accepted. The sidecar is not an account, signature, or
+hosted collaboration service. Decision/checklist directives remain document content.
 
 For a repeat review, pass the prior local artifact with `build --review review.json`. Never copy a prior page
 thread into changed content; inspect bindings, continue the current discussion, and export the next revision.

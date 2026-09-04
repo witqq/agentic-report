@@ -56,7 +56,9 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   manifest/frontmatter provenance, entry/partial diagnostic source maps, source/output collision protection,
   closed en/ru reader-locale resolution, unsupported/`und` English fallback, Russian count forms,
   localized review binding/target fallbacks, and explicit-locale visualization number formatting,
-  deterministic review-target manifests and local-input revisions, strict canonical review JSON,
+  deterministic version-2 review-target manifests and local-input revisions, strict canonical version-3
+  review JSON with version-2 whole-block normalization, selected-text anchor structure, subject uniqueness,
+  and two-endpoint binding,
   strict response form/artifact parsing, kind-specific answer domains, untouched/default distinction,
   canonical response JSON and foreign/stale/prototype-like rejection,
   exact unescaped colon prose and frontmatter titles—clock, range and duration notation, ratios, host/port
@@ -131,9 +133,12 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   non-shrinking single-line labels, list-owned overflow where needed, document containment, and pointer and
   keyboard selection and focus. Dedicated Review Workspace coverage builds both formats, exercises clean
   enter/exit, desktop/mobile dialog semantics, equal-text target isolation, ordered user/agent messages,
-  message editing, resolved/reopened state, version-1 rejection without state loss, canonical download,
-  exact import and stale prior-thread classification, and produces the required visually inspected state
-  captures. Dedicated Response Workspace coverage builds both formats for desktop/mobile, completes all
+  message editing, resolved/reopened state, version-1 rejection and legacy version-2 import without state
+  loss, strict-substring and cross-target selection anchors, keyboard-focused localized **Create note**,
+  whole-block plus multiple same-target notes in one canonical download, exact selected-note import,
+  malformed/mismatched range preservation, topbar/control/whitespace selection suppression, and stale prior-
+  thread classification, and produces the required visually inspected tooltip/editor state captures.
+  Dedicated Response Workspace coverage builds both formats for desktop/mobile, completes all
   seven answer kinds, uses bucket select/drag and explicit ordering controls, preserves original-link state,
   asserts every exported answer shape, compares clipboard/file bytes, forces clipboard failure, rejects
   oversized, unsupported, malformed, and foreign form revisions without state loss, replaces a selected

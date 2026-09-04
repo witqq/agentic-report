@@ -8,13 +8,16 @@ metadata:
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run.
 ---
 
-Use Review Workspace for local fragment discussion threads: ordered user/agent messages, editing and
-resolved/reopened state exported together as deterministic version-2 `review.json`. Never imply an account
-or signature. For a follow-up build, pass a confined prior artifact with `build --review review.json`; treat
-stale bindings as immutable prior revision segments, append a current segment when continuing a changed
-fragment, and export the next revision. A report may contain at most 5,000 reviewable targets and a
-750,000-byte target manifest; reduce or split it when either bound is reached. Never rewrite Markdown. Ordinary typed
-`decision`/`decision-option` and `checklist`/`check-item` syntax remains static report content.
+Use Review Workspace for local discussion threads and selected-text notes. A reader selects eligible text,
+chooses **Create note**, writes in the existing editor, and exports every whole-block thread and selection
+note together as deterministic version-3 `review.json`; valid version-2 whole-block files remain accepted.
+Selection anchors contain the exact quote plus bounded target endpoints and Unicode code-point offsets.
+Never imply an account or signature. For a follow-up build, pass a confined prior artifact with
+`build --review review.json`; treat stale bindings as immutable prior revision segments, append a current
+segment when continuing a changed fragment, and export the next revision. A report may contain at most 5,000
+reviewable targets and a 750,000-byte target manifest; reduce or split it when either bound is reached. Never
+rewrite Markdown. Ordinary typed `decision`/`decision-option` and `checklist`/`check-item` syntax remains
+static report content.
 
 # agentic-report
 

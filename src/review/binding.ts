@@ -1,6 +1,7 @@
 import type {
   ReviewArtifact,
   ReviewBinding,
+  ReviewSelectionBoundary,
   ReviewThread,
   ReviewThreadSegment,
   ReviewTargetManifest,
@@ -15,6 +16,16 @@ export interface ResolvedReviewThread {
 }
 export interface ResolvedReviewSegment {
   readonly segment: ReviewThreadSegment;
+  readonly binding: ReviewBinding;
+  readonly currentTarget?: ReviewTargetReference;
+  readonly selection?: ResolvedReviewSelection;
+}
+export interface ResolvedReviewSelection {
+  readonly start: ResolvedReviewSelectionBoundary;
+  readonly end: ResolvedReviewSelectionBoundary;
+}
+export interface ResolvedReviewSelectionBoundary {
+  readonly boundary: ReviewSelectionBoundary;
   readonly binding: ReviewBinding;
   readonly currentTarget?: ReviewTargetReference;
 }
@@ -32,14 +43,30 @@ export function bindReviewArtifact(
   return {
     reportStatus,
     threads: artifact.threads.map((thread) => {
-      const segments = thread.segments.map((segment) => ({
-        segment,
-        ...bindTarget(
+      const segments = thread.segments.map((segment) => {
+        const primary = bindTarget(
           segment.target,
           manifest.targets,
           segment.reportRevision === manifest.reportRevision ? 'exact' : 'stale',
-        ),
-      }));
+        );
+        if (segment.selection === undefined) return { segment, ...primary };
+        const start = bindSelectionBoundary(
+          segment.selection.start,
+          manifest.targets,
+          segment.reportRevision === manifest.reportRevision ? 'exact' : 'stale',
+        );
+        const end = bindSelectionBoundary(
+          segment.selection.end,
+          manifest.targets,
+          segment.reportRevision === manifest.reportRevision ? 'exact' : 'stale',
+        );
+        return {
+          segment,
+          binding: combinedBinding([primary.binding, start.binding, end.binding]),
+          ...(start.currentTarget === undefined ? {} : { currentTarget: start.currentTarget }),
+          selection: { start, end },
+        };
+      });
       const latest = segments.at(-1);
       return {
         thread,
@@ -49,6 +76,20 @@ export function bindReviewArtifact(
       };
     }),
   };
+}
+
+function bindSelectionBoundary(
+  boundary: ReviewSelectionBoundary,
+  currentTargets: readonly ReviewTargetReference[],
+  reportStatus: 'exact' | 'stale',
+): ResolvedReviewSelectionBoundary {
+  return { boundary, ...bindTarget(boundary.target, currentTargets, reportStatus) };
+}
+
+function combinedBinding(bindings: readonly ReviewBinding[]): ReviewBinding {
+  for (const candidate of ['ambiguous', 'missing', 'changed', 'exact'] as const)
+    if (bindings.includes(candidate)) return candidate;
+  return 'missing';
 }
 
 function bindTarget(

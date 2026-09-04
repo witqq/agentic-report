@@ -85,7 +85,7 @@ describe('CLI transport', () => {
     await writeFile(
       path.join(workspace, 'review.json'),
       serializeReviewArtifact({
-        contractVersion: 2,
+        contractVersion: 3,
         report: { revision: `sha256:${'a'.repeat(64)}` },
         threads: [
           {
@@ -114,7 +114,7 @@ describe('CLI transport', () => {
     expect(result).toMatchObject({ exitCode: 0, stderr: '' });
     expect(JSON.parse(result.stdout)).toMatchObject({
       type: 'result',
-      contractVersion: 2,
+      contractVersion: 3,
       reportStatus: 'stale',
       threads: [
         {
@@ -170,7 +170,7 @@ describe('CLI transport', () => {
     await writeFile(
       path.join(workspace, 'review.json'),
       serializeReviewArtifact({
-        contractVersion: 2,
+        contractVersion: 3,
         report: { revision: `sha256:${'a'.repeat(64)}` },
         threads: [
           {
@@ -1091,7 +1091,7 @@ async function createPriorReviewCliWorkspace(prefix: string): Promise<string> {
   await writeFile(
     path.join(workspace, 'prior.json'),
     serializeReviewArtifact({
-      contractVersion: 2,
+      contractVersion: 3,
       report: { revision: `sha256:${'a'.repeat(64)}` },
       threads: [],
     }),

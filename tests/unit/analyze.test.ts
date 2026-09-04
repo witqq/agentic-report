@@ -173,7 +173,7 @@ describe('report analysis', () => {
     await writeFile(
       path.join(workspace, 'review.json'),
       serializeReviewArtifact({
-        contractVersion: 2,
+        contractVersion: 3,
         report: { revision: singleManifest.reportRevision },
         threads: [
           {
@@ -289,7 +289,7 @@ describe('report analysis', () => {
     await writeFile(
       path.join(workspace, 'review.json'),
       serializeReviewArtifact({
-        contractVersion: 2,
+        contractVersion: 3,
         report: { revision: manifest.reportRevision },
         threads: [
           {
@@ -349,7 +349,7 @@ describe('report analysis', () => {
     await writeFile(
       path.join(workspace, 'prior.json'),
       serializeReviewArtifact({
-        contractVersion: 2,
+        contractVersion: 3,
         report: { revision: manifest.reportRevision },
         threads: [
           {
@@ -388,7 +388,7 @@ describe('report analysis', () => {
     await writeFile(
       path.join(workspace, 'next.json'),
       serializeReviewArtifact({
-        contractVersion: 2,
+        contractVersion: 3,
         report: { revision: currentManifest.reportRevision },
         threads: [
           {

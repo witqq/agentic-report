@@ -55,6 +55,9 @@ export interface PackageStrings {
   readonly reviewThisReport: string;
   readonly noThreads: string;
   readonly discussionSelected: string;
+  readonly noteForSelection: string;
+  readonly createNote: string;
+  readonly currentNotes: string;
   readonly noMessages: string;
   readonly newMessage: string;
   readonly addMessage: string;
@@ -81,6 +84,7 @@ export interface PackageStrings {
   readonly reviewBinding: (binding: ReviewBinding) => string;
   readonly reviewTargetFallback: (kind: string) => string;
   readonly openDiscussion: (label: string) => string;
+  readonly openNote: (label: string) => string;
   readonly resolveFor: (resolved: boolean, label: string) => string;
   readonly fileTooLarge: (bytes: number) => string;
   readonly differentRevision: string;
@@ -88,6 +92,7 @@ export interface PackageStrings {
   readonly importFailed: string;
   readonly multipleCurrentSegments: string;
   readonly unknownCurrentTarget: string;
+  readonly invalidSelectionAnchor: string;
   readonly unanswered: string;
   readonly copyResponse: string;
   readonly downloadResponse: string;
@@ -162,6 +167,9 @@ const en: PackageStrings = {
   reviewThisReport: 'Review this report',
   noThreads: 'No discussion threads yet',
   discussionSelected: 'Discussion for selected block',
+  noteForSelection: 'Note for selected text',
+  createNote: 'Create note',
+  currentNotes: 'Notes in this report',
   noMessages: 'No messages yet.',
   newMessage: 'New message',
   addMessage: 'Add message',
@@ -191,14 +199,17 @@ const en: PackageStrings = {
   reviewTargetFallback: (kind) =>
     kind === 'markdown:thematic-break' ? 'Thematic break' : 'Report block',
   openDiscussion: (label) => `Open discussion for ${label}`,
+  openNote: (label) => `Open note for “${label}”`,
   resolveFor: (resolved, label) => `${resolved ? 'Reopen' : 'Resolve'} thread for ${label}`,
   fileTooLarge: (bytes) => `Review files must be no larger than ${bytes} bytes.`,
   differentRevision: 'This review belongs to a different report revision.',
-  unsupportedReview: 'Version 1 reviews are unsupported. Export a version-2 thread review.',
+  unsupportedReview: 'Version 1 reviews are unsupported. Export a version-3 review.',
   importFailed: 'Review import failed.',
   multipleCurrentSegments: 'Imported review contains more than one current segment for a thread.',
   unknownCurrentTarget:
     'Imported review contains a current target that is not part of this report revision.',
+  invalidSelectionAnchor:
+    'Imported review contains a selected-text anchor that does not match this report revision.',
   unanswered: 'Not answered',
   copyResponse: 'Copy response',
   downloadResponse: 'Download response.json',
@@ -273,6 +284,9 @@ const ru: PackageStrings = {
   reviewThisReport: 'Ревью отчёта',
   noThreads: 'Обсуждений пока нет',
   discussionSelected: 'Обсуждение выбранного блока',
+  noteForSelection: 'Заметка к выделенному тексту',
+  createNote: 'Создать заметку',
+  currentNotes: 'Заметки в этом отчёте',
   noMessages: 'Сообщений пока нет.',
   newMessage: 'Новое сообщение',
   addMessage: 'Добавить сообщение',
@@ -304,15 +318,18 @@ const ru: PackageStrings = {
   reviewTargetFallback: (kind) =>
     kind === 'markdown:thematic-break' ? 'Разделитель' : 'Блок отчёта',
   openDiscussion: (label) => `Открыть обсуждение: ${label}`,
+  openNote: (label) => `Открыть заметку к «${label}»`,
   resolveFor: (resolved, label) => `${resolved ? 'Возобновить' : 'Закрыть'} обсуждение: ${label}`,
   fileTooLarge: (bytes) => `Размер файла ревью не должен превышать ${bytes} байт.`,
   differentRevision: 'Это ревью относится к другой редакции отчёта.',
-  unsupportedReview: 'Ревью версии 1 не поддерживаются. Экспортируйте ревью обсуждений версии 2.',
+  unsupportedReview: 'Ревью версии 1 не поддерживаются. Экспортируйте ревью версии 3.',
   importFailed: 'Не удалось импортировать ревью.',
   multipleCurrentSegments:
     'Импортированное ревью содержит несколько текущих сегментов одного обсуждения.',
   unknownCurrentTarget:
     'Импортированное ревью содержит текущую цель, которой нет в этой редакции отчёта.',
+  invalidSelectionAnchor:
+    'Импортированное ревью содержит привязку к выделенному тексту, которой нет в этой редакции отчёта.',
   unanswered: 'Нет ответа',
   copyResponse: 'Копировать ответ',
   downloadResponse: 'Скачать response.json',

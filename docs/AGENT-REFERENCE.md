@@ -205,17 +205,27 @@ import { inspectReview, parseReviewArtifact, serializeReviewArtifact } from 'age
 const result = await inspectReview({ input: './my-report', review: 'review.json' });
 ```
 
-`parseReviewArtifact()` enforces the closed version-2 thread schema. `serializeReviewArtifact()` trims and
-normalizes human text to Unicode NFC, then produces canonical newline-terminated JSON without a timestamp or
-random value. A changed or ambiguous target is never applied automatically; inspect its reported source
-state and edit the Markdown explicitly.
+`parseReviewArtifact()` enforces the closed version-3 thread schema and losslessly normalizes a valid
+version-2 whole-block artifact. A version-3 segment omits `selection` for a whole-block thread or carries an
+exact selected-text anchor: full `start.target` and `end.target` references, non-negative Unicode code-point
+`offset` values, and the bounded NFC `quote`; `segment.target` equals `selection.start.target`.
+`serializeReviewArtifact()` trims and normalizes human messages to Unicode NFC, then produces canonical
+newline-terminated version-3 JSON without a timestamp or random value. A changed or ambiguous endpoint is
+never applied automatically; inspect its reported source state and edit the Markdown explicitly.
 
-The generated page itself provides Review Workspace. The reader selects `Review`, opens a block thread,
-adds or edits messages, reads agent replies, resolves or reopens the thread, and downloads all threads in
-`review.json`. Desktop uses a non-modal rail; mobile uses a modal sheet. Exact state imports directly;
-stale threads remain prior evidence through the build sidecar and CLI binding result. Continuing a changed
-target appends a current revision segment to the same thread; the next export retains every historical
-message and resolution state in one sidecar.
+The generated page itself provides Review Workspace. To add a precise note, select an eligible phrase and
+choose **Create note**. The selection may start and end in one block or cross into a later review target; the
+editor displays the exact quote before the reader writes. Repeat for other passages, or select **Review** and
+use a block control for a whole-block discussion. The panel lists every current note, and **Export
+review.json** downloads all block threads and selected-text notes together. Empty, whitespace-only,
+oversized, outside-report, and package-control selections create nothing.
+
+Desktop uses a non-modal rail; mobile uses a modal sheet. Exact state imports directly after verifying the
+rendered quote and offsets. Stale selection ranges remain prior evidence through the build sidecar and CLI
+binding result rather than being fuzzily relocated. Continuing a changed target appends a current revision
+segment to the same thread; the next export retains every historical message and resolution state in one
+sidecar. Build [`../examples/review-workspace/report.md`](../examples/review-workspace/report.md), select
+**68% in the revised cohort**, create a note, and export it for a complete reproducible example.
 
 Typed review controls are declarative and keep legacy decisions static:
 
@@ -667,20 +677,21 @@ package.
 
 ### Interaction behavior and limits
 
-| Primitive           | Semantics and initial state                                                                                                                                                                                                                           | Reader routes                                                                                                                                                              |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `term` / `glossary` | A prose or first code term button controls a closed canonical-title dialog; the full definition remains visible inline or in the reference appendix. Code explanations are portalled outside the scrollable code block and anchored beside the token. | Hover, focus, click, or tap opens; `Escape` closes and restores focus; click **View full definition** to navigate to the complete Markdown entry. Clicking outside closes. |
-| `disclosure`        | Native `details`/`summary`; `open="false"` is the default.                                                                                                                                                                                            | Activate the summary with click/tap or native `Enter`/`Space`.                                                                                                             |
-| `tabs` / `tab`      | ARIA `tablist`/`tab`/`tabpanel`; first direct tab selected. A tab requires `label`; other directive children are rejected.                                                                                                                            | Click/tap selects. `ArrowLeft`/`ArrowRight` wrap, while `Home`/`End` select the first/last tab.                                                                            |
-| `modal`             | Closed native `dialog` with a labelled trigger.                                                                                                                                                                                                       | Trigger opens; `Escape` or Close closes and returns focus to the opener. Backdrop click is not a supported dismissal route.                                                |
-| `popover`           | Closed non-modal labelled dialog.                                                                                                                                                                                                                     | Click/tap or native button activation toggles; `Escape` closes and restores trigger focus; outside click closes.                                                           |
-| `filter`            | Labelled search input and polite live count; empty initially.                                                                                                                                                                                         | Typing filters case-insensitively. Only list items in a direct authored `ul`/`ol` are targets.                                                                             |
-| `toggle`            | ARIA switch; `default="off"` hides its panel.                                                                                                                                                                                                         | Click/tap or native `Enter`/`Space` toggles checked state and visibility.                                                                                                  |
-| `demo`              | Numeric output starts at `start="0"`.                                                                                                                                                                                                                 | Increment button adds `step="1"` by default; author code is never executed.                                                                                                |
-| `response`          | Native typed controls plus deterministic copy/file export and validated local import. Authored defaults remain explicitly unanswered until reader input.                                                                                              | Native fields cover all values; bucket select and order buttons provide complete keyboard routes, with bucket drag-and-drop as an additional pointer route.                |
+| Primitive           | Semantics and initial state                                                                                                                                                                                                                           | Reader routes                                                                                                                                                                            |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `term` / `glossary` | A prose or first code term button controls a closed canonical-title dialog; the full definition remains visible inline or in the reference appendix. Code explanations are portalled outside the scrollable code block and anchored beside the token. | Hover, focus, click, or tap opens; `Escape` closes and restores focus; click **View full definition** to navigate to the complete Markdown entry. Clicking outside closes.               |
+| `disclosure`        | Native `details`/`summary`; `open="false"` is the default.                                                                                                                                                                                            | Activate the summary with click/tap or native `Enter`/`Space`.                                                                                                                           |
+| `tabs` / `tab`      | ARIA `tablist`/`tab`/`tabpanel`; first direct tab selected. A tab requires `label`; other directive children are rejected.                                                                                                                            | Click/tap selects. `ArrowLeft`/`ArrowRight` wrap, while `Home`/`End` select the first/last tab.                                                                                          |
+| `modal`             | Closed native `dialog` with a labelled trigger.                                                                                                                                                                                                       | Trigger opens; `Escape` or Close closes and returns focus to the opener. Backdrop click is not a supported dismissal route.                                                              |
+| `popover`           | Closed non-modal labelled dialog.                                                                                                                                                                                                                     | Click/tap or native button activation toggles; `Escape` closes and restores trigger focus; outside click closes.                                                                         |
+| `filter`            | Labelled search input and polite live count; empty initially.                                                                                                                                                                                         | Typing filters case-insensitively. Only list items in a direct authored `ul`/`ol` are targets.                                                                                           |
+| `toggle`            | ARIA switch; `default="off"` hides its panel.                                                                                                                                                                                                         | Click/tap or native `Enter`/`Space` toggles checked state and visibility.                                                                                                                |
+| `demo`              | Numeric output starts at `start="0"`.                                                                                                                                                                                                                 | Increment button adds `step="1"` by default; author code is never executed.                                                                                                              |
+| Review Workspace    | Valid selected text exposes **Create note** and opens the existing editor with the exact quote; whole-block controls, the current-note list, messages, resolution, import, and one all-notes export share local state.                                | Releasing `Shift` after keyboard selection focuses **Create note**. Pointer/touch selection uses the same action beside the highlight; invalid or package-control ranges create no note. |
+| `response`          | Native typed controls plus deterministic copy/file export and validated local import. Authored defaults remain explicitly unanswered until reader input.                                                                                              | Native fields cover all values; bucket select and order buttons provide complete keyboard routes, with bucket drag-and-drop as an additional pointer route.                              |
 
-Each instance owns its state. Tabs, overlays, filters, switches, demos, and response forms do not change
-another instance.
+Each instance owns its state. Tabs, overlays, filters, switches, demos, Review Workspace, and response forms
+do not change another instance.
 
 ### Page navigation and bounded motion
 

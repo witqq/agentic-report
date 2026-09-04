@@ -3,24 +3,24 @@
     "result": {
       "outputPath": "<single>",
       "format": "single-file",
-      "bytes": 125309,
+      "bytes": 133638,
       "embeddedAssets": 6,
       "externalAssets": 0,
-      "contentHash": "eb320aab1a2dc104bdc8b010ecfdf98fdfca6bc7ebf28caa8f114030c9861a93",
+      "contentHash": "ed1d25dccd62688dceb2d43ef5c1b1cabd924b6cdfcd9a38f527b93203f100d5",
       "share": false,
       "neutralizedSourceLinks": 0,
       "warnings": []
     },
-    "sha256": "eb320aab1a2dc104bdc8b010ecfdf98fdfca6bc7ebf28caa8f114030c9861a93"
+    "sha256": "ed1d25dccd62688dceb2d43ef5c1b1cabd924b6cdfcd9a38f527b93203f100d5"
   },
   "directory": {
     "result": {
       "outputPath": "<directory>/index.html",
       "format": "directory",
-      "bytes": 9648,
+      "bytes": 9991,
       "embeddedAssets": 0,
       "externalAssets": 6,
-      "contentHash": "c70b926e65759bbdf542239a53323433b39a5773d70be7ec923c8fb0690a36fd",
+      "contentHash": "4f792ce6d2e40f963b7aa94b4d61a18fb8eeee5e04c301ce27464549e9726e7a",
       "share": false,
       "neutralizedSourceLinks": 0,
       "warnings": []
@@ -28,10 +28,10 @@
     "tree": {
       "assets/data.b5a2226aa8dc.json": "b5a2226aa8dc989b18f2db6775a56448e7cdbe706e17e07d5110a43ef106b4d7",
       "assets/diagram.56b7b89f0860.svg": "56b7b89f0860520e4c8e1333aba1bbaa9b1e4711026a752b848fbf6190398c5f",
-      "assets/document.fd2d1e7b0c9a.css": "fd2d1e7b0c9ac7da06449ca2d8ef401d408cd3981151331da2b28be4cf3de7da",
+      "assets/document.f535593f5936.css": "f535593f59360368704e41e90bcb2064f431af79e1ec4559e20d831c55e88364",
       "assets/report.8c8ee5dd216c.woff2": "8c8ee5dd216cadd374fdce346b787ea7bf1d0ed7000f45c87de79edd68bdf7be",
-      "assets/runtime.e7e5050f9e6f.js": "e7e5050f9e6f2655d33e82a1bed74598e2b94cbcf6d171db4a1e4432d37c7542",
-      "index.html": "c70b926e65759bbdf542239a53323433b39a5773d70be7ec923c8fb0690a36fd"
+      "assets/runtime.6d6f7328b4cf.js": "6d6f7328b4cf2b76f0ac4176bd0fbd9db3b8759e7afd351f5642038fa8a2e71f",
+      "index.html": "4f792ce6d2e40f963b7aa94b4d61a18fb8eeee5e04c301ce27464549e9726e7a"
     }
   }
 }

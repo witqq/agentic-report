@@ -429,7 +429,7 @@ describe('deterministic public site staging', () => {
       ['README', readme],
     ] as const) {
       expect(source, name).toContain('npx skills add witqq/agentic-report --skill agentic-report');
-      expect(source, name).toMatch(/chat response|wall of text/iu);
+      expect(source, name).toMatch(/chat\s+response|wall of text/iu);
     }
     expect(landing).toContain('Build it into your own skill');
     expect(quickstart).toContain('## Use it inside your own skill');

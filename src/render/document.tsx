@@ -209,13 +209,19 @@ export function renderDocument(options: DocumentRenderOptions): string {
                 <output className="review-summary" aria-live="polite" data-review-summary>
                   {strings.noThreads}
                 </output>
+                <section className="review-form-section" data-review-current-section hidden>
+                  <h3>{strings.currentNotes}</h3>
+                  <ol className="review-response-list" data-review-current-list />
+                </section>
                 <section
                   className="review-form-section review-target-editor"
                   aria-labelledby={reviewTargetTitleId}
                   data-review-target-editor
                   hidden
                 >
-                  <h3 id={reviewTargetTitleId}>{strings.discussionSelected}</h3>
+                  <h3 id={reviewTargetTitleId} data-review-editor-title>
+                    {strings.discussionSelected}
+                  </h3>
                   <p className="review-target-label" data-review-target-label />
                   <ol
                     className="review-response-list"
@@ -260,6 +266,16 @@ export function renderDocument(options: DocumentRenderOptions): string {
               </footer>
             </div>
           </dialog>
+        ) : null}
+        {hasReviewTargets ? (
+          <button
+            type="button"
+            className="review-selection-action"
+            data-review-selection-action
+            hidden
+          >
+            {strings.createNote}
+          </button>
         ) : null}
         <template data-review-manifest>{JSON.stringify(options.reviewManifest)}</template>
         {options.priorReview === undefined ? null : (
