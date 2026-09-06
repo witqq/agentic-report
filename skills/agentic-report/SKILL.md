@@ -3,7 +3,7 @@ name: agentic-report
 description: Create, validate, inspect, or build polished local interactive reports, research pages, architecture pages, tutorials, dashboards, decisions, and landing pages from declarative Markdown. Use for static agent-to-human page handoff; do not use for hosted apps, live collaboration, deployment, publication, or bespoke frontend development.
 license: MIT
 metadata:
-  version: '0.9.0'
+  version: '0.10.0'
   homepage: https://agentic-report.witqq.dev/
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run.
 ---
@@ -12,9 +12,10 @@ Use Review Workspace for always-on local selected-text discussion. A reader sele
 **Create note**, and writes in the anchored full-thread popover; saved open/resolved ranges stay highlighted,
 and **View thread** reopens the same popover by pointer, touch, or focusable marker. The topbar **Review**
 action opens only a non-reflowing list/import/export overlay. It exports every selection plus imported legacy
-whole-block threads as deterministic version-3 `review.json`; valid version-2 whole-block files remain
-accepted and list-only. Selection anchors contain the exact quote plus bounded target endpoints and Unicode
-code-point offsets.
+whole-block threads as deterministic version-3 `review.json` for a single-language page or version 4 with
+the active `report.locale` for a multilingual page; valid version-2 whole-block files remain accepted and
+list-only. Selection anchors contain the exact quote plus bounded target endpoints and Unicode code-point
+offsets. Keep imported and authored threads in the locale they belong to.
 Never imply an account or signature. For a follow-up build, pass a confined prior artifact with
 `build --review review.json`; treat stale bindings as immutable prior revision segments, append a current
 segment when continuing a changed fragment, and export the next revision. A report may contain at most 5,000
@@ -32,6 +33,11 @@ Create a local declarative source, verify it, and hand the user a finished inter
 - Author Markdown, YAML frontmatter or the optional manifest, supported directives, confined Markdown
   partials, and local assets. Do not introduce JSX, raw HTML, browser JavaScript, CSS, executable
   templates, plugins, or remote source fetching.
+- When the handoff needs English and Russian, keep one language in the primary entry and declare the other
+  confined Markdown file with `localizations.en` or `localizations.ru`. Translate authored prose, partials,
+  directive labels, and visible asset text explicitly. Keep layout, theme, preset, tokens, attribution, and
+  output metadata in the primary entry. The generated page chooses the initial variant from system language
+  preferences and shows a language selector only when both variants exist; do not add a bespoke switcher.
 - Treat missing content facts as unresolved inputs; do not invent operational evidence, identities, or
   metrics.
 - Use Response Workspace when the human must return structured triage, choices, ordering, scores, text, or
@@ -87,10 +93,10 @@ Create a local declarative source, verify it, and hand the user a finished inter
 Use the release pinned in this skill:
 
 ```sh
-npx --yes agentic-report@0.9.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.9.0 validate ./my-page --json
-npx --yes agentic-report@0.9.0 inspect ./my-page --json
-npx --yes agentic-report@0.9.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.10.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.10.0 validate ./my-page --json
+npx --yes agentic-report@0.10.0 inspect ./my-page --json
+npx --yes agentic-report@0.10.0 build ./my-page --output ./my-page.html --json
 ```
 
 Choose a different starter or destination name when the task requires it. `init` requires an absent
@@ -107,7 +113,8 @@ as a compact JSON line. `--human` selects the form for a person — prose from `
 violation it found, so fix them together. Build only after both succeed. Open the result
 through normal `file://`; use `--format directory` only when a multi-file output is intentionally needed.
 
-Report the source path, artifact path, chosen starter/output format, warnings, and unresolved content facts.
+Report the source path, artifact path, chosen starter/output format, available languages, warnings, and
+unresolved content facts.
 
 ## Respect source-review requirements
 
@@ -115,7 +122,7 @@ If the user does not trust the published npm package, do not run it through `npx
 pinned by this skill, expose the checked commit for review, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.9.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.10.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -125,7 +132,7 @@ pnpm build
 node dist/node/cli.js init ../my-page --starter report --json
 ```
 
-Substitute `node dist/node/cli.js` for every `npx --yes agentic-report@0.9.0` command above. Keep page
+Substitute `node dist/node/cli.js` for every `npx --yes agentic-report@0.10.0` command above. Keep page
 sources and outputs outside the cloned repository.
 
 Explain that this avoids executing the `agentic-report` npm package but is not registry-free:

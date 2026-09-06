@@ -12,34 +12,34 @@
       "source": "../../../examples/incident-review/report.md",
       "liveRoute": "examples/incident-review/index.html",
       "publicSourceRoute": "examples/incident-review/report.md",
-      "sourceSha256": "3aad026526695ad3ac2f4752416159f8fb5c3834e4fe3ee21cdf6c4e80d36b12",
-      "artifactSha256": "8a8183a2b820e05c612f67594e02b2f3447d620c73917305f7d6cb9ab2a83744",
+      "sourceSha256": "38329917f50a0c60605dcaec9614fc0b214fef30d748cefcd7bcfb17babc36e9",
+      "artifactSha256": "a0f88267e646620bd99b9a3ecd029b81f0932e25053734c355ef626bc0582e49",
       "file": "incident-review.png",
-      "sha256": "4799119d029d4eac830cde76639aea0a5bb5e3987deb59e416585a6c436765d6"
+      "sha256": "7dde8841c6d5afdd64e03caf4cd9bb4e2300efec8cc30adb86f85e196b1268a2"
     },
     {
       "id": "vendor-decision",
       "source": "../../../examples/vendor-decision/report.md",
       "liveRoute": "examples/vendor-decision/index.html",
       "publicSourceRoute": "examples/vendor-decision/report.md",
-      "sourceSha256": "d389a0038a7d8450a46bdb2115bf26a469df849a8e6fa4b24407ed6e81468535",
-      "artifactSha256": "c1ba1b2bdabf585f595496dc275a57386769b1ae430af38264ca314e165ae7a6",
+      "sourceSha256": "11c4dfff6d2ee1b66f6e8eb484724ae5aa7a39b635eb7ae1d8a5555a664bfaf4",
+      "artifactSha256": "28f69fb09dd01f53aa697eed5ae3c08a7078e9e87db17c55de760edd4323f928",
       "file": "vendor-decision.png",
-      "sha256": "545207ca6dc15d953cfb1e3e1c90e551f2817b633ab346f67b9e7d4cd3290d46"
+      "sha256": "1c68eac6a3823ea032624ef33c266174b595ff8e1a2c9f2744e418a30f77d3ec"
     },
     {
       "id": "launch-readiness",
       "source": "../../../examples/launch-readiness/report.md",
       "liveRoute": "examples/launch-readiness/index.html",
       "publicSourceRoute": "examples/launch-readiness/report.md",
-      "sourceSha256": "e3674fffe5a1955e2dbb0be958cfae6c27cfd65d2e48d102f3e746d4045b0cfc",
-      "artifactSha256": "b7a0b4089170489155cbb2cd41576f64d1cb70204ffd0a4a4dfc79ee62346da5",
+      "sourceSha256": "cbcbf61a3f516f27ffe34ce48d7f90b1e346f5e708db2c1fa0217760781d1d38",
+      "artifactSha256": "582f4470914b5ba65996878619cd33f0de3bcd4c55ed358bf109a22b88769085",
       "file": "launch-readiness.png",
-      "sha256": "8f30d472d2b25980e6fa968e57d3979c0b84e653c59613bf202859e08159aa62",
+      "sha256": "18cd1c2fd5144ac5d3749a81120e0db636cdb6c8ccce485f193fc747e6327cd8",
       "proofExcerpt": {
         "startLine": 1,
-        "endLine": 15,
-        "sha256": "dbf95754b006c40ec7a43145a7726f08344408776ca4c253272aab3e45f7de28"
+        "endLine": 17,
+        "sha256": "9ae4c95209ab63bb120849e88a99510d29267431fc5cf8eb01832653c109b173"
       }
     }
   ]

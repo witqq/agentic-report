@@ -3,6 +3,8 @@ contractVersion: 1
 title: Delivery control room
 description: A current operational view of release throughput, quality, and accountable follow-up.
 language: en
+localizations:
+  ru: report.ru.md
 theme: dark
 layout: dashboard
 tokens:

@@ -1,28 +1,22 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 
+import type { PageLocaleChoice } from '../authoring/registry.js';
 import type { ReportManifest } from '../contracts.js';
 import { PACKAGE_ICON_PATHS, type PackageIconName } from '../iconography.js';
-import { packageStrings, resolvePackageLocale } from '../localization.js';
-import type { ReviewTargetManifest } from '../review/contract.js';
+import { packageStrings, resolvePackageLocale, type PackageStrings } from '../localization.js';
 import type { ResolvedReviewArtifact } from '../review/binding.js';
-import type { ReviewArtifact } from '../review/contract.js';
+import type { ReviewArtifact, ReviewTargetManifest } from '../review/contract.js';
 import type { NavigationItem } from './navigation.js';
 
 export type { NavigationItem } from './navigation.js';
 
-export interface DocumentRenderOptions {
+export interface DocumentPageVariantOptions {
+  readonly locale: PageLocaleChoice;
   readonly title: string;
   readonly description?: string;
   readonly language: string;
-  readonly page: Pick<
-    ReportManifest,
-    'preset' | 'theme' | 'layout' | 'tokens' | 'scrollProgress' | 'attribution'
-  >;
   readonly contentHtml: string;
   readonly navigation: readonly NavigationItem[];
-  readonly contentSecurityPolicy: string;
-  readonly styles: { readonly inline?: string; readonly href?: string };
-  readonly runtime: DocumentRuntime;
   readonly reviewManifest: ReviewTargetManifest;
   readonly priorReview?: {
     readonly artifact: ReviewArtifact;
@@ -30,28 +24,23 @@ export interface DocumentRenderOptions {
   };
 }
 
+export interface DocumentRenderOptions extends DocumentPageVariantOptions {
+  readonly page: Pick<
+    ReportManifest,
+    'preset' | 'theme' | 'layout' | 'tokens' | 'scrollProgress' | 'attribution'
+  >;
+  readonly contentSecurityPolicy: string;
+  readonly styles: { readonly inline?: string; readonly href?: string };
+  readonly runtime: DocumentRuntime;
+  readonly localizations?: readonly DocumentPageVariantOptions[];
+}
+
 export type DocumentRuntime =
   | { readonly inline: string; readonly src?: never }
   | { readonly src: string; readonly inline?: never };
 
 export function renderDocument(options: DocumentRenderOptions): string {
-  const strings = packageStrings(options.language);
-  const hasNavigation = options.navigation.length >= 2;
-  const hasReviewTargets = options.reviewManifest.targets.length > 0;
-  const documentIdentity = compactDocumentIdentity(options.title);
-  const usedIds = new Set(
-    [...options.contentHtml.matchAll(/\sid="([^"]+)"/gu)].map((match) => match[1] ?? ''),
-  );
-  const contentId = allocateShellId('report-content', usedIds);
-  const navigationId = allocateShellId('report-navigation', usedIds);
-  const navigationHostId = allocateShellId('report-navigation-host', usedIds);
-  const navigationDialogId = allocateShellId('report-navigation-dialog', usedIds);
-  const navigationDialogTitleId = allocateShellId('report-navigation-dialog-title', usedIds);
-  const reviewDialogId = allocateShellId('report-review-dialog', usedIds);
-  const reviewDialogTitleId = allocateShellId('report-review-dialog-title', usedIds);
-  const reviewPopoverId = allocateShellId('report-review-popover', usedIds);
-  const reviewTargetTitleId = allocateShellId('report-review-target-title', usedIds);
-  const reviewThreadTitleId = allocateShellId('report-review-thread-title', usedIds);
+  const variants = [options, ...(options.localizations ?? [])];
   const markup = renderToStaticMarkup(
     <html
       lang={options.language}
@@ -65,6 +54,7 @@ export function renderDocument(options: DocumentRenderOptions): string {
       data-radius={options.page.tokens.radius}
       data-scroll-progress={options.page.scrollProgress ? 'true' : undefined}
       data-package-locale={resolvePackageLocale(options.language)}
+      data-active-locale={options.locale}
     >
       <head>
         <meta charSet="utf-8" />
@@ -82,215 +72,22 @@ export function renderDocument(options: DocumentRenderOptions): string {
         )}
       </head>
       <body>
-        <a className="skip-link" href={`#${contentId}`}>
-          {strings.skipToContent}
-        </a>
-        <header className="topbar" data-nav-outside>
-          {hasNavigation ? (
-            <button
-              className="nav-toggle"
-              type="button"
-              aria-controls={navigationId}
-              aria-expanded="true"
-              aria-label={strings.hideContents}
-              data-nav-toggle
-            >
-              <PackageIcon name="three-bars" />
-              <span data-nav-toggle-label>{strings.hideContents}</span>
-            </button>
-          ) : null}
-          <div className="topbar-context">
-            <a
-              className="topbar-title"
-              href={`#${contentId}`}
-              aria-label={options.title}
-              title={options.title}
-            >
-              <span className="topbar-title-full">{options.title}</span>
-              <span className="topbar-title-short">{documentIdentity}</span>
-            </a>
-            {hasNavigation ? (
-              <span className="topbar-current">
-                <span className="topbar-current-prefix">{strings.current}</span>
-                <span data-topbar-current>{options.navigation[0]?.label}</span>
-              </span>
-            ) : null}
-          </div>
-          {hasReviewTargets ? (
-            <button
-              className="review-toggle"
-              type="button"
-              aria-controls={reviewDialogId}
-              aria-expanded="false"
-              data-review-toggle
-            >
-              <span data-review-toggle-label>{strings.review}</span>
-              <span className="review-toggle-count" data-review-toggle-count hidden />
-            </button>
-          ) : null}
-          <button
-            className="theme-toggle"
-            type="button"
-            aria-label={strings.toggleTheme}
-            data-theme-toggle
-          >
-            <PackageIcon name="sun" />
-            <span data-theme-toggle-label>{strings.theme}</span>
-          </button>
-        </header>
-        <div
-          className="report-shell"
-          data-has-navigation={hasNavigation ? 'true' : 'false'}
-          data-nav-outside
-        >
-          {hasNavigation ? (
-            <aside className="sidebar" id={navigationHostId} data-nav-desktop-host>
-              <nav id={navigationId} aria-label={strings.documentContents} data-navigation>
-                <p className="sidebar-label">{strings.onThisPage}</p>
-                <ol>
-                  {options.navigation.map((item, index) => (
-                    <li key={item.id} data-depth={item.depth}>
-                      <a href={`#${item.id}`} aria-current={index === 0 ? 'location' : undefined}>
-                        {item.label}
-                      </a>
-                    </li>
-                  ))}
-                </ol>
-              </nav>
-            </aside>
-          ) : null}
-          <main id={contentId} className="report-content">
-            {/* biome-ignore lint/security/noDangerouslySetInnerHtml: content passed through rehype-sanitize before this trust boundary. */}
-            <article dangerouslySetInnerHTML={{ __html: options.contentHtml }} />
-          </main>
+        <div data-localized-page-host>
+          <PageVariant
+            options={options}
+            variants={variants}
+            attribution={options.page.attribution}
+          />
         </div>
-        {options.page.attribution ? (
-          <footer className="report-attribution" data-report-attribution>
-            <a href="https://agentic-report.witqq.dev/">Made with Agentic Report</a>
-          </footer>
-        ) : null}
-        {hasNavigation ? (
-          <dialog
-            className="nav-dialog"
-            id={navigationDialogId}
-            aria-labelledby={navigationDialogTitleId}
-            data-nav-dialog
-          >
-            <div className="nav-dialog-panel">
-              <div className="nav-dialog-header">
-                <p id={navigationDialogTitleId}>{strings.contents}</p>
-                <button type="button" className="nav-dialog-close" data-nav-close>
-                  <PackageIcon name="x" />
-                  {strings.close}
-                </button>
-              </div>
-              <div data-nav-dialog-content />
-            </div>
-          </dialog>
-        ) : null}
-        {hasReviewTargets ? (
-          <dialog
-            className="review-dialog"
-            id={reviewDialogId}
-            aria-labelledby={reviewDialogTitleId}
-            data-review-dialog
-          >
-            <div className="review-panel">
-              <header className="review-panel-header">
-                <div>
-                  <p className="review-eyebrow">{strings.reviewWorkspace}</p>
-                  <h2 id={reviewDialogTitleId}>{strings.reviewThisReport}</h2>
-                </div>
-                <button type="button" className="review-close" data-review-close>
-                  {strings.close}
-                </button>
-              </header>
-              <div className="review-panel-body">
-                <p className="review-error" role="alert" data-review-error hidden />
-                <output className="review-summary" aria-live="polite" data-review-summary>
-                  {strings.noThreads}
-                </output>
-                <section className="review-form-section" data-review-current-section hidden>
-                  <h3>{strings.currentNotes}</h3>
-                  <ol className="review-response-list" data-review-current-list />
-                </section>
-                <section className="review-form-section" data-review-prior-section hidden>
-                  <h3>{strings.previousThreads}</h3>
-                  <ol className="review-response-list" data-review-prior-list />
-                </section>
-              </div>
-              <footer className="review-panel-footer">
-                <label className="review-file-action">
-                  {strings.importReview}
-                  <input type="file" accept="application/json,.json" data-review-import />
-                </label>
-                <button type="button" className="review-primary" data-review-export>
-                  {strings.exportReview}
-                </button>
-              </footer>
-            </div>
-          </dialog>
-        ) : null}
-        {hasReviewTargets ? (
-          <section
-            className="review-popover"
-            id={reviewPopoverId}
-            role="dialog"
-            aria-labelledby={reviewTargetTitleId}
-            data-review-popover
-            hidden
-          >
-            <header className="review-popover-header">
-              <div>
-                <h2 id={reviewTargetTitleId} data-review-editor-title>
-                  {strings.noteForSelection}
-                </h2>
-                <p className="review-target-label" data-review-target-label />
-              </div>
-              <button type="button" className="review-close" data-review-popover-close>
-                {strings.close}
-              </button>
-            </header>
-            <p className="review-error" role="alert" data-review-popover-error hidden />
-            <ol
-              className="review-response-list review-thread-messages"
-              aria-labelledby={reviewThreadTitleId}
-              data-review-thread-messages
+        {(options.localizations ?? []).map((variant) => (
+          <template key={variant.locale} data-localized-page={variant.locale}>
+            <PageVariant
+              options={variant}
+              variants={variants}
+              attribution={options.page.attribution}
             />
-            <p id={reviewThreadTitleId} data-review-thread-empty>
-              {strings.noMessages}
-            </p>
-            <label className="review-field">
-              <span>{strings.newMessage}</span>
-              <textarea rows={4} data-review-message />
-            </label>
-            <div className="review-inline-actions">
-              <button type="button" className="review-primary" data-review-add-message>
-                {strings.addMessage}
-              </button>
-              <button type="button" data-review-cancel-message-edit hidden>
-                {strings.cancelEdit}
-              </button>
-              <button type="button" data-review-resolve-thread hidden>
-                {strings.resolveThread}
-              </button>
-            </div>
-          </section>
-        ) : null}
-        {hasReviewTargets ? (
-          <button
-            type="button"
-            className="review-selection-action"
-            data-review-selection-action
-            hidden
-          >
-            {strings.createNote}
-          </button>
-        ) : null}
-        <template data-review-manifest>{JSON.stringify(options.reviewManifest)}</template>
-        {options.priorReview === undefined ? null : (
-          <template data-prior-review>{JSON.stringify(options.priorReview)}</template>
-        )}
+          </template>
+        ))}
         {options.runtime.inline === undefined ? null : (
           // biome-ignore lint/security/noDangerouslySetInnerHtml: JavaScript is the package-owned Vite build artifact.
           <script dangerouslySetInnerHTML={{ __html: options.runtime.inline }} />
@@ -300,6 +97,303 @@ export function renderDocument(options: DocumentRenderOptions): string {
     </html>,
   );
   return `<!doctype html>${markup}`;
+}
+
+function PageVariant({
+  options,
+  variants,
+  attribution,
+}: {
+  readonly options: DocumentPageVariantOptions;
+  readonly variants: readonly DocumentPageVariantOptions[];
+  readonly attribution: boolean;
+}) {
+  const strings = packageStrings(options.language);
+  const hasNavigation = options.navigation.length >= 2;
+  const hasReviewTargets = options.reviewManifest.targets.length > 0;
+  const documentIdentity = compactDocumentIdentity(options.title);
+  const usedIds = new Set(
+    [...options.contentHtml.matchAll(/\sid="([^"]+)"/gu)].map((match) => match[1] ?? ''),
+  );
+  const contentId = allocateShellId('report-content', usedIds);
+  const navigationId = allocateShellId('report-navigation', usedIds);
+  const navigationHostId = allocateShellId('report-navigation-host', usedIds);
+  const navigationDialogId = allocateShellId('report-navigation-dialog', usedIds);
+  const navigationDialogTitleId = allocateShellId('report-navigation-dialog-title', usedIds);
+  const reviewDialogId = allocateShellId('report-review-dialog', usedIds);
+  const reviewDialogTitleId = allocateShellId('report-review-dialog-title', usedIds);
+  const reviewPopoverId = allocateShellId('report-review-popover', usedIds);
+  const reviewTargetTitleId = allocateShellId('report-review-target-title', usedIds);
+  const reviewThreadTitleId = allocateShellId('report-review-thread-title', usedIds);
+  return (
+    <div
+      className="localized-page-variant"
+      data-localized-page-variant={options.locale}
+      data-page-language={options.language}
+      data-page-package-locale={resolvePackageLocale(options.language)}
+      data-page-title={options.title}
+      data-page-description={options.description ?? options.title}
+      data-page-multilingual={variants.length > 1 ? 'true' : 'false'}
+    >
+      <a className="skip-link" href={`#${contentId}`}>
+        {strings.skipToContent}
+      </a>
+      <header className="topbar" data-nav-outside>
+        {hasNavigation ? (
+          <button
+            className="nav-toggle"
+            type="button"
+            aria-controls={navigationId}
+            aria-expanded="true"
+            aria-label={strings.hideContents}
+            data-nav-toggle
+          >
+            <PackageIcon name="three-bars" />
+            <span data-nav-toggle-label>{strings.hideContents}</span>
+          </button>
+        ) : null}
+        <div className="topbar-context">
+          <a
+            className="topbar-title"
+            href={`#${contentId}`}
+            aria-label={options.title}
+            title={options.title}
+          >
+            <span className="topbar-title-full">{options.title}</span>
+            <span className="topbar-title-short">{documentIdentity}</span>
+          </a>
+          {hasNavigation ? (
+            <span className="topbar-current">
+              <span className="topbar-current-prefix">{strings.current}</span>
+              <span data-topbar-current>{options.navigation[0]?.label}</span>
+            </span>
+          ) : null}
+        </div>
+        {hasReviewTargets ? (
+          <button
+            className="review-toggle"
+            type="button"
+            aria-controls={reviewDialogId}
+            aria-expanded="false"
+            aria-label={strings.review}
+            data-review-toggle
+          >
+            <PackageIcon name="comment" />
+            <span data-review-toggle-label>{strings.review}</span>
+            <span className="review-toggle-count" data-review-toggle-count hidden />
+          </button>
+        ) : null}
+        {variants.length > 1 ? (
+          <label className="language-select">
+            <span className="visually-hidden">{strings.language}</span>
+            <select
+              aria-label={strings.language}
+              defaultValue={options.locale}
+              data-language-select
+            >
+              {variants.map((variant) => (
+                <option key={variant.locale} value={variant.locale}>
+                  {strings.languageName(variant.locale)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        <button
+          className="theme-toggle"
+          type="button"
+          aria-label={strings.toggleTheme}
+          data-theme-toggle
+        >
+          <PackageIcon name="sun" />
+          <span data-theme-toggle-label>{strings.theme}</span>
+        </button>
+      </header>
+      <div
+        className="report-shell"
+        data-has-navigation={hasNavigation ? 'true' : 'false'}
+        data-nav-outside
+      >
+        {hasNavigation ? (
+          <aside className="sidebar" id={navigationHostId} data-nav-desktop-host>
+            <nav id={navigationId} aria-label={strings.documentContents} data-navigation>
+              <p className="sidebar-label">{strings.onThisPage}</p>
+              <ol>
+                {options.navigation.map((item, index) => (
+                  <li key={item.id} data-depth={item.depth}>
+                    <a href={`#${item.id}`} aria-current={index === 0 ? 'location' : undefined}>
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          </aside>
+        ) : null}
+        <main id={contentId} className="report-content">
+          {/* biome-ignore lint/security/noDangerouslySetInnerHtml: content passed through rehype-sanitize before this trust boundary. */}
+          <article dangerouslySetInnerHTML={{ __html: options.contentHtml }} />
+        </main>
+      </div>
+      <VariantAttribution enabled={attribution} label={strings.reportAttribution} />
+      {hasNavigation ? (
+        <dialog
+          className="nav-dialog"
+          id={navigationDialogId}
+          aria-labelledby={navigationDialogTitleId}
+          data-nav-dialog
+        >
+          <div className="nav-dialog-panel">
+            <div className="nav-dialog-header">
+              <p id={navigationDialogTitleId}>{strings.contents}</p>
+              <button type="button" className="nav-dialog-close" data-nav-close>
+                <PackageIcon name="x" />
+                {strings.close}
+              </button>
+            </div>
+            <div data-nav-dialog-content />
+          </div>
+        </dialog>
+      ) : null}
+      {hasReviewTargets ? (
+        <ReviewMarkup
+          strings={strings}
+          ids={{
+            dialog: reviewDialogId,
+            dialogTitle: reviewDialogTitleId,
+            popover: reviewPopoverId,
+            targetTitle: reviewTargetTitleId,
+            threadTitle: reviewThreadTitleId,
+          }}
+        />
+      ) : null}
+      <template data-review-manifest>{JSON.stringify(options.reviewManifest)}</template>
+      {options.priorReview === undefined ? null : (
+        <template data-prior-review>{JSON.stringify(options.priorReview)}</template>
+      )}
+    </div>
+  );
+}
+
+function ReviewMarkup({
+  strings,
+  ids,
+}: {
+  readonly strings: PackageStrings;
+  readonly ids: {
+    readonly dialog: string;
+    readonly dialogTitle: string;
+    readonly popover: string;
+    readonly targetTitle: string;
+    readonly threadTitle: string;
+  };
+}) {
+  return (
+    <>
+      <dialog
+        className="review-dialog"
+        id={ids.dialog}
+        aria-labelledby={ids.dialogTitle}
+        data-review-dialog
+      >
+        <div className="review-panel">
+          <header className="review-panel-header">
+            <div>
+              <p className="review-eyebrow">{strings.reviewWorkspace}</p>
+              <h2 id={ids.dialogTitle}>{strings.reviewThisReport}</h2>
+            </div>
+            <button type="button" className="review-close" data-review-close>
+              {strings.close}
+            </button>
+          </header>
+          <div className="review-panel-body">
+            <p className="review-error" role="alert" data-review-error hidden />
+            <output className="review-summary" aria-live="polite" data-review-summary>
+              {strings.noThreads}
+            </output>
+            <section className="review-form-section" data-review-current-section hidden>
+              <h3>{strings.currentNotes}</h3>
+              <ol className="review-response-list" data-review-current-list />
+            </section>
+            <section className="review-form-section" data-review-prior-section hidden>
+              <h3>{strings.previousThreads}</h3>
+              <ol className="review-response-list" data-review-prior-list />
+            </section>
+          </div>
+          <footer className="review-panel-footer">
+            <label className="review-file-action">
+              {strings.importReview}
+              <input type="file" accept="application/json,.json" data-review-import />
+            </label>
+            <button type="button" className="review-primary" data-review-export>
+              {strings.exportReview}
+            </button>
+          </footer>
+        </div>
+      </dialog>
+      <section
+        className="review-popover"
+        id={ids.popover}
+        role="dialog"
+        aria-labelledby={ids.targetTitle}
+        data-review-popover
+        hidden
+      >
+        <header className="review-popover-header">
+          <div>
+            <h2 id={ids.targetTitle} data-review-editor-title>
+              {strings.noteForSelection}
+            </h2>
+            <p className="review-target-label" data-review-target-label />
+          </div>
+          <button type="button" className="review-close" data-review-popover-close>
+            {strings.close}
+          </button>
+        </header>
+        <p className="review-error" role="alert" data-review-popover-error hidden />
+        <ol
+          className="review-response-list review-thread-messages"
+          aria-labelledby={ids.threadTitle}
+          data-review-thread-messages
+        />
+        <p id={ids.threadTitle} data-review-thread-empty>
+          {strings.noMessages}
+        </p>
+        <label className="review-field">
+          <span>{strings.newMessage}</span>
+          <textarea rows={4} data-review-message />
+        </label>
+        <div className="review-inline-actions">
+          <button type="button" className="review-primary" data-review-add-message>
+            {strings.addMessage}
+          </button>
+          <button type="button" data-review-cancel-message-edit hidden>
+            {strings.cancelEdit}
+          </button>
+          <button type="button" data-review-resolve-thread hidden>
+            {strings.resolveThread}
+          </button>
+        </div>
+      </section>
+      <button type="button" className="review-selection-action" data-review-selection-action hidden>
+        {strings.createNote}
+      </button>
+    </>
+  );
+}
+
+function VariantAttribution({
+  enabled,
+  label,
+}: {
+  readonly enabled: boolean;
+  readonly label: string;
+}) {
+  return enabled ? (
+    <footer className="report-attribution" data-report-attribution>
+      <a href="https://agentic-report.witqq.dev/">{label}</a>
+    </footer>
+  ) : null;
 }
 
 function compactDocumentIdentity(title: string): string {

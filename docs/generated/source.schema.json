@@ -41,6 +41,25 @@
           "description": "Language tag using the supported 2-8 letter primary and optional 2-8 character alphanumeric subtags.",
           "default": "und"
         },
+        "localizations": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "en": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,}\\S))\\s*$",
+              "format": "relative-local-path",
+              "description": "Alternate English Markdown entry relative to the primary source root."
+            },
+            "ru": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,}\\S))\\s*$",
+              "format": "relative-local-path",
+              "description": "Alternate Russian Markdown entry relative to the primary source root."
+            }
+          },
+          "description": "Confined alternate Markdown entries for package-supported reader locales; the primary entry is the fallback."
+        },
         "preset": {
           "type": "string",
           "enum": ["studio", "editorial", "signal"],

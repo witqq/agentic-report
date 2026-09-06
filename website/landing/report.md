@@ -3,6 +3,8 @@ contractVersion: 1
 title: agentic-report — declarative interactive pages for agent handoffs
 description: Turn declarative Markdown into a finished interactive page an agent can hand to a human.
 language: en
+localizations:
+  ru: report.ru.md
 theme: system
 layout: landing
 preset: editorial
@@ -51,6 +53,8 @@ contractVersion: 1
 title: Regional beta launch readiness
 description: A fictional launch decision combining audience value, activation evidence, operational gates, and a reversible rollout.
 language: en
+localizations:
+  ru: report.ru.md
 theme: light
 layout: landing
 preset: studio
@@ -87,7 +91,7 @@ must revalidate, while content-hashed directory assets may be cached as immutabl
 npx --yes agentic-report build ./website/landing --output ./site/index.html --json
 ```
 
-[Read the landing source](source/landing/report.md) · [Inspect release identity](release.json)
+[Read the landing source](source/landing/report.md) · [Read the Russian landing source](source/landing/report.ru.md) · [Inspect release identity](release.json)
 :::::
 
 :::::section{title="Install once. Let the agent choose when a page helps." id="agent-skill" nav="Agent skill" width="wide" align="start" tone="accent" reveal="true"}
@@ -167,11 +171,20 @@ Select any eligible passage in the generated page and choose **Create note**. An
 the exact quote and keeps reply, edit, resolve, and reopen beside the text—there is no review mode or layout
 shift. Selections can cross inline markup or adjacent report targets. Saved open and resolved ranges remain
 highlighted; **View thread** reopens the conversation, while **Review** opens only an overlay list with prior
-evidence, import, and export. Export every thread together as deterministic version-3 `review.json`. Valid
-version-2 whole-block threads remain list-accessible, but new threads begin with selected text. The review
+evidence, import, and export. Localized pages export deterministic version-4 `review.json` with the active
+report language; single-language pages keep version 3. Valid version-2 whole-block threads remain
+list-accessible, but new threads begin with selected text. The review
 stays local; use the CLI review command to map its targets back to the current Markdown or partial ranges.
 One artifact supports at most 5,000 reviewable targets and a 750,000-byte target manifest; split an unusually
 large handoff when either bound is reached. [Try selection notes now](examples/review-workspace/index.html).
+:::
+
+:::callout{kind="info" title="Collect a structured decision when comments are not enough"}
+Response Workspace adds bounded bucket triage, item/global choices, priority order, scores, free text, and
+optional item comments. It keeps answers in the current locale and tab, validates imports before replacing
+state, and exports one deterministic `response.json` by clipboard or file. [Try the bilingual workspace](examples/response-workspace/index.html),
+[read its English source](examples/response-workspace/report.md), or
+[read its Russian source](examples/response-workspace/report.ru.md).
 :::
 
 :::callout{kind="warning" title="The runtime is part of the artifact"}

@@ -247,6 +247,112 @@ describe('loadSource', () => {
       diagnostic: { code: 'MANIFEST_OUTSIDE_SOURCE' },
     });
   });
+
+  it('loads confined catalog-backed localizations with shared primary page policy', async () => {
+    const workspace = await trackedWorkspace('localized-source');
+    await mkdir(path.join(workspace, 'partials'));
+    await writeFile(path.join(workspace, 'partials', 'ru.md'), 'Русская часть.\n');
+    await writeFile(
+      path.join(workspace, 'report.md'),
+      [
+        '---',
+        'title: English report',
+        'language: en-GB',
+        'preset: signal',
+        'localizations:',
+        '  ru: report.ru.md',
+        '---',
+        '# English report',
+        '',
+      ].join('\n'),
+    );
+    await writeFile(
+      path.join(workspace, 'report.ru.md'),
+      [
+        '---',
+        'title: Русский отчёт',
+        'language: ru-RU',
+        '---',
+        '# Русский отчёт',
+        '',
+        '{{include: partials/ru.md}}',
+        '',
+      ].join('\n'),
+    );
+
+    const source = await loadSource(workspace);
+
+    expect(source.locale).toBe('en');
+    expect(source.localizations).toHaveLength(1);
+    expect(source.localizations[0]).toMatchObject({
+      locale: 'ru',
+      markdown: expect.stringContaining('Русская часть.'),
+      manifest: { title: 'Русский отчёт', language: 'ru-RU', preset: 'signal' },
+    });
+    expect(source.sourceFiles).toEqual(
+      expect.arrayContaining([
+        path.join(workspace, 'report.md'),
+        path.join(workspace, 'report.ru.md'),
+        path.join(workspace, 'partials', 'ru.md'),
+      ]),
+    );
+  });
+
+  it('rejects invalid localization graphs before they can become selectable', async () => {
+    const unsupported = await trackedWorkspace('unsupported-localization-primary');
+    const repeated = await trackedWorkspace('repeated-localization');
+    const nested = await trackedWorkspace('nested-localization');
+    await writeFile(
+      path.join(unsupported, 'report.md'),
+      '---\nlanguage: de\nlocalizations:\n  ru: missing.md\n---\n# Deutsch\n',
+    );
+    await writeFile(
+      path.join(repeated, 'report.md'),
+      '---\nlanguage: en\nlocalizations:\n  en: report.en.md\n---\n# English\n',
+    );
+    await writeFile(
+      path.join(nested, 'report.md'),
+      '---\nlanguage: en\nlocalizations:\n  ru: report.ru.md\n---\n# English\n',
+    );
+    await writeFile(
+      path.join(nested, 'report.ru.md'),
+      '---\nlanguage: ru\nlocalizations:\n  en: report.en.md\n---\n# Русский\n',
+    );
+
+    await expect(loadSource(unsupported)).rejects.toMatchObject({
+      diagnostic: { code: 'INVALID_LOCALIZATION' },
+    });
+    await expect(loadSource(repeated)).rejects.toMatchObject({
+      diagnostic: { code: 'INVALID_LOCALIZATION' },
+    });
+    await expect(loadSource(nested)).rejects.toMatchObject({
+      diagnostic: { code: 'INVALID_LOCALIZATION' },
+    });
+  });
+
+  it('confines localized entries and rejects canonical aliases', async () => {
+    const escaped = await trackedWorkspace('escaped-localization');
+    const aliased = await trackedWorkspace('aliased-localization');
+    const outside = await trackedWorkspace('outside-localization');
+    await writeFile(path.join(outside, 'report.ru.md'), '---\nlanguage: ru\n---\n# Снаружи\n');
+    await writeFile(
+      path.join(escaped, 'report.md'),
+      '---\nlanguage: en\nlocalizations:\n  ru: report.ru.md\n---\n# English\n',
+    );
+    await symlink(path.join(outside, 'report.ru.md'), path.join(escaped, 'report.ru.md'));
+    await writeFile(
+      path.join(aliased, 'report.md'),
+      '---\nlanguage: en\nlocalizations:\n  ru: report.ru.md\n---\n# English\n',
+    );
+    await symlink(path.join(aliased, 'report.md'), path.join(aliased, 'report.ru.md'));
+
+    await expect(loadSource(escaped)).rejects.toMatchObject({
+      diagnostic: { code: 'LOCALIZATION_OUTSIDE_SOURCE' },
+    });
+    await expect(loadSource(aliased)).rejects.toMatchObject({
+      diagnostic: { code: 'INVALID_LOCALIZATION' },
+    });
+  });
 });
 
 async function trackedWorkspace(prefix: string): Promise<string> {

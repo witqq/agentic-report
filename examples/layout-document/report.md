@@ -2,6 +2,8 @@
 title: Architecture decision record
 description: A long-form document layout with durable navigation and evidence.
 language: en
+localizations:
+  ru: report.ru.md
 theme: system
 layout: document
 tokens:

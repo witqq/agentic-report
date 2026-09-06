@@ -50,7 +50,7 @@ When the user does not trust the published package, do not silently fall back to
 release tag, let the user inspect the repository, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.9.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.10.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -76,19 +76,26 @@ and use an isolated environment when the user's threat model calls for one.
 Use Node.js 24.18.0 or newer. The first `npx` command needs npm registry and network access; the generated
 page itself opens locally through `file://` with its included package-owned browser runtime.
 
-For a reproducible 0.9.0 run, create a new landing-page source and keep the package version pinned through
+For a reproducible 0.10.0 run, create a new landing-page source and keep the package version pinned through
 validation, inspection, and build:
 
 ```sh
-npx --yes agentic-report@0.9.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.9.0 validate ./my-page --json
-npx --yes agentic-report@0.9.0 inspect ./my-page --json
-npx --yes agentic-report@0.9.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.10.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.10.0 validate ./my-page --json
+npx --yes agentic-report@0.10.0 inspect ./my-page --json
+npx --yes agentic-report@0.10.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Edit only the declarative source: Markdown, YAML frontmatter or the
 optional YAML/JSON manifest, confined Markdown partials, and local assets. Authors do not need React,
 JSX, browser JavaScript, CSS, or a frontend project.
+
+The packaged starters already include maintained English and Russian entries. For another bilingual source,
+set the primary entry to `language: en` or `language: ru` and declare the other confined Markdown path with
+`localizations.en` or `localizations.ru`. Translate prose, partials, authored labels, and visible asset text
+explicitly; keep layout/output policy only in the primary. The generated artifact selects the first matching
+system language, falls back to the primary, and shows its native language selector only when both variants
+exist. Switching also isolates review threads and response drafts by locale.
 
 Generated reports include a bottom **Made with Agentic Report** link by default. Keep that default unless
 the user asks for an unbranded artifact; in that case set `attribution: false` in frontmatter or the
@@ -148,7 +155,9 @@ an unusually large handoff when either bound is reached.
 Use the separate `response`/`question` directives when the reader must return structured triage, choices,
 priority order, scores, text, or per-item comments. The generated page keeps answers in the current tab and
 offers both **Copy response** and **Download response.json**; a rejected import preserves existing answers.
-The installed example catalog includes the complete `response-workspace` source.
+The installed example catalog includes the complete bilingual `response-workspace` source. Its public
+[English entry](../../examples/response-workspace/report.md) and
+[Russian entry](../../examples/response-workspace/report.ru.md) use the same declarative contract.
 
 Write an ordinary colon directly—a digit-initial name and a colon written against the preceding word remain
 literal text in Markdown, so `21:01`, `1:30:05`, `3:1`, `1:10:100`, `localhost:9000`, `arXiv:2508.05775` and
@@ -163,9 +172,12 @@ Use `:::copyable` for prose handoffs. It remains ordinary wrapped Markdown and c
 do not use a `text` code fence just to get a Copy button.
 
 Review version 3 stores ordered user/agent messages, resolved state, and optional exact selected-text anchors
-in one local sidecar. Each anchor records its quote and bounded start/end target plus Unicode code-point
-offsets. Valid version-2 whole-block reviews remain accepted. The sidecar is not an account, signature, or
-hosted collaboration service. Decision/checklist directives remain document content.
+for a single-language page. A multilingual page exports version 4 with the active `report.locale`, and the
+CLI routes it to that localized Markdown graph before binding targets. Each anchor records its quote and
+bounded start/end target plus Unicode code-point offsets. Valid version-2 whole-block reviews remain
+accepted; legacy v2/v3 feedback uses an exact matching locale revision when available and otherwise the
+primary variant. The sidecar is not an account, signature, or hosted collaboration service.
+Decision/checklist directives remain document content.
 
 For a repeat review, pass the prior local artifact with `build --review review.json`. Never copy a prior page
 thread into changed content; inspect bindings, continue the current discussion, and export the next revision.
@@ -191,9 +203,9 @@ registry's current `latest` release.
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.9.0 describe --json
-npx --yes agentic-report@0.9.0 schema --scope source
-npx --yes agentic-report@0.9.0 examples --json
+npx --yes agentic-report@0.10.0 describe --json
+npx --yes agentic-report@0.10.0 schema --scope source
+npx --yes agentic-report@0.10.0 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),

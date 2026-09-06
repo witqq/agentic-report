@@ -1,13 +1,18 @@
 import './document.css';
 
 import { COPY_ICON_PATH } from '../iconography.js';
-import { packageStrings } from '../localization.js';
+import { packageStrings, type PackageLocale } from '../localization.js';
 import { PAGE_MOTION_POLICY } from '../page-motion.js';
-import { installResponseWorkspaces } from './response-workspace.js';
-import { installReviewWorkspace } from './review-workspace.js';
+import type { ReviewArtifact } from '../review/contract.js';
+import {
+  installResponseWorkspaces,
+  type ResponseWorkspacesController,
+} from './response-workspace.js';
+import { installReviewWorkspace, type ReviewWorkspaceController } from './review-workspace.js';
 
 const root = document.documentElement;
-const strings = packageStrings(root.dataset.packageLocale);
+const localizedPage = createLocalizedPageController();
+let strings = packageStrings(root.dataset.packageLocale);
 root.style.setProperty(
   '--motion-reveal-duration',
   `${PAGE_MOTION_POLICY.sectionReveal.durationMs}ms`,
@@ -23,13 +28,16 @@ const glossaryPortals = new Map<
 >();
 const glossaryPortalOwners = new WeakMap<HTMLElement, HTMLElement>();
 const pendingPopoverCloses = new Map<HTMLElement, number>();
-const navigationController = createNavigationController();
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-const motionController = createMotionController(reducedMotion);
-installResponseWorkspaces();
-installReviewWorkspace();
+let navigationController: NavigationController | undefined;
+let motionController: MotionController | undefined;
+let responseController: ResponseWorkspacesController | undefined;
+let reviewController: ReviewWorkspaceController | undefined;
+const responseControllers = new Map<PackageLocale, ResponseWorkspacesController>();
+const reviewStates = new Map<PackageLocale, ReviewArtifact>();
+activateCurrentPage();
 
-reducedMotion.addEventListener('change', () => motionController.sync());
+reducedMotion.addEventListener('change', () => motionController?.sync());
 
 document.addEventListener('click', (event) => {
   const target = event.target;
@@ -135,6 +143,15 @@ document.addEventListener('click', (event) => {
   if (copy !== null) void copyContent(copy);
 });
 
+document.addEventListener('change', (event) => {
+  const select =
+    event.target instanceof HTMLSelectElement && event.target.matches('[data-language-select]')
+      ? event.target
+      : undefined;
+  if (select === undefined || (select.value !== 'en' && select.value !== 'ru')) return;
+  switchPageLocale(select.value);
+});
+
 document.addEventListener('keydown', (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
@@ -219,16 +236,119 @@ document.addEventListener(
   true,
 );
 
-for (const input of document.querySelectorAll<HTMLInputElement>('[data-filter-input]')) {
-  applyFilter(input);
+interface LocalizedPageController {
+  readonly locale: () => PackageLocale;
+  readonly page: () => HTMLElement;
+  readonly activate: (locale: PackageLocale) => HTMLElement;
 }
 
-for (const block of document.querySelectorAll<HTMLElement>('pre')) {
-  block.append(createCopyButton('code'));
+function createLocalizedPageController(): LocalizedPageController {
+  const host = document.querySelector<HTMLElement>('[data-localized-page-host]');
+  const initial = host?.querySelector<HTMLElement>('[data-localized-page-variant]');
+  if (host === null || initial === undefined || initial === null)
+    throw new Error('Localized page host is incomplete.');
+  const templates = new Map<PackageLocale, HTMLTemplateElement>();
+  for (const template of document.querySelectorAll<HTMLTemplateElement>(
+    'template[data-localized-page]',
+  )) {
+    const locale = template.dataset.localizedPage;
+    if (locale === 'en' || locale === 'ru') templates.set(locale, template);
+  }
+  const primary = pageLocale(initial);
+  const available = new Set<PackageLocale>([primary, ...templates.keys()]);
+  const saved = new Map<PackageLocale, DocumentFragment>();
+  let currentLocale = primary;
+  let currentPage = initial;
+
+  const updateDocument = (): void => {
+    root.lang = currentPage.dataset.pageLanguage ?? currentLocale;
+    root.dataset.packageLocale = currentPage.dataset.pagePackageLocale ?? currentLocale;
+    root.dataset.activeLocale = currentLocale;
+    document.title = currentPage.dataset.pageTitle ?? document.title;
+    const description = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    if (description !== null)
+      description.content = currentPage.dataset.pageDescription ?? document.title;
+  };
+
+  const activate = (locale: PackageLocale): HTMLElement => {
+    if (!available.has(locale) || locale === currentLocale) {
+      updateDocument();
+      return currentPage;
+    }
+    const previous = document.createDocumentFragment();
+    previous.append(...host.childNodes);
+    saved.set(currentLocale, previous);
+    const next = saved.get(locale) ?? templates.get(locale)?.content.cloneNode(true);
+    if (!(next instanceof DocumentFragment)) throw new Error(`Missing page locale: ${locale}.`);
+    saved.delete(locale);
+    host.replaceChildren(next);
+    const page = host.querySelector<HTMLElement>('[data-localized-page-variant]');
+    if (page === null || pageLocale(page) !== locale)
+      throw new Error(`Localized page ${locale} is incomplete.`);
+    currentLocale = locale;
+    currentPage = page;
+    const languageSelect = currentPage.querySelector<HTMLSelectElement>('[data-language-select]');
+    if (languageSelect !== null) languageSelect.value = locale;
+    updateDocument();
+    return page;
+  };
+
+  const preferred = preferredPageLocale(available, primary);
+  if (preferred !== primary) activate(preferred);
+  else updateDocument();
+  return { locale: () => currentLocale, page: () => currentPage, activate };
 }
 
-for (const block of document.querySelectorAll<HTMLElement>('[data-copyable-prose]')) {
-  block.append(createCopyButton('prose'));
+function preferredPageLocale(
+  available: ReadonlySet<PackageLocale>,
+  fallback: PackageLocale,
+): PackageLocale {
+  const preferences = navigator.languages.length > 0 ? navigator.languages : [navigator.language];
+  for (const preference of preferences) {
+    const primary = preference.trim().toLowerCase().split('-')[0];
+    if ((primary === 'en' || primary === 'ru') && available.has(primary)) return primary;
+  }
+  return fallback;
+}
+
+function pageLocale(page: HTMLElement): PackageLocale {
+  return page.dataset.localizedPageVariant === 'ru' ? 'ru' : 'en';
+}
+
+function switchPageLocale(locale: PackageLocale): void {
+  if (locale === localizedPage.locale()) return;
+  const currentLocale = localizedPage.locale();
+  if (reviewController !== undefined) reviewStates.set(currentLocale, reviewController.snapshot());
+  reviewController?.destroy();
+  navigationController?.destroy();
+  motionController?.destroy();
+  for (const popover of document.querySelectorAll<HTMLElement>('[data-popover]'))
+    closePopover(popover, false);
+  localizedPage.activate(locale);
+  strings = packageStrings(root.dataset.packageLocale);
+  activateCurrentPage();
+  localizedPage.page().querySelector<HTMLSelectElement>('[data-language-select]')?.focus();
+}
+
+function activateCurrentPage(): void {
+  const page = localizedPage.page();
+  strings = packageStrings(page.dataset.pagePackageLocale);
+  navigationController = createNavigationController();
+  motionController = createMotionController(reducedMotion);
+  responseController = responseControllers.get(localizedPage.locale());
+  if (responseController === undefined) {
+    responseController = installResponseWorkspaces(page);
+    responseControllers.set(localizedPage.locale(), responseController);
+  }
+  reviewController = installReviewWorkspace(page, reviewStates.get(localizedPage.locale()));
+  for (const input of page.querySelectorAll<HTMLInputElement>('[data-filter-input]'))
+    applyFilter(input);
+  for (const block of page.querySelectorAll<HTMLElement>('pre'))
+    if (block.querySelector(':scope > [data-copy-code]') === null)
+      block.append(createCopyButton('code'));
+  for (const block of page.querySelectorAll<HTMLElement>('[data-copyable-prose]'))
+    if (block.querySelector(':scope > [data-copy-prose]') === null)
+      block.append(createCopyButton('prose'));
 }
 
 function createCopyButton(kind: 'code' | 'prose'): HTMLButtonElement {
@@ -264,6 +384,7 @@ interface NavigationController {
   readonly toggle: () => void;
   readonly closeMobile: (restoreFocus: boolean) => void;
   readonly activate: (link: HTMLAnchorElement) => void;
+  readonly destroy: () => void;
 }
 
 interface NavigationOwner {
@@ -273,6 +394,7 @@ interface NavigationOwner {
 }
 
 function createNavigationController(): NavigationController | undefined {
+  const abort = new AbortController();
   const navigation = document.querySelector<HTMLElement>('[data-navigation]');
   const desktopHost = document.querySelector<HTMLElement>('[data-nav-desktop-host]');
   const dialog = document.querySelector<HTMLDialogElement>('[data-nav-dialog]');
@@ -435,24 +557,28 @@ function createNavigationController(): NavigationController | undefined {
     close.focus();
   };
 
-  dialog.addEventListener('keydown', (event) => {
-    if (event.key !== 'Tab' || !dialog.open) return;
-    const focusable = [
-      ...dialog.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
-      ),
-    ];
-    const first = focusable[0];
-    const last = focusable.at(-1);
-    if (first === undefined || last === undefined) return;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  });
+  dialog.addEventListener(
+    'keydown',
+    (event) => {
+      if (event.key !== 'Tab' || !dialog.open) return;
+      const focusable = [
+        ...dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+        ),
+      ];
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (first === undefined || last === undefined) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    },
+    { signal: abort.signal },
+  );
 
   const rebuildCurrentObserver = (): void => {
     currentObserver?.disconnect();
@@ -474,30 +600,42 @@ function createNavigationController(): NavigationController | undefined {
     if (!currentObserverSuspended) selectFromGeometry();
   };
 
-  dialog.addEventListener('close', () => {
-    setOutsideInert(false);
-    if (desktop.matches) {
-      updateDesktopState();
-    } else {
-      toggle.setAttribute('aria-expanded', 'false');
-      toggle.setAttribute('aria-label', strings.openContents);
-    }
-    const target = focusAfterClose ?? toggle;
-    focusAfterClose = undefined;
-    target.focus({ preventScroll: true });
-  });
-  desktop.addEventListener('change', applyViewport);
-  window.addEventListener('hashchange', selectFromHash);
-  window.addEventListener('resize', () => {
-    cancelFallbackScrollSelection();
-    currentObserverSuspended = false;
-    rebuildCurrentObserver();
-  });
-  if (supportsScrollEnd) {
-    window.addEventListener('scrollend', () => {
+  dialog.addEventListener(
+    'close',
+    () => {
+      setOutsideInert(false);
+      if (desktop.matches) {
+        updateDesktopState();
+      } else {
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.setAttribute('aria-label', strings.openContents);
+      }
+      const target = focusAfterClose ?? toggle;
+      focusAfterClose = undefined;
+      target.focus({ preventScroll: true });
+    },
+    { signal: abort.signal },
+  );
+  desktop.addEventListener('change', applyViewport, { signal: abort.signal });
+  window.addEventListener('hashchange', selectFromHash, { signal: abort.signal });
+  window.addEventListener(
+    'resize',
+    () => {
+      cancelFallbackScrollSelection();
       currentObserverSuspended = false;
-      selectFromGeometry();
-    });
+      rebuildCurrentObserver();
+    },
+    { signal: abort.signal },
+  );
+  if (supportsScrollEnd) {
+    window.addEventListener(
+      'scrollend',
+      () => {
+        currentObserverSuspended = false;
+        selectFromGeometry();
+      },
+      { signal: abort.signal },
+    );
   }
   window.addEventListener(
     'scroll',
@@ -514,7 +652,7 @@ function createNavigationController(): NavigationController | undefined {
         setCurrent(owners.at(-1) ?? unreachableNavigationOwner());
       }
     },
-    { passive: true },
+    { passive: true, signal: abort.signal },
   );
 
   applyViewport();
@@ -548,6 +686,13 @@ function createNavigationController(): NavigationController | undefined {
         closeMobile(false);
       }
     },
+    destroy: () => {
+      abort.abort();
+      currentObserver?.disconnect();
+      cancelFallbackScrollSelection();
+      bottomSentinel.remove();
+      root.removeAttribute('data-nav-collapsed');
+    },
   };
 }
 
@@ -566,6 +711,7 @@ function unreachableNavigationOwner(): never {
 
 interface MotionController {
   readonly sync: () => void;
+  readonly destroy: () => void;
 }
 
 function createMotionController(media: MediaQueryList): MotionController {
@@ -601,7 +747,13 @@ function createMotionController(media: MediaQueryList): MotionController {
   };
 
   sync();
-  return { sync };
+  return {
+    sync,
+    destroy: () => {
+      cleanupProgress?.();
+      cleanupReveal?.();
+    },
+  };
 }
 
 function installScrollProgress(): (() => void) | undefined {

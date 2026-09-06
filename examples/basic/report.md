@@ -3,6 +3,8 @@ contractVersion: 1
 title: Release decision report
 description: A decision-ready report that turns evidence into an accountable delivery path.
 language: en
+localizations:
+  ru: report.ru.md
 theme: system
 layout: document
 tokens:

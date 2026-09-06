@@ -1,6 +1,8 @@
 import { isNormalizedPackageRelativePosixPath } from '../authoring/local-reference.js';
+import type { PageLocaleChoice } from '../authoring/registry.js';
 
 export const REVIEW_CONTRACT_VERSION = 3 as const;
+export const MULTILINGUAL_REVIEW_CONTRACT_VERSION = 4 as const;
 export const LEGACY_REVIEW_CONTRACT_VERSION = 2 as const;
 export const REVIEW_TARGET_MANIFEST_VERSION = 2 as const;
 export const MAX_REVIEW_THREADS = 500;
@@ -73,11 +75,17 @@ export interface ReviewSelectionAnchor {
   readonly end: ReviewSelectionBoundary;
   readonly quote: string;
 }
-export interface ReviewArtifact {
+export interface SingleLanguageReviewArtifact {
   readonly contractVersion: typeof REVIEW_CONTRACT_VERSION;
   readonly report: { readonly revision: string };
   readonly threads: readonly ReviewThread[];
 }
+export interface MultilingualReviewArtifact {
+  readonly contractVersion: typeof MULTILINGUAL_REVIEW_CONTRACT_VERSION;
+  readonly report: { readonly revision: string; readonly locale: PageLocaleChoice };
+  readonly threads: readonly ReviewThread[];
+}
+export type ReviewArtifact = SingleLanguageReviewArtifact | MultilingualReviewArtifact;
 export interface ReviewContractIssue {
   readonly path: string;
   readonly message: string;
@@ -123,8 +131,18 @@ export function parseReviewArtifact(input: unknown): ReviewArtifact {
   const issues: ReviewContractIssue[] = [];
   exact(record, ['contractVersion', 'report', 'threads'], '$', issues);
   const report = object(record.report, '$.report', issues);
-  if (report) exact(report, ['revision'], '$.report', issues);
+  if (report)
+    exact(
+      report,
+      version === MULTILINGUAL_REVIEW_CONTRACT_VERSION ? ['revision', 'locale'] : ['revision'],
+      '$.report',
+      issues,
+    );
   const revision = fingerprint(report?.revision, '$.report.revision', issues);
+  const locale =
+    version === MULTILINGUAL_REVIEW_CONTRACT_VERSION
+      ? pageLocale(report?.locale, '$.report.locale', issues)
+      : undefined;
   const threads: ReviewThread[] = [];
   if (!Array.isArray(record.threads)) add(issues, '$.threads', 'must be an array');
   else if (record.threads.length > MAX_REVIEW_THREADS)
@@ -166,7 +184,13 @@ export function parseReviewArtifact(input: unknown): ReviewArtifact {
   )
     add(issues, '$.threads', `must contain at most ${MAX_REVIEW_MESSAGES} messages in total`);
   if (!revision || issues.length) throw new ReviewContractError(issues);
-  return { contractVersion: REVIEW_CONTRACT_VERSION, report: { revision }, threads };
+  return version === MULTILINGUAL_REVIEW_CONTRACT_VERSION && locale !== undefined
+    ? {
+        contractVersion: MULTILINGUAL_REVIEW_CONTRACT_VERSION,
+        report: { revision, locale },
+        threads,
+      }
+    : { contractVersion: REVIEW_CONTRACT_VERSION, report: { revision }, threads };
 }
 
 export function parseReviewTargetManifest(
@@ -209,18 +233,22 @@ export function serializeReviewArtifact(input: ReviewArtifact): string {
 
 function artifactVersioned(input: unknown): {
   readonly record: Readonly<Record<string, unknown>>;
-  readonly version: typeof REVIEW_CONTRACT_VERSION | typeof LEGACY_REVIEW_CONTRACT_VERSION;
+  readonly version:
+    | typeof MULTILINGUAL_REVIEW_CONTRACT_VERSION
+    | typeof REVIEW_CONTRACT_VERSION
+    | typeof LEGACY_REVIEW_CONTRACT_VERSION;
 } {
   if (!plain(input)) throw new ReviewContractError([{ path: '$', message: 'must be an object' }]);
   if (
     input.contractVersion !== REVIEW_CONTRACT_VERSION &&
+    input.contractVersion !== MULTILINGUAL_REVIEW_CONTRACT_VERSION &&
     input.contractVersion !== LEGACY_REVIEW_CONTRACT_VERSION
   )
     throw new ReviewContractError(
       [
         {
           path: '$.contractVersion',
-          message: `must equal ${REVIEW_CONTRACT_VERSION} or legacy ${LEGACY_REVIEW_CONTRACT_VERSION}; version 1 formal reviews are not supported`,
+          message: `must equal multilingual ${MULTILINGUAL_REVIEW_CONTRACT_VERSION}, single-language ${REVIEW_CONTRACT_VERSION}, or legacy ${LEGACY_REVIEW_CONTRACT_VERSION}; version 1 formal reviews are not supported`,
         },
       ],
       true,
@@ -248,7 +276,10 @@ function thread(
   input: unknown,
   path: string,
   issues: ReviewContractIssue[],
-  version: typeof REVIEW_CONTRACT_VERSION | typeof LEGACY_REVIEW_CONTRACT_VERSION,
+  version:
+    | typeof MULTILINGUAL_REVIEW_CONTRACT_VERSION
+    | typeof REVIEW_CONTRACT_VERSION
+    | typeof LEGACY_REVIEW_CONTRACT_VERSION,
 ): ReviewThread | undefined {
   const record = object(input, path, issues);
   if (!record) return;
@@ -289,13 +320,16 @@ function segment(
   input: unknown,
   path: string,
   issues: ReviewContractIssue[],
-  version: typeof REVIEW_CONTRACT_VERSION | typeof LEGACY_REVIEW_CONTRACT_VERSION,
+  version:
+    | typeof MULTILINGUAL_REVIEW_CONTRACT_VERSION
+    | typeof REVIEW_CONTRACT_VERSION
+    | typeof LEGACY_REVIEW_CONTRACT_VERSION,
 ): ReviewThreadSegment | undefined {
   const record = object(input, path, issues);
   if (!record) return;
   exact(
     record,
-    version === REVIEW_CONTRACT_VERSION
+    version !== LEGACY_REVIEW_CONTRACT_VERSION
       ? ['id', 'reportRevision', 'target', 'selection', 'resolved', 'messages']
       : ['id', 'reportRevision', 'target', 'resolved', 'messages'],
     path,
@@ -305,7 +339,7 @@ function segment(
   const reportRevision = fingerprint(record.reportRevision, `${path}.reportRevision`, issues);
   const owner = target(record.target, `${path}.target`, issues);
   const selection =
-    version === REVIEW_CONTRACT_VERSION && record.selection !== undefined
+    version !== LEGACY_REVIEW_CONTRACT_VERSION && record.selection !== undefined
       ? selectionAnchor(record.selection, `${path}.selection`, issues)
       : undefined;
   if (
@@ -503,6 +537,17 @@ function identifier(
 function token(value: unknown, path: string, issues: ReviewContractIssue[]): string | undefined {
   if (typeof value !== 'string' || value.length > 80 || !/^[a-z][a-z0-9:-]*$/u.test(value)) {
     add(issues, path, 'must be a bounded lowercase token');
+    return;
+  }
+  return value;
+}
+function pageLocale(
+  value: unknown,
+  path: string,
+  issues: ReviewContractIssue[],
+): PageLocaleChoice | undefined {
+  if (value !== 'en' && value !== 'ru') {
+    add(issues, path, 'must be a supported normalized page locale');
     return;
   }
   return value;

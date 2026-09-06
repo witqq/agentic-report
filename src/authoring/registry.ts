@@ -111,6 +111,9 @@ export const PAGE_CONTRACT = {
   tokens: PAGE_TOKEN_FIELDS,
 } as const;
 
+export const PAGE_LOCALES = ['en', 'ru'] as const;
+export type PageLocaleChoice = (typeof PAGE_LOCALES)[number];
+
 export type LayoutChoice = (typeof PAGE_CONTRACT.layouts)[number];
 export type ThemeChoice = (typeof PAGE_CONTRACT.themes)[number];
 export type PresetChoice = (typeof PAGE_PRESET_NAMES)[number];
@@ -452,6 +455,36 @@ export const authoringRegistry = {
         minLength: 2,
         pattern: '^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{2,8})*$',
       },
+    },
+    {
+      name: 'localizations',
+      description:
+        'Confined alternate Markdown entries for package-supported reader locales; the primary entry is the fallback.',
+      required: false,
+      fields: [
+        {
+          name: 'en',
+          description: 'Alternate English Markdown entry relative to the primary source root.',
+          required: false,
+          constraint: {
+            kind: 'string',
+            normalization: 'trim',
+            minLength: 1,
+            format: 'relative-local-path',
+          },
+        },
+        {
+          name: 'ru',
+          description: 'Alternate Russian Markdown entry relative to the primary source root.',
+          required: false,
+          constraint: {
+            kind: 'string',
+            normalization: 'trim',
+            minLength: 1,
+            format: 'relative-local-path',
+          },
+        },
+      ],
     },
     {
       name: 'preset',

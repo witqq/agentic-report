@@ -277,6 +277,15 @@
   box-sizing: border-box;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 4.6875rem;
@@ -290,6 +299,11 @@ body {
   color: var(--color-text);
   font-family: var(--agentic-font, var(--font-body));
   line-height: var(--body-leading);
+}
+
+[data-localized-page-host],
+.localized-page-variant {
+  display: contents;
 }
 
 :root[data-preset='signal'] body {
@@ -360,6 +374,7 @@ a {
 .nav-toggle,
 .review-toggle,
 .theme-toggle,
+.language-select select,
 .copy-code,
 .copy-prose,
 .semantic-demo button,
@@ -389,7 +404,15 @@ a {
 }
 
 :root[data-preset='editorial']
-  :is(.nav-toggle, .theme-toggle, .copy-code, .copy-prose, .nav-dialog-close, .semantic-action) {
+  :is(
+    .nav-toggle,
+    .review-toggle,
+    .theme-toggle,
+    .copy-code,
+    .copy-prose,
+    .nav-dialog-close,
+    .semantic-action
+  ) {
   gap: var(--control-icon-gap);
 }
 
@@ -398,7 +421,7 @@ a {
 }
 
 :root[data-preset='editorial']
-  :is(.nav-toggle, .theme-toggle, .copy-code, .copy-prose, .nav-dialog-close) {
+  :is(.nav-toggle, .review-toggle, .theme-toggle, .copy-code, .copy-prose, .nav-dialog-close) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -407,6 +430,7 @@ a {
 .nav-toggle:hover,
 .review-toggle:hover,
 .theme-toggle:hover,
+.language-select select:hover,
 .copy-code:hover,
 .copy-prose:hover,
 .semantic-demo button:hover,
@@ -418,6 +442,15 @@ a {
 .response-file-action:hover {
   border-color: var(--color-accent);
   background: var(--color-accent-soft);
+}
+
+.language-select {
+  display: inline-flex;
+  min-width: 0;
+}
+
+.language-select select {
+  max-width: 8.5rem;
 }
 
 .report-shell {
@@ -596,9 +629,12 @@ a {
   font: inherit;
   font-size: 0.68rem;
   cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
+  opacity: 0.84;
   transform: translate(-50%, -50%);
+}
+
+.review-highlight-marker:hover {
+  opacity: 1;
 }
 
 .review-highlight-marker[data-review-thread-state='resolved'] {
@@ -2697,6 +2733,26 @@ span.semantic-source-link[data-source-link-neutralized] {
       opacity: 0;
       transform: translateY(12px);
     }
+  }
+}
+
+@media (max-width: 26rem) {
+  :root[data-preset='editorial'] .topbar {
+    gap: 0.3rem;
+    padding-inline: 0.5rem;
+  }
+
+  :root[data-preset='editorial'] :is([data-nav-toggle-label], [data-review-toggle-label]) {
+    display: none;
+  }
+
+  :root[data-preset='editorial'] :is(.nav-toggle, .review-toggle) {
+    min-width: 2.5rem;
+    padding-inline: 0.65rem;
+  }
+
+  :root[data-preset='editorial'] .language-select select {
+    max-width: 5.25rem;
   }
 }
 

@@ -54,11 +54,14 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   both output formats and their derived runtime placement, truthful discovery/schema defaults,
   declared Node.js floor comparison and below-floor diagnostic behavior,
   manifest/frontmatter provenance, entry/partial diagnostic source maps, source/output collision protection,
-  closed en/ru reader-locale resolution, unsupported/`und` English fallback, Russian count forms,
-  localized review binding/target fallbacks, and explicit-locale visualization number formatting,
-  deterministic version-2 review-target manifests and local-input revisions, strict canonical version-3
-  review JSON with version-2 whole-block normalization, selected-text anchor structure, subject uniqueness,
-  and two-endpoint binding,
+  closed multilingual en/ru declarations, alternate-entry policy and locale matching, lexical/canonical
+  confinement, aliases, recursion, graph/resource collisions, complete source inventory, unsupported
+  single-language/`und` English fallback, Russian count forms, locale-scoped equal-name fonts, deterministic
+  merged resources, localized review binding/target fallbacks, and explicit-locale visualization number
+  formatting, deterministic version-2 review-target manifests and per-locale local-input revisions, strict
+  canonical single-language version-3 and multilingual version-4 review JSON with version-2 whole-block
+  normalization, locale-first/legacy-revision routing, fully missing localized targets, foreign-locale
+  refusal, selected-text anchor structure, subject uniqueness, and two-endpoint binding,
   strict response form/artifact parsing, kind-specific answer domains, untouched/default distinction,
   canonical response JSON and foreign/stale/prototype-like rejection,
   exact unescaped colon prose and frontmatter titles—clock, range and duration notation, ratios, host/port
@@ -131,7 +134,11 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   containment, and produce inspected captures. Dedicated semantic-tabs coverage builds every current
   tab-bearing starter, example, and fixture for desktop and mobile `file://` artifacts; it asserts readable
   non-shrinking single-line labels, list-owned overflow where needed, document containment, and pointer and
-  keyboard selection and focus. Dedicated Review Workspace coverage builds both formats and distinguishes
+  keyboard selection and focus. Dedicated localization coverage builds both formats and verifies ordered
+  `navigator.languages` selection, unsupported preference fallback, conditional selector absence, complete
+  metadata/content/navigation/chrome replacement, focus return, locale-local review/response/component
+  state, version-4 active-locale export, localized visualization text and number formatting, and
+  desktop/mobile containment. Dedicated Review Workspace coverage builds both formats and distinguishes
   always-on annotation from the retired mode/block-control and layout-shifting designs. It exercises
   desktop/mobile list-overlay semantics, unchanged report geometry, ordered user/agent messages, reply/edit,
   resolved/reopened highlights, version-1 rejection, list-only version-2 whole-block import, strict
@@ -161,7 +168,7 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   engine, installed CLI version and supported-runtime behavior, CLI shebang, file count, absence of private/temporary paths,
   and common secret/token patterns. It
   computes and prints the candidate SHA-256, then installs the
-  tarball into a clean temporary npm consumer, invokes discovery, and builds complete offline artifacts through the
+  tarball into a clean temporary npm consumer, invokes discovery, and builds complete multilingual offline artifacts through the
   installed binary in both formats plus directory output through the ESM API. It also builds every packaged
   page-layout example and all six starters in both formats and verifies the selected layout. Two installed
   first-use journeys perform init, edit, validate, inspect, and build for single-file and directory output.

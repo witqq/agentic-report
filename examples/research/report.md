@@ -3,6 +3,8 @@ contractVersion: 1
 title: Assisted authoring research synthesis
 description: A research brief that connects method, evidence, comparison, and recommendation.
 language: en
+localizations:
+  ru: report.ru.md
 theme: system
 layout: mixed
 tokens:

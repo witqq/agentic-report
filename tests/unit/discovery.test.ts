@@ -393,6 +393,7 @@ describe('agent discovery contract', () => {
     const expectedExports = [
       'AgenticReportError',
       'EXTENSION_PROPOSAL_CONTRACT_VERSION',
+      'MULTILINGUAL_REVIEW_CONTRACT_VERSION',
       'REVIEW_CONTRACT_VERSION',
       'REVIEW_TARGET_MANIFEST_VERSION',
       'buildReport',
@@ -438,6 +439,7 @@ describe('agent discovery contract', () => {
         'InspectReportResult',
         'InspectReviewOptions',
         'InspectReviewResult',
+        'MultilingualReviewArtifact',
         'OutputFormat',
         'ReportManifest',
         'ReportManifestInput',
@@ -451,6 +453,7 @@ describe('agent discovery contract', () => {
         'ReviewThread',
         'ReviewThreadSegment',
         'SchemaScope',
+        'SingleLanguageReviewArtifact',
         'SourceContract',
         'ValidateReportOptions',
         'ValidateReportResult',

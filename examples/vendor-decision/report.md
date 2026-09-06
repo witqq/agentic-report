@@ -3,6 +3,8 @@ contractVersion: 1
 title: AI support vendor decision packet
 description: A fictional security and procurement decision comparing hard gates, weighted evidence, and conditional adoption.
 language: en
+localizations:
+  ru: report.ru.md
 theme: light
 layout: document
 preset: editorial

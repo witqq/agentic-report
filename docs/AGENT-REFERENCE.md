@@ -108,7 +108,8 @@ and fully reads the packaged tree before exclusively creating the destination; o
 no-overwrite creation. It never overwrites, merges, deletes, or rolls back destination content. A later
 failure may leave the newly created destination incomplete; inspect it and remove it explicitly before
 retrying. The result contains starter, project and entry identity plus a sorted package-relative file
-inventory; it does not contain source file contents.
+inventory, including each starter's maintained Russian alternate and localized partial/assets; it does not
+contain source file contents.
 
 Every command answers an agent without a flag, accepts `--json` as the name of that default, and offers
 `--human` for a person. The agent shape follows what the command returns: `init`, `build`, `validate`,
@@ -205,12 +206,15 @@ import { inspectReview, parseReviewArtifact, serializeReviewArtifact } from 'age
 const result = await inspectReview({ input: './my-report', review: 'review.json' });
 ```
 
-`parseReviewArtifact()` enforces the closed version-3 thread schema and losslessly normalizes a valid
-version-2 whole-block artifact. A version-3 segment omits `selection` for a whole-block thread or carries an
+`parseReviewArtifact()` enforces the closed single-language version-3 and multilingual version-4 thread
+schemas and losslessly normalizes a valid version-2 whole-block artifact. Version 4 requires
+`report.locale`; review inspection routes that locale before resolving source targets. Legacy v2/v3 input
+uses a unique exact locale revision when available and otherwise the primary variant. A segment omits
+`selection` for a whole-block thread or carries an
 exact selected-text anchor: full `start.target` and `end.target` references, non-negative Unicode code-point
 `offset` values, and the bounded NFC `quote`; `segment.target` equals `selection.start.target`.
 `serializeReviewArtifact()` trims and normalizes human messages to Unicode NFC, then produces canonical
-newline-terminated version-3 JSON without a timestamp or random value. A changed or ambiguous endpoint is
+newline-terminated JSON without a timestamp or random value. A changed or ambiguous endpoint is
 never applied automatically; inspect its reported source state and edit the Markdown explicitly.
 
 The generated page itself provides always-on Review Workspace annotations. Select any eligible rendered
@@ -222,7 +226,8 @@ resolved treatment. Hover or tap exposes **View thread**, and each range has a f
 The topbar **Review** action opens only an overlay list of current comments and prior evidence plus local
 import and one **Export review.json** action. The list never changes report geometry; choosing a bound entry
 brings its target into view and opens the same popover. Existing version-2/version-3 whole-block discussions
-remain list-accessible, but readers create new threads only from selected text. Empty, whitespace-only,
+remain list-accessible, but readers create new threads only from selected text. A multilingual page exports
+version 4 for the active locale and keeps each locale's threads isolated across switching. Empty, whitespace-only,
 oversized, outside-report, and package-control selections create nothing.
 
 Desktop uses a non-modal list overlay; mobile uses a modal sheet. Exact state import first verifies rendered
@@ -288,7 +293,8 @@ response.json** serialize the same deterministic version-1 JSON. Every question 
 `answered`, and a machine-readable value; comments are a separate sparse array. Import accepts only the
 same form revision and validates the complete file before replacing any current answer. State remains in the
 current tab without storage, network, an account, or form submission. Build the complete packaged
-[`response-workspace` example source](../examples/response-workspace/report.md) to inspect every answer kind.
+[`response-workspace` English source](../examples/response-workspace/report.md) or its maintained
+[`Russian entry`](../examples/response-workspace/report.ru.md) to inspect every answer kind.
 
 ## Copy prose without code styling
 
@@ -321,6 +327,7 @@ when the prose is not a directive.
 ```text
 my-report/
 ├── report.md
+├── report.ru.md
 ├── agentic-report.yaml
 ├── assets/
 │   ├── architecture.png
@@ -337,6 +344,8 @@ my-report/
 title: Architecture analysis
 description: Options and decision branches
 language: en
+localizations:
+  ru: report.ru.md
 layout: mixed
 theme: system
 preset: signal
@@ -357,11 +366,20 @@ Use semantic directives instead of handwritten layout.
 :::
 ```
 
-`language` is the sole selector for package-owned reader chrome. Use `ru` or a Russian subtag such as
-`ru-RU` for Russian shell controls, interaction states, Review Workspace, accessible visualization prose,
-and locale-formatted chart numbers. Use `en` for English. The default `und` and unsupported language tags
-select the complete English fallback even when the browser or operating system uses another locale. This
-setting does not translate authored Markdown, explicitly authored directive labels, or CLI diagnostics.
+On a single-language page, `language` is the sole selector for package-owned reader chrome. Use `ru` or a
+Russian subtag such as `ru-RU` for Russian shell controls, interaction states, Review Workspace, accessible
+visualization prose, and locale-formatted chart numbers. Use `en` for English. The default `und` and
+unsupported language tags select the complete English fallback even when the browser or operating system
+uses another locale.
+
+To ship both languages in one artifact, set the primary entry to `language: en` or `language: ru` and map
+only the other locale under `localizations`. The alternate file must declare the matching language and may
+set only `contractVersion`, `title`, `description`, and `language`; keep layout, theme, preset, tokens,
+attribution, output, and `localizations` in the primary. Translate its Markdown, partials, visible SVG text,
+and authored directive labels explicitly—the compiler does not machine-translate them. At startup the
+browser uses ordered system preferences to select an available variant, falls back to the primary, and
+shows a native selector only for the multilingual artifact. Manual switching replaces the whole page and
+keeps review/response/component state isolated by locale in the current tab.
 
 ## Choose the page shape
 
@@ -369,8 +387,9 @@ The package owns the page shell and design system. Metadata selects one closed l
 theme, and optional token values:
 
 - `layout`: `document` (default), `dashboard`, `landing`, or `mixed`;
-- `language`: `ru` and Russian subtags select Russian reader chrome; `en`, `und`, and unsupported tags use
-  English chrome;
+- `language`: selects reader chrome for one source variant; unsupported single-language tags use English;
+- `localizations.en` / `localizations.ru`: optional confined alternate Markdown entry for the other
+  package-supported locale; a multilingual primary must itself be English or Russian;
 - `preset`: `studio` (default), `editorial`, or `signal`;
 - `theme`: `system` (default), `light`, or `dark`;
 - `scrollProgress`: boolean, default `false`; decorative normal-motion reading progress;
@@ -421,6 +440,10 @@ trees rather than templates or a separate showcase system:
 | [`incident-review`](../examples/incident-review/report.md)   | `mixed`    | Service impact, causal evidence, recovery, and owned follow-up                           |
 | [`vendor-decision`](../examples/vendor-decision/report.md)   | `document` | Mandatory procurement gates, weighted evidence, and conditional adoption                 |
 | [`launch-readiness`](../examples/launch-readiness/report.md) | `landing`  | Audience value, activation/funnel evidence, launch gates, and a reversible regional beta |
+
+Every starter, layout example, catalog, workspace example, and showcase declares its maintained Russian
+entry. Building any example produces one bilingual artifact; the initial variant follows the browser's
+ordered language preferences and the reader can switch it manually.
 
 From a checkout containing the package-owned source paths:
 

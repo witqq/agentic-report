@@ -2,6 +2,8 @@
 title: Pages agents can finish
 description: A focused landing page assembled without JSX, custom CSS, or author JavaScript.
 language: en
+localizations:
+  ru: report.ru.md
 theme: light
 layout: landing
 tokens:

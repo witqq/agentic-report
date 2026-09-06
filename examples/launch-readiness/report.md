@@ -3,6 +3,8 @@ contractVersion: 1
 title: Regional beta launch readiness
 description: A fictional launch decision combining audience value, activation evidence, operational gates, and a reversible rollout.
 language: en
+localizations:
+  ru: report.ru.md
 theme: light
 layout: landing
 preset: studio

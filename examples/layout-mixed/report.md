@@ -2,6 +2,8 @@
 title: Research synthesis
 description: Narrative findings and wide evidence panels in one responsive page.
 language: en
+localizations:
+  ru: report.ru.md
 theme: system
 layout: mixed
 tokens:

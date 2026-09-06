@@ -6,10 +6,17 @@ import { fileURLToPath } from 'node:url';
 import {
   OUTPUT_FORMATS,
   runtimePlacementForFormat,
+  type PageLocaleChoice,
   type RuntimePlacement,
 } from '../authoring/registry.js';
-import type { Diagnostic, OutputFormat, SourceDocument } from '../contracts.js';
+import type {
+  Diagnostic,
+  OutputFormat,
+  SourceDocument,
+  SourceVariantDocument,
+} from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
+import { bindReviewArtifact, type ResolvedReviewArtifact } from '../review/binding.js';
 import {
   MAX_REVIEW_FILE_BYTES,
   parseReviewArtifact,
@@ -17,9 +24,9 @@ import {
   type ReviewArtifact,
   type ReviewTargetManifest,
 } from '../review/contract.js';
-import { bindReviewArtifact, type ResolvedReviewArtifact } from '../review/binding.js';
+import { ReviewLocaleRoutingError, selectReviewLocaleVariant } from '../review/routing.js';
 import { createReviewTargetManifest } from '../review/targets.js';
-import { renderDocument } from '../render/document.js';
+import { renderDocument, type DocumentPageVariantOptions } from '../render/document.js';
 import {
   renderMarkdown,
   type MarkdownRenderResult,
@@ -36,8 +43,21 @@ export interface PrepareReportOptions {
   readonly share?: boolean;
 }
 
+export interface PreparedPageVariant {
+  readonly locale: PageLocaleChoice;
+  readonly primary: boolean;
+  readonly source: SourceVariantDocument;
+  readonly markdown: MarkdownRenderResult;
+  readonly reviewManifest: ReviewTargetManifest;
+  readonly priorReview?: {
+    readonly artifact: ReviewArtifact;
+    readonly resolved: ResolvedReviewArtifact;
+  };
+}
+
 export interface PreparedReport {
   readonly source: SourceDocument;
+  readonly variants: readonly [PreparedPageVariant, ...PreparedPageVariant[]];
   readonly format: OutputFormat;
   readonly runtimePlacement: RuntimePlacement;
   readonly outputPath?: string;
@@ -75,73 +95,73 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
   if (collisionTargetPath !== undefined)
     await assertOutputDoesNotCollide(collisionTargetPath, source.sourceFiles);
 
-  const [runtime, styles] = await Promise.all([
-    readBrowserAsset('runtime.js'),
-    readBrowserAsset('document.css'),
-  ]);
-  const inlineRuntime = escapeInlineScript(runtime);
-  const markdown = await renderMarkdown(source.markdown, {
-    language: source.manifest.language,
-    sourceRoot: source.sourceRoot,
-    sourceMap: source.sourceMap,
-    format,
-    share: options.share === true,
-    ...(outputFilePath === undefined ? {} : { outputFilePath }),
-  });
-  const documentStyles = markdown.fontCss.length === 0 ? styles : `${styles}\n${markdown.fontCss}`;
-  const reviewManifest = await createReviewTargetManifest(
-    source.sourceRoot,
-    [...source.sourceDigests, ...markdown.resourceDigests],
-    markdown.reviewTargets,
+  const sourceVariants: readonly {
+    readonly locale: PageLocaleChoice;
+    readonly primary: boolean;
+    readonly source: SourceVariantDocument;
+  }[] = [
+    { locale: source.locale, primary: true, source },
+    ...source.localizations.map((localized) => ({
+      locale: localized.locale,
+      primary: false,
+      source: localized,
+    })),
+  ];
+  const preparedVariants: readonly PreparedPageVariant[] = await Promise.all(
+    sourceVariants.map(async (variant) => ({
+      ...variant,
+      ...(await preparePageVariant(
+        variant.source,
+        format,
+        options.share === true,
+        outputFilePath,
+        sourceVariants.length > 1 ? variant.locale : undefined,
+      )),
+    })),
+  );
+  const variants = requirePreparedVariants(preparedVariants);
+
+  const allResourceSourceFiles = unique(
+    variants.flatMap((variant) => variant.markdown.sourceFiles),
   );
   const priorReviewFile =
     options.review === undefined
       ? undefined
       : await resolveLocalPath(source.sourceRoot, options.review, 'REVIEW_OUTSIDE_SOURCE');
-  if (priorReviewFile !== undefined) {
+  if (priorReviewFile !== undefined)
     await assertPriorReviewDoesNotCollide(priorReviewFile, [
       ...source.sourceFiles,
-      ...markdown.sourceFiles,
+      ...allResourceSourceFiles,
     ]);
-  }
-  const priorReviewInput =
-    priorReviewFile === undefined
-      ? undefined
-      : await loadPriorReview(priorReviewFile, reviewManifest);
-  const priorReview = priorReviewInput?.payload;
-  if (collisionTargetPath !== undefined) {
+  const priorArtifact =
+    priorReviewFile === undefined ? undefined : await readPriorReview(priorReviewFile);
+  const routedVariants =
+    priorArtifact === undefined ? variants : routePriorReview(priorArtifact, variants);
+  const routedPrior = routedVariants.find((variant) => variant.priorReview)?.priorReview;
+
+  if (collisionTargetPath !== undefined)
     await assertOutputDoesNotCollide(collisionTargetPath, [
       ...source.sourceFiles,
-      ...markdown.sourceFiles,
-      ...(priorReviewInput === undefined ? [] : [priorReviewInput.file]),
+      ...allResourceSourceFiles,
+      ...(priorReviewFile === undefined ? [] : [priorReviewFile]),
     ]);
-  }
-  const warnings: Diagnostic[] = [...markdown.warnings];
-  const bundledBytes =
-    markdown.embeddedBytes +
-    Buffer.byteLength(documentStyles) +
-    (format === 'single-file' ? Buffer.byteLength(inlineRuntime) : 0);
-  if (format === 'single-file' && bundledBytes > source.manifest.output.maxInlineBytes) {
-    warnings.push({
-      level: 'warning',
-      code: 'INLINE_SIZE_THRESHOLD_EXCEEDED',
-      message: `Embedded resources total ${bundledBytes} bytes, above the configured ${source.manifest.output.maxInlineBytes}-byte threshold.`,
-      remediation:
-        'Use directory output or raise output.maxInlineBytes after reviewing portability needs.',
-      details: { bundledBytes, threshold: source.manifest.output.maxInlineBytes },
-    });
-  }
 
+  const [runtime, styles] = await Promise.all([
+    readBrowserAsset('runtime.js'),
+    readBrowserAsset('document.css'),
+  ]);
+  const inlineRuntime = escapeInlineScript(runtime);
+  const fontCss = unique(routedVariants.map((variant) => variant.markdown.fontCss).filter(Boolean));
+  const documentStyles = fontCss.length === 0 ? styles : `${styles}\n${fontCss.join('\n')}`;
   const external =
     runtimePlacement === 'inline'
       ? { styleHref: undefined, scriptSrc: undefined, files: [] as PreparedResourceFile[] }
       : prepareBrowserAssets(runtime, documentStyles);
+  const documentVariants = routedVariants.map(toDocumentVariant);
+  const [primaryDocument, ...localizedDocuments] = documentVariants;
+  if (primaryDocument === undefined) throw new Error('Prepared report has no primary locale.');
   const html = renderDocument({
-    title: source.manifest.title ?? path.basename(source.entryPath, path.extname(source.entryPath)),
-    language: source.manifest.language,
-    ...(source.manifest.description === undefined
-      ? {}
-      : { description: source.manifest.description }),
+    ...primaryDocument,
     page: {
       preset: source.manifest.preset,
       theme: source.manifest.theme,
@@ -150,8 +170,6 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
       scrollProgress: source.manifest.scrollProgress,
       attribution: source.manifest.attribution,
     },
-    contentHtml: markdown.html,
-    navigation: markdown.navigation,
     contentSecurityPolicy: createContentSecurityPolicy(runtimePlacement, inlineRuntime),
     styles:
       format === 'single-file'
@@ -161,41 +179,184 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
       runtimePlacement === 'inline'
         ? { inline: inlineRuntime }
         : { src: requireAssetReference(external.scriptSrc, 'runtime script') },
-    reviewManifest,
-    ...(priorReview === undefined ? {} : { priorReview }),
+    ...(localizedDocuments.length === 0 ? {} : { localizations: localizedDocuments }),
   });
 
+  const warnings: Diagnostic[] = routedVariants.flatMap((variant) => variant.markdown.warnings);
+  const bundledBytes =
+    routedVariants.reduce((sum, variant) => sum + variant.markdown.embeddedBytes, 0) +
+    Buffer.byteLength(documentStyles) +
+    (format === 'single-file' ? Buffer.byteLength(inlineRuntime) : 0);
+  if (format === 'single-file' && bundledBytes > source.manifest.output.maxInlineBytes)
+    warnings.push({
+      level: 'warning',
+      code: 'INLINE_SIZE_THRESHOLD_EXCEEDED',
+      message: `Embedded resources total ${bundledBytes} bytes, above the configured ${source.manifest.output.maxInlineBytes}-byte threshold.`,
+      remediation:
+        'Use directory output or raise output.maxInlineBytes after reviewing portability needs.',
+      details: { bundledBytes, threshold: source.manifest.output.maxInlineBytes },
+    });
+
+  const markdownResourceFiles = mergeResourceFiles(
+    routedVariants.flatMap((variant) => variant.markdown.resourceFiles),
+  );
+  const primary = routedVariants[0];
   return {
     source,
+    variants: routedVariants,
     format,
     runtimePlacement,
     ...(outputPath === undefined ? {} : { outputPath }),
     html,
     contentHash: createHash('sha256').update(html).digest('hex'),
     share: options.share === true,
-    neutralizedSourceLinks: markdown.neutralizedSourceLinks,
-    embeddedAssets: markdown.embeddedAssets + (format === 'single-file' ? 2 : 0),
-    externalAssets: markdown.externalAssets + external.files.length,
+    neutralizedSourceLinks: routedVariants.reduce(
+      (sum, variant) => sum + variant.markdown.neutralizedSourceLinks,
+      0,
+    ),
+    embeddedAssets:
+      routedVariants.reduce((sum, variant) => sum + variant.markdown.embeddedAssets, 0) +
+      (format === 'single-file' ? 2 : 0),
+    externalAssets:
+      format === 'directory' ? markdownResourceFiles.length + external.files.length : 0,
     warnings,
-    resourceFiles: [...markdown.resourceFiles, ...external.files],
-    observedDirectives: markdown.observedDirectives,
-    observedResources: markdown.observedResources,
-    resourceSourceFiles: markdown.sourceFiles,
-    reviewManifest,
-    ...(priorReview === undefined ? {} : { priorReview }),
+    resourceFiles: [...markdownResourceFiles, ...external.files],
+    observedDirectives: unique(
+      routedVariants.flatMap((variant) => variant.markdown.observedDirectives),
+    ),
+    observedResources: routedVariants.reduce(
+      (totals, variant) => ({
+        images: totals.images + variant.markdown.observedResources.images,
+        downloads: totals.downloads + variant.markdown.observedResources.downloads,
+        fonts: totals.fonts + variant.markdown.observedResources.fonts,
+      }),
+      { images: 0, downloads: 0, fonts: 0 },
+    ),
+    resourceSourceFiles: allResourceSourceFiles,
+    reviewManifest: primary.reviewManifest,
+    ...(routedPrior === undefined ? {} : { priorReview: routedPrior }),
   };
 }
 
-async function loadPriorReview(
-  file: string,
-  manifest: ReviewTargetManifest,
+async function preparePageVariant(
+  source: SourceVariantDocument,
+  format: OutputFormat,
+  share: boolean,
+  outputFilePath: string | undefined,
+  localeScope: PageLocaleChoice | undefined,
 ): Promise<{
-  readonly file: string;
-  readonly payload: {
-    readonly artifact: ReviewArtifact;
-    readonly resolved: ResolvedReviewArtifact;
-  };
+  readonly markdown: MarkdownRenderResult;
+  readonly reviewManifest: ReviewTargetManifest;
 }> {
+  const markdown = await renderMarkdown(source.markdown, {
+    language: source.manifest.language,
+    sourceRoot: source.sourceRoot,
+    sourceMap: source.sourceMap,
+    format,
+    share,
+    ...(outputFilePath === undefined ? {} : { outputFilePath }),
+    ...(localeScope === undefined ? {} : { localeScope }),
+  });
+  return {
+    markdown,
+    reviewManifest: await createReviewTargetManifest(
+      source.sourceRoot,
+      [...source.sourceDigests, ...markdown.resourceDigests],
+      markdown.reviewTargets,
+    ),
+  };
+}
+
+function routePriorReview(
+  artifact: ReviewArtifact,
+  variants: readonly [PreparedPageVariant, ...PreparedPageVariant[]],
+): readonly [PreparedPageVariant, ...PreparedPageVariant[]] {
+  try {
+    const selected = selectReviewLocaleVariant(
+      artifact,
+      variants.map((variant) => ({
+        locale: variant.locale,
+        primary: variant.primary,
+        manifest: variant.reviewManifest,
+        variant,
+      })),
+    );
+    return requirePreparedVariants(
+      variants.map((variant) =>
+        variant === selected.variant
+          ? {
+              ...variant,
+              priorReview: {
+                artifact,
+                resolved: bindReviewArtifact(artifact, variant.reviewManifest),
+              },
+            }
+          : variant,
+      ),
+    );
+  } catch (error) {
+    if (!(error instanceof ReviewLocaleRoutingError)) throw error;
+    throw new AgenticReportError({
+      level: 'error',
+      code:
+        error.reason === 'unsupported-locale'
+          ? 'REVIEW_LOCALE_UNSUPPORTED'
+          : 'REVIEW_LOCALE_AMBIGUOUS',
+      message: error.message,
+      remediation:
+        error.reason === 'unsupported-locale'
+          ? 'Use a review exported from one of this report’s declared locales.'
+          : 'Use a version-4 multilingual review carrying an explicit locale.',
+    });
+  }
+}
+
+function toDocumentVariant(variant: PreparedPageVariant): DocumentPageVariantOptions {
+  return {
+    locale: variant.locale,
+    title:
+      variant.source.manifest.title ??
+      path.basename(variant.source.entryPath, path.extname(variant.source.entryPath)),
+    ...(variant.source.manifest.description === undefined
+      ? {}
+      : { description: variant.source.manifest.description }),
+    language: variant.source.manifest.language,
+    contentHtml: variant.markdown.html,
+    navigation: variant.markdown.navigation,
+    reviewManifest: variant.reviewManifest,
+    ...(variant.priorReview === undefined ? {} : { priorReview: variant.priorReview }),
+  };
+}
+
+function requirePreparedVariants<T>(values: readonly T[]): readonly [T, ...T[]] {
+  const [first, ...rest] = values;
+  if (first === undefined) throw new Error('Prepared report has no locale variants.');
+  return [first, ...rest];
+}
+
+function mergeResourceFiles(files: readonly PreparedResourceFile[]): PreparedResourceFile[] {
+  const merged = new Map<string, PreparedResourceFile>();
+  for (const file of files) {
+    const existing = merged.get(file.relativePath);
+    if (existing !== undefined && !existing.bytes.equals(file.bytes))
+      throw new AgenticReportError({
+        level: 'error',
+        code: 'LOCALIZED_RESOURCE_COLLISION',
+        message: `Localized resources produced conflicting bytes for ${file.relativePath}.`,
+        remediation: 'Use distinct resource contents or paths for each localized asset.',
+      });
+    if (existing === undefined) merged.set(file.relativePath, file);
+  }
+  return [...merged.values()].sort((left, right) =>
+    left.relativePath.localeCompare(right.relativePath),
+  );
+}
+
+function unique(values: readonly string[]): string[] {
+  return [...new Set(values)];
+}
+
+async function readPriorReview(file: string): Promise<ReviewArtifact> {
   const info = await stat(file);
   if (!info.isFile() || info.size > MAX_REVIEW_FILE_BYTES)
     throw new AgenticReportError({
@@ -205,8 +366,7 @@ async function loadPriorReview(
       remediation: `Use a review file no larger than ${MAX_REVIEW_FILE_BYTES} bytes.`,
     });
   try {
-    const artifact = parseReviewArtifact(JSON.parse(await readFile(file, 'utf8')) as unknown);
-    return { file, payload: { artifact, resolved: bindReviewArtifact(artifact, manifest) } };
+    return parseReviewArtifact(JSON.parse(await readFile(file, 'utf8')) as unknown);
   } catch (error) {
     throw new AgenticReportError({
       level: 'error',
@@ -219,7 +379,7 @@ async function loadPriorReview(
           ? error.message
           : 'Prior review is not valid versioned review JSON.',
       remediation:
-        'Use a version-3 review exported by Agentic Report; legacy version 2 is also accepted.',
+        'Use a version-3 single-language or version-4 multilingual review; legacy version 2 is also accepted.',
       details: { cause: error instanceof Error ? error.name : 'unknown' },
     });
   }
@@ -235,7 +395,7 @@ async function assertPriorReviewDoesNotCollide(
     if (
       sourceFile === priorReviewFile ||
       (sourceStat.dev === priorStat.dev && sourceStat.ino === priorStat.ino)
-    ) {
+    )
       throw new AgenticReportError({
         level: 'error',
         code: 'REVIEW_COLLIDES_WITH_SOURCE',
@@ -244,7 +404,6 @@ async function assertPriorReviewDoesNotCollide(
           'Use a dedicated review JSON sidecar that is not an entry, manifest, partial, or local asset.',
         details: { review: priorReviewFile, source: sourceFile },
       });
-    }
   }
 }
 
@@ -272,9 +431,8 @@ async function resolveOutputTarget(outputPath: string): Promise<string> {
   try {
     return await realpath(outputPath);
   } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT')
       return path.resolve(outputPath);
-    }
     throw error;
   }
 }
@@ -295,9 +453,8 @@ async function assertOutputDoesNotCollide(
   }
   for (const candidate of sourceFiles) {
     const sourceStat = await stat(candidate, { bigint: true });
-    if (sourceStat.dev === outputIdentity.dev && sourceStat.ino === outputIdentity.ino) {
+    if (sourceStat.dev === outputIdentity.dev && sourceStat.ino === outputIdentity.ino)
       throw outputCollisionError(outputPath, candidate);
-    }
   }
 }
 
@@ -379,13 +536,12 @@ function createContentSecurityPolicy(placement: RuntimePlacement, runtime: strin
 }
 
 function requireAssetReference(reference: string | undefined, label: string): string {
-  if (reference === undefined) {
+  if (reference === undefined)
     throw new AgenticReportError({
       level: 'error',
       code: 'INTERNAL_ASSET_REFERENCE_MISSING',
       message: `The ${label} reference was not produced for directory output.`,
       remediation: 'Rebuild the package and retry with the same source.',
     });
-  }
   return reference;
 }

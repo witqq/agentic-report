@@ -20,6 +20,12 @@
       "kind": "copy"
     },
     {
+      "id": "source-incident-ru",
+      "href": "examples/incident-review/report.ru.md",
+      "source": "../examples/incident-review/report.ru.md",
+      "kind": "copy"
+    },
+    {
       "id": "example-review-workspace",
       "href": "examples/review-workspace/index.html",
       "source": "../examples/review-workspace",
@@ -30,6 +36,12 @@
       "id": "source-review-workspace",
       "href": "examples/review-workspace/report.md",
       "source": "../examples/review-workspace/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-review-workspace-ru",
+      "href": "examples/review-workspace/report.ru.md",
+      "source": "../examples/review-workspace/report.ru.md",
       "kind": "copy"
     },
     {
@@ -51,6 +63,12 @@
       "kind": "copy"
     },
     {
+      "id": "source-response-workspace-ru",
+      "href": "examples/response-workspace/report.ru.md",
+      "source": "../examples/response-workspace/report.ru.md",
+      "kind": "copy"
+    },
+    {
       "id": "example-vendor",
       "href": "examples/vendor-decision/index.html",
       "source": "../examples/vendor-decision",
@@ -60,6 +78,12 @@
       "id": "source-vendor",
       "href": "examples/vendor-decision/report.md",
       "source": "../examples/vendor-decision/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-vendor-ru",
+      "href": "examples/vendor-decision/report.ru.md",
+      "source": "../examples/vendor-decision/report.ru.md",
       "kind": "copy"
     },
     {
@@ -75,9 +99,21 @@
       "kind": "copy"
     },
     {
+      "id": "source-launch-ru",
+      "href": "examples/launch-readiness/report.ru.md",
+      "source": "../examples/launch-readiness/report.ru.md",
+      "kind": "copy"
+    },
+    {
       "id": "source-landing",
       "href": "source/landing/report.md",
       "source": "landing/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-ru",
+      "href": "source/landing/report.ru.md",
+      "source": "landing/report.ru.md",
       "kind": "copy"
     },
     {

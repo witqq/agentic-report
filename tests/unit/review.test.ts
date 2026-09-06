@@ -5,15 +5,18 @@ import { describe, expect, it } from 'vitest';
 import { bindReviewArtifact } from '../../src/review/binding.js';
 import {
   MAX_REVIEW_TEXT_LENGTH,
+  MULTILINGUAL_REVIEW_CONTRACT_VERSION,
   REVIEW_CONTRACT_VERSION,
   ReviewContractError,
   parseReviewArtifact,
   parseReviewTargetManifest,
   serializeReviewArtifact,
   type ReviewArtifact,
+  type SingleLanguageReviewArtifact,
   type ReviewTargetReference,
   type ReviewThread,
 } from '../../src/review/contract.js';
+import { ReviewLocaleRoutingError, selectReviewLocaleVariant } from '../../src/review/routing.js';
 
 const target: ReviewTargetReference = {
   id: 'target-a',
@@ -23,7 +26,7 @@ const target: ReviewTargetReference = {
 };
 const revision = `sha256:${'b'.repeat(64)}`;
 
-function artifact(overrides: Partial<ReviewArtifact> = {}): ReviewArtifact {
+function artifact(overrides: Partial<SingleLanguageReviewArtifact> = {}): ReviewArtifact {
   return {
     contractVersion: REVIEW_CONTRACT_VERSION,
     report: { revision },
@@ -358,5 +361,63 @@ describe('review thread protocol v3', () => {
     expect(source).not.toContain('data-review-active');
     expect(source).not.toContain('data-review-target-control');
     expect(source).not.toContain('data-review-exit');
+  });
+});
+
+describe('multilingual review protocol v4 routing', () => {
+  const englishManifest = {
+    contractVersion: 2 as const,
+    reportRevision: `sha256:${'d'.repeat(64)}`,
+    targets: [target],
+  };
+  const russianManifest = {
+    contractVersion: 2 as const,
+    reportRevision: `sha256:${'e'.repeat(64)}`,
+    targets: [] as readonly ReviewTargetReference[],
+  };
+  const variants = [
+    { locale: 'en' as const, primary: true, manifest: englishManifest },
+    { locale: 'ru' as const, primary: false, manifest: russianManifest },
+  ] as const;
+
+  it('preserves a closed locale discriminator through deterministic parsing', () => {
+    const value = {
+      ...artifact(),
+      contractVersion: MULTILINGUAL_REVIEW_CONTRACT_VERSION,
+      report: { revision, locale: 'ru' as const },
+    };
+    expect(parseReviewArtifact(value)).toEqual(value);
+    expect(parseReviewArtifact(JSON.parse(serializeReviewArtifact(value)))).toEqual(value);
+    expect(() => parseReviewArtifact({ ...value, report: { revision } })).toThrow(
+      ReviewContractError,
+    );
+    expect(() => parseReviewArtifact({ ...value, report: { revision, locale: 'de' } })).toThrow(
+      ReviewContractError,
+    );
+    expect(() =>
+      parseReviewArtifact({ ...artifact(), report: { revision, locale: 'en' } }),
+    ).toThrow(ReviewContractError);
+  });
+
+  it('routes a fully missing stale review by locale and refuses a foreign locale', () => {
+    const russian = parseReviewArtifact({
+      ...artifact(),
+      contractVersion: MULTILINGUAL_REVIEW_CONTRACT_VERSION,
+      report: { revision, locale: 'ru' },
+    });
+    const selected = selectReviewLocaleVariant(russian, variants);
+    expect(selected.locale).toBe('ru');
+    expect(bindReviewArtifact(russian, selected.manifest).threads[0]?.binding).toBe('missing');
+    const foreign = {
+      ...russian,
+      report: { revision, locale: 'de' },
+    } as unknown as ReviewArtifact;
+    expect(() => selectReviewLocaleVariant(foreign, variants)).toThrow(ReviewLocaleRoutingError);
+  });
+
+  it('routes legacy exact revisions uniquely and opaque stale input to primary', () => {
+    const exactRussian = artifact({ report: { revision: russianManifest.reportRevision } });
+    expect(selectReviewLocaleVariant(exactRussian, variants).locale).toBe('ru');
+    expect(selectReviewLocaleVariant(artifact(), variants).locale).toBe('en');
   });
 });

@@ -3,6 +3,8 @@ contractVersion: 1
 title: From Markdown to a page worth sharing
 description: A focused landing page for an offline, agent-friendly interactive page builder.
 language: en
+localizations:
+  ru: report.ru.md
 theme: light
 layout: landing
 preset: studio

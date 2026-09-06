@@ -1,6 +1,7 @@
 import {
   MAX_REVIEW_FILE_BYTES,
   MAX_REVIEW_TEXT_LENGTH,
+  MULTILINGUAL_REVIEW_CONTRACT_VERSION,
   REVIEW_CONTRACT_VERSION,
   ReviewContractError,
   constrainReviewText,
@@ -19,7 +20,6 @@ import type { ResolvedReviewArtifact } from '../review/binding.js';
 import { packageStrings } from '../localization.js';
 
 const mobileReview = window.matchMedia('(max-width: 56.99rem)');
-const strings = packageStrings(document.documentElement.dataset.packageLocale);
 const OPEN_HIGHLIGHT = 'agentic-review-open';
 const RESOLVED_HIGHLIGHT = 'agentic-review-resolved';
 
@@ -86,23 +86,33 @@ type HighlightRegistry = {
 
 type HighlightConstructor = new (...ranges: AbstractRange[]) => unknown;
 
-export function installReviewWorkspace(): void {
-  const template = document.querySelector<HTMLTemplateElement>('template[data-review-manifest]');
-  const toggle = document.querySelector<HTMLButtonElement>('[data-review-toggle]');
+export interface ReviewWorkspaceController {
+  readonly snapshot: () => ReviewArtifact;
+  readonly destroy: () => void;
+}
+
+export function installReviewWorkspace(
+  root: HTMLElement = document.body,
+  initial?: ReviewArtifact,
+): ReviewWorkspaceController | undefined {
+  const strings = packageStrings(root.dataset.pagePackageLocale);
+  const template = root.querySelector<HTMLTemplateElement>('template[data-review-manifest]');
+  const toggle = root.querySelector<HTMLButtonElement>('[data-review-toggle]');
   if (!template || !toggle) return;
   try {
     const manifest = parseReviewTargetManifest(
       JSON.parse(template.content.textContent ?? '') as unknown,
     );
-    const elements = collect(toggle);
-    const targets = collectTargets(manifest);
+    const elements = collect(toggle, root);
+    const targets = collectTargets(manifest, root, strings);
     if (!elements || !targets) throw new Error('Review workspace markup is incomplete.');
-    createController(manifest, targets, elements, readPrior());
+    return createController(manifest, targets, elements, readPrior(root), root, strings, initial);
   } catch {
     toggle.disabled = true;
     toggle.dataset.reviewUnavailable = '';
     const label = toggle.querySelector<HTMLElement>('[data-review-toggle-label]');
     if (label) label.textContent = strings.reviewUnavailable;
+    return undefined;
   }
 }
 
@@ -111,10 +121,19 @@ function createController(
   targets: ReadonlyMap<string, TargetDom>,
   el: Elements,
   prior: { artifact: ReviewArtifact; resolved: ResolvedReviewArtifact } | undefined,
-): void {
-  let artifact = prior
-    ? { ...parseReviewArtifact(prior.artifact), report: { revision: manifest.reportRevision } }
-    : emptyArtifact(manifest.reportRevision);
+  root: HTMLElement,
+  strings: ReturnType<typeof packageStrings>,
+  initial: ReviewArtifact | undefined,
+): ReviewWorkspaceController {
+  const locale = root.dataset.localizedPageVariant === 'ru' ? 'ru' : 'en';
+  const multilingual = root.dataset.pageMultilingual === 'true';
+  let artifact = currentArtifact(
+    initial ?? prior?.artifact,
+    manifest.reportRevision,
+    locale,
+    multilingual,
+  );
+  const abort = new AbortController();
   let selected: ReviewSubject | undefined;
   let pendingAction: AnchoredAction | undefined;
   let pressedAction: AnchoredAction | undefined;
@@ -128,123 +147,186 @@ function createController(
   const markerHost = document.createElement('div');
   markerHost.className = 'review-highlight-markers';
   markerHost.dataset.reviewHighlightMarkers = '';
-  document.body.append(markerHost);
+  root.append(markerHost);
 
-  limit(el.message);
-  el.toggle.addEventListener('click', () =>
-    el.dialog.open ? closeDrawer() : openDrawer(el.toggle),
+  limit(el.message, abort.signal);
+  el.toggle.addEventListener(
+    'click',
+    () => (el.dialog.open ? closeDrawer() : openDrawer(el.toggle)),
+    { signal: abort.signal },
   );
-  el.close.addEventListener('click', () => closeDrawer());
-  el.dialog.addEventListener('close', () => {
-    syncToggle();
-    if (restoreDrawerFocus) drawerOpener.focus({ preventScroll: true });
-    restoreDrawerFocus = true;
+  el.close.addEventListener('click', () => closeDrawer(), { signal: abort.signal });
+  el.dialog.addEventListener(
+    'close',
+    () => {
+      syncToggle();
+      if (restoreDrawerFocus) drawerOpener.focus({ preventScroll: true });
+      restoreDrawerFocus = true;
+    },
+    { signal: abort.signal },
+  );
+  el.dialog.addEventListener(
+    'click',
+    (event) => {
+      if (event.target === el.dialog && mobileReview.matches) closeDrawer();
+    },
+    { signal: abort.signal },
+  );
+  document.addEventListener('selectionchange', () => updateSelectionAction(false), {
+    signal: abort.signal,
   });
-  el.dialog.addEventListener('click', (event) => {
-    if (event.target === el.dialog && mobileReview.matches) closeDrawer();
-  });
-  document.addEventListener('selectionchange', () => updateSelectionAction(false));
-  document.addEventListener('pointerup', (event) => {
-    const pressed = pressedAction;
-    if (pressed)
-      window.setTimeout(() => {
-        if (pressedAction === pressed) pressedAction = undefined;
-      }, 0);
-    queueMicrotask(() => {
-      if (updateSelectionAction(false)) return;
+  document.addEventListener(
+    'pointerup',
+    (event) => {
+      const pressed = pressedAction;
+      if (pressed)
+        window.setTimeout(() => {
+          if (pressedAction === pressed) pressedAction = undefined;
+        }, 0);
+      queueMicrotask(() => {
+        if (updateSelectionAction(false)) return;
+        updateHighlightAction(event.clientX, event.clientY);
+      });
+    },
+    { signal: abort.signal },
+  );
+  document.addEventListener(
+    'pointermove',
+    (event) => {
+      if (window.getSelection()?.isCollapsed === false || !el.popover.hidden) return;
+      if (event.target === el.selectionAction || markerHost.contains(event.target as Node)) return;
       updateHighlightAction(event.clientX, event.clientY);
-    });
+    },
+    { signal: abort.signal },
+  );
+  document.addEventListener(
+    'pointerdown',
+    (event) => {
+      const node = event.target;
+      if (!(node instanceof Node)) return;
+      if (!el.selectionAction.contains(node)) pressedAction = undefined;
+      if (el.popover.hidden || el.popover.contains(node)) return;
+      if (el.selectionAction.contains(node) || markerHost.contains(node)) return;
+      closePopover(false);
+    },
+    { signal: abort.signal },
+  );
+  document.addEventListener(
+    'keyup',
+    (event) => {
+      if (event.key === 'Shift') updateSelectionAction(true);
+      if (event.key === 'Escape' && !el.popover.hidden) closePopover(true);
+    },
+    { signal: abort.signal },
+  );
+  window.addEventListener('resize', scheduleReposition, { signal: abort.signal });
+  window.addEventListener('scroll', scheduleReposition, {
+    capture: true,
+    signal: abort.signal,
   });
-  document.addEventListener('pointermove', (event) => {
-    if (window.getSelection()?.isCollapsed === false || !el.popover.hidden) return;
-    if (event.target === el.selectionAction || markerHost.contains(event.target as Node)) return;
-    updateHighlightAction(event.clientX, event.clientY);
-  });
-  document.addEventListener('pointerdown', (event) => {
-    const node = event.target;
-    if (!(node instanceof Node)) return;
-    if (!el.selectionAction.contains(node)) pressedAction = undefined;
-    if (el.popover.hidden || el.popover.contains(node)) return;
-    if (el.selectionAction.contains(node) || markerHost.contains(node)) return;
-    closePopover(false);
-  });
-  document.addEventListener('keyup', (event) => {
-    if (event.key === 'Shift') updateSelectionAction(true);
-    if (event.key === 'Escape' && !el.popover.hidden) closePopover(true);
-  });
-  window.addEventListener('resize', scheduleReposition);
-  window.addEventListener('scroll', scheduleReposition, true);
-  el.selectionAction.addEventListener('pointerdown', (event) => {
-    pressedAction = pendingAction;
-    event.preventDefault();
-  });
-  el.selectionAction.addEventListener('pointercancel', () => {
-    pressedAction = undefined;
-  });
-  el.selectionAction.addEventListener('click', openPendingAction);
-  markerHost.addEventListener('click', (event) => {
-    const node = event.target;
-    if (!(node instanceof Element)) return;
-    const marker = node.closest<HTMLButtonElement>('[data-review-highlight-marker]');
-    const entry = renderedSelections.find(
-      (item) => item.thread.id === marker?.dataset.reviewHighlightMarker,
-    );
-    if (!marker || !entry) return;
-    select(entry.subject);
-    openPopover(entry.range, marker);
-  });
-  mobileReview.addEventListener('change', () => {
-    if (!el.dialog.open) return;
-    el.dialog.close();
-    queueMicrotask(() => openDrawer(drawerOpener));
-  });
-  el.currentList.addEventListener('click', (event) => {
-    const node = event.target;
-    if (!(node instanceof Element)) return;
-    const button = node.closest<HTMLButtonElement>('[data-review-thread-open]');
-    const thread = artifact.threads.find((item) => item.id === button?.dataset.reviewThreadOpen);
-    const segment = thread === undefined ? undefined : currentSegment(thread);
-    if (!button || !segment) return;
-    const subject = subjectForSegment(segment);
-    const range =
-      segment.selection === undefined ? undefined : reconstructRange(segment.selection, targets);
-    const owner = targets.get(subject.target.id)?.element;
-    const fallbackAnchor = button.getBoundingClientRect();
-    closeDrawer(false);
-    owner?.scrollIntoView({ behavior: 'instant', block: 'center' });
-    const anchor = range ?? owner?.getBoundingClientRect() ?? fallbackAnchor;
-    select(subject);
-    openPopover(anchor, el.toggle);
-  });
-  el.priorList.addEventListener('click', (event) => {
-    const node = event.target;
-    if (!(node instanceof Element)) return;
-    const button = node.closest<HTMLButtonElement>('[data-review-prior-open]');
-    const entry = prior?.resolved.threads.find(
-      (item) => item.thread.id === button?.dataset.reviewPriorOpen,
-    );
-    const target =
-      entry?.currentTarget === undefined ? undefined : targets.get(entry.currentTarget.id);
-    if (!button || !entry || !target) return;
-    closeDrawer(false);
-    target.element.scrollIntoView({ behavior: 'instant', block: 'center' });
-    select({ target: target.target, label: target.label });
-    openPopover(target.element.getBoundingClientRect(), el.toggle);
-  });
-  el.add.addEventListener('click', saveMessage);
-  el.cancel.addEventListener('click', clearEditor);
-  el.messages.addEventListener('click', (event) => {
-    const node = event.target;
-    if (!(node instanceof Element)) return;
-    const edit = node.closest<HTMLButtonElement>('[data-review-message-edit]');
-    if (edit) editMessage(edit.dataset.reviewMessageEdit ?? '');
-  });
-  el.resolve.addEventListener('click', () => {
-    if (selected) toggleResolved(selected);
-  });
-  el.popoverClose.addEventListener('click', () => closePopover(true));
-  el.importInput.addEventListener('change', () => void importReview());
-  el.exportButton.addEventListener('click', exportReview);
+  el.selectionAction.addEventListener(
+    'pointerdown',
+    (event) => {
+      pressedAction = pendingAction;
+      event.preventDefault();
+    },
+    { signal: abort.signal },
+  );
+  el.selectionAction.addEventListener(
+    'pointercancel',
+    () => {
+      pressedAction = undefined;
+    },
+    { signal: abort.signal },
+  );
+  el.selectionAction.addEventListener('click', openPendingAction, { signal: abort.signal });
+  markerHost.addEventListener(
+    'click',
+    (event) => {
+      const node = event.target;
+      if (!(node instanceof Element)) return;
+      const marker = node.closest<HTMLButtonElement>('[data-review-highlight-marker]');
+      const entry = renderedSelections.find(
+        (item) => item.thread.id === marker?.dataset.reviewHighlightMarker,
+      );
+      if (!marker || !entry) return;
+      select(entry.subject);
+      openPopover(entry.range, marker);
+    },
+    { signal: abort.signal },
+  );
+  mobileReview.addEventListener(
+    'change',
+    () => {
+      if (!el.dialog.open) return;
+      el.dialog.close();
+      queueMicrotask(() => openDrawer(drawerOpener));
+    },
+    { signal: abort.signal },
+  );
+  el.currentList.addEventListener(
+    'click',
+    (event) => {
+      const node = event.target;
+      if (!(node instanceof Element)) return;
+      const button = node.closest<HTMLButtonElement>('[data-review-thread-open]');
+      const thread = artifact.threads.find((item) => item.id === button?.dataset.reviewThreadOpen);
+      const segment = thread === undefined ? undefined : currentSegment(thread);
+      if (!button || !segment) return;
+      const subject = subjectForSegment(segment, targets, strings);
+      const range =
+        segment.selection === undefined ? undefined : reconstructRange(segment.selection, targets);
+      const owner = targets.get(subject.target.id)?.element;
+      const fallbackAnchor = button.getBoundingClientRect();
+      closeDrawer(false);
+      owner?.scrollIntoView({ behavior: 'instant', block: 'center' });
+      const anchor = range ?? owner?.getBoundingClientRect() ?? fallbackAnchor;
+      select(subject);
+      openPopover(anchor, el.toggle);
+    },
+    { signal: abort.signal },
+  );
+  el.priorList.addEventListener(
+    'click',
+    (event) => {
+      const node = event.target;
+      if (!(node instanceof Element)) return;
+      const button = node.closest<HTMLButtonElement>('[data-review-prior-open]');
+      const entry = prior?.resolved.threads.find(
+        (item) => item.thread.id === button?.dataset.reviewPriorOpen,
+      );
+      const target =
+        entry?.currentTarget === undefined ? undefined : targets.get(entry.currentTarget.id);
+      if (!button || !entry || !target) return;
+      closeDrawer(false);
+      target.element.scrollIntoView({ behavior: 'instant', block: 'center' });
+      select({ target: target.target, label: target.label });
+      openPopover(target.element.getBoundingClientRect(), el.toggle);
+    },
+    { signal: abort.signal },
+  );
+  el.add.addEventListener('click', saveMessage, { signal: abort.signal });
+  el.cancel.addEventListener('click', clearEditor, { signal: abort.signal });
+  el.messages.addEventListener(
+    'click',
+    (event) => {
+      const node = event.target;
+      if (!(node instanceof Element)) return;
+      const edit = node.closest<HTMLButtonElement>('[data-review-message-edit]');
+      if (edit) editMessage(edit.dataset.reviewMessageEdit ?? '');
+    },
+    { signal: abort.signal },
+  );
+  el.resolve.addEventListener(
+    'click',
+    () => {
+      if (selected) toggleResolved(selected);
+    },
+    { signal: abort.signal },
+  );
+  el.popoverClose.addEventListener('click', () => closePopover(true), { signal: abort.signal });
+  el.importInput.addEventListener('change', () => void importReview(), { signal: abort.signal });
+  el.exportButton.addEventListener('click', exportReview, { signal: abort.signal });
   render();
 
   function openDrawer(button: HTMLElement): void {
@@ -482,7 +564,7 @@ function createController(
       );
     el.currentSection.hidden = current.length === 0;
     for (const entry of current) {
-      const subject = subjectForSegment(entry.segment);
+      const subject = subjectForSegment(entry.segment, targets, strings);
       const li = document.createElement('li');
       li.className = 'review-response';
       li.dataset.reviewThreadState = entry.segment.resolved ? 'resolved' : 'open';
@@ -547,7 +629,7 @@ function createController(
             ? undefined
             : reconstructRange(segment.selection, targets);
         return segment && range
-          ? { thread, segment, subject: subjectForSegment(segment), range }
+          ? { thread, segment, subject: subjectForSegment(segment, targets, strings), range }
           : undefined;
       })
       .filter((entry): entry is RenderedSelection => entry !== undefined)
@@ -661,8 +743,13 @@ function createController(
       const imported = parseReviewArtifact(JSON.parse(await file.text()) as unknown);
       if (imported.report.revision !== manifest.reportRevision)
         throw new ReaderImportError(strings.differentRevision);
-      validateTargets(imported, manifest);
-      artifact = imported;
+      if (
+        imported.contractVersion === MULTILINGUAL_REVIEW_CONTRACT_VERSION &&
+        imported.report.locale !== locale
+      )
+        throw new ReaderImportError(strings.differentRevision);
+      validateTargets(imported, manifest, root, strings);
+      artifact = currentArtifact(imported, manifest.reportRevision, locale, multilingual);
       clearDrawerError();
       render();
     } catch (error) {
@@ -765,10 +852,23 @@ function createController(
     el.popover.style.left = `${left}px`;
     el.popover.style.top = `${top}px`;
   }
+
+  return {
+    snapshot: () => artifact,
+    destroy: () => {
+      if (el.dialog.open) el.dialog.close();
+      el.popover.hidden = true;
+      abort.abort();
+      if (repositionFrame !== undefined) window.cancelAnimationFrame(repositionFrame);
+      highlightRegistry()?.delete(OPEN_HIGHLIGHT);
+      highlightRegistry()?.delete(RESOLVED_HIGHLIGHT);
+      markerHost.remove();
+    },
+  };
 }
 
-function collect(toggle: HTMLButtonElement): Elements | undefined {
-  const find = <T extends Element>(selector: string) => document.querySelector<T>(selector);
+function collect(toggle: HTMLButtonElement, root: HTMLElement): Elements | undefined {
+  const find = <T extends Element>(selector: string) => root.querySelector<T>(selector);
   const values = {
     dialog: find<HTMLDialogElement>('[data-review-dialog]'),
     toggle,
@@ -801,31 +901,37 @@ function collect(toggle: HTMLButtonElement): Elements | undefined {
 
 function collectTargets(
   manifest: ReviewTargetManifest,
+  root: HTMLElement,
+  strings: ReturnType<typeof packageStrings>,
 ): ReadonlyMap<string, TargetDom> | undefined {
-  const owners = [...document.querySelectorAll<HTMLElement>('[data-review-target]')];
+  const owners = [...root.querySelectorAll<HTMLElement>('[data-review-target]')];
   const map = new Map<string, TargetDom>();
   for (const target of manifest.targets) {
     const element = owners.find((candidate) => candidate.dataset.reviewTarget === target.id);
     if (!element) return;
-    map.set(target.id, { target, element, label: visibleLabel(target, element) });
+    map.set(target.id, { target, element, label: visibleLabel(target, element, strings) });
   }
   return map;
 }
 
-function subjectForSegment(segment: ReviewThreadSegment): ReviewSubject {
+function subjectForSegment(
+  segment: ReviewThreadSegment,
+  targets: ReadonlyMap<string, TargetDom>,
+  strings: ReturnType<typeof packageStrings>,
+): ReviewSubject {
   if (segment.selection !== undefined)
     return {
       target: segment.target,
       selection: segment.selection,
       label: compactQuote(segment.selection.quote),
     };
-  const element = findTargetElement(segment.target.id);
+  const element = targets.get(segment.target.id)?.element;
   return {
     target: segment.target,
     label:
       element === undefined
         ? strings.reviewTargetFallback(segment.target.kind)
-        : visibleLabel(segment.target, element),
+        : visibleLabel(segment.target, element, strings),
   };
 }
 
@@ -982,8 +1088,10 @@ function rangeContainsViewportPoint(range: Range, x: number, y: number): boolean
   );
 }
 
-function readPrior(): { artifact: ReviewArtifact; resolved: ResolvedReviewArtifact } | undefined {
-  const template = document.querySelector<HTMLTemplateElement>('template[data-prior-review]');
+function readPrior(
+  root: HTMLElement,
+): { artifact: ReviewArtifact; resolved: ResolvedReviewArtifact } | undefined {
+  const template = root.querySelector<HTMLTemplateElement>('template[data-prior-review]');
   if (!template) return;
   try {
     const value = JSON.parse(template.content.textContent ?? '') as {
@@ -996,12 +1104,29 @@ function readPrior(): { artifact: ReviewArtifact; resolved: ResolvedReviewArtifa
   }
 }
 
-function emptyArtifact(revision: string): ReviewArtifact {
-  return { contractVersion: REVIEW_CONTRACT_VERSION, report: { revision }, threads: [] };
+function currentArtifact(
+  source: ReviewArtifact | undefined,
+  revision: string,
+  locale: 'en' | 'ru',
+  multilingual: boolean,
+): ReviewArtifact {
+  const threads = source === undefined ? [] : parseReviewArtifact(source).threads;
+  return multilingual
+    ? {
+        contractVersion: MULTILINGUAL_REVIEW_CONTRACT_VERSION,
+        report: { revision, locale },
+        threads,
+      }
+    : { contractVersion: REVIEW_CONTRACT_VERSION, report: { revision }, threads };
 }
 
-function validateTargets(artifact: ReviewArtifact, manifest: ReviewTargetManifest): void {
-  const targets = collectTargetOwners(manifest);
+function validateTargets(
+  artifact: ReviewArtifact,
+  manifest: ReviewTargetManifest,
+  root: HTMLElement,
+  strings: ReturnType<typeof packageStrings>,
+): void {
+  const targets = collectTargetOwners(manifest, root);
   if (!targets) throw new ReaderImportError(strings.unknownCurrentTarget);
   for (const thread of artifact.threads) {
     const currentSegments = thread.segments.filter(
@@ -1020,6 +1145,7 @@ function validateTargets(artifact: ReviewArtifact, manifest: ReviewTargetManifes
 
 function collectTargetOwners(
   manifest: ReviewTargetManifest,
+  root: HTMLElement,
 ):
   | ReadonlyMap<string, { readonly target: ReviewTargetReference; readonly element: HTMLElement }>
   | undefined {
@@ -1028,15 +1154,15 @@ function collectTargetOwners(
     { readonly target: ReviewTargetReference; readonly element: HTMLElement }
   >();
   for (const target of manifest.targets) {
-    const element = findTargetElement(target.id);
+    const element = findTargetElement(target.id, root);
     if (!element) return;
     result.set(target.id, { target, element });
   }
   return result;
 }
 
-function findTargetElement(id: string): HTMLElement | undefined {
-  return [...document.querySelectorAll<HTMLElement>('[data-review-target]')].find(
+function findTargetElement(id: string, root: HTMLElement): HTMLElement | undefined {
+  return [...root.querySelectorAll<HTMLElement>('[data-review-target]')].find(
     (element) => element.dataset.reviewTarget === id,
   );
 }
@@ -1069,11 +1195,15 @@ function pointAtCodePointOffset(
   return remaining === 0 && last ? { node: last, offset: last.data.length } : undefined;
 }
 
-function limit(input: HTMLTextAreaElement): void {
-  input.addEventListener('input', () => {
-    const value = constrainReviewText(input.value, MAX_REVIEW_TEXT_LENGTH);
-    if (value.truncated) input.value = value.input;
-  });
+function limit(input: HTMLTextAreaElement, signal: AbortSignal): void {
+  input.addEventListener(
+    'input',
+    () => {
+      const value = constrainReviewText(input.value, MAX_REVIEW_TEXT_LENGTH);
+      if (value.truncated) input.value = value.input;
+    },
+    { signal },
+  );
 }
 
 function normalize(value: string): string {
@@ -1086,7 +1216,11 @@ function nextGeneratedId(base: string, occupied: ReadonlySet<string>): string {
   return `${base}-${sequence}`;
 }
 
-function visibleLabel(target: ReviewTargetReference, element: HTMLElement): string {
+function visibleLabel(
+  target: ReviewTargetReference,
+  element: HTMLElement,
+  strings: ReturnType<typeof packageStrings>,
+): string {
   const excerpt = (element.textContent ?? '').replace(/\s+/gu, ' ').trim().slice(0, 80);
   return excerpt || strings.reviewTargetFallback(target.kind);
 }

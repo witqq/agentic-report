@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { packageStrings, resolvePackageLocale } from '../../src/localization.js';
+import {
+  packageStrings,
+  resolvePackageLocale,
+  supportedPackageLocale,
+} from '../../src/localization.js';
 
 describe('package reader localization', () => {
   it('resolves only Russian primary tags and otherwise falls back to English', () => {
@@ -10,6 +14,9 @@ describe('package reader localization', () => {
     expect(resolvePackageLocale('und')).toBe('en');
     expect(resolvePackageLocale('de-DE')).toBe('en');
     expect(resolvePackageLocale(undefined)).toBe('en');
+    expect(supportedPackageLocale('en-US')).toBe('en');
+    expect(supportedPackageLocale('ru-RU')).toBe('ru');
+    expect(supportedPackageLocale('de-DE')).toBeUndefined();
   });
 
   it('uses supported Russian and English count forms without host locale state', () => {
@@ -33,6 +40,8 @@ describe('package reader localization', () => {
       '21 обсуждение · открыто: 21',
     ]);
     expect(packageStrings('en').threadsSummary(1, 1)).toBe('1 thread · unresolved: 1');
+    expect(packageStrings('en').languageName('ru')).toBe('Russian');
+    expect(packageStrings('ru').languageName('en')).toBe('Английский');
   });
 
   it('localizes every closed prior binding and textless target fallback', () => {

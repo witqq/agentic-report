@@ -3,6 +3,8 @@ contractVersion: 1
 title: Build your first portable page
 description: A practical tutorial for the declarative init, edit, validate, inspect, and build loop.
 language: en
+localizations:
+  ru: report.ru.md
 theme: light
 layout: document
 tokens:

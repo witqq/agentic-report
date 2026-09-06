@@ -3,6 +3,8 @@ contractVersion: 1
 title: Product signal atlas
 description: Declarative visualizations compiled into offline, accessible page primitives.
 language: en
+localizations:
+  ru: report.ru.md
 theme: system
 layout: dashboard
 tokens:

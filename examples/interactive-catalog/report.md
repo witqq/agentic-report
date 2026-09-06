@@ -3,6 +3,8 @@ contractVersion: 1
 title: Interactive component catalog
 description: Declarative copyable prose, glossary, disclosure, tabs, overlays, filtering, toggles, and a bounded demo.
 language: en
+localizations:
+  ru: report.ru.md
 theme: dark
 layout: mixed
 tokens:

@@ -42,10 +42,15 @@ Markdown + metadata + local assets + partials + semantic directives
 - `src/page-motion.ts` is the presentation-neutral source of truth for the fixed package motion policy.
   The authoring registry projects it into discovery, while the browser runtime consumes the same values and
   supplies its duration/translation to package CSS through runtime-owned custom properties.
-- `src/source/load-source.ts` resolves the entry, parses metadata, and expands confined Markdown
-  partials. It validates raw metadata shapes before merging and retains metadata/partial provenance for
-  diagnostics and output-collision protection. Reads perform lexical/canonical confinement. The product
-  deliberately does not implement an inode ledger or defend against hostile concurrent path replacement.
+- `src/source/load-source.ts` resolves the primary entry, parses metadata, and expands confined Markdown
+  partials. An optional closed `en`/`ru` localization map loads alternate Markdown entries through the same
+  graph and confinement boundary. The primary owns presentation/output policy; an alternate may own only
+  source-contract version, title, description, language, Markdown, partials, and local resources. Distinct
+  canonical file identities, matching locale/contract declarations, recursion refusal, and complete source
+  inventory prevent aliases and incomplete selectable variants. The loader validates raw metadata shapes
+  before merging and retains metadata/partial provenance for diagnostics and output-collision protection.
+  The product deliberately does not implement an inode ledger or defend against hostile concurrent path
+  replacement.
 - `src/render/markdown.ts` uses the unified/remark/rehype AST pipeline with GitHub Flavored Markdown table,
   strikethrough, task-list, and autolink-literal parsing. Raw HTML is not passed through; rehype sanitization
   runs before trusted compile-time syntax highlighting. The authoring registry owns the serializable
@@ -54,13 +59,16 @@ Markdown + metadata + local assets + partials + semantic directives
   through Shiki metadata. Trusted post-Shiki enhancement splits existing styled HAST spans around bounded
   first glossary occurrences without changing code text. The asset plugin embeds local images, downloads,
   and fonts or copies them under deterministic hashed names.
-- `src/review/contract.ts`, `src/review/targets.ts`, and `src/review/binding.ts` own the platform-neutral
+- `src/review/contract.ts`, `src/review/routing.ts`, `src/review/targets.ts`, and `src/review/binding.ts` own the platform-neutral
   versioned review data contract, bounded canonical serialization, compile-time target inventory,
   local-input revision, and exact/changed/missing/ambiguous binding. The unchanged version-2 target manifest
-  is separate from the version-3 review artifact, whose optional selected-text anchor stores full start/end
-  target references, Unicode code-point offsets, and a normalized quote. Valid version-2 whole-block
-  artifacts normalize into the current shape. Target provenance is captured while AST offsets and the
-  partial source map are available; it is never reconstructed from final HTML or matched by proximity.
+  is separate from single-language review artifact version 3 and multilingual version 4. Version 4 requires
+  a closed locale discriminator and routes to one prepared target manifest before binding; legacy v2/v3
+  input uses a unique exact revision or the primary locale. The optional selected-text anchor stores full
+  start/end target references, Unicode code-point offsets, and a normalized quote. Valid version-2
+  whole-block artifacts normalize into the current single-language shape. Target provenance is captured
+  while AST offsets and the partial source map are available; it is never reconstructed from final HTML or
+  matched by proximity.
 - `src/response/contract.ts` owns the independent version-1 response manifest and answer artifact. It
   validates exact bounded records and kind-specific values, distinguishes untouched questions from authored
   defaults, normalizes human text, compares the compiler-created form revision, and serializes canonical
@@ -97,11 +105,17 @@ Markdown + metadata + local assets + partials + semantic directives
 - `src/render/navigation.ts` derives the final explicit-section or legacy H2 inventory structurally from
   enhanced HAST, fills authored in-flow maps with exact headings, and projects optional short labels for the
   shell. Appendix and subordinate headings remain excluded without parsing serialized HTML.
-- `src/render/document.tsx` creates the static HTML document from prepared navigation, selected
-  registry-owned page layout/tokens, responsive shell, metadata, and content security policy. It allocates
-  collision-free shell IDs around authored content IDs and uses them consistently for navigation and
-  accessibility relationships.
-- `src/browser/` contains the browser runtime and token-based stylesheet bundled by Vite. One delegated
+- `src/render/document.tsx` creates the static HTML document from prepared locale variants, navigation,
+  selected registry-owned page layout/tokens, responsive shell, metadata, and content security policy. One
+  active variant and inert alternate templates contain complete localized shell/article state; the native
+  selector exists only when more than one variant is present. It allocates collision-free shell IDs around
+  each variant's authored content IDs and uses them consistently for navigation and accessibility
+  relationships.
+- `src/browser/` contains the browser runtime and token-based stylesheet bundled by Vite. The locale
+  controller chooses the initial embedded variant from ordered `navigator.languages`, falls back to the
+  primary variant, and atomically swaps the complete active DOM boundary. It updates document metadata and
+  language, recreates variant-bound controllers, restores locale-local review/response/component state, and
+  keeps manual choice session-only. One delegated
   event controller handles theme/navigation controls, current-section ownership, bounded normal-motion
   progress/reveal, code copying, glossary hover/focus/tap explanations,
   tab selection, modal/popover focus, filtering, switches, and bounded counters. A code-term explanation is
@@ -127,9 +141,13 @@ Markdown + metadata + local assets + partials + semantic directives
   `copyable` prose. Trusted enhancement marks a prose content owner; runtime reads its rendered `innerText`,
   while code retains clone-based glossary-panel exclusion. Neither route accepts author behavior.
 - `src/core/prepare-report.ts` owns the shared side-effect-free preparation used by building, validation,
-  and inspection: source/render work, registry-owned output selection, package browser assets, size
-  accounting, content hashing, observed source features, and prepared directory resources. Package browser
-  assets resolve only beside the installed module, never from the consumer's working directory.
+  and inspection: every declared locale graph, per-locale Markdown/navigation/review preparation,
+  deterministic resource merge/collision checks, registry-owned output selection, package browser assets,
+  size accounting, content hashing, observed source features, and prepared directory resources. Matching
+  resource bytes deduplicate; conflicting locale resources at one output path fail. Multilingual authored
+  font identities and activation properties are locale-scoped, while single-language font output remains
+  compatible. Package browser assets resolve only beside the installed module, never from the consumer's
+  working directory.
 - `src/core/compiler.ts` publishes a prepared single-file or staged directory artifact.
   `src/core/analyze-report.ts` projects the same preparation into compact validation and inspection
   results without output publication.
@@ -210,9 +228,10 @@ through the same boundary. Unexpected internal causes and source bodies do not c
 envelopes are not yet independently versioned; the source-contract major is included in validation and
 inspection results.
 
-The current source schema supports title, description, a documented restricted language-tag syntax,
-theme, layout, a coordinated preset, optional scroll progress, a default-on boolean package attribution,
-compact page-token overrides, and output defaults. `attribution: false` removes only the renderer-owned
+The current source schema supports title, description, a documented restricted language-tag syntax, an
+optional fixed-shape `en`/`ru` localization map, theme, layout, a coordinated preset, optional scroll
+progress, a default-on boolean package attribution, compact page-token overrides, and output defaults.
+`attribution: false` removes only the renderer-owned
 **Made with Agentic Report** footer; default and opt-out behavior are identical across output formats. `studio`,
 `editorial`, and `signal` are registry-owned token-default families; `editorial` is the Field Manual family
 with warm package surfaces, compact controls, numbered document navigation, and package-owned decorative
@@ -226,13 +245,17 @@ are allowed; the loader rejects cycles, nesting over 10 levels, and lexical or c
 source root. The source contract is defined in
 [`product/source-contract.md`](product/source-contract.md).
 
-The manifest language is also the sole input to the browser-safe package localization module. It resolves
-`ru` and Russian subtags to one closed Russian catalog and resolves `en`, `und`, and unsupported tags to the
-complete English catalog. Static document markup, compile-time directive and visualization enhancement,
-the browser runtime, and Review Workspace consume that same catalog. They never inspect `navigator`, the
-host environment, or network state. Authored content and CLI diagnostics remain outside this reader-chrome
-boundary. The catalog also owns explicit-locale numeric formatting for visible and accessible chart output,
-so compiled values cannot fall back to a host or hardcoded locale.
+For a single-language source, manifest `language` remains the sole input to the browser-safe package
+catalog: `ru` and Russian subtags resolve Russian, while `en`, `und`, and unsupported tags retain the
+complete English fallback regardless of browser locale. A source that declares `localizations` narrows its
+selectable locale domain to catalog-backed `en` and `ru`; each entry's language resolves the matching
+catalog at compile time. Static document markup, compile-time directive and visualization enhancement,
+Review Workspace, and Response Workspace consume that locale's same catalog. At startup only, the browser
+runtime inspects ordered `navigator.languages` to choose among already embedded variants, then falls back to
+the primary entry. It does not fetch or compile content, consult network state, persist the manual choice,
+or change generated bytes. Authored content and CLI diagnostics remain outside this reader-chrome boundary.
+The catalog also owns explicit-locale numeric formatting for visible and accessible chart output, so
+compiled values cannot fall back to a host or hardcoded locale.
 
 The `section` directive is restricted to the Markdown root. It creates one real `<section>` labelled by an
 owned visible H2, with a validated explicit ID or deterministic title-derived ID. Explicit duplicates and
@@ -311,9 +334,10 @@ network behavior, CSP directive, or output-format branch.
 
 ## Output model
 
-`single-file` embeds CSS, the package-owned runtime, local images, downloadable resources, and declared
-fonts. Binary resource bytes are encoded as MIME-qualified base64 data URLs. A configured byte threshold
-produces a warning, not an implicit format change.
+`single-file` embeds CSS, the package-owned runtime, every declared locale variant, local images,
+downloadable resources, and declared fonts. Binary resource bytes are encoded as MIME-qualified base64 data
+URLs. A configured byte threshold measures the complete multilingual artifact and produces a warning, not
+an implicit format change.
 
 `directory` writes `index.html` and an `assets/` directory. Browser and source assets receive SHA-256
 prefixes in their filenames. A non-empty destination is rejected to avoid destructive cleanup and stale
@@ -353,7 +377,7 @@ selection directly instead of scanning on every scroll signal. Desktop collapse 
 session-only. Mobile moves the same nav into a native modal dialog with inert background, cyclic focus,
 Escape/backdrop/Close return, link-to-heading focus, and safe breakpoint closure.
 
-Both formats contain the same inert escaped review-target manifest in a `template` element. Reviewable
+Both formats contain one inert escaped review-target manifest per locale variant. Reviewable
 container directives that survive enhancement as DOM owners and ordinary Markdown blocks carry deterministic
 `data-review-target` identities. The registry-owned review-ownership contract assigns structural chart
 `series` data to the chart target instead of
@@ -373,7 +397,7 @@ viewport-clamped **Create note** action. The controller snapshots its exact rang
 opens the popover beside the selection; compose, ordered history, edit, resolve, and reopen stay at that text
 locus. Empty, whitespace-only, oversized, outside-report, and package-control selections expose no action.
 
-Current exact ranges are reconstructed from version-3 anchors and registered as separate open and resolved
+Current exact ranges are reconstructed from review selection anchors and registered as separate open and resolved
 CSS highlights without rewriting authored DOM. A pointer or touch point is compared with the actual range
 rectangles; overlapping matches choose the unresolved, shortest, then lexically stable thread. Focusable
 fixed overlay markers give each highlight a keyboard route without affecting layout. Re-selecting an exact
@@ -388,7 +412,12 @@ cannot create a new one. List-origin popovers return focus to the visible Review
 the closed list; other close paths return to their relevant opener. State remains in memory until explicit
 canonical import or download.
 
-Review protocol version 3 stores discussion threads as ordered revision segments. Each segment owns its
+Single-language review protocol version 3 stores discussion threads as ordered revision segments.
+Multilingual version 4 has the same thread model and additionally requires `report.locale`; browser export
+uses the active locale, and the shared Node router selects that still-declared locale before binding. A
+version-4 target may remain `missing` within its locale when its old source and targets disappeared; a
+foreign locale is rejected without substituting another variant. Legacy v2/v3 input first uses a unique
+matching report revision and otherwise follows the primary-locale migration rule. Each segment owns its
 report revision, source target, optional selected-text anchor, ordered user/agent messages and resolved flag.
 An anchor repeats the start target as an enforced invariant and supplies the end target, code-point offsets,
 and bounded NFC quote. Subject uniqueness distinguishes a whole-block thread and multiple ranges on the same
@@ -399,10 +428,11 @@ masquerade under the closed version-2 schema. The browser can edit messages and 
 ordinary decision/checklist directives remain static report content and create no review requirements or
 approval gates. Version-1 formal review files fail at the version boundary without changing current state.
 
-An optional confined prior-review sidecar enters common preparation before publication. Preparation embeds
-the parsed artifact plus shared exact/changed/missing/ambiguous bindings; it never embeds the sidecar path.
-Exact revisions resume current state. Stale threads render as prior evidence. Invalid or colliding input fails
-before authoritative output replacement.
+An optional confined prior-review sidecar enters common preparation before publication. Preparation routes
+its locale/revision, then embeds the parsed artifact plus exact/changed/missing/ambiguous bindings only in the
+selected variant; it never embeds the sidecar path. Exact revisions resume current locale state. Stale
+threads render as prior evidence. Invalid, foreign-locale, ambiguous, or colliding input fails before
+authoritative output replacement.
 
 `scrollProgress` defaults to false. In normal motion, an enabled page installs one passive document scroll
 listener and one resize listener, coalesces updates through one animation frame, and changes one decorative
@@ -429,7 +459,8 @@ and revision produce identical staged bytes.
 
 The human docs, direct agent quickstart, complete agent reference, source contract, canonical skill, and
 `llms.txt` are available under the same static origin as the product-built landing and separately built
-examples. Hosting is outside the compiler. A valid deployment serves these files directly with appropriate
+examples. Every staged bilingual demo and the landing also expose their canonical English and Russian
+Markdown entries as direct copy routes. Hosting is outside the compiler. A valid deployment serves these files directly with appropriate
 MIME types, a real 404 rather than an SPA fallback, and ordinary publicly trusted HTTPS. The reference
 Nginx policy requires every mutable HTML, Markdown, manifest, and release-metadata route to revalidate while
 allowing a one-year immutable cache only for filenames containing the compiler's 12-hex content hash. ETag

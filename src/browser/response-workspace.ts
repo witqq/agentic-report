@@ -18,26 +18,51 @@ class ResponseImportError extends Error {}
 
 const RESPONSE_DRAG_TYPE = 'application/x-agentic-response-item';
 
-export function installResponseWorkspaces(): void {
-  const strings = packageStrings(document.documentElement.dataset.packageLocale);
-  for (const root of document.querySelectorAll<HTMLElement>('[data-response-workspace]')) {
+export interface ResponseWorkspacesController {
+  readonly snapshot: () => ReadonlyMap<string, ResponseArtifact>;
+  readonly destroy: () => void;
+}
+
+interface ResponseWorkspaceController {
+  readonly id: string;
+  readonly snapshot: () => ResponseArtifact;
+  readonly destroy: () => void;
+}
+
+export function installResponseWorkspaces(
+  page: HTMLElement = document.body,
+  initial: ReadonlyMap<string, ResponseArtifact> = new Map(),
+): ResponseWorkspacesController {
+  const strings = packageStrings(page.dataset.pagePackageLocale);
+  const controllers: ResponseWorkspaceController[] = [];
+  for (const root of page.querySelectorAll<HTMLElement>('[data-response-workspace]')) {
     const template = root.querySelector<HTMLElement>('[data-response-manifest]');
     const mount = root.querySelector<HTMLElement>('[data-response-mount]');
     if (!template || !mount) continue;
     try {
       const manifest = parseResponseFormManifest(JSON.parse(template.textContent ?? '') as unknown);
-      createController(mount, manifest, strings);
+      controllers.push(createController(mount, manifest, strings, initial.get(manifest.id)));
     } catch {
       root.dataset.responseUnavailable = '';
     }
   }
+  return {
+    snapshot: () =>
+      new Map(controllers.map((controller) => [controller.id, controller.snapshot()])),
+    destroy: () =>
+      controllers.forEach((controller) => {
+        controller.destroy();
+      }),
+  };
 }
 
 function createController(
   mount: HTMLElement,
   manifest: ResponseFormManifest,
   strings: PackageStrings,
-): void {
+  initial: ResponseArtifact | undefined,
+): ResponseWorkspaceController {
+  const abort = new AbortController();
   const answered = new Set<string>();
   let draggedItem: HTMLElement | undefined;
   const status = document.createElement('output');
@@ -64,98 +89,131 @@ function createController(
   actions.append(copy, download, importLabel);
   mount.replaceChildren(questions, actions, status);
 
-  mount.addEventListener('input', (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
-    if (!target.matches('[data-response-comment]')) markAnswered(target);
-  });
-  mount.addEventListener('change', (event) => {
-    const target = event.target;
-    if (target instanceof HTMLSelectElement && target.matches('[data-response-bucket-select]')) {
-      const item = target.closest<HTMLElement>('[data-response-item]');
-      const question = target.closest<HTMLElement>('[data-response-question]');
-      if (item && question) moveBucketItem(question, item, target.value);
-    }
-    if (target instanceof HTMLInputElement && target.matches('[data-response-import]')) {
-      void importArtifact(target);
-      return;
-    }
-    if (target instanceof Element && !target.matches('[data-response-comment]'))
-      markAnswered(target);
-  });
-  mount.addEventListener('click', (event) => {
-    const target = event.target;
-    if (!(target instanceof Element)) return;
-    const move = target.closest<HTMLButtonElement>('[data-response-order-move]');
-    if (move) {
-      const item = move.closest<HTMLLIElement>('[data-response-order-item]');
-      const list = item?.parentElement;
-      if (item && list) {
-        const direction = move.dataset.responseOrderMove;
-        const sibling = direction === 'up' ? item.previousElementSibling : item.nextElementSibling;
-        if (sibling instanceof HTMLLIElement) {
-          direction === 'up' ? list.insertBefore(item, sibling) : list.insertBefore(sibling, item);
-          markAnswered(move);
-          move.focus();
-        }
+  mount.addEventListener(
+    'input',
+    (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
+      if (!target.matches('[data-response-comment]')) markAnswered(target);
+    },
+    { signal: abort.signal },
+  );
+  mount.addEventListener(
+    'change',
+    (event) => {
+      const target = event.target;
+      if (target instanceof HTMLSelectElement && target.matches('[data-response-bucket-select]')) {
+        const item = target.closest<HTMLElement>('[data-response-item]');
+        const question = target.closest<HTMLElement>('[data-response-question]');
+        if (item && question) moveBucketItem(question, item, target.value);
       }
-      return;
-    }
-    if (target.closest('[data-response-copy]')) void copyArtifact();
-    else if (target.closest('[data-response-download]')) downloadArtifact();
-  });
-  mount.addEventListener('dragstart', (event) => {
-    const item =
-      event.target instanceof Element
-        ? event.target.closest<HTMLElement>('[data-response-item]')
-        : null;
-    const question = item?.closest<HTMLElement>('[data-response-question]');
-    const itemId = item?.dataset.responseItem;
-    const questionId = question?.dataset.responseQuestion;
-    if (!item || !itemId || !questionId || !event.dataTransfer) return;
-    draggedItem = item;
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData(RESPONSE_DRAG_TYPE, itemId);
-  });
-  mount.addEventListener('dragover', (event) => {
-    const column =
-      event.target instanceof Element
-        ? event.target.closest<HTMLElement>('[data-response-bucket-column]')
-        : null;
-    const question = column?.closest<HTMLElement>('[data-response-question]');
-    if (
-      !question ||
-      !draggedItem ||
-      draggedItem.closest<HTMLElement>('[data-response-question]') !== question
-    )
-      return;
-    event.preventDefault();
-    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-  });
-  mount.addEventListener('drop', (event) => {
-    const column =
-      event.target instanceof Element
-        ? event.target.closest<HTMLElement>('[data-response-bucket-column]')
-        : null;
-    if (!column || !event.dataTransfer) return;
-    const question = column.closest<HTMLElement>('[data-response-question]');
-    if (
-      !question ||
-      !draggedItem ||
-      draggedItem.closest<HTMLElement>('[data-response-question]') !== question ||
-      event.dataTransfer.getData(RESPONSE_DRAG_TYPE) !== draggedItem.dataset.responseItem
-    )
-      return;
-    event.preventDefault();
-    if (draggedItem) {
-      moveBucketItem(question, draggedItem, column.dataset.responseBucketColumn ?? '');
-      markAnswered(question);
-    }
-    draggedItem = undefined;
-  });
-  mount.addEventListener('dragend', () => {
-    draggedItem = undefined;
-  });
+      if (target instanceof HTMLInputElement && target.matches('[data-response-import]')) {
+        void importArtifact(target);
+        return;
+      }
+      if (target instanceof Element && !target.matches('[data-response-comment]'))
+        markAnswered(target);
+    },
+    { signal: abort.signal },
+  );
+  mount.addEventListener(
+    'click',
+    (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const move = target.closest<HTMLButtonElement>('[data-response-order-move]');
+      if (move) {
+        const item = move.closest<HTMLLIElement>('[data-response-order-item]');
+        const list = item?.parentElement;
+        if (item && list) {
+          const direction = move.dataset.responseOrderMove;
+          const sibling =
+            direction === 'up' ? item.previousElementSibling : item.nextElementSibling;
+          if (sibling instanceof HTMLLIElement) {
+            direction === 'up'
+              ? list.insertBefore(item, sibling)
+              : list.insertBefore(sibling, item);
+            markAnswered(move);
+            move.focus();
+          }
+        }
+        return;
+      }
+      if (target.closest('[data-response-copy]')) void copyArtifact();
+      else if (target.closest('[data-response-download]')) downloadArtifact();
+    },
+    { signal: abort.signal },
+  );
+  mount.addEventListener(
+    'dragstart',
+    (event) => {
+      const item =
+        event.target instanceof Element
+          ? event.target.closest<HTMLElement>('[data-response-item]')
+          : null;
+      const question = item?.closest<HTMLElement>('[data-response-question]');
+      const itemId = item?.dataset.responseItem;
+      const questionId = question?.dataset.responseQuestion;
+      if (!item || !itemId || !questionId || !event.dataTransfer) return;
+      draggedItem = item;
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData(RESPONSE_DRAG_TYPE, itemId);
+    },
+    { signal: abort.signal },
+  );
+  mount.addEventListener(
+    'dragover',
+    (event) => {
+      const column =
+        event.target instanceof Element
+          ? event.target.closest<HTMLElement>('[data-response-bucket-column]')
+          : null;
+      const question = column?.closest<HTMLElement>('[data-response-question]');
+      if (
+        !question ||
+        !draggedItem ||
+        draggedItem.closest<HTMLElement>('[data-response-question]') !== question
+      )
+        return;
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    },
+    { signal: abort.signal },
+  );
+  mount.addEventListener(
+    'drop',
+    (event) => {
+      const column =
+        event.target instanceof Element
+          ? event.target.closest<HTMLElement>('[data-response-bucket-column]')
+          : null;
+      if (!column || !event.dataTransfer) return;
+      const question = column.closest<HTMLElement>('[data-response-question]');
+      if (
+        !question ||
+        !draggedItem ||
+        draggedItem.closest<HTMLElement>('[data-response-question]') !== question ||
+        event.dataTransfer.getData(RESPONSE_DRAG_TYPE) !== draggedItem.dataset.responseItem
+      )
+        return;
+      event.preventDefault();
+      if (draggedItem) {
+        moveBucketItem(question, draggedItem, column.dataset.responseBucketColumn ?? '');
+        markAnswered(question);
+      }
+      draggedItem = undefined;
+    },
+    { signal: abort.signal },
+  );
+  mount.addEventListener(
+    'dragend',
+    () => {
+      draggedItem = undefined;
+    },
+    { signal: abort.signal },
+  );
+
+  if (initial !== undefined) applyArtifact(questions, manifest, initial, answered);
 
   function markAnswered(target: Element): void {
     const question = target.closest<HTMLElement>('[data-response-question]');
@@ -263,6 +321,12 @@ function createController(
     status.textContent = message;
     status.toggleAttribute('data-response-error', error);
   }
+
+  return {
+    id: manifest.id,
+    snapshot: currentArtifact,
+    destroy: () => abort.abort(),
+  };
 }
 
 function renderQuestion(
