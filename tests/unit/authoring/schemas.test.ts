@@ -185,6 +185,9 @@ describe('authoring schema projections', () => {
       title: 'Report',
       language: 'en',
     });
+    expect(parseReportManifest({ localizations: { ru: ' locales/report.ru.md ' } })).toMatchObject({
+      localizations: { ru: 'locales/report.ru.md' },
+    });
     expect(reportManifestInputSchema.safeParse({ unknown: true }).success).toBe(false);
     expect(reportManifestInputSchema.safeParse({ output: { unknown: true } }).success).toBe(false);
 
@@ -293,6 +296,8 @@ describe('authoring schema projections', () => {
       accepted('trimmed metadata', { title: '  Report  ', description: '  Description  ' }),
       accepted('language tag', { language: 'zh-Hant-TW' }),
       accepted('trimmed language tag', { language: '  zh-Hant-TW  ' }),
+      accepted('localized Russian entry', { localizations: { ru: 'report.ru.md' } }),
+      accepted('localized English entry', { localizations: { en: 'report.en.md' } }),
       accepted('studio preset', { preset: 'studio' }),
       accepted('editorial preset', { preset: 'editorial' }),
       accepted('signal preset', { preset: 'signal' }),
@@ -327,6 +332,9 @@ describe('authoring schema projections', () => {
       rejected('numeric description', { description: 1 }),
       rejected('invalid language pattern', { language: 'invalid_tag' }),
       rejected('numeric language', { language: 1 }),
+      rejected('non-object localizations', { localizations: 'report.ru.md' }),
+      rejected('unknown localization locale', { localizations: { de: 'report.de.md' } }),
+      rejected('escaping localization entry', { localizations: { ru: '../report.ru.md' } }),
       rejected('unknown preset', { preset: 'cinematic' }),
       rejected('numeric preset', { preset: 1 }),
       rejected('unknown theme', { theme: 'sepia' }),

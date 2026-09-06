@@ -530,6 +530,15 @@ export default async function globalSetup(): Promise<void> {
       format: 'directory',
     }),
     buildReport({
+      input: path.resolve('examples/review-workspace'),
+      output: path.join(fixtureRoot, 'review-workspace.html'),
+    }),
+    buildReport({
+      input: path.resolve('examples/review-workspace'),
+      output: path.join(fixtureRoot, 'review-workspace-directory'),
+      format: 'directory',
+    }),
+    buildReport({
       input: path.resolve('examples/response-workspace'),
       output: path.join(fixtureRoot, 'response-workspace-directory'),
       format: 'directory',

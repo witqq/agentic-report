@@ -2,6 +2,8 @@
 title: Work registry corpus
 description: Bounded work-report contract coverage.
 language: ru
+localizations:
+  en: report.en.md
 ---
 
 # Work registry corpus

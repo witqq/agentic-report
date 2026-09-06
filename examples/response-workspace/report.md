@@ -3,6 +3,8 @@ contractVersion: 1
 title: Release decision response workspace
 description: A fictional local response form covering every structured answer kind.
 language: en
+localizations:
+  ru: report.ru.md
 theme: system
 layout: document
 preset: editorial

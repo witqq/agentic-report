@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { access, readFile, realpath, stat } from 'node:fs/promises';
+import type { BigIntStats } from 'node:fs';
 import path from 'node:path';
 
 import matter from 'gray-matter';
@@ -10,11 +11,14 @@ import { authoringRegistry } from '../authoring/registry.js';
 import { normalizePackageRelativePosixReference } from '../authoring/local-reference.js';
 import {
   ReportManifestSchema,
+  type LocalizedSourceDocument,
   type SourceDocument,
   type SourceLocation,
   type SourceMapSegment,
+  type SourceVariantDocument,
 } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
+import { supportedPackageLocale } from '../localization.js';
 import { sourceLocationFromOffsets } from './source-map.js';
 
 interface MetadataOrigin {
@@ -48,11 +52,121 @@ export async function loadSource(input: string): Promise<SourceDocument> {
       )
     : await realpath(resolvedInput);
   const sourceRoot = path.dirname(entryPath);
+  const primary = await loadSourceEntry(entryPath, sourceRoot, true);
+  const declared = primary.manifest.localizations;
+  const primaryLocale = supportedPackageLocale(primary.manifest.language);
+  if (declared === undefined) {
+    return {
+      ...primary,
+      locale: primaryLocale ?? 'en',
+      localizations: [],
+    };
+  }
+  if (primaryLocale === undefined) {
+    throw localizationError(
+      'A multilingual report primary language must be English or Russian.',
+      'Set language to en or ru, or remove localizations from this single-language report.',
+      primary.entryPath,
+    );
+  }
+  const entries = Object.entries(declared).filter(
+    (entry): entry is ['en' | 'ru', string] => entry[1] !== undefined,
+  );
+  if (entries.length === 0) {
+    throw localizationError(
+      'Report localizations must declare at least one alternate entry.',
+      'Add localizations.en or localizations.ru, or remove the empty localizations object.',
+      primary.entryPath,
+    );
+  }
+  if (entries.some(([locale]) => locale === primaryLocale)) {
+    throw localizationError(
+      `Report localizations repeat the primary ${primaryLocale} locale.`,
+      'Keep the primary language in the main entry and declare only alternate locales.',
+      primary.entryPath,
+    );
+  }
+
+  const localizations: LocalizedSourceDocument[] = [];
+  const identities = [await stat(entryPath, { bigint: true })];
+  for (const [locale, reference] of entries) {
+    const localizedEntry = await resolveLocalPath(
+      sourceRoot,
+      reference,
+      'LOCALIZATION_OUTSIDE_SOURCE',
+    );
+    if (!localizedEntry.endsWith('.md')) {
+      throw localizationError(
+        `Localized entry must be Markdown: ${reference}`,
+        'Use a confined .md entry for each localization.',
+        primary.entryPath,
+      );
+    }
+    const localizedStat = await statOrLocalizationError(localizedEntry, reference);
+    if (!localizedStat.isFile()) {
+      throw localizationError(
+        `Localized entry is not an ordinary file: ${reference}`,
+        'Use a regular Markdown file under the primary source root.',
+        localizedEntry,
+      );
+    }
+    if (
+      identities.some(
+        (identity) => identity.dev === localizedStat.dev && identity.ino === localizedStat.ino,
+      )
+    ) {
+      throw localizationError(
+        `Localized entry aliases another report entry: ${reference}`,
+        'Use a distinct Markdown file for every locale.',
+        localizedEntry,
+      );
+    }
+    identities.push(localizedStat);
+    const loaded = await loadSourceEntry(localizedEntry, sourceRoot, false);
+    if (supportedPackageLocale(loaded.manifest.language) !== locale) {
+      throw localizationError(
+        `Localized entry ${reference} does not declare language ${locale}.`,
+        `Set its language frontmatter to ${locale} or remove the mismatched declaration.`,
+        localizedEntry,
+      );
+    }
+    if (loaded.manifest.contractVersion !== primary.manifest.contractVersion) {
+      throw localizationError(
+        `Localized entry ${reference} uses a different source-contract major.`,
+        'Use the same contractVersion in the primary and every localized entry.',
+        localizedEntry,
+      );
+    }
+    localizations.push({
+      ...loaded,
+      manifest: localizedManifest(primary.manifest, loaded.manifest),
+      locale,
+    });
+  }
+
+  return {
+    ...primary,
+    sourceFiles: [
+      ...new Set([primary.sourceFiles, ...localizations.map((item) => item.sourceFiles)].flat()),
+    ],
+    locale: primaryLocale,
+    localizations,
+  };
+}
+
+async function loadSourceEntry(
+  entryPath: string,
+  sourceRoot: string,
+  includeProjectManifest: boolean,
+): Promise<SourceVariantDocument> {
   const raw = await readFile(entryPath, 'utf8');
   const parsed = parseFrontmatter(raw, entryPath);
-  const manifestDocument = await readOptionalManifest(sourceRoot);
+  const manifestDocument = includeProjectManifest
+    ? await readOptionalManifest(sourceRoot)
+    : { data: {} };
   const frontmatterOrigin: MetadataOrigin = { file: entryPath, text: raw };
   const frontmatterData = requireMetadataRecord(parsed.data, frontmatterOrigin, 'frontmatter');
+  if (!includeProjectManifest) assertLocalizedMetadata(frontmatterData, frontmatterOrigin);
   const merged = mergeManifestData(manifestDocument.data, frontmatterData);
   const headingTitle = /^#\s+(.+)$/m.exec(parsed.content)?.[1]?.trim();
   const withDerivedTitle =
@@ -102,6 +216,63 @@ export async function loadSource(input: string): Promise<SourceDocument> {
     sourceMap: expanded.sourceMap,
     sourceDigests: sourceDigests(entryPath, raw, manifestDocument.origin, expanded.sourceMap),
   };
+}
+
+function assertLocalizedMetadata(data: Record<string, unknown>, origin: MetadataOrigin): void {
+  const allowed = new Set(['contractVersion', 'title', 'description', 'language']);
+  const unsupported = Object.keys(data).filter((key) => !allowed.has(key));
+  if (unsupported.length === 0) return;
+  throw localizationError(
+    `Localized entry has primary-owned metadata: ${unsupported.join(', ')}.`,
+    'Keep layout, theme, tokens, output, attribution, and localizations in the primary entry.',
+    origin.file,
+  );
+}
+
+function localizedManifest(
+  primary: SourceDocument['manifest'],
+  localized: SourceDocument['manifest'],
+): SourceDocument['manifest'] {
+  const {
+    localizations: _localizations,
+    title: _title,
+    description: _description,
+    language: _language,
+    ...shared
+  } = primary;
+  return {
+    ...shared,
+    language: localized.language,
+    ...(localized.title === undefined ? {} : { title: localized.title }),
+    ...(localized.description === undefined ? {} : { description: localized.description }),
+  };
+}
+
+async function statOrLocalizationError(file: string, reference: string): Promise<BigIntStats> {
+  try {
+    return await stat(file, { bigint: true });
+  } catch (error) {
+    throw new AgenticReportError(
+      {
+        level: 'error',
+        code: 'LOCALIZATION_READ_FAILED',
+        message: `Could not read localized entry: ${reference}`,
+        remediation: 'Add the declared Markdown file under the primary source root.',
+        source: { file },
+      },
+      { cause: error },
+    );
+  }
+}
+
+function localizationError(message: string, remediation: string, file: string): AgenticReportError {
+  return new AgenticReportError({
+    level: 'error',
+    code: 'INVALID_LOCALIZATION',
+    message,
+    remediation,
+    source: { file },
+  });
 }
 
 function sourceDigests(

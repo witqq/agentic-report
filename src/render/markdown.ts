@@ -19,6 +19,7 @@ import {
   authoringRegistry,
   type AuthoringRegistryDefinition,
   type DirectiveDefinition,
+  type PageLocaleChoice,
 } from '../authoring/registry.js';
 import type { Diagnostic, OutputFormat, SourceDigest, SourceMapSegment } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
@@ -40,6 +41,7 @@ export interface MarkdownRenderOptions {
   readonly share?: boolean;
   readonly outputFilePath?: string;
   readonly sourceMap: readonly SourceMapSegment[];
+  readonly localeScope?: PageLocaleChoice;
 }
 
 export interface PreparedResourceFile {
@@ -316,8 +318,14 @@ async function processAssetTarget(
   const cssUrl =
     options.format === 'directory' ? `./${path.basename(reference.url)}` : reference.url;
   const activateFont = options.collector.fontCss.length === 0;
+  const fontFamily =
+    options.localeScope === undefined ? family : `${family}--agentic-${options.localeScope}`;
+  const activationSelector =
+    options.localeScope === undefined
+      ? ':root'
+      : `[data-localized-page-variant="${options.localeScope}"]`;
   options.collector.fontCss.push(
-    `@font-face{font-family:${JSON.stringify(family)};src:url(${JSON.stringify(cssUrl)})${format === undefined ? '' : ` format(${JSON.stringify(format)})`};font-display:swap}${activateFont ? `:root{--agentic-font:${JSON.stringify(family)}}` : ''}`,
+    `@font-face{font-family:${JSON.stringify(fontFamily)};src:url(${JSON.stringify(cssUrl)})${format === undefined ? '' : ` format(${JSON.stringify(format)})`};font-display:swap}${activateFont ? `${activationSelector}{--agentic-font:${JSON.stringify(fontFamily)}}` : ''}`,
   );
   delete target.node.properties.dataFontSource;
   delete target.node.properties.dataFontFamily;

@@ -37,12 +37,15 @@ export type {
   ValidateReportResult,
 } from './contracts.js';
 export {
+  MULTILINGUAL_REVIEW_CONTRACT_VERSION,
   REVIEW_CONTRACT_VERSION,
   REVIEW_TARGET_MANIFEST_VERSION,
   parseReviewArtifact,
   parseReviewTargetManifest,
   serializeReviewArtifact,
   type ReviewArtifact,
+  type MultilingualReviewArtifact,
+  type SingleLanguageReviewArtifact,
   type ReviewBinding,
   type ReviewMessage,
   type ReviewSelectionAnchor,

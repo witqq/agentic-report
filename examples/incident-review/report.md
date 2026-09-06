@@ -3,6 +3,8 @@ contractVersion: 1
 title: OrbitDesk P1 incident review
 description: A fictional service incident command review with impact, causal evidence, recovery, and accountable follow-up.
 language: en
+localizations:
+  ru: report.ru.md
 theme: dark
 layout: mixed
 preset: signal

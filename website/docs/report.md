@@ -86,6 +86,19 @@ Authors write declarative source rather than application code. Use Markdown for 
 manifest for page settings, allowlisted semantic directives for components, confined Markdown partials
 for composition, and local assets for media and downloads.
 
+For a bilingual page, the primary entry declares `language: en` or `language: ru` and maps the other
+confined Markdown entry under `localizations`. Translate that variant's prose, partials, directive labels,
+and visible asset text; the package does not machine-translate. One artifact embeds both variants, selects
+the initial language from ordered system preferences, falls back to the primary, and shows the native
+language selector only when localization exists. Switching replaces content, metadata, navigation, chrome,
+visualizations, and locale-specific review/response state together.
+
+```yaml
+language: en
+localizations:
+  ru: report.ru.md
+```
+
 ::::cards
 :::card{title="Agent reference"}
 Commands, JSON output, starters, components, layouts, themes, diagnostics, and output behavior.
@@ -112,10 +125,11 @@ Generated pages include always-on local Review Workspace annotations. Select an 
 beside the text. A selection may cross inline markup or adjacent review targets. Saved open/resolved ranges
 stay visibly distinct; hover/tap exposes **View thread**, and focusable markers provide the keyboard route.
 The topbar **Review** action opens only a non-reflowing overlay list, prior evidence, import, and one export
-of every thread as deterministic version-3 `review.json`. Valid version-2 whole-block files remain accepted
-and list-accessible, but new threads begin with selected text. Desktop uses a non-modal list overlay; mobile
-uses a modal sheet. Nothing is uploaded or stored in an account; ordinary decisions and checklists remain
-static report content. [Try the complete Review Workspace example](../examples/review-workspace/index.html)
+of every thread. Single-language pages export deterministic version 3; multilingual pages export version 4
+with the active `report.locale` and retain separate threads for each locale. Valid version-2 whole-block
+files remain accepted and list-accessible, but new threads begin with selected text. Desktop uses a
+non-modal list overlay; mobile uses a modal sheet. Nothing is uploaded or stored in an account; ordinary
+decisions and checklists remain static report content. [Try the complete Review Workspace example](../examples/review-workspace/index.html)
 or [read its declarative source](../examples/review-workspace/report.md).
 The target manifest is bounded to 5,000 reviewable blocks and 750,000 serialized bytes; unusually large
 handoffs must stay under both limits or be split.
@@ -136,7 +150,8 @@ When the reader must return typed values instead of discussion, use Response Wor
 triage, per-item and global choices, priority ordering, bounded scores, free text, and sparse item comments.
 The page keeps state only in the current tab and exports the same deterministic response through clipboard
 and file download. [Open the complete live example](../examples/response-workspace/index.html) or inspect
-its [declarative source](../examples/response-workspace/report.md).
+its [English source](../examples/response-workspace/report.md) and
+[Russian source](../examples/response-workspace/report.ru.md).
 
 Use `copyable` when ordinary prose should be pasted elsewhere. It keeps Markdown typography/wrapping and
 copies only visible rendered text through the localized package control.
@@ -163,7 +178,8 @@ copies only visible rendered text through the localized package control.
 
 The public [landing](../index.html), [incident review](../examples/incident-review/index.html),
 [vendor decision](../examples/vendor-decision/index.html), and
-[launch readiness page](../examples/launch-readiness/index.html) are all built through this same contract.
+[launch readiness page](../examples/launch-readiness/index.html) are all bilingual pages built through this
+same contract.
 
 ::::
 

@@ -18,6 +18,12 @@ The output destination must not exist. Open `site/index.html` through `file://`,
 digest and byte count. Direct Markdown and skill files are copied from their canonical repository sources;
 they are not rendered or maintained as separate copies.
 
+The landing and every staged demo are ordinary bilingual compiler inputs. Their canonical English entries
+declare maintained Russian entries through `localizations`, so the built page initially follows the reader's
+system language and retains the package-owned selector. `website/routes.json` also exposes both English and
+Russian Markdown entries as direct source routes; staging copies those bytes without translating or
+rewriting them.
+
 Site assembly adds one compact `Made with Moira` footer to every staged HTML page. The footer links to
 `https://moira-mcp.com/`, makes no runtime request, and is deliberately owned by the public-site
 assembler rather than the compiler. Ordinary pages built by package users are therefore unchanged. The

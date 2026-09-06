@@ -90,6 +90,13 @@ Open `my-page.html` through `file://`. Edit only the declarative source: Markdow
 optional YAML/JSON manifest, confined Markdown partials, and local assets. Authors do not need React,
 JSX, browser JavaScript, CSS, or a frontend project.
 
+The packaged starters already include maintained English and Russian entries. For another bilingual source,
+set the primary entry to `language: en` or `language: ru` and declare the other confined Markdown path with
+`localizations.en` or `localizations.ru`. Translate prose, partials, authored labels, and visible asset text
+explicitly; keep layout/output policy only in the primary. The generated artifact selects the first matching
+system language, falls back to the primary, and shows its native language selector only when both variants
+exist. Switching also isolates review threads and response drafts by locale.
+
 Generated reports include a bottom **Made with Agentic Report** link by default. Keep that default unless
 the user asks for an unbranded artifact; in that case set `attribution: false` in frontmatter or the
 manifest. This removes only the package footer and does not alter author-owned prose or links.
@@ -148,7 +155,9 @@ an unusually large handoff when either bound is reached.
 Use the separate `response`/`question` directives when the reader must return structured triage, choices,
 priority order, scores, text, or per-item comments. The generated page keeps answers in the current tab and
 offers both **Copy response** and **Download response.json**; a rejected import preserves existing answers.
-The installed example catalog includes the complete `response-workspace` source.
+The installed example catalog includes the complete bilingual `response-workspace` source. Its public
+[English entry](../../examples/response-workspace/report.md) and
+[Russian entry](../../examples/response-workspace/report.ru.md) use the same declarative contract.
 
 Write an ordinary colon directly—a digit-initial name and a colon written against the preceding word remain
 literal text in Markdown, so `21:01`, `1:30:05`, `3:1`, `1:10:100`, `localhost:9000`, `arXiv:2508.05775` and
@@ -163,9 +172,12 @@ Use `:::copyable` for prose handoffs. It remains ordinary wrapped Markdown and c
 do not use a `text` code fence just to get a Copy button.
 
 Review version 3 stores ordered user/agent messages, resolved state, and optional exact selected-text anchors
-in one local sidecar. Each anchor records its quote and bounded start/end target plus Unicode code-point
-offsets. Valid version-2 whole-block reviews remain accepted. The sidecar is not an account, signature, or
-hosted collaboration service. Decision/checklist directives remain document content.
+for a single-language page. A multilingual page exports version 4 with the active `report.locale`, and the
+CLI routes it to that localized Markdown graph before binding targets. Each anchor records its quote and
+bounded start/end target plus Unicode code-point offsets. Valid version-2 whole-block reviews remain
+accepted; legacy v2/v3 feedback uses an exact matching locale revision when available and otherwise the
+primary variant. The sidecar is not an account, signature, or hosted collaboration service.
+Decision/checklist directives remain document content.
 
 For a repeat review, pass the prior local artifact with `build --review review.json`. Never copy a prior page
 thread into changed content; inspect bindings, continue the current discussion, and export the next revision.

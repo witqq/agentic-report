@@ -3,6 +3,8 @@ contractVersion: 1
 title: Portable page architecture
 description: An architecture decision packet with boundaries, alternatives, and rollout evidence.
 language: en
+localizations:
+  ru: report.ru.md
 theme: dark
 layout: document
 tokens:

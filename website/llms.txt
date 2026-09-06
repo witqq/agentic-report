@@ -14,6 +14,11 @@ complete discussion and saved open/resolved ranges remain highlighted. **Review*
 list/import/export overlay. Review Workspace exports every selected-text note and compatible imported
 whole-block thread together in one local `review.json`.
 
+Sources may embed maintained English and Russian Markdown variants with `localizations`. The generated page
+selects an available system language, falls back to the primary entry, and shows a language selector only
+when both variants exist. Switching replaces the complete page and keeps review/response state isolated by
+locale. Single-language review export is version 3; multilingual export is version 4 with `report.locale`.
+
 - Agent quickstart: docs/agent/index.md
 - Human documentation: docs/index.html
 - Complete agent reference: docs/AGENT-REFERENCE.md

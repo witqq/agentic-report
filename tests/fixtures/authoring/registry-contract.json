@@ -209,6 +209,35 @@
       }
     },
     {
+      "name": "localizations",
+      "description": "Confined alternate Markdown entries for package-supported reader locales; the primary entry is the fallback.",
+      "required": false,
+      "fields": [
+        {
+          "name": "en",
+          "description": "Alternate English Markdown entry relative to the primary source root.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "format": "relative-local-path"
+          }
+        },
+        {
+          "name": "ru",
+          "description": "Alternate Russian Markdown entry relative to the primary source root.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "format": "relative-local-path"
+          }
+        }
+      ]
+    },
+    {
       "name": "preset",
       "description": "Coordinated package-owned visual defaults; explicit bounded token values override the preset.",
       "required": false,

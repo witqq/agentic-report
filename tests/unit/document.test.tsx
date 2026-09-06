@@ -208,6 +208,8 @@ describe('renderDocument runtime boundary', () => {
     });
 
     expect(html).toContain('class="review-toggle"');
+    expect(html).toContain('data-package-icon="comment"');
+    expect(html).toContain('aria-label="Review"');
     expect(html).toContain('aria-controls="report-review-dialog-2"');
     expect(html).toContain(
       'class="review-dialog" id="report-review-dialog-2" aria-labelledby="report-review-dialog-title"',

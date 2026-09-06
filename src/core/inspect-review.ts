@@ -6,9 +6,9 @@ import { bindReviewArtifact } from '../review/binding.js';
 import {
   parseReviewArtifact,
   ReviewContractError,
-  REVIEW_CONTRACT_VERSION,
   MAX_REVIEW_FILE_BYTES,
 } from '../review/contract.js';
+import { ReviewLocaleRoutingError, selectReviewLocaleVariant } from '../review/routing.js';
 import { resolveLocalPath } from '../source/load-source.js';
 import { prepareReport } from './prepare-report.js';
 
@@ -21,12 +21,36 @@ export async function inspectReview(options: InspectReviewOptions): Promise<Insp
     'REVIEW_OUTSIDE_SOURCE',
   );
   const review = await readReviewArtifact(reviewPath);
-  const bound = bindReviewArtifact(review, prepared.reviewManifest);
+  let variant: (typeof prepared.variants)[number];
+  try {
+    variant = selectReviewLocaleVariant(
+      review,
+      prepared.variants.map((entry) => ({
+        ...entry,
+        manifest: entry.reviewManifest,
+      })),
+    );
+  } catch (error) {
+    if (!(error instanceof ReviewLocaleRoutingError)) throw error;
+    throw new AgenticReportError({
+      level: 'error',
+      code:
+        error.reason === 'unsupported-locale'
+          ? 'REVIEW_LOCALE_UNSUPPORTED'
+          : 'REVIEW_LOCALE_AMBIGUOUS',
+      message: error.message,
+      remediation:
+        error.reason === 'unsupported-locale'
+          ? 'Use a review exported from one of this report’s declared locales.'
+          : 'Use a version-4 multilingual review carrying an explicit locale.',
+    });
+  }
+  const bound = bindReviewArtifact(review, variant.reviewManifest);
   return sanitizeTransportValue({
-    contractVersion: REVIEW_CONTRACT_VERSION,
-    projectPath: prepared.source.sourceRoot,
-    entryPath: prepared.source.entryPath,
-    reportRevision: prepared.reviewManifest.reportRevision,
+    contractVersion: review.contractVersion,
+    projectPath: variant.source.sourceRoot,
+    entryPath: variant.source.entryPath,
+    reportRevision: variant.reviewManifest.reportRevision,
     reviewedRevision: review.report.revision,
     reportStatus: bound.reportStatus,
     threads: bound.threads,
@@ -78,7 +102,7 @@ async function readReviewArtifact(reviewPath: string) {
         code: error.unsupportedVersion ? 'REVIEW_VERSION_UNSUPPORTED' : 'REVIEW_ARTIFACT_INVALID',
         message: error.message,
         remediation: error.unsupportedVersion
-          ? 'Export a version-3 review from the current report; legacy version 2 is also accepted.'
+          ? 'Export a current review from this report; legacy version 2 is also accepted.'
           : 'Regenerate the review from the bound report or fix the reported fields.',
         source: { file: reviewPath },
         details: { issues: error.issues },

@@ -165,7 +165,14 @@ describe('starter initialization', () => {
       starterTitle: 'Report starter',
       projectPath: destination,
       entryPath: path.join(destination, 'report.md'),
-      files: ['assets/architecture.svg', 'partials/findings.md', 'report.md'],
+      files: [
+        'assets/architecture.ru.svg',
+        'assets/architecture.svg',
+        'partials/findings.md',
+        'partials/findings.ru.md',
+        'report.md',
+        'report.ru.md',
+      ],
     });
     expect(await fileBytes(destination)).toEqual(await fileBytes(path.resolve('examples/basic')));
 
@@ -175,7 +182,14 @@ describe('starter initialization', () => {
       initProject({ destination: path.join(workspace, 'second'), starter: 'basic' }),
     ).resolves.toMatchObject({
       starterId: 'basic',
-      files: ['assets/architecture.svg', 'partials/findings.md', 'report.md'],
+      files: [
+        'assets/architecture.ru.svg',
+        'assets/architecture.svg',
+        'partials/findings.md',
+        'partials/findings.ru.md',
+        'report.md',
+        'report.ru.md',
+      ],
     });
     await expect(
       initProject({ destination: path.join(workspace, 'alias'), starter: 'report' }),
@@ -285,7 +299,7 @@ describe('starter initialization', () => {
         starterTitle: 'Second starter',
         projectPath: path.join(workspace, 'named-project'),
         entryPath: path.join(workspace, 'named-project/findings.md'),
-        files: ['findings.md'],
+        files: ['findings.md', 'findings.ru.md'],
       });
       await expect(
         readFile(path.join(workspace, 'named-project/findings.md'), 'utf8'),
@@ -428,7 +442,10 @@ describe('starter initialization', () => {
           'Inspect the destination state. If an incomplete directory exists, remove it explicitly before retrying at a new path.',
       },
     });
-    expect(await recursiveFilePaths(destination)).toEqual(['assets/architecture.svg']);
+    expect(await recursiveFilePaths(destination)).toEqual([
+      'assets/architecture.ru.svg',
+      'assets/architecture.svg',
+    ]);
     expect((await readdir(workspace)).sort()).toEqual(['project']);
   });
 
@@ -530,7 +547,14 @@ describe('starter initialization', () => {
     );
     const result = JSON.parse(execution.stdout) as { readonly files: readonly string[] };
 
-    expect(result.files).toEqual(['assets/architecture.svg', 'partials/findings.md', 'report.md']);
+    expect(result.files).toEqual([
+      'assets/architecture.ru.svg',
+      'assets/architecture.svg',
+      'partials/findings.md',
+      'partials/findings.ru.md',
+      'report.md',
+      'report.ru.md',
+    ]);
     expect(await fileBytes(destination)).toEqual(
       await fileBytes(path.resolve(originalCwd, 'examples/basic')),
     );

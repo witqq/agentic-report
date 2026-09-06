@@ -23,6 +23,8 @@ import {
   validateReport,
 } from '../../src/index.js';
 import { MAX_REVIEW_FILE_BYTES } from '../../src/review/contract.js';
+import { MULTILINGUAL_REVIEW_CONTRACT_VERSION } from '../../src/review/contract.js';
+import { prepareReport } from '../../src/core/prepare-report.js';
 import { AgenticReportError } from '../../src/diagnostics.js';
 import { authoringRegistry } from '../../src/authoring/registry.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
@@ -713,6 +715,87 @@ describe('report analysis', () => {
       ]);
       expect((warnings[0]?.details?.bundledBytes as number) > 1).toBe(true);
     }
+  });
+
+  it('routes multilingual review through the matching locale and preserves fully missing targets', async () => {
+    const workspace = await createTestWorkspace('analysis-localized-review');
+    workspaces.push(workspace);
+    await mkdir(path.join(workspace, 'partials'));
+    await writeFile(path.join(workspace, 'partials', 'en.md'), 'English evidence.\n');
+    await writeFile(path.join(workspace, 'partials', 'ru.md'), 'Русское доказательство.\n');
+    await writeFile(
+      path.join(workspace, 'report.md'),
+      '---\ntitle: English\nlanguage: en\nlocalizations:\n  ru: report.ru.md\n---\n# English\n\n{{include: partials/en.md}}\n',
+    );
+    await writeFile(
+      path.join(workspace, 'report.ru.md'),
+      '---\ntitle: Русский\nlanguage: ru\n---\n# Русский\n\n{{include: partials/ru.md}}\n',
+    );
+    const prepared = await prepareReport({ input: workspace });
+    const russian = prepared.variants.find((variant) => variant.locale === 'ru');
+    const target = russian?.reviewManifest.targets.find(
+      (candidate) => candidate.source.file === 'partials/ru.md',
+    );
+    if (russian === undefined || target === undefined) throw new Error('Missing Russian target');
+    const review = serializeReviewArtifact({
+      contractVersion: MULTILINGUAL_REVIEW_CONTRACT_VERSION,
+      report: { revision: russian.reviewManifest.reportRevision, locale: 'ru' },
+      threads: [
+        {
+          id: 'thread-russian',
+          segments: [
+            {
+              id: 'segment-russian',
+              reportRevision: russian.reviewManifest.reportRevision,
+              target,
+              resolved: false,
+              messages: [{ id: 'message-russian', author: 'user', message: 'Проверьте.' }],
+            },
+          ],
+        },
+      ],
+    });
+    await writeFile(path.join(workspace, 'review.ru.json'), review);
+
+    await expect(
+      inspectReview({ input: workspace, review: 'review.ru.json' }),
+    ).resolves.toMatchObject({
+      contractVersion: 4,
+      entryPath: path.join(workspace, 'report.ru.md'),
+      threads: [{ binding: 'exact', currentTarget: { source: { file: 'partials/ru.md' } } }],
+    });
+    await writeFile(
+      path.join(workspace, 'report.ru.md'),
+      '---\ntitle: Русский\nlanguage: ru\n---\n# Русский\n\nДоказательство удалено.\n',
+    );
+    await expect(
+      inspectReview({ input: workspace, review: 'review.ru.json' }),
+    ).resolves.toMatchObject({
+      entryPath: path.join(workspace, 'report.ru.md'),
+      reportStatus: 'stale',
+      threads: [{ binding: 'missing' }],
+    });
+    await expect(
+      validateReport({ input: workspace, review: 'review.ru.json' }),
+    ).resolves.toMatchObject({
+      format: 'single-file',
+    });
+    await expect(
+      inspectReport({ input: workspace, review: 'review.ru.json' }),
+    ).resolves.toMatchObject({
+      sourceFiles: expect.arrayContaining(['report.ru.md']),
+    });
+    const output = path.join(workspace, 'localized.html');
+    await buildReport({ input: workspace, output, review: 'review.ru.json' });
+    const html = await readFile(output, 'utf8');
+    expect(html).toContain('data-localized-page="ru"');
+    expect(html).toContain('&quot;reportStatus&quot;:&quot;stale&quot;');
+
+    const singleLanguage = await reviewWorkspace('analysis-foreign-locale-review');
+    await writeFile(path.join(singleLanguage, 'foreign.json'), review);
+    await expect(
+      inspectReview({ input: singleLanguage, review: 'foreign.json' }),
+    ).rejects.toMatchObject({ diagnostic: { code: 'REVIEW_LOCALE_UNSUPPORTED' } });
   });
 });
 

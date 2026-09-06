@@ -2,6 +2,8 @@
 title: Delivery health dashboard
 description: A dense operational summary built from the shared page primitives.
 language: en
+localizations:
+  ru: report.ru.md
 theme: dark
 layout: dashboard
 tokens:

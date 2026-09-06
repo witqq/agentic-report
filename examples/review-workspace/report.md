@@ -3,6 +3,8 @@ contractVersion: 1
 title: Human review handoff
 description: A local report prepared for selected-text notes and fragment discussion threads.
 language: en
+localizations:
+  ru: report.ru.md
 layout: document
 theme: system
 preset: studio
@@ -15,7 +17,7 @@ preset: studio
 Select **68% in the revised cohort**, choose **Create note**, and use the anchored popover to reply, edit,
 resolve, or reopen without a mode. The range stays highlighted; hover, tap, or focus its marker for **View
 thread**. A selection can cross adjacent targets. **Review** opens only the non-reflowing list, import, and one
-local version-3 `review.json` export of every discussion.
+local version-4 `review.json` export for the active report language.
 
 The bundled `prior-review.json` remains a valid version-2 whole-block handoff. Its legacy thread stays
 list-accessible after import, demonstrating backward-compatible binding without offering new block controls.

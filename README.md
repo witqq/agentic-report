@@ -81,16 +81,23 @@ also contain:
 
 - YAML frontmatter in the entry Markdown file;
 - `agentic-report.yaml`, `agentic-report.yml`, or `agentic-report.json`;
+- optional confined English/Russian alternate Markdown entries declared by `localizations`;
 - local images referenced by relative paths;
 - Markdown partials included as `{{include: partials/summary.md}}`;
 - semantic directives for labelled page sections, generated in-flow contents, action and source-location links, authored/code glossary references, content, interactions, compile-time
   charts/diagrams/timelines, safe built-in demos, downloads, and fonts.
 
-Set frontmatter or manifest `language` to `ru` (including subtags such as `ru-RU`) for Russian
-package-owned reader controls, interaction states, accessibility labels, visualization descriptions, and
-Review Workspace. `en`, the default `und`, and unsupported languages use a complete English fallback. This
-choice comes only from the input; it does not follow the browser locale and never translates authored
-Markdown or CLI diagnostics.
+For a single-language page, set `language` to `ru` (including `ru-RU`) for Russian package-owned controls,
+interaction states, accessibility labels, visualization descriptions, and Review Workspace. `en`, the
+default `und`, and unsupported tags use the complete English fallback.
+
+For one artifact with both languages, give the primary entry `language: en` or `language: ru` and declare
+the other confined Markdown entry under `localizations`. The browser selects the first available language
+from `navigator.languages`, falls back to the primary entry, and shows a native language selector only on
+the multilingual page. Switching replaces content, metadata, navigation, package chrome, visualizations,
+and locale-specific review/response state together. Both variants are compiled locally into the same
+artifact; the browser fetches nothing, and the package never machine-translates authored Markdown or CLI
+diagnostics.
 
 Every generated report shows a compact footer link, **Made with Agentic Report**, pointing to
 `https://agentic-report.witqq.dev/`. Omit `attribution` to keep this default. Set `attribution: false` in
@@ -103,6 +110,7 @@ Example:
 ---
 title: Architecture options
 description: Decision report
+language: en
 layout: document
 theme: system
 preset: editorial
@@ -148,6 +156,12 @@ One canonical definition shared by prose forms and selected first code occurrenc
 ::::
 ````
 
+To localize this page, set `localizations.ru` to `report.ru.md` in its frontmatter. The alternate uses the
+same source contract, declares `language: ru`, and contains the maintained Russian content, partial references,
+and localized visible asset text. Presentation and output metadata stay in the primary entry; an alternate
+may set only `contractVersion`, `title`, `description`, and `language`. See the complete paired-file example
+in the [source contract](docs/product/source-contract.md#metadata).
+
 See [`docs/product/source-contract.md`](docs/product/source-contract.md) for the complete declarative
 source contract.
 `source-link` is an optional local-workstation integration: its full absolute path remains in a normal
@@ -180,15 +194,18 @@ command/format/starter/capability catalog.
 
 Generated pages also carry an inert deterministic review-target manifest. Use
 `inspectReview({ input, review })` or `agentic-report review <review> [input] --json` to validate a confined
-version-3 `review.json` and resolve each discussion thread to the current Markdown or partial range. Valid
-version-2 whole-block reviews remain accepted and normalize to version 3. Stale, changed, missing, and
-ambiguous targets remain explicit; the command never rewrites source.
+review and resolve each discussion thread to the current Markdown or partial range. Single-language pages
+export version 3. Multilingual pages export version 4 with the active `report.locale`, so Node-side review,
+build, validate, and inspect route feedback to the matching source variant before binding targets. Valid
+version-2 whole-block reviews remain accepted; legacy v2/v3 input uses a unique exact revision when present
+and otherwise the primary locale. Stale, changed, missing, and ambiguous targets remain explicit; the
+command never rewrites source.
 The manifest accepts at most 5,000 reviewable targets and 750,000 serialized bytes; the byte ceiling may
 bind first when source-location records are unusually long.
 
 In the generated page, select any eligible text and choose **Create note**; annotation is always available
 without a review mode or block controls. A selection may cross inline markup or adjacent review targets; its
-version-3 anchor records both target references and Unicode code-point offsets. The anchored popover shows
+anchor records both target references and Unicode code-point offsets. The anchored popover shows
 the exact quote and keeps compose, reply, edit, resolve, and reopen beside it. Saved open/resolved ranges
 remain visibly distinct; hover/tap exposes **View thread**, and focusable markers provide the keyboard route.
 
@@ -266,6 +283,10 @@ compiler paths:
 | [`vendor-decision`](examples/vendor-decision/)   | Separate mandatory procurement gates from weighted preference and approve a conditional path                 |
 | [`launch-readiness`](examples/launch-readiness/) | Judge a fictional regional beta from audience value, funnel evidence, launch gates, and a reversible rollout |
 
+Every packaged starter, layout example, catalog, workspace example, realistic showcase, and the public
+landing pairs its canonical English source with a maintained Russian entry. A generated artifact chooses
+the system-preferred available language initially and keeps the selector available for manual switching.
+
 From a repository or package-source checkout, validate and rebuild them with the public CLI:
 
 ```bash
@@ -295,7 +316,8 @@ write their one reference document as a compact JSON line. `--json` is accepted 
 
 The canonical public landing is itself an ordinary compiler input at
 [`website/landing`](website/landing/). It uses only supported Markdown, frontmatter, semantic directives,
-and local screenshots generated from the three fictional showcases. Build it through the same public path
+and local screenshots generated from the three fictional showcases. Its paired Russian entry and every
+public demo use the same multilingual contract as package consumers. Build it through the same public path
 as any user page:
 
 ```bash

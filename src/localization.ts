@@ -1,6 +1,7 @@
 import type { ReviewBinding } from './review/contract.js';
+import type { PageLocaleChoice } from './authoring/registry.js';
 
-export type PackageLocale = 'en' | 'ru';
+export type PackageLocale = PageLocaleChoice;
 
 export interface PackageStrings {
   readonly formatNumber: (value: number) => string;
@@ -11,6 +12,9 @@ export interface PackageStrings {
   readonly closeContents: string;
   readonly contents: string;
   readonly current: string;
+  readonly language: string;
+  readonly languageName: (locale: PackageLocale) => string;
+  readonly reportAttribution: string;
   readonly review: string;
   readonly theme: string;
   readonly toggleTheme: string;
@@ -124,6 +128,9 @@ const en: PackageStrings = {
   closeContents: 'Close contents',
   contents: 'Contents',
   current: 'Current / ',
+  language: 'Language',
+  languageName: (locale) => (locale === 'ru' ? 'Russian' : 'English'),
+  reportAttribution: 'Made with Agentic Report',
   review: 'Review',
   theme: 'Theme',
   toggleTheme: 'Toggle color theme',
@@ -205,7 +212,7 @@ const en: PackageStrings = {
   resolveFor: (resolved, label) => `${resolved ? 'Reopen' : 'Resolve'} thread for ${label}`,
   fileTooLarge: (bytes) => `Review files must be no larger than ${bytes} bytes.`,
   differentRevision: 'This review belongs to a different report revision.',
-  unsupportedReview: 'Version 1 reviews are unsupported. Export a version-3 review.',
+  unsupportedReview: 'Version 1 reviews are unsupported. Export a current review from this page.',
   importFailed: 'Review import failed.',
   multipleCurrentSegments: 'Imported review contains more than one current segment for a thread.',
   unknownCurrentTarget:
@@ -242,6 +249,9 @@ const ru: PackageStrings = {
   closeContents: 'Закрыть содержание',
   contents: 'Содержание',
   current: 'Сейчас / ',
+  language: 'Язык',
+  languageName: (locale) => (locale === 'ru' ? 'Русский' : 'Английский'),
+  reportAttribution: 'Создано с Agentic Report',
   review: 'Ревью',
   theme: 'Тема',
   toggleTheme: 'Переключить цветовую тему',
@@ -325,7 +335,8 @@ const ru: PackageStrings = {
   resolveFor: (resolved, label) => `${resolved ? 'Возобновить' : 'Закрыть'} обсуждение: ${label}`,
   fileTooLarge: (bytes) => `Размер файла ревью не должен превышать ${bytes} байт.`,
   differentRevision: 'Это ревью относится к другой редакции отчёта.',
-  unsupportedReview: 'Ревью версии 1 не поддерживаются. Экспортируйте ревью версии 3.',
+  unsupportedReview:
+    'Ревью версии 1 не поддерживаются. Экспортируйте актуальное ревью с этой страницы.',
   importFailed: 'Не удалось импортировать ревью.',
   multipleCurrentSegments:
     'Импортированное ревью содержит несколько текущих сегментов одного обсуждения.',
@@ -354,7 +365,12 @@ const ru: PackageStrings = {
 };
 
 export function resolvePackageLocale(language: string | undefined): PackageLocale {
-  return language?.trim().toLowerCase().split(/[-_]/u, 1)[0] === 'ru' ? 'ru' : 'en';
+  return supportedPackageLocale(language) ?? 'en';
+}
+
+export function supportedPackageLocale(language: string | undefined): PackageLocale | undefined {
+  const primary = language?.trim().toLowerCase().split(/[-_]/u, 1)[0];
+  return primary === 'en' || primary === 'ru' ? primary : undefined;
 }
 
 export function packageStrings(language: string | undefined): PackageStrings {

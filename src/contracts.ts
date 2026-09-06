@@ -6,7 +6,7 @@ import {
   type ReportManifest,
   type ReportManifestInput,
 } from './authoring/schemas.js';
-import { OUTPUT_FORMATS, type PAGE_CONTRACT } from './authoring/registry.js';
+import { OUTPUT_FORMATS, type PAGE_CONTRACT, type PageLocaleChoice } from './authoring/registry.js';
 import type { ResolvedReviewThread } from './review/binding.js';
 
 export const OutputFormatSchema = z.enum(OUTPUT_FORMATS);
@@ -16,7 +16,7 @@ export const ReportManifestSchema = reportManifestSchema;
 export type OutputFormat = (typeof OUTPUT_FORMATS)[number];
 export type { ReportManifest, ReportManifestInput };
 
-export interface SourceDocument {
+export interface SourceVariantDocument {
   readonly entryPath: string;
   readonly sourceRoot: string;
   readonly sourceFiles: readonly string[];
@@ -24,6 +24,15 @@ export interface SourceDocument {
   readonly manifest: ReportManifest;
   readonly sourceMap: readonly SourceMapSegment[];
   readonly sourceDigests: readonly SourceDigest[];
+}
+
+export interface LocalizedSourceDocument extends SourceVariantDocument {
+  readonly locale: PageLocaleChoice;
+}
+
+export interface SourceDocument extends SourceVariantDocument {
+  readonly locale: PageLocaleChoice;
+  readonly localizations: readonly LocalizedSourceDocument[];
 }
 
 export interface SourceDigest {

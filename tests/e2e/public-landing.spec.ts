@@ -66,6 +66,7 @@ const expectCompactFieldManualHeader = async (
   const current = page.locator('.topbar-current');
   await expect(identity).toHaveText('Agentic Report');
   await expect(current).toContainText(`Current / ${section}`);
+  await expect(page.locator('.review-toggle [data-package-icon="comment"]')).toBeVisible();
   for (const label of [identity, current]) {
     expect(await label.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
       true,
