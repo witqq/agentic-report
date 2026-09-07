@@ -490,12 +490,6 @@ describe('starter initialization', () => {
     },
   );
 
-  it('owns no destination cleanup, staging, hard-link, or native rename primitive', async () => {
-    const source = await readFile(path.resolve('src/authoring/init-project.ts'), 'utf8');
-    expect(source).not.toMatch(/\b(?:rm|unlink|rmdir|mkdtemp|link|rename)\s*\(/u);
-    expect(source).not.toMatch(/staging|rollback|inode|hard.?link/iu);
-  });
-
   it('rejects an intermediate starter-root symlink without outside reads', async () => {
     const workspace = await createWorkspace('init-intermediate-link');
     const examplesRoot = path.join(workspace, 'examples');

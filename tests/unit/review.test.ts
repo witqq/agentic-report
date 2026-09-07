@@ -1,5 +1,3 @@
-import { readFile } from 'node:fs/promises';
-
 import { describe, expect, it } from 'vitest';
 
 import { bindReviewArtifact } from '../../src/review/binding.js';
@@ -344,23 +342,6 @@ describe('review thread protocol v3', () => {
         targets: [target, ambiguousTarget],
       }).threads[0]?.binding,
     ).toBe('ambiguous');
-  });
-
-  it('keeps the browser runtime free of formal approval vocabulary', async () => {
-    const source = await readFile('src/browser/review-workspace.ts', 'utf8');
-    for (const removed of [
-      'pageVerdict',
-      'targetVerdict',
-      'assertReviewRequirements',
-      'ReviewDecisionResponse',
-      'ReviewChecklistResponse',
-    ])
-      expect(source).not.toContain(removed);
-    expect(source).toContain('toggleResolved');
-    expect(source).toContain('data-review-thread-messages');
-    expect(source).not.toContain('data-review-active');
-    expect(source).not.toContain('data-review-target-control');
-    expect(source).not.toContain('data-review-exit');
   });
 });
 

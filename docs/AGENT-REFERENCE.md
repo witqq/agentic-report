@@ -237,6 +237,20 @@ the next export retains every historical message and resolution state. Build
 [`../examples/review-workspace/report.md`](../examples/review-workspace/report.md), select **68% in the
 revised cohort**, create a note, close it, reopen the highlighted range, and export the result.
 
+The anchored thread surface does not reflow the report. Desktop prefers the right or left of its anchor,
+then centers above or below when neither side fits; every placement shifts/clamps inside the visual viewport.
+Mobile uses a bounded bottom surface. Window and
+`visualViewport` scroll/resize updates keep that surface, **Create note**, and range markers reachable when
+browser chrome or the on-screen keyboard changes the visible area. The contextual action and focus markers
+are clamped by their measured size to a visible rectangle from the live range and hide when that range is
+wholly offscreen. A focus marker prefers to sit completely above the range, then below it, before edge
+clamping, so tapping the highlighted text remains a separate **View thread** route.
+The topbar Review entry has a localized name and title tooltip around its 20-pixel icon. At constrained
+widths the shell keeps icon controls and tooltips while hiding labels that would widen the document; the
+editorial preset shows the compact `AR` identity. Visible
+contextual/action controls retain their labels and use 16-pixel icons; Create note shows a pencil and View
+thread shows a comment without replacing the control.
+
 Typed review controls are declarative and keep legacy decisions static:
 
 ```md
@@ -493,13 +507,13 @@ Directives are declarative and allowlisted. Unknown names and invalid attributes
 diagnostics.
 
 ````markdown
-::::section{title="Decision" id="decision" nav="Decision" width="wide" align="start" tone="soft" reveal="true"}
+::::section{title="Decision" id="decision" nav="Decision" width="wide" align="start" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="display" media="mask" media-fit="cover" media-aspect="landscape" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
 :::callout{title="Finding" kind="warning"}
 Content may contain ordinary Markdown.
 :::
 
-:::actions
-::action[Review the decision]{href="#decision" kind="primary"}
+:::actions{placement="auto"}
+::action[Review the decision]{href="#decision" kind="primary" effect="magnetic"}
 ::action[Open related evidence]{href="evidence.html" kind="secondary"}
 ::action[Project home]{href="https://example.com/project" kind="quiet"}
 :::
@@ -648,11 +662,46 @@ meaning.
 `callout.kind` is a lowercase presentation token. `demo.start` and `demo.step` are bounded integers.
 `section` is top-level only and requires `title`. Its optional `id` is a lowercase letter-led identity;
 omission derives a deterministic collision-free ID from the title. `nav` supplies a short primary label.
-`width` is `reading|standard|wide`, `align` is `start|center`, and `tone` is
-`plain|soft|accent|contrast`; `reveal` is boolean. Defaults are `standard`, `start`, `plain`, and
-`reveal="false"`. Explicit sections own real labelled section/H2 markup and primary navigation, while
-heading-only sources use H2 primary links. H3 and component anchors remain owned targets without becoming
-primary links.
+Its closed visual attributes are:
+
+| Attribute         | Values                                                    | Default     |
+| ----------------- | --------------------------------------------------------- | ----------- |
+| `width`           | `reading`, `standard`, `wide`                             | `standard`  |
+| `align`           | `start`, `center`                                         | `start`     |
+| `tone`            | `plain`, `soft`, `accent`, `contrast`                     | `plain`     |
+| `composition`     | `flow`, `stage`, `split`, `mosaic`, `story`, `stack`      | `flow`      |
+| `viewport`        | `adaptive`, `full`, `bounded`                             | `adaptive`  |
+| `section-density` | `compact`, `editorial`, `immersive`                       | `editorial` |
+| `type`            | `body`, `display`, `editorial`                            | `body`      |
+| `media`           | `natural`, `mask`, `layers`, `gallery`, `bleed`           | `natural`   |
+| `media-fit`       | `natural`, `contain`, `cover`                             | `natural`   |
+| `media-aspect`    | `natural`, `landscape`, `cinematic`, `portrait`, `square` | `natural`   |
+| `focal`           | `center`, `top`, `right`, `bottom`, `left`                | `center`    |
+| `surface`         | `plain`, `mesh`, `glow`, `grain`, `grid`                  | `plain`     |
+| `transition`      | `none`, `reveal`, `stagger`                               | `none`      |
+| `scene`           | `none`, `progress`, `sticky`                              | `none`      |
+| `interaction`     | `none`, `depth`, `tilt`                                   | `none`      |
+| `choreography`    | `none`, `cascade`                                         | `none`      |
+| `reveal`          | boolean                                                   | `false`     |
+
+Compatibility boundaries prevent two roles from owning the same layout or transform:
+`composition="mosaic|stack"` cannot pair with `media="layers|gallery"`; `media="layers"` and
+`scene="progress"` cannot pair with `interaction="depth|tilt"`; and `composition="story|stack"` cannot pair
+with `scene="sticky"`. A secondary or quiet action cannot use `effect="magnetic"`. These combinations fail
+before rendering and are declared in discovery and JSON Schema.
+
+Compose these roles instead of writing a bespoke layout. `media` owns the treatment, while fit, aspect, and
+focal point frame local images independently. Section `tone` owns its background/foreground relationship;
+`surface` stays behind authored content, and nested package components keep their own readable surface text.
+For `layers`, prefer
+image-only cards when the overlap is the point: the package transforms image descendants and leaves the
+semantic card and review target untransformed. At narrow widths, split/mosaic/story/stack/layers return to
+source order and galleries retain their own horizontal scroll. Explicit sections own real labelled
+section/H2 markup and primary navigation, while heading-only sources use H2 primary links. H3 and component
+anchors remain owned targets without becoming primary links. The packaged English/Russian `layout-mixed`
+source is the complete grammar catalog; locate it with `agentic-report examples --json`. The bilingual
+landing starter is the smaller copyable narrative, while the public incident-review, vendor-decision, and
+launch-readiness sources demonstrate reuse on signal, editorial, and studio pages.
 
 Use top-level `::contents` to place the section map inside the article. It accepts no attributes, label, or
 children. The compiler fills it after final IDs are known: exact visible section headings become native
@@ -667,10 +716,14 @@ or repeated lead blocks fail validation. A glossary with `placement="appendix"` 
 section child. Direct-section authorship keeps the definition beside its explanation while compilation
 moves the complete already-targeted definition into the single appendix without leaving a placeholder.
 
-`actions` accepts only direct labelled `::action[...]` children. Every action requires `href`; valid targets
+`actions` accepts only direct labelled `::action[...]` children. Its `placement` is `auto`, `edge`, `inline`,
+or `bottom`; `auto` resolves to edge alignment on desktop and a compact bottom group on mobile. Bottom
+placement remains at the authored position in normal flow and never becomes a sticky/fixed overlay. Every action requires `href`; valid targets
 are same-page anchors, relative paths, HTTP(S), and `mailto:`. `javascript:`, `data:`, `file:`, absolute
 local paths, and protocol-relative URLs fail validation. `kind` is `primary`, `secondary`, or `quiet` and
-changes package styling only; the output remains an ordinary anchor with no callback or form behavior.
+changes package styling only. `effect` is `none` or `magnetic`; magnetic is primary-only and moves by at most
+7 pixels for a fine pointer in normal motion. The output remains an ordinary anchor with a 16-pixel package
+icon and no callback or form behavior.
 
 `source-link` is an inline labelled address for an external local editor helper. Its `href` is deliberately
 narrower than an action: `http://127.0.0.1:<port>/open?path=<absolute-path>&line=<positive-line>`, with an
@@ -705,18 +758,18 @@ package.
 
 ### Interaction behavior and limits
 
-| Primitive           | Semantics and initial state                                                                                                                                                                                                                             | Reader routes                                                                                                                                                                                                  |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `term` / `glossary` | A prose or first code term button controls a closed canonical-title dialog; the full definition remains visible inline or in the reference appendix. Code explanations are portalled outside the scrollable code block and anchored beside the token.   | Hover, focus, click, or tap opens; `Escape` closes and restores focus; click **View full definition** to navigate to the complete Markdown entry. Clicking outside closes.                                     |
-| `disclosure`        | Native `details`/`summary`; `open="false"` is the default.                                                                                                                                                                                              | Activate the summary with click/tap or native `Enter`/`Space`.                                                                                                                                                 |
-| `tabs` / `tab`      | ARIA `tablist`/`tab`/`tabpanel`; first direct tab selected. A tab requires `label`; other directive children are rejected.                                                                                                                              | Click/tap selects. `ArrowLeft`/`ArrowRight` wrap, while `Home`/`End` select the first/last tab.                                                                                                                |
-| `modal`             | Closed native `dialog` with a labelled trigger.                                                                                                                                                                                                         | Trigger opens; `Escape` or Close closes and returns focus to the opener. Backdrop click is not a supported dismissal route.                                                                                    |
-| `popover`           | Closed non-modal labelled dialog.                                                                                                                                                                                                                       | Click/tap or native button activation toggles; `Escape` closes and restores trigger focus; outside click closes.                                                                                               |
-| `filter`            | Labelled search input and polite live count; empty initially.                                                                                                                                                                                           | Typing filters case-insensitively. Only list items in a direct authored `ul`/`ol` are targets.                                                                                                                 |
-| `toggle`            | ARIA switch; `default="off"` hides its panel.                                                                                                                                                                                                           | Click/tap or native `Enter`/`Space` toggles checked state and visibility.                                                                                                                                      |
-| `demo`              | Numeric output starts at `start="0"`.                                                                                                                                                                                                                   | Increment button adds `step="1"` by default; author code is never executed.                                                                                                                                    |
-| Review Workspace    | Always-on valid text selection exposes **Create note** and an anchored full-thread popover. Saved open/resolved ranges remain highlighted; **Review** opens only a non-reflowing list/import/export overlay, with legacy whole-block threads list-only. | `Shift` release focuses **Create note**; focusable range markers reopen a saved thread. Pointer/touch selects text, while hover/tap exposes **View thread**. Invalid or package-control ranges create no note. |
-| `response`          | Native typed controls plus deterministic copy/file export and validated local import. Authored defaults remain explicitly unanswered until reader input.                                                                                                | Native fields cover all values; bucket select and order buttons provide complete keyboard routes, with bucket drag-and-drop as an additional pointer route.                                                    |
+| Primitive           | Semantics and initial state                                                                                                                                                                                                                                                                   | Reader routes                                                                                                                                                                                                                                                                                                                          |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `term` / `glossary` | A prose or first code term button controls a closed canonical-title dialog; the full definition remains visible inline or in the reference appendix. Code explanations are portalled outside the scrollable code block and anchored beside the token.                                         | Hover, focus, click, or tap opens; `Escape` closes and restores focus; click **View full definition** to navigate to the complete Markdown entry. Clicking outside closes.                                                                                                                                                             |
+| `disclosure`        | Native `details`/`summary`; `open="false"` is the default.                                                                                                                                                                                                                                    | Activate the summary with click/tap or native `Enter`/`Space`.                                                                                                                                                                                                                                                                         |
+| `tabs` / `tab`      | ARIA `tablist`/`tab`/`tabpanel`; first direct tab selected. A tab requires `label`; other directive children are rejected.                                                                                                                                                                    | Click/tap selects. `ArrowLeft`/`ArrowRight` wrap, while `Home`/`End` select the first/last tab.                                                                                                                                                                                                                                        |
+| `modal`             | Closed native `dialog` with a labelled trigger.                                                                                                                                                                                                                                               | Trigger opens; `Escape` or Close closes and returns focus to the opener. Backdrop click is not a supported dismissal route.                                                                                                                                                                                                            |
+| `popover`           | Closed non-modal labelled dialog.                                                                                                                                                                                                                                                             | Click/tap or native button activation toggles; `Escape` closes and restores trigger focus; outside click closes.                                                                                                                                                                                                                       |
+| `filter`            | Labelled search input and polite live count; empty initially.                                                                                                                                                                                                                                 | Typing filters case-insensitively. Only list items in a direct authored `ul`/`ol` are targets.                                                                                                                                                                                                                                         |
+| `toggle`            | ARIA switch; `default="off"` hides its panel.                                                                                                                                                                                                                                                 | Click/tap or native `Enter`/`Space` toggles checked state and visibility.                                                                                                                                                                                                                                                              |
+| `demo`              | Numeric output starts at `start="0"`.                                                                                                                                                                                                                                                         | Increment button adds `step="1"` by default; author code is never executed.                                                                                                                                                                                                                                                            |
+| Review Workspace    | Always-on valid text selection exposes **Create note** and an anchored full-thread popover. Desktop flips/shifts/clamps the surface; mobile uses a bounded visual-viewport bottom surface. Saved ranges remain highlighted; **Review** opens only a non-reflowing list/import/export overlay. | `Shift` release focuses **Create note**; focusable range markers reopen a saved thread and prefer a fully separate above/below position so text tap remains independent. Pointer/touch selects text, while hover/tap exposes **View thread**. Window and visual-viewport changes keep controls visible; invalid ranges create no note. |
+| `response`          | Native typed controls plus deterministic copy/file export and validated local import. Authored defaults remain explicitly unanswered until reader input.                                                                                                                                      | Native fields cover all values; bucket select and order buttons provide complete keyboard routes, with bucket drag-and-drop as an additional pointer route.                                                                                                                                                                            |
 
 Each instance owns its state. Tabs, overlays, filters, switches, demos, Review Workspace, and response forms
 do not change another instance.
@@ -730,11 +783,18 @@ and collapse per document session. Mobile contents use a native modal dialog: Cl
 focus, Tab stays contained, Escape/backdrop/Close return to the trigger, and a chosen link closes the dialog
 and focuses its section heading. Do not add `menu` keyboard behavior or persist collapse state.
 
-Set root metadata `scrollProgress: true` only when decorative reading progress is useful. Set
-`reveal="true"` only on selected top-level sections. Both features run only in the normal-motion profile;
-reduced motion installs no progress or reveal machinery, and an unavailable `IntersectionObserver` leaves
-reveals visible. The package owns the fixed transform/opacity behavior and duration; authors cannot supply
-animation coordinates, easing, JavaScript, or parallax.
+Set root metadata `scrollProgress: true` only when decorative reading progress is useful. On a section,
+choose `transition="reveal|stagger"`, `scene="progress|sticky"`, `interaction="depth|tilt"`, or
+`choreography="cascade"`; each defaults to `none`. Legacy `reveal="true"` remains supported.
+Reveal is a 220-millisecond, 12-pixel maximum entrance. Stagger affects at most 12 direct children in
+70-millisecond steps. Progress drives one normalized media transform; sticky media returns to normal flow at
+48rem and below. Cascade orders at most 12 semantic cards, chart points, or timeline items in 60-millisecond
+steps. Fine-pointer depth is bounded to 10 pixels, tilt to 2.5 degrees, and primary-action magnetic movement
+to 7 pixels; updates are visibility-bound and animation-frame-coalesced. Reduced motion leaves all content
+visible and untransformed, coarse pointers receive no pointer effects, and an unavailable or non-callable
+`IntersectionObserver` leaves observer-dependent motion/pointer behavior inert, entrance/choreography content
+visible, and navigation on its bounded geometry fallback. Authors cannot supply timing,
+coordinates, easing, JavaScript, or custom runtime code.
 
 ## Build for an agent
 

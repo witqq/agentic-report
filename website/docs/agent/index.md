@@ -50,7 +50,7 @@ When the user does not trust the published package, do not silently fall back to
 release tag, let the user inspect the repository, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.10.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.11.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -76,19 +76,47 @@ and use an isolated environment when the user's threat model calls for one.
 Use Node.js 24.18.0 or newer. The first `npx` command needs npm registry and network access; the generated
 page itself opens locally through `file://` with its included package-owned browser runtime.
 
-For a reproducible 0.10.0 run, create a new landing-page source and keep the package version pinned through
+For a reproducible 0.11.0 run, create a new landing-page source and keep the package version pinned through
 validation, inspection, and build:
 
 ```sh
-npx --yes agentic-report@0.10.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.10.0 validate ./my-page --json
-npx --yes agentic-report@0.10.0 inspect ./my-page --json
-npx --yes agentic-report@0.10.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.11.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.11.0 validate ./my-page --json
+npx --yes agentic-report@0.11.0 inspect ./my-page --json
+npx --yes agentic-report@0.11.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Edit only the declarative source: Markdown, YAML frontmatter or the
 optional YAML/JSON manifest, confined Markdown partials, and local assets. Authors do not need React,
 JSX, browser JavaScript, CSS, or a frontend project.
+
+Compose distinctive sections through package-owned roles rather than custom layout code. `composition`
+offers `flow`, `stage`, `split`, `mosaic`, `story`, and `stack`; pair it as needed with closed viewport,
+density, typography, media treatment, image fit/aspect/focal point, and surface attributes. On narrow
+screens, multi-column and layered arrangements return to source order and galleries keep their own scroll.
+Do not pair mosaic/stack composition with layers/gallery media: those roles would own the same card layout,
+so the compiler rejects the four combinations before rendering.
+
+```markdown
+::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
+The content remains ordinary Markdown and semantic directives.
+::::
+```
+
+Use the installed `layout-mixed` example for the complete grammar, the landing starter for a smaller
+copyable narrative, and the public incident-review, vendor-decision, and launch-readiness sources for the
+same roles on different layouts. Use `schema --scope directives` for the exact closed domains and defaults.
+
+Motion remains declarative: sections accept `transition="none|reveal|stagger"`,
+`scene="none|progress|sticky"`, `interaction="none|depth|tilt"`, and
+`choreography="none|cascade"`. Each defaults to `none`; reduced motion leaves all content visible and coarse
+pointers receive no pointer effects. Layers/progress cannot combine with depth/tilt, and story/stack cannot
+combine with sticky. An `actions` group accepts `placement="auto|edge|inline|bottom"`; bottom stays at its
+authored position in normal flow. Only a primary action may use `effect="magnetic"`. The package owns the
+bounded timing, movement, responsive placement, and icons.
+
+Section tone owns its background/foreground relationship; decorative surfaces stay behind content, and
+nested package cards and visualizations retain their own readable surface text.
 
 The packaged starters already include maintained English and Russian entries. For another bilingual source,
 set the primary entry to `language: en` or `language: ru` and declare the other confined Markdown path with
@@ -115,7 +143,7 @@ compact JSON line; `--json` names that default, while `--human` selects prose or
 directive pass reports its earliest authored violation plus the remaining independent violations in
 `related`, so fix the whole inventory together. When a diagnostic carries an exact `fix`, run
 `npx --yes agentic-report fix ./my-page`; this is the only command that writes authored Markdown, and it
-leaves all other bytes unchanged. `describe` exposes all nine commands and the declared directive rule
+leaves all other bytes unchanged. `describe` exposes all registered commands and the declared directive rule
 dependencies as `commands` and `authoredRules`.
 
 `init` requires an absent destination below an existing directory. A symbolic-link parent such as macOS
@@ -142,6 +170,14 @@ the anchored popover to add the first message, reply, edit, resolve, or reopen w
 mode; a selection can cross inline markup or adjacent report targets. Saved open and resolved ranges stay
 visibly distinct, and their **View thread** action reopens the same popover. **Review** opens only an overlay
 list with prior evidence, import, and one **Export review.json** action; it never divides or shifts the page.
+Desktop flips, shifts, and clamps the thread surface within the visual viewport; mobile uses a bounded bottom
+surface that follows browser-chrome and on-screen-keyboard viewport changes. The measured contextual action
+and focus markers follow a visible rectangle from their live range and hide when that range is wholly
+offscreen. A focus marker prefers a fully separate position above or below the saved text before edge
+clamping, so direct text tap remains an independent **View thread** route. The topbar Review entry has a
+localized title tooltip around its 20-pixel icon. At constrained widths topbar labels collapse to accessible
+icons/tooltips without widening the page; editorial pages keep the compact `AR` identity. Visible contextual/action controls retain localized labels
+and use 16-pixel icons; Create note shows a pencil and View thread shows a comment.
 Valid version-2 whole-block threads remain list-accessible, but new threads begin with selected text. After
 the reader downloads `review.json`, map it back to the authored files with:
 
@@ -203,9 +239,9 @@ registry's current `latest` release.
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.10.0 describe --json
-npx --yes agentic-report@0.10.0 schema --scope source
-npx --yes agentic-report@0.10.0 examples --json
+npx --yes agentic-report@0.11.0 describe --json
+npx --yes agentic-report@0.11.0 schema --scope source
+npx --yes agentic-report@0.11.0 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),

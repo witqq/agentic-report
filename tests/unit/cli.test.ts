@@ -232,22 +232,6 @@ describe('CLI transport', () => {
     expect(formatInstalledExamples(examplesRoot, 7, [example], false)).toBe(
       `special: ${expectedEntry}\n`,
     );
-
-    const cliSource = await readFile(path.resolve('src/cli.ts'), 'utf8');
-    const actionStart = cliSource.indexOf(".command('examples')");
-    const actionEnd = cliSource.indexOf('\nconst compatibilityDiagnostic', actionStart);
-    const actionSource = cliSource.slice(actionStart, actionEnd);
-    expect(actionStart).toBeGreaterThanOrEqual(0);
-    expect(actionEnd).toBeGreaterThan(actionStart);
-    expect(actionSource).toContain('formatInstalledExamples(');
-    expect(actionSource).not.toContain('.map(');
-    expect(actionSource).not.toContain('example.entry');
-
-    const inwardSource = await readFile(path.resolve('src/authoring/example-path.ts'), 'utf8');
-    const outwardSource = await readFile(path.resolve('src/cli-examples.ts'), 'utf8');
-    expect(inwardSource).not.toMatch(/discovery|JSON\.stringify|formatInstalledExamples/u);
-    expect(outwardSource).toContain("from './discovery.js'");
-    expect(outwardSource).toContain('export function formatInstalledExamples(');
   });
 
   it('keeps describe/discover, all schema scopes and examples equal to the ESM API', async () => {

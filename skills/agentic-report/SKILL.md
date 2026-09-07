@@ -3,7 +3,7 @@ name: agentic-report
 description: Create, validate, inspect, or build polished local interactive reports, research pages, architecture pages, tutorials, dashboards, decisions, and landing pages from declarative Markdown. Use for static agent-to-human page handoff; do not use for hosted apps, live collaboration, deployment, publication, or bespoke frontend development.
 license: MIT
 metadata:
-  version: '0.10.0'
+  version: '0.11.0'
   homepage: https://agentic-report.witqq.dev/
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run.
 ---
@@ -16,6 +16,15 @@ whole-block threads as deterministic version-3 `review.json` for a single-langua
 the active `report.locale` for a multilingual page; valid version-2 whole-block files remain accepted and
 list-only. Selection anchors contain the exact quote plus bounded target endpoints and Unicode code-point
 offsets. Keep imported and authored threads in the locale they belong to.
+Desktop thread popovers flip, shift, and clamp within the visual viewport; mobile uses a bounded bottom
+surface. Window and visual-viewport changes keep the selection action, markers, and popover reachable without
+moving report content. The measured contextual action and focus markers follow a visible rectangle from their
+live range and hide when that range is wholly offscreen. A marker prefers a fully separate position above or
+below its saved text before edge clamping, so marker and highlighted-text activation remain independent. The
+topbar Review entry has a localized name and title tooltip around its 20-pixel icon. At constrained widths
+shell labels collapse to their accessible icons/tooltips without widening the document; editorial pages keep
+the compact `AR` identity. Visible contextual/action controls retain localized labels and use 16-pixel icons; Create note shows a
+pencil and View thread shows a comment.
 Never imply an account or signature. For a follow-up build, pass a confined prior artifact with
 `build --review review.json`; treat stale bindings as immutable prior revision segments, append a current
 segment when continuing a changed fragment, and export the next revision. A report may contain at most 5,000
@@ -80,6 +89,29 @@ Create a local declarative source, verify it, and hand the user a finished inter
 - Use one opening `:::lead` inside a `section` for its thesis, not a callout. When a glossary definition
   belongs beside that explanation but should print in the reference appendix, keep it as a direct section
   child with `placement="appendix"`; do not move it to a separate hand-maintained source list.
+- Compose visually distinct sections with the closed package grammar before considering a bespoke page:
+  `composition="flow|stage|split|mosaic|story|stack"`, `viewport="adaptive|full|bounded"`,
+  `section-density="compact|editorial|immersive"`, `type="body|display|editorial"`,
+  `media="natural|mask|layers|gallery|bleed"`, `media-fit="natural|contain|cover"`,
+  `media-aspect="natural|landscape|cinematic|portrait|square"`,
+  `focal="center|top|right|bottom|left"`, and `surface="plain|mesh|glow|grain|grid"`. Section tone owns its
+  foreground/background relationship; a decorative surface stays behind content, while nested package
+  components retain their own readable surface text. These attributes
+  remain package-owned; never substitute CSS, classes, raw HTML, or browser code. Do not combine
+  `composition="mosaic|stack"` with `media="layers|gallery"`: both would own the same card layout, so the
+  compiler rejects those pairs. Other composition/media pairs remain available.
+  Keep important reading order in source because multi-column/layered arrangements flatten on narrow
+  screens. Prefer image-only cards for `layers`. Use the bilingual `layout-mixed` example as the complete
+  grammar catalog, the landing starter as a smaller copyable narrative, and the public incident-review,
+  vendor-decision, and launch-readiness sources as cross-layout composition references.
+- Add motion through the same closed section grammar: `transition="none|reveal|stagger"`,
+  `scene="none|progress|sticky"`, `interaction="none|depth|tilt"`, and
+  `choreography="none|cascade"`. They default to `none`; legacy `reveal="true"` remains available. Do not
+  combine layers or progress scenes with depth/tilt, or story/stack with sticky. Reduced motion leaves all
+  content visible, and pointer effects require a fine pointer. Use
+  `:::actions{placement="auto|edge|inline|bottom"}`;
+  bottom stays compact normal-flow content. Reserve `effect="magnetic"` for a primary action. Do not invent
+  animation timing, coordinates, CSS, or browser code—the package owns bounded behavior and icons.
 - When a finished artifact containing `source-link` will leave the source workstation, build it with
   `--share` and report the returned `neutralizedSourceLinks` count. Keep the default build when local editor
   links are part of the requested handoff; share output derives path-free filename/line labels from validated
@@ -93,10 +125,10 @@ Create a local declarative source, verify it, and hand the user a finished inter
 Use the release pinned in this skill:
 
 ```sh
-npx --yes agentic-report@0.10.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.10.0 validate ./my-page --json
-npx --yes agentic-report@0.10.0 inspect ./my-page --json
-npx --yes agentic-report@0.10.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.11.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.11.0 validate ./my-page --json
+npx --yes agentic-report@0.11.0 inspect ./my-page --json
+npx --yes agentic-report@0.11.0 build ./my-page --output ./my-page.html --json
 ```
 
 Choose a different starter or destination name when the task requires it. `init` requires an absent
@@ -122,7 +154,7 @@ If the user does not trust the published npm package, do not run it through `npx
 pinned by this skill, expose the checked commit for review, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.10.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.11.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -132,7 +164,7 @@ pnpm build
 node dist/node/cli.js init ../my-page --starter report --json
 ```
 
-Substitute `node dist/node/cli.js` for every `npx --yes agentic-report@0.10.0` command above. Keep page
+Substitute `node dist/node/cli.js` for every `npx --yes agentic-report@0.11.0` command above. Keep page
 sources and outputs outside the cloned repository.
 
 Explain that this avoids executing the `agentic-report` npm package but is not registry-free:

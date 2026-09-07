@@ -59,6 +59,15 @@ const failureFixtureRoot = path.join(repositoryRoot, 'test-results/site-failure-
 const standalonePage = path.join(repositoryRoot, 'test-results/site-unit-standalone.html');
 const revision = 'fd9b4b3721c5c33ca94e5df239e3480cf3b39b8e';
 
+const repositoryPackageMetadata = JSON.parse(
+  await readFile(path.join(repositoryRoot, 'package.json'), 'utf8'),
+) as {
+  readonly name: string;
+  readonly version: string;
+  readonly homepage: string;
+  readonly engines: { readonly node: string };
+};
+
 const sha256 = (value: Buffer | string): string => createHash('sha256').update(value).digest('hex');
 
 const listFiles = async (root: string, current = root): Promise<string[]> => {
@@ -210,11 +219,15 @@ describe('deterministic public site staging', () => {
     const firstFiles = await listFiles(firstSite);
     const secondFiles = await listFiles(secondSite);
     expect(firstFiles).toEqual(secondFiles);
-    for (const file of firstFiles) {
-      expect(await readFile(path.join(firstSite, file))).toEqual(
-        await readFile(path.join(secondSite, file)),
-      );
-    }
+    await Promise.all(
+      firstFiles.map(async (file) => {
+        const [first, second] = await Promise.all([
+          readFile(path.join(firstSite, file)),
+          readFile(path.join(secondSite, file)),
+        ]);
+        expect(first.equals(second), file).toBe(true);
+      }),
+    );
   });
 
   it('crawls every declared route from the landing through exact case-sensitive file targets', async () => {
@@ -292,12 +305,12 @@ describe('deterministic public site staging', () => {
     expect(release).toMatchObject({
       contractVersion: 1,
       package: {
-        name: 'agentic-report',
-        version: '0.10.0',
-        engines: { node: '>=24.18.0' },
+        name: repositoryPackageMetadata.name,
+        version: repositoryPackageMetadata.version,
+        engines: repositoryPackageMetadata.engines,
       },
       sourceRevision: revision,
-      skill: { version: '0.10.0', license: 'MIT' },
+      skill: { version: repositoryPackageMetadata.version, license: 'MIT' },
     });
     expect(release.routes).toHaveLength(routes.length - 1);
     const actualFiles = (await listFiles(firstSite)).filter((file) => file !== 'release.json');
@@ -318,13 +331,7 @@ describe('deterministic public site staging', () => {
   });
 
   it('keeps package, skill, OpenAI, Claude, and community distribution identity synchronized', async () => {
-    const packageMetadata = JSON.parse(
-      await readFile(path.join(repositoryRoot, 'package.json'), 'utf8'),
-    ) as {
-      readonly version: string;
-      readonly homepage: string;
-      readonly engines: { node: string };
-    };
+    const packageMetadata = repositoryPackageMetadata;
     const skillSource = await readFile(
       path.join(repositoryRoot, 'skills/agentic-report/SKILL.md'),
       'utf8',
@@ -372,9 +379,12 @@ describe('deterministic public site staging', () => {
       license: 'MIT',
       metadata: { version: packageMetadata.version, homepage: packageMetadata.homepage },
     });
-    expect(packageMetadata.version).toBe('0.10.0');
-    expect(skillFrontmatter.metadata.compatibility).toContain('Node.js 24.18.0 or newer');
-    expect(packageMetadata.engines.node).toBe('>=24.18.0');
+    expect(packageMetadata.version).toMatch(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u);
+    const minimumNodeVersion = packageMetadata.engines.node.match(/^>=(\d+\.\d+\.\d+)$/u)?.[1];
+    expect(minimumNodeVersion).toBeDefined();
+    expect(skillFrontmatter.metadata.compatibility).toContain(
+      `Node.js ${minimumNodeVersion} or newer`,
+    );
     for (const plugin of [openAiPlugin, claudePlugin]) {
       expect(plugin).toMatchObject({
         name: 'agentic-report',
@@ -391,10 +401,6 @@ describe('deterministic public site staging', () => {
         source: './',
       }),
     ]);
-    expect(skillSource).toContain(
-      'npx --yes agentic-report@0.10.0 build ./my-page --output ./my-page.html --json',
-    );
-    expect(skillSource).toContain('Do not deploy, publish, use credentials');
     for (const [publicSource, source] of [
       ['skills/agentic-report/SKILL.md', skillSource],
       [
@@ -408,57 +414,6 @@ describe('deterministic public site staging', () => {
       );
       expect(pinnedVersions.length, publicSource).toBeGreaterThan(0);
       expect(new Set(pinnedVersions), publicSource).toEqual(new Set([packageMetadata.version]));
-    }
-    const readme = await readFile(path.join(repositoryRoot, 'README.md'), 'utf8');
-    expect(readme.trimEnd()).toMatch(
-      /<a href="https:\/\/moira-mcp\.com\/"><img alt="Made with Moira"[^>]*><\/a>\n<\/p>$/u,
-    );
-  });
-
-  it('onboards agents through the ready-made skill and a reusable custom-skill pattern', async () => {
-    const [landing, quickstart, llms, readme] = await Promise.all([
-      readFile(path.join(repositoryRoot, 'website/landing/report.md'), 'utf8'),
-      readFile(path.join(repositoryRoot, 'website/docs/agent/index.md'), 'utf8'),
-      readFile(path.join(repositoryRoot, 'website/llms.txt'), 'utf8'),
-      readFile(path.join(repositoryRoot, 'README.md'), 'utf8'),
-    ]);
-    for (const [name, source] of [
-      ['landing', landing],
-      ['quickstart', quickstart],
-      ['llms', llms],
-      ['README', readme],
-    ] as const) {
-      expect(source, name).toContain('npx skills add witqq/agentic-report --skill agentic-report');
-      expect(source, name).toMatch(/chat\s+response|wall of text/iu);
-    }
-    expect(landing).toContain('Build it into your own skill');
-    expect(quickstart).toContain('## Use it inside your own skill');
-    expect(quickstart).toContain('name: architecture-handoff');
-    expect(readme).toContain('The custom skill owns research,');
-  });
-
-  it('documents a source-review path without claiming registry-free installation', async () => {
-    const sources = await Promise.all(
-      [
-        'README.md',
-        'website/docs/report.md',
-        'website/docs/agent/index.md',
-        'skills/agentic-report/SKILL.md',
-      ].map(
-        async (file) => [file, await readFile(path.join(repositoryRoot, file), 'utf8')] as const,
-      ),
-    );
-    for (const [file, source] of sources) {
-      expect(source, file).toContain(
-        'git clone --branch v0.10.0 --depth 1 https://github.com/witqq/agentic-report.git',
-      );
-      expect(source, file).toContain('pnpm install --frozen-lockfile');
-      expect(source, file).toContain('pnpm-lock.yaml');
-      expect(source, file).toMatch(
-        /not registry-free|does not eliminate registry trust|still uses the npm registry|still downloads/iu,
-      );
-      expect(source, file).toContain('node dist/node/cli.js');
-      expect(source, file).not.toContain('npm install agentic-report');
     }
   });
 

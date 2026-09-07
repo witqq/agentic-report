@@ -14,6 +14,12 @@ complete discussion and saved open/resolved ranges remain highlighted. **Review*
 list/import/export overlay. Review Workspace exports every selected-text note and compatible imported
 whole-block thread together in one local `review.json`.
 
+The section grammar composes stage, split, mosaic, story, stack, bounded/full viewport rhythm, display or
+editorial type, local media framing, mesh/glow/grain/grid surfaces, reveal/stagger, progress/sticky scenes,
+data choreography, fine-pointer depth/tilt, and responsive action placement without author CSS or JavaScript.
+Reduced motion keeps all content visible. On narrow screens complex arrangements return to source order,
+gallery scroll stays local, and the topbar uses accessible icon controls without widening the document.
+
 Sources may embed maintained English and Russian Markdown variants with `localizations`. The generated page
 selects an available system language, falls back to the primary entry, and shows a language selector only
 when both variants exist. Switching replaces the complete page and keeps review/response state isolated by
@@ -34,11 +40,11 @@ locale. Single-language review export is version 3; multilingual export is versi
 
 Requires Node.js 24.18.0 or newer. The first npx run requires npm registry access. Start with:
 
-    npx --yes agentic-report@0.10.0 init ./my-page --starter landing --json
-    npx --yes agentic-report@0.10.0 validate ./my-page --json
-    npx --yes agentic-report@0.10.0 fix ./my-page --json
-    npx --yes agentic-report@0.10.0 inspect ./my-page --json
-    npx --yes agentic-report@0.10.0 build ./my-page --output ./my-page.html --json
+    npx --yes agentic-report@0.11.0 init ./my-page --starter landing --json
+    npx --yes agentic-report@0.11.0 validate ./my-page --json
+    npx --yes agentic-report@0.11.0 fix ./my-page --json
+    npx --yes agentic-report@0.11.0 inspect ./my-page --json
+    npx --yes agentic-report@0.11.0 build ./my-page --output ./my-page.html --json
 
 Generated reports include a bottom Made with Agentic Report link by default. Set root metadata
 `attribution: false` only when an unbranded artifact is explicitly required.

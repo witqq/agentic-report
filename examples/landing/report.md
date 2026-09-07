@@ -19,15 +19,15 @@ demonstrate the report engine; replace it with verified project evidence before 
 Give an agent a declarative source, not a frontend project. Build reports, research, architecture notes,
 tutorials, dashboards, and landing pages that open directly from disk.
 
-::::actions
-::action[See the workflow]{href="#workflow" kind="primary"}
+::::actions{placement="edge"}
+::action[See the workflow]{href="#workflow" kind="primary" effect="magnetic"}
 ::action[Review the proof]{href="#proof" kind="secondary"}
 ::action[Read the boundaries]{href="#boundaries" kind="quiet"}
 ::::
 
 ::contents
 
-:::::section{title="Start with the work, not the framework" id="workflow" nav="Workflow" width="wide" align="start" tone="soft" reveal="true"}
+:::::section{title="Start with the work, not the framework" id="workflow" nav="Workflow" width="wide" align="start" tone="soft" composition="mosaic" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 :::lead
 A :term[portable boundary]{key="portable-boundary"} keeps the opening thesis in normal reading flow while
 making the page's main claim easy to scan.
@@ -54,7 +54,7 @@ The source remains declarative and the package owns rendering, interaction, conf
 :::
 :::::
 
-:::::section{title="The path to a useful page" id="journey" nav="Journey" width="standard" align="start" tone="plain"}
+:::::section{title="The path to a useful page" id="journey" nav="Journey" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal" choreography="cascade"}
 ::::timeline{title="First page journey" description="Four short stages move from a package-owned starter to a portable reviewed artifact."}
 :::event{date="Choose" title="Select a starter" kind="neutral"}
 Pick the page shape closest to the reader's job.
@@ -71,7 +71,7 @@ Exercise the real page at desktop and mobile widths through `file://`.
 ::::
 :::::
 
-::::section{title="Proof without a hidden service" id="proof" nav="Proof" width="reading" align="start" tone="accent" reveal="true"}
+::::section{title="Proof without a hidden service" id="proof" nav="Proof" width="wide" align="start" tone="accent" composition="stage" viewport="full" section-density="immersive" type="display" surface="glow" transition="stagger"}
 :::decision{title="Keep the public format data-only"}
 The package owns rendering and interaction behavior so authors do not need JSX, CSS, callbacks, or a hosted
 editor to finish a page.
@@ -83,7 +83,7 @@ runtime after compilation.
 :::
 ::::
 
-::::section{title="Build the first page" id="boundaries" nav="Start" width="standard" align="center" tone="contrast" reveal="true"}
+::::section{title="Build the first page" id="boundaries" nav="Start" width="wide" align="center" tone="contrast" composition="stage" viewport="bounded" section-density="immersive" type="display" surface="plain" transition="stagger"}
 
 ```sh
 agentic-report init ./my-page --starter landing
@@ -96,8 +96,8 @@ Remote fetching, raw HTML, executable templates, arbitrary plugins, and author-s
 outside the portable trust boundary.
 :::
 
-:::actions
-::action[Back to workflow]{href="#workflow" kind="primary"}
+:::actions{placement="bottom"}
+::action[Back to workflow]{href="#workflow" kind="primary" effect="magnetic"}
 ::action[Project documentation]{href="../../docs/product/source-contract.md" kind="secondary"}
 ::action[Review the source contract]{href="../../docs/product/source-contract.md" kind="quiet"}
 :::

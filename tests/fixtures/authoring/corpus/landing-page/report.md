@@ -12,7 +12,7 @@ Corpus class: landing-page
 
 Portable reports for agents, built locally.
 
-:::section{title="Benefits" id="benefits" nav="Benefits" width="wide" align="center" tone="soft" reveal="true"}
+:::section{title="Benefits" id="benefits" nav="Benefits" width="wide" align="center" tone="soft" composition="mosaic" viewport="bounded" section-density="immersive" type="display" media="natural" media-fit="contain" media-aspect="square" focal="top" surface="mesh" transition="stagger" scene="progress" interaction="none" choreography="cascade" reveal="true"}
 Section-level contract coverage.
 :::
 
@@ -25,8 +25,8 @@ Compile and read offline.
 :::
 ::::
 
-:::actions
-::action[Review benefits]{href="#benefits" kind="primary"}
+:::actions{placement="edge"}
+::action[Review benefits]{href="#benefits" kind="primary" effect="magnetic"}
 ::action[Read next]{href="next.html" kind="secondary"}
 ::action[Project site]{href="https://example.com/project" kind="quiet"}
 :::

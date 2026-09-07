@@ -188,7 +188,7 @@ describe('registry-driven semantic directives', () => {
     expect(rendered.html).toContain('id="proof-2" aria-labelledby="proof-2-title"');
     expect(rendered.html).toMatch(/data-reveal="false" data-semantic="section"[^>]*id="proof-2"/u);
     expect(rendered.html).toMatch(
-      /<a class="semantic-action" data-kind="primary" data-semantic="action" href="#proof"><svg class="package-icon" data-package-icon="arrow-right"[^>]*>.*<\/svg>Start here<\/a>/u,
+      /<a class="semantic-action" data-kind="primary" data-effect="none" data-semantic="action" href="#proof"><svg class="package-icon" data-package-icon="arrow-right"[^>]*>.*<\/svg>Start here<\/a>/u,
     );
     expect(rendered.html).toMatch(
       /data-package-icon="arrow-right"[^>]*>.*<\/svg>Read the guide<\/a>/u,

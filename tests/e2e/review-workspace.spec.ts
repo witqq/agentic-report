@@ -29,6 +29,11 @@ test('annotations stay available without review mode and the list never moves th
     .filter({ hasText: 'Shared evidence statement.' })
     .first();
   await selectRange(page, target, 'evidence', 0, target, 'evidence', 'evidence'.length);
+  const createAction = page.locator(
+    '[data-review-selection-action][data-review-action-kind="create"]',
+  );
+  await expect(createAction.locator('[data-package-icon="pencil"]')).toBeVisible();
+  await expect(createAction.locator('[data-package-icon="comment"]')).toBeHidden();
   await page.getByRole('button', { name: 'Create note' }).click();
   await expect(page.locator('[data-review-popover]')).toBeVisible();
   await expect(page.locator('[data-review-dialog]')).not.toBeVisible();
@@ -77,14 +82,43 @@ for (const format of formats) {
       'data-review-thread-state',
       'open',
     );
+    await page.locator('[data-review-popover-close]').click();
+    await selectRange(page, target, 'evidence', 0, target, 'evidence', 'evidence'.length);
+    const exactAction = page.locator(
+      '[data-review-selection-action][data-review-action-kind="thread"]',
+    );
+    await expect(exactAction).toBeVisible();
+    await exactAction.click();
+    await expect(page.locator('[data-review-thread-messages] p')).toHaveText([
+      'Explain why this evidence supports the conclusion.',
+      'Add the supporting context as a reply.',
+    ]);
+    await page.locator('[data-review-popover-close]').click();
+    await page.evaluate(() => window.getSelection()?.removeAllRanges());
+    const point = await textPoint(target, 'evidence');
+    if (info.project.name.startsWith('mobile')) await page.touchscreen.tap(point.x, point.y);
+    else await page.mouse.move(point.x, point.y);
+    const rangeAction = page.locator(
+      '[data-review-selection-action][data-review-action-kind="thread"]',
+    );
+    await expect(rangeAction).toBeVisible();
+    if (info.project.name.startsWith('mobile')) await rangeAction.dispatchEvent('click');
+    else await rangeAction.click();
+    await expect(page.locator('[data-review-popover]')).toBeVisible();
+    await expect(page.locator('[data-review-thread-messages] p')).toHaveText([
+      'Explain why this evidence supports the conclusion.',
+      'Add the supporting context as a reply.',
+    ]);
     await page.screenshot({
       path: path.join(captures, `${format.name}-${info.project.name}-unresolved.png`),
     });
     await page.locator('[data-review-popover-close]').click();
     const marker = page.locator('[data-review-highlight-marker]');
+    const geometryBeforeThread = await reportGeometry(target);
     await marker.focus();
     await expect(marker).toBeFocused();
     await page.keyboard.press('Enter');
+    expect(await reportGeometry(target)).toEqual(geometryBeforeThread);
     await expect(page.locator('[data-review-thread-messages]')).toContainText(
       'supports the conclusion',
     );
@@ -100,11 +134,26 @@ for (const format of formats) {
     await page.screenshot({
       path: path.join(captures, `${format.name}-${info.project.name}-resolved.png`),
     });
+    await page.locator('[data-review-popover-close]').click();
+    const geometryBeforeList = await reportGeometry(target);
+    await page.locator('[data-review-toggle]').click();
+    await expect(page.locator('[data-review-dialog]')).toBeVisible();
+    expect(await reportGeometry(target)).toEqual(geometryBeforeList);
+    await page.locator('[data-review-thread-open]').click();
+    await expect(page.locator('[data-review-thread-messages] p')).toHaveText([
+      'Explain why this evidence supports the conclusion.',
+      'Add the supporting context as a reply.',
+    ]);
     const review = await downloadedReview(page);
     await page.screenshot({
       path: path.join(captures, `${format.name}-${info.project.name}-list-populated.png`),
     });
     const artifact = JSON.parse(review.toString('utf8'));
+    expect(await page.evaluate(() => document.documentElement.lang)).toBe('en');
+    await expect(page.locator('[data-localized-page-variant]')).toHaveAttribute(
+      'data-localized-page-variant',
+      'en',
+    );
     expect(artifact).toMatchObject({
       contractVersion: 3,
       threads: [
@@ -377,10 +426,79 @@ test('selecting a saved exact range offers its thread instead of creating a dupl
   await selectRange(page, target, 'evidence', 0, target, 'evidence', 'evidence'.length);
   const action = page.locator('[data-review-selection-action][data-review-action-kind="thread"]');
   await expect(action).toHaveText('View thread');
+  await expect(action).toHaveAttribute('title', 'View thread');
+  await expect(action.locator('[data-package-icon="comment"]')).toBeVisible();
+  await expect(action.locator('[data-package-icon="pencil"]')).toBeHidden();
   await action.click();
   await expect(page.locator('[data-review-thread-messages]')).toContainText(
     'Existing exact discussion.',
   );
+  const exported = JSON.parse((await downloadedReview(page)).toString('utf8'));
+  expect(exported.threads).toHaveLength(1);
+  expect(exported.threads[0].segments[0].messages).toHaveLength(1);
+});
+
+test('selection actions clamp their measured surface and follow a saved range through viewport movement', async ({
+  page,
+}, info) => {
+  await page.setViewportSize({
+    width: info.project.name.startsWith('mobile') ? 304 : 500,
+    height: 600,
+  });
+  await page.goto(formats[0].url);
+  const target = page
+    .locator('p[data-review-target]')
+    .filter({ hasText: 'Shared evidence statement.' })
+    .first();
+  await target.evaluate((node) => {
+    node.style.position = 'fixed';
+    node.style.right = '0';
+    node.style.bottom = '0';
+    node.style.width = 'max-content';
+    node.style.zIndex = '1';
+  });
+  await selectRange(page, target, 'statement.', 0, target, 'statement.', 'statement.'.length);
+  const action = page.locator('[data-review-selection-action]');
+  await expect(action).toBeVisible();
+  await expect.poll(() => actionInsideVisualViewport(action)).toBe(true);
+  expect((await action.boundingBox())?.x).toBeGreaterThanOrEqual(7);
+
+  await action.click();
+  await page.locator('[data-review-message]').fill('Viewport-bound thread.');
+  await page.locator('[data-review-add-message]').click();
+  await page.locator('[data-review-popover-close]').click();
+  const marker = page.locator('[data-review-highlight-marker]');
+  await expect(marker).toBeVisible();
+  await expect.poll(() => actionInsideVisualViewport(marker)).toBe(true);
+  await marker.evaluate((node) => {
+    node.style.left = '9999px';
+    node.style.top = '9999px';
+    window.visualViewport?.dispatchEvent(new Event('scroll'));
+  });
+  await expect.poll(() => actionInsideVisualViewport(marker)).toBe(true);
+  await page.evaluate(() => window.getSelection()?.removeAllRanges());
+  const point = await textPoint(target, 'statement.');
+  if (info.project.name.startsWith('mobile')) await page.touchscreen.tap(point.x, point.y);
+  else await page.mouse.move(point.x, point.y);
+  await expect(action).toHaveAttribute('data-review-action-kind', 'thread');
+  await action.evaluate((node) => {
+    node.style.left = '9999px';
+    node.style.top = '9999px';
+    window.visualViewport?.dispatchEvent(new Event('scroll'));
+  });
+  await expect.poll(() => actionInsideVisualViewport(action)).toBe(true);
+  await target.evaluate((node) => {
+    node.style.removeProperty('position');
+    node.style.removeProperty('right');
+    node.style.removeProperty('bottom');
+    node.style.removeProperty('width');
+    node.style.removeProperty('z-index');
+  });
+  await page.evaluate(() =>
+    scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }),
+  );
+  await expect(action).toBeHidden();
+  await expect(marker).toBeHidden();
 });
 
 test('a cancelled action press cannot open an earlier selection from a keyboard click', async ({
@@ -718,6 +836,91 @@ test('mobile review thread dialog opens and returns focus without overflow', asy
   ).toBe(true);
 });
 
+test('the same review popover stays inside desktop and mobile visual viewports without reflow', async ({
+  page,
+}, info) => {
+  const mobile = info.project.name.startsWith('mobile');
+  if (!mobile) await page.setViewportSize({ width: 1000, height: 600 });
+  await page.goto(formats[0].url);
+  const before = await page.locator('.report-shell').evaluate((shell) => {
+    const rect = shell.getBoundingClientRect();
+    return { left: rect.left, width: rect.width };
+  });
+  const target = page
+    .locator('p[data-review-target]')
+    .filter({ hasText: 'Shared evidence statement.' })
+    .first();
+  await selectRange(page, target, 'statement', 0, target, 'statement', 'statement'.length);
+  const selectionRect = await page.evaluate(() => {
+    const range = window.getSelection()?.getRangeAt(0);
+    if (range === undefined) throw new Error('Missing selected range geometry.');
+    const rect = range.getBoundingClientRect();
+    return { left: rect.left, right: rect.right };
+  });
+  await page.getByRole('button', { name: 'Create note' }).click();
+  const popover = page.locator('[data-review-popover]');
+  await expect(popover).toHaveAttribute(
+    'data-review-popover-placement',
+    mobile ? 'bottom' : 'inline',
+  );
+  const assertInsideVisualViewport = async (): Promise<void> => {
+    await expect
+      .poll(() =>
+        popover.evaluate((node) => {
+          const rect = node.getBoundingClientRect();
+          const viewport = window.visualViewport;
+          const left = viewport?.offsetLeft ?? 0;
+          const top = viewport?.offsetTop ?? 0;
+          const right = left + (viewport?.width ?? innerWidth);
+          const bottom = top + (viewport?.height ?? innerHeight);
+          return (
+            rect.left >= left - 1 &&
+            rect.right <= right + 1 &&
+            rect.top >= top - 1 &&
+            rect.bottom <= bottom + 1
+          );
+        }),
+      )
+      .toBe(true);
+  };
+  await assertInsideVisualViewport();
+  if (!mobile) {
+    const popoverRect = await popover.boundingBox();
+    if (popoverRect === null) throw new Error('Missing desktop popover geometry.');
+    expect(popoverRect.x + popoverRect.width).toBeLessThan(selectionRect.left);
+  }
+  await popover.evaluate((node) => {
+    (node as HTMLElement).style.top = '9999px';
+    window.visualViewport?.dispatchEvent(new Event('scroll'));
+  });
+  await assertInsideVisualViewport();
+  await page.evaluate(() => scrollTo({ top: 240, behavior: 'instant' }));
+  if (mobile) {
+    const viewport = page.viewportSize();
+    if (viewport === null) throw new Error('Mobile viewport is unavailable.');
+    await page.setViewportSize({ width: viewport.width, height: 620 });
+  }
+  await assertInsideVisualViewport();
+  expect(
+    await page.locator('.report-shell').evaluate((shell) => {
+      const rect = shell.getBoundingClientRect();
+      return { left: rect.left, width: rect.width };
+    }),
+  ).toEqual(before);
+  const iconSizes = await popover
+    .locator('.package-icon')
+    .evaluateAll((icons) => icons.map((icon) => icon.getBoundingClientRect().width));
+  expect(iconSizes.every((size) => size === 16)).toBe(true);
+  expect(
+    await page.locator('[data-review-toggle] .package-icon').evaluate((icon) => {
+      const rect = icon.getBoundingClientRect();
+      return { width: rect.width, height: rect.height };
+    }),
+  ).toEqual({ width: 20, height: 20 });
+  await mkdir(captures, { recursive: true });
+  await page.screenshot({ path: path.join(captures, `open-thread-${info.project.name}.png`) });
+});
+
 async function downloadedReview(page: Page): Promise<Buffer> {
   if (await page.locator('[data-review-popover]').isVisible())
     await page.locator('[data-review-popover-close]').click();
@@ -813,6 +1016,52 @@ async function textPoint(element: Locator, needle: string): Promise<{ x: number;
     }
     throw new Error(`Missing text point: ${value}`);
   }, needle);
+}
+
+async function reportGeometry(target: Locator): Promise<{
+  readonly shell: { left: number; width: number; marginLeft: string; marginRight: string };
+  readonly target: { left: number; top: number; width: number; height: number };
+  readonly scroll: { x: number; y: number };
+}> {
+  return target.evaluate((node) => {
+    const shell = document.querySelector<HTMLElement>('.report-shell');
+    if (shell === null) throw new Error('Missing report shell.');
+    const shellRect = shell.getBoundingClientRect();
+    const targetRect = node.getBoundingClientRect();
+    const style = getComputedStyle(shell);
+    return {
+      shell: {
+        left: shellRect.left,
+        width: shellRect.width,
+        marginLeft: style.marginLeft,
+        marginRight: style.marginRight,
+      },
+      target: {
+        left: targetRect.left,
+        top: targetRect.top,
+        width: targetRect.width,
+        height: targetRect.height,
+      },
+      scroll: { x: scrollX, y: scrollY },
+    };
+  });
+}
+
+async function actionInsideVisualViewport(action: Locator): Promise<boolean> {
+  return action.evaluate((node) => {
+    const rect = node.getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const left = viewport?.offsetLeft ?? 0;
+    const top = viewport?.offsetTop ?? 0;
+    const right = left + (viewport?.width ?? innerWidth);
+    const bottom = top + (viewport?.height ?? innerHeight);
+    return (
+      rect.left >= left + 7 &&
+      rect.right <= right - 7 &&
+      rect.top >= top + 7 &&
+      rect.bottom <= bottom - 7
+    );
+  });
 }
 
 async function selectFirstTextRange(element: Locator, length: number): Promise<void> {

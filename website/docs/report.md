@@ -39,7 +39,7 @@ If you prefer to inspect the implementation instead of executing the published `
 package, clone a specific release tag and run the compiler directly from its build:
 
 ```sh
-git clone --branch v0.10.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.11.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -62,7 +62,7 @@ tag pinned so later commands continue to use the revision you inspected.
 
 ::::section{title="Validate, explain, and repair" id="diagnostics" nav="Diagnostics" width="standard" align="start" tone="soft" reveal="true"}
 
-The CLI registers nine discoverable commands: `init`, `validate`, `inspect`, `build`, `fix`, `review`,
+The CLI commands are discoverable: `init`, `validate`, `inspect`, `build`, `fix`, `review`,
 `describe`, `schema`, and `examples`. Agent output is the default—NDJSON for run commands and one compact
 JSON line for reference commands. `--json` explicitly names that default; `--human` selects prose or
 indented JSON without dropping diagnostic facts.
@@ -85,6 +85,30 @@ destination, and still refuses every existing destination.
 Authors write declarative source rather than application code. Use Markdown for content, frontmatter or a
 manifest for page settings, allowlisted semantic directives for components, confined Markdown partials
 for composition, and local assets for media and downloads.
+
+A top-level `section` can compose package-owned `flow`, `stage`, `split`, `mosaic`, `story`, or `stack`
+arrangements. Closed attributes also select bounded viewport rhythm, density, typography, natural/masked/
+layered/gallery/bleed media, independent image fit/aspect/focal point, and plain/mesh/glow/grain/grid
+surfaces. They work in both output formats without author CSS or JavaScript. Multi-column and layered
+arrangements flatten to the authored reading order on narrow screens; gallery overflow stays inside its
+rail. Mosaic/stack composition cannot pair with layers/gallery media because both roles would own the same
+card layout; those four combinations fail before rendering.
+
+Section tone owns its background and foreground relationship. Decorative surfaces remain behind the
+authored content, while nested cards and visualizations restore their own readable package surface text.
+
+```markdown
+::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
+The content remains ordinary Markdown and semantic directives.
+::::
+```
+
+Sections also accept closed motion roles: `transition="none|reveal|stagger"`,
+`scene="none|progress|sticky"`, `interaction="none|depth|tilt"`, and
+`choreography="none|cascade"`. They default to `none`; reduced motion leaves content visible and pointer
+effects require a fine pointer. Conflicting layout or transform owners fail validation. `actions` accepts
+`placement="auto|edge|inline|bottom"`, with bottom kept in normal flow, and only a primary action may use the
+bounded `effect="magnetic"`. The package owns timings, movement, responsive placement, and icons.
 
 For a bilingual page, the primary entry declares `language: en` or `language: ru` and maps the other
 confined Markdown entry under `localizations`. Translate that variant's prose, partials, directive labels,
@@ -134,6 +158,16 @@ or [read its declarative source](../examples/review-workspace/report.md).
 The target manifest is bounded to 5,000 reviewable blocks and 750,000 serialized bytes; unusually large
 handoffs must stay under both limits or be split.
 
+The anchored thread surface flips, shifts, and clamps within the desktop visual viewport; on mobile it
+becomes a bounded bottom surface. Window and visual-viewport changes keep it, the selection action, and saved
+range markers reachable without moving report content. The measured contextual action and focus markers
+follow a visible rectangle from their live range and hide when that range is wholly offscreen. A marker
+prefers to sit fully above or below its saved text before edge clamping, keeping marker activation distinct
+from tapping the highlighted range. The topbar Review entry has a localized title tooltip around its
+20-pixel icon. At constrained widths topbar labels collapse to their accessible icons/tooltips without
+widening the page; editorial pages use the compact `AR` identity. Visible contextual/action controls retain localized labels and use 16-pixel icons;
+Create note shows a pencil and View thread shows a comment.
+
 An agent resolves the downloaded review against the current source with:
 
 ```sh
@@ -179,7 +213,10 @@ copies only visible rendered text through the localized package control.
 The public [landing](../index.html), [incident review](../examples/incident-review/index.html),
 [vendor decision](../examples/vendor-decision/index.html), and
 [launch readiness page](../examples/launch-readiness/index.html) are all bilingual pages built through this
-same contract.
+same contract. The landing combines a full stage, data scene, media gallery, sticky desktop story with
+normal mobile flow, contextual review, mosaic, choreography, pointer depth, magnetic emphasis, and
+responsive action placement. The three demo pages reuse those public roles on independent layouts; their
+English and Russian Markdown sources are linked from the landing.
 
 ::::
 

@@ -218,6 +218,8 @@ describe('renderDocument runtime boundary', () => {
     expect(html).toContain('data-review-popover-close="true"');
     expect(html).toContain('data-review-import="true"');
     expect(html).toContain('data-review-export="true"');
+    expect(html).toContain('data-review-selection-action-label="true"');
+    expect(html).toContain('data-package-icon="pencil"');
     expect(html).not.toContain('data-review-exit');
     expect(html).not.toContain('data-review-target-editor');
     expect(renderDocument(inlineOptions)).not.toContain('data-review-toggle');

@@ -13,6 +13,7 @@ language: ru
 Все поставщики, оценки, средства контроля, цены и записи доказательств созданы для движка отчётов; они не
 описывают реальную организацию или коммерческое утверждение.
 
+:::::section{title="Сигнал решения" id="decision-signal" nav="Решение" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 :::callout{kind="info" title="Решение за минуту"}
 Выберите **Cedar Assist** для обратимого 90-дневного пилота. Meridian Reply набрал больше всего взвешенных
 баллов, но не проходит :term[обязательное условие]{key="hard-gate"} региональной обработки. Quill Support проходит все условия,
@@ -48,8 +49,9 @@ language: ru
 :::glossary{key="evidence-expiry" term="Срок действия доказательства"}
 Дата, после которой утверждение о контроле нужно повторно проверить или заменить для использования в решении.
 :::
+:::::
 
-## Решение по условиям
+:::::section{title="Решение по условиям" id="gates" nav="Условия" width="wide" align="start" tone="soft" composition="story" viewport="bounded" section-density="editorial" type="editorial" media="mask" media-fit="contain" media-aspect="landscape" focal="center" surface="grain" transition="reveal" interaction="depth"}
 
 {{include: partials/gates.ru.md}}
 
@@ -59,8 +61,9 @@ language: ru
 89 баллов Meridian измеряют только предпочтения. Непройденное региональное условие не компенсируется, поэтому
 дополнительные баллы удобства или цены не делают кандидата допустимым.
 :::
+:::::
 
-## Взвешенное сравнение
+:::::section{title="Взвешенное сравнение" id="evidence" nav="Данные" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="grid" transition="stagger" scene="progress" choreography="cascade"}
 
 :::::chart{type="bar" title="Взвешенная оценка после проверки данных" description="Демонстрационные оценки: Meridian Reply — 89, Cedar Assist — 84, Quill Support — 77; Meridian остаётся недопустимым из-за отдельного обязательного ограничения." x-label="Вымышленный кандидат" y-label="Взвешенная оценка из 100"}
 ::::series{label="Взвешенная оценка"}
@@ -108,7 +111,9 @@ Cedar должен подтвердить распространение уда�
 - Запишите для каждого условия пилота владельца, срок и последствие выхода.
   :::
 
-## Решение и условия
+:::::
+
+:::::section{title="Решение и условия" id="conditions" nav="Условия пилота" width="wide" align="start" tone="accent" composition="stack" viewport="adaptive" section-density="compact" type="editorial" surface="glow" transition="reveal" choreography="cascade"}
 
 :::decision{title="Одобрить Cedar Assist для обратимого пилота"}
 Продолжать только для очереди поддержки ЕС без платёжных данных. Безопасность отвечает за проверку удаления
@@ -139,3 +144,5 @@ Cedar должен подтвердить распространение уда�
 3. Отрепетируйте удаление и экспорт до подключения второй очереди.
 4. Откройте решение заново при изменении условия, существенного субобработчика или потока данных.
    :::
+
+:::::

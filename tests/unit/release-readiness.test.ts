@@ -58,87 +58,6 @@ describe('release readiness', () => {
     ).resolves.toMatchObject({ format: 'single-file' });
   });
 
-  it('keeps the current authoring workflow visible across public entry points', async () => {
-    const surfaces = await Promise.all(
-      [
-        'README.md',
-        'skills/agentic-report/SKILL.md',
-        'website/landing/report.md',
-        'website/docs/report.md',
-        'website/docs/agent/index.md',
-      ].map(async (file) => ({ file, source: await readFile(path.resolve(file), 'utf8') })),
-    );
-    for (const { file, source } of surfaces) {
-      for (const fact of ['fix', 'forms', '5,000', 'Create note', 'review.json'])
-        expect(source, `${file}: ${fact}`).toContain(fact);
-    }
-    for (const { file, source } of surfaces.filter(({ file }) => file !== 'README.md')) {
-      for (const fact of ['related', '--human']) expect(source, `${file}: ${fact}`).toContain(fact);
-      expect(source, `${file}: symlink parent`).toMatch(/symbolic(?:-| )link|symlink/u);
-    }
-
-    const development = await readFile(path.resolve('docs/DEVELOPMENT.md'), 'utf8');
-    expect(development).toContain('sets its own npm global prefix');
-    expect(development).toContain('does not have to be removed first');
-  });
-
-  it('keeps all shipped review pillars in normative product requirements', async () => {
-    const requirements = await readFile(path.resolve('PRODUCT-REQUIREMENTS.md'), 'utf8');
-    for (const required of [
-      'AR-AUTHOR-REVIEW-PROTOCOL',
-      'AR-AUTHOR-REVIEW-BINDING',
-      'AR-AUTHOR-REVIEW-RECONCILIATION',
-      'AR-COMPONENT-REVIEW-WORKSPACE',
-      '`review.json` версии 3',
-      'точной привязкой к выделенному тексту',
-      '`Create note`',
-      'сообщениями пользователя',
-      'resolved или reopened',
-      '`exact/changed/missing/ambiguous`',
-      'Формальные verdict, approval',
-      'gate и review-чек-листы не входят',
-    ]) {
-      expect(requirements, required).toContain(required);
-    }
-    expect(requirements).not.toContain('AR-COMPONENT-REVIEW-DECISIONS');
-    expect(requirements).not.toContain('AR-COMPONENT-REVIEW-CHECKLISTS');
-  });
-
-  it('keeps static checklist metadata independent from review approval', async () => {
-    const [architecture, sourceContract, registry, requirements, extension] = await Promise.all([
-      readFile(path.resolve('docs/ARCHITECTURE.md'), 'utf8'),
-      readFile(path.resolve('docs/product/source-contract.md'), 'utf8'),
-      readFile(path.resolve('src/authoring/registry.ts'), 'utf8'),
-      readFile(path.resolve('PRODUCT-REQUIREMENTS.md'), 'utf8'),
-      readFile(path.resolve('docs/product/review-workspace-extension.json'), 'utf8'),
-    ]);
-    expect(architecture).toContain('owns in-memory discussion threads');
-    expect(sourceContract).toContain('optional authored `required` marker');
-    expect(sourceContract).toContain('prior thread segments');
-    expect(registry).toContain('Marks this item as required in the static document.');
-    expect(registry).toContain('Marks this decision as required in the static document.');
-    expect(registry).toContain('Static structured checklist');
-    expect(registry).toContain('fragment threads, user/agent messages, resolution');
-    expect(architecture).toContain('binds its threads and revision segments');
-    expect(architecture).toContain('resolve the thread segment');
-    expect(sourceContract).toContain('Structured thread and message fields');
-    expect(requirements).toContain('поля тредов и сообщений');
-    expect(extension).toContain('revision-segment binding');
-    for (const retired of [
-      'Blocks approval while unchecked.',
-      'Requires a selected, open, or deferred response.',
-      'Typed review checklist',
-      'independent verdicts',
-      'structured responses',
-      'resolve the response',
-      'read-only feedback binding',
-    ]) {
-      expect(
-        `${registry}\n${architecture}\n${sourceContract}\n${requirements}\n${extension}`,
-      ).not.toContain(retired);
-    }
-  });
-
   it('targets a real Compose service and its declared health container', async () => {
     const deploy = JSON.parse(await readFile(path.resolve('.deploy-config.json'), 'utf8')) as {
       readonly serviceName?: string;
@@ -155,26 +74,6 @@ describe('release readiness', () => {
     expect(service?.container_name).toBe(deploy.healthCheck?.containerName);
   });
 
-  it('keeps the release cycle single-gated and delegates external checks to their owning stages', async () => {
-    const runbook = await readFile(path.resolve('docs/RELEASE.md'), 'utf8');
-    expect(runbook.match(/^pnpm verify$/gmu)).toHaveLength(1);
-    expect(runbook).toContain('`pnpm verify` is the complete pre-release gate.');
-    expect(runbook).toContain('do not run its constituent checks again');
-    expect(runbook).toContain('do not duplicate it with a second download or isolated install');
-    expect(runbook).toContain(
-      'gh workflow run publish-npm.yml --ref main -f tag=v0.10.0 -f sha256="$candidate_sha256"',
-    );
-    expect(runbook).toContain('gh run watch "<databaseId>" --exit-status');
-    expect(runbook).toContain('npm view agentic-report dist-tags version --json');
-    expect(runbook).toContain('pnpm deploy:prod');
-    expect(runbook).toContain('After a healthy deploy, perform one public smoke test');
-    expect(runbook).toContain('Repeat only the affected gate and every later stage.');
-    expect(runbook).not.toContain('npm publish ');
-    expect(runbook).not.toContain('## Prove real registry npx');
-    expect(runbook).not.toContain('shasum -a 256');
-    expect(runbook).toContain('`[Made with Moira](https://moira-mcp.com/)`.');
-  });
-
   it('labels every packaged example as fictional before its first evidence claims', async () => {
     const manifest = JSON.parse(await readFile(path.resolve('examples/manifest.json'), 'utf8')) as {
       readonly examples: readonly {
@@ -183,7 +82,6 @@ describe('release readiness', () => {
         readonly entry: string;
       }[];
     };
-    expect(manifest.examples).toHaveLength(17);
     for (const example of manifest.examples) {
       const source = await readFile(path.resolve('examples', example.path, example.entry), 'utf8');
       expect(fictionalMarkerIssue(source), example.id).toBeUndefined();

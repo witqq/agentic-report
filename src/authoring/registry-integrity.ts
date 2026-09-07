@@ -45,6 +45,39 @@ export function authoringRegistryIntegrityIssues(
         issues.push(`${directive.name}.${attribute.name}: unsafe rendered attribute property`);
       }
     }
+    for (const [combinationIndex, combination] of (
+      directive.incompatibleCombinations ?? []
+    ).entries()) {
+      const entries = Object.entries(combination.attributes);
+      if (entries.length < 2) {
+        issues.push(
+          `${directive.name}: incompatible combination ${combinationIndex} needs two attributes`,
+        );
+      }
+      if (combination.message.trim().length === 0 || combination.remediation.trim().length === 0) {
+        issues.push(
+          `${directive.name}: incompatible combination ${combinationIndex} needs guidance`,
+        );
+      }
+      for (const [attributeName, values] of entries) {
+        const attribute = directive.attributes.find(
+          (candidate) => candidate.name === attributeName,
+        );
+        if (attribute?.constraint.kind !== 'enum') {
+          issues.push(
+            `${directive.name}: incompatible combination references non-enum ${attributeName}`,
+          );
+          continue;
+        }
+        for (const value of values) {
+          if (!attribute.constraint.values.includes(value)) {
+            issues.push(
+              `${directive.name}: incompatible combination uses unknown ${attributeName} value ${value}`,
+            );
+          }
+        }
+      }
+    }
     for (const target of [
       directive.placement.requiredParent,
       directive.placement.preferredParent,
