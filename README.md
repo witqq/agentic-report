@@ -130,7 +130,7 @@ tokens:
 
 ::contents
 
-::::section{title="Decision" id="decision" nav="Decision" width="reading" align="start" tone="soft" reveal="true"}
+::::section{title="Decision" id="decision" nav="Decision" width="reading" align="start" tone="soft" transition="stagger" scene="progress" choreography="cascade"}
 :::lead
 The opening thesis introduces :term[concepts]{key="concept"} as emphasized prose, not a callout.
 :::
@@ -139,8 +139,8 @@ The opening thesis introduces :term[concepts]{key="concept"} as emphasized prose
 The compiler owns responsive layout and navigation.
 :::
 
-:::actions
-::action[Review the decision]{href="#decision" kind="primary"}
+:::actions{placement="auto"}
+::action[Review the decision]{href="#decision" kind="primary" effect="magnetic"}
 ::action[Open the evidence]{href="evidence.html" kind="secondary"}
 :::
 
@@ -208,6 +208,16 @@ without a review mode or block controls. A selection may cross inline markup or 
 anchor records both target references and Unicode code-point offsets. The anchored popover shows
 the exact quote and keeps compose, reply, edit, resolve, and reopen beside it. Saved open/resolved ranges
 remain visibly distinct; hover/tap exposes **View thread**, and focusable markers provide the keyboard route.
+Desktop flips, shifts, and clamps the popover within the visual viewport; mobile uses a bounded bottom
+surface that follows browser-chrome and on-screen-keyboard viewport changes without reflowing the report.
+The contextual action and focus markers are clamped by their measured size to a visible range rectangle and
+hide when the saved range is wholly offscreen. A saved-range marker prefers a fully separate position above
+or below the text, keeping marker activation and a direct tap on the highlighted text independent.
+Topbar icon controls carry localized names and title tooltips; the Review entry uses a 20-pixel icon. At
+constrained widths the topbar keeps its recognizable icons and tooltips while hiding labels that would widen
+the document; the editorial shell uses its compact `AR` identity.
+Visible contextual controls retain their labels while 16-pixel pencil/comment icons distinguish Create note
+from View thread.
 
 The topbar **Review** action opens only a non-reflowing overlay list, prior evidence, import, and one complete
 export. Choosing an entry returns to the same anchored popover. Existing whole-block threads remain
@@ -248,11 +258,33 @@ links, proportional typography, and wrapping remain ordinary Markdown; the local
 only visible rendered text rather than Markdown or HTML.
 
 Authors may replace heading-only structure with top-level `section` directives. Each section owns a
-visible H2 and a stable anchor, plus closed reading/standard/wide tracks, start/center alignment, and
-plain/soft/accent/contrast tones. `reveal="true"` opts one section into a bounded one-time normal-motion
-reveal. A nested `actions` group composes ordinary safe links with primary/secondary/quiet emphasis.
-Legacy heading documents remain valid; their H2 headings define the primary navigation while H3 and
-component anchors remain owned descendant targets.
+visible H2 and stable anchor. Closed visual attributes compose package-owned arrangements (`flow`, `stage`,
+`split`, `mosaic`, `story`, `stack`), bounded viewport rhythm, compact/editorial/immersive density,
+body/display/editorial typography, natural/masked/layered/gallery/bleed media, image fit/aspect/focal point,
+and plain/mesh/glow/grain/grid surfaces. They are semantic choices, not CSS or component code; multi-column
+and layered arrangements return to authored order on narrow screens, and gallery overflow stays local.
+Because mosaic/stack and layers/gallery would both own the same card layout, those four combinations fail
+before rendering; use flow/stage/split/story with layered/gallery media or natural/mask/bleed media with
+mosaic/stack.
+`transition="reveal|stagger"`, `scene="progress|sticky"`, `interaction="depth|tilt"`, and
+`choreography="cascade"` add bounded package-owned motion while defaulting independently to `none`; legacy
+`reveal="true"` remains supported. A nested `actions` group composes ordinary safe links with
+primary/secondary/quiet emphasis, `auto|edge|inline|bottom` placement, and an optional primary-only
+`magnetic` effect. Mobile bottom placement remains compact normal-flow content rather than a sticky overlay.
+Legacy heading documents remain valid;
+their H2 headings define the primary navigation while H3 and component anchors remain owned descendant
+targets.
+
+```markdown
+::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
+The content remains ordinary Markdown and semantic directives.
+::::
+```
+
+Use the packaged `layout-mixed` example as the complete bilingual composition reference. The exact domains
+and defaults are in the
+[`section` source contract](docs/product/source-contract.md#semantic-primitives) and machine-readable
+directive schema.
 
 Place `::contents` at the document root to keep a generated route map inside the article. Its native links
 use exact visible section headings and final collision-free targets; optional short `nav` labels remain in
@@ -270,7 +302,12 @@ Pages with at least two eligible sections receive one responsive contents naviga
 collapse the non-modal sidebar without persisting state; mobile readers get a labelled native dialog with
 contained focus and focus return. Exactly one link exposes `aria-current="location"`, including for
 descendant and outside hashes. `scrollProgress: true` enables a decorative progress line. Progress and
-section-reveal DOM work are entirely absent under reduced motion; navigation semantics remain available.
+section motion are entirely absent under reduced motion; content remains visible and navigation semantics
+remain available. Entrance and cascade sequences are capped at 12 items; pointer depth, tilt, and magnetic
+movement run only for a fine pointer, while scene progress and pointer updates are visibility-bound and
+animation-frame-coalesced. Authors choose semantic roles, not timings, coordinates, easing, or scripts.
+If `IntersectionObserver` is unavailable or non-callable, observer-dependent motion and pointer enhancement
+remain inert, baseline content stays readable, and navigation uses its bounded geometry fallback.
 
 ## Realistic showcase portfolio
 
@@ -316,9 +353,12 @@ write their one reference document as a compact JSON line. `--json` is accepted 
 
 The canonical public landing is itself an ordinary compiler input at
 [`website/landing`](website/landing/). It uses only supported Markdown, frontmatter, semantic directives,
-and local screenshots generated from the three fictional showcases. Its paired Russian entry and every
-public demo use the same multilingual contract as package consumers. Build it through the same public path
-as any user page:
+and local screenshots generated from the three fictional showcases. Its visual narrative composes a
+full stage, data scene, media gallery, sticky desktop story with normal mobile flow, selected-text review,
+mosaic, choreography, pointer depth, magnetic emphasis, and responsive action placement. Its paired Russian
+entry and every public demo use the same multilingual contract as package consumers, while incident review,
+vendor decision, and launch readiness reuse the visual vocabulary on independent page layouts. Build it
+through the same public path as any user page:
 
 ```bash
 agentic-report validate ./website/landing --json

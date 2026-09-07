@@ -13,15 +13,15 @@ language: ru
 Дайте агенту декларативный источник, а не frontend-проект. Создавайте отчёты, исследования, архитектурные
 заметки, руководства, dashboards и лендинги, которые открываются прямо с диска.
 
-::::actions
-::action[Посмотреть процесс]{href="#workflow" kind="primary"}
+::::actions{placement="edge"}
+::action[Посмотреть процесс]{href="#workflow" kind="primary" effect="magnetic"}
 ::action[Изучить доказательства]{href="#proof" kind="secondary"}
 ::action[Прочитать ограничения]{href="#boundaries" kind="quiet"}
 ::::
 
 ::contents
 
-:::::section{title="Начните с работы, а не с фреймворка" id="workflow" nav="Процесс" width="wide" align="start" tone="soft" reveal="true"}
+:::::section{title="Начните с работы, а не с фреймворка" id="workflow" nav="Процесс" width="wide" align="start" tone="soft" composition="mosaic" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 :::lead
 :term[Переносимая граница]{key="portable-boundary"} сохраняет основной тезис в обычном потоке чтения и
 помогает быстро увидеть главное обещание страницы.
@@ -48,7 +48,7 @@ language: ru
 :::
 :::::
 
-:::::section{title="Путь к полезной странице" id="journey" nav="Путь" width="standard" align="start" tone="plain"}
+:::::section{title="Путь к полезной странице" id="journey" nav="Путь" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal" choreography="cascade"}
 ::::timeline{title="Путь первой страницы" description="Четыре коротких этапа ведут от основы пакета к переносимому проверенному артефакту."}
 :::event{date="Выбор" title="Выберите основу" kind="neutral"}
 Возьмите форму страницы, наиболее близкую к задаче читателя.
@@ -65,7 +65,7 @@ language: ru
 ::::
 :::::
 
-::::section{title="Доказательство без скрытого сервиса" id="proof" nav="Доказательство" width="reading" align="start" tone="accent" reveal="true"}
+::::section{title="Доказательство без скрытого сервиса" id="proof" nav="Доказательство" width="wide" align="start" tone="accent" composition="stage" viewport="full" section-density="immersive" type="display" surface="glow" transition="stagger"}
 :::decision{title="Сохранить публичный формат только для данных"}
 Пакет владеет рендерингом и взаимодействиями, поэтому для готовой страницы автору не нужны JSX, CSS,
 callbacks или hosted-редактор.
@@ -76,7 +76,7 @@ callbacks или hosted-редактор.
 :::
 ::::
 
-::::section{title="Соберите первую страницу" id="boundaries" nav="Старт" width="standard" align="center" tone="contrast" reveal="true"}
+::::section{title="Соберите первую страницу" id="boundaries" nav="Старт" width="wide" align="center" tone="contrast" composition="stage" viewport="bounded" section-density="immersive" type="display" surface="plain" transition="stagger"}
 
 ```sh
 agentic-report init ./my-page --starter landing
@@ -89,8 +89,8 @@ agentic-report build ./my-page --output ./my-page.html
 вне переносимой границы доверия.
 :::
 
-:::actions
-::action[Назад к процессу]{href="#workflow" kind="primary"}
+:::actions{placement="bottom"}
+::action[Назад к процессу]{href="#workflow" kind="primary" effect="magnetic"}
 ::action[Документация проекта]{href="../../docs/product/source-contract.md" kind="secondary"}
 ::action[Изучить контракт источника]{href="../../docs/product/source-contract.md" kind="quiet"}
 :::

@@ -20,6 +20,7 @@ This brief follows a fictional launch review for **Driftwood Rooms**, an invente
 product from the fictional North Quay Labs. Every user, cohort, metric, threshold, and date is sample data
 created for the report engine; none describes a real product, company, or market result.
 
+:::::section{title="Launch signal" id="launch-signal" nav="Signal" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
 :::callout{kind="success" title="Decision in one minute"}
 Open a 240-team European Economic Area beta on 15 September. Keep the invitation list capped, exclude
 regulated workflows, and hold broader expansion until week-two retention and support-response gates pass for
@@ -50,8 +51,9 @@ No unresolved severity-one issue or missing mandatory launch gate.
 ::::
 
 ![Sample beta learning loop connecting a bounded audience, collaborative value, evidence, and a governed rollout](assets/beta-learning-loop.svg)
+:::::
 
-## Who gets value first
+:::::section{title="Who gets value first" id="audience" nav="Audience" width="wide" align="start" tone="soft" composition="mosaic" viewport="bounded" section-density="compact" type="editorial" surface="grain" transition="stagger" choreography="cascade"}
 
 ::::tabs{title="Audience evidence"}
 :::tab{label="Product teams"}
@@ -67,8 +69,9 @@ Single-participant rooms show weak repeat value, and mobile attachment review re
 The beta excludes regulated casework and makes no claim about enterprise-wide adoption.
 :::
 ::::
+:::::
 
-## Activation evidence
+:::::section{title="Activation evidence" id="activation" nav="Evidence" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="grid" transition="reveal" scene="progress" choreography="cascade"}
 
 ::::chart{type="line" title="Activated workspace rate by cohort" description="The fictional seven-day activated workspace rate rises from 46 percent in cohort one to 64 percent in cohort four." x-label="Design-partner cohort" y-label="Activated workspaces, percent"}
 :::series{label="Activated within seven days"}
@@ -96,7 +99,9 @@ The beta excludes regulated casework and makes no claim about enterprise-wide ad
 | Severity-one product issues   |                0 |               0 | Pass       |
 | Rehearsed support first reply |         ≤ 10 min |           7 min | Pass       |
 
-## Launch gates and ownership
+:::::
+
+:::::section{title="Launch gates and ownership" id="gates" nav="Gates" width="wide" align="start" tone="accent" composition="story" viewport="adaptive" section-density="editorial" type="editorial" surface="glow" transition="reveal"}
 
 {{include: partials/readiness-register.md}}
 
@@ -116,8 +121,9 @@ The sample uses invited design partners rather than a random market sample. Acti
 directional operating thresholds, not statistical proof of product-market fit. The cohort trend includes no
 seasonality adjustment, and the funnel does not estimate paid conversion.
 :::
+:::::
 
-## Decision and rollout
+:::::section{title="Decision and rollout" id="rollout" nav="Rollout" width="wide" align="start" tone="contrast" composition="stack" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 
 :::decision{title="Go: bounded European Economic Area beta"}
 Launch on 15 September for no more than 240 invited teams. Product Operations owns the invitation cap;
@@ -148,3 +154,5 @@ Add the remaining invitations only after two passing cohorts; otherwise stop int
 3. Exercise the support escalation and invitation-pause controls before opening access.
 4. Record the expand-or-hold decision with the evidence that changed it.
    :::
+
+:::::

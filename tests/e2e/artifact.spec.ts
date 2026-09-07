@@ -217,6 +217,7 @@ for (const artifact of russianChromeArtifacts) {
     const target = page
       .locator('p[data-review-target]')
       .filter({ hasText: 'Пакет локализует собственные элементы' });
+    await target.scrollIntoViewIfNeeded();
     await target.evaluate((owner) => {
       const node = owner.firstChild;
       if (!(node instanceof Text)) throw new Error('Missing localized review text.');
@@ -878,7 +879,7 @@ for (const artifact of landingSectionArtifacts) {
     ).toHaveAttribute('id', 'workflow-title');
     await expect(page.locator('#workflow')).toHaveAttribute('data-width', 'wide');
     await expect(page.locator('#workflow')).toHaveAttribute('data-tone', 'soft');
-    await expect(page.locator('#proof')).toHaveAttribute('data-width', 'reading');
+    await expect(page.locator('#proof')).toHaveAttribute('data-width', 'wide');
     await expect(page.locator('#proof')).toHaveAttribute('data-tone', 'accent');
     await expect(page.locator('#boundaries')).toHaveAttribute('data-align', 'center');
     await expect(page.locator('#boundaries')).toHaveAttribute('data-tone', 'contrast');
@@ -1943,7 +1944,18 @@ test('reduced motion omits progress and reveal machinery while normal motion sta
     const ratioBeforeResize = await progressRatio();
     const scrollBeforeResize = await page.evaluate(() => scrollY);
     await page.setViewportSize({ width: 1200, height: 900 });
-    await expect.poll(progressRatio).toBeGreaterThan(ratioBeforeResize);
+    await expect
+      .poll(async () => {
+        const rendered = await progressRatio();
+        const expected = await page.evaluate(() => {
+          const maximum =
+            document.documentElement.scrollHeight - document.documentElement.clientHeight;
+          return maximum <= 0 ? 0 : Math.min(1, Math.max(0, scrollY / maximum));
+        });
+        return Math.abs(rendered - expected);
+      })
+      .toBeLessThan(0.000_001);
+    expect(await progressRatio()).not.toBe(ratioBeforeResize);
     expect(await page.evaluate(() => scrollY)).toBe(scrollBeforeResize);
 
     const beforeBurst = (await readMotionEvidence(page)).rafRequests;

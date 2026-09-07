@@ -106,6 +106,7 @@ export default async function globalSetup(): Promise<void> {
   ] as const;
   const presetFixtures = ['studio', 'editorial', 'signal'] as const;
   const navigationSource = path.join(fixtureRoot, 'navigation-source');
+  const purposefulMotionSource = path.join(fixtureRoot, 'purposeful-motion-source');
   const sectionProseSource = path.join(fixtureRoot, 'section-prose-source');
   const reviewSource = path.join(fixtureRoot, 'review-source');
   const responseIsolationSource = path.join(fixtureRoot, 'response-isolation-source');
@@ -318,6 +319,64 @@ export default async function globalSetup(): Promise<void> {
       'This valid target follows every eligible section.',
     ].join('\n\n'),
   );
+  await mkdir(purposefulMotionSource, { recursive: true });
+  await writeFile(
+    path.join(purposefulMotionSource, 'motion.svg'),
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect width="320" height="180" fill="#2dd4bf"/><circle cx="230" cy="72" r="42" fill="#312e81"/></svg>',
+  );
+  await writeFile(
+    path.join(purposefulMotionSource, 'report.md'),
+    [
+      '---',
+      'title: Purposeful motion fixture',
+      'layout: mixed',
+      'theme: light',
+      'scrollProgress: true',
+      '---',
+      '# Purposeful motion fixture',
+      ':::::section{title="Sequenced evidence" id="sequence" transition="stagger" scene="progress" choreography="cascade"}',
+      '::::cards',
+      ':::card{title="First"}',
+      'Evidence begins in authored order.',
+      ':::',
+      ':::card{title="Second"}',
+      'Evidence continues without hidden baseline content.',
+      ':::',
+      ':::card{title="Third"}',
+      'Evidence closes the sequence.',
+      ':::',
+      '::::',
+      ':::::',
+      '::::::section{title="Ordered data" id="data-scene" choreography="cascade"}',
+      ':::::chart{type="bar" title="Ordered evidence" description="Three authored values remain in source order." x-label="Step" y-label="Value"}',
+      '::::series{label="Evidence"}',
+      '::point{label="One" value="1"}',
+      '::point{label="Two" value="2"}',
+      '::point{label="Three" value="3"}',
+      '::::',
+      ':::::',
+      '::::::',
+      ':::section{title="Pointer depth" id="pointer" interaction="tilt" media="mask"}',
+      '![Local motion proof](motion.svg)',
+      ':::',
+      ':::section{title="Sticky scene" id="sticky" scene="sticky"}',
+      '![Sticky local proof](motion.svg)',
+      'The image stays available while the story scrolls.',
+      ':::',
+      ':::actions{placement="auto"}',
+      '::action[Automatic primary]{href="#sequence" kind="primary" effect="magnetic"}',
+      ':::',
+      ':::actions{placement="edge"}',
+      '::action[Edge action]{href="#pointer" kind="secondary"}',
+      ':::',
+      ':::actions{placement="inline"}',
+      '::action[Inline action]{href="#sticky" kind="quiet"}',
+      ':::',
+      ':::actions{placement="bottom"}',
+      '::action[Bottom action]{href="#sequence" kind="primary"}',
+      ':::',
+    ].join('\n'),
+  );
   await mkdir(sectionProseSource, { recursive: true });
   await writeFile(
     path.join(sectionProseSource, 'report.md'),
@@ -510,6 +569,10 @@ export default async function globalSetup(): Promise<void> {
     buildReport({
       input: navigationSource,
       output: path.join(fixtureRoot, 'navigation.html'),
+    }),
+    buildReport({
+      input: purposefulMotionSource,
+      output: path.join(fixtureRoot, 'purposeful-motion.html'),
     }),
     buildReport({
       input: sectionProseSource,

@@ -35,7 +35,7 @@ test('system locale selects Russian and the visible switcher changes the complet
     );
     await expect(
       page.getByRole('heading', {
-        name: 'Дайте агенту лучший способ передать результат.',
+        name: 'Дайте агенту страницу, которую не стыдно передать.',
         level: 1,
       }),
     ).toBeVisible();
@@ -62,7 +62,7 @@ test('system locale selects Russian and the visible switcher changes the complet
       'agentic-report — declarative interactive pages for agent handoffs',
     );
     await expect(
-      page.getByRole('heading', { name: 'Give your agent a better handoff.', level: 1 }),
+      page.getByRole('heading', { name: 'Give your agent a page worth handing over.', level: 1 }),
     ).toBeVisible();
     await expect(page.locator('[data-navigation] a').first()).toHaveText('Proof');
     await expect(page.getByRole('combobox', { name: 'Language' })).toHaveValue('en');

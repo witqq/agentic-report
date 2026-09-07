@@ -9,8 +9,6 @@ import {
   getExtensionProposalSchema,
   getExtensionProposalTemplate,
 } from '../dist/node/authoring/extension-gate.js';
-import { authoringRegistry } from '../dist/node/authoring/registry.js';
-import { projectAuthoringSchemas } from '../dist/node/authoring/schemas.js';
 import { getAuthoringSchema, getSourceContract, listExamples } from '../dist/node/discovery.js';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -35,15 +33,6 @@ projections.set(
   await serialize(getExtensionProposalTemplate()),
 );
 projections.set('examples/manifest.json', await serialize(await createExampleManifest()));
-projections.set(
-  'tests/fixtures/authoring/registry-contract.json',
-  await serialize(authoringRegistry),
-);
-projections.set(
-  'tests/fixtures/authoring/schema-projections.json',
-  await serialize(projectAuthoringSchemas(authoringRegistry)),
-);
-
 const stale: string[] = [];
 for (const [relativePath, content] of projections) {
   const target = path.join(outputRoot, relativePath);

@@ -69,6 +69,7 @@ interface DirectiveContract {
   readonly description: string;
   readonly forms: readonly string[];
   readonly attributes: Readonly<Record<string, AttributeContract>>;
+  readonly incompatibleCombinations?: DirectiveDefinition['incompatibleCombinations'];
   readonly children: DirectiveDefinition['children'];
   readonly placement: DirectiveDefinition['placement'];
   readonly resource: DirectiveDefinition['behavior']['resource'];
@@ -126,6 +127,9 @@ function createSourceContract(): SourceContract {
               },
             ]),
           ),
+          ...(directive.incompatibleCombinations === undefined
+            ? {}
+            : { incompatibleCombinations: directive.incompatibleCombinations }),
           children: directive.children,
           placement: directive.placement,
           resource: directive.behavior.resource,

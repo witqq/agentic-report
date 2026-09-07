@@ -1123,6 +1123,30 @@ const directiveNodeRules = declareAuthoredRules<DirectiveNodeSubject>({
       check: ({ node }) => (node.name === 'action' ? actionLabelViolation(node) : undefined),
     },
     {
+      id: 'compatible-attribute-combination',
+      dependsOn: ['interpreted-attributes'],
+      check: ({ node, parsed }) => {
+        const directive = directiveByName.get(node.name);
+        if (directive === undefined || parsed.values === undefined) return undefined;
+        const violations = (directive.incompatibleCombinations ?? [])
+          .filter((combination) =>
+            Object.entries(combination.attributes).every(([name, incompatibleValues]) => {
+              const value = parsed.values?.[name];
+              return typeof value === 'string' && incompatibleValues.includes(value);
+            }),
+          )
+          .map((combination) =>
+            directiveError(
+              node,
+              'INVALID_DIRECTIVE_ATTRIBUTE',
+              combination.message,
+              combination.remediation,
+            ),
+          );
+        return violations.length === 0 ? undefined : violations;
+      },
+    },
+    {
       // The identity is read from the interpreted attributes, so it cannot answer for a node whose
       // attributes were refused. The rule only judges: claiming the name belongs to the accepted
       // node, because a refused section must not take a name away from the section that keeps it.

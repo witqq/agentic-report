@@ -146,6 +146,7 @@ function PageVariant({
             aria-controls={navigationId}
             aria-expanded="true"
             aria-label={strings.hideContents}
+            title={strings.hideContents}
             data-nav-toggle
           >
             <PackageIcon name="three-bars" />
@@ -176,9 +177,10 @@ function PageVariant({
             aria-controls={reviewDialogId}
             aria-expanded="false"
             aria-label={strings.review}
+            title={strings.review}
             data-review-toggle
           >
-            <PackageIcon name="comment" />
+            <PackageIcon name="comment" size={20} />
             <span data-review-toggle-label>{strings.review}</span>
             <span className="review-toggle-count" data-review-toggle-count hidden />
           </button>
@@ -203,6 +205,7 @@ function PageVariant({
           className="theme-toggle"
           type="button"
           aria-label={strings.toggleTheme}
+          title={strings.toggleTheme}
           data-theme-toggle
         >
           <PackageIcon name="sun" />
@@ -303,7 +306,8 @@ function ReviewMarkup({
               <h2 id={ids.dialogTitle}>{strings.reviewThisReport}</h2>
             </div>
             <button type="button" className="review-close" data-review-close>
-              {strings.close}
+              <PackageIcon name="x" />
+              <span>{strings.close}</span>
             </button>
           </header>
           <div className="review-panel-body">
@@ -322,11 +326,13 @@ function ReviewMarkup({
           </div>
           <footer className="review-panel-footer">
             <label className="review-file-action">
-              {strings.importReview}
+              <PackageIcon name="upload" />
+              <span>{strings.importReview}</span>
               <input type="file" accept="application/json,.json" data-review-import />
             </label>
             <button type="button" className="review-primary" data-review-export>
-              {strings.exportReview}
+              <PackageIcon name="download" />
+              <span>{strings.exportReview}</span>
             </button>
           </footer>
         </div>
@@ -347,7 +353,8 @@ function ReviewMarkup({
             <p className="review-target-label" data-review-target-label />
           </div>
           <button type="button" className="review-close" data-review-popover-close>
-            {strings.close}
+            <PackageIcon name="x" />
+            <span>{strings.close}</span>
           </button>
         </header>
         <p className="review-error" role="alert" data-review-popover-error hidden />
@@ -365,18 +372,29 @@ function ReviewMarkup({
         </label>
         <div className="review-inline-actions">
           <button type="button" className="review-primary" data-review-add-message>
-            {strings.addMessage}
+            <PackageIcon name="comment" />
+            <span data-review-add-message-label>{strings.addMessage}</span>
           </button>
           <button type="button" data-review-cancel-message-edit hidden>
-            {strings.cancelEdit}
+            <PackageIcon name="x" />
+            <span>{strings.cancelEdit}</span>
           </button>
           <button type="button" data-review-resolve-thread hidden>
-            {strings.resolveThread}
+            <PackageIcon name="check" />
+            <span data-review-resolve-thread-label>{strings.resolveThread}</span>
           </button>
         </div>
       </section>
-      <button type="button" className="review-selection-action" data-review-selection-action hidden>
-        {strings.createNote}
+      <button
+        type="button"
+        className="review-selection-action"
+        title={strings.createNote}
+        data-review-selection-action
+        hidden
+      >
+        <PackageIcon name="pencil" />
+        <PackageIcon name="comment" />
+        <span data-review-selection-action-label>{strings.createNote}</span>
       </button>
     </>
   );
@@ -406,14 +424,21 @@ function compactDocumentIdentity(title: string): string {
     .join(' ');
 }
 
-function PackageIcon({ name }: { readonly name: PackageIconName }) {
+function PackageIcon({
+  name,
+  size = 16,
+}: {
+  readonly name: PackageIconName;
+  readonly size?: 16 | 20;
+}) {
   return (
     <svg
       className="package-icon"
       data-package-icon={name}
+      data-icon-size={size}
       viewBox="0 0 16 16"
-      width="16"
-      height="16"
+      width={size}
+      height={size}
       aria-hidden="true"
       focusable="false"
     >

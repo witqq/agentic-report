@@ -20,6 +20,7 @@ This demonstration follows a realistic incident at OrbitDesk, an invented subscr
 organization, event, metric, and decision on this page is sample data created to show the report engine;
 none describes a real company or production system.
 
+::::::section{title="Impact signal" id="impact" nav="Impact" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
 :::callout{kind="warning" title="Executive readout"}
 A retry storm in the billing adapter exhausted the checkout connection pool for 47 minutes. Customer
 records remained intact, but **18.4% of checkout attempts failed** at peak and **3,240 renewals were
@@ -62,8 +63,9 @@ Two prevention items, one detection improvement, and one preparedness drill are 
 :::::
 
 ![Sample topology showing traffic entering checkout, billing, and the payment provider](assets/service-topology.svg)
+::::::
 
-## What failed
+:::::section{title="What failed" id="cause" nav="Cause" width="wide" align="start" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="stagger" choreography="cascade"}
 
 :::diagram{title="Causal chain" description="A provider timeout triggered uncapped adapter retries, saturated the shared connection pool, and caused checkout failures." direction="down"}
 ::node{id="timeout" label="Provider timeout" kind="warning"}
@@ -101,7 +103,9 @@ Two prevention items, one detection improvement, and one preparedness drill are 
   :::
   ::::
 
-## Response timeline
+:::::
+
+:::::section{title="Response timeline" id="response" nav="Response" width="wide" align="start" tone="plain" composition="stack" viewport="adaptive" section-density="compact" type="body" surface="plain" transition="reveal" choreography="cascade"}
 
 ::::timeline{title="Incident command log" description="Five sample checkpoints show detection, diagnosis, mitigation, recovery, and verification."}
 :::event{date="09:42 UTC" title="Alert fired" kind="warning"}
@@ -120,8 +124,9 @@ Checkout success held above 99% for ten minutes and the incident moved to monito
 Payment, order, and ledger totals reconciled with no loss or duplicate acceptance.
 :::
 ::::
+:::::
 
-## Corrective action register
+:::::section{title="Corrective action register" id="actions" nav="Actions" width="wide" align="start" tone="accent" composition="mosaic" viewport="bounded" section-density="editorial" type="editorial" surface="glow" transition="stagger" choreography="cascade"}
 
 {{include: partials/actions.md}}
 
@@ -146,3 +151,5 @@ and safeguards are being added to prevent retry traffic from exhausting checkout
 3. Exercise the new amplification alert in the incident drill.
 4. Close each action only with linked, reproducible evidence.
    :::
+
+:::::

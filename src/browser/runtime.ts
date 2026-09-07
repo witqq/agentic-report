@@ -21,6 +21,11 @@ root.style.setProperty(
   '--motion-reveal-translation',
   `${PAGE_MOTION_POLICY.sectionReveal.translationPx}px`,
 );
+root.style.setProperty('--motion-stagger-step', `${PAGE_MOTION_POLICY.stagger.stepMs}ms`);
+root.style.setProperty('--motion-choreography-step', `${PAGE_MOTION_POLICY.choreography.stepMs}ms`);
+root.style.setProperty('--motion-depth', `${PAGE_MOTION_POLICY.pointer.depthPx}px`);
+root.style.setProperty('--motion-tilt', `${PAGE_MOTION_POLICY.pointer.tiltDegrees}deg`);
+root.style.setProperty('--motion-magnetic', `${PAGE_MOTION_POLICY.pointer.magneticPx}px`);
 const modalOpeners = new WeakMap<HTMLDialogElement, HTMLButtonElement>();
 const glossaryPortals = new Map<
   HTMLElement,
@@ -29,6 +34,7 @@ const glossaryPortals = new Map<
 const glossaryPortalOwners = new WeakMap<HTMLElement, HTMLElement>();
 const pendingPopoverCloses = new Map<HTMLElement, number>();
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
 let navigationController: NavigationController | undefined;
 let motionController: MotionController | undefined;
 let responseController: ResponseWorkspacesController | undefined;
@@ -38,6 +44,7 @@ const reviewStates = new Map<PackageLocale, ReviewArtifact>();
 activateCurrentPage();
 
 reducedMotion.addEventListener('change', () => motionController?.sync());
+finePointer.addEventListener('change', () => motionController?.sync());
 
 document.addEventListener('click', (event) => {
   const target = event.target;
@@ -403,6 +410,7 @@ function createNavigationController(): NavigationController | undefined {
   const toggle = document.querySelector<HTMLButtonElement>('[data-nav-toggle]');
   const toggleLabel = toggle?.querySelector<HTMLElement>('[data-nav-toggle-label]');
   const currentLabel = document.querySelector<HTMLElement>('[data-topbar-current]');
+  const topbar = document.querySelector<HTMLElement>('.topbar');
   if (
     navigation === null ||
     desktopHost === null ||
@@ -414,7 +422,8 @@ function createNavigationController(): NavigationController | undefined {
     toggle === null ||
     toggleLabel === undefined ||
     toggleLabel === null ||
-    currentLabel === null
+    currentLabel === null ||
+    topbar === null
   ) {
     return undefined;
   }
@@ -441,6 +450,12 @@ function createNavigationController(): NavigationController | undefined {
   let currentObserverSuspended = false;
   const supportsScrollEnd = 'onscrollend' in window;
   let fallbackScrollTimer: number | undefined;
+  const syncTopbarClearance = (): void => {
+    root.style.setProperty('--topbar-clearance', `${Math.ceil(topbar.offsetHeight) + 16}px`);
+  };
+  const topbarObserver = new ResizeObserver(syncTopbarClearance);
+  topbarObserver.observe(topbar);
+  syncTopbarClearance();
   const cancelFallbackScrollSelection = (): void => {
     if (fallbackScrollTimer === undefined) return;
     window.clearTimeout(fallbackScrollTimer);
@@ -514,6 +529,7 @@ function createNavigationController(): NavigationController | undefined {
       'aria-label',
       desktopExpanded ? strings.hideContents : strings.showContents,
     );
+    toggle.title = desktopExpanded ? strings.hideContents : strings.showContents;
     toggleLabel.textContent = desktopExpanded ? strings.hideContents : strings.showContents;
   };
 
@@ -539,6 +555,7 @@ function createNavigationController(): NavigationController | undefined {
     toggle.setAttribute('aria-controls', dialog.id);
     toggle.setAttribute('aria-expanded', 'false');
     toggle.setAttribute('aria-label', strings.openContents);
+    toggle.title = strings.openContents;
     toggleLabel.textContent = strings.contents;
   };
 
@@ -583,7 +600,7 @@ function createNavigationController(): NavigationController | undefined {
   const rebuildCurrentObserver = (): void => {
     currentObserver?.disconnect();
     currentObserver = undefined;
-    if (!('IntersectionObserver' in window)) {
+    if (!supportsIntersectionObserver()) {
       if (!currentObserverSuspended) selectFromGeometry();
       return;
     }
@@ -689,9 +706,11 @@ function createNavigationController(): NavigationController | undefined {
     destroy: () => {
       abort.abort();
       currentObserver?.disconnect();
+      topbarObserver.disconnect();
       cancelFallbackScrollSelection();
       bottomSentinel.remove();
       root.removeAttribute('data-nav-collapsed');
+      root.style.removeProperty('--topbar-clearance');
     },
   };
 }
@@ -715,24 +734,24 @@ interface MotionController {
 }
 
 function createMotionController(media: MediaQueryList): MotionController {
-  let cleanupProgress: (() => void) | undefined;
-  let cleanupReveal: (() => void) | undefined;
+  let cleanups: Array<() => void> = [];
   const revealed = new WeakSet<HTMLElement>();
 
   const sync = (): void => {
-    cleanupProgress?.();
-    cleanupReveal?.();
-    cleanupProgress = undefined;
-    cleanupReveal = undefined;
+    for (const cleanup of cleanups) cleanup();
+    cleanups = [];
     const targets = [
-      ...document.querySelectorAll<HTMLElement>('[data-semantic="section"][data-reveal="true"]'),
+      ...document.querySelectorAll<HTMLElement>(
+        '[data-semantic="section"][data-reveal="true"], [data-semantic="section"][data-transition="reveal"], [data-semantic="section"][data-transition="stagger"]',
+      ),
     ];
     const reduceProgress = media.matches && PAGE_MOTION_POLICY.scrollProgress.normalMotionOnly;
     const reduceReveal = media.matches && PAGE_MOTION_POLICY.sectionReveal.normalMotionOnly;
     if (reduceProgress) {
       document.querySelector('[data-scroll-progress-indicator]')?.remove();
     } else {
-      cleanupProgress = installScrollProgress();
+      const cleanup = installScrollProgress();
+      if (cleanup) cleanups.push(cleanup);
     }
     if (reduceReveal) {
       for (const target of targets) {
@@ -741,18 +760,204 @@ function createMotionController(media: MediaQueryList): MotionController {
         target.setAttribute('data-reveal-shown', '');
         revealed.add(target);
       }
-      return;
+    } else {
+      const cleanup = installSectionReveal(targets, revealed);
+      if (cleanup) cleanups.push(cleanup);
     }
-    cleanupReveal = installSectionReveal(targets, revealed);
+    cleanups.push(installActionPlacement());
+    const allowScenes = !media.matches || !PAGE_MOTION_POLICY.scene.normalMotionOnly;
+    const allowChoreography = !media.matches || !PAGE_MOTION_POLICY.choreography.normalMotionOnly;
+    if (allowScenes || allowChoreography) {
+      const sceneCleanup = installSceneAndChoreography({
+        scenes: allowScenes,
+        choreography: allowChoreography,
+      });
+      if (sceneCleanup) cleanups.push(sceneCleanup);
+    }
+    const allowPointerMotion =
+      (!media.matches || !PAGE_MOTION_POLICY.pointer.normalMotionOnly) &&
+      (finePointer.matches || !PAGE_MOTION_POLICY.pointer.finePointerOnly);
+    if (allowPointerMotion) {
+      const pointerCleanup = installPointerEffects();
+      if (pointerCleanup) cleanups.push(pointerCleanup);
+    }
   };
 
   sync();
   return {
     sync,
     destroy: () => {
-      cleanupProgress?.();
-      cleanupReveal?.();
+      for (const cleanup of cleanups) cleanup();
+      cleanups = [];
     },
+  };
+}
+
+function installActionPlacement(): () => void {
+  const mobile = window.matchMedia('(max-width: 56.99rem)');
+  const groups = [...document.querySelectorAll<HTMLElement>('[data-semantic="actions"]')];
+  const apply = (): void => {
+    for (const group of groups) {
+      const authored = group.dataset.placement ?? 'auto';
+      group.dataset.placementResolved =
+        authored === 'auto' ? (mobile.matches ? 'bottom' : 'edge') : authored;
+    }
+  };
+  mobile.addEventListener('change', apply);
+  apply();
+  return () => {
+    mobile.removeEventListener('change', apply);
+    for (const group of groups) delete group.dataset.placementResolved;
+  };
+}
+
+function installSceneAndChoreography(capabilities: {
+  readonly scenes: boolean;
+  readonly choreography: boolean;
+}): (() => void) | undefined {
+  if (!supportsIntersectionObserver()) return undefined;
+  const scenes = capabilities.scenes
+    ? [...document.querySelectorAll<HTMLElement>('[data-scene]:not([data-scene="none"])')]
+    : [];
+  const choreographed = capabilities.choreography
+    ? [...document.querySelectorAll<HTMLElement>('[data-choreography="cascade"]')]
+    : [];
+  if (scenes.length === 0 && choreographed.length === 0) return undefined;
+  const abort = new AbortController();
+  const activeScenes = new Set<HTMLElement>();
+  let frame = 0;
+  const update = (): void => {
+    frame = 0;
+    for (const scene of activeScenes) {
+      const rect = scene.getBoundingClientRect();
+      const span = rect.height + innerHeight;
+      const progress = span <= 0 ? 0 : Math.min(1, Math.max(0, (innerHeight - rect.top) / span));
+      scene.style.setProperty('--scene-progress', progress.toFixed(4));
+    }
+  };
+  const schedule = (): void => {
+    if (activeScenes.size > 0 && frame === 0) frame = requestAnimationFrame(update);
+  };
+  for (const owner of choreographed) {
+    const items = [
+      ...owner.querySelectorAll<HTMLElement>(
+        '.semantic-card, .semantic-chart .semantic-point, .semantic-timeline > ol > li',
+      ),
+    ].slice(0, PAGE_MOTION_POLICY.choreography.maximumItems);
+    items.forEach((item, index) => {
+      item.style.setProperty('--choreography-index', String(index));
+    });
+    owner.setAttribute('data-choreography-motion', '');
+  }
+  const observer = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      const owner = entry.target as HTMLElement;
+      if (scenes.includes(owner)) {
+        owner.toggleAttribute('data-scene-active', entry.isIntersecting);
+        if (entry.isIntersecting) activeScenes.add(owner);
+        else activeScenes.delete(owner);
+      }
+      if (entry.isIntersecting && choreographed.includes(owner)) {
+        owner.setAttribute('data-choreography-active', '');
+        observer.unobserve(owner);
+      }
+    }
+    schedule();
+  });
+  for (const owner of new Set([...scenes, ...choreographed])) observer.observe(owner);
+  document.addEventListener('scroll', schedule, { passive: true, signal: abort.signal });
+  window.addEventListener('resize', schedule, { signal: abort.signal });
+  return () => {
+    abort.abort();
+    observer.disconnect();
+    activeScenes.clear();
+    if (frame !== 0) cancelAnimationFrame(frame);
+    for (const scene of scenes) {
+      scene.style.removeProperty('--scene-progress');
+      scene.removeAttribute('data-scene-active');
+    }
+    for (const owner of choreographed) {
+      owner.removeAttribute('data-choreography-active');
+      owner.removeAttribute('data-choreography-motion');
+      for (const item of owner.querySelectorAll<HTMLElement>('[style*="--choreography-index"]'))
+        item.style.removeProperty('--choreography-index');
+    }
+  };
+}
+
+function installPointerEffects(): (() => void) | undefined {
+  if (!supportsIntersectionObserver()) return undefined;
+  const owners = [
+    ...document.querySelectorAll<HTMLElement>(
+      '[data-interaction="depth"], [data-interaction="tilt"], .semantic-action[data-effect="magnetic"]',
+    ),
+  ];
+  if (owners.length === 0) return undefined;
+  const abort = new AbortController();
+  const active = new Set<HTMLElement>();
+  const pending = new Map<HTMLElement, { readonly clientX: number; readonly clientY: number }>();
+  let frame = 0;
+  const isInViewport = (owner: HTMLElement): boolean => {
+    const rect = owner.getBoundingClientRect();
+    return rect.bottom > 0 && rect.top < innerHeight && rect.right > 0 && rect.left < innerWidth;
+  };
+  const reset = (owner: HTMLElement): void => {
+    pending.delete(owner);
+    owner.style.removeProperty('--pointer-x');
+    owner.style.removeProperty('--pointer-y');
+    owner.removeAttribute('data-pointer-active');
+  };
+  const flush = (): void => {
+    frame = 0;
+    for (const [owner, point] of pending) {
+      if (!active.has(owner)) continue;
+      const rect = owner.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) continue;
+      const x = Math.min(1, Math.max(-1, ((point.clientX - rect.left) / rect.width - 0.5) * 2));
+      const y = Math.min(1, Math.max(-1, ((point.clientY - rect.top) / rect.height - 0.5) * 2));
+      owner.style.setProperty('--pointer-x', x.toFixed(4));
+      owner.style.setProperty('--pointer-y', y.toFixed(4));
+      owner.setAttribute('data-pointer-active', '');
+    }
+    pending.clear();
+  };
+  const schedule = (): void => {
+    if (frame === 0) frame = requestAnimationFrame(flush);
+  };
+  const observer = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      const owner = entry.target as HTMLElement;
+      if (entry.isIntersecting) active.add(owner);
+      else {
+        active.delete(owner);
+        reset(owner);
+      }
+    }
+  });
+  for (const owner of owners) {
+    if (isInViewport(owner)) active.add(owner);
+    observer.observe(owner);
+    owner.addEventListener(
+      'pointermove',
+      (event) => {
+        if (!active.has(owner)) {
+          if (!isInViewport(owner)) return;
+          active.add(owner);
+        }
+        pending.set(owner, { clientX: event.clientX, clientY: event.clientY });
+        schedule();
+      },
+      { signal: abort.signal },
+    );
+    owner.addEventListener('pointerleave', () => reset(owner), { signal: abort.signal });
+  }
+  return () => {
+    abort.abort();
+    observer.disconnect();
+    active.clear();
+    pending.clear();
+    if (frame !== 0) cancelAnimationFrame(frame);
+    for (const owner of owners) reset(owner);
   };
 }
 
@@ -785,15 +990,26 @@ function installScrollProgress(): (() => void) | undefined {
   };
 }
 
+function supportsIntersectionObserver(): boolean {
+  return typeof window.IntersectionObserver === 'function';
+}
+
 function installSectionReveal(
   targets: readonly HTMLElement[],
   revealed: WeakSet<HTMLElement>,
 ): (() => void) | undefined {
-  if (!('IntersectionObserver' in window)) return undefined;
+  if (!supportsIntersectionObserver()) return undefined;
   const pending = targets.filter((target) => !revealed.has(target));
   if (pending.length === 0) return undefined;
   for (const target of pending) {
     target.setAttribute('data-reveal-pending', '');
+    if (target.dataset.transition === 'stagger') {
+      [...target.children]
+        .slice(0, PAGE_MOTION_POLICY.stagger.maximumItems)
+        .forEach((child, index) => {
+          (child as HTMLElement).style.setProperty('--stagger-index', String(index));
+        });
+    }
   }
   document.body.getBoundingClientRect();
   for (const target of pending) target.setAttribute('data-reveal-motion', '');

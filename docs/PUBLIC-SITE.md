@@ -24,6 +24,13 @@ system language and retains the package-owned selector. `website/routes.json` al
 Russian Markdown entries as direct source routes; staging copies those bytes without translating or
 rewriting them.
 
+The landing is an ordinary multi-scene visual narrative: full stage, data scene, local media gallery,
+sticky desktop story with normal mobile flow, contextual selected-text review, mosaic, choreography,
+fine-pointer depth, magnetic primary emphasis, and responsive action placement all come from the public
+declarative grammar. Incident review, vendor decision, and launch readiness are compiled independently on
+different layouts and reuse the same grammar. Their screenshots are previews captured from normal `file://`
+artifacts; the live bilingual pages and direct English/Russian Markdown routes are the authoritative proof.
+
 Site assembly adds one compact `Made with Moira` footer to every staged HTML page. The footer links to
 `https://moira-mcp.com/`, makes no runtime request, and is deliberately owned by the public-site
 assembler rather than the compiler. Ordinary pages built by package users are therefore unchanged. The

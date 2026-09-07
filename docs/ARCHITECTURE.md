@@ -41,7 +41,8 @@ Markdown + metadata + local assets + partials + semantic directives
   by `src/index.ts`.
 - `src/page-motion.ts` is the presentation-neutral source of truth for the fixed package motion policy.
   The authoring registry projects it into discovery, while the browser runtime consumes the same values and
-  supplies its duration/translation to package CSS through runtime-owned custom properties.
+  supplies entrance/stagger/choreography timing and bounded depth, tilt, and magnetic distances to package
+  CSS through runtime-owned custom properties.
 - `src/source/load-source.ts` resolves the primary entry, parses metadata, and expands confined Markdown
   partials. An optional closed `en`/`ru` localization map loads alternate Markdown entries through the same
   graph and confinement boundary. The primary owns presentation/output policy; an alternate may own only
@@ -117,7 +118,7 @@ Markdown + metadata + local assets + partials + semantic directives
   language, recreates variant-bound controllers, restores locale-local review/response/component state, and
   keeps manual choice session-only. One delegated
   event controller handles theme/navigation controls, current-section ownership, bounded normal-motion
-  progress/reveal, code copying, glossary hover/focus/tap explanations,
+  progress, entrances, scenes, choreography and fine-pointer effects, responsive action placement, code copying, glossary hover/focus/tap explanations,
   tab selection, modal/popover focus, filtering, switches, and bounded counters. A code-term explanation is
   portalled to `body` while open, positioned against its trigger with viewport clamping and above/below
   flipping, then restored to its semantic source position on close; this prevents scrollable code blocks from
@@ -262,7 +263,20 @@ owned visible H2, with a validated explicit ID or deterministic title-derived ID
 unsafe IDs fail; generated collisions receive deterministic suffixes. When explicit sections exist they
 are the primary navigation inventory, using `nav` when supplied; documents without them use legacy H2
 headings. H3 and component IDs remain owned descendant hash targets but do not become primary links.
-`reveal` defaults to false and opts only that section into the package-owned normal-motion reveal.
+The same registry owns a closed visual grammar for each section: composition, viewport,
+density, typography, media treatment, image fit/aspect/focal point, decorative surface, transition, scene,
+interaction, and choreography. Legacy `reveal` remains a false-by-default entrance alias. Validation emits
+only normalized data attributes; package CSS interprets them for both output formats. This keeps author CSS,
+class names, arbitrary values, callbacks, and layout JavaScript outside the public source boundary. Media
+treatment does not absorb image framing: `media` owns natural/mask/layers/gallery/bleed behavior, while
+`media-fit`, `media-aspect`, and `focal` remain independent. Layered presentation transforms image
+descendants rather than semantic cards or review-target owners, so browser range geometry remains stable.
+Responsive rules restore multi-column and overlapping compositions to authored order on narrow screens and
+confine gallery overflow to the gallery rail.
+The registry also owns incompatible attribute combinations. Markdown validation, public discovery and JSON
+Schema consume the same records; mosaic/stack with layers/gallery, layers with depth/tilt, progress with
+depth/tilt, story/stack with sticky, and non-primary magnetic actions are rejected because two roles would
+otherwise control the same layout or transform.
 One direct `lead` may be the section's first authored block. MDAST validation bounds it to one paragraph
 before review targeting; lead is excluded as a duplicate directive owner, and trusted HAST enhancement
 collapses the wrapper while retaining the paragraph's authored review target. It adds presentation only,
@@ -274,7 +288,10 @@ visible with zero or one item. Production no longer reparses serialized HTML to 
 browser heading parser or synchronization state exists.
 `actions` accepts only direct `action` children. Each action becomes an ordinary anchor after
 its same-page, relative, HTTP(S), or mail target passes the closed registry constraint; executable,
-local-file, absolute-path, and protocol-relative targets are rejected.
+local-file, absolute-path, and protocol-relative targets are rejected. The group owns a closed
+auto/edge/inline/bottom placement role; auto resolves responsively, and bottom remains compact normal-flow
+content instead of a sticky or fixed overlay. Primary actions alone may opt into the bounded normal-motion
+magnetic treatment. Package-owned 16-pixel icons remain part of the anchor rather than authored markup.
 The inline `source-link` directive is narrower: it accepts only an explicit IPv4-loopback `/open` helper
 URL carrying an absolute path and positive line. The compiled protected anchor opens a separate browsing
 context, so helper response status cannot replace the `file://` report. The package does not request the
@@ -363,8 +380,13 @@ an external content-addressed runtime; layout selects document/dashboard/landing
 selects coordinated visual defaults. The schema normalizer resolves preset defaults followed by explicit
 bounded token overrides, and the renderer projects only the resolved preset/theme/token identities into
 the shared package stylesheet in both formats. The stylesheet owns reading/standard/wide tracks, section
-rhythm, component containment, and a single content-surface layer; wide media, tables, charts, and code
-scroll locally instead of widening the document. Sidebar/mobile navigation exists only with at least two
+rhythm, the closed section composition and media grammar, component containment, and package-only
+decorative surfaces. Section tone retains background/foreground ownership, while decorative surfaces change
+only the behind-content treatment and nested package components restore their own readable surface text.
+Full and bounded viewport profiles are capped rather than forcing unbounded empty
+height; display/editorial headings retain readable words; and wide media, galleries, tables, charts, and
+code scroll only within their owning surface instead of widening the document. Sidebar/mobile navigation
+exists only with at least two
 eligible sections; an authored in-flow map remains ordinary visible content at every inventory size and
 viewport. One shell navigation link is always current: direct and descendant hashes resolve through section
 ownership, outside targets use the preceding or first section, and geometry uses the sticky-topbar
@@ -401,8 +423,18 @@ Current exact ranges are reconstructed from review selection anchors and registe
 CSS highlights without rewriting authored DOM. A pointer or touch point is compared with the actual range
 rectangles; overlapping matches choose the unresolved, shortest, then lexically stable thread. Focusable
 fixed overlay markers give each highlight a keyboard route without affecting layout. Re-selecting an exact
-saved subject resolves the contextual action to its existing thread instead of creating a duplicate. Scroll
-and resize updates are coalesced and run only while an action, popover, or saved range exists.
+saved subject resolves the contextual action to its existing thread instead of creating a duplicate. Window
+and `visualViewport` scroll/resize updates are coalesced and run only while an action, popover, or saved range
+exists. Desktop popovers flip, shift and clamp around their anchor; mobile uses a bounded bottom surface
+inside the visual viewport. This preserves report geometry while browser chrome or the on-screen keyboard
+changes the visible area. Contextual actions and focus markers use a visible rectangle from their live range,
+measure their own surface before two-axis clamping, and hide when the range is wholly offscreen. A focus
+marker prefers a fully separated position above the range, then below it, before edge clamping, so the marker
+and highlighted text remain independent activation targets. The topbar Review entry uses a package-owned
+20-pixel icon with a localized name and title tooltip. At constrained widths shell controls retain localized
+accessible names and title tooltips while visible labels collapse; the editorial preset uses its compact
+`AR` identity and the document has no artificial minimum width. Visible contextual/action controls retain their labels while package-owned icons default
+to 16 pixels; the selection action switches pencil/comment visibility without replacing either SVG node.
 
 The topbar Review action opens only the current/prior thread list plus import/export. Desktop shows a fixed
 non-modal overlay and mobile a native modal bottom sheet; neither mode changes report width, margin, or
@@ -436,11 +468,16 @@ authoritative output replacement.
 
 `scrollProgress` defaults to false. In normal motion, an enabled page installs one passive document scroll
 listener and one resize listener, coalesces updates through one animation frame, and changes one decorative
-`scaleX()` transform. A section with `reveal=true` is observed once and uses only opacity plus a 12-pixel,
-220-millisecond transition. Reduced motion installs neither progress DOM/listeners/frames nor reveal hidden
-state/observer; lack of `IntersectionObserver` leaves sections visible while navigation retains hash,
-activation-line, equal-top, resize, short-final and document-bottom ownership through bounded terminal
-geometry selection.
+`scaleX()` transform. Section transition, scene, interaction, and choreography roles default to `none`.
+Reveal and legacy `reveal=true` use a one-time 12-pixel, 220-millisecond entrance; stagger applies it to at
+most 12 direct children in 70-millisecond steps. Progress scenes drive one normalized media transform, while
+sticky scenes return to normal flow at 48rem and below. Cascade orders at most 12 semantic cards, chart
+points, or timeline items in 60-millisecond steps. Fine-pointer depth, tilt, and primary magnetic effects are
+bounded to 10 pixels, 2.5 degrees, and 7 pixels; visibility gates and one animation frame coalesce their
+updates. Reduced motion installs no progress/entrance/scene/choreography/pointer machinery and leaves no
+hidden pending content; coarse pointers receive no pointer effects. An absent or non-callable
+`IntersectionObserver` leaves sections visible while navigation retains hash, activation-line, equal-top,
+resize, short-final and document-bottom ownership through bounded terminal geometry selection.
 
 ## Public site staging
 
@@ -466,6 +503,13 @@ Nginx policy requires every mutable HTML, Markdown, manifest, and release-metada
 allowing a one-year immutable cache only for filenames containing the compiler's 12-hex content hash. ETag
 remains enabled for both families so unchanged conditional requests can return `304` without risking a stale
 mutable landing or document.
+
+The product landing is compiled as an ordinary multi-scene bilingual input rather than receiving a site
+assembler theme or runtime hook. It combines the registry-owned stage, data, gallery, story, review, mosaic,
+choreography, pointer, and action-placement roles. Incident review, vendor decision, and launch readiness are
+separate bilingual compiler invocations that reuse the same grammar on different page layouts. Their preview
+images are captures of those `file://` artifacts; the independently staged live pages and direct Markdown
+routes remain the authoritative proof.
 
 The canonical skill is instruction-only. Its OpenAI and Claude plugin manifests point to the same
 `skills/` folder and carry the same package version, license, homepage, and compatibility contract.

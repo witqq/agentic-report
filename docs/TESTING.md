@@ -99,7 +99,10 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   exact/changed/missing/ambiguous entry/partial binding, confined review paths, and sanitized review transport,
   exact serialized inline-size accounting, canonical and hard-link source/output collision protection,
   injected partial-write/rename preservation and retry for both output formats, same-process name/content
-  determinism, registry-owned page layouts/themes/token defaults, GFM table rendering, collision-free
+  determinism, registry-owned page layouts/themes/token defaults, the complete closed section visual
+  grammar with independent invalid-value and executable-attribute rejection, registry-declared rejection of
+  mosaic/stack with layers/gallery card-layout conflicts, identical single-file/directory and
+  document/dashboard projections, GFM table rendering, collision-free
   document shell IDs, default attribution and explicit footer opt-out without changing authored content,
   compiler results, deterministic public-site staging, complete declared-route
   reachability, direct-file byte identity, release hashes, synchronized skill/plugin metadata, and public
@@ -117,7 +120,9 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   narrow-screen visibility with the drawer closed, section lead and moved appendix definition states across
   desktop/mobile, light/dark and both formats, desktop collapse,
   native-dialog mobile
-  focus containment/return, normal/reduced-motion progress and one-time reveal, themes, visible focus,
+  focus containment/return, normal/reduced-motion progress, reveal/stagger entrances, progress/sticky
+  scenes, ordered semantic choreography, fine-pointer depth/tilt/magnetic effects, responsive action
+  placement, offscreen idling and animation-frame coalescing, themes, visible focus,
   locally scrolling wide tables, protected loopback source-location links that preserve the report page,
   authored glossary forms, first-only color-preserving code glossary references, clean code copying,
   appendix navigation, 15–20-node grouped flows, ordered sequence messages, diagram geometry and accessible
@@ -130,6 +135,19 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   document bottom and its complete absence under `attribution: false`. The document, dashboard, landing,
   and mixed examples are built and exercised through
   `file://` in desktop and mobile profiles, including their page data contract and local images. All six
+  visual composition families are also exercised in one ordinary bilingual non-landing artifact at
+  ultrawide, tall portrait, desktop, mobile, and narrow-mobile viewports. That coverage distinguishes
+  computed stage/split/mosaic/story/stack layouts; masked, layered, gallery, and bleed media; independent
+  fit/aspect/focal framing; distinct decorative surfaces; authored-order mobile flattening; local gallery
+  overflow; image completion; and document containment. Inspected captures supplement those geometry and
+  computed-style assertions.
+  Public integration separately enumerates the closed staged inventory, opens the bilingual landing plus
+  incident review, vendor decision, and launch readiness, and reaches both canonical locale sources for each.
+  The landing and a non-landing page jointly exercise the same semantic visual identities. Initial and
+  scrolled states at ultrawide, tall, desktop, mobile, and 304-pixel widths assert useful occupied space,
+  readable text, local gallery overflow, real scene/motion state changes, reduced-motion suppression,
+  localized switching, contrast, and unchanged document geometry while a selected-text thread is open.
+  All six
   package starters are also opened in both profiles, exercise a declared interaction, assert responsive
   containment, and produce inspected captures. Dedicated semantic-tabs coverage builds every current
   tab-bearing starter, example, and fixture for desktop and mobile `file://` artifacts; it asserts readable
@@ -147,7 +165,12 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   pointer-state isolation, visible current/prior list-origin focus return, offscreen list navigation, multiple
   notes in one canonical download, exact imported highlight restoration, malformed/mismatched range
   preservation, topbar/control/whitespace suppression, stale prior classification/continuation, and
-  idle-versus-active animation-frame bounds. The same cases produce the inspected selection, popover,
+  idle-versus-active animation-frame bounds. Desktop flip/shift/clamp geometry and the mobile bounded bottom
+  surface are exercised through both window and `visualViewport` movement. Measured contextual actions and
+  focus markers are checked at constrained edges, after viewport movement, and after their saved range
+  becomes wholly offscreen. At the exact 304-pixel width the saved marker must also remain fully separate
+  from the range whenever above or below placement fits, so tapping highlighted text still exposes the
+  thread action instead of being intercepted by the marker. The same cases produce the inspected selection, popover,
   highlight, and populated desktop/mobile drawer captures.
   Dedicated Response Workspace coverage builds both formats for desktop/mobile, completes all
   seven answer kinds, uses bucket select/drag and explicit ordering controls, preserves original-link state,
@@ -204,4 +227,12 @@ ETag/conditional `304`, health, and real `404` behavior.
 - Import Playwright `test` and `expect` from `tests/e2e/fixtures.ts` so browser errors are attached on
   failure.
 - Assert behavior and generated contracts; avoid using screenshots as the only signal.
+- Do not record artifact hashes, byte sizes, complete generated JSON, or descriptive prose as golden
+  expectations. Determinism compares independent current builds; content-addressing and integrity compute the
+  expected digest from the current input bytes. Assert an exact string only when that string is itself a
+  public, serialized, accessibility, diagnostic, localization, or security contract.
+- Choose evidence that distinguishes the required behavior from a superficially similar implementation.
+  For responsive or animated UI, assert geometry, state transitions, ordering, reduced-motion behavior, and
+  bounded work directly. Use an ordinary settled viewport capture for visual inspection; a stitched
+  full-page screenshot can misrepresent sticky state and is not behavioral evidence.
 - Do not increase a timeout to mask a state, environment, or implementation defect.

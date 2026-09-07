@@ -240,6 +240,12 @@ export interface DirectiveAttributeDefinition {
   readonly invalidDiagnostic: DirectiveAttributeDiagnosticCode;
 }
 
+export interface DirectiveIncompatibleCombinationDefinition {
+  readonly attributes: Readonly<Record<string, readonly [string, ...string[]]>>;
+  readonly message: string;
+  readonly remediation: string;
+}
+
 export type RendererKey = 'semantic-container' | 'download-asset' | 'font-registration';
 export type CapabilityHandoff = 'semantic-document' | 'resource-graph' | 'reader-runtime';
 
@@ -248,6 +254,7 @@ export interface DirectiveDefinition {
   readonly description: string;
   readonly forms: readonly [DirectiveForm, ...DirectiveForm[]];
   readonly attributes: readonly DirectiveAttributeDefinition[];
+  readonly incompatibleCombinations?: readonly DirectiveIncompatibleCombinationDefinition[];
   readonly children:
     | 'markdown'
     | 'decision-option-directives'
@@ -945,6 +952,84 @@ function sectionDirective(): DirectiveDefinition {
       ['plain', 'soft', 'accent', 'contrast'],
       'plain',
     ),
+    enumAttribute(
+      'composition',
+      'Semantic arrangement for the section content; authored reading order is unchanged.',
+      ['flow', 'stage', 'split', 'mosaic', 'story', 'stack'],
+      'flow',
+    ),
+    enumAttribute(
+      'viewport',
+      'Bounded use of the available viewport without changing document order.',
+      ['adaptive', 'full', 'bounded'],
+      'adaptive',
+    ),
+    enumAttribute(
+      'section-density',
+      'Section-local content rhythm independent of the page density token.',
+      ['compact', 'editorial', 'immersive'],
+      'editorial',
+    ),
+    enumAttribute(
+      'type',
+      'Section-local typography role.',
+      ['body', 'display', 'editorial'],
+      'body',
+    ),
+    enumAttribute(
+      'media',
+      'Art direction for confined local images inside the section.',
+      ['natural', 'mask', 'layers', 'gallery', 'bleed'],
+      'natural',
+    ),
+    enumAttribute(
+      'media-fit',
+      'Section-local object fitting for confined images.',
+      ['natural', 'contain', 'cover'],
+      'natural',
+    ),
+    enumAttribute(
+      'media-aspect',
+      'Section-local aspect ratio for confined images.',
+      ['natural', 'landscape', 'cinematic', 'portrait', 'square'],
+      'natural',
+    ),
+    enumAttribute(
+      'focal',
+      'Package-owned object position for cropped local media.',
+      ['center', 'top', 'right', 'bottom', 'left'],
+      'center',
+    ),
+    enumAttribute(
+      'surface',
+      'Package-owned decorative surface that never replaces content.',
+      ['plain', 'mesh', 'glow', 'grain', 'grid'],
+      'plain',
+    ),
+    enumAttribute(
+      'transition',
+      'Bounded package-owned entrance treatment.',
+      ['none', 'reveal', 'stagger'],
+      'none',
+    ),
+    enumAttribute(
+      'scene',
+      'Content-driven scroll scene without changing document order.',
+      ['none', 'progress', 'sticky'],
+      'none',
+    ),
+    enumAttribute(
+      'interaction',
+      'Fine-pointer-only media interaction.',
+      ['none', 'depth', 'tilt'],
+      'none',
+    ),
+    enumAttribute(
+      'choreography',
+      'Semantic ordered emphasis for metrics and visualizations.',
+      ['none', 'cascade'],
+      'none',
+    ),
     booleanAttribute(
       'reveal',
       'Enables one package-owned one-time section reveal in the normal-motion profile.',
@@ -956,6 +1041,42 @@ function sectionDirective(): DirectiveDefinition {
     description: 'Labelled top-level page section containing Markdown.',
     forms: ['container'],
     attributes,
+    incompatibleCombinations: [
+      {
+        attributes: {
+          composition: ['mosaic', 'stack'],
+          media: ['layers', 'gallery'],
+        },
+        message:
+          'section composition mosaic or stack cannot be combined with layered or gallery media.',
+        remediation:
+          'Use composition flow, stage, split, or story with layered/gallery media, or use natural, mask, or bleed media with mosaic/stack composition.',
+      },
+      {
+        attributes: {
+          media: ['layers'],
+          interaction: ['depth', 'tilt'],
+        },
+        message: 'Layered media cannot also own a pointer transform.',
+        remediation: 'Use interaction="none" with layered media or another media treatment.',
+      },
+      {
+        attributes: {
+          scene: ['progress'],
+          interaction: ['depth', 'tilt'],
+        },
+        message: 'A progress scene and pointer interaction cannot transform the same media.',
+        remediation: 'Use either scene="progress" or a depth/tilt interaction.',
+      },
+      {
+        attributes: {
+          composition: ['story', 'stack'],
+          scene: ['sticky'],
+        },
+        message: 'Story and stack compositions already own sticky positioning.',
+        remediation: 'Use scene="none|progress" or a flow, stage, split, or mosaic composition.',
+      },
+    ],
     children: 'markdown',
     placement: { topLevelOnly: true },
     behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
@@ -1009,18 +1130,26 @@ function leadDirective(): DirectiveDefinition {
 }
 
 function actionsDirective(): DirectiveDefinition {
+  const attributes = [
+    enumAttribute(
+      'placement',
+      'Responsive placement for one action inventory.',
+      ['auto', 'edge', 'inline', 'bottom'],
+      'auto',
+    ),
+  ] as const;
   return {
     name: 'actions',
     description: 'Responsive group containing ordinary action links.',
     forms: ['container'],
-    attributes: [],
+    attributes,
     children: 'action-directives',
     placement: {},
     behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
     sanitizer: {
       tagName: 'div',
       className: 'semantic-actions',
-      properties: ['dataSemantic'],
+      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
     },
     security: { authorCode: false, rawHtml: false, localResourceOnly: false },
     handoffs: ['semantic-document'],
@@ -1036,12 +1165,20 @@ function actionDirective(): DirectiveDefinition {
       ['primary', 'secondary', 'quiet'],
       'primary',
     ),
+    enumAttribute('effect', 'Rare package-owned action interaction.', ['none', 'magnetic'], 'none'),
   ] as const;
   return {
     name: 'action',
     description: 'Ordinary safe link inside an actions group.',
     forms: ['leaf'],
     attributes,
+    incompatibleCombinations: [
+      {
+        attributes: { kind: ['secondary', 'quiet'], effect: ['magnetic'] },
+        message: 'Magnetic action treatment is available only for a primary action.',
+        remediation: 'Use kind="primary" or effect="none".',
+      },
+    ],
     children: 'label-or-generated-label',
     placement: { requiredParent: 'actions' },
     behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
@@ -1649,7 +1786,7 @@ function enumAttribute(
     required: false,
     default: defaultValue,
     constraint: { kind: 'enum', values },
-    renderProperty: `data${name[0]?.toUpperCase() ?? ''}${name.slice(1)}`,
+    renderProperty: attributeRenderProperty(name),
     invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
   };
 }
@@ -1680,7 +1817,7 @@ function booleanAttribute(
     required: false,
     default: defaultValue,
     constraint: { kind: 'boolean' },
-    renderProperty: `data${name[0]?.toUpperCase() ?? ''}${name.slice(1)}`,
+    renderProperty: attributeRenderProperty(name),
     invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
   };
 }

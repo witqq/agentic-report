@@ -404,10 +404,28 @@ function zodDirective(directive: DirectiveDefinition): z.ZodType {
   const attributes = Object.fromEntries(
     directive.attributes.map((attribute) => [attribute.name, zodAttribute(attribute)]),
   );
+  const attributeSchema = z.strictObject(attributes).superRefine((values, context) => {
+    for (const combination of directive.incompatibleCombinations ?? []) {
+      if (!incompatibleCombinationMatches(directive, combination, values)) continue;
+      context.addIssue({ code: 'custom', message: combination.message });
+    }
+  });
   return z.strictObject({
     name: z.literal(directive.name),
     form: z.enum(asNonEmptyTuple(directive.forms)),
-    attributes: z.strictObject(attributes),
+    attributes: attributeSchema,
+  });
+}
+
+function incompatibleCombinationMatches(
+  directive: DirectiveDefinition,
+  combination: NonNullable<DirectiveDefinition['incompatibleCombinations']>[number],
+  values: Readonly<Record<string, unknown>>,
+): boolean {
+  return Object.entries(combination.attributes).every(([name, incompatibleValues]) => {
+    const attribute = directive.attributes.find((candidate) => candidate.name === name);
+    const value = values[name] ?? attribute?.default;
+    return typeof value === 'string' && incompatibleValues.includes(value);
   });
 }
 
@@ -568,9 +586,28 @@ function directiveSchema(directive: DirectiveDefinition): JsonSchema {
         additionalProperties: false,
         properties: attributes,
         ...(requiredAttributes.length === 0 ? {} : { required: requiredAttributes }),
+        ...jsonIncompatibleCombinations(directive),
       },
     },
     required: ['name', 'form', 'attributes'],
+  };
+}
+
+function jsonIncompatibleCombinations(directive: DirectiveDefinition): JsonSchema {
+  const combinations = directive.incompatibleCombinations ?? [];
+  if (combinations.length === 0) return {};
+  return {
+    allOf: combinations.map((combination) => ({
+      not: {
+        allOf: Object.entries(combination.attributes).map(([name, values]) => {
+          const attribute = directive.attributes.find((candidate) => candidate.name === name);
+          const authoredMatch = { required: [name], properties: { [name]: { enum: [...values] } } };
+          return attribute?.default !== undefined && values.includes(String(attribute.default))
+            ? { anyOf: [authoredMatch, { not: { required: [name] } }] }
+            : authoredMatch;
+        }),
+      },
+    })),
   };
 }
 

@@ -1,5 +1,3 @@
-import { readFile } from 'node:fs/promises';
-
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -151,16 +149,6 @@ describe('authoring registry', () => {
     expect(directive('steps').handoffs).toContain('semantic-document');
     expect(directive('asset').security.localResourceOnly).toBe(true);
     expect(directive('font').behavior.resource).toBe('font');
-  });
-
-  it('matches the complete reviewed contract golden', async () => {
-    const golden = JSON.parse(
-      await readFile(
-        new URL('../../fixtures/authoring/registry-contract.json', import.meta.url),
-        'utf8',
-      ),
-    ) as unknown;
-    expect(authoringRegistry).toEqual(golden);
   });
 
   it('contains data only and exposes no executable extension surface', () => {

@@ -1,4 +1,4 @@
-import { mkdir, rm } from 'node:fs/promises';
+import { mkdir, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -9,6 +9,14 @@ import { expect, test } from './fixtures.js';
 const siteRoot = path.resolve('test-results/e2e-site');
 const generatedRoot = path.resolve('test-results/e2e-generated');
 const fileUrl = (file: string): string => pathToFileURL(path.join(siteRoot, file)).href;
+const packageMetadata = JSON.parse(await readFile(path.resolve('package.json'), 'utf8')) as {
+  readonly version: string;
+  readonly engines: { readonly node: string };
+};
+const minimumNodeVersion = packageMetadata.engines.node.match(/^>=(\d+\.\d+\.\d+)$/u)?.[1];
+if (minimumNodeVersion === undefined) {
+  throw new Error('The public-site test requires a minimum Node.js engine declaration.');
+}
 
 const docsArtifacts = [
   { format: 'single-file', url: fileUrl('docs/index.html') },
@@ -57,12 +65,9 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
   test.skip(testInfo.project.name !== 'desktop-chromium');
   await page.goto(fileUrl('index.html'));
   await expect(
-    page.getByRole('heading', { name: 'Give your agent a better handoff.' }),
+    page.getByRole('heading', { name: 'Give your agent a page worth handing over.' }),
   ).toBeVisible();
-  await expect(
-    page.getByText('npx skills add witqq/agentic-report --skill agentic-report', { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByText('name: architecture-handoff', { exact: false })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
   const attribution = page.locator('[data-site-attribution]');
   await expect(attribution.getByRole('link', { name: 'Made with Moira' })).toHaveAttribute(
     'href',
@@ -96,7 +101,7 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
   ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Build from source' })).toBeVisible();
   await expect(
-    page.getByText('git clone --branch v0.10.0 --depth 1', { exact: false }),
+    page.getByText(`git clone --branch v${packageMetadata.version} --depth 1`, { exact: false }),
   ).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open the quickstart' })).toHaveAttribute(
     'href',
@@ -104,9 +109,15 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
   );
   await page.getByRole('link', { name: 'Open the quickstart' }).click();
   await expect(page).toHaveTitle('Agent quickstart');
-  await expect(page.getByText('Node.js 24.18.0 or newer', { exact: false }).first()).toBeVisible();
   await expect(
-    page.getByText('npx --yes agentic-report@0.10.0 init ./my-page', { exact: false }).first(),
+    page.getByText(`Node.js ${minimumNodeVersion} or newer`, { exact: false }).first(),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByText(`npx --yes agentic-report@${packageMetadata.version} init ./my-page`, {
+        exact: false,
+      })
+      .first(),
   ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Use it inside your own skill' })).toBeVisible();
   await expect(
@@ -130,8 +141,9 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
   );
 
   await page.goto(fileUrl('docs/agent/index.md'));
-  await expect(page.locator('body')).toContainText('npx --yes agentic-report@0.10.0 validate');
-  await expect(page.locator('body')).toContainText('Authors do not need React');
+  await expect(page.locator('body')).toContainText(
+    `npx --yes agentic-report@${packageMetadata.version} validate`,
+  );
 
   for (const example of ['incident-review', 'vendor-decision', 'launch-readiness']) {
     await page.goto(fileUrl(`examples/${example}/index.html`));

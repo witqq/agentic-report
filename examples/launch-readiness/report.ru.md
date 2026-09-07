@@ -13,6 +13,7 @@ language: ru
 от вымышленной North Quay Labs. Все пользователи, когорты, показатели, пороги и даты созданы для движка
 отчётов; они не описывают реальный продукт, компанию или рыночный результат.
 
+:::::section{title="Сигнал запуска" id="launch-signal" nav="Сигнал" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
 :::callout{kind="success" title="Решение за минуту"}
 15 сентября открыть бета-тест для 240 команд Европейской экономической зоны. Ограничить список приглашений,
 исключить регулируемые процессы и не расширять запуск, пока условия удержания на второй неделе и ответа
@@ -43,8 +44,9 @@ language: ru
 ::::
 
 ![Демонстрационный цикл обучения беты со связью ограниченной аудитории, совместной ценности, данных и управляемого запуска](assets/beta-learning-loop.ru.svg)
+:::::
 
-## Кто первым получает пользу
+:::::section{title="Кто первым получает пользу" id="audience" nav="Аудитория" width="wide" align="start" tone="soft" composition="mosaic" viewport="bounded" section-density="compact" type="editorial" surface="grain" transition="stagger" choreography="cascade"}
 
 ::::tabs{title="Данные об аудитории"}
 :::tab{label="Продуктовые команды"}
@@ -60,8 +62,9 @@ language: ru
 компьютерного. Бета исключает регулируемые дела и не заявляет внедрение во всей организации.
 :::
 ::::
+:::::
 
-## Данные активации
+:::::section{title="Данные активации" id="activation" nav="Данные" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="grid" transition="reveal" scene="progress" choreography="cascade"}
 
 ::::chart{type="line" title="Доля активированных рабочих пространств по когортам" description="Вымышленная семидневная доля активации растёт с 46 процентов в первой когорте до 64 в четвёртой." x-label="Когорта дизайн-партнёров" y-label="Активированные пространства, проценты"}
 :::series{label="Активированы за семь дней"}
@@ -89,7 +92,9 @@ language: ru
 | Проблемы первой критичности |             0 |                   0 | Пройдено |
 | Первый ответ поддержки      |      ≤ 10 мин |               7 мин | Пройдено |
 
-## Условия запуска и владельцы
+:::::
+
+:::::section{title="Условия запуска и владельцы" id="gates" nav="Условия" width="wide" align="start" tone="accent" composition="story" viewport="adaptive" section-density="editorial" type="editorial" surface="glow" transition="reveal"}
 
 {{include: partials/readiness-register.ru.md}}
 
@@ -109,8 +114,9 @@ language: ru
 направляющие операционные пороги, не статистическое доказательство соответствия рынку. Тренд когорт не
 скорректирован по сезонности, а воронка не оценивает платную конверсию.
 :::
+:::::
 
-## Решение и развёртывание
+:::::section{title="Решение и развёртывание" id="rollout" nav="Развёртывание" width="wide" align="start" tone="contrast" composition="stack" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 
 :::decision{title="Одобрить ограниченную бету в Европейской экономической зоне"}
 Запустить 15 сентября максимум для 240 приглашённых команд. Продуктовые операции отвечают за лимит приглашений;
@@ -141,3 +147,5 @@ language: ru
 3. Проверьте эскалацию поддержки и остановку приглашений до открытия доступа.
 4. Запишите решение о расширении или остановке вместе с изменившими его данными.
    :::
+
+:::::

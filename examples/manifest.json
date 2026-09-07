@@ -156,11 +156,11 @@
       "files": [
         {
           "path": "report.md",
-          "sha256": "1ada8b027f539e05e43d0950e8607db993c18e43ed5503f0bd53468d5142712e"
+          "sha256": "6b2ada7aba209d951e73362801319477fe91c6dc0011a5a0820bdcb857843f17"
         },
         {
           "path": "report.ru.md",
-          "sha256": "31e8ae1cd7888b4615350fb6ad92a93971e0105c33c7890db47841a85334843b"
+          "sha256": "cee72ac23eebe8fc7932dd895fc985c206e6caf4f82263d75ef7075ddaf2a2ce"
         }
       ]
     },
@@ -244,11 +244,11 @@
         },
         {
           "path": "report.md",
-          "sha256": "208597fc3ecde58ad73b072ca18fc59b5c9b115cf4f07d5fb06b85230311db22"
+          "sha256": "f958bb57eaaee2cdee5da44b293290b517a29697587066306f4f0c1e538a1256"
         },
         {
           "path": "report.ru.md",
-          "sha256": "06a2b8460203fecdd49d83ad925020e6da0779ac06f5afe7fcef477c00c0c111"
+          "sha256": "4c28cd722eca3b68cbce8c03a1a78e66d0e0002e6c8db18d4591096e641f0e29"
         }
       ]
     },
@@ -354,11 +354,11 @@
         },
         {
           "path": "report.md",
-          "sha256": "38329917f50a0c60605dcaec9614fc0b214fef30d748cefcd7bcfb17babc36e9"
+          "sha256": "db1c58be71026a5736996eb946a8ac68e786c7abfbf5e6df588ae3382f718b80"
         },
         {
           "path": "report.ru.md",
-          "sha256": "755aedfc8f131f55b1bf7ea641b088a09c23adfb4e48f047a0294c6c590e34b2"
+          "sha256": "27bef78a0255da7e77c181a88f9c7282d426b16a421120fc2078af6301a32210"
         }
       ]
     },
@@ -388,11 +388,11 @@
         },
         {
           "path": "report.md",
-          "sha256": "11c4dfff6d2ee1b66f6e8eb484724ae5aa7a39b635eb7ae1d8a5555a664bfaf4"
+          "sha256": "1e1fea53114c2ae69517416b124b66dd2328bb4966e03adb56e00f54a5c01a81"
         },
         {
           "path": "report.ru.md",
-          "sha256": "3e8c3bffeced05306caa077f1d9adbb609d0b32e349adb2c66e18df269bdf1e1"
+          "sha256": "de0bbb3e0f52c7afe350ab103aa520977b8ec24d324278a13b1e3da10281af03"
         }
       ]
     },
@@ -422,11 +422,11 @@
         },
         {
           "path": "report.md",
-          "sha256": "cbcbf61a3f516f27ffe34ce48d7f90b1e346f5e708db2c1fa0217760781d1d38"
+          "sha256": "b2c37a54a15bf8370e87c775c594549f2cec2de930c6671b6a5426e97de959ab"
         },
         {
           "path": "report.ru.md",
-          "sha256": "247b6619e8dd2dca29c8577b3ab03c9e9a2c289f8f75607bc04a3aab8538c750"
+          "sha256": "c35ded41d79d007c8af9238671d5a6078975c53f0e58a5188636ae4d6a08993b"
         }
       ]
     }

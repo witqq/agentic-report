@@ -241,13 +241,140 @@
               "description": "Package-owned section surface tone.",
               "default": "plain"
             },
+            "composition": {
+              "type": "string",
+              "enum": ["flow", "stage", "split", "mosaic", "story", "stack"],
+              "description": "Semantic arrangement for the section content; authored reading order is unchanged.",
+              "default": "flow"
+            },
+            "viewport": {
+              "type": "string",
+              "enum": ["adaptive", "full", "bounded"],
+              "description": "Bounded use of the available viewport without changing document order.",
+              "default": "adaptive"
+            },
+            "section-density": {
+              "type": "string",
+              "enum": ["compact", "editorial", "immersive"],
+              "description": "Section-local content rhythm independent of the page density token.",
+              "default": "editorial"
+            },
+            "type": {
+              "type": "string",
+              "enum": ["body", "display", "editorial"],
+              "description": "Section-local typography role.",
+              "default": "body"
+            },
+            "media": {
+              "type": "string",
+              "enum": ["natural", "mask", "layers", "gallery", "bleed"],
+              "description": "Art direction for confined local images inside the section.",
+              "default": "natural"
+            },
+            "media-fit": {
+              "type": "string",
+              "enum": ["natural", "contain", "cover"],
+              "description": "Section-local object fitting for confined images.",
+              "default": "natural"
+            },
+            "media-aspect": {
+              "type": "string",
+              "enum": ["natural", "landscape", "cinematic", "portrait", "square"],
+              "description": "Section-local aspect ratio for confined images.",
+              "default": "natural"
+            },
+            "focal": {
+              "type": "string",
+              "enum": ["center", "top", "right", "bottom", "left"],
+              "description": "Package-owned object position for cropped local media.",
+              "default": "center"
+            },
+            "surface": {
+              "type": "string",
+              "enum": ["plain", "mesh", "glow", "grain", "grid"],
+              "description": "Package-owned decorative surface that never replaces content.",
+              "default": "plain"
+            },
+            "transition": {
+              "type": "string",
+              "enum": ["none", "reveal", "stagger"],
+              "description": "Bounded package-owned entrance treatment.",
+              "default": "none"
+            },
+            "scene": {
+              "type": "string",
+              "enum": ["none", "progress", "sticky"],
+              "description": "Content-driven scroll scene without changing document order.",
+              "default": "none"
+            },
+            "interaction": {
+              "type": "string",
+              "enum": ["none", "depth", "tilt"],
+              "description": "Fine-pointer-only media interaction.",
+              "default": "none"
+            },
+            "choreography": {
+              "type": "string",
+              "enum": ["none", "cascade"],
+              "description": "Semantic ordered emphasis for metrics and visualizations.",
+              "default": "none"
+            },
             "reveal": {
               "type": "boolean",
               "description": "Enables one package-owned one-time section reveal in the normal-motion profile.",
               "default": false
             }
           },
-          "required": ["title"]
+          "required": ["title"],
+          "allOf": [
+            {
+              "not": {
+                "allOf": [
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["mosaic", "stack"] } }
+                  },
+                  {
+                    "required": ["media"],
+                    "properties": { "media": { "enum": ["layers", "gallery"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["media"], "properties": { "media": { "enum": ["layers"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["progress"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack"] } }
+                  },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["sticky"] } } }
+                ]
+              }
+            }
+          ]
         }
       },
       "required": ["name", "form", "attributes"]
@@ -278,7 +405,18 @@
       "properties": {
         "name": { "const": "actions" },
         "form": { "type": "string", "enum": ["container"] },
-        "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "placement": {
+              "type": "string",
+              "enum": ["auto", "edge", "inline", "bottom"],
+              "description": "Responsive placement for one action inventory.",
+              "default": "auto"
+            }
+          }
+        }
       },
       "required": ["name", "form", "attributes"]
     },
@@ -302,9 +440,28 @@
               "enum": ["primary", "secondary", "quiet"],
               "description": "Package-owned action emphasis.",
               "default": "primary"
+            },
+            "effect": {
+              "type": "string",
+              "enum": ["none", "magnetic"],
+              "description": "Rare package-owned action interaction.",
+              "default": "none"
             }
           },
-          "required": ["href"]
+          "required": ["href"],
+          "allOf": [
+            {
+              "not": {
+                "allOf": [
+                  {
+                    "required": ["kind"],
+                    "properties": { "kind": { "enum": ["secondary", "quiet"] } }
+                  },
+                  { "required": ["effect"], "properties": { "effect": { "enum": ["magnetic"] } } }
+                ]
+              }
+            }
+          ]
         }
       },
       "required": ["name", "form", "attributes"]

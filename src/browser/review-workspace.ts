@@ -34,6 +34,7 @@ interface Elements {
   drawerError: HTMLElement;
   summary: HTMLOutputElement;
   selectionAction: HTMLButtonElement;
+  selectionActionLabel: HTMLElement;
   currentSection: HTMLElement;
   currentList: HTMLOListElement;
   popover: HTMLElement;
@@ -45,8 +46,10 @@ interface Elements {
   empty: HTMLElement;
   message: HTMLTextAreaElement;
   add: HTMLButtonElement;
+  addLabel: HTMLElement;
   cancel: HTMLButtonElement;
   resolve: HTMLButtonElement;
+  resolveLabel: HTMLElement;
   priorSection: HTMLElement;
   priorList: HTMLOListElement;
   importInput: HTMLInputElement;
@@ -74,9 +77,8 @@ interface RenderedSelection {
 
 interface AnchoredAction {
   readonly subject: ReviewSubject;
-  readonly range?: Range;
+  readonly range: Range;
   readonly kind: 'create' | 'thread';
-  readonly position: { readonly left: number; readonly top: number };
 }
 
 type HighlightRegistry = {
@@ -194,7 +196,9 @@ function createController(
     'pointermove',
     (event) => {
       if (window.getSelection()?.isCollapsed === false || !el.popover.hidden) return;
-      if (event.target === el.selectionAction || markerHost.contains(event.target as Node)) return;
+      const node = event.target;
+      if (!(node instanceof Node)) return;
+      if (el.selectionAction.contains(node) || markerHost.contains(node)) return;
       updateHighlightAction(event.clientX, event.clientY);
     },
     { signal: abort.signal },
@@ -220,6 +224,8 @@ function createController(
     { signal: abort.signal },
   );
   window.addEventListener('resize', scheduleReposition, { signal: abort.signal });
+  window.visualViewport?.addEventListener('resize', scheduleReposition, { signal: abort.signal });
+  window.visualViewport?.addEventListener('scroll', scheduleReposition, { signal: abort.signal });
   window.addEventListener('scroll', scheduleReposition, {
     capture: true,
     signal: abort.signal,
@@ -434,7 +440,7 @@ function createController(
     if (!message) return;
     editing = id;
     el.message.value = message.message;
-    el.add.textContent = strings.saveMessage;
+    el.addLabel.textContent = strings.saveMessage;
     el.cancel.hidden = false;
     el.message.focus();
   }
@@ -442,7 +448,7 @@ function createController(
   function clearEditor(): void {
     editing = undefined;
     el.message.value = '';
-    el.add.textContent = strings.addMessage;
+    el.addLabel.textContent = strings.addMessage;
     el.cancel.hidden = true;
   }
 
@@ -551,7 +557,7 @@ function createController(
       }
     const segment = thread === undefined ? undefined : currentSegment(thread);
     el.resolve.hidden = !segment;
-    el.resolve.textContent = segment?.resolved ? strings.reopenThread : strings.resolveThread;
+    el.resolveLabel.textContent = segment?.resolved ? strings.reopenThread : strings.resolveThread;
   }
 
   function renderCurrent(): void {
@@ -671,10 +677,7 @@ function createController(
     if (!pending) return;
     pendingAction = undefined;
     select(pending.subject);
-    openPopover(
-      pending.range ?? new DOMRect(pending.position.left, pending.position.top),
-      el.selectionAction,
-    );
+    openPopover(pending.range, el.selectionAction);
   }
 
   function updateSelectionAction(focus: boolean): boolean {
@@ -687,11 +690,13 @@ function createController(
     const kind = threadForSubject(candidate.subject) === undefined ? 'create' : 'thread';
     pendingAction = { ...candidate, kind };
     el.selectionAction.dataset.reviewActionKind = kind;
-    el.selectionAction.textContent = kind === 'create' ? strings.createNote : strings.viewThread;
+    el.selectionActionLabel.textContent =
+      kind === 'create' ? strings.createNote : strings.viewThread;
+    el.selectionAction.title = kind === 'create' ? strings.createNote : strings.viewThread;
     if (kind === 'thread')
       el.selectionAction.setAttribute('aria-label', strings.openNote(candidate.subject.label));
     else el.selectionAction.removeAttribute('aria-label');
-    showAction(candidate.position);
+    positionAction(pendingAction);
     if (focus) el.selectionAction.focus({ preventScroll: true });
     return true;
   }
@@ -709,18 +714,45 @@ function createController(
       subject: entry.subject,
       range: entry.range,
       kind: 'thread',
-      position: { left: x, top: y },
     };
     el.selectionAction.dataset.reviewActionKind = 'thread';
-    el.selectionAction.textContent = strings.viewThread;
+    el.selectionActionLabel.textContent = strings.viewThread;
+    el.selectionAction.title = strings.viewThread;
     el.selectionAction.setAttribute('aria-label', strings.openNote(entry.subject.label));
-    showAction({ left: x, top: y });
+    positionAction(pendingAction);
   }
 
-  function showAction(position: { readonly left: number; readonly top: number }): void {
+  function positionAction(action: AnchoredAction): void {
+    const viewport = viewportRect();
+    const anchor = visibleRangeAnchorRect(action.range, viewport);
+    const gutter = 8;
+    const gap = 8;
+    if (anchor === undefined) {
+      hideAction();
+      return;
+    }
+    el.selectionAction.style.maxWidth = `${Math.max(0, viewport.right - viewport.left - gutter * 2)}px`;
     el.selectionAction.hidden = false;
-    el.selectionAction.style.left = `${position.left}px`;
-    el.selectionAction.style.top = `${position.top}px`;
+    const width = el.selectionAction.offsetWidth;
+    const height = el.selectionAction.offsetHeight;
+    const minimumLeft = viewport.left + gutter;
+    const maximumLeft = Math.max(minimumLeft, viewport.right - width - gutter);
+    const left = Math.min(
+      Math.max(anchor.left + anchor.width / 2 - width / 2, minimumLeft),
+      maximumLeft,
+    );
+    const above = anchor.top - height - gap;
+    const below = anchor.bottom + gap;
+    const minimumTop = viewport.top + gutter;
+    const maximumTop = Math.max(minimumTop, viewport.bottom - height - gutter);
+    const top =
+      above >= minimumTop
+        ? above
+        : below <= maximumTop
+          ? below
+          : Math.min(Math.max(above, minimumTop), maximumTop);
+    el.selectionAction.style.left = `${left}px`;
+    el.selectionAction.style.top = `${top}px`;
   }
 
   function hideAction(): void {
@@ -783,6 +815,7 @@ function createController(
   function syncToggle(): void {
     el.toggle.setAttribute('aria-expanded', String(el.dialog.open));
     el.toggleLabel.textContent = el.dialog.open ? strings.closeReview : strings.review;
+    el.toggle.title = el.dialog.open ? strings.closeReview : strings.review;
   }
 
   function showDrawerError(message: string): void {
@@ -806,7 +839,7 @@ function createController(
   }
 
   function repositionOverlays(): void {
-    if (pendingAction?.kind === 'create') updateSelectionAction(false);
+    if (pendingAction) positionAction(pendingAction);
     positionPopover();
     for (const entry of renderedSelections) {
       const marker = markerHost.querySelector<HTMLButtonElement>(
@@ -828,27 +861,43 @@ function createController(
   function positionPopover(): void {
     if (el.popover.hidden || !popoverAnchor) return;
     const rect = popoverAnchor instanceof Range ? rangeAnchorRect(popoverAnchor) : popoverAnchor;
+    const viewport = viewportRect();
     const gutter = 8;
     const gap = 10;
+    if (mobileReview.matches) {
+      el.popover.dataset.reviewPopoverPlacement = 'bottom';
+      el.popover.style.width = `${Math.max(0, viewport.right - viewport.left - gutter * 2)}px`;
+      el.popover.style.maxHeight = `${Math.max(0, viewport.bottom - viewport.top - gutter * 2)}px`;
+      const height = el.popover.offsetHeight;
+      el.popover.style.left = `${viewport.left + gutter}px`;
+      el.popover.style.top = `${Math.max(viewport.top + gutter, viewport.bottom - height - gutter)}px`;
+      return;
+    }
+    el.popover.dataset.reviewPopoverPlacement = 'inline';
+    el.popover.style.removeProperty('width');
+    el.popover.style.maxHeight = `${Math.max(0, viewport.bottom - viewport.top - gutter * 2)}px`;
     const width = el.popover.offsetWidth;
     const height = el.popover.offsetHeight;
-    const rightFits = rect.right + gap + width <= window.innerWidth - gutter;
-    const leftFits = rect.left - gap - width >= gutter;
+    const rightFits = rect.right + gap + width <= viewport.right - gutter;
+    const leftFits = rect.left - gap - width >= viewport.left + gutter;
     const left = rightFits
       ? rect.right + gap
       : leftFits
         ? rect.left - gap - width
         : Math.min(
-            Math.max(rect.left + rect.width / 2 - width / 2, gutter),
-            window.innerWidth - width - gutter,
+            Math.max(rect.left + rect.width / 2 - width / 2, viewport.left + gutter),
+            viewport.right - width - gutter,
           );
     const below = rect.bottom + gap;
     const top =
       rightFits || leftFits
-        ? Math.min(Math.max(rect.top - gap, gutter), window.innerHeight - height - gutter)
-        : below + height <= window.innerHeight - gutter
+        ? Math.min(
+            Math.max(rect.top - gap, viewport.top + gutter),
+            viewport.bottom - height - gutter,
+          )
+        : below + height <= viewport.bottom - gutter
           ? below
-          : Math.max(gutter, rect.top - height - gap);
+          : Math.max(viewport.top + gutter, rect.top - height - gap);
     el.popover.style.left = `${left}px`;
     el.popover.style.top = `${top}px`;
   }
@@ -867,6 +916,18 @@ function createController(
   };
 }
 
+function viewportRect(): { left: number; top: number; right: number; bottom: number } {
+  const viewport = window.visualViewport;
+  const left = viewport?.offsetLeft ?? 0;
+  const top = viewport?.offsetTop ?? 0;
+  return {
+    left,
+    top,
+    right: left + (viewport?.width ?? window.innerWidth),
+    bottom: top + (viewport?.height ?? window.innerHeight),
+  };
+}
+
 function collect(toggle: HTMLButtonElement, root: HTMLElement): Elements | undefined {
   const find = <T extends Element>(selector: string) => root.querySelector<T>(selector);
   const values = {
@@ -878,6 +939,7 @@ function collect(toggle: HTMLButtonElement, root: HTMLElement): Elements | undef
     drawerError: find<HTMLElement>('[data-review-error]'),
     summary: find<HTMLOutputElement>('[data-review-summary]'),
     selectionAction: find<HTMLButtonElement>('[data-review-selection-action]'),
+    selectionActionLabel: find<HTMLElement>('[data-review-selection-action-label]'),
     currentSection: find<HTMLElement>('[data-review-current-section]'),
     currentList: find<HTMLOListElement>('[data-review-current-list]'),
     popover: find<HTMLElement>('[data-review-popover]'),
@@ -889,8 +951,10 @@ function collect(toggle: HTMLButtonElement, root: HTMLElement): Elements | undef
     empty: find<HTMLElement>('[data-review-thread-empty]'),
     message: find<HTMLTextAreaElement>('[data-review-message]'),
     add: find<HTMLButtonElement>('[data-review-add-message]'),
+    addLabel: find<HTMLElement>('[data-review-add-message-label]'),
     cancel: find<HTMLButtonElement>('[data-review-cancel-message-edit]'),
     resolve: find<HTMLButtonElement>('[data-review-resolve-thread]'),
+    resolveLabel: find<HTMLElement>('[data-review-resolve-thread-label]'),
     priorSection: find<HTMLElement>('[data-review-prior-section]'),
     priorList: find<HTMLOListElement>('[data-review-prior-list]'),
     importInput: find<HTMLInputElement>('[data-review-import]'),
@@ -946,7 +1010,6 @@ function captureSelection(targets: ReadonlyMap<string, TargetDom>):
   | {
       readonly subject: ReviewSubject;
       readonly range: Range;
-      readonly position: { left: number; top: number };
     }
   | undefined {
   const selection = window.getSelection();
@@ -969,14 +1032,9 @@ function captureSelection(targets: ReadonlyMap<string, TargetDom>):
       end: { target: end.target, offset: endOffset },
       quote,
     };
-    const rect = rangeAnchorRect(range);
     return {
       subject: { target: start.target, selection: anchor, label: compactQuote(quote) },
       range: range.cloneRange(),
-      position: {
-        left: Math.min(Math.max(rect.left + rect.width / 2, 4), window.innerWidth - 4),
-        top: Math.max(rect.top, 3.5 * 16),
-      },
     };
   } catch {
     return;
@@ -1054,10 +1112,43 @@ function rangeAnchorRect(range: Range): DOMRect {
   return rectangles.at(-1) ?? range.getBoundingClientRect();
 }
 
+function visibleRangeAnchorRect(
+  range: Range,
+  viewport: { left: number; top: number; right: number; bottom: number },
+): DOMRect | undefined {
+  return [...range.getClientRects()]
+    .filter((rect) => rect.width > 0 || rect.height > 0)
+    .filter(
+      (rect) =>
+        rect.bottom > viewport.top &&
+        rect.top < viewport.bottom &&
+        rect.right > viewport.left &&
+        rect.left < viewport.right,
+    )
+    .at(-1);
+}
+
 function positionMarker(marker: HTMLButtonElement, range: Range): void {
-  const rect = rangeAnchorRect(range);
-  marker.style.left = `${Math.min(rect.right, window.innerWidth - 4)}px`;
-  marker.style.top = `${Math.min(Math.max(rect.top, 4), window.innerHeight - 4)}px`;
+  const viewport = viewportRect();
+  const rect = visibleRangeAnchorRect(range, viewport);
+  if (rect === undefined) {
+    marker.hidden = true;
+    return;
+  }
+  marker.hidden = false;
+  const gutter = 8;
+  const gap = 4;
+  const halfWidth = marker.offsetWidth / 2;
+  const halfHeight = marker.offsetHeight / 2;
+  const minimumLeft = viewport.left + halfWidth + gutter;
+  const maximumLeft = Math.max(minimumLeft, viewport.right - halfWidth - gutter);
+  const minimumTop = viewport.top + halfHeight + gutter;
+  const maximumTop = Math.max(minimumTop, viewport.bottom - halfHeight - gutter);
+  const above = rect.top - halfHeight - gap;
+  const below = rect.bottom + halfHeight + gap;
+  const preferredTop = above >= minimumTop ? above : below <= maximumTop ? below : rect.top;
+  marker.style.left = `${Math.min(Math.max(rect.right, minimumLeft), maximumLeft)}px`;
+  marker.style.top = `${Math.min(Math.max(preferredTop, minimumTop), maximumTop)}px`;
 }
 
 function compactQuote(value: string): string {

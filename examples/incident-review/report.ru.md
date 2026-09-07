@@ -13,6 +13,7 @@ language: ru
 события, показатели и решения на странице — демонстрационные данные для движка отчётов; они не описывают
 реальную компанию или производственную систему.
 
+::::::section{title="Сигнал влияния" id="impact" nav="Влияние" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
 :::callout{kind="warning" title="Сводка для руководства"}
 Шторм повторных запросов в адаптере оплаты на 47 минут исчерпал пул соединений оформления заказа. Данные
 клиентов сохранились, но на пике **18,4% попыток оформления завершались ошибкой**, а **3 240 продлений были
@@ -55,8 +56,9 @@ language: ru
 :::::
 
 ![Демонстрационная топология трафика через оформление, оплату и платёжного провайдера](assets/service-topology.ru.svg)
+::::::
 
-## Что отказало
+:::::section{title="Что отказало" id="cause" nav="Причина" width="wide" align="start" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="stagger" choreography="cascade"}
 
 :::diagram{title="Причинная цепочка" description="Тайм-аут провайдера вызвал неограниченные повторы адаптера, насытил общий пул соединений и привёл к ошибкам оформления." direction="down"}
 ::node{id="timeout" label="Тайм-аут провайдера" kind="warning"}
@@ -94,7 +96,9 @@ language: ru
   :::
   ::::
 
-## Хронология реагирования
+:::::
+
+:::::section{title="Хронология реагирования" id="response" nav="Реагирование" width="wide" align="start" tone="plain" composition="stack" viewport="adaptive" section-density="compact" type="body" surface="plain" transition="reveal" choreography="cascade"}
 
 ::::timeline{title="Журнал управления инцидентом" description="Пять демонстрационных точек показывают обнаружение, диагностику, смягчение, восстановление и проверку."}
 :::event{date="09:42 UTC" title="Сработало оповещение" kind="warning"}
@@ -113,8 +117,9 @@ language: ru
 Итоги оплаты, заказов и реестра сошлись без потерь и повторного принятия.
 :::
 ::::
+:::::
 
-## Реестр корректирующих действий
+:::::section{title="Реестр корректирующих действий" id="actions" nav="Действия" width="wide" align="start" tone="accent" composition="mosaic" viewport="bounded" section-density="editorial" type="editorial" surface="glow" transition="stagger" choreography="cascade"}
 
 {{include: partials/actions.ru.md}}
 
@@ -139,3 +144,5 @@ language: ru
 3. Проверьте новое оповещение об усилении на тренировке инцидента.
 4. Закрывайте каждое действие только со ссылкой на воспроизводимое доказательство.
    :::
+
+:::::

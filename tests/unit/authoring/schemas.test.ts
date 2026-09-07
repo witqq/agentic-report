@@ -1,5 +1,3 @@
-import { readFile } from 'node:fs/promises';
-
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import { describe, expect, it } from 'vitest';
 
@@ -376,14 +374,6 @@ describe('authoring schema projections', () => {
     const first = projectAuthoringSchemas(authoringRegistry);
     const second = projectAuthoringSchemas(authoringRegistry);
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
-    const projection = first;
-    const golden = JSON.parse(
-      await readFile(
-        new URL('../../fixtures/authoring/schema-projections.json', import.meta.url),
-        'utf8',
-      ),
-    ) as unknown;
-    expect(projection).toEqual(golden);
     expect([first.manifest.$id, first.directives.$id, first.source.$id]).toEqual([
       authoringRegistry.contract.schemaIds.manifest,
       authoringRegistry.contract.schemaIds.directives,

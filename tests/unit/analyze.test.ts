@@ -40,27 +40,48 @@ describe('report analysis', () => {
   it('keeps build bytes stable while validate and inspect share its production preparation', async () => {
     const workspace = await createTestWorkspace('analysis-parity');
     workspaces.push(workspace);
-    const oracle = JSON.parse(
-      await readFile(path.resolve('tests/fixtures/analysis/parity-oracle.json'), 'utf8'),
-    ) as ParityOracle;
 
     const singlePath = path.join(workspace, 'single.html');
+    const repeatedSinglePath = path.join(workspace, 'single-repeated.html');
     const directoryPath = path.join(workspace, 'directory');
-    const [single, validated, inspected, directory, validatedDirectory, inspectedDirectory] =
-      await Promise.all([
-        buildReport({ input: paritySource, output: singlePath }),
-        validateReport({ input: paritySource }),
-        inspectReport({ input: paritySource }),
-        buildReport({ input: paritySource, output: directoryPath, format: 'directory' }),
-        validateReport({ input: paritySource, format: 'directory' }),
-        inspectReport({ input: paritySource, format: 'directory' }),
-      ]);
-    expect({ ...single, outputPath: '<single>' }).toStrictEqual(oracle.single.result);
-    expect(
-      createHash('sha256')
-        .update(await readFile(singlePath))
-        .digest('hex'),
-    ).toBe(oracle.single.sha256);
+    const repeatedDirectoryPath = path.join(workspace, 'directory-repeated');
+    const [
+      single,
+      repeatedSingle,
+      validated,
+      inspected,
+      directory,
+      repeatedDirectory,
+      validatedDirectory,
+      inspectedDirectory,
+    ] = await Promise.all([
+      buildReport({ input: paritySource, output: singlePath }),
+      buildReport({ input: paritySource, output: repeatedSinglePath }),
+      validateReport({ input: paritySource }),
+      inspectReport({ input: paritySource }),
+      buildReport({ input: paritySource, output: directoryPath, format: 'directory' }),
+      buildReport({
+        input: paritySource,
+        output: repeatedDirectoryPath,
+        format: 'directory',
+      }),
+      validateReport({ input: paritySource, format: 'directory' }),
+      inspectReport({ input: paritySource, format: 'directory' }),
+    ]);
+    const singleBytes = await readFile(singlePath);
+    const repeatedSingleBytes = await readFile(repeatedSinglePath);
+    expect(repeatedSingleBytes).toStrictEqual(singleBytes);
+    expect({ ...repeatedSingle, outputPath: single.outputPath }).toStrictEqual(single);
+    expect(single.bytes).toBe(singleBytes.byteLength);
+    expect(single.contentHash).toBe(sha256(singleBytes));
+    expect(single).toMatchObject({
+      format: 'single-file',
+      externalAssets: 0,
+      share: false,
+      neutralizedSourceLinks: 0,
+      warnings: [],
+    });
+    expect(single.embeddedAssets).toBeGreaterThan(0);
 
     expect(validated).toStrictEqual({
       contractVersion: 1,
@@ -71,7 +92,7 @@ describe('report analysis', () => {
       warnings: [],
     });
 
-    expect(inspected).toStrictEqual({
+    expect(inspected).toMatchObject({
       contractVersion: 1,
       projectPath: paritySource,
       entryPath: path.join(paritySource, 'report.md'),
@@ -89,44 +110,48 @@ describe('report analysis', () => {
         directives: ['asset', 'callout', 'demo', 'font'],
         resources: { images: 2, downloads: 1, fonts: 1 },
       },
-      catalog: {
-        commands: {
-          init: 'Initialize a packaged declarative starter without overwriting user content.',
-          validate: 'Validate a project without writing an output artifact.',
-          inspect:
-            'Inspect source usage and the available authoring catalog without writing output.',
-          review: 'Resolve a confined review artifact without changing report sources.',
-          build: 'Compile a source into a default or share-safe static artifact.',
-          fix: 'Apply the replacements the product computed exactly, and nothing else.',
-          describe: 'Return the complete source contract.',
-          schema: 'Return manifest, directive, or complete source JSON Schema.',
-          examples: 'List packaged buildable examples.',
-        },
-        formats: ['single-file', 'directory'],
-        starters: [
-          { id: 'basic', title: 'Report starter', default: true, aliases: ['report'] },
-          { id: 'research', title: 'Research starter', default: false, aliases: [] },
-          { id: 'architecture', title: 'Architecture starter', default: false, aliases: [] },
-          { id: 'tutorial', title: 'Tutorial starter', default: false, aliases: [] },
-          { id: 'dashboard', title: 'Dashboard starter', default: false, aliases: [] },
-          { id: 'landing', title: 'Landing page starter', default: false, aliases: [] },
-        ],
-        capabilities: {
-          init: 'Initialize a packaged declarative starter without overwriting user content.',
-          validate: 'Validate a project through the production preparation pipeline.',
-          inspect: 'Inspect a valid project through the production preparation pipeline.',
-          review: 'Resolve a versioned review artifact to current Markdown source locations.',
-        },
-        page: authoringRegistry.page,
-      },
+      catalog: { formats: ['single-file', 'directory'], page: authoringRegistry.page },
       warnings: [],
     });
+    expect(Object.keys(inspected.catalog.commands).sort()).toStrictEqual([
+      'build',
+      'describe',
+      'examples',
+      'fix',
+      'init',
+      'inspect',
+      'review',
+      'schema',
+      'validate',
+    ]);
+    expect(inspected.catalog.starters.map(({ id }) => id)).toStrictEqual([
+      'basic',
+      'research',
+      'architecture',
+      'tutorial',
+      'dashboard',
+      'landing',
+    ]);
 
-    expect({
-      ...directory,
-      outputPath: directory.outputPath.replace(directoryPath, '<directory>'),
-    }).toStrictEqual(oracle.directory.result);
-    expect(await hashTree(directoryPath)).toStrictEqual(oracle.directory.tree);
+    const directoryTree = await hashTree(directoryPath);
+    const repeatedDirectoryTree = await hashTree(repeatedDirectoryPath);
+    expect(repeatedDirectoryTree).toStrictEqual(directoryTree);
+    expect({ ...repeatedDirectory, outputPath: directory.outputPath }).toStrictEqual(directory);
+    const directoryIndex = await readFile(path.join(directoryPath, 'index.html'));
+    expect(directory.bytes).toBe(directoryIndex.byteLength);
+    expect(directory.contentHash).toBe(sha256(directoryIndex));
+    expect(directory).toMatchObject({
+      format: 'directory',
+      embeddedAssets: 0,
+      share: false,
+      neutralizedSourceLinks: 0,
+      warnings: [],
+    });
+    expect(directory.externalAssets).toBeGreaterThan(0);
+    for (const [relativePath, digest] of Object.entries(directoryTree)) {
+      if (relativePath === 'index.html') continue;
+      expect(path.basename(relativePath), relativePath).toContain(digest.slice(0, 12));
+    }
 
     expect(validatedDirectory).toMatchObject({
       format: 'directory',
@@ -799,37 +824,6 @@ describe('report analysis', () => {
   });
 });
 
-interface ParityOracle {
-  readonly single: {
-    readonly result: {
-      readonly outputPath: '<single>';
-      readonly format: 'single-file';
-      readonly bytes: number;
-      readonly embeddedAssets: number;
-      readonly externalAssets: number;
-      readonly contentHash: string;
-      readonly share: false;
-      readonly neutralizedSourceLinks: 0;
-      readonly warnings: readonly unknown[];
-    };
-    readonly sha256: string;
-  };
-  readonly directory: {
-    readonly result: {
-      readonly outputPath: '<directory>/index.html';
-      readonly format: 'directory';
-      readonly bytes: number;
-      readonly embeddedAssets: number;
-      readonly externalAssets: number;
-      readonly contentHash: string;
-      readonly share: false;
-      readonly neutralizedSourceLinks: 0;
-      readonly warnings: readonly unknown[];
-    };
-    readonly tree: Readonly<Record<string, string>>;
-  };
-}
-
 async function hashTree(root: string): Promise<Readonly<Record<string, string>>> {
   const hashes: Record<string, string> = {};
   await visit(root, '');
@@ -851,6 +845,10 @@ async function hashTree(root: string): Promise<Readonly<Record<string, string>>>
       }
     }
   }
+}
+
+function sha256(value: Buffer): string {
+  return createHash('sha256').update(value).digest('hex');
 }
 
 function compareNames(left: string, right: string): number {

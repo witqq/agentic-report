@@ -1,470 +1,592 @@
-import { createHash } from 'node:crypto';
-import { mkdir, readFile, readdir, rm } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import type { Locator, Page } from '@playwright/test';
 
-import { test, expect } from './fixtures.js';
+import { expect, test } from './fixtures.js';
 
 const generatedRoot = path.resolve('test-results/e2e-generated');
-const stagedSiteRoot = path.resolve('test-results/e2e-site');
-const artifactUrl = (name: string): string => pathToFileURL(path.join(generatedRoot, name)).href;
+const stagedRoot = path.resolve('test-results/e2e-site');
+const generatedUrl = (name: string): string => pathToFileURL(path.join(generatedRoot, name)).href;
+const stagedUrl = (href: string): string => pathToFileURL(path.join(stagedRoot, href)).href;
 
 const landingArtifacts = [
-  { format: 'single-file', url: artifactUrl('public-landing.html') },
-  { format: 'directory', url: artifactUrl('public-landing-directory/index.html') },
+  { format: 'single-file', url: generatedUrl('public-landing.html') },
+  { format: 'directory', url: generatedUrl('public-landing-directory/index.html') },
 ] as const;
 
-const exampleUrls = {
-  incident: artifactUrl('incident-review.html'),
-  vendor: artifactUrl('vendor-decision.html'),
-  launch: artifactUrl('launch-readiness.html'),
-} as const;
+const publicProofs = [
+  {
+    page: 'index.html',
+    sources: ['source/landing/report.md', 'source/landing/report.ru.md'],
+  },
+  {
+    page: 'examples/incident-review/index.html',
+    sources: ['examples/incident-review/report.md', 'examples/incident-review/report.ru.md'],
+  },
+  {
+    page: 'examples/vendor-decision/index.html',
+    sources: ['examples/vendor-decision/report.md', 'examples/vendor-decision/report.ru.md'],
+  },
+  {
+    page: 'examples/launch-readiness/index.html',
+    sources: ['examples/launch-readiness/report.md', 'examples/launch-readiness/report.ru.md'],
+  },
+] as const;
 
-const expectNoDocumentOverflow = async (page: Page): Promise<void> => {
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+const siteRoutes = JSON.parse(await readFile(path.resolve('website/routes.json'), 'utf8')) as {
+  readonly routes: readonly {
+    readonly id: string;
+    readonly href: string;
+    readonly source: string;
+    readonly kind: 'page' | 'copy' | 'generated';
+  }[];
 };
 
-const expectLoaded = async (image: Locator): Promise<void> => {
-  await expect(image).toBeVisible();
+const expectNoOverflow = async (page: Page): Promise<void> => {
   expect(
-    await image.evaluate((element) => (element as HTMLImageElement).naturalWidth),
-  ).toBeGreaterThan(0);
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
 };
 
-const sha256 = (value: Buffer): string => createHash('sha256').update(value).digest('hex');
-
-test('public repeat-review route exposes the fictional changed prior handoff', async ({
-  page,
-}, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop-chromium');
-  await page.goto(
-    pathToFileURL(path.join(stagedSiteRoot, 'examples/review-workspace/index.html')).href,
-  );
-  await page.locator('[data-review-toggle]').click();
-  await expect(page.locator('[data-review-prior-section]')).toContainText(
-    'Prior · changed · unresolved',
-  );
-  await expect(page.locator('[data-review-prior-section]')).toContainText(
-    'Explain why this evidence supports the release conclusion.',
-  );
-  await mkdir(path.resolve('test-results/captures/public-site'), { recursive: true });
-  await page.screenshot({
-    path: path.resolve('test-results/captures/public-site/repeat-review-desktop.png'),
-    fullPage: true,
-  });
-});
-
-const expectCompactFieldManualHeader = async (
-  page: Page,
-  width: 320 | 390,
-  section: 'Proof' | 'Examples',
-): Promise<void> => {
-  await page.setViewportSize({ width, height: 844 });
-  const identity = page.locator('.topbar-title-short');
-  const current = page.locator('.topbar-current');
-  await expect(identity).toHaveText('Agentic Report');
-  await expect(current).toContainText(`Current / ${section}`);
-  await expect(page.locator('.review-toggle [data-package-icon="comment"]')).toBeVisible();
-  for (const label of [identity, current]) {
-    expect(await label.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
-      true,
-    );
-  }
+const expectLoadedImages = async (page: Page): Promise<void> => {
+  expect(
+    await page
+      .locator('img')
+      .evaluateAll((images) =>
+        images.every(
+          (image) =>
+            image instanceof HTMLImageElement &&
+            image.complete &&
+            image.naturalWidth > 0 &&
+            image.naturalHeight > 0,
+        ),
+      ),
+  ).toBe(true);
 };
 
-test('public landing has the exact proof-first contract in both output formats', async ({
+test('landing composes the public visual vocabulary identically in both output formats', async ({
   page,
-}, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop-chromium');
-  const renderedContent: string[] = [];
+}, info) => {
+  test.skip(info.project.name !== 'desktop-chromium');
+  const rendered: string[] = [];
   for (const artifact of landingArtifacts) {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(artifact.url);
-    await expect(page).toHaveTitle(
-      'agentic-report — declarative interactive pages for agent handoffs',
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    const expected = [
+      [
+        'proof',
+        'stage',
+        'full',
+        'immersive',
+        'display',
+        'mask',
+        'mesh',
+        'stagger',
+        'progress',
+        'none',
+        'cascade',
+      ],
+      [
+        'data-scene',
+        'split',
+        'bounded',
+        'editorial',
+        'editorial',
+        'natural',
+        'grid',
+        'reveal',
+        'progress',
+        'none',
+        'cascade',
+      ],
+      [
+        'examples',
+        'stage',
+        'full',
+        'immersive',
+        'display',
+        'gallery',
+        'glow',
+        'stagger',
+        'none',
+        'none',
+        'cascade',
+      ],
+      [
+        'workflow',
+        'story',
+        'bounded',
+        'editorial',
+        'editorial',
+        'mask',
+        'grain',
+        'reveal',
+        'none',
+        'depth',
+        'none',
+      ],
+      [
+        'review',
+        'split',
+        'bounded',
+        'compact',
+        'display',
+        'natural',
+        'glow',
+        'reveal',
+        'none',
+        'none',
+        'none',
+      ],
+      [
+        'agent-skill',
+        'mosaic',
+        'adaptive',
+        'compact',
+        'editorial',
+        'natural',
+        'grid',
+        'stagger',
+        'none',
+        'none',
+        'cascade',
+      ],
+      [
+        'start',
+        'stage',
+        'bounded',
+        'immersive',
+        'display',
+        'natural',
+        'mesh',
+        'stagger',
+        'none',
+        'none',
+        'none',
+      ],
+    ] as const;
+    for (const [
+      id,
+      composition,
+      viewport,
+      density,
+      typography,
+      media,
+      surface,
+      transition,
+      scene,
+      interaction,
+      choreography,
+    ] of expected) {
+      const section = page.locator(`#${id}`);
+      await expect(section).toHaveAttribute('data-composition', composition);
+      await expect(section).toHaveAttribute('data-viewport', viewport);
+      await expect(section).toHaveAttribute('data-section-density', density);
+      await expect(section).toHaveAttribute('data-type', typography);
+      await expect(section).toHaveAttribute('data-media', media);
+      await expect(section).toHaveAttribute('data-surface', surface);
+      await expect(section).toHaveAttribute('data-transition', transition);
+      await expect(section).toHaveAttribute('data-scene', scene);
+      await expect(section).toHaveAttribute('data-interaction', interaction);
+      await expect(section).toHaveAttribute('data-choreography', choreography);
+    }
+
+    await expect(page.locator('.semantic-actions').first()).toHaveAttribute(
+      'data-placement-resolved',
+      'edge',
     );
-    await expect(page.locator('html')).toHaveAttribute('data-preset', 'editorial');
-    await expect(
-      page.getByRole('heading', { name: 'Give your agent a better handoff.', level: 1 }),
-    ).toBeVisible();
-    await expect(page.locator('section.semantic-section')).toHaveCount(9);
-    await expect(page.locator('[data-navigation] a')).toHaveText([
-      'Proof',
-      'Agent skill',
-      'Workflow',
-      'Examples',
-      'Page types',
-      'Landing pages',
-      'Boundaries',
-      'Docs',
-      'Start',
-    ]);
-    await expect(page.locator('[data-navigation] a[aria-current="location"]')).toHaveCount(1);
-    const fieldManualState = await page.evaluate(() => {
-      const sidebar = document.querySelector<HTMLElement>('[data-nav-desktop-host]');
-      const content = document.querySelector<HTMLElement>('.report-content');
-      const action = document.querySelector<HTMLElement>('.semantic-action[data-kind="primary"]');
-      const icon = action?.querySelector<SVGElement>('[data-package-icon="arrow-right"]');
-      const navigationIcon = document.querySelector<SVGElement>(
-        '.nav-toggle [data-package-icon="three-bars"]',
-      );
-      if (
-        sidebar === null ||
-        content === null ||
-        action === null ||
-        icon === undefined ||
-        icon === null ||
-        navigationIcon === null
-      ) {
-        throw new Error('Field Manual shell, action, and icon are required.');
-      }
-      const sidebarBox = sidebar.getBoundingClientRect();
-      const contentBox = content.getBoundingClientRect();
-      const controls = [
-        ['nav', document.querySelector<HTMLElement>('.nav-toggle')],
-        ['theme', document.querySelector<HTMLElement>('.theme-toggle')],
-        ['copy', document.querySelector<HTMLElement>('.copy-code')],
-        ['action', action],
-      ] as const;
-      return {
-        sidebarPosition: getComputedStyle(sidebar).position,
-        separated: sidebarBox.right <= contentBox.left,
-        iconSize: icon.getBoundingClientRect().width,
-        navigationIconSize: navigationIcon.getBoundingClientRect().width,
-        controls: controls.map(([name, control]) => {
-          if (control === null) throw new Error(`Missing Field Manual ${name} control.`);
-          const style = getComputedStyle(control);
-          return {
-            name,
-            height: control.getBoundingClientRect().height,
-            paddingLeft: Number.parseFloat(style.paddingLeft),
-            paddingRight: Number.parseFloat(style.paddingRight),
-            gap: Number.parseFloat(style.gap),
+    await expect(page.locator('#workflow > .semantic-actions')).toHaveAttribute(
+      'data-placement-resolved',
+      'inline',
+    );
+    await expect(page.locator('#start > .semantic-actions')).toHaveAttribute(
+      'data-placement-resolved',
+      'bottom',
+    );
+    await expect(page.locator('#start .semantic-action[data-kind="primary"]')).toHaveAttribute(
+      'data-effect',
+      'magnetic',
+    );
+    await expectLoadedImages(page);
+    await expectNoOverflow(page);
+    rendered.push(await page.locator('main').innerText());
+  }
+  expect(rendered[0]).toBe(rendered[1]);
+});
+
+test('the staged public proof opens all four bilingual artifacts and all eight canonical sources', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop-chromium');
+  const captureRoot = path.resolve('test-results/captures/public-locales');
+  await mkdir(captureRoot, { recursive: true });
+  await page.setViewportSize({ width: 304, height: 844 });
+  for (const proof of publicProofs) {
+    await page.goto(stagedUrl(proof.page));
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    const englishTitle = await page.title();
+    const englishHeading = await page.locator('h1').innerText();
+    expect(
+      await page
+        .locator('section.semantic-section')
+        .first()
+        .evaluate((section) => {
+          const title = section.querySelector<HTMLElement>('.semantic-section-title');
+          if (title === null) throw new Error('Public proof section title is absent.');
+          const parse = (value: string): readonly [number, number, number] => {
+            const channels = value
+              .match(/[\d.]+/gu)
+              ?.slice(0, 3)
+              .map(Number);
+            if (channels?.length !== 3) throw new Error(`Unsupported color: ${value}`);
+            return channels as unknown as readonly [number, number, number];
           };
+          const luminance = (value: string): number => {
+            const linear = (channel: number): number => {
+              const normalized = channel / 255;
+              return normalized <= 0.04045
+                ? normalized / 12.92
+                : ((normalized + 0.055) / 1.055) ** 2.4;
+            };
+            const [red, green, blue] = parse(value);
+            return 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue);
+          };
+          const foreground = luminance(getComputedStyle(title).color);
+          const background = luminance(getComputedStyle(section).backgroundColor);
+          return (
+            (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
+          );
         }),
+    ).toBeGreaterThanOrEqual(4.5);
+    await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+    expect(await page.title()).not.toBe(englishTitle);
+    expect(await page.locator('h1').innerText()).not.toBe(englishHeading);
+    await expect(page.getByRole('combobox', { name: 'Язык' })).toHaveValue('ru');
+    await expectNoOverflow(page);
+    if (proof.page === 'index.html') {
+      await page.screenshot({ path: path.join(captureRoot, 'landing-ru-narrow.png') });
+    }
+    expect(
+      await page.locator('.topbar > *').evaluateAll((items) =>
+        items.every((item) => {
+          const box = item.getBoundingClientRect();
+          return box.left >= 0 && box.right <= document.documentElement.clientWidth;
+        }),
+      ),
+    ).toBe(true);
+
+    for (const source of proof.sources) {
+      const route = siteRoutes.routes.find((candidate) => candidate.href === source);
+      expect(route?.kind, source).toBe('copy');
+      if (route === undefined || route.source === 'generated') {
+        throw new Error(`Canonical source route is absent: ${source}`);
+      }
+      const [stagedBytes, canonicalBytes] = await Promise.all([
+        readFile(path.join(stagedRoot, ...source.split('/'))),
+        readFile(path.resolve('website', route.source)),
+      ]);
+      expect(stagedBytes, source).toEqual(canonicalBytes);
+      await page.goto(stagedUrl(source));
+      expect((await page.locator('body').innerText()).trim().length, source).toBeGreaterThan(0);
+    }
+  }
+
+  for (const route of siteRoutes.routes) {
+    await page.goto(stagedUrl(route.href));
+    expect((await page.locator('body').innerText()).trim().length, route.href).toBeGreaterThan(0);
+  }
+});
+
+test('desktop stage keeps unrelated direct children in readable non-overlapping regions', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop-chromium');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 1280, height: 800 });
+
+  const stageGeometry = async (): Promise<{
+    readonly overlaps: readonly string[];
+    readonly missingMedia: readonly string[];
+  }> =>
+    page.locator('section.semantic-section[data-composition="stage"]').evaluateAll((sections) => {
+      const overlaps: string[] = [];
+      const missingMedia: string[] = [];
+      for (const section of sections) {
+        if (
+          section.getAttribute('data-media') !== 'natural' &&
+          section.querySelector('img') === null
+        ) {
+          missingMedia.push(section.id);
+        }
+        const children = [...section.children].filter((child): child is HTMLElement => {
+          if (!(child instanceof HTMLElement)) return false;
+          const rect = child.getBoundingClientRect();
+          return rect.width > 1 && rect.height > 1;
+        });
+        for (let leftIndex = 0; leftIndex < children.length; leftIndex += 1) {
+          const left = children[leftIndex];
+          if (left === undefined) continue;
+          const leftRect = left.getBoundingClientRect();
+          for (let rightIndex = leftIndex + 1; rightIndex < children.length; rightIndex += 1) {
+            const right = children[rightIndex];
+            if (right === undefined) continue;
+            const rightRect = right.getBoundingClientRect();
+            const overlapWidth =
+              Math.min(leftRect.right, rightRect.right) - Math.max(leftRect.left, rightRect.left);
+            const overlapHeight =
+              Math.min(leftRect.bottom, rightRect.bottom) - Math.max(leftRect.top, rightRect.top);
+            if (overlapWidth > 1 && overlapHeight > 1) {
+              overlaps.push(
+                `${section.id}:${left.tagName.toLowerCase()}.${left.className}:${right.tagName.toLowerCase()}.${right.className}`,
+              );
+            }
+          }
+        }
+      }
+      return { overlaps, missingMedia };
+    });
+
+  for (const proof of publicProofs) {
+    await page.goto(stagedUrl(proof.page));
+    expect(await stageGeometry(), `${proof.page}:en`).toEqual({ overlaps: [], missingMedia: [] });
+    await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
+    expect(await stageGeometry(), `${proof.page}:ru`).toEqual({ overlaps: [], missingMedia: [] });
+  }
+});
+
+test('landing and a non-landing demo execute reusable scenes, choreography, and pointer motion', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop-chromium');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(landingArtifacts[0].url);
+
+  const dataScene = page.locator('#data-scene');
+  const initialProgress = Number(
+    await dataScene.evaluate((node) => node.style.getPropertyValue('--scene-progress')),
+  );
+  await dataScene.scrollIntoViewIfNeeded();
+  await expect
+    .poll(() =>
+      dataScene.evaluate((node) => Number(node.style.getPropertyValue('--scene-progress'))),
+    )
+    .not.toBe(initialProgress);
+  await expect(dataScene).toHaveAttribute('data-choreography-active', '');
+  await expect(dataScene.locator('.semantic-point').first()).toHaveCSS('opacity', '1');
+
+  const workflow = page.locator('#workflow');
+  await workflow.scrollIntoViewIfNeeded();
+  const workflowImage = workflow.locator('img');
+  const imageBox = await workflowImage.boundingBox();
+  if (imageBox === null) throw new Error('Landing story image has no geometry.');
+  await page.mouse.move(imageBox.x + imageBox.width * 0.75, imageBox.y + imageBox.height * 0.35);
+  await expect(workflow).toHaveAttribute('data-pointer-active', '');
+  expect(await workflowImage.evaluate((image) => getComputedStyle(image).transform)).not.toBe(
+    'none',
+  );
+
+  await page.goto(generatedUrl('launch-readiness.html'));
+  const activation = page.locator('#activation');
+  await activation.scrollIntoViewIfNeeded();
+  await expect(activation).toHaveAttribute('data-scene-active', '');
+  await expect(activation).toHaveAttribute('data-choreography-active', '');
+  await expect(activation.locator('.semantic-point').first()).toHaveCSS('opacity', '1');
+  await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
+  await expect(page.locator('#activation')).toHaveAttribute('data-composition', 'split');
+  await expect(page.locator('#launch-signal')).toHaveAttribute('data-surface', 'mesh');
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(landingArtifacts[0].url);
+  await expect(page.locator('[data-reveal-pending], [data-reveal-motion]')).toHaveCount(0);
+  await expect(
+    page.locator('[data-scene-active], [data-choreography-motion], [data-pointer-active]'),
+  ).toHaveCount(0);
+  await expect(page.locator('#proof')).toBeVisible();
+  await expect(page.locator('#data-scene .semantic-point').first()).toHaveCSS('opacity', '1');
+  await mkdir(path.resolve('test-results/captures/public-motion'), { recursive: true });
+  await page.screenshot({
+    path: path.resolve('test-results/captures/public-motion/landing-reduced-motion.png'),
+  });
+});
+
+test('viewport matrix keeps content readable, mobile concise, and wide layouts occupied', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop-chromium');
+  const captureRoot = path.resolve('test-results/captures/public-visual-language');
+  await mkdir(captureRoot, { recursive: true });
+  const profiles = [
+    { name: 'ultrawide', width: 2560, height: 1440, maxHeight: 13_000 },
+    { name: 'tall', width: 1200, height: 1920, maxHeight: 14_000 },
+    { name: 'desktop', width: 1440, height: 1000, maxHeight: 13_000 },
+    { name: 'mobile', width: 390, height: 844, maxHeight: 15_000 },
+    { name: 'narrow', width: 304, height: 844, maxHeight: 17_000 },
+  ] as const;
+
+  for (const profile of profiles) {
+    await page.setViewportSize({ width: profile.width, height: profile.height });
+    await page.goto(landingArtifacts[0].url);
+    await expect(page.locator('h1')).toBeVisible();
+    await expectNoOverflow(page);
+    const geometry = await page.evaluate(() => {
+      const shell = document.querySelector<HTMLElement>('.report-shell');
+      const heading = document.querySelector<HTMLElement>('h1');
+      const sections = [...document.querySelectorAll<HTMLElement>('section.semantic-section')];
+      if (shell === null || heading === null) throw new Error('Landing geometry is incomplete.');
+      return {
+        height: document.documentElement.scrollHeight,
+        shellWidth: shell.getBoundingClientRect().width,
+        headingFits: heading.scrollWidth <= heading.clientWidth,
+        topbarContained: [...document.querySelectorAll<HTMLElement>('.topbar > *')].every(
+          (item) => {
+            const box = item.getBoundingClientRect();
+            return box.left >= 0 && box.right <= document.documentElement.clientWidth;
+          },
+        ),
+        sectionWidths: sections.map((section) => section.getBoundingClientRect().width),
+        sectionHeights: sections.map((section) => section.getBoundingClientRect().height),
       };
     });
-    expect(fieldManualState).toMatchObject({
-      sidebarPosition: 'sticky',
-      separated: true,
-      iconSize: 16,
-      navigationIconSize: 16,
-    });
-    for (const control of fieldManualState.controls) {
-      expect(control.height, control.name).toBeGreaterThanOrEqual(32);
-      expect(control.height, control.name).toBeLessThanOrEqual(40);
-      expect(control.paddingLeft, control.name).toBeLessThanOrEqual(13.2);
-      expect(control.paddingRight, control.name).toBeLessThanOrEqual(13.2);
-      expect(control.gap, control.name).toBe(6);
+    expect(geometry.height).toBeLessThan(profile.maxHeight);
+    expect(geometry.height).toBeGreaterThan(profile.height * 2);
+    expect(geometry.headingFits).toBe(true);
+    expect(geometry.topbarContained).toBe(true);
+    expect(geometry.sectionWidths.every((width) => width > 0 && width <= profile.width)).toBe(true);
+    expect(geometry.sectionHeights.every((height) => height > 120)).toBe(true);
+    if (profile.width >= 1200) {
+      expect(geometry.shellWidth).toBeGreaterThan(profile.width * 0.55);
     }
-    await expect(page.locator('#page-types .semantic-card')).toHaveCount(8);
-    await expect(page.locator('#proof .semantic-card')).toHaveCount(2);
-    await expect(
-      page.getByRole('heading', { name: 'Verbatim declarative source', level: 3 }),
-    ).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Compiled result', level: 3 })).toBeVisible();
-    await expect(
-      page.getByText('npx --yes agentic-report build ./website/landing', { exact: false }).first(),
-    ).toBeVisible();
-    await expect(
-      page.getByText('Use Node.js 24.18.0 or newer.', { exact: false }).first(),
-    ).toBeVisible();
-    await expect(
-      page.getByText('package-owned browser runtime is included and required', { exact: false }),
-    ).toBeVisible();
-    await expect(page.getByText('Fictional sample.', { exact: true })).toHaveCount(3);
-    for (const imageName of [
-      /Fictional incident review/u,
-      /Fictional vendor decision/u,
-      /Fictional launch review/u,
-    ]) {
-      await expectLoaded(page.getByRole('img', { name: imageName }));
-    }
-    await expectNoDocumentOverflow(page);
-    renderedContent.push(await page.locator('main').innerText());
-  }
-  expect(renderedContent[0]).toBe(renderedContent[1]);
-});
 
-test('landing proof links identify separately publishable examples and their public source targets', async ({
-  page,
-}, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop-chromium');
-  await page.goto(landingArtifacts[0].url);
-  const expectedLinks = [
-    ['examples/incident-review/index.html', 'examples/incident-review/report.md'],
-    ['examples/vendor-decision/index.html', 'examples/vendor-decision/report.md'],
-    ['examples/launch-readiness/index.html', 'examples/launch-readiness/report.md'],
-  ] as const;
-  for (const [live, source] of expectedLinks) {
-    await expect(page.locator(`#examples a[href="${live}"]`)).toHaveCount(1);
-    await expect(page.locator(`#examples a[href="${source}"]`)).toHaveCount(1);
-  }
-  await expect(page.getByRole('link', { name: 'Architecture', exact: true })).toHaveAttribute(
-    'href',
-    'docs/ARCHITECTURE.md',
-  );
-
-  const provenance = JSON.parse(
-    await readFile(path.resolve('website/landing/assets/screenshots.json'), 'utf8'),
-  ) as {
-    readonly screenshots: readonly {
-      readonly id: string;
-      readonly artifactSha256: string;
-      readonly liveRoute: string;
-      readonly publicSourceRoute: string;
-    }[];
-  };
-  const artifactNames = {
-    incident: 'incident-review.html',
-    vendor: 'vendor-decision.html',
-    launch: 'launch-readiness.html',
-  } as const;
-  const provenanceIds = {
-    'incident-review': 'incident',
-    'vendor-decision': 'vendor',
-    'launch-readiness': 'launch',
-  } as const;
-  for (const screenshot of provenance.screenshots) {
-    const exampleId = provenanceIds[screenshot.id as keyof typeof provenanceIds];
-    expect(exampleId).toBeDefined();
-    expect(sha256(await readFile(path.join(generatedRoot, artifactNames[exampleId])))).toBe(
-      screenshot.artifactSha256,
-    );
-    if (screenshot.id === 'launch-readiness') {
-      const proof = page.locator('#proof');
-      await expect(
-        proof.getByRole('link', { name: 'Read the complete launch source' }),
-      ).toHaveAttribute('href', screenshot.publicSourceRoute);
-      await expect(
-        proof.getByRole('link', { name: 'Open this fictional launch page' }),
-      ).toHaveAttribute('href', screenshot.liveRoute);
-      await expectLoaded(
-        proof.getByRole('img', {
-          name: 'Decision-oriented launch page with navigation, evidence cards, charts, and a timeline',
-        }),
-      );
-    }
-  }
-
-  await page.goto(exampleUrls.incident);
-  const ruledOut = page.getByRole('tab', { name: 'Ruled out' });
-  await ruledOut.click();
-  await expect(ruledOut).toHaveAttribute('aria-selected', 'true');
-  const communication = page
-    .locator('[data-disclosure]')
-    .filter({ hasText: 'Open the customer communication draft' });
-  await communication.getByText('Open the customer communication draft', { exact: true }).click();
-  await expect(communication).toHaveAttribute('open', '');
-
-  await page.goto(exampleUrls.vendor);
-  await page.getByRole('button', { name: 'Why not the top score?' }).click();
-  await expect(page.getByRole('dialog', { name: 'Ranking exception' })).toBeVisible();
-  await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Open the evidence checklist' }).click();
-  await expect(page.getByRole('dialog', { name: 'Reviewer evidence checklist' })).toBeVisible();
-
-  await page.goto(exampleUrls.launch);
-  const residualRisk = page.getByRole('tab', { name: 'Residual risk' });
-  await residualRisk.click();
-  await expect(residualRisk).toHaveAttribute('aria-selected', 'true');
-  const hold = page.getByRole('switch', { name: 'Show the automatic hold condition' });
-  await hold.click();
-  await expect(hold).toHaveAttribute('aria-checked', 'true');
-});
-
-test('captures the complete public-landing acceptance states in both formats', async ({
-  page,
-}, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop-chromium');
-  const captureRoot = path.resolve('test-results/step-4-captures/landing');
-  await rm(captureRoot, { recursive: true, force: true });
-  await mkdir(captureRoot, { recursive: true });
-
-  const capture = async (
-    artifact: (typeof landingArtifacts)[number],
-    state: string,
-    options: {
-      readonly width: number;
-      readonly height: number;
-      readonly theme?: 'light' | 'dark';
-      readonly reducedMotion?: 'reduce' | 'no-preference';
-      readonly target?: string;
-      readonly collapse?: boolean;
-      readonly drawer?: boolean;
-    },
-  ): Promise<void> => {
-    await page.setViewportSize({ width: options.width, height: options.height });
-    await page.emulateMedia({
-      colorScheme: options.theme === 'dark' ? 'dark' : 'light',
-      reducedMotion: options.reducedMotion ?? 'no-preference',
-    });
-    await page.goto(artifact.url);
-    await page.locator('html').evaluate((element, theme) => {
-      element.dataset.theme = theme;
-    }, options.theme ?? 'light');
-    if (options.target !== undefined) {
-      const target = page.locator(options.target);
-      await target.evaluate((element) => {
-        element.scrollIntoView({ behavior: 'instant', block: 'start' });
-      });
-      await expect(target).not.toHaveAttribute('data-reveal-pending', '');
-      await expect(target).toHaveCSS('opacity', '1');
-      await expect(target).toHaveCSS('transform', 'none');
-    }
-    if (options.collapse === true) {
-      await page.getByRole('button', { name: 'Hide contents' }).click();
-    }
-    if (options.drawer === true) {
-      await page.getByRole('button', { name: 'Open contents' }).click();
-      await expect(page.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
-      await expect(page.locator('[data-navigation] a')).toHaveCount(9);
-      await expect(page.locator('[data-nav-dialog]')).toHaveCSS('opacity', '1');
-      await expect(page.locator('[data-nav-dialog]')).toHaveCSS(
-        'transform',
-        /^(?:none|matrix\(1, 0, 0, 1, 0, 0\))$/u,
-      );
-      const drawerBounds = await page.locator('[data-nav-dialog]').evaluate((element) => {
-        const box = element.getBoundingClientRect();
-        return { x: box.x, height: box.height, width: box.width };
-      });
-      expect(drawerBounds.x).toBe(0);
-      expect(drawerBounds.height).toBe(options.height);
-      expect(drawerBounds.width).toBeLessThan(options.width);
-      const closeMetrics = await page
-        .getByRole('button', { name: 'Close', exact: true })
-        .evaluate((button) => {
-          const style = getComputedStyle(button);
-          return {
-            height: button.getBoundingClientRect().height,
-            paddingLeft: Number.parseFloat(style.paddingLeft),
-            paddingRight: Number.parseFloat(style.paddingRight),
-            gap: Number.parseFloat(style.gap),
-          };
-        });
-      expect(closeMetrics).toEqual({ height: 40, paddingLeft: 12, paddingRight: 12, gap: 6 });
-    }
-    await expectNoDocumentOverflow(page);
     await page.screenshot({
-      path: path.join(captureRoot, `${artifact.format}-${state}.png`),
+      path: path.join(captureRoot, `${profile.name}-initial.png`),
     });
-  };
-
-  for (const artifact of landingArtifacts) {
-    for (const width of [320, 390] as const) {
-      await page.goto(artifact.url);
-      await expectCompactFieldManualHeader(page, width, 'Proof');
-      await page.goto(`${artifact.url}#examples`);
-      await expectCompactFieldManualHeader(page, width, 'Examples');
-    }
-    await capture(artifact, 's1-hero-light-expanded', { width: 1440, height: 1000 });
-    await capture(artifact, 's2-examples-dark-expanded', {
-      width: 1440,
-      height: 1000,
-      theme: 'dark',
-      target: '#examples',
-    });
-    await capture(artifact, 's3-light-collapsed', {
-      width: 1280,
-      height: 900,
-      collapse: true,
-    });
-    await capture(artifact, 's4-page-types-1024', {
-      width: 1024,
-      height: 900,
-      target: '#page-types',
-    });
-    expect(
-      await page
-        .locator('#page-types .semantic-cards')
-        .evaluate(
-          (element) =>
-            getComputedStyle(element).gridTemplateColumns.split(' ').filter(Boolean).length,
-        ),
-    ).toBe(2);
-    await capture(artifact, 's5-mobile-hero', { width: 390, height: 844 });
-    expect(
-      await page
-        .getByRole('img', {
-          name: 'Fictional regional beta launch page compiled from the public declarative source',
-        })
-        .first()
-        .evaluate((element) => element.getBoundingClientRect().top < innerHeight),
-    ).toBe(true);
-    await capture(artifact, 's6-mobile-drawer-dark', {
-      width: 390,
-      height: 844,
-      theme: 'dark',
-      drawer: true,
-    });
-    await capture(artifact, 's7-reduced-proof', {
-      width: 390,
-      height: 844,
-      reducedMotion: 'reduce',
-      target: '#proof',
-    });
-    await expect(
-      page.locator('[data-scroll-progress-indicator], [data-reveal-pending]'),
-    ).toHaveCount(0);
-    await capture(artifact, 's7-reduced-examples', {
-      width: 390,
-      height: 844,
-      reducedMotion: 'reduce',
-      target: '#examples',
-    });
-    await expect(
-      page.locator('[data-scroll-progress-indicator], [data-reveal-pending]'),
-    ).toHaveCount(0);
-    await capture(artifact, 's9-self-hosting-proof', {
-      width: 1440,
-      height: 1000,
-      target: '#proof',
+    await page.locator('#data-scene').scrollIntoViewIfNeeded();
+    await expectSettledSection(page.locator('#data-scene'));
+    await page.locator('#examples').scrollIntoViewIfNeeded();
+    await expectSettledSection(page.locator('#examples'));
+    await page.screenshot({
+      path: path.join(captureRoot, `${profile.name}-scrolled.png`),
     });
   }
-
-  const expected = landingArtifacts.flatMap((artifact) =>
-    [
-      's1-hero-light-expanded',
-      's2-examples-dark-expanded',
-      's3-light-collapsed',
-      's4-page-types-1024',
-      's5-mobile-hero',
-      's6-mobile-drawer-dark',
-      's7-reduced-proof',
-      's7-reduced-examples',
-      's9-self-hosting-proof',
-    ].map((state) => `${artifact.format}-${state}.png`),
-  );
-  expect((await readdir(captureRoot)).sort()).toEqual(expected.sort());
 });
 
-test('recaptures the six dense fictional-example states after runtime changes', async ({
+async function expectSettledSection(section: Locator): Promise<void> {
+  await expect(section).not.toHaveAttribute('data-reveal-pending', '');
+  await expect
+    .poll(() =>
+      section.evaluate((owner) =>
+        [...owner.children].every((child) => {
+          const style = getComputedStyle(child);
+          return style.opacity === '1';
+        }),
+      ),
+    )
+    .toBe(true);
+  await expect
+    .poll(() =>
+      section
+        .locator('[data-choreography-motion]')
+        .evaluateAll((items) => items.every((item) => getComputedStyle(item).opacity === '1')),
+    )
+    .toBe(true);
+}
+
+test('selection review remains anchored and non-reflowing on desktop and constrained mobile', async ({
   page,
-}, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop-chromium');
-  const captureRoot = path.resolve('test-results/step-4-captures/dense-examples');
-  await rm(captureRoot, { recursive: true, force: true });
+}, info) => {
+  test.skip(info.project.name !== 'desktop-chromium');
+  const captureRoot = path.resolve('test-results/captures/public-review');
   await mkdir(captureRoot, { recursive: true });
-  await page.setViewportSize({ width: 320, height: 800 });
-  for (const [name, url] of Object.entries(exampleUrls)) {
-    for (const theme of ['light', 'dark'] as const) {
-      await page.emulateMedia({ colorScheme: theme });
-      await page.goto(url);
-      await page.locator('html').evaluate((element, value) => {
-        element.dataset.theme = value;
-      }, theme);
-      await expectNoDocumentOverflow(page);
-      await page.screenshot({ path: path.join(captureRoot, `${name}-${theme}.png`) });
-    }
+
+  for (const profile of [
+    { name: 'desktop', width: 1440, height: 1000 },
+    { name: 'mobile', width: 390, height: 844 },
+  ] as const) {
+    await page.setViewportSize({ width: profile.width, height: profile.height });
+    await page.goto(landingArtifacts[0].url);
+    const target = page.locator('#review p[data-review-target]').filter({
+      hasText: 'There are no special review blocks',
+    });
+    await target.scrollIntoViewIfNeeded();
+    const before = await reportGeometry(page);
+    await selectText(target, 'no special review blocks');
+    await page.getByRole('button', { name: 'Create note' }).click();
+    await expect(page.locator('[data-review-popover]')).toBeVisible();
+    await page.locator('[data-review-message]').fill(`${profile.name} integrated note`);
+    await page.getByRole('button', { name: 'Add message' }).click();
+    await expect(page.locator('[data-review-highlight-marker]')).toHaveCount(1);
+    const after = await reportGeometry(page);
+    expect(after.documentWidth).toBe(before.documentWidth);
+    expect(after.mainLeft).toBeCloseTo(before.mainLeft, 1);
+    expect(after.mainWidth).toBeCloseTo(before.mainWidth, 1);
+    expect(after.targetLeft).toBeCloseTo(before.targetLeft, 1);
+    expect(after.targetWidth).toBeCloseTo(before.targetWidth, 1);
+    expect(Math.abs(after.scrollY - before.scrollY)).toBeLessThanOrEqual(2);
+
+    const popover = await page.locator('[data-review-popover]').boundingBox();
+    if (popover === null) throw new Error('Review popover has no geometry.');
+    expect(popover.x).toBeGreaterThanOrEqual(0);
+    expect(popover.y).toBeGreaterThanOrEqual(0);
+    expect(popover.x + popover.width).toBeLessThanOrEqual(profile.width + 1);
+    expect(popover.y + popover.height).toBeLessThanOrEqual(profile.height + 1);
+    await page.screenshot({ path: path.join(captureRoot, `${profile.name}-open-thread.png`) });
+
+    await page.getByRole('button', { name: 'Close' }).click();
+    await page.locator('[data-review-highlight-marker]').click();
+    await expect(page.locator('[data-review-thread-messages]')).toContainText(
+      `${profile.name} integrated note`,
+    );
   }
-  expect((await readdir(captureRoot)).sort()).toEqual([
-    'incident-dark.png',
-    'incident-light.png',
-    'launch-dark.png',
-    'launch-light.png',
-    'vendor-dark.png',
-    'vendor-light.png',
-  ]);
 });
+
+async function selectText(target: Locator, needle: string): Promise<void> {
+  await target.evaluate((owner, value) => {
+    const walker = document.createTreeWalker(owner, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      const index = node.textContent?.indexOf(value) ?? -1;
+      if (index < 0) continue;
+      const range = document.createRange();
+      range.setStart(node, index);
+      range.setEnd(node, index + value.length);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      owner.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      return;
+    }
+    throw new Error(`Selection text is absent: ${value}`);
+  }, needle);
+}
+
+async function reportGeometry(page: Page): Promise<{
+  readonly documentWidth: number;
+  readonly mainLeft: number;
+  readonly mainWidth: number;
+  readonly targetLeft: number;
+  readonly targetWidth: number;
+  readonly scrollY: number;
+}> {
+  return page.evaluate(() => {
+    const main = document.querySelector<HTMLElement>('main');
+    const target = [
+      ...document.querySelectorAll<HTMLElement>('#review p[data-review-target]'),
+    ].find((node) => node.textContent?.includes('There are no special review blocks'));
+    if (main === null || target === undefined) throw new Error('Review geometry target is absent.');
+    const mainBox = main.getBoundingClientRect();
+    const targetBox = target.getBoundingClientRect();
+    return {
+      documentWidth: document.documentElement.scrollWidth,
+      mainLeft: mainBox.left,
+      mainWidth: mainBox.width,
+      targetLeft: targetBox.left,
+      targetWidth: targetBox.width,
+      scrollY,
+    };
+  });
+}
