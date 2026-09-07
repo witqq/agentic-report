@@ -12,6 +12,7 @@ language: ru
 Текущие сигналы о кандидате на релиз, расположенные для быстрого просмотра без отдельного фреймворка
 панелей.
 
+::::::section{title="Сигнал релиза" id="signal" nav="Сигнал" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 ::::cards
 :::card{title="Сборка"}
 **Проходит**
@@ -34,8 +35,9 @@ language: ru
 Отправка и публикация остаются отдельными решениями.
 :::
 ::::
+::::::
 
-## Состояние направлений
+::::::section{title="Состояние направлений" id="status" nav="Состояние" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal"}
 
 | Направление     | Владелец         | Состояние     | Следующее подтверждение |
 | --------------- | ---------------- | ------------- | ----------------------- |
@@ -49,8 +51,9 @@ language: ru
 :::callout{kind="warning" title="Сохраняйте безопасность транспорта"}
 Пути и подписанные URL не должны раскрывать учётные данные ни в человекочитаемых, ни в машинных результатах.
 :::
+::::::
 
-## Следующая последовательность
+::::::section{title="Следующая последовательность" id="next" nav="Дальше" width="wide" tone="accent" composition="stack" viewport="adaptive" section-density="compact" type="display" surface="glow" transition="stagger" choreography="cascade"}
 
 :::steps{title="Перейти к следующей контрольной точке"}
 
@@ -58,3 +61,4 @@ language: ru
 2. Изучите визуальные снимки.
 3. Проверьте установленный пакет.
    :::
+   ::::::

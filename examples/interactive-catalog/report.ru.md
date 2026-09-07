@@ -19,7 +19,7 @@ language: ru
 
 Объяснение :term[пакета решения]{key="decision-packet"} остаётся доступным в каждом месте, где встречается понятие.
 
-## Копируемый текст
+::::::section{title="Копируемый смысл" id="copy" nav="Копирование" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 
 :::copyable
 Выполняйте развёртывание после завершения **двух проверок**.
@@ -27,8 +27,9 @@ language: ru
 Прочитайте [инструкцию по откату](https://example.com/runbook) и подтвердите
 :term[пакет решения]{key="decision-packet"} перед передачей.
 :::
+::::::
 
-## Последовательное раскрытие
+::::::section{title="Последовательное раскрытие" id="detail" nav="Подробности" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grain" transition="reveal"}
 
 :::disclosure{title="Почему исходник остаётся декларативным" open="true"}
 Автор выбирает намерение и начальное состояние. Пакет предоставляет семантический HTML, поведение фокуса
@@ -55,21 +56,23 @@ language: ru
 Проверьте созданную страницу в браузере.
 :::
 ::::
+::::::
 
-## Сфокусированные оверлеи
+::::::section{title="Сфокусированные оверлеи" id="overlays" nav="Оверлеи" width="wide" tone="plain" composition="mosaic" viewport="adaptive" section-density="compact" type="editorial" surface="grid" transition="stagger" choreography="cascade"}
 
 :::modal{title="Контрольный список релиза" trigger="Открыть контрольный список релиза"}
 
-- Проверьте исходник.
-- Соберите выбранный результат.
-- Изучите браузерный артефакт.
+- Замените примерное содержимое.
+- Соберите выбранный результат: сборка проверит исходник перед записью.
+- Откройте браузерный артефакт прямо с диска.
   :::
 
 :::popover{title="Примечание о переносимости" trigger="Показать примечание о переносимости"}
 После сборки странице не нужен локальный веб-сервер.
 :::
+::::::
 
-## Поиск и раскрытие
+::::::section{title="Поиск, раскрытие и демонстрация" id="controls" nav="Управление" width="wide" tone="accent" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="glow" transition="reveal"}
 
 :::filter{title="Фильтр возможностей компонентов" placeholder="Найти возможности"}
 
@@ -89,8 +92,7 @@ language: ru
 Авторы не предоставляют JSX, CSS или браузерный JavaScript.
 :::
 
-## Ограниченная демонстрация
-
 :::demo{title="Оценить число редакций" start="2" step="1"}
 Счётчик — одно намеренно ограниченное взаимодействие из пакета.
 :::
+::::::

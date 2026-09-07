@@ -633,11 +633,59 @@ const editedSource = `${await readFile(firstUseEntry, 'utf8')}\nAgent-authored e
 const credentialBearingSource = `${editedSource}\n![Broken](https://alice:secret@local.test/image.png?token=private&X-Amz-Credential=credential-sentinel&X-Amz-Signature=signature-sentinel&X-Amz-Security-Token=security-token-sentinel)\n`;
 await writeFile(firstUseEntry, credentialBearingSource);
 
+const firstUseOutput = path.join(firstUseProject, 'built.html');
+await writeFile(firstUseOutput, 'preserve first-use output sentinel');
+const rejectedFirstUseBuild = await runCandidateNpx(
+  ['build', firstUseProject, '--output', firstUseOutput, '--json'],
+  consumerDirectory,
+);
+const rejectedFirstUseDiagnostic = requireSingleNdjsonRecord(
+  rejectedFirstUseBuild,
+  'installed direct first-use build diagnostic',
+);
+if (
+  rejectedFirstUseBuild.exitCode !== 1 ||
+  rejectedFirstUseBuild.stderr !== '' ||
+  rejectedFirstUseDiagnostic.type !== 'diagnostic' ||
+  rejectedFirstUseDiagnostic.code !== 'REMOTE_ASSET_BLOCKED' ||
+  /alice|secret|private|path-sentinel|credential-sentinel|signature-sentinel|security-token-sentinel/u.test(
+    rejectedFirstUseBuild.stdout,
+  ) ||
+  !rejectedFirstUseBuild.stdout.includes('[REDACTED]') ||
+  (await readFile(firstUseOutput, 'utf8')) !== 'preserve first-use output sentinel'
+) {
+  throw new Error(
+    'Installed direct first-use build did not validate the source before preserving its output.',
+  );
+}
+
+await writeFile(firstUseEntry, editedSource);
+const firstUseBuild = await runCandidateNpx(
+  ['build', firstUseProject, '--output', firstUseOutput, '--json'],
+  consumerDirectory,
+);
+const firstUseBuildRecord = requireSingleNdjsonRecord(
+  firstUseBuild,
+  'installed first-use build result',
+);
+if (
+  firstUseBuild.exitCode !== 0 ||
+  firstUseBuild.stderr !== '' ||
+  firstUseBuildRecord.type !== 'result' ||
+  firstUseBuildRecord.outputPath !== redactCredentialPath(firstUseOutput) ||
+  firstUseBuild.stdout.includes('path-sentinel') ||
+  !(await readFile(firstUseOutput, 'utf8')).includes('Agent-authored edit.')
+) {
+  throw new Error('Installed CLI did not complete the direct first-use build.');
+}
+const firstUseBytes = await readFile(firstUseOutput);
+
 const analysisSingleSentinel = path.join(firstUseProject, 'report.html');
 const analysisDirectorySentinel = path.join(firstUseProject, 'report-artifact', 'sentinel.txt');
 await writeFile(analysisSingleSentinel, 'preserve single analysis sentinel');
 await mkdir(path.dirname(analysisDirectorySentinel));
 await writeFile(analysisDirectorySentinel, 'preserve directory analysis sentinel');
+await writeFile(firstUseEntry, credentialBearingSource);
 
 for (const command of ['validate', 'inspect']) {
   const broken = await runCommand(binary, [command, firstUseProject, '--json'], consumerDirectory);
@@ -659,7 +707,8 @@ for (const command of ['validate', 'inspect']) {
 }
 if (
   (await readFile(analysisSingleSentinel, 'utf8')) !== 'preserve single analysis sentinel' ||
-  (await readFile(analysisDirectorySentinel, 'utf8')) !== 'preserve directory analysis sentinel'
+  (await readFile(analysisDirectorySentinel, 'utf8')) !== 'preserve directory analysis sentinel' ||
+  !(await readFile(firstUseOutput)).equals(firstUseBytes)
 ) {
   throw new Error('Installed analysis commands mutated author output.');
 }
@@ -768,26 +817,7 @@ if (
   throw new Error('Installed ESM and CLI analysis routes do not describe the same project.');
 }
 
-const firstUseOutput = path.join(firstUseProject, 'built.html');
-const firstUseBuild = await runCandidateNpx(
-  ['build', firstUseProject, '--output', firstUseOutput, '--json'],
-  consumerDirectory,
-);
-const firstUseBuildRecord = requireSingleNdjsonRecord(
-  firstUseBuild,
-  'installed first-use build result',
-);
-if (
-  firstUseBuild.exitCode !== 0 ||
-  firstUseBuild.stderr !== '' ||
-  firstUseBuildRecord.type !== 'result' ||
-  firstUseBuildRecord.outputPath !== redactCredentialPath(firstUseOutput) ||
-  firstUseBuild.stdout.includes('path-sentinel') ||
-  !(await readFile(firstUseOutput, 'utf8')).includes('Agent-authored edit.')
-) {
-  throw new Error('Installed CLI did not build the fixed first-use project.');
-}
-const firstUseHtml = await readFile(firstUseOutput, 'utf8');
+const firstUseHtml = firstUseBytes.toString('utf8');
 const encodedReviewManifest = /<template data-review-manifest="true">([\s\S]*?)<\/template>/u.exec(
   firstUseHtml,
 )?.[1];
@@ -954,14 +984,6 @@ await writeFile(
   directoryJourneyEntry,
   `${await readFile(directoryJourneyEntry, 'utf8')}\nDirectory journey agent edit.\n`,
 );
-for (const command of ['validate', 'inspect'] as const) {
-  const arguments_ = [command, directoryJourneyProject, '--format', 'directory', '--json'];
-  const result = await runCommand(binary, arguments_, consumerDirectory);
-  const record = requireSingleNdjsonRecord(result, `installed directory ${command} result`);
-  if (result.exitCode !== 0 || result.stderr !== '' || record.type !== 'result') {
-    throw new Error(`Installed directory first-use ${command} journey failed.`);
-  }
-}
 const directoryJourneyOutput = path.join(directoryJourneyProject, 'built-directory');
 const directoryJourneyBuild = await runCommand(
   binary,
@@ -992,6 +1014,17 @@ if (
 ) {
   throw new Error('Installed CLI did not complete the directory first-use build journey.');
 }
+for (const command of ['validate', 'inspect'] as const) {
+  const arguments_ = [command, directoryJourneyProject, '--format', 'directory', '--json'];
+  const result = await runCommand(binary, arguments_, consumerDirectory);
+  const record = requireSingleNdjsonRecord(
+    result,
+    `installed optional directory ${command} result`,
+  );
+  if (result.exitCode !== 0 || result.stderr !== '' || record.type !== 'result') {
+    throw new Error(`Installed optional directory ${command} check failed.`);
+  }
+}
 const repeatedDirectoryJourneyOutput = path.join(directoryJourneyProject, 'built-directory-again');
 await execFileAsync(
   binary,
@@ -1012,6 +1045,8 @@ if (
   throw new Error('Independent installed CLI processes produced different directory trees.');
 }
 const candidateBrowserEvidence = await inspectCandidateArtifacts([
+  { format: 'single-file', path: firstUseOutput },
+  { format: 'directory', path: path.join(directoryJourneyOutput, 'index.html') },
   { format: 'single-file', path: installedPriorSingle, expectReviewThreads: true },
   {
     format: 'directory',

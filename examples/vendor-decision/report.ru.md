@@ -63,7 +63,7 @@ language: ru
 :::
 :::::
 
-:::::section{title="Взвешенное сравнение" id="evidence" nav="Данные" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="grid" transition="stagger" scene="progress" choreography="cascade"}
+::::::section{title="Взвешенное сравнение" id="evidence" nav="Данные" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="grid" transition="stagger" scene="progress" choreography="cascade"}
 
 :::::chart{type="bar" title="Взвешенная оценка после проверки данных" description="Демонстрационные оценки: Meridian Reply — 89, Cedar Assist — 84, Quill Support — 77; Meridian остаётся недопустимым из-за отдельного обязательного ограничения." x-label="Вымышленный кандидат" y-label="Взвешенная оценка из 100"}
 ::::series{label="Взвешенная оценка"}
@@ -111,7 +111,7 @@ Cedar должен подтвердить распространение уда�
 - Запишите для каждого условия пилота владельца, срок и последствие выхода.
   :::
 
-:::::
+::::::
 
 :::::section{title="Решение и условия" id="conditions" nav="Условия пилота" width="wide" align="start" tone="accent" composition="stack" viewport="adaptive" section-density="compact" type="editorial" surface="glow" transition="reveal" choreography="cascade"}
 

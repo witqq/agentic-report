@@ -22,7 +22,7 @@ demonstrate the report engine; replace it with verified project evidence before 
 Write Markdown, choose a page shape, and build a polished offline artifact without hand-building another
 frontend application.
 
-## One declarative path
+::::::section{title="One declarative path" id="value" nav="Value" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="immersive" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 
 ::::cards
 :::card{title="Start with meaning"}
@@ -35,22 +35,24 @@ Themes, layouts, and compact tokens are validated data—not CSS or callbacks.
 Open one self-contained file directly in a browser or choose a hashed directory artifact.
 :::
 ::::
+::::::
 
-## Built for the real loop
+::::::section{title="Built for the real loop" id="proof" nav="Proof" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal" scene="progress"}
 
-:::decision{title="Create → validate → inspect → build"}
-The same production preparation powers every step, so analysis describes the artifact that will actually be
-built.
+:::decision{title="Create → edit → build → open"}
+One build validates the source and produces the artifact you review. Use separate diagnostics only when a
+source error needs more detail.
 :::
+::::::
 
-## Make the first page
+::::::section{title="Make the first page" id="start" nav="Start" width="wide" align="center" tone="accent" composition="stage" viewport="bounded" section-density="immersive" type="display" surface="glow" transition="stagger"}
 
 ```sh
 agentic-report init ./my-page
-agentic-report validate ./my-page
 agentic-report build ./my-page --output ./my-page.html
 ```
 
 :::callout{kind="success" title="No server required"}
 The generated page opens through `file://` with package-owned interaction and local assets.
 :::
+::::::

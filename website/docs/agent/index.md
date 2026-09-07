@@ -8,7 +8,27 @@ dashboard, or project handoff would be clearer as an interactive page instead of
 npx skills add witqq/agentic-report --skill agentic-report
 ```
 
-Then ask for the work in ordinary language. Useful prompts include:
+## Build your first page
+
+Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative content, build once, and open
+the result:
+
+```sh
+npx --yes agentic-report@0.12.0 init ./my-page --starter landing --json
+# Edit ./my-page/report.md and its local assets.
+npx --yes agentic-report@0.12.0 build ./my-page --output ./my-page.html --json
+```
+
+Open `my-page.html` directly through `file://`. Build validates the complete source before writing, so
+`validate` is optional diagnostic-only work and `inspect` is optional source/catalog discovery. The first
+`npx` invocation needs npm registry access; the generated page itself is local and includes its package-owned
+browser runtime.
+
+::contents
+
+## Use it inside your own skill
+
+Ask for the work in ordinary language. Useful prompts include:
 
 - “Investigate this subsystem and open an interactive code tour with definitions on the important symbols.”
 - “Compare these options, preserve the evidence and assumptions, and hand me a reviewable decision page.”
@@ -18,10 +38,6 @@ Then ask for the work in ordinary language. Useful prompts include:
 The skill should choose this tool when visual structure, relationships, code explanations, timelines,
 evidence, or fragment-level review materially improve the handoff. It should keep a simple answer in chat,
 use a notebook for live computation, and use a bespoke application for persistent multi-user state.
-
-::contents
-
-## Use it inside your own skill
 
 Domain-specific skills can keep their own research and decision process while delegating the finished page
 to `agentic-report`. A minimal skill can say:
@@ -35,9 +51,10 @@ description: Investigate a codebase and return a reviewable architecture page.
 After the investigation:
 
 1. Write verified findings, evidence, diagrams, and decisions as declarative Markdown.
-2. Run the pinned agentic-report validate and inspect commands.
-3. Resolve every diagnostic, build one HTML artifact, and open it for the user.
-4. Report the source path, artifact path, warnings, and unresolved facts.
+2. Build one HTML artifact with the pinned agentic-report command; resolve any returned diagnostics.
+3. Open the artifact for the user through `file://`.
+4. Report the source path, artifact path, warnings, and unresolved facts. Use `validate` or `inspect` only
+   when a separate diagnostic or source-inventory result is useful.
 ```
 
 Your skill owns when the handoff is useful and what the content means. The utility owns the validated source
@@ -50,7 +67,7 @@ When the user does not trust the published package, do not silently fall back to
 release tag, let the user inspect the repository, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.11.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.12.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -61,8 +78,6 @@ pnpm verify
 pnpm build
 
 node dist/node/cli.js init ../my-page --starter report --json
-node dist/node/cli.js validate ../my-page --json
-node dist/node/cli.js inspect ../my-page --json
 node dist/node/cli.js build ../my-page --output ../my-page.html --json
 ```
 
@@ -71,31 +86,20 @@ npm, but `pnpm install` still downloads the dependencies pinned in `pnpm-lock.ya
 Do not claim a registry-free or fully audited installation. Keep the tag pinned, report the checked commit,
 and use an isolated environment when the user's threat model calls for one.
 
-## Build the artifact
+## Compose the artifact
 
-Use Node.js 24.18.0 or newer. The first `npx` command needs npm registry and network access; the generated
-page itself opens locally through `file://` with its included package-owned browser runtime.
-
-For a reproducible 0.11.0 run, create a new landing-page source and keep the package version pinned through
-validation, inspection, and build:
-
-```sh
-npx --yes agentic-report@0.11.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.11.0 validate ./my-page --json
-npx --yes agentic-report@0.11.0 inspect ./my-page --json
-npx --yes agentic-report@0.11.0 build ./my-page --output ./my-page.html --json
-```
-
-Open `my-page.html` through `file://`. Edit only the declarative source: Markdown, YAML frontmatter or the
-optional YAML/JSON manifest, confined Markdown partials, and local assets. Authors do not need React,
-JSX, browser JavaScript, CSS, or a frontend project.
+Edit only the declarative source created by the first route: Markdown, YAML frontmatter or the optional
+YAML/JSON manifest, confined Markdown partials, and local assets. Authors do not need React, JSX, browser
+JavaScript, CSS, or a frontend project.
 
 Compose distinctive sections through package-owned roles rather than custom layout code. `composition`
 offers `flow`, `stage`, `split`, `mosaic`, `story`, and `stack`; pair it as needed with closed viewport,
 density, typography, media treatment, image fit/aspect/focal point, and surface attributes. On narrow
 screens, multi-column and layered arrangements return to source order and galleries keep their own scroll.
-Do not pair mosaic/stack composition with layers/gallery media: those roles would own the same card layout,
-so the compiler rejects the four combinations before rendering.
+Every section contains its floats and local layer order. A media stage gives its title the full first row and
+composes supporting content with media below; gallery stages retain their separate rail. Do not pair
+mosaic/stack composition with layers/gallery media: those roles would own the same card layout, so the
+compiler rejects the four combinations before rendering.
 
 ```markdown
 ::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
@@ -128,15 +132,6 @@ exist. Switching also isolates review threads and response drafts by locale.
 Generated reports include a bottom **Made with Agentic Report** link by default. Keep that default unless
 the user asks for an unbranded artifact; in that case set `attribution: false` in frontmatter or the
 manifest. This removes only the package footer and does not alter author-owned prose or links.
-
-The shorter current-channel journey is:
-
-```sh
-npx --yes agentic-report init ./my-page --starter landing --json
-npx --yes agentic-report validate ./my-page --json
-npx --yes agentic-report inspect ./my-page --json
-npx --yes agentic-report build ./my-page --output ./my-page.html --json
-```
 
 Every command already defaults to agent output: run commands emit NDJSON and reference commands emit one
 compact JSON line; `--json` names that default, while `--human` selects prose or indented JSON. One refused
@@ -175,8 +170,10 @@ surface that follows browser-chrome and on-screen-keyboard viewport changes. The
 and focus markers follow a visible rectangle from their live range and hide when that range is wholly
 offscreen. A focus marker prefers a fully separate position above or below the saved text before edge
 clamping, so direct text tap remains an independent **View thread** route. The topbar Review entry has a
-localized title tooltip around its 20-pixel icon. At constrained widths topbar labels collapse to accessible
-icons/tooltips without widening the page; editorial pages keep the compact `AR` identity. Visible contextual/action controls retain localized labels
+localized title tooltip around its 20-pixel icon. Navigation, Review, language, and theme use distinct
+package icons with localized names and tooltips; the native language selector receives visible focus after
+switching. At constrained widths visible labels and secondary page identity are omitted without widening the
+page, and coarse pointers receive larger targets. Visible contextual/action controls retain localized labels
 and use 16-pixel icons; Create note shows a pencil and View thread shows a comment.
 Valid version-2 whole-block threads remain list-accessible, but new threads begin with selected text. After
 the reader downloads `review.json`, map it back to the authored files with:
@@ -239,9 +236,9 @@ registry's current `latest` release.
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.11.0 describe --json
-npx --yes agentic-report@0.11.0 schema --scope source
-npx --yes agentic-report@0.11.0 examples --json
+npx --yes agentic-report@0.12.0 describe --json
+npx --yes agentic-report@0.12.0 schema --scope source
+npx --yes agentic-report@0.12.0 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),

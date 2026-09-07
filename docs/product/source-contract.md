@@ -105,6 +105,11 @@ Six trees are packaged: report (`report`, with stable canonical ID `basic`), `re
 `tutorial`, `dashboard`, and `landing`. The report tree is the default and every registry entry is
 `report.md`. A starter is also a buildable example; there is no separate generator contract.
 
+The normal first-use path is `init`, edit the generated Markdown and local assets, run one `build`, and open
+the resulting artifact through `file://`. Build runs the complete source and render preparation before it
+publishes output, so neither `validate` nor `inspect` is a prerequisite. Use those read-only operations only
+when their separate diagnostic or discovery result is useful.
+
 The ESM `validateReport({ input, format?, review? })` and `inspectReport({ input, format?, review? })` operations use the
 production source and render preparation without output publication. CLI `validate [input] [--format
 <format>] [--json]` and `inspect [input] [--format <format>] [--json]` are adapters of the same
@@ -198,10 +203,11 @@ recalculate from both window and `visualViewport` scroll/resize signals, so brow
 keyboard cannot strand them off screen. The contextual action and focus markers measure their complete
 surface, clamp against a visible rectangle from the live range, and hide when the range is wholly offscreen.
 A saved-range marker prefers a fully separated position above the range, then below it, before edge clamping;
-this keeps direct marker activation distinct from tapping the highlighted text. The topbar Review entry uses
-a localized accessible name and title tooltip around its 20-pixel icon. At constrained widths topbar labels
-collapse to their accessible icons and tooltips without imposing a document minimum width; the editorial
-shell uses its compact `AR` identity. Visible contextual/action controls retain localized labels and use
+this keeps direct marker activation distinct from tapping the highlighted text. Navigation, Review, language,
+and theme use distinct package-owned topbar icons with localized accessible names and title tooltips. The
+native language selector remains the locale input and receives visible focus after switching. At constrained
+widths visible labels and secondary page identity are omitted without imposing a document minimum width, and
+coarse pointers receive larger targets. Visible contextual/action controls retain localized labels and use
 16-pixel icons; Create note shows a pencil and View thread shows a comment.
 
 The inert manifest contains at most 5,000 targets and at most 750,000 serialized bytes. These are independent
@@ -404,10 +410,13 @@ and `media-fit`, `media-aspect`, and `focal` control image framing without dupli
 `tone` owns the section background and foreground relationship; `surface` adds package decoration behind
 that content without replacing the tone background. Nested package components and visualizations restore
 their own readable surface text tokens. Transition, scene, interaction, and choreography are closed semantic
-roles rather than author-supplied timing or coordinates. `layers` transforms image descendants rather than cards
-or other semantic containers, preserving stable review geometry. Narrow screens return multi-column and
-overlapping arrangements to authored order, and gallery overflow stays local to its rail. Authors cannot
-supply CSS values, class names, event handlers, or executable layout code.
+roles rather than author-supplied timing or coordinates. `layers` transforms image descendants rather than
+cards or other semantic containers, preserving stable review geometry. Narrow screens return multi-column
+and overlapping arrangements to authored order, and gallery overflow stays local to its rail. Every section
+contains its floats and local layer order. A media stage reserves a full-width title row and composes its
+supporting content with media below; gallery stages keep their separate title/rail arrangement. Split returns
+to normal flow before a desktop sidebar can leave unreadably narrow tracks. Authors cannot supply CSS values,
+class names, event handlers, or executable layout code.
 
 ```markdown
 ::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}

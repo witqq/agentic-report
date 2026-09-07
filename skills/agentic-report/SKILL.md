@@ -1,40 +1,43 @@
 ---
 name: agentic-report
-description: Create, validate, inspect, or build polished local interactive reports, research pages, architecture pages, tutorials, dashboards, decisions, and landing pages from declarative Markdown. Use for static agent-to-human page handoff; do not use for hosted apps, live collaboration, deployment, publication, or bespoke frontend development.
+description: Create and build polished local interactive reports, research pages, architecture pages, tutorials, dashboards, decisions, and landing pages from declarative Markdown, with optional diagnostic inspection. Use for static agent-to-human page handoff; do not use for hosted apps, live collaboration, deployment, publication, or bespoke frontend development.
 license: MIT
 metadata:
-  version: '0.11.0'
+  version: '0.12.0'
   homepage: https://agentic-report.witqq.dev/
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run.
 ---
 
-Use Review Workspace for always-on local selected-text discussion. A reader selects eligible text, chooses
-**Create note**, and writes in the anchored full-thread popover; saved open/resolved ranges stay highlighted,
-and **View thread** reopens the same popover by pointer, touch, or focusable marker. The topbar **Review**
-action opens only a non-reflowing list/import/export overlay. It exports every selection plus imported legacy
-whole-block threads as deterministic version-3 `review.json` for a single-language page or version 4 with
-the active `report.locale` for a multilingual page; valid version-2 whole-block files remain accepted and
-list-only. Selection anchors contain the exact quote plus bounded target endpoints and Unicode code-point
-offsets. Keep imported and authored threads in the locale they belong to.
-Desktop thread popovers flip, shift, and clamp within the visual viewport; mobile uses a bounded bottom
-surface. Window and visual-viewport changes keep the selection action, markers, and popover reachable without
-moving report content. The measured contextual action and focus markers follow a visible rectangle from their
-live range and hide when that range is wholly offscreen. A marker prefers a fully separate position above or
-below its saved text before edge clamping, so marker and highlighted-text activation remain independent. The
-topbar Review entry has a localized name and title tooltip around its 20-pixel icon. At constrained widths
-shell labels collapse to their accessible icons/tooltips without widening the document; editorial pages keep
-the compact `AR` identity. Visible contextual/action controls retain localized labels and use 16-pixel icons; Create note shows a
-pencil and View thread shows a comment.
-Never imply an account or signature. For a follow-up build, pass a confined prior artifact with
-`build --review review.json`; treat stale bindings as immutable prior revision segments, append a current
-segment when continuing a changed fragment, and export the next revision. A report may contain at most 5,000
-reviewable targets and a 750,000-byte target manifest; reduce or split it when either bound is reached. Never
-rewrite Markdown. Ordinary typed `decision`/`decision-option` and `checklist`/`check-item` syntax remains
-static report content.
-
 # agentic-report
 
-Create a local declarative source, verify it, and hand the user a finished interactive HTML artifact.
+Create a local declarative source, build it, open it, and hand the user a finished interactive HTML artifact.
+
+## Build a reproducible page
+
+Use the release pinned in this skill:
+
+```sh
+npx --yes agentic-report@0.12.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.12.0 build ./my-page --output ./my-page.html --json
+```
+
+Choose a different starter or destination name when the task requires it. Edit the generated source between
+the two commands. `build` validates the complete source before it writes output; resolve every structured
+diagnostic at its reported file and range, then rerun build. Open the successful result through normal
+`file://`. Use `validate` only for a separate diagnostic result, `inspect` only for source/catalog discovery,
+and `--format directory` only when multi-file output is intentionally needed.
+
+`init` requires an absent destination whose immediate parent already exists and is a directory; the parent
+may be a symbolic link, and the reported `projectPath` then names the resolved location. An existing
+destination is refused with `INIT_DESTINATION_EXISTS`. The first `npx` call requires registry/network access.
+
+Every command answers an agent without a flag and accepts `--json` as the name of that default: the run
+commands `init`, `build`, `validate`, `inspect`, `fix` and `review` write NDJSON records, while `schema`,
+`describe` and `examples` write one compact JSON document. `--human` selects the form for a person. One
+failed run lists every independent violation it found, so fix them together.
+
+Report the source path, artifact path, chosen starter/output format, available languages, warnings, and
+unresolved content facts.
 
 ## Work within the product boundary
 
@@ -101,7 +104,9 @@ Create a local declarative source, verify it, and hand the user a finished inter
   `composition="mosaic|stack"` with `media="layers|gallery"`: both would own the same card layout, so the
   compiler rejects those pairs. Other composition/media pairs remain available.
   Keep important reading order in source because multi-column/layered arrangements flatten on narrow
-  screens. Prefer image-only cards for `layers`. Use the bilingual `layout-mixed` example as the complete
+  screens. A media stage keeps its title across the full section and composes support with media below;
+  gallery stages keep their separate rail. Prefer image-only cards for `layers`. Use the bilingual
+  `layout-mixed` example as the complete
   grammar catalog, the landing starter as a smaller copyable narrative, and the public incident-review,
   vendor-decision, and launch-readiness sources as cross-layout composition references.
 - Add motion through the same closed section grammar: `transition="none|reveal|stagger"`,
@@ -120,33 +125,34 @@ Create a local declarative source, verify it, and hand the user a finished inter
 - Do not deploy, publish, use credentials, or mutate unrelated files. This skill authorizes only local
   installation, source authoring, validation, inspection, build, and artifact review.
 
-## Build a reproducible page
+## Review the result with a human
 
-Use the release pinned in this skill:
+Use Review Workspace for always-on local selected-text discussion. A reader selects eligible text, chooses
+**Create note**, and writes in the anchored full-thread popover; saved open/resolved ranges stay highlighted,
+and **View thread** reopens the same popover by pointer, touch, or focusable marker. The topbar **Review**
+action opens only a non-reflowing list/import/export overlay. It exports every selection plus imported legacy
+whole-block threads as deterministic version-3 `review.json` for a single-language page or version 4 with
+the active `report.locale` for a multilingual page; valid version-2 whole-block files remain accepted and
+list-only. Selection anchors contain the exact quote plus bounded target endpoints and Unicode code-point
+offsets. Keep imported and authored threads in the locale they belong to.
 
-```sh
-npx --yes agentic-report@0.11.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.11.0 validate ./my-page --json
-npx --yes agentic-report@0.11.0 inspect ./my-page --json
-npx --yes agentic-report@0.11.0 build ./my-page --output ./my-page.html --json
-```
+Desktop thread popovers flip, shift, and clamp within the visual viewport; mobile uses a bounded bottom
+surface. Window and visual-viewport changes keep the selection action, markers, and popover reachable without
+moving report content. The measured contextual action and focus markers follow a visible rectangle from their
+live range and hide when that range is wholly offscreen. A marker prefers a fully separate position above or
+below its saved text before edge clamping, so marker and highlighted-text activation remain independent. The
+topbar uses distinct navigation, Review, language, and theme icons with localized names and title tooltips.
+The native language selector remains the locale input and receives visible focus after switching. At
+constrained widths shell labels and secondary page identity are omitted without widening the document, and
+coarse pointers receive larger targets. Visible contextual/action controls retain localized labels and use
+16-pixel icons; Create note shows a pencil and View thread shows a comment.
 
-Choose a different starter or destination name when the task requires it. `init` requires an absent
-destination whose immediate parent already exists and is a directory; the parent may be a symbolic link,
-and the reported `projectPath` then names the resolved location. An existing destination is refused with
-`INIT_DESTINATION_EXISTS`. The first `npx` call requires registry/network access.
-
-Edit the generated source before validation. Resolve every structured diagnostic at its reported file and
-range, then rerun `validate` and `inspect`. Every command answers an agent without a flag and accepts
-`--json` as the name of that default: the run commands `init`, `build`, `validate`, `inspect`, `fix` and
-`review` write NDJSON records, while `schema`, `describe` and `examples` write their one reference document
-as a compact JSON line. `--human` selects the form for a person — prose from `init`, `build`, `validate`,
-`fix`, `review` and `examples`, the same document indented from `inspect`, `schema` and `describe`. One failed run lists every independent
-violation it found, so fix them together. Build only after both succeed. Open the result
-through normal `file://`; use `--format directory` only when a multi-file output is intentionally needed.
-
-Report the source path, artifact path, chosen starter/output format, available languages, warnings, and
-unresolved content facts.
+Never imply an account or signature. For a follow-up build, pass a confined prior artifact with
+`build --review review.json`; treat stale bindings as immutable prior revision segments, append a current
+segment when continuing a changed fragment, and export the next revision. A report may contain at most 5,000
+reviewable targets and a 750,000-byte target manifest; reduce or split it when either bound is reached. Never
+rewrite Markdown. Ordinary typed `decision`/`decision-option` and `checklist`/`check-item` syntax remains
+static report content.
 
 ## Respect source-review requirements
 
@@ -154,7 +160,7 @@ If the user does not trust the published npm package, do not run it through `npx
 pinned by this skill, expose the checked commit for review, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.11.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.12.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -164,7 +170,7 @@ pnpm build
 node dist/node/cli.js init ../my-page --starter report --json
 ```
 
-Substitute `node dist/node/cli.js` for every `npx --yes agentic-report@0.11.0` command above. Keep page
+Substitute `node dist/node/cli.js` for every `npx --yes agentic-report@0.12.0` command above. Keep page
 sources and outputs outside the cloned repository.
 
 Explain that this avoids executing the `agentic-report` npm package but is not registry-free:

@@ -1,6 +1,6 @@
 ---
 title: Agent quickstart
-description: Create, validate, inspect, and build an interactive page from declarative Markdown.
+description: Initialize, edit, build, and open an interactive page from declarative Markdown.
 language: en
 layout: document
 theme: system

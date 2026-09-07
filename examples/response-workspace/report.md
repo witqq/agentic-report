@@ -16,6 +16,7 @@ preset: editorial
 
 Complete the questions, add only the comments you need, then copy or download the deterministic response.
 
+::::::section{title="Triage in one local workspace" id="workspace" nav="Workspace" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 :::::response{title="Release triage" id="release-triage"}
 ::::question{id="scope" kind="bucket" title="What should happen when?" prompt="Assign every item to a delivery bucket."}
 ::bucket{id="do" label="Do now"}
@@ -62,3 +63,4 @@ Complete the questions, add only the comments you need, then copy or download th
 ::::question{id="summary" kind="text" title="Decision summary" prompt="Explain the decision and its most important condition."}
 ::::
 :::::
+::::::

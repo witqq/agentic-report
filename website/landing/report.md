@@ -152,8 +152,8 @@ Judge a bounded beta from activation, retention, operating gates, and a reversib
 
 1. Initialize with `npx --yes agentic-report init ./my-page --starter landing --json`.
 2. Replace the sample evidence and add only confined partials or local assets.
-3. Run `validate` and `inspect`; fix every reported source violation.
-4. Build one HTML file or a content-addressed directory and open it through `file://`.
+3. Build one HTML file or a content-addressed directory; `build` validates before writing.
+4. Open the result through `file://`; use `validate` or `inspect` only for focused diagnostics.
    :::
 
 :::callout{kind="info" title="Agent-first diagnostics"}

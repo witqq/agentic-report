@@ -12,6 +12,7 @@ language: ru
 
 Эта основа делает текущие сигналы удобными для быстрого просмотра, сохраняя доказательство и владельца состояния.
 
+::::::section{title="Текущий сигнал поставки" id="signal" nav="Сигнал" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 ::::cards
 :::card{title="Состояние сборки"}
 **Зелёное**
@@ -34,8 +35,9 @@ Desktop- и mobile-артефакты открываются через `file://
 В принятом объёме не осталось блокирующих замечаний.
 :::
 ::::
+::::::
 
-## Пропускная способность
+::::::section{title="Пропускная способность и очередь" id="throughput" nav="Поток" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal" scene="progress"}
 
 ::::chart{type="line" title="Принятая работа по контрольным точкам" description="Объём принятой работы рос на четырёх контрольных точках в одной границе выпуска." x-label="Контрольная точка" y-label="Принятые элементы"}
 :::series{label="Принято"}
@@ -45,8 +47,6 @@ Desktop- и mobile-артефакты открываются через `file://
 ::point{label="К4" value="26"}
 :::
 ::::
-
-## Очередь направлений
 
 :::filter{title="Фильтр направлений" placeholder="Поиск владельца или состояния"}
 
@@ -59,8 +59,9 @@ Desktop- и mobile-артефакты открываются через `file://
 :::toggle{title="Дополнительные сведения о выпуске" label="Показать внешнюю границу выпуска" default="off"}
 Push, публикация npm, развёртывание и использование credentials не следуют из локально проверенного кандидата.
 :::
+::::::
 
-## Распределение рисков
+::::::section{title="Распределение рисков" id="risk" nav="Риск" width="wide" tone="accent" composition="mosaic" viewport="adaptive" section-density="compact" type="display" surface="glow" transition="stagger" choreography="cascade"}
 
 ::::chart{type="pie" title="Оставшееся внимание" description="Больше всего внимания требует сверка документации, затем упаковка и итоговое браузерное ревью."}
 :::series{label="Внимание"}
@@ -73,3 +74,4 @@ Push, публикация npm, развёртывание и использов
 :::callout{kind="warning" title="Используйте живые доказательства"}
 Замените примерные сигналы результатами воспроизводимых проверок. Не превращайте неизвестное в зелёное состояние.
 :::
+::::::

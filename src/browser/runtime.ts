@@ -450,8 +450,13 @@ function createNavigationController(): NavigationController | undefined {
   let currentObserverSuspended = false;
   const supportsScrollEnd = 'onscrollend' in window;
   let fallbackScrollTimer: number | undefined;
+  const navigationOffset = 16;
+  const hashOwnershipOverlap = 1;
   const syncTopbarClearance = (): void => {
-    root.style.setProperty('--topbar-clearance', `${Math.ceil(topbar.offsetHeight) + 16}px`);
+    root.style.setProperty(
+      '--topbar-clearance',
+      `${Math.ceil(topbar.offsetHeight) + navigationOffset - hashOwnershipOverlap}px`,
+    );
   };
   const topbarObserver = new ResizeObserver(syncTopbarClearance);
   topbarObserver.observe(topbar);
@@ -487,7 +492,8 @@ function createNavigationController(): NavigationController | undefined {
   };
 
   const activationLine = (): number =>
-    (document.querySelector<HTMLElement>('.topbar')?.getBoundingClientRect().bottom ?? 0) + 16;
+    (document.querySelector<HTMLElement>('.topbar')?.getBoundingClientRect().bottom ?? 0) +
+    navigationOffset;
 
   const atDocumentBottom = (): boolean =>
     Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 1;

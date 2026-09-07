@@ -12,6 +12,21 @@ when arbitrary layout control is the primary job.
 
 It is a local compiler, not a hosted or cloud service, and it does not start a server.
 
+## Build your first page
+
+Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative content, build once, and open
+the resulting file:
+
+```sh
+npx --yes agentic-report@0.12.0 init ./my-page --starter landing --json
+# Edit ./my-page/report.md and its local assets.
+npx --yes agentic-report@0.12.0 build ./my-page --output ./my-page.html --json
+```
+
+Open `my-page.html` directly through `file://`. `build` validates the complete source before publishing the
+artifact, so `validate` is an optional diagnostic-only preflight and `inspect` is optional source/catalog
+discovery. Use `--format directory` only when separate content-addressed assets are useful.
+
 ## Give the capability to an agent
 
 Install the packaged skill so a compatible coding agent can recognize when a static interactive handoff is
@@ -23,8 +38,9 @@ npx skills add witqq/agentic-report --skill agentic-report
 
 Ask naturally: “investigate this subsystem and open an interactive code tour,” “compare these options as a
 reviewable decision,” or “turn this incident into a report with a timeline and owners.” The skill chooses a
-starter, writes declarative source, validates and inspects it, builds the local HTML, and returns the source
-and artifact paths. It is intended for finished agent-to-human handoffs with evidence, relationships,
+starter, writes declarative source, builds the local HTML, opens it, and returns the source and artifact
+paths. Validation and inspection remain available when focused diagnostics are useful. The skill is
+intended for finished agent-to-human handoffs with evidence, relationships,
 timelines, code explanations, visualizations, or fragment-level review; simple answers should stay in chat.
 
 You can also use the CLI as the rendering stage of a domain-specific skill. The custom skill owns research,
@@ -38,7 +54,7 @@ If you do not want to execute the published `agentic-report` npm package, clone 
 inspect the repository, run its checks, and invoke the compiled CLI directly:
 
 ```sh
-git clone --branch v0.11.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.12.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -49,10 +65,12 @@ pnpm verify
 pnpm build
 
 node dist/node/cli.js init ../my-page --starter report --json
-node dist/node/cli.js validate ../my-page --json
-node dist/node/cli.js inspect ../my-page --json
 node dist/node/cli.js build ../my-page --output ../my-page.html --json
 ```
+
+Edit `../my-page/report.md` between the two commands. `build` validates the complete source before writing;
+use `validate` for a diagnostic-only run or `inspect` for the observed source catalog when either answer is
+needed separately.
 
 This avoids installing or running the `agentic-report` package from npm and gives you the complete source to
 review. It does not eliminate registry trust: `pnpm install` still downloads the exact dependencies recorded
@@ -213,11 +231,11 @@ surface that follows browser-chrome and on-screen-keyboard viewport changes with
 The contextual action and focus markers are clamped by their measured size to a visible range rectangle and
 hide when the saved range is wholly offscreen. A saved-range marker prefers a fully separate position above
 or below the text, keeping marker activation and a direct tap on the highlighted text independent.
-Topbar icon controls carry localized names and title tooltips; the Review entry uses a 20-pixel icon. At
-constrained widths the topbar keeps its recognizable icons and tooltips while hiding labels that would widen
-the document; the editorial shell uses its compact `AR` identity.
-Visible contextual controls retain their labels while 16-pixel pencil/comment icons distinguish Create note
-from View thread.
+Navigation, Review, language, and theme use distinct package-owned topbar icons with localized names and title
+tooltips. The native language selector remains the locale input and receives visible focus after switching.
+At constrained widths the topbar omits visible labels and secondary page identity instead of clipping or
+inventing an abbreviation; coarse pointers receive larger targets. Visible contextual controls retain their
+labels while 16-pixel pencil/comment icons distinguish Create note from View thread.
 
 The topbar **Review** action opens only a non-reflowing overlay list, prior evidence, import, and one complete
 export. Choosing an entry returns to the same anchored popover. Existing whole-block threads remain
@@ -262,7 +280,10 @@ visible H2 and stable anchor. Closed visual attributes compose package-owned arr
 `split`, `mosaic`, `story`, `stack`), bounded viewport rhythm, compact/editorial/immersive density,
 body/display/editorial typography, natural/masked/layered/gallery/bleed media, image fit/aspect/focal point,
 and plain/mesh/glow/grain/grid surfaces. They are semantic choices, not CSS or component code; multi-column
-and layered arrangements return to authored order on narrow screens, and gallery overflow stays local.
+and layered arrangements return to authored order on narrow screens, and gallery overflow stays local. Every
+section contains its floats and local layer order. A media stage uses a full-width title row with supporting
+content and media composed below; gallery stages keep their separate title/rail arrangement, while split
+returns to flow before desktop navigation can make its tracks unreadable.
 Because mosaic/stack and layers/gallery would both own the same card layout, those four combinations fail
 before rendering; use flow/stage/split/story with layered/gallery media or natural/mask/bleed media with
 mosaic/stack.
@@ -324,10 +345,9 @@ Every packaged starter, layout example, catalog, workspace example, realistic sh
 landing pairs its canonical English source with a maintained Russian entry. A generated artifact chooses
 the system-preferred available language initially and keeps the selector available for manual switching.
 
-From a repository or package-source checkout, validate and rebuild them with the public CLI:
+From a repository or package-source checkout, build them with the public CLI:
 
 ```bash
-agentic-report validate ./examples/incident-review
 agentic-report build ./examples/incident-review --output ./incident-review.html
 agentic-report build ./examples/vendor-decision --output ./vendor-decision.html
 agentic-report build ./examples/launch-readiness --output ./launch-readiness.html
@@ -361,11 +381,12 @@ vendor decision, and launch readiness reuse the visual vocabulary on independent
 through the same public path as any user page:
 
 ```bash
-agentic-report validate ./website/landing --json
-agentic-report inspect ./website/landing --json
 agentic-report build ./website/landing --output ./landing.html --json
 agentic-report build ./website/landing --format directory --output ./landing-directory --json
 ```
+
+The build validates before writing. Run `validate` or `inspect` separately only when diagnostics or an
+observed source inventory is the desired result.
 
 [`website/routes.json`](website/routes.json) is the deployment-route authority. It gives every internal
 landing destination one relative URL, canonical repository source, route kind, and an optional confined
@@ -396,10 +417,10 @@ pnpm install
 pnpm build
 node dist/node/cli.js init ./my-report
 node dist/node/cli.js init ./research-brief --starter research
-node dist/node/cli.js validate ./my-report
-node dist/node/cli.js inspect ./my-report --json
 node dist/node/cli.js build examples/basic --output report.html
 node dist/node/cli.js build examples/basic --format directory --output report-dir
+node dist/node/cli.js validate ./my-report
+node dist/node/cli.js inspect ./my-report --json
 node dist/node/cli.js describe --json
 node dist/node/cli.js schema
 node dist/node/cli.js schema --scope directives
@@ -421,19 +442,12 @@ npm init --yes
 npm install "$PACK_DIR"/agentic-report-*.tgz
 npx agentic-report init ./my-report --starter report
 printf '\nAgent-authored edit.\n' >> ./my-report/report.md
-printf '\n![Remote asset used to test diagnostics](https://local.invalid/image.png)\n' >> ./my-report/report.md
-! npx agentic-report validate ./my-report --json
-! npx agentic-report inspect ./my-report --json
-sed -i.bak '/Remote asset used to test diagnostics/d' ./my-report/report.md
-npx agentic-report validate ./my-report --json
-npx agentic-report inspect ./my-report --json
 npx agentic-report build ./my-report --output ./report.html --json
 ```
 
-The two broken-source commands must return `REMOTE_ASSET_BLOCKED` without creating or replacing output.
-After the offending Markdown line is removed, validation and inspection succeed and the final command
-creates `report.html`. `scripts/check-package.ts` executes this same installed-package recovery route with
-credential-bearing diagnostics and output sentinels.
+The build creates `report.html` directly from the edited starter. `scripts/check-package.ts` additionally
+proves that the same installed build rejects invalid source before publication, preserves an existing
+output, and succeeds after correction; it covers optional validation and inspection separately.
 
 Install and use the published package with:
 
@@ -441,10 +455,11 @@ Install and use the published package with:
 npx agentic-report build ./report-source --output report.html
 npm install --global agentic-report
 agentic-report init ./my-report
+# Edit ./my-report/report.md and its local assets.
+agentic-report build ./my-report --output ./my-report.html
 agentic-report validate ./my-report
 agentic-report inspect ./my-report --json
 agentic-report review ./review.json ./my-report --json
-agentic-report build ./report-source --output report.html
 ```
 
 ## Output formats

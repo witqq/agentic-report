@@ -13,7 +13,7 @@ language: ru
 Каждая визуализация ниже описана ограниченными директивами Markdown. Компилятор проверяет данные и создаёт
 детерминированный SVG или семантический HTML; при визуализации страница не обращается к сети.
 
-## Внедрение
+::::::section{title="Сигнал внедрения" id="adoption" nav="Внедрение" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
 
 :::::chart{type="bar" title="Еженедельно активные агенты" description="Число активных агентов росло четыре еженедельных релиза, а после второй недели лидировала группа с поддержкой." x-label="Неделя релиза" y-label="Активные агенты"}
 ::::series{label="С поддержкой"}
@@ -29,8 +29,9 @@ language: ru
 ::point{label="Н4" value="74"}
 ::::
 :::::
+::::::
 
-## Тренд качества
+::::::section{title="Тренд качества" id="quality" nav="Качество" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal" scene="progress"}
 
 ::::chart{type="line" title="Успешные первые сборки" description="Доля агентов, успешно завершивших первую сборку, росла на протяжении измеряемых релизов." x-label="Неделя релиза" y-label="Процент"}
 :::series{label="Доля успеха"}
@@ -40,8 +41,9 @@ language: ru
 ::point{label="Н4" value="91"}
 :::
 ::::
+::::::
 
-## Состав работ
+::::::section{title="Состав работ" id="mix" nav="Состав" width="wide" tone="plain" composition="mosaic" viewport="adaptive" section-density="compact" type="editorial" surface="grain" transition="stagger" choreography="cascade"}
 
 ::::chart{type="pie" title="Состав созданных страниц" description="Отчёты — крупнейшая категория, затем идут учебные материалы, панели и лендинги."}
 :::series{label="Страницы"}
@@ -51,8 +53,9 @@ language: ru
 ::point{label="Лендинги" value="12"}
 :::
 ::::
+::::::
 
-## Поток компиляции
+::::::section{title="Поток компиляции" id="flow" nav="Поток" width="wide" tone="accent" composition="story" viewport="bounded" section-density="immersive" type="display" surface="glow" transition="reveal" interaction="depth"}
 
 :::diagram{title="Поток офлайн-компиляции" description="Пятнадцать участников в подсистемах авторинга, компиляции и артефакта." type="flow"}
 ::group{id="authoring" label="Граф авторинга"}
@@ -104,8 +107,9 @@ language: ru
 ::edge{from="compiler" to="browser" label="записать артефакт"}
 ::edge{from="browser" to="agent" label="результат ревью"}
 :::
+::::::
 
-## Путь поставки
+::::::section{title="Путь поставки" id="delivery" nav="Поставка" width="wide" tone="contrast" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 
 ::::timeline{title="Путь релиза" description="Четыре этапа переводят продукт от данных к локально проверенному кандидату на релиз."}
 :::event{date="Исследование" title="Изучить каталог" kind="neutral"}
@@ -121,3 +125,4 @@ language: ru
 Проверки на компьютере и телефоне изучают настоящий созданный артефакт без сервера.
 :::
 ::::
+::::::

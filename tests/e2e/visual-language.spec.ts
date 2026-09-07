@@ -14,7 +14,7 @@ test('declarative visual families remain distinct, readable, and contained', asy
   const mobile = testInfo.project.name.startsWith('mobile');
   const requestUrls: string[] = [];
   page.on('request', (request) => requestUrls.push(request.url()));
-  const viewport = mobile ? { width: 390, height: 844 } : { width: 1200, height: 1920 };
+  const viewport = mobile ? { width: 390, height: 844 } : { width: 1440, height: 1920 };
   await page.setViewportSize(viewport);
   await page.goto(artifactUrl);
 

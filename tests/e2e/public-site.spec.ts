@@ -140,11 +140,6 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
     'This document defines the current author-facing input',
   );
 
-  await page.goto(fileUrl('docs/agent/index.md'));
-  await expect(page.locator('body')).toContainText(
-    `npx --yes agentic-report@${packageMetadata.version} validate`,
-  );
-
   for (const example of ['incident-review', 'vendor-decision', 'launch-readiness']) {
     await page.goto(fileUrl(`examples/${example}/index.html`));
     await expect(page.locator('main')).not.toBeEmpty();

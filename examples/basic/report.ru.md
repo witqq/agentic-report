@@ -13,14 +13,17 @@ language: ru
 Эта основа организует настоящее ревью: решение, подтверждающие его данные, оставшийся риск и следующие
 ответственные шаги. Замените примерные факты, сохранив смысловую структуру.
 
+::::::section{title="Сигнал решения" id="signal" nav="Сигнал" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+
 :::callout{kind="success" title="Рекомендация"}
 Продолжить работу с локальным кандидатом на выпуск. Сценарий первого использования завершён, а в
 проверенном объёме нет блокирующих дефектов.
 :::
 
 {{include: partials/findings.ru.md}}
+::::::
 
-## Карта доказательств
+::::::section{title="Карта доказательств" id="evidence" nav="Доказательства" width="wide" tone="soft" composition="mosaic" viewport="bounded" section-density="editorial" type="editorial" media="natural" media-fit="cover" media-aspect="landscape" surface="grain" transition="reveal"}
 
 ![Движение доказательств от источника через проверку к решению о выпуске](assets/architecture.ru.svg)
 
@@ -37,8 +40,9 @@ language: ru
 Публикация и развёртывание остаются отдельными внешними действиями.
 :::
 ::::
+::::::
 
-## Решение
+::::::section{title="Решение и ревью" id="decision" nav="Решение" width="wide" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="stagger" choreography="cascade"}
 
 :::decision{title="Принять кандидата для подготовки выпуска"}
 Доказательства позволяют двигаться дальше. Любое новое блокирующее наблюдение повторно открывает решение
@@ -49,13 +53,13 @@ language: ru
 :::event{date="Автор" title="Сформулировать решение" kind="neutral"}
 Зафиксировать аудиторию, объём и критерии успеха в обычном Markdown.
 :::
-:::event{date="Проверка" title="Проверить источник" kind="accent"}
-Запустить production-путь проверки до записи результата.
+:::event{date="Правка" title="Заменить пример" kind="accent"}
+Сохранить структуру и заменить все демонстрационные утверждения наблюдаемыми доказательствами.
 :::
 :::event{date="Сборка" title="Создать артефакт" kind="success"}
 Сгенерировать переносимую страницу в выбранном формате.
 :::
-:::event{date="Ревью" title="Изучить результат" kind="warning"}
+:::event{date="Открытие" title="Изучить результат" kind="warning"}
 Открыть собранный файл и зафиксировать решение по наблюдаемым доказательствам.
 :::
 ::::
@@ -68,17 +72,19 @@ language: ru
 - Внешняя публикация всё ещё требует явного действия выпуска.
 - Новым требованиям нужны собственные доказательства до включения в решение.
   :::
+  ::::::
 
-## Следующие действия
+::::::section{title="Следующие действия" id="actions" nav="Действия" width="wide" tone="accent" composition="stack" viewport="adaptive" section-density="compact" type="display" surface="glow" transition="reveal"}
 
 :::steps{title="Завершить передачу"}
 
 1. Заменить примерные выводы проверенными фактами проекта.
-2. Запустить `agentic-report validate` и `agentic-report inspect`.
-3. Собрать выбранный формат и открыть его напрямую в браузере.
-4. Назначить владельцев и даты всем оставшимся действиям.
+2. Собрать выбранный результат: команда `build` проверит исходник перед записью.
+3. Открыть результат напрямую в браузере и проверить настоящую страницу.
+4. Использовать `validate` или `inspect` только для точечной диагностики, затем назначить владельцев и даты.
    :::
 
 :::demo{title="Уверенность ревью" start="1" step="1"}
 Используйте этот ограниченный контрол во время живого ревью, чтобы считать независимо подтверждённые группы доказательств.
 :::
+::::::

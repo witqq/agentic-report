@@ -11,18 +11,18 @@ language: ru
 
 Сосредоточенная поверхность для чтения решения, его доказательств и пути от ограничений к внедрению.
 
+::::::section{title="Контекст решения" id="context" nav="Контекст" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" media="mask" media-fit="cover" media-aspect="cinematic" surface="mesh" transition="stagger" choreography="cascade"}
 :::callout{kind="info" title="Статус решения"}
 Принято для следующей единицы реализации после локальной проверки.
 :::
-
-## Контекст
 
 Продукт превращает декларативный Markdown в переносимую интерактивную браузерную страницу. Автор задаёт
 смысл, а пакет управляет компоновкой, токенами, навигацией и поведением фокуса.
 
 ![Многоуровневая модель страницы](page-model.ru.svg)
+::::::
 
-## Варианты
+::::::section{title="Варианты и решение" id="options" nav="Варианты" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal" scene="progress"}
 
 | Вариант                   | Переносимость | Работа автора | Среда выполнения |
 | ------------------------- | ------------: | ------------: | ---------------- |
@@ -34,8 +34,9 @@ language: ru
 Храните варианты компоновки и оформления как проверяемые значения. Не допускайте произвольный CSS или
 код компонентов.
 :::
+::::::
 
-## Контракт реализации
+::::::section{title="Реализация и проверка" id="implementation" nav="Реализация" width="wide" tone="accent" composition="story" viewport="adaptive" section-density="editorial" type="editorial" surface="grain" transition="stagger" interaction="depth"}
 
 ```yaml
 layout: document
@@ -49,10 +50,11 @@ tokens:
 
 1. Выберите компоновку и тему.
 2. Добавьте смысловые блоки содержимого.
-3. Проверьте, проанализируйте и соберите артефакт.
+3. Соберите и откройте артефакт; используйте `validate` или `inspect` только для точечной диагностики.
    :::
 
 ## Проверка
 
 Страница остаётся читаемой в узком окне, оглавление доступно с клавиатуры, а широкие таблицы прокручиваются
 внутри области чтения и не ломают страницу.
+::::::

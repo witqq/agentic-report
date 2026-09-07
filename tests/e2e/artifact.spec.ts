@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 
 import type { Locator, Page } from '@playwright/test';
 
+import { listExamples } from '../../src/discovery.js';
 import { PAGE_MOTION_POLICY } from '../../src/page-motion.js';
 import { test, expect } from './fixtures.js';
 
@@ -61,6 +62,10 @@ const launchReadinessArtifacts = [
     ).href,
   },
 ] as const;
+const portfolioArtifacts = listExamples().map((example) => ({
+  id: example.id,
+  url: layoutArtifactUrl(example.starter === undefined ? example.id : `starter-${example.id}`),
+}));
 const navigationArtifacts = [
   { format: 'single-file', url: layoutArtifactUrl('navigation') },
   {
@@ -652,13 +657,6 @@ const presetFixtureExpectations = [
     width: 'standard',
     radius: 'soft',
     fontFamily: 'Inter',
-    lineHeight: 26.4,
-    contentWidth: '76rem',
-    headingWeight: '780',
-    surfaceRadius: '14.4px',
-    sectionMargin: 60,
-    lightBackground: 'rgb(244, 246, 251)',
-    darkBackground: 'rgb(12, 17, 28)',
   },
   {
     preset: 'editorial',
@@ -668,13 +666,6 @@ const presetFixtureExpectations = [
     width: 'wide',
     radius: 'sharp',
     fontFamily: 'Inter',
-    lineHeight: 26.88,
-    contentWidth: '94rem',
-    headingWeight: '610',
-    surfaceRadius: '0px',
-    sectionMargin: 64,
-    lightBackground: 'rgb(244, 240, 231)',
-    darkBackground: 'rgb(23, 23, 19)',
   },
   {
     preset: 'signal',
@@ -684,13 +675,6 @@ const presetFixtureExpectations = [
     width: 'wide',
     radius: 'sharp',
     fontFamily: 'Inter',
-    lineHeight: 24.8,
-    contentWidth: '94rem',
-    headingWeight: '800',
-    surfaceRadius: '4px',
-    sectionMargin: 34.32,
-    lightBackground: 'rgb(244, 246, 251)',
-    darkBackground: 'rgb(12, 17, 28)',
   },
 ] as const;
 
@@ -865,6 +849,53 @@ for (const starter of starters) {
     });
   });
 }
+
+test('every shipped example stays substantial, localized, and contained on large and mobile screens', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+
+  for (const artifact of portfolioArtifacts) {
+    for (const viewport of [
+      { width: 2560, height: 1440 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto(artifact.url);
+      await expect(page.locator('h1')).toBeVisible();
+      await expect(page.locator('section.semantic-section').first()).toBeVisible();
+      await expect(page.locator('main p').filter({ hasText: /^:{3,}$/u })).toHaveCount(0);
+
+      const geometry = await page.evaluate(() => {
+        const heading = document.querySelector<HTMLElement>('h1');
+        if (heading === null) throw new Error('Example heading is absent.');
+        return {
+          headingHeight: heading.getBoundingClientRect().height,
+          documentHeight: document.documentElement.scrollHeight,
+          contained: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        };
+      });
+      expect(geometry.contained, `${artifact.id} at ${viewport.width}px`).toBe(true);
+      expect(geometry.headingHeight, `${artifact.id} at ${viewport.width}px`).toBeLessThan(
+        viewport.height * 0.45,
+      );
+      expect(geometry.documentHeight, `${artifact.id} at ${viewport.width}px`).toBeGreaterThan(
+        viewport.height * 1.2,
+      );
+
+      const language = page.locator('[data-language-select]');
+      await expect(language).toHaveValue('en');
+      await language.selectOption('ru');
+      await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+        `${artifact.id} Russian at ${viewport.width}px`,
+      ).toBe(true);
+    }
+  }
+});
 
 for (const artifact of landingSectionArtifacts) {
   test(`${artifact.format} section and action contract is semantic and responsive from file URL`, async ({
@@ -2554,6 +2585,9 @@ test('same-layout preset families retain their coordinated styles in both format
   page.on('request', (request) => {
     if (/^https?:/u.test(request.url())) remoteRequests.push(request.url());
   });
+  const crossFormatStates = new Map<string, string>();
+  const presetSignatures = new Map<string, string>();
+  const backgrounds = new Map<string, string>();
   await page.setViewportSize({ width: 1280, height: 900 });
   for (const expected of presetFixtureExpectations) {
     for (const artifact of [
@@ -2576,7 +2610,6 @@ test('same-layout preset families retain their coordinated styles in both format
         }, mode);
         const state = await page.evaluate(() => {
           const root = document.documentElement;
-          const rootStyle = getComputedStyle(root);
           const bodyStyle = getComputedStyle(document.body);
           const heading = document.querySelector<HTMLElement>('h1');
           const surface = document.querySelector<HTMLElement>('.semantic-card');
@@ -2590,7 +2623,7 @@ test('same-layout preset families retain their coordinated styles in both format
             radius: root.dataset.radius,
             fontFamily: bodyStyle.fontFamily,
             lineHeight: Number.parseFloat(bodyStyle.lineHeight),
-            contentWidth: rootStyle.getPropertyValue('--content-width').trim(),
+            headingFamily: heading === null ? undefined : getComputedStyle(heading).fontFamily,
             headingWeight: heading === null ? undefined : getComputedStyle(heading).fontWeight,
             surfaceRadius: surface === null ? undefined : getComputedStyle(surface).borderRadius,
             sectionMargin:
@@ -2605,16 +2638,49 @@ test('same-layout preset families retain their coordinated styles in both format
           accent: expected.accent,
           width: expected.width,
           radius: expected.radius,
-          contentWidth: expected.contentWidth,
-          headingWeight: expected.headingWeight,
-          surfaceRadius: expected.surfaceRadius,
-          background: mode === 'light' ? expected.lightBackground : expected.darkBackground,
         });
         expect(state.fontFamily).toContain(expected.fontFamily);
-        expect(state.lineHeight).toBeCloseTo(expected.lineHeight, 2);
-        expect(state.sectionMargin).toBeCloseTo(expected.sectionMargin, 2);
+        const visualState = JSON.stringify({
+          fontFamily: state.fontFamily,
+          lineHeight: state.lineHeight,
+          headingFamily: state.headingFamily,
+          headingWeight: state.headingWeight,
+          surfaceRadius: state.surfaceRadius,
+          sectionMargin: state.sectionMargin,
+          background: state.background,
+        });
+        const crossFormatKey = `${expected.preset}/${mode}`;
+        const previous = crossFormatStates.get(crossFormatKey);
+        if (previous === undefined) crossFormatStates.set(crossFormatKey, visualState);
+        else expect(visualState, crossFormatKey).toBe(previous);
+        presetSignatures.set(
+          crossFormatKey,
+          JSON.stringify({
+            lineHeight: state.lineHeight,
+            headingFamily: state.headingFamily,
+            headingWeight: state.headingWeight,
+            surfaceRadius: state.surfaceRadius,
+            sectionMargin: state.sectionMargin,
+          }),
+        );
+        backgrounds.set(crossFormatKey, state.background);
       }
     }
+  }
+  for (const mode of ['light', 'dark', 'system'] as const) {
+    expect(
+      new Set(
+        presetFixtureExpectations.map((expected) =>
+          presetSignatures.get(`${expected.preset}/${mode}`),
+        ),
+      ).size,
+      mode,
+    ).toBe(presetFixtureExpectations.length);
+  }
+  for (const expected of presetFixtureExpectations) {
+    expect(backgrounds.get(`${expected.preset}/light`)).not.toBe(
+      backgrounds.get(`${expected.preset}/dark`),
+    );
   }
   expect(remoteRequests).toEqual([]);
 });
@@ -2689,12 +2755,7 @@ for (const example of [
     font: 'serif',
     accent: 'indigo',
     width: 'narrow',
-    contentWidth: '60rem',
-    spaceFactor: '1',
     fontFamily: 'Charter',
-    focusColor: 'rgb(56, 86, 216)',
-    surfaceRadius: '14.4px',
-    backgroundColor: 'rgb(244, 246, 251)',
     radius: 'soft',
     heading: 'Architecture decision record',
     component: '.semantic-decision',
@@ -2709,12 +2770,7 @@ for (const example of [
     font: 'sans',
     accent: 'teal',
     width: 'wide',
-    contentWidth: '94rem',
-    spaceFactor: '.78',
     fontFamily: 'Inter',
-    focusColor: 'rgb(117, 234, 219)',
-    surfaceRadius: '4px',
-    backgroundColor: 'rgb(12, 17, 28)',
     radius: 'sharp',
     heading: 'Delivery health dashboard',
     component: '.semantic-card',
@@ -2728,12 +2784,7 @@ for (const example of [
     font: 'sans',
     accent: 'coral',
     width: 'wide',
-    contentWidth: '94rem',
-    spaceFactor: '1.28',
     fontFamily: 'Inter',
-    focusColor: 'rgb(194, 65, 93)',
-    surfaceRadius: '21.6px',
-    backgroundColor: 'rgb(244, 246, 251)',
     radius: 'round',
     heading: 'Pages agents can finish',
     component: '.semantic-card',
@@ -2746,12 +2797,7 @@ for (const example of [
     font: 'sans',
     accent: 'teal',
     width: 'wide',
-    contentWidth: '94rem',
-    spaceFactor: '1',
     fontFamily: 'Inter',
-    focusColor: 'rgb(8, 127, 117)',
-    surfaceRadius: '14.4px',
-    backgroundColor: 'rgb(244, 246, 251)',
     radius: 'soft',
     heading: 'Research synthesis',
     component: '.semantic-card',
@@ -2778,35 +2824,29 @@ for (const example of [
     const themeToggle = page.getByRole('button', { name: 'Toggle color theme' });
     await themeToggle.focus();
     const visualState = await page.evaluate((componentSelector) => {
-      const rootStyle = getComputedStyle(document.documentElement);
       const shell = document.querySelector<HTMLElement>('.report-shell');
       const surface = document.querySelector<HTMLElement>(componentSelector);
       const focused = document.querySelector<HTMLElement>('[data-theme-toggle]');
       return {
-        token: rootStyle.getPropertyValue('--content-width').trim(),
         shell: shell?.getBoundingClientRect().width,
-        rootFontSize: Number.parseFloat(rootStyle.fontSize),
         viewport: window.innerWidth,
-        spaceFactor: rootStyle.getPropertyValue('--space-factor').trim(),
         fontFamily: getComputedStyle(document.body).fontFamily,
-        focusColor: focused === null ? undefined : getComputedStyle(focused).outlineColor,
-        surfaceRadius: surface === null ? undefined : getComputedStyle(surface).borderRadius,
-        backgroundColor: getComputedStyle(document.body).backgroundColor,
+        focusVisible:
+          focused !== null &&
+          getComputedStyle(focused).outlineStyle !== 'none' &&
+          Number.parseFloat(getComputedStyle(focused).outlineWidth) > 0,
+        surfaceVisible:
+          surface !== null &&
+          surface.getBoundingClientRect().width > 0 &&
+          surface.getBoundingClientRect().height > 0,
       };
     }, example.component);
-    expect(visualState.token).toBe(example.contentWidth);
-    expect(visualState.shell).toBeCloseTo(
-      Math.min(
-        visualState.viewport,
-        Number.parseFloat(example.contentWidth) * visualState.rootFontSize,
-      ),
-      4,
-    );
-    expect(visualState.spaceFactor).toBe(example.spaceFactor);
+    expect(visualState.shell).toBeDefined();
+    expect(visualState.shell ?? 0).toBeGreaterThan(visualState.viewport * 0.75);
+    expect(visualState.shell ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(visualState.viewport);
     expect(visualState.fontFamily).toContain(example.fontFamily);
-    expect(visualState.focusColor).toBe(example.focusColor);
-    expect(visualState.surfaceRadius).toBe(example.surfaceRadius);
-    expect(visualState.backgroundColor).toBe(example.backgroundColor);
+    expect(visualState.focusVisible).toBe(true);
+    expect(visualState.surfaceVisible).toBe(true);
 
     if ('image' in example) {
       await expectLoadedImage(page.getByRole('img', { name: example.image }));

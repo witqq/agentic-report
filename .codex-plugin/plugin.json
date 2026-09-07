@@ -1,6 +1,6 @@
 {
   "name": "agentic-report",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Create polished local interactive pages from declarative Markdown with agentic-report.",
   "author": {
     "name": "witqq",
@@ -14,7 +14,7 @@
   "interface": {
     "displayName": "agentic-report",
     "shortDescription": "Build interactive pages from Markdown",
-    "longDescription": "Create, validate, inspect, and build polished local interactive pages from declarative Markdown without a frontend project.",
+    "longDescription": "Create and build polished local interactive pages from declarative Markdown without a frontend project; use diagnostics only when needed.",
     "developerName": "witqq",
     "category": "Developer Tools",
     "capabilities": ["Write"],
