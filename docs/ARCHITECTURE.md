@@ -151,7 +151,10 @@ Markdown + metadata + local assets + partials + semantic directives
   working directory.
 - `src/core/compiler.ts` publishes a prepared single-file or staged directory artifact.
   `src/core/analyze-report.ts` projects the same preparation into compact validation and inspection
-  results without output publication.
+  results without output publication. The normal author journey therefore initializes a starter, edits its
+  declarative source, invokes `build` once, and opens the artifact: build itself crosses the complete
+  preparation boundary before publication. `validate` and `inspect` are optional projections, not stateful
+  prerequisites for compilation.
 - `src/core/inspect-review.ts` reads one strictly bounded review JSON file confined under the prepared
   source root, validates it, binds its threads and revision segments to the current target manifest, and returns a
   centrally sanitized result without publishing output or editing Markdown.
@@ -239,7 +242,8 @@ with warm package surfaces, compact controls, numbered document navigation, and 
 action/shell icons. Theme remains an independent color mode, and explicitly authored bounded tokens
 override the preset on density, typography, accent, content width, and radius. The icon vocabulary is a
 small compile-time set of MIT-licensed Primer Octicon paths: it adds no author syntax, network request,
-runtime dependency, or CSP branch, and visible control text remains the accessible name. `document`,
+runtime dependency, or CSP branch. Shell controls retain localized accessible names and title tooltips even
+when compact presentation omits their visible labels. `document`,
 `dashboard`, `landing`, and `mixed` share one responsive shell, track
 system, and component surface model. Frontmatter overrides the matching manifest fields. Only Markdown partials
 are allowed; the loader rejects cycles, nesting over 10 levels, and lexical or canonical paths outside the
@@ -272,7 +276,10 @@ treatment does not absorb image framing: `media` owns natural/mask/layers/galler
 `media-fit`, `media-aspect`, and `focal` remain independent. Layered presentation transforms image
 descendants rather than semantic cards or review-target owners, so browser range geometry remains stable.
 Responsive rules restore multi-column and overlapping compositions to authored order on narrow screens and
-confine gallery overflow to the gallery rail.
+confine gallery overflow to the gallery rail. Every section establishes local formatting and stacking
+contexts. A media stage reserves a full-width title row before composing supporting content and media below;
+gallery stages retain their separate title/rail arrangement. Split sections return to normal flow before a
+desktop sidebar can leave unreadably narrow tracks, and story floats cannot influence a following section.
 The registry also owns incompatible attribute combinations. Markdown validation, public discovery and JSON
 Schema consume the same records; mosaic/stack with layers/gallery, layers with depth/tilt, progress with
 depth/tilt, story/stack with sticky, and non-primary magnetic actions are rejected because two roles would
@@ -430,11 +437,13 @@ inside the visual viewport. This preserves report geometry while browser chrome 
 changes the visible area. Contextual actions and focus markers use a visible rectangle from their live range,
 measure their own surface before two-axis clamping, and hide when the range is wholly offscreen. A focus
 marker prefers a fully separated position above the range, then below it, before edge clamping, so the marker
-and highlighted text remain independent activation targets. The topbar Review entry uses a package-owned
-20-pixel icon with a localized name and title tooltip. At constrained widths shell controls retain localized
-accessible names and title tooltips while visible labels collapse; the editorial preset uses its compact
-`AR` identity and the document has no artificial minimum width. Visible contextual/action controls retain their labels while package-owned icons default
-to 16 pixels; the selection action switches pencil/comment visibility without replacing either SVG node.
+and highlighted text remain independent activation targets. Navigation, Review, language, and theme use
+distinct package-owned topbar icons. Each available control retains a localized accessible name and title
+tooltip; the native language selector remains the locale input and receives visible focus after switching.
+At constrained widths visible labels and secondary page identity are omitted, coarse pointers receive larger
+targets, and the document has no artificial minimum width. Visible contextual/action controls retain their
+labels while package-owned icons default to 16 pixels; the selection action switches pencil/comment
+visibility without replacing either SVG node.
 
 The topbar Review action opens only the current/prior thread list plus import/export. Desktop shows a fixed
 non-modal overlay and mobile a native modal bottom sheet; neither mode changes report width, margin, or
@@ -524,7 +533,10 @@ must bind those tarball bytes to the canonical public asset before npm consumes 
 operator verifies the asset hash, inspects the complete public npm version document, and stops on any
 identity mismatch or sensitive value. Registry queries, network access, authentication, publication, and
 deployment remain operator actions described by `docs/RELEASE.md`; none enters the compiler, CLI, ESM API,
-browser runtime, or a separate release-validation subsystem.
+browser runtime, or a separate release-validation subsystem. The clean consumer initializes and edits a
+starter, lets `build` itself reject an invalid source without replacing output, then reaches a successful
+artifact by correcting the source and running build directly. Optional analysis commands retain independent
+coverage and are not part of the first-use prerequisite chain.
 
 ## Security properties
 

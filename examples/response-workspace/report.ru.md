@@ -11,6 +11,7 @@ language: ru
 
 Ответьте на вопросы, добавьте только нужные комментарии, затем скопируйте или скачайте детерминированный ответ.
 
+::::::section{title="Разбор в едином локальном пространстве" id="workspace" nav="Пространство" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 :::::response{title="Разбор релиза" id="release-triage"}
 ::::question{id="scope" kind="bucket" title="Что и когда следует сделать?" prompt="Распределите каждый пункт по этапу поставки."}
 ::bucket{id="do" label="Сделать сейчас"}
@@ -57,3 +58,4 @@ language: ru
 ::::question{id="summary" kind="text" title="Итог решения" prompt="Объясните решение и его самое важное условие."}
 ::::
 :::::
+::::::

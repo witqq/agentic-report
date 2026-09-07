@@ -69,7 +69,7 @@ non-compensating, so additional usability or price points cannot make the candid
 :::
 :::::
 
-:::::section{title="Weighted comparison" id="evidence" nav="Evidence" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="grid" transition="stagger" scene="progress" choreography="cascade"}
+::::::section{title="Weighted comparison" id="evidence" nav="Evidence" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="grid" transition="stagger" scene="progress" choreography="cascade"}
 
 :::::chart{type="bar" title="Weighted score after evidence review" description="Sample weighted scores rank Meridian Reply first at 89, Cedar Assist second at 84, and Quill Support third at 77; Meridian remains ineligible because it fails a separate mandatory constraint." x-label="Fictional candidate" y-label="Weighted score out of 100"}
 ::::series{label="Weighted score"}
@@ -117,7 +117,7 @@ evidence dates; changing any of them requires a new decision record.
 - Record every pilot condition with an owner, deadline, and exit consequence.
   :::
 
-:::::
+::::::
 
 :::::section{title="Decision and conditions" id="conditions" nav="Conditions" width="wide" align="start" tone="accent" composition="stack" viewport="adaptive" section-density="compact" type="editorial" surface="glow" transition="reveal" choreography="cascade"}
 

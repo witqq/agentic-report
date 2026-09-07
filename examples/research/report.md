@@ -23,13 +23,15 @@ demonstrate the report engine; replace it with verified project evidence before 
 This starter turns a research question into a transparent recommendation. It keeps the method and evidence
 close enough for another agent to challenge the conclusion.
 
+::::::section{title="Research frame" id="frame" nav="Frame" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 :::callout{kind="info" title="Research question"}
 Which authoring route gives agents the shortest path to a portable, reviewable interactive page?
 :::
 
 {{include: partials/method.md}}
+::::::
 
-## Evidence model
+::::::section{title="Evidence model" id="evidence" nav="Evidence" width="wide" tone="soft" composition="story" viewport="bounded" section-density="editorial" type="editorial" media="mask" media-fit="contain" media-aspect="landscape" surface="grain" transition="reveal" interaction="depth"}
 
 ![Research inputs converging into a recommendation](assets/evidence-map.svg)
 
@@ -44,8 +46,9 @@ The output had to remain offline, deterministic, accessible, and openable throug
 Long-term adoption and maintenance cost require longitudinal evidence beyond this focused study.
 :::
 ::::
+::::::
 
-## Comparison
+::::::section{title="Comparison" id="comparison" nav="Comparison" width="wide" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="grid" transition="stagger" scene="progress" choreography="cascade"}
 
 :::::chart{type="bar" title="First useful artifact" description="Median focused work units required to reach a reviewable local artifact; lower is better." x-label="Authoring route" y-label="Work units"}
 ::::series{label="Median effort"}
@@ -54,8 +57,9 @@ Long-term adoption and maintenance cost require longitudinal evidence beyond thi
 ::point{label="Custom frontend" value="14"}
 ::::
 :::::
+::::::
 
-## Interpretation
+::::::section{title="Interpretation and follow-up" id="interpretation" nav="Decision" width="wide" tone="accent" composition="stack" viewport="adaptive" section-density="compact" type="editorial" surface="glow" transition="reveal"}
 
 :::disclosure{title="Read the validity limits" open="true"}
 The comparison measures a bounded local task, not every publishing workflow. It supports the recommendation
@@ -67,11 +71,10 @@ Use a starter when the intended page fits the package vocabulary. Escalate to a 
 when verified requirements exceed that vocabulary.
 :::
 
-## Follow-up
-
 :::steps{title="Extend the study"}
 
 1. Replace the sample observation table with traceable session evidence.
 2. Record exclusions and counterexamples before updating the recommendation.
 3. Re-run the comparison after a meaningful authoring-contract change.
    :::
+   ::::::

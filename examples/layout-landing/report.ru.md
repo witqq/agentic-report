@@ -12,7 +12,7 @@ language: ru
 Пишите Markdown, выбирайте форму страницы и собирайте качественный офлайн-артефакт, не создавая ещё одно
 фронтенд-приложение вручную.
 
-## Единый декларативный путь
+::::::section{title="Единый декларативный путь" id="value" nav="Ценность" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="immersive" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 
 ::::cards
 :::card{title="Начните со смысла"}
@@ -25,22 +25,24 @@ language: ru
 Откройте один самодостаточный файл прямо в браузере или выберите каталог с хешированными ресурсами.
 :::
 ::::
+::::::
 
-## Для реального рабочего цикла
+::::::section{title="Для реального рабочего цикла" id="proof" nav="Доказательство" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal" scene="progress"}
 
-:::decision{title="Создать → проверить → изучить → собрать"}
-Все шаги используют одну производственную подготовку, поэтому анализ описывает именно тот артефакт,
-который будет собран.
+:::decision{title="Создать → изменить → собрать → открыть"}
+Одна сборка проверяет исходник и создаёт артефакт для просмотра. Отдельная диагностика нужна только тогда,
+когда ошибку исходника требуется разобрать подробнее.
 :::
+::::::
 
-## Создайте первую страницу
+::::::section{title="Создайте первую страницу" id="start" nav="Начать" width="wide" align="center" tone="accent" composition="stage" viewport="bounded" section-density="immersive" type="display" surface="glow" transition="stagger"}
 
 ```sh
 agentic-report init ./my-page
-agentic-report validate ./my-page
 agentic-report build ./my-page --output ./my-page.html
 ```
 
 :::callout{kind="success" title="Сервер не требуется"}
 Созданная страница открывается через `file://`, использует взаимодействия из пакета и локальные ресурсы.
 :::
+::::::

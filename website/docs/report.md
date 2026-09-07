@@ -14,8 +14,6 @@ scrollProgress: true
 interactive HTML page. The default is one self-contained file; directory output keeps the same behavior
 with content-addressed assets.
 
-::contents
-
 ::::section{title="Start here" id="start" nav="Start" width="standard" align="start" tone="soft" reveal="true"}
 
 :::lead
@@ -25,6 +23,15 @@ Write the opening thesis as one emphasized prose paragraph, not as a callout or 
 Use Node.js 24.18.0 or newer. Start with the [agent quickstart](agent/index.html), retrieve the
 [direct Markdown version](agent/index.md), or install the [agent skill](../skills/agentic-report/SKILL.md).
 
+```sh
+npx --yes agentic-report@0.11.0 init ./my-page --starter landing --json
+# Edit ./my-page/report.md and its local assets.
+npx --yes agentic-report@0.11.0 build ./my-page --output ./my-page.html --json
+```
+
+Open `my-page.html` through `file://`. Build validates before publishing; use `validate` or `inspect` only
+when a separate diagnostic or source-inventory result is useful.
+
 :::actions
 ::action[Open the quickstart]{href="agent/index.html" kind="primary"}
 ::action[Read agent Markdown]{href="agent/index.md" kind="secondary"}
@@ -32,6 +39,8 @@ Use Node.js 24.18.0 or newer. Start with the [agent quickstart](agent/index.html
 :::
 
 ::::
+
+::contents
 
 ::::section{title="Build from source" id="source-install" nav="From source" width="standard" align="start" tone="accent" reveal="true"}
 
@@ -91,8 +100,11 @@ arrangements. Closed attributes also select bounded viewport rhythm, density, ty
 layered/gallery/bleed media, independent image fit/aspect/focal point, and plain/mesh/glow/grain/grid
 surfaces. They work in both output formats without author CSS or JavaScript. Multi-column and layered
 arrangements flatten to the authored reading order on narrow screens; gallery overflow stays inside its
-rail. Mosaic/stack composition cannot pair with layers/gallery media because both roles would own the same
-card layout; those four combinations fail before rendering.
+rail. Every section contains its floats and local layer order. A media stage reserves a full-width title row
+and composes supporting content with media below; gallery stages keep their separate title/rail arrangement,
+while split returns to flow before desktop navigation can make its tracks unreadable. Mosaic/stack
+composition cannot pair with layers/gallery media because both roles would own the same card layout; those
+four combinations fail before rendering.
 
 Section tone owns its background and foreground relationship. Decorative surfaces remain behind the
 authored content, while nested cards and visualizations restore their own readable package surface text.
@@ -164,9 +176,11 @@ range markers reachable without moving report content. The measured contextual a
 follow a visible rectangle from their live range and hide when that range is wholly offscreen. A marker
 prefers to sit fully above or below its saved text before edge clamping, keeping marker activation distinct
 from tapping the highlighted range. The topbar Review entry has a localized title tooltip around its
-20-pixel icon. At constrained widths topbar labels collapse to their accessible icons/tooltips without
-widening the page; editorial pages use the compact `AR` identity. Visible contextual/action controls retain localized labels and use 16-pixel icons;
-Create note shows a pencil and View thread shows a comment.
+20-pixel icon. Navigation, Review, language, and theme use distinct package icons with localized names and
+tooltips. The native language selector receives visible focus after switching. At constrained widths visible
+labels and secondary page identity are omitted without widening the page, and coarse pointers receive larger
+targets. Visible contextual/action controls retain localized labels and use 16-pixel icons; Create note shows
+a pencil and View thread shows a comment.
 
 An agent resolves the downloaded review against the current source with:
 

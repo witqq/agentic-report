@@ -3,7 +3,23 @@
 This is the copyable reference for the implemented CLI and declarative source contract. Only syntax exposed
 by the commands, generated schemas, and source contract below is supported.
 
-## Install the current tarball and recover from an authored error
+## Build the first page
+
+Use Node.js 24.18.0 or newer. Initialize a suitable packaged starter, replace its declarative content, build
+once, and open the result:
+
+```bash
+npx --yes agentic-report@0.11.0 init ./my-report --starter report --json
+# Edit ./my-report/report.md and its local assets.
+npx --yes agentic-report@0.11.0 build ./my-report --output ./my-report.html --json
+```
+
+Open `my-report.html` through `file://`. Build runs the complete source and render preparation before
+publication, so `validate` and `inspect` are not prerequisites. Use `validate` for a read-only diagnostic
+result, `inspect` for source inventory and the authoring catalog, `fix` for an exact compiler-provided
+replacement, or `review` to bind returned local feedback.
+
+## Verify the current tarball in a clean consumer
 
 From the package repository, build one tarball and install that exact artifact into a clean directory:
 
@@ -19,19 +35,16 @@ npm install "$PACK_DIR"/agentic-report-*.tgz
 npx agentic-report init ./my-report --starter report
 printf '\nAgent-authored edit.\n' >> ./my-report/report.md
 printf '\n![Remote asset used to test diagnostics](https://local.invalid/image.png)\n' >> ./my-report/report.md
-! npx agentic-report validate ./my-report --json
-! npx agentic-report inspect ./my-report --json
+printf 'preserve me\n' > ./report.html
+! npx agentic-report build ./my-report --output ./report.html --json
 sed -i.bak '/Remote asset used to test diagnostics/d' ./my-report/report.md
-npx agentic-report validate ./my-report --json
-npx agentic-report inspect ./my-report --json
 npx agentic-report build ./my-report --output ./report.html --json
 ```
 
-The two commands prefixed with `!` are expected to fail with `REMOTE_ASSET_BLOCKED`; neither analysis
-operation writes output. After removing the broken Markdown line, validation and inspection return result
-records and build creates `report.html`. The package smoke test executes the same installed
-`init → edit → break → validate → inspect → fix → build` route, including credential redaction and output
-sentinels.
+The command prefixed with `!` is expected to fail with `REMOTE_ASSET_BLOCKED` without replacing an existing
+output. After removing the broken Markdown line, the direct build creates `report.html`. The package smoke
+test executes this installed build-first recovery route with credential redaction and output sentinels, then
+exercises optional validation and inspection independently.
 
 ## Discover the contract
 
@@ -245,11 +258,12 @@ browser chrome or the on-screen keyboard changes the visible area. The contextua
 are clamped by their measured size to a visible rectangle from the live range and hide when that range is
 wholly offscreen. A focus marker prefers to sit completely above the range, then below it, before edge
 clamping, so tapping the highlighted text remains a separate **View thread** route.
-The topbar Review entry has a localized name and title tooltip around its 20-pixel icon. At constrained
-widths the shell keeps icon controls and tooltips while hiding labels that would widen the document; the
-editorial preset shows the compact `AR` identity. Visible
-contextual/action controls retain their labels and use 16-pixel icons; Create note shows a pencil and View
-thread shows a comment without replacing the control.
+Navigation, Review, language, and theme use distinct package-owned topbar icons with localized names and
+title tooltips. The native language selector remains the locale input and receives visible focus after a
+switch. At constrained widths the shell omits visible labels and secondary page identity instead of clipping
+or inventing an abbreviation; coarse pointers receive larger targets. Visible contextual/action controls
+retain their labels and use 16-pixel icons; Create note shows a pencil and View thread shows a comment
+without replacing the control.
 
 Typed review controls are declarative and keep legacy decisions static:
 
@@ -462,8 +476,6 @@ ordered language preferences and the reader can switch it manually.
 From a checkout containing the package-owned source paths:
 
 ```bash
-agentic-report validate ./examples/incident-review
-agentic-report inspect ./examples/vendor-decision --json
 agentic-report build ./examples/incident-review --output ./incident-review.html
 agentic-report build ./examples/vendor-decision --output ./vendor-decision.html
 agentic-report build ./examples/launch-readiness --output ./launch-readiness.html
@@ -472,7 +484,9 @@ agentic-report build ./examples/launch-readiness --format directory --output ./l
 
 Open each single file or directory `index.html` through `file://`. For an installed package, first run
 `agentic-report examples --json`; the response contains an `examples` array whose items have an absolute
-`entry` value. Use the parent directory of that value as the input for `validate`, `inspect`, or `build`.
+`entry` value. Use the parent directory of that value as the build input. Build validates before writing;
+use `validate` or `inspect` separately when diagnostics or the observed source inventory is the intended
+result.
 `single-file` remains the default; `directory` changes runtime and asset placement, not source semantics or
 reader behavior.
 
@@ -483,14 +497,13 @@ as reports and decisions, not a frontend-project scaffold:
 
 ```bash
 npx --yes agentic-report init ./my-page --starter landing --json
-npx --yes agentic-report validate ./my-page --json
-npx --yes agentic-report inspect ./my-page --json
 npx --yes agentic-report build ./my-page --output ./my-page.html --json
 ```
 
-The first zero-install `npx` run requires registry/network access and Node.js 24.18.0 or newer. The normal
-generated page then opens locally through `file://` and requires the included package-owned browser runtime.
-Authors write no JSX, raw HTML, CSS, or browser JavaScript.
+Replace the starter content between initialization and build. The first zero-install `npx` run requires
+registry/network access and Node.js 24.18.0 or newer. The normal generated page then opens locally through
+`file://` and requires the included package-owned browser runtime. Authors write no JSX, raw HTML, CSS, or
+browser JavaScript.
 
 The CLI and ESM entry read this floor from installed package metadata before accepting work. A lower CLI
 runtime exits with code `1` and `NODE_VERSION_UNSUPPORTED`; an ESM import throws `AgenticReportError` with
@@ -696,7 +709,10 @@ focal point frame local images independently. Section `tone` owns its background
 For `layers`, prefer
 image-only cards when the overlap is the point: the package transforms image descendants and leaves the
 semantic card and review target untransformed. At narrow widths, split/mosaic/story/stack/layers return to
-source order and galleries retain their own horizontal scroll. Explicit sections own real labelled
+source order and galleries retain their own horizontal scroll. Every section contains its floats and local
+layer order. A media stage gives its title the full first row and composes supporting content with media
+below; a gallery stage keeps its separate title and rail, while split returns to normal flow before a desktop
+sidebar can make its tracks unreadable. Explicit sections own real labelled
 section/H2 markup and primary navigation, while heading-only sources use H2 primary links. H3 and component
 anchors remain owned targets without becoming primary links. The packaged English/Russian `layout-mixed`
 source is the complete grammar catalog; locate it with `agentic-report examples --json`. The bilingual

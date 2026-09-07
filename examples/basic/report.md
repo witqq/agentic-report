@@ -23,14 +23,17 @@ demonstrate the report engine; replace it with verified project evidence before 
 This starter organizes a real review: the decision, the evidence behind it, the remaining risk, and the
 next accountable steps. Replace the sample facts while keeping the semantic structure.
 
+::::::section{title="Decision signal" id="signal" nav="Signal" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+
 :::callout{kind="success" title="Recommendation"}
 Proceed with the local release candidate. The documented first-use journey is complete and no blocking
 defect remains in the reviewed scope.
 :::
 
 {{include: partials/findings.md}}
+::::::
 
-## Evidence map
+::::::section{title="Evidence map" id="evidence" nav="Evidence" width="wide" tone="soft" composition="mosaic" viewport="bounded" section-density="editorial" type="editorial" media="natural" media-fit="cover" media-aspect="landscape" surface="grain" transition="reveal"}
 
 ![Evidence moving from source through verification to a release decision](assets/architecture.svg)
 
@@ -47,8 +50,9 @@ Focused unit, browser, and installed-package journeys cover the public path.
 Publication and deployment remain separate external actions.
 :::
 ::::
+::::::
 
-## Decision
+::::::section{title="Decision and review" id="decision" nav="Decision" width="wide" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="stagger" choreography="cascade"}
 
 :::decision{title="Accept the candidate for release preparation"}
 The evidence supports advancing. Any new blocking observation reopens this decision with a reproducible
@@ -59,13 +63,13 @@ failure, owner, and next check.
 :::event{date="Author" title="State the decision" kind="neutral"}
 Record the audience, scope, and success criteria in ordinary Markdown.
 :::
-:::event{date="Validate" title="Check the source" kind="accent"}
-Run the production validation path before writing output.
+:::event{date="Edit" title="Replace the sample" kind="accent"}
+Keep the structure and replace every demonstration claim with observed evidence.
 :::
 :::event{date="Build" title="Create the artifact" kind="success"}
 Generate the portable page in the selected output format.
 :::
-:::event{date="Review" title="Inspect the result" kind="warning"}
+:::event{date="Open" title="Review the result" kind="warning"}
 Open the built file and record the decision against observed evidence.
 :::
 ::::
@@ -78,17 +82,19 @@ Open the built file and record the decision against observed evidence.
 - External publication still requires an explicit release action.
 - New requirements need their own evidence before they enter this decision.
   :::
+  ::::::
 
-## Next actions
+::::::section{title="Next actions" id="actions" nav="Actions" width="wide" tone="accent" composition="stack" viewport="adaptive" section-density="compact" type="display" surface="glow" transition="reveal"}
 
 :::steps{title="Complete the handoff"}
 
 1. Replace the sample findings with verified project facts.
-2. Run `agentic-report validate` and `agentic-report inspect`.
-3. Build the selected output and open it directly in a browser.
-4. Assign owners and dates to any residual action.
+2. Build the selected output; `build` validates the source before writing it.
+3. Open the result directly in a browser and review the real page.
+4. Use `validate` or `inspect` only when you need focused diagnostics, then assign owners and dates.
    :::
 
 :::demo{title="Review confidence" start="1" step="1"}
 Use this bounded control during a live review to count independently confirmed evidence groups.
 :::
+::::::

@@ -45,7 +45,7 @@ Use Markdown, frontmatter, confined partials, and local assets.
 Choose package-owned cards, decisions, interactions, diagrams, timelines, and charts.
 :::
 :::card{title="Ship static output"}
-Validate, inspect, and build through one production preparation path.
+Build through one production path that validates before it writes.
 :::
 ::::
 
@@ -87,9 +87,10 @@ runtime after compilation.
 
 ```sh
 agentic-report init ./my-page --starter landing
-agentic-report validate ./my-page
 agentic-report build ./my-page --output ./my-page.html
 ```
+
+Use `validate` or `inspect` later when focused source diagnostics would help.
 
 :::disclosure{title="What stays outside the source format" open="false"}
 Remote fetching, raw HTML, executable templates, arbitrary plugins, and author-supplied browser code stay

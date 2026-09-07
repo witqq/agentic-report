@@ -31,7 +31,7 @@ A compact bundle of evidence, constraints, and a recommendation that another age
 The same :term[Decision packet]{key="decision-packet"} explanation remains available wherever the concept
 appears.
 
-## Copyable prose
+::::::section{title="Copyable meaning" id="copy" nav="Copy" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 
 :::copyable
 Deploy after **two checks** are complete.
@@ -39,8 +39,9 @@ Deploy after **two checks** are complete.
 Read the [rollback runbook](https://example.com/runbook) and confirm the
 :term[decision packet]{key="decision-packet"} before the handoff.
 :::
+::::::
 
-## Progressive detail
+::::::section{title="Progressive detail" id="detail" nav="Detail" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grain" transition="reveal"}
 
 :::disclosure{title="Why the source stays declarative" open="true"}
 The author chooses intent and initial state. The package supplies semantic HTML, focus behavior, and the
@@ -67,21 +68,23 @@ Check the declared behavior and constraints.
 Check the generated page in a browser.
 :::
 ::::
+::::::
 
-## Focused overlays
+::::::section{title="Focused overlays" id="overlays" nav="Overlays" width="wide" tone="plain" composition="mosaic" viewport="adaptive" section-density="compact" type="editorial" surface="grid" transition="stagger" choreography="cascade"}
 
 :::modal{title="Release checklist" trigger="Open release checklist"}
 
-- Validate the source.
-- Build the selected output.
-- Inspect the browser artifact.
+- Replace the sample content.
+- Build the selected output; the build validates before writing.
+- Open the browser artifact directly from disk.
   :::
 
 :::popover{title="Portability note" trigger="Show portability note"}
 The page does not need a local web server after it is built.
 :::
+::::::
 
-## Find and reveal
+::::::section{title="Find, reveal, and demonstrate" id="controls" nav="Controls" width="wide" tone="accent" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="glow" transition="reveal"}
 
 :::filter{title="Filter component capabilities" placeholder="Search capabilities"}
 
@@ -101,8 +104,7 @@ The generated artifact was opened through a local file URL at desktop and mobile
 Authors provide no JSX, CSS, or browser JavaScript.
 :::
 
-## Bounded demonstration
-
 :::demo{title="Estimate revisions" start="2" step="1"}
 The counter is one deliberately limited package-owned interaction.
 :::
+::::::

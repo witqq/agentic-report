@@ -39,7 +39,7 @@ language: ru
 Выбирайте карточки, решения, взаимодействия, схемы, хронологии и графики пакета.
 :::
 :::card{title="Поставляйте статику"}
-Проверяйте, инспектируйте и собирайте через единый production-путь подготовки.
+Собирайте единым production-путём, который проверяет исходник перед записью.
 :::
 ::::
 
@@ -80,9 +80,10 @@ callbacks или hosted-редактор.
 
 ```sh
 agentic-report init ./my-page --starter landing
-agentic-report validate ./my-page
 agentic-report build ./my-page --output ./my-page.html
 ```
+
+Используйте `validate` или `inspect` позже, когда нужна точечная диагностика исходника.
 
 :::disclosure{title="Что остаётся вне формата источника" open="false"}
 Удалённая загрузка, raw HTML, исполняемые шаблоны, произвольные plugins и авторский браузерный код остаются

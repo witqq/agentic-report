@@ -22,6 +22,7 @@ demonstrate the report engine; replace it with verified project evidence before 
 
 This starter keeps current signals scan-friendly while preserving the evidence and owner behind each state.
 
+::::::section{title="Current delivery signal" id="signal" nav="Signal" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 ::::cards
 :::card{title="Build health"}
 **Green**
@@ -44,8 +45,9 @@ The immutable tarball succeeds in a clean consumer.
 No blocking finding remains in the accepted slice.
 :::
 ::::
+::::::
 
-## Throughput
+::::::section{title="Throughput and queue" id="throughput" nav="Throughput" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal" scene="progress"}
 
 ::::chart{type="line" title="Accepted work by checkpoint" description="Accepted work increased across four checkpoints while remaining within the same release boundary." x-label="Checkpoint" y-label="Accepted items"}
 :::series{label="Accepted"}
@@ -55,8 +57,6 @@ No blocking finding remains in the accepted slice.
 ::point{label="C4" value="26"}
 :::
 ::::
-
-## Workstream queue
 
 :::filter{title="Filter workstreams" placeholder="Search owner or state"}
 
@@ -69,8 +69,9 @@ No blocking finding remains in the accepted slice.
 :::toggle{title="Optional release detail" label="Show external release boundary" default="off"}
 Push, npm publication, deployment, and credential use are not implied by a locally verified candidate.
 :::
+::::::
 
-## Risk distribution
+::::::section{title="Risk distribution" id="risk" nav="Risk" width="wide" tone="accent" composition="mosaic" viewport="adaptive" section-density="compact" type="display" surface="glow" transition="stagger" choreography="cascade"}
 
 ::::chart{type="pie" title="Residual attention" description="Most remaining attention belongs to documentation reconciliation, followed by packaging and final browser review."}
 :::series{label="Attention"}
@@ -83,3 +84,4 @@ Push, npm publication, deployment, and credential use are not implied by a local
 :::callout{kind="warning" title="Use live evidence"}
 Replace these sample signals with values from reproducible checks. Never turn an unknown into a green state.
 :::
+::::::

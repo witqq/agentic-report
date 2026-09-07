@@ -229,6 +229,7 @@ test('the staged public proof opens all four bilingual artifacts and all eight c
   for (const proof of publicProofs) {
     await page.goto(stagedUrl(proof.page));
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page.locator('main p').filter({ hasText: /^:{3,}$/u })).toHaveCount(0);
     const englishTitle = await page.title();
     const englishHeading = await page.locator('h1').innerText();
     expect(
@@ -265,6 +266,7 @@ test('the staged public proof opens all four bilingual artifacts and all eight c
     ).toBeGreaterThanOrEqual(4.5);
     await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
     await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+    await expect(page.locator('main p').filter({ hasText: /^:{3,}$/u })).toHaveCount(0);
     expect(await page.title()).not.toBe(englishTitle);
     expect(await page.locator('h1').innerText()).not.toBe(englishHeading);
     await expect(page.getByRole('combobox', { name: 'Язык' })).toHaveValue('ru');

@@ -139,8 +139,11 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   ultrawide, tall portrait, desktop, mobile, and narrow-mobile viewports. That coverage distinguishes
   computed stage/split/mosaic/story/stack layouts; masked, layered, gallery, and bleed media; independent
   fit/aspect/focal framing; distinct decorative surfaces; authored-order mobile flattening; local gallery
-  overflow; image completion; and document containment. Inspected captures supplement those geometry and
-  computed-style assertions.
+  overflow; image completion; and document containment. Dedicated foundation coverage also distinguishes
+  the localized icon toolbar in fine/coarse pointer profiles, native locale focus, useful compact heading/
+  action geometry, section-local short-story floats, and nonintersecting Russian stage titles/media at both
+  constrained and wide desktop widths. Wide visual-family coverage separately preserves stage, split, and
+  gallery track behavior. Inspected captures supplement those geometry and computed-style assertions.
   Public integration separately enumerates the closed staged inventory, opens the bilingual landing plus
   incident review, vendor decision, and launch readiness, and reaches both canonical locale sources for each.
   The landing and a non-landing page jointly exercise the same semantic visual identities. Initial and
@@ -149,7 +152,10 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   localized switching, contrast, and unchanged document geometry while a selected-text thread is open.
   All six
   package starters are also opened in both profiles, exercise a declared interaction, assert responsive
-  containment, and produce inspected captures. Dedicated semantic-tabs coverage builds every current
+  containment, and produce inspected captures. Registry-derived portfolio coverage additionally opens every
+  shipped starter, layout example, catalog, workspace, and showcase at mobile and ultrawide sizes, switches
+  each artifact to Russian, and distinguishes horizontal overflow, disproportionate headings, pages that do
+  not occupy the viewport, missing semantic sections, and leaked directive fences. Dedicated semantic-tabs coverage builds every current
   tab-bearing starter, example, and fixture for desktop and mobile `file://` artifacts; it asserts readable
   non-shrinking single-line labels, list-owned overflow where needed, document containment, and pointer and
   keyboard selection and focus. Dedicated localization coverage builds both formats and verifies ordered
@@ -193,10 +199,13 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   computes and prints the candidate SHA-256, then installs the
   tarball into a clean temporary npm consumer, invokes discovery, and builds complete multilingual offline artifacts through the
   installed binary in both formats plus directory output through the ESM API. It also builds every packaged
-  page-layout example and all six starters in both formats and verifies the selected layout. Two installed
-  first-use journeys perform init, edit, validate, inspect, and build for single-file and directory output.
-  Installed CLI and ESM share builds additionally prove exact source-link counts and absence of their
-  workstation paths while default builds retain the links.
+  page-layout example and all six starters in both formats and verifies the selected layout. Installed
+  first-use journeys initialize and edit a starter, then build directly for single-file and directory
+  output without an analysis-command prerequisite. The single-file route first supplies invalid source to
+  build and observes its diagnostic plus preservation of an existing output, then corrects the source and observes
+  successful publication. The exact first-use artifacts are opened through `file://`; optional validate and
+  inspect behavior remains independently covered. Installed CLI and ESM share builds additionally prove
+  exact source-link counts and absence of their workstation paths while default builds retain the links.
   It asserts exact
   discovery/schema/result shapes, rejects retired options, type members, and out-of-domain ESM format
   values without output mutation, and contains conflicting `dist/browser` files to prove the installed

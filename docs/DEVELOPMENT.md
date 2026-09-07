@@ -35,9 +35,11 @@ under a random name and the search directories are built by the run itself, so c
 editing `scripts/check-package.ts` to write an `agentic-report` executable into the toolchain directory it
 just created, running `pnpm pack:check`, reading `Clean consumer preflight found a checkout link, a
 product executable inside the run environment, or a reused cache`, and reverting the edit.
-That command verifies the exact tarball inventory and metadata, installs the tarball into a clean consumer, and exercises CLI/ESM first-use
-journeys in both output formats. It prints the candidate tarball path, SHA-256, and file count. Do not
-publish the tarball as part of local verification.
+That command verifies the exact tarball inventory and metadata, installs the tarball into a clean consumer,
+and exercises direct `init` → edit → `build` → `file://` first-use journeys in both output formats. Build's
+own invalid-source refusal and output preservation are checked before the corrected artifact is accepted;
+optional validation and inspection are exercised separately. It prints the candidate tarball path, SHA-256,
+and file count. Do not publish the tarball as part of local verification.
 
 ## Quality commands
 

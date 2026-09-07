@@ -26,7 +26,7 @@ demonstrate the report engine; replace it with verified project evidence before 
 Every visual below is authored as bounded Markdown directives. The compiler validates the data and emits
 deterministic SVG or semantic HTML; the page performs no visualization-time network request.
 
-## Adoption
+::::::section{title="Adoption signal" id="adoption" nav="Adoption" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
 
 :::::chart{type="bar" title="Weekly active agents" description="Active agents increased across four weekly releases, with the assisted cohort leading after week two." x-label="Release week" y-label="Active agents"}
 ::::series{label="Assisted"}
@@ -42,8 +42,9 @@ deterministic SVG or semantic HTML; the page performs no visualization-time netw
 ::point{label="W4" value="74"}
 ::::
 :::::
+::::::
 
-## Quality trend
+::::::section{title="Quality trend" id="quality" nav="Quality" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal" scene="progress"}
 
 ::::chart{type="line" title="Successful first builds" description="The percentage of agents completing a successful first build rose during the measured releases." x-label="Release week" y-label="Percent"}
 :::series{label="Success rate"}
@@ -53,8 +54,9 @@ deterministic SVG or semantic HTML; the page performs no visualization-time netw
 ::point{label="W4" value="91"}
 :::
 ::::
+::::::
 
-## Work mix
+::::::section{title="Work mix" id="mix" nav="Mix" width="wide" tone="plain" composition="mosaic" viewport="adaptive" section-density="compact" type="editorial" surface="grain" transition="stagger" choreography="cascade"}
 
 ::::chart{type="pie" title="Generated page mix" description="Reports are the largest category, followed by tutorials, dashboards, and landing pages."}
 :::series{label="Pages"}
@@ -64,8 +66,9 @@ deterministic SVG or semantic HTML; the page performs no visualization-time netw
 ::point{label="Landing pages" value="12"}
 :::
 ::::
+::::::
 
-## Compilation flow
+::::::section{title="Compilation flow" id="flow" nav="Flow" width="wide" tone="accent" composition="story" viewport="bounded" section-density="immersive" type="display" surface="glow" transition="reveal" interaction="depth"}
 
 :::diagram{title="Offline compilation flow" description="Fifteen participants across authoring, compilation, and artifact subsystems." type="flow"}
 ::group{id="authoring" label="Authoring graph"}
@@ -117,8 +120,9 @@ deterministic SVG or semantic HTML; the page performs no visualization-time netw
 ::edge{from="compiler" to="browser" label="write artifact"}
 ::edge{from="browser" to="agent" label="review result"}
 :::
+::::::
 
-## Delivery path
+::::::section{title="Delivery path" id="delivery" nav="Delivery" width="wide" tone="contrast" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 
 ::::timeline{title="Release journey" description="Four milestones move the product from evidence to a locally verified release candidate."}
 :::event{date="Discover" title="Inspect the catalog" kind="neutral"}
@@ -134,3 +138,4 @@ The same validated model produces single-file or directory output.
 Desktop and mobile checks inspect the real generated artifact without a server.
 :::
 ::::
+::::::

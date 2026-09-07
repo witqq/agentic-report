@@ -13,11 +13,13 @@ language: ru
 Эта основа фиксирует одно системное решение с достаточной детализацией для реализации и последующего отката.
 Граница доверия остаётся видимой, а не скрывается в коде фреймворка.
 
+::::::section{title="Граница системы" id="boundary" nav="Граница" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" surface="mesh" transition="stagger" choreography="cascade"}
 ![Граница источника, компилятора, артефакта и браузера](assets/system-map.ru.svg)
 
 {{include: partials/decision.ru.md}}
+::::::
 
-## Поток выполнения
+::::::section{title="Поток выполнения" id="flow" nav="Поток" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal" scene="progress"}
 
 :::diagram{title="Граница автономной сборки" description="Декларативный локальный вход проходит проверку и compile-time рендеринг и становится статическим браузерным артефактом." direction="right"}
 ::node{id="source" label="Локальный источник" kind="accent"}
@@ -28,8 +30,9 @@ language: ru
 ::edge{from="model" to="render" label="типизированные данные"}
 ::edge{from="render" to="artifact" label="HTML и ресурсы"}
 :::
+::::::
 
-## Альтернативы
+::::::section{title="Альтернативы и последствия" id="alternatives" nav="Альтернативы" width="wide" tone="plain" composition="mosaic" viewport="adaptive" section-density="compact" type="editorial" surface="grain" transition="stagger" choreography="cascade"}
 
 ::::tabs{title="Рассмотренные альтернативы"}
 :::tab{label="Примитивы пакета"}
@@ -42,8 +45,6 @@ language: ru
 Быстрое визуальное редактирование, но появляется зависимость от сервиса и ослабевает автономная переносимость.
 :::
 ::::
-
-## Эксплуатационные последствия
 
 ::::cards
 :::card{title="Плюс"}
@@ -64,13 +65,15 @@ language: ru
 - Работает ли артефакт без сети и сервера?
 - Проверено ли новое поведение через публичную границу?
   :::
+  ::::::
 
-## Внедрение
+::::::section{title="Внедрение" id="rollout" nav="Внедрение" width="wide" tone="accent" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="glow" transition="reveal"}
 
 :::steps{title="Применить решение"}
 
-1. Проверить модель источника и диагностику.
-2. Отрендерить смысловой результат через общий компилятор.
-3. Проверить артефакт через `file://` на desktop и mobile.
+1. Заменить примерное решение и доказательства в декларативном исходнике.
+2. Собрать смысловой результат через общий компилятор.
+3. Открыть артефакт через `file://` на desktop и mobile.
 4. Пересмотреть решение, когда проверенное требование перестанет укладываться в границу.
    :::
+   ::::::

@@ -13,13 +13,15 @@ language: ru
 Эта основа превращает исследовательский вопрос в прозрачную рекомендацию. Метод и доказательства находятся
 достаточно близко, чтобы другой агент мог оспорить вывод.
 
+::::::section{title="Рамка исследования" id="frame" nav="Рамка" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 :::callout{kind="info" title="Исследовательский вопрос"}
 Какой авторский путь быстрее всего приводит агента к переносимой интерактивной странице, пригодной для ревью?
 :::
 
 {{include: partials/method.ru.md}}
+::::::
 
-## Модель доказательств
+::::::section{title="Модель доказательств" id="evidence" nav="Доказательства" width="wide" tone="soft" composition="story" viewport="bounded" section-density="editorial" type="editorial" media="mask" media-fit="contain" media-aspect="landscape" surface="grain" transition="reveal" interaction="depth"}
 
 ![Исследовательские данные сходятся в рекомендацию](assets/evidence-map.ru.svg)
 
@@ -34,8 +36,9 @@ language: ru
 Для оценки долгосрочного внедрения и стоимости поддержки нужны наблюдения за пределами этого исследования.
 :::
 ::::
+::::::
 
-## Сравнение
+::::::section{title="Сравнение" id="comparison" nav="Сравнение" width="wide" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="grid" transition="stagger" scene="progress" choreography="cascade"}
 
 :::::chart{type="bar" title="Первый полезный артефакт" description="Медианное число целевых рабочих единиц до локального артефакта для ревью; меньше — лучше." x-label="Авторский путь" y-label="Рабочие единицы"}
 ::::series{label="Медианные усилия"}
@@ -44,8 +47,9 @@ language: ru
 ::point{label="Собственный frontend" value="14"}
 ::::
 :::::
+::::::
 
-## Интерпретация
+::::::section{title="Интерпретация и продолжение" id="interpretation" nav="Решение" width="wide" tone="accent" composition="stack" viewport="adaptive" section-density="compact" type="editorial" surface="glow" transition="reveal"}
 
 :::disclosure{title="Прочитать ограничения достоверности" open="true"}
 Сравнение измеряет ограниченную локальную задачу, а не каждый процесс публикации. Оно поддерживает
@@ -57,11 +61,10 @@ language: ru
 только когда проверенные требования выходят за этот словарь.
 :::
 
-## Продолжение
-
 :::steps{title="Расширить исследование"}
 
 1. Заменить таблицу наблюдений отслеживаемыми данными сессий.
 2. Зафиксировать исключения и контрпримеры до изменения рекомендации.
 3. Повторить сравнение после значимого изменения авторского контракта.
    :::
+   ::::::

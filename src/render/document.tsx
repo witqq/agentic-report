@@ -150,7 +150,9 @@ function PageVariant({
             data-nav-toggle
           >
             <PackageIcon name="three-bars" />
-            <span data-nav-toggle-label>{strings.hideContents}</span>
+            <span data-nav-toggle-label data-topbar-control-label>
+              {strings.hideContents}
+            </span>
           </button>
         ) : null}
         <div className="topbar-context">
@@ -170,47 +172,55 @@ function PageVariant({
             </span>
           ) : null}
         </div>
-        {hasReviewTargets ? (
-          <button
-            className="review-toggle"
-            type="button"
-            aria-controls={reviewDialogId}
-            aria-expanded="false"
-            aria-label={strings.review}
-            title={strings.review}
-            data-review-toggle
-          >
-            <PackageIcon name="comment" size={20} />
-            <span data-review-toggle-label>{strings.review}</span>
-            <span className="review-toggle-count" data-review-toggle-count hidden />
-          </button>
-        ) : null}
-        {variants.length > 1 ? (
-          <label className="language-select">
-            <span className="visually-hidden">{strings.language}</span>
-            <select
-              aria-label={strings.language}
-              defaultValue={options.locale}
-              data-language-select
+        <div className="topbar-tools">
+          {hasReviewTargets ? (
+            <button
+              className="review-toggle"
+              type="button"
+              aria-controls={reviewDialogId}
+              aria-expanded="false"
+              aria-label={strings.review}
+              title={strings.review}
+              data-review-toggle
             >
-              {variants.map((variant) => (
-                <option key={variant.locale} value={variant.locale}>
-                  {strings.languageName(variant.locale)}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        <button
-          className="theme-toggle"
-          type="button"
-          aria-label={strings.toggleTheme}
-          title={strings.toggleTheme}
-          data-theme-toggle
-        >
-          <PackageIcon name="sun" />
-          <span data-theme-toggle-label>{strings.theme}</span>
-        </button>
+              <PackageIcon name="comment" size={20} />
+              <span data-review-toggle-label data-topbar-control-label>
+                {strings.review}
+              </span>
+              <span className="review-toggle-count" data-review-toggle-count hidden />
+            </button>
+          ) : null}
+          {variants.length > 1 ? (
+            <label className="language-select" title={strings.language}>
+              <PackageIcon name="language" size={20} />
+              <span className="visually-hidden">{strings.language}</span>
+              <select
+                aria-label={strings.language}
+                title={strings.language}
+                defaultValue={options.locale}
+                data-language-select
+              >
+                {variants.map((variant) => (
+                  <option key={variant.locale} value={variant.locale}>
+                    {strings.languageName(variant.locale)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <button
+            className="theme-toggle"
+            type="button"
+            aria-label={strings.toggleTheme}
+            title={strings.toggleTheme}
+            data-theme-toggle
+          >
+            <PackageIcon name="sun" size={20} />
+            <span data-theme-toggle-label data-topbar-control-label>
+              {strings.theme}
+            </span>
+          </button>
+        </div>
       </header>
       <div
         className="report-shell"
