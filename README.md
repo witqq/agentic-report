@@ -131,7 +131,7 @@ description: Decision report
 language: en
 layout: document
 theme: system
-preset: editorial
+preset: material
 scrollProgress: true
 attribution: true
 tokens:
@@ -260,11 +260,13 @@ bucket cards also support drag-and-drop. The reader copies or downloads the same
 complete source is [`examples/response-workspace/report.md`](examples/response-workspace/report.md).
 
 The package owns four responsive page layouts: `document`, `dashboard`, `landing`, and `mixed`. Authors
-select one as metadata and may choose the coordinated `studio`, `editorial`, or `signal` preset, an
+select one as metadata and may choose `monument` (default), `material`, `signal`, `terminal`, or `cinematic`, an
 independent `system`, `light`, or `dark` color mode, and compact token overrides for `density`, `font`,
 `accent`, `width`, and `radius`. Preset defaults apply first and explicitly authored token values apply
-last. The `editorial` preset is the Field Manual system for warm long-form pages with compact controls,
-numbered contents, and package-owned action icons. These are closed validated values, not CSS or component code. Buildable examples under
+last. `studio` and `editorial` remain accepted compatibility identities for Monument and Material.
+Monument provides large-scale staged storytelling, Material provides warm editorial reading, Signal keeps
+dense data crisp, Terminal adds console texture and prompt rhythm, and Cinematic stages image-first stories.
+These are closed validated values, not CSS or component code. Buildable examples under
 `examples/layout-*` demonstrate every layout and are listed by
 `agentic-report examples --json`; `examples/interactive-catalog` and `examples/visualization-catalog`
 demonstrate the package-owned interaction and data primitives.
@@ -276,7 +278,9 @@ links, proportional typography, and wrapping remain ordinary Markdown; the local
 only visible rendered text rather than Markdown or HTML.
 
 Authors may replace heading-only structure with top-level `section` directives. Each section owns a
-visible H2 and stable anchor. Closed visual attributes compose package-owned arrangements (`flow`, `stage`,
+visible H2 and stable anchor. Start with `recipe="hero|evidence|story|rail|metrics"` for a coherent
+high-level composition; any explicitly authored detailed attribute overrides only its matching recipe role.
+Closed visual attributes compose package-owned arrangements (`flow`, `stage`,
 `split`, `mosaic`, `story`, `stack`), bounded viewport rhythm, compact/editorial/immersive density,
 body/display/editorial typography, natural/masked/layered/gallery/bleed media, image fit/aspect/focal point,
 and plain/mesh/glow/grain/grid surfaces. They are semantic choices, not CSS or component code; multi-column
@@ -292,6 +296,9 @@ mosaic/stack.
 `reveal="true"` remains supported. A nested `actions` group composes ordinary safe links with
 primary/secondary/quiet emphasis, `auto|edge|inline|bottom` placement, and an optional primary-only
 `magnetic` effect. Mobile bottom placement remains compact normal-flow content rather than a sticky overlay.
+Add `href` to a `card` when the whole card is one destination. The compiler reuses the safe-link contract,
+rejects nested links, and renders one keyboard focus target with a persistent link icon; cards without
+`href` remain informational articles.
 Legacy heading documents remain valid;
 their H2 headings define the primary navigation while H3 and component anchors remain owned descendant
 targets.

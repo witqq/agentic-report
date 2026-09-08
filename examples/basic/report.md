@@ -23,7 +23,7 @@ demonstrate the report engine; replace it with verified project evidence before 
 This starter organizes a real review: the decision, the evidence behind it, the remaining risk, and the
 next accountable steps. Replace the sample facts while keeping the semantic structure.
 
-::::::section{title="Decision signal" id="signal" nav="Signal" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Decision signal" id="signal" nav="Signal" recipe="hero" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
 
 :::callout{kind="success" title="Recommendation"}
 Proceed with the local release candidate. The documented first-use journey is complete and no blocking
@@ -40,7 +40,7 @@ defect remains in the reviewed scope.
 ::asset[Download the evidence map]{src="assets/architecture.svg"}
 
 ::::cards
-:::card{title="Scope"}
+:::card{title="Scope" href="#evidence"}
 The candidate includes the declarative authoring loop, static output, and package-owned interactions.
 :::
 :::card{title="Confidence"}

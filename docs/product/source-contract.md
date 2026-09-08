@@ -36,7 +36,8 @@ Frontmatter takes precedence. Supported fields are:
   metadata. Presentation and output settings come from the primary entry. An empty object, unsupported
   locale, recursive localization declaration, canonical alias, or lexical/symlink escape fails before
   publication;
-- `preset`: coordinated `studio`, `editorial`, or `signal` package-owned visual defaults;
+- `preset`: coordinated `monument`, `material`, `signal`, `terminal`, or `cinematic` package-owned visual
+  defaults; `studio` and `editorial` remain compatibility identities;
 - `theme`: `system`, `light`, or `dark`;
 - `layout`: `document`, `dashboard`, `landing`, or `mixed`;
 - `scrollProgress`: boolean; default `false`; enables decorative normal-motion reading progress;
@@ -244,15 +245,19 @@ The root metadata value, `tokens`, and `output` must be objects; scalar and arra
 silently replaced by defaults. Validation diagnostics point to the actual manifest or frontmatter field
 range that supplied the failing value.
 
-Defaults are `layout: document`, `theme: system`, `preset: studio`, `scrollProgress: false`, and
+Defaults are `layout: document`, `theme: system`, `preset: monument`, `scrollProgress: false`, and
 `attribution: true`. Presets provide these coordinated
 token defaults:
 
-| Preset      | Density     | Font  | Accent | Width    | Radius |
-| ----------- | ----------- | ----- | ------ | -------- | ------ |
-| `studio`    | comfortable | sans  | indigo | standard | soft   |
-| `editorial` | comfortable | serif | indigo | wide     | sharp  |
-| `signal`    | compact     | sans  | teal   | wide     | sharp  |
+| Preset      | Density     | Font  | Accent | Width | Radius |
+| ----------- | ----------- | ----- | ------ | ----- | ------ |
+| `monument`  | spacious    | sans  | indigo | wide  | soft   |
+| `material`  | comfortable | serif | indigo | wide  | sharp  |
+| `signal`    | compact     | sans  | teal   | wide  | sharp  |
+| `terminal`  | compact     | mono  | teal   | wide  | sharp  |
+| `cinematic` | spacious    | sans  | coral  | wide  | round  |
+| `studio`    | spacious    | sans  | indigo | wide  | soft   |
+| `editorial` | comfortable | serif | indigo | wide  | sharp  |
 
 The selected preset supplies all five token axes, the selected theme supplies only the color mode, and
 explicitly authored token fields apply last. An omitted token field therefore retains its selected preset
@@ -261,7 +266,7 @@ class names, JSX, templates, URLs, arbitrary fonts, and callbacks are not accept
 `agentic-report describe --json` and the ESM `getSourceContract()` return the same `page` domain,
 coordinated defaults, and precedence contract. In that discovery value, `page.tokenResolution` declares
 that defaults come from the selected preset before explicit token fields apply. For major-1 compatibility,
-`page.tokens` retains each Studio normalization `default` with
+`page.tokens` retains each generic normalization `default` with
 `defaultVisibility: normalization-only`; discovery consumers must materialize only `published` defaults as
 authored fields. `page.presets` contains every complete coordinated map.
 The public landing and vendor decision use the Field Manual `editorial` preset, the launch example uses
@@ -381,6 +386,7 @@ short navigation text. The complete visual grammar is closed and package-owned:
 
 | Attribute         | Values                                                    | Default     |
 | ----------------- | --------------------------------------------------------- | ----------- |
+| `recipe`          | `none`, `hero`, `evidence`, `story`, `rail`, `metrics`    | `none`      |
 | `width`           | `reading`, `standard`, `wide`                             | `standard`  |
 | `align`           | `start`, `center`                                         | `start`     |
 | `tone`            | `plain`, `soft`, `accent`, `contrast`                     | `plain`     |
@@ -418,6 +424,12 @@ supporting content with media below; gallery stages keep their separate title/ra
 to normal flow before a desktop sidebar can leave unreadably narrow tracks. Authors cannot supply CSS values,
 class names, event handlers, or executable layout code.
 
+Recipes provide the short path. Their coordinated detailed values resolve first, and any explicit detailed
+attribute overrides only its own role before the same incompatibility checks run. `hero` stages an opening,
+`evidence` creates a split proof field, `story` creates a scroll narrative, `rail` creates a local media rail,
+and `metrics` creates a compact data mosaic. A card may declare one safe `href`; it then renders as one
+focusable anchor with a persistent link icon, while nested Markdown links fail validation.
+
 ```markdown
 ::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
 The content remains ordinary Markdown and semantic directives.
@@ -449,7 +461,7 @@ same-page `#anchor`, a relative target, HTTP(S), or `mailto:`. Executable scheme
 part of the contract. `actions.placement` is `auto`, `edge`, `inline`, or `bottom`; `auto` resolves to an
 edge-aligned group on desktop and a compact bottom group at its authored position on mobile. `bottom` remains
 in normal document flow—it is not sticky, fixed, or allowed to cover later content. `action.effect` is
-`none` or `magnetic`; the latter is valid only on a primary action and moves by at most 7 pixels for a fine
+`none` or `magnetic`; the latter is valid only on a primary action and moves by at most 9 pixels for a fine
 pointer in the normal-motion profile. Output remains an ordinary keyboard-operable anchor with package-owned
 styling and a 16-pixel package icon.
 
@@ -601,13 +613,14 @@ initial focus; Tab and Shift+Tab remain contained; Escape, backdrop, and Close r
 closes the dialog and focuses its target heading. Crossing to desktop while open closes the dialog safely.
 
 `scrollProgress: true` installs one decorative transform-based progress indicator only in normal motion.
-`transition="reveal"` and legacy `reveal="true"` reveal a section once using opacity and at most 12 pixels
-of translation over 220 milliseconds. `transition="stagger"` applies the same entrance to at most 12 direct
-children with 70-millisecond steps. `scene="progress"` drives one bounded transform from normalized visible
+`transition="reveal"` and legacy `reveal="true"` reveal section contents once using opacity and at most 24
+pixels of translation over 420 milliseconds while the section anchor remains stable. `transition="stagger"`
+applies the same entrance to at most 12 direct children with 90-millisecond steps. `scene="progress"` drives one bounded transform from normalized visible
 scroll progress; `scene="sticky"` keeps the direct image-bearing paragraph sticky on desktop and restores
 normal flow at 48rem and below. `choreography="cascade"` reveals at most 12 semantic cards, chart points, or
-timeline items in source order with 60-millisecond steps. `interaction="depth|tilt"` applies at most 10 pixels
-of depth or 2.5 degrees of tilt to media for a fine pointer. Pointer updates are visibility-bound and
+timeline items in source order with 75-millisecond steps. `interaction="depth|tilt"` applies at most 24 pixels
+of depth or 4.5 degrees of tilt to media for a fine pointer. Primary magnetic movement is bounded to 9
+pixels. Pointer updates are visibility-bound and
 coalesced to one animation frame. Under `prefers-reduced-motion: reduce`, progress, entrance, scene,
 choreography, and pointer machinery leave no hidden or transformed pending state; coarse pointers receive no
 depth, tilt, or magnetic behavior. Without a callable `IntersectionObserver`, observer-dependent enhancement

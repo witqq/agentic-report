@@ -49,7 +49,7 @@ const config: Config = {
       command: 'pnpm exec playwright test --config=playwright.config.ts',
       resultFile: 'e2e.json',
       timeout: 300_000,
-      workers: 1,
+      workers: 2,
     },
   ],
 };

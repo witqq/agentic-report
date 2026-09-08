@@ -418,7 +418,8 @@ theme, and optional token values:
 - `language`: selects reader chrome for one source variant; unsupported single-language tags use English;
 - `localizations.en` / `localizations.ru`: optional confined alternate Markdown entry for the other
   package-supported locale; a multilingual primary must itself be English or Russian;
-- `preset`: `studio` (default), `editorial`, or `signal`;
+- `preset`: `monument` (default), `material`, `signal`, `terminal`, or `cinematic`; compatibility identities
+  `studio` and `editorial` remain accepted;
 - `theme`: `system` (default), `light`, or `dark`;
 - `scrollProgress`: boolean, default `false`; decorative normal-motion reading progress;
 - `attribution`: boolean, default `true`; shows **Made with Agentic Report** linked to
@@ -429,21 +430,24 @@ theme, and optional token values:
 - `tokens.width`: `narrow`, `standard`, or `wide`;
 - `tokens.radius`: `sharp`, `soft`, or `round`.
 
-Preset token defaults are `studio = comfortable/sans/indigo/standard/soft`, `editorial =
-comfortable/serif/indigo/wide/sharp`, and `signal = compact/sans/teal/wide/sharp`, in the token order above.
+Preset token defaults are `monument = spacious/sans/indigo/wide/soft`, `material =
+comfortable/serif/indigo/wide/sharp`, `signal = compact/sans/teal/wide/sharp`, `terminal =
+compact/mono/teal/wide/sharp`, and `cinematic = spacious/sans/coral/wide/round`, in the token order above.
+`studio` maps to Monument's tokens and `editorial` maps to Material's tokens.
 The preset applies first, theme controls only light/dark/system color resolution, and every explicitly
 authored token field overrides its preset value. Do not repeat all five token fields when the preset
 already expresses the intended family.
 
 The public discovery contract represents this rule as `page.tokenResolution`: defaults come from the
 selected preset, then explicit token fields apply. For source-contract-major compatibility, each
-`page.tokens` entry retains Studio's internal normalization `default` and marks it
+`page.tokens` entry retains the generic internal normalization `default` and marks it
 `defaultVisibility: normalization-only`; a discovery consumer must not materialize such values as authored
 tokens. Use the complete maps in `page.presets` when constructing an editor or agent prompt, and apply only
 defaults whose visibility is `published`.
 
-`editorial` is the Field Manual family: serif display typography, warm plates, compact controls,
-package-owned action icons, numbered desktop contents, and a left mobile contents sheet. `document`
+Monument is the recommended large-scale default; Material is the warm editorial family; Signal is the
+dense data family; Terminal adds console texture, prompts and scan rhythm; Cinematic stages image-first
+stories. `document`
 emphasizes long-form reading with persistent desktop contents. `dashboard` uses a wide dense
 surface and horizontal desktop navigation. `landing` provides a spacious centered hero and wide content
 sections. `mixed` combines a reading column with wide evidence, cards, tables, and media. Every layout
@@ -679,6 +683,7 @@ Its closed visual attributes are:
 
 | Attribute         | Values                                                    | Default     |
 | ----------------- | --------------------------------------------------------- | ----------- |
+| `recipe`          | `none`, `hero`, `evidence`, `story`, `rail`, `metrics`    | `none`      |
 | `width`           | `reading`, `standard`, `wide`                             | `standard`  |
 | `align`           | `start`, `center`                                         | `start`     |
 | `tone`            | `plain`, `soft`, `accent`, `contrast`                     | `plain`     |
@@ -702,6 +707,11 @@ Compatibility boundaries prevent two roles from owning the same layout or transf
 `scene="progress"` cannot pair with `interaction="depth|tilt"`; and `composition="story|stack"` cannot pair
 with `scene="sticky"`. A secondary or quiet action cannot use `effect="magnetic"`. These combinations fail
 before rendering and are declared in discovery and JSON Schema.
+
+A recipe is the short path: it supplies a coordinated subset of detailed roles before explicit attributes
+apply. Use `recipe="hero"`, `recipe="evidence"`, `recipe="story"`, `recipe="rail"`, or
+`recipe="metrics"`; omit it only when composing the detailed roles directly. A `card` may carry one safe
+`href`; linked cards render as one focusable anchor with a persistent icon, and nested Markdown links fail.
 
 Compose these roles instead of writing a bespoke layout. `media` owns the treatment, while fit, aspect, and
 focal point frame local images independently. Section `tone` owns its background/foreground relationship;
@@ -738,7 +748,7 @@ placement remains at the authored position in normal flow and never becomes a st
 are same-page anchors, relative paths, HTTP(S), and `mailto:`. `javascript:`, `data:`, `file:`, absolute
 local paths, and protocol-relative URLs fail validation. `kind` is `primary`, `secondary`, or `quiet` and
 changes package styling only. `effect` is `none` or `magnetic`; magnetic is primary-only and moves by at most
-7 pixels for a fine pointer in normal motion. The output remains an ordinary anchor with a 16-pixel package
+9 pixels for a fine pointer in normal motion. The output remains an ordinary anchor with a 16-pixel package
 icon and no callback or form behavior.
 
 `source-link` is an inline labelled address for an external local editor helper. Its `href` is deliberately
@@ -802,11 +812,12 @@ and focuses its section heading. Do not add `menu` keyboard behavior or persist 
 Set root metadata `scrollProgress: true` only when decorative reading progress is useful. On a section,
 choose `transition="reveal|stagger"`, `scene="progress|sticky"`, `interaction="depth|tilt"`, or
 `choreography="cascade"`; each defaults to `none`. Legacy `reveal="true"` remains supported.
-Reveal is a 220-millisecond, 12-pixel maximum entrance. Stagger affects at most 12 direct children in
-70-millisecond steps. Progress drives one normalized media transform; sticky media returns to normal flow at
-48rem and below. Cascade orders at most 12 semantic cards, chart points, or timeline items in 60-millisecond
-steps. Fine-pointer depth is bounded to 10 pixels, tilt to 2.5 degrees, and primary-action magnetic movement
-to 7 pixels; updates are visibility-bound and animation-frame-coalesced. Reduced motion leaves all content
+Reveal is a 420-millisecond, 24-pixel maximum entrance applied to section contents so anchor geometry remains
+stable. Stagger affects at most 12 direct children in 90-millisecond steps. Progress drives one normalized
+media transform; sticky media returns to normal flow at 48rem and below. Cascade orders at most 12 semantic
+cards, chart points, or timeline items in 75-millisecond
+steps. Fine-pointer depth is bounded to 24 pixels, tilt to 4.5 degrees, and primary-action magnetic movement
+to 9 pixels; updates are visibility-bound and animation-frame-coalesced. Reduced motion leaves all content
 visible and untransformed, coarse pointers receive no pointer effects, and an unavailable or non-callable
 `IntersectionObserver` leaves observer-dependent motion/pointer behavior inert, entrance/choreography content
 visible, and navigation on its bounded geometry fallback. Authors cannot supply timing,

@@ -448,6 +448,7 @@ function createNavigationController(): NavigationController | undefined {
   let focusAfterClose: HTMLElement | undefined;
   let currentObserver: IntersectionObserver | undefined;
   let currentObserverSuspended = false;
+  let pendingInitialHashOwner: NavigationOwner | undefined;
   const supportsScrollEnd = 'onscrollend' in window;
   let fallbackScrollTimer: number | undefined;
   const navigationOffset = 16;
@@ -521,6 +522,19 @@ function createNavigationController(): NavigationController | undefined {
       currentObserverSuspended = false;
       selectFromGeometry();
     }
+  };
+
+  const alignPendingInitialHash = (): boolean => {
+    const owner = pendingInitialHashOwner;
+    if (owner === undefined) return false;
+    pendingInitialHashOwner = undefined;
+    window.scrollBy({
+      top: owner.heading.getBoundingClientRect().top - activationLine() + hashOwnershipOverlap,
+      behavior: 'instant',
+    });
+    currentObserverSuspended = true;
+    setCurrent(owner);
+    return true;
   };
 
   const setOutsideInert = (inert: boolean): void => {
@@ -654,6 +668,7 @@ function createNavigationController(): NavigationController | undefined {
     window.addEventListener(
       'scrollend',
       () => {
+        if (alignPendingInitialHash()) return;
         currentObserverSuspended = false;
         selectFromGeometry();
       },
@@ -667,6 +682,7 @@ function createNavigationController(): NavigationController | undefined {
         cancelFallbackScrollSelection();
         fallbackScrollTimer = window.setTimeout(() => {
           fallbackScrollTimer = undefined;
+          if (alignPendingInitialHash()) return;
           currentObserverSuspended = false;
           selectFromGeometry();
         }, 80);
@@ -682,7 +698,10 @@ function createNavigationController(): NavigationController | undefined {
   const initialTarget = hashTarget(window.location.hash);
   if (initialTarget !== undefined) {
     currentObserverSuspended = true;
-    setCurrent(ownerForTarget(initialTarget));
+    const initialOwner = ownerForTarget(initialTarget);
+    pendingInitialHashOwner = initialOwner;
+    setCurrent(initialOwner);
+    if (!supportsScrollEnd) requestAnimationFrame(() => alignPendingInitialHash());
   }
   rebuildCurrentObserver();
 
@@ -713,6 +732,7 @@ function createNavigationController(): NavigationController | undefined {
       abort.abort();
       currentObserver?.disconnect();
       topbarObserver.disconnect();
+      pendingInitialHashOwner = undefined;
       cancelFallbackScrollSelection();
       bottomSentinel.remove();
       root.removeAttribute('data-nav-collapsed');

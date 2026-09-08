@@ -22,6 +22,12 @@ describe('declarative visual language', () => {
     if (section === undefined) throw new Error('Missing public section directive');
     const attributes = section.attributes;
 
+    expect(attributes.recipe).toMatchObject({
+      kind: 'enum',
+      default: 'none',
+      values: ['none', 'hero', 'evidence', 'story', 'rail', 'metrics'],
+    });
+
     expect(attributes.composition).toMatchObject({
       kind: 'enum',
       default: 'flow',
@@ -76,6 +82,78 @@ describe('declarative visual language', () => {
         'section composition mosaic or stack cannot be combined with layered or gallery media.',
       remediation:
         'Use composition flow, stage, split, or story with layered/gallery media, or use natural, mask, or bleed media with mosaic/stack composition.',
+    });
+  });
+
+  it('resolves a high-level recipe before explicit per-role overrides and diagnostics', async () => {
+    const workspace = await visualWorkspace('visual-language-recipes');
+    const validateDirective = new Ajv2020({ strict: false, allErrors: true }).compile(
+      getDirectiveSchema(),
+    );
+    const hero = await render(
+      ':::section{title="Opening" recipe="hero" media="mask"}\nText.\n:::',
+      workspace,
+      'single-file',
+    );
+    expect(hero.html).toContain('data-recipe="hero"');
+    expect(hero.html).toContain('data-composition="stage"');
+    expect(hero.html).toContain('data-viewport="full"');
+    expect(hero.html).toContain('data-type="display"');
+    expect(hero.html).toContain('data-media="mask"');
+    expect(hero.html).toContain('data-scene="progress"');
+
+    const conflict = {
+      name: 'section',
+      form: 'container',
+      attributes: { title: 'Conflict', recipe: 'metrics', media: 'gallery' },
+    } as const;
+    expect(directiveInvocationSchema.safeParse(conflict).success).toBe(false);
+    expect(validateDirective(conflict)).toBe(false);
+
+    await expect(
+      render(
+        ':::section{title="Conflict" recipe="metrics" media="gallery"}\nText.\n:::',
+        workspace,
+        'single-file',
+      ),
+    ).rejects.toMatchObject({
+      diagnostic: {
+        code: 'INVALID_DIRECTIVE_ATTRIBUTE',
+        message: expect.stringContaining('cannot be combined'),
+      },
+    });
+
+    const overridden = {
+      ...conflict,
+      attributes: { ...conflict.attributes, composition: 'stage' },
+    } as const;
+    expect(directiveInvocationSchema.safeParse(overridden).success).toBe(true);
+    expect(validateDirective(overridden)).toBe(true);
+  });
+
+  it('renders a linked card as one safe focus target and rejects nested links', async () => {
+    const workspace = await visualWorkspace('visual-language-linked-card');
+    const linked = await render(
+      '::::cards\n:::card{title="Read evidence" href="#evidence"}\nPlain selectable text.\n:::\n::::',
+      workspace,
+      'single-file',
+    );
+    expect(linked.html).toContain('<a class="semantic-card"');
+    expect(linked.html).toContain('href="#evidence"');
+    expect(linked.html).toContain('data-linked-card=""');
+    expect(linked.html).toContain('semantic-card-link-signifier');
+
+    await expect(
+      render(
+        '::::cards\n:::card{title="Invalid" href="#evidence"}\n[Nested](next.html)\n:::\n::::',
+        workspace,
+        'single-file',
+      ),
+    ).rejects.toMatchObject({
+      diagnostic: {
+        code: 'INVALID_DIRECTIVE_PLACEMENT',
+        message: expect.stringContaining('cannot contain another link'),
+      },
     });
   });
 

@@ -92,7 +92,10 @@ Edit only the declarative source created by the first route: Markdown, YAML fron
 YAML/JSON manifest, confined Markdown partials, and local assets. Authors do not need React, JSX, browser
 JavaScript, CSS, or a frontend project.
 
-Compose distinctive sections through package-owned roles rather than custom layout code. `composition`
+Choose `monument` by default or select `material`, `signal`, `terminal`, or `cinematic`; `studio` and
+`editorial` remain compatibility identities. Start a section with
+`recipe="hero|evidence|story|rail|metrics"` when that reader job fits, then override only the detailed roles
+you need. Compose distinctive sections through package-owned roles rather than custom layout code. `composition`
 offers `flow`, `stage`, `split`, `mosaic`, `story`, and `stack`; pair it as needed with closed viewport,
 density, typography, media treatment, image fit/aspect/focal point, and surface attributes. On narrow
 screens, multi-column and layered arrangements return to source order and galleries keep their own scroll.
@@ -100,6 +103,9 @@ Every section contains its floats and local layer order. A media stage gives its
 composes supporting content with media below; gallery stages retain their separate rail. Do not pair
 mosaic/stack composition with layers/gallery media: those roles would own the same card layout, so the
 compiler rejects the four combinations before rendering.
+
+A card with one destination may declare `href`; it becomes one safe keyboard target with a persistent link
+icon. Do not put another Markdown link inside it.
 
 ```markdown
 ::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}

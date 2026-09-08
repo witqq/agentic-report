@@ -69,6 +69,13 @@
           "required": false,
           "description": "Optional short primary-navigation label."
         },
+        "recipe": {
+          "kind": "enum",
+          "values": ["none", "hero", "evidence", "story", "rail", "metrics"],
+          "required": false,
+          "default": "none",
+          "description": "High-level package-owned section composition; explicit detailed attributes override its roles."
+        },
         "width": {
           "kind": "enum",
           "values": ["reading", "standard", "wide"],
@@ -508,7 +515,7 @@
       "handoffs": ["semantic-document"]
     },
     "card": {
-      "description": "One semantic card containing Markdown.",
+      "description": "One semantic card containing Markdown, optionally promoted to one safe whole-card link.",
       "forms": ["container"],
       "attributes": {
         "title": {
@@ -518,6 +525,15 @@
           "maxLength": 200,
           "required": false,
           "description": "Visible title."
+        },
+        "href": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 500,
+          "pattern": "^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*)$",
+          "required": false,
+          "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected."
         }
       },
       "children": "markdown",
@@ -1451,22 +1467,22 @@
     "runtimePlacement": { "single-file": "inline", "directory": "external" }
   },
   "page": {
-    "defaultPreset": "studio",
+    "defaultPreset": "monument",
     "presets": [
       {
-        "name": "studio",
-        "description": "Balanced product storytelling with a generous sans-serif rhythm and restrained depth.",
+        "name": "monument",
+        "description": "Large-scale product storytelling with sculptural type, generous space, and staged depth.",
         "tokens": {
-          "density": "comfortable",
+          "density": "spacious",
           "font": "sans",
           "accent": "indigo",
-          "width": "standard",
+          "width": "wide",
           "radius": "soft"
         }
       },
       {
-        "name": "editorial",
-        "description": "Field Manual reading with serif display type, compact controls, warm plates, and document navigation.",
+        "name": "material",
+        "description": "Editorial reading with serif display type, tactile warm plates, and document navigation.",
         "tokens": {
           "density": "comfortable",
           "font": "serif",
@@ -1485,6 +1501,50 @@
           "width": "wide",
           "radius": "sharp"
         }
+      },
+      {
+        "name": "terminal",
+        "description": "Console-oriented storytelling with mono type, luminous signals, scan texture, and explicit prompts.",
+        "tokens": {
+          "density": "compact",
+          "font": "mono",
+          "accent": "teal",
+          "width": "wide",
+          "radius": "sharp"
+        }
+      },
+      {
+        "name": "cinematic",
+        "description": "Image-first narrative with deep staging, broad media, restrained overlays, and scroll-driven scenes.",
+        "tokens": {
+          "density": "spacious",
+          "font": "sans",
+          "accent": "coral",
+          "width": "wide",
+          "radius": "round"
+        }
+      },
+      {
+        "name": "studio",
+        "description": "Compatibility identity mapped to the Monument visual system.",
+        "tokens": {
+          "density": "spacious",
+          "font": "sans",
+          "accent": "indigo",
+          "width": "wide",
+          "radius": "soft"
+        }
+      },
+      {
+        "name": "editorial",
+        "description": "Compatibility identity mapped to the Material editorial visual system.",
+        "tokens": {
+          "density": "comfortable",
+          "font": "serif",
+          "accent": "indigo",
+          "width": "wide",
+          "radius": "sharp"
+        }
       }
     ],
     "defaultLayout": "document",
@@ -1498,19 +1558,19 @@
       "sectionReveal": {
         "default": false,
         "normalMotionOnly": true,
-        "durationMs": 220,
-        "translationPx": 12
+        "durationMs": 420,
+        "translationPx": 24
       },
-      "stagger": { "stepMs": 70, "maximumItems": 12 },
+      "stagger": { "stepMs": 90, "maximumItems": 12 },
       "scene": { "normalMotionOnly": true },
       "pointer": {
         "normalMotionOnly": true,
         "finePointerOnly": true,
-        "depthPx": 10,
-        "tiltDegrees": 2.5,
-        "magneticPx": 7
+        "depthPx": 24,
+        "tiltDegrees": 4.5,
+        "magneticPx": 9
       },
-      "choreography": { "stepMs": 60, "maximumItems": 12, "normalMotionOnly": true }
+      "choreography": { "stepMs": 75, "maximumItems": 12, "normalMotionOnly": true }
     },
     "tokens": [
       {

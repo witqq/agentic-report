@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import {
   authoringRegistry,
+  SECTION_RECIPES,
+  sectionRecipeDefaults,
   type AuthoringRegistryDefinition,
   type ConstraintDefinition,
   type DirectiveAttributeDefinition,
@@ -167,10 +169,16 @@ export function interpretDirectiveAttributes(
     string,
     string | number | boolean
   >;
+  const recipeDefaults =
+    directive.name === 'section'
+      ? sectionRecipeDefaults(input.recipe === null ? undefined : input.recipe)
+      : {};
   for (const attribute of directive.attributes) {
     const authored = input[attribute.name];
     if (authored === undefined || authored === null) {
-      if (attribute.default !== undefined) values[attribute.name] = attribute.default;
+      const recipeDefault = recipeDefaults[attribute.name];
+      if (recipeDefault !== undefined) values[attribute.name] = recipeDefault;
+      else if (attribute.default !== undefined) values[attribute.name] = attribute.default;
       else if (attribute.required) return { ok: false, reason: 'required', attribute };
       continue;
     }
@@ -422,9 +430,13 @@ function incompatibleCombinationMatches(
   combination: NonNullable<DirectiveDefinition['incompatibleCombinations']>[number],
   values: Readonly<Record<string, unknown>>,
 ): boolean {
+  const recipeDefaults =
+    directive.name === 'section' && typeof values.recipe === 'string'
+      ? sectionRecipeDefaults(values.recipe)
+      : {};
   return Object.entries(combination.attributes).every(([name, incompatibleValues]) => {
     const attribute = directive.attributes.find((candidate) => candidate.name === name);
-    const value = values[name] ?? attribute?.default;
+    const value = values[name] ?? recipeDefaults[name] ?? attribute?.default;
     return typeof value === 'string' && incompatibleValues.includes(value);
   });
 }
@@ -596,18 +608,41 @@ function directiveSchema(directive: DirectiveDefinition): JsonSchema {
 function jsonIncompatibleCombinations(directive: DirectiveDefinition): JsonSchema {
   const combinations = directive.incompatibleCombinations ?? [];
   if (combinations.length === 0) return {};
-  return {
-    allOf: combinations.map((combination) => ({
-      not: {
-        allOf: Object.entries(combination.attributes).map(([name, values]) => {
+  const incompatibility = (
+    combination: NonNullable<DirectiveDefinition['incompatibleCombinations']>[number],
+    resolvedDefaults: Readonly<Record<string, string>>,
+    recipeName?: string,
+  ): JsonSchema => ({
+    not: {
+      allOf: [
+        ...(recipeName === undefined
+          ? []
+          : [{ required: ['recipe'], properties: { recipe: { const: recipeName } } }]),
+        ...Object.entries(combination.attributes).map(([name, values]) => {
           const attribute = directive.attributes.find((candidate) => candidate.name === name);
           const authoredMatch = { required: [name], properties: { [name]: { enum: [...values] } } };
-          return attribute?.default !== undefined && values.includes(String(attribute.default))
+          const resolvedDefault = resolvedDefaults[name] ?? attribute?.default;
+          return resolvedDefault !== undefined && values.includes(String(resolvedDefault))
             ? { anyOf: [authoredMatch, { not: { required: [name] } }] }
             : authoredMatch;
         }),
-      },
-    })),
+      ],
+    },
+  });
+  const recipeConstraints =
+    directive.name === 'section'
+      ? SECTION_RECIPES.filter((recipe) => recipe.name !== 'none').flatMap((recipe) => {
+          const defaults: Readonly<Record<string, string>> = recipe.attributes;
+          return combinations.map((combination) =>
+            incompatibility(combination, defaults, recipe.name),
+          );
+        })
+      : [];
+  return {
+    allOf: [
+      ...combinations.map((combination) => incompatibility(combination, {})),
+      ...recipeConstraints,
+    ],
   };
 }
 

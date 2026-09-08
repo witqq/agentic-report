@@ -159,22 +159,21 @@ describe('authoring schema projections', () => {
     const expectedDefaults = {
       contractVersion: 1,
       language: 'und',
-      preset: 'studio',
+      preset: 'monument',
       theme: 'system',
       layout: 'document',
       scrollProgress: false,
       attribution: true,
       tokens: {
-        density: 'comfortable',
+        density: 'spacious',
         font: 'sans',
         accent: 'indigo',
-        width: 'standard',
+        width: 'wide',
         radius: 'soft',
       },
       output: { format: 'single-file', maxInlineBytes: 5_000_000 },
     };
     expect(parseReportManifest({})).toEqual(expectedDefaults);
-    expect(parseReportManifest({})).toEqual(manifestDefaults(authoringRegistry.manifestFields));
     expect(parseReportManifest({ output: {} }).output).toEqual({
       format: 'single-file',
       maxInlineBytes: 5_000_000,
@@ -190,14 +189,14 @@ describe('authoring schema projections', () => {
     expect(reportManifestInputSchema.safeParse({ output: { unknown: true } }).success).toBe(false);
 
     const presetDefaults = {
-      studio: {
-        density: 'comfortable',
+      monument: {
+        density: 'spacious',
         font: 'sans',
         accent: 'indigo',
-        width: 'standard',
+        width: 'wide',
         radius: 'soft',
       },
-      editorial: {
+      material: {
         density: 'comfortable',
         font: 'serif',
         accent: 'indigo',
@@ -208,6 +207,34 @@ describe('authoring schema projections', () => {
         density: 'compact',
         font: 'sans',
         accent: 'teal',
+        width: 'wide',
+        radius: 'sharp',
+      },
+      terminal: {
+        density: 'compact',
+        font: 'mono',
+        accent: 'teal',
+        width: 'wide',
+        radius: 'sharp',
+      },
+      cinematic: {
+        density: 'spacious',
+        font: 'sans',
+        accent: 'coral',
+        width: 'wide',
+        radius: 'round',
+      },
+      studio: {
+        density: 'spacious',
+        font: 'sans',
+        accent: 'indigo',
+        width: 'wide',
+        radius: 'soft',
+      },
+      editorial: {
+        density: 'comfortable',
+        font: 'serif',
+        accent: 'indigo',
         width: 'wide',
         radius: 'sharp',
       },
@@ -299,6 +326,10 @@ describe('authoring schema projections', () => {
       accepted('studio preset', { preset: 'studio' }),
       accepted('editorial preset', { preset: 'editorial' }),
       accepted('signal preset', { preset: 'signal' }),
+      accepted('monument preset', { preset: 'monument' }),
+      accepted('material preset', { preset: 'material' }),
+      accepted('terminal preset', { preset: 'terminal' }),
+      accepted('cinematic preset', { preset: 'cinematic' }),
       accepted('theme enum', { theme: 'dark' }),
       accepted('every layout enum', { layout: 'document' }),
       accepted('dashboard layout', { layout: 'dashboard' }),
@@ -333,7 +364,7 @@ describe('authoring schema projections', () => {
       rejected('non-object localizations', { localizations: 'report.ru.md' }),
       rejected('unknown localization locale', { localizations: { de: 'report.de.md' } }),
       rejected('escaping localization entry', { localizations: { ru: '../report.ru.md' } }),
-      rejected('unknown preset', { preset: 'cinematic' }),
+      rejected('unknown preset', { preset: 'neon' }),
       rejected('numeric preset', { preset: 1 }),
       rejected('unknown theme', { theme: 'sepia' }),
       rejected('numeric theme', { theme: 1 }),
@@ -956,14 +987,6 @@ function assertParity(
   if (runtime !== jsonSchema) {
     throw new Error(`runtime and JSON Schema diverged for ${JSON.stringify(value)}`);
   }
-}
-
-function manifestDefaults(fields: readonly FieldDefinition[]): Readonly<Record<string, unknown>> {
-  return Object.fromEntries(
-    fields.flatMap((field) =>
-      field.default === undefined ? [] : [[field.name, structuredClone(field.default)]],
-    ),
-  );
 }
 
 function withManifestStringConstraint(

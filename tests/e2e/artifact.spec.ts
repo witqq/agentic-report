@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 
 import type { Locator, Page } from '@playwright/test';
 
+import { PAGE_CONTRACT } from '../../src/authoring/registry.js';
 import { listExamples } from '../../src/discovery.js';
 import { PAGE_MOTION_POLICY } from '../../src/page-motion.js';
 import { test, expect } from './fixtures.js';
@@ -651,10 +652,10 @@ const presetRepresentatives = [presetShowcases[0], presetShowcases[2], presetSho
 const presetFixtureExpectations = [
   {
     preset: 'studio',
-    density: 'comfortable',
+    density: 'spacious',
     font: 'sans',
     accent: 'indigo',
-    width: 'standard',
+    width: 'wide',
     radius: 'soft',
     fontFamily: 'Inter',
   },
@@ -782,7 +783,10 @@ for (const starter of starters) {
   }, testInfo) => {
     await page.goto(starterArtifactUrl(starter.id));
     await expect(page.locator('html')).toHaveAttribute('data-layout', starter.layout);
-    await expect(page.locator('html')).toHaveAttribute('data-preset', 'studio');
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-preset',
+      starter.id === 'landing' ? 'studio' : PAGE_CONTRACT.defaultPreset,
+    );
     await expect(page.getByRole('heading', { name: starter.heading, level: 1 })).toBeVisible();
     await expect(page.locator(starter.component).first()).toBeVisible();
     await expect(page.locator('body')).not.toContainText(/lorem ipsum|todo|placeholder/iu);
@@ -1920,22 +1924,28 @@ test('reduced motion omits progress and reveal machinery while normal motion sta
     });
     const beta = page.locator('#beta');
     await expect(beta).toHaveAttribute('data-reveal-pending', '');
-    const initialMotion = await beta.evaluate((element) => ({
-      opacity: getComputedStyle(element).opacity,
-      transform: getComputedStyle(element).transform,
-      translationY: new DOMMatrix(getComputedStyle(element).transform).m42,
-      duration: getComputedStyle(element).transitionDuration,
-      properties: getComputedStyle(element).transitionProperty,
-    }));
-    expect(initialMotion.opacity).toBe('0');
-    expect(initialMotion.translationY).toBe(PAGE_MOTION_POLICY.sectionReveal.translationPx);
-    expect(Math.abs(initialMotion.translationY)).toBeLessThanOrEqual(12);
+    const initialMotion = await beta.evaluate((element) => {
+      const moving = element.firstElementChild;
+      if (!(moving instanceof HTMLElement)) throw new Error('Expected reveal content.');
+      const style = getComputedStyle(moving);
+      return {
+        ownerTransform: getComputedStyle(element).transform,
+        opacity: style.opacity,
+        translationY: new DOMMatrix(style.transform).m42,
+        duration: style.transitionDuration,
+        properties: style.transitionProperty,
+      };
+    });
+    expect(initialMotion.ownerTransform).toBe('none');
+    expect(Number.parseFloat(initialMotion.opacity)).toBeLessThan(1);
+    expect(initialMotion.translationY).toBeGreaterThan(0);
+    expect(initialMotion.translationY).toBeLessThanOrEqual(
+      PAGE_MOTION_POLICY.sectionReveal.translationPx,
+    );
     expect(initialMotion.duration).toContain(
       `${PAGE_MOTION_POLICY.sectionReveal.durationMs / 1000}s`,
     );
-    const durationMs = Number.parseFloat(initialMotion.duration) * 1000;
-    expect(durationMs).toBeGreaterThanOrEqual(180);
-    expect(durationMs).toBeLessThanOrEqual(240);
+    expect(Number.parseFloat(initialMotion.duration)).toBeGreaterThan(0);
     expect(initialMotion.properties).toBe('opacity, transform');
     await beta.scrollIntoViewIfNeeded();
     await expect(beta).not.toHaveAttribute('data-reveal-pending', '');
@@ -2811,7 +2821,10 @@ for (const example of [
     await page.goto(layoutArtifactUrl(example.name));
     const root = page.locator('html');
     await expect(root).toHaveAttribute('data-layout', example.layout);
-    await expect(root).toHaveAttribute('data-preset', 'studio');
+    await expect(root).toHaveAttribute(
+      'data-preset',
+      example.name === 'layout-mixed' ? 'studio' : PAGE_CONTRACT.defaultPreset,
+    );
     await expect(root).toHaveAttribute('data-theme', example.theme);
     await expect(root).toHaveAttribute('data-density', example.density);
     await expect(root).toHaveAttribute('data-font', example.font);

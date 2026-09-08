@@ -93,6 +93,10 @@ unresolved content facts.
   belongs beside that explanation but should print in the reference appendix, keep it as a direct section
   child with `placement="appendix"`; do not move it to a separate hand-maintained source list.
 - Compose visually distinct sections with the closed package grammar before considering a bespoke page:
+  start with `recipe="hero|evidence|story|rail|metrics"` when one of those reader jobs fits, then add only
+  the detailed overrides that are actually needed. Monument is the default preset; Material, Signal,
+  Terminal, and Cinematic are the other recommended directions, while Studio and Editorial remain accepted
+  compatibility identities.
   `composition="flow|stage|split|mosaic|story|stack"`, `viewport="adaptive|full|bounded"`,
   `section-density="compact|editorial|immersive"`, `type="body|display|editorial"`,
   `media="natural|mask|layers|gallery|bleed"`, `media-fit="natural|contain|cover"`,
@@ -117,6 +121,8 @@ unresolved content facts.
   `:::actions{placement="auto|edge|inline|bottom"}`;
   bottom stays compact normal-flow content. Reserve `effect="magnetic"` for a primary action. Do not invent
   animation timing, coordinates, CSS, or browser code—the package owns bounded behavior and icons.
+- Give a card `href` only when the whole card has one destination. The package validates the same safe-link
+  domain as actions, renders one keyboard target and persistent icon, and rejects nested Markdown links.
 - When a finished artifact containing `source-link` will leave the source workstation, build it with
   `--share` and report the returned `neutralizedSourceLinks` count. Keep the default build when local editor
   links are part of the requested handoff; share output derives path-free filename/line labels from validated

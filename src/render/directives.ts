@@ -287,6 +287,7 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
     validateCodeTermBlocks(codeTermBlocks, glossaryByKey, refusedGlossaryKeys, options, violations);
     validateVisualizationData(tree, attributesByNode, options, violations);
     validateActionGroups(tree, options, violations);
+    validateLinkedCards(tree, attributesByNode, options, violations);
     validateCopyableProse(tree, options, violations);
     validateLeadParagraphs(tree, options, violations);
     validateTypedReviewComponents(tree, attributesByNode, options, violations);
@@ -323,6 +324,45 @@ function aggregateViolations(violations: readonly AgenticReportError[]): Agentic
     { ...first.diagnostic, related: rest.map((violation) => violation.diagnostic) },
     { cause: first },
   );
+}
+
+function validateLinkedCards(
+  tree: MdastRoot,
+  attributesByNode: WeakMap<object, Readonly<Record<string, string | number | boolean>>>,
+  options: DirectivePluginOptions,
+  violations: AgenticReportError[],
+): void {
+  visit(tree, (candidate) => {
+    if (!isDirectiveNode(candidate) || candidate.name !== 'card') return;
+    const href = attributesByNode.get(candidate)?.href;
+    if (typeof href !== 'string') return;
+    const pending = [...(candidate.children ?? [])];
+    while (pending.length > 0) {
+      const child = pending.pop();
+      if (
+        typeof child === 'object' &&
+        child !== null &&
+        'type' in child &&
+        (child.type === 'link' || child.type === 'linkReference')
+      ) {
+        violations.push(
+          attachDirectiveSource(
+            directiveError(
+              candidate,
+              'INVALID_DIRECTIVE_PLACEMENT',
+              'A linked card cannot contain another link.',
+              'Remove the nested Markdown link or remove the card href.',
+            ),
+            candidate,
+            options,
+          ),
+        );
+        return SKIP;
+      }
+      if (isTraversableNode(child)) pending.push(...(child.children ?? []));
+    }
+    return undefined;
+  });
 }
 
 interface CopyableSubject {
@@ -2903,6 +2943,10 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
         enhanceAction(node);
         return;
       }
+      if (semantic === 'card') {
+        enhanceCard(node);
+        return;
+      }
       if (semantic === 'source-link') {
         enhanceSourceLink(node, options.share === true);
         if (options.share === true && options.shareTransform !== undefined) {
@@ -3264,6 +3308,24 @@ function enhanceAction(node: Element): void {
   if (href === undefined) throw new Error('Validated action is missing its href.');
   node.properties.href = href;
   node.children.unshift(decorativeIcon('arrow-right'));
+}
+
+function enhanceCard(node: Element): void {
+  const href = stringProperty(node, 'dataHref');
+  if (href === undefined) {
+    prependDirectiveTitle(node);
+    return;
+  }
+  node.tagName = 'a';
+  node.properties.href = href;
+  node.properties.dataLinkedCard = '';
+  prependDirectiveTitle(node);
+  node.children.push({
+    type: 'element',
+    tagName: 'span',
+    properties: { className: ['semantic-card-link-signifier'], ariaHidden: 'true' },
+    children: [decorativeIcon('arrow-right')],
+  });
 }
 
 function enhanceSourceLink(node: Element, share: boolean): void {

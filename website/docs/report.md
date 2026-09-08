@@ -4,7 +4,7 @@ description: Human and agent documentation for the local declarative interactive
 language: en
 layout: document
 theme: system
-preset: editorial
+preset: material
 scrollProgress: true
 ---
 
@@ -105,6 +105,11 @@ and composes supporting content with media below; gallery stages keep their sepa
 while split returns to flow before desktop navigation can make its tracks unreadable. Mosaic/stack
 composition cannot pair with layers/gallery media because both roles would own the same card layout; those
 four combinations fail before rendering.
+
+Use `recipe="hero|evidence|story|rail|metrics"` as the short path to a coordinated section; explicit detailed
+attributes override only their own recipe roles. The default preset is Monument. Material, Signal, Terminal,
+and Cinematic are the other recommended directions; Studio and Editorial remain compatible. A card may
+declare one safe `href` to become a single visibly linked keyboard target, but it cannot contain nested links.
 
 Section tone owns its background and foreground relationship. Decorative surfaces remain behind the
 authored content, while nested cards and visualizations restore their own readable package surface text.
