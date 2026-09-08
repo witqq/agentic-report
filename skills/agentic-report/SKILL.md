@@ -3,7 +3,7 @@ name: agentic-report
 description: Create and build polished local interactive reports, research pages, architecture pages, tutorials, dashboards, decisions, and landing pages from declarative Markdown, with optional diagnostic inspection. Use for static agent-to-human page handoff; do not use for hosted apps, live collaboration, deployment, publication, or bespoke frontend development.
 license: MIT
 metadata:
-  version: '0.12.0'
+  version: '0.13.0'
   homepage: https://agentic-report.witqq.dev/
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run.
 ---
@@ -17,8 +17,8 @@ Create a local declarative source, build it, open it, and hand the user a finish
 Use the release pinned in this skill:
 
 ```sh
-npx --yes agentic-report@0.12.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.12.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.13.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.13.0 build ./my-page --output ./my-page.html --json
 ```
 
 Choose a different starter or destination name when the task requires it. Edit the generated source between
@@ -93,6 +93,10 @@ unresolved content facts.
   belongs beside that explanation but should print in the reference appendix, keep it as a direct section
   child with `placement="appendix"`; do not move it to a separate hand-maintained source list.
 - Compose visually distinct sections with the closed package grammar before considering a bespoke page:
+  start with `recipe="hero|evidence|story|rail|metrics"` when one of those reader jobs fits, then add only
+  the detailed overrides that are actually needed. Monument is the default preset; Material, Signal,
+  Terminal, and Cinematic are the other recommended directions, while Studio and Editorial remain accepted
+  compatibility identities.
   `composition="flow|stage|split|mosaic|story|stack"`, `viewport="adaptive|full|bounded"`,
   `section-density="compact|editorial|immersive"`, `type="body|display|editorial"`,
   `media="natural|mask|layers|gallery|bleed"`, `media-fit="natural|contain|cover"`,
@@ -106,9 +110,9 @@ unresolved content facts.
   Keep important reading order in source because multi-column/layered arrangements flatten on narrow
   screens. A media stage keeps its title across the full section and composes support with media below;
   gallery stages keep their separate rail. Prefer image-only cards for `layers`. Use the bilingual
-  `layout-mixed` example as the complete
-  grammar catalog, the landing starter as a smaller copyable narrative, and the public incident-review,
-  vendor-decision, and launch-readiness sources as cross-layout composition references.
+  `layout-mixed` example as the complete grammar catalog, the landing starter as a smaller copyable narrative,
+  `terminal-portfolio` for console-led composition, `cinematic-story` for image-first scroll storytelling,
+  and the public decision showcases as cross-layout composition references.
 - Add motion through the same closed section grammar: `transition="none|reveal|stagger"`,
   `scene="none|progress|sticky"`, `interaction="none|depth|tilt"`, and
   `choreography="none|cascade"`. They default to `none`; legacy `reveal="true"` remains available. Do not
@@ -117,6 +121,8 @@ unresolved content facts.
   `:::actions{placement="auto|edge|inline|bottom"}`;
   bottom stays compact normal-flow content. Reserve `effect="magnetic"` for a primary action. Do not invent
   animation timing, coordinates, CSS, or browser code—the package owns bounded behavior and icons.
+- Give a card `href` only when the whole card has one destination. The package validates the same safe-link
+  domain as actions, renders one keyboard target and persistent icon, and rejects nested Markdown links.
 - When a finished artifact containing `source-link` will leave the source workstation, build it with
   `--share` and report the returned `neutralizedSourceLinks` count. Keep the default build when local editor
   links are part of the requested handoff; share output derives path-free filename/line labels from validated
@@ -160,7 +166,7 @@ If the user does not trust the published npm package, do not run it through `npx
 pinned by this skill, expose the checked commit for review, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.12.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.13.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -170,7 +176,7 @@ pnpm build
 node dist/node/cli.js init ../my-page --starter report --json
 ```
 
-Substitute `node dist/node/cli.js` for every `npx --yes agentic-report@0.12.0` command above. Keep page
+Substitute `node dist/node/cli.js` for every `npx --yes agentic-report@0.13.0` command above. Keep page
 sources and outputs outside the cloned repository.
 
 Explain that this avoids executing the `agentic-report` npm package but is not registry-free:

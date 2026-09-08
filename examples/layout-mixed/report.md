@@ -1,12 +1,12 @@
 ---
-title: Research synthesis
-description: A fictional mixed report proving portable declarative composition.
+title: Complete visual language catalog
+description: A bilingual catalog of package-owned composition, media, surface, and responsive roles.
 language: en
 localizations:
   ru: report.ru.md
 theme: system
 layout: mixed
-preset: studio
+preset: monument
 tokens:
   density: comfortable
   font: sans
@@ -15,7 +15,7 @@ tokens:
   radius: soft
 ---
 
-# Research synthesis
+# Complete visual language catalog
 
 **Fictional sample.** Every observation exists only to demonstrate the authoring system. Replace it with
 verified evidence before use.

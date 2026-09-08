@@ -144,9 +144,9 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   action geometry, section-local short-story floats, and nonintersecting Russian stage titles/media at both
   constrained and wide desktop widths. Wide visual-family coverage separately preserves stage, split, and
   gallery track behavior. Inspected captures supplement those geometry and computed-style assertions.
-  Public integration separately enumerates the closed staged inventory, opens the bilingual landing plus
-  incident review, vendor decision, and launch readiness, and reaches both canonical locale sources for each.
-  The landing and a non-landing page jointly exercise the same semantic visual identities. Initial and
+  Public integration separately enumerates the closed staged inventory, opens the bilingual landing, every
+  declared live example, and both canonical locale sources for each. It behaviorally distinguishes Terminal
+  console treatment and Cinematic image-first scenes rather than inferring them from preset labels. Initial and
   scrolled states at ultrawide, tall, desktop, mobile, and 304-pixel widths assert useful occupied space,
   readable text, local gallery overflow, real scene/motion state changes, reduced-motion suppression,
   localized switching, contrast, and unchanged document geometry while a selected-text thread is open.
@@ -200,6 +200,10 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   tarball into a clean temporary npm consumer, invokes discovery, and builds complete multilingual offline artifacts through the
   installed binary in both formats plus directory output through the ESM API. It also builds every packaged
   page-layout example and all six starters in both formats and verifies the selected layout. Installed
+  Terminal and Cinematic examples are built in both formats as well. Their complete source trees are then
+  copied from the installed package inside the isolated consumer, edited, and rebuilt as complementary
+  single-file and directory artifacts; the authored edit and expected preset identity must survive.
+  Installed
   first-use journeys initialize and edit a starter, then build directly for single-file and directory
   output without an analysis-command prerequisite. The single-file route first supplies invalid source to
   build and observes its diagnostic plus preservation of an existing output, then corrects the source and observes
@@ -216,7 +220,7 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
 
 The E2E setup also stages the same-origin public tree and builds directory-format documentation fixtures.
 Tests start from the staged landing, follow real `file://` links to human and direct agent documentation,
-open all three independently staged showcase pages, compare rendered documentation across output formats,
+open every independently staged example page, compare rendered documentation across output formats,
 assert code/content containment, exercise responsive navigation, and capture desktop/mobile documentation
 states in both formats. Screenshots supplement behavioral and byte assertions; they are never the only
 evidence.

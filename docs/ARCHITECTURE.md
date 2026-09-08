@@ -236,10 +236,10 @@ The current source schema supports title, description, a documented restricted l
 optional fixed-shape `en`/`ru` localization map, theme, layout, a coordinated preset, optional scroll
 progress, a default-on boolean package attribution, compact page-token overrides, and output defaults.
 `attribution: false` removes only the renderer-owned
-**Made with Agentic Report** footer; default and opt-out behavior are identical across output formats. `studio`,
-`editorial`, and `signal` are registry-owned token-default families; `editorial` is the Field Manual family
-with warm package surfaces, compact controls, numbered document navigation, and package-owned decorative
-action/shell icons. Theme remains an independent color mode, and explicitly authored bounded tokens
+**Made with Agentic Report** footer; default and opt-out behavior are identical across output formats.
+`monument` is the registry-owned default; `material`, `signal`, `terminal`, and `cinematic` provide the other
+recommended visual families. `studio` and `editorial` remain compatibility identities mapped to Monument and
+Material. Theme remains an independent color mode, and explicitly authored bounded tokens
 override the preset on density, typography, accent, content width, and radius. The icon vocabulary is a
 small compile-time set of MIT-licensed Primer Octicon paths: it adds no author syntax, network request,
 runtime dependency, or CSP branch. Shell controls retain localized accessible names and title tooltips even
@@ -267,7 +267,8 @@ owned visible H2, with a validated explicit ID or deterministic title-derived ID
 unsafe IDs fail; generated collisions receive deterministic suffixes. When explicit sections exist they
 are the primary navigation inventory, using `nav` when supplied; documents without them use legacy H2
 headings. H3 and component IDs remain owned descendant hash targets but do not become primary links.
-The same registry owns a closed visual grammar for each section: composition, viewport,
+The same registry owns closed high-level section recipes (`hero`, `evidence`, `story`, `rail`, `metrics`)
+and the detailed visual grammar for each section: composition, viewport,
 density, typography, media treatment, image fit/aspect/focal point, decorative surface, transition, scene,
 interaction, and choreography. Legacy `reveal` remains a false-by-default entrance alias. Validation emits
 only normalized data attributes; package CSS interprets them for both output formats. This keeps author CSS,
@@ -275,6 +276,9 @@ class names, arbitrary values, callbacks, and layout JavaScript outside the publ
 treatment does not absorb image framing: `media` owns natural/mask/layers/gallery/bleed behavior, while
 `media-fit`, `media-aspect`, and `focal` remain independent. Layered presentation transforms image
 descendants rather than semantic cards or review-target owners, so browser range geometry remains stable.
+Recipe values resolve before the existing incompatible-combination rules and explicitly authored detailed
+attributes apply last. Optional card `href` values reuse the safe-link constraint; the authored tree rejects
+nested links before one semantic card anchor is emitted.
 Responsive rules restore multi-column and overlapping compositions to authored order on narrow screens and
 confine gallery overflow to the gallery rail. Every section establishes local formatting and stacking
 contexts. A media stage reserves a full-width title row before composing supporting content and media below;
@@ -387,7 +391,8 @@ an external content-addressed runtime; layout selects document/dashboard/landing
 selects coordinated visual defaults. The schema normalizer resolves preset defaults followed by explicit
 bounded token overrides, and the renderer projects only the resolved preset/theme/token identities into
 the shared package stylesheet in both formats. The stylesheet owns reading/standard/wide tracks, section
-rhythm, the closed section composition and media grammar, component containment, and package-only
+rhythm, semantic page/section/component/control/current/muted/inverse color roles, the closed section recipe,
+composition and media grammar, component containment, and package-only
 decorative surfaces. Section tone retains background/foreground ownership, while decorative surfaces change
 only the behind-content treatment and nested package components restore their own readable surface text.
 Full and bounded viewport profiles are capped rather than forcing unbounded empty
@@ -478,11 +483,12 @@ authoritative output replacement.
 `scrollProgress` defaults to false. In normal motion, an enabled page installs one passive document scroll
 listener and one resize listener, coalesces updates through one animation frame, and changes one decorative
 `scaleX()` transform. Section transition, scene, interaction, and choreography roles default to `none`.
-Reveal and legacy `reveal=true` use a one-time 12-pixel, 220-millisecond entrance; stagger applies it to at
-most 12 direct children in 70-millisecond steps. Progress scenes drive one normalized media transform, while
+Reveal and legacy `reveal=true` use a one-time 24-pixel, 420-millisecond entrance on section contents while
+the anchor owner remains stable; stagger applies it to at most 12 direct children in 90-millisecond steps.
+Progress scenes drive one normalized media transform, while
 sticky scenes return to normal flow at 48rem and below. Cascade orders at most 12 semantic cards, chart
-points, or timeline items in 60-millisecond steps. Fine-pointer depth, tilt, and primary magnetic effects are
-bounded to 10 pixels, 2.5 degrees, and 7 pixels; visibility gates and one animation frame coalesce their
+points, or timeline items in 75-millisecond steps. Fine-pointer depth, tilt, and primary magnetic effects are
+bounded to 24 pixels, 4.5 degrees, and 9 pixels; visibility gates and one animation frame coalesce their
 updates. Reduced motion installs no progress/entrance/scene/choreography/pointer machinery and leaves no
 hidden pending content; coarse pointers receive no pointer effects. An absent or non-callable
 `IntersectionObserver` leaves sections visible while navigation retains hash, activation-line, equal-top,
@@ -514,11 +520,12 @@ remains enabled for both families so unchanged conditional requests can return `
 mutable landing or document.
 
 The product landing is compiled as an ordinary multi-scene bilingual input rather than receiving a site
-assembler theme or runtime hook. It combines the registry-owned stage, data, gallery, story, review, mosaic,
-choreography, pointer, and action-placement roles. Incident review, vendor decision, and launch readiness are
-separate bilingual compiler invocations that reuse the same grammar on different page layouts. Their preview
-images are captures of those `file://` artifacts; the independently staged live pages and direct Markdown
-routes remain the authoritative proof.
+assembler theme or runtime hook. Its first viewport, style chooser, author path, public gallery, Review
+explanation, agent setup, and trust boundary use the same registry-owned recipes, media, motion, cards, and
+actions as package consumers. Every starter, the complete visual/interactive/data catalogs, Terminal and
+Cinematic showcases, the three decision showcases, and Review/Response workspaces are separate bilingual
+compiler invocations. Preview images never replace their independently staged live pages or direct Markdown
+routes.
 
 The canonical skill is instruction-only. Its OpenAI and Claude plugin manifests point to the same
 `skills/` folder and carry the same package version, license, homepage, and compatibility contract.

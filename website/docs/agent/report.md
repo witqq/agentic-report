@@ -4,7 +4,7 @@ description: Initialize, edit, build, and open an interactive page from declarat
 language: en
 layout: document
 theme: system
-preset: studio
+preset: monument
 scrollProgress: true
 ---
 

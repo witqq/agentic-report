@@ -154,13 +154,7 @@ const extractInternalLinks = (source: string, route: string): string[] => {
     );
   }
   return links
-    .filter(
-      (href) =>
-        !href.startsWith('#') &&
-        !href.startsWith('https://') &&
-        !href.startsWith('http://') &&
-        !href.startsWith('mailto:'),
-    )
+    .filter((href) => !href.startsWith('#') && !/^[a-z][a-z0-9+.-]*:/iu.test(href))
     .map((href) => {
       const withoutFragment = href.split('#', 1)[0] ?? '';
       return path.posix.normalize(path.posix.join(path.posix.dirname(route), withoutFragment));
@@ -262,6 +256,12 @@ describe('deterministic public site staging', () => {
         'docs/reference.md',
       ),
     ).toEqual(['docs/present.md']);
+    expect(
+      extractInternalLinks(
+        '<a href="data:image/svg+xml;base64,PHN2Zz4=">download</a><a href="page.md">page</a>',
+        'examples/index.html',
+      ),
+    ).toEqual(['examples/page.md']);
   });
 
   it('adds one linked Moira attribution footer to every public HTML page only', async () => {

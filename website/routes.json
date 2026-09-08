@@ -207,10 +207,28 @@
       "kind": "copy"
     },
     {
+      "id": "example-basic",
+      "href": "examples/basic/index.html",
+      "source": "../examples/basic",
+      "kind": "page"
+    },
+    {
       "id": "source-basic",
       "href": "examples/basic/report.md",
       "source": "../examples/basic/report.md",
       "kind": "copy"
+    },
+    {
+      "id": "source-basic-ru",
+      "href": "examples/basic/report.ru.md",
+      "source": "../examples/basic/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-research",
+      "href": "examples/research/index.html",
+      "source": "../examples/research",
+      "kind": "page"
     },
     {
       "id": "source-research",
@@ -219,10 +237,34 @@
       "kind": "copy"
     },
     {
+      "id": "source-research-ru",
+      "href": "examples/research/report.ru.md",
+      "source": "../examples/research/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-architecture",
+      "href": "examples/architecture/index.html",
+      "source": "../examples/architecture",
+      "kind": "page"
+    },
+    {
       "id": "source-architecture",
       "href": "examples/architecture/report.md",
       "source": "../examples/architecture/report.md",
       "kind": "copy"
+    },
+    {
+      "id": "source-architecture-ru",
+      "href": "examples/architecture/report.ru.md",
+      "source": "../examples/architecture/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-tutorial",
+      "href": "examples/tutorial/index.html",
+      "source": "../examples/tutorial",
+      "kind": "page"
     },
     {
       "id": "source-tutorial",
@@ -231,10 +273,34 @@
       "kind": "copy"
     },
     {
+      "id": "source-tutorial-ru",
+      "href": "examples/tutorial/report.ru.md",
+      "source": "../examples/tutorial/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-dashboard",
+      "href": "examples/dashboard/index.html",
+      "source": "../examples/dashboard",
+      "kind": "page"
+    },
+    {
       "id": "source-dashboard",
       "href": "examples/dashboard/report.md",
       "source": "../examples/dashboard/report.md",
       "kind": "copy"
+    },
+    {
+      "id": "source-dashboard-ru",
+      "href": "examples/dashboard/report.ru.md",
+      "source": "../examples/dashboard/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-landing-starter",
+      "href": "examples/landing/index.html",
+      "source": "../examples/landing",
+      "kind": "page"
     },
     {
       "id": "source-landing-starter",
@@ -243,15 +309,99 @@
       "kind": "copy"
     },
     {
+      "id": "source-landing-starter-ru",
+      "href": "examples/landing/report.ru.md",
+      "source": "../examples/landing/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-visual-catalog",
+      "href": "examples/visual-catalog/index.html",
+      "source": "../examples/layout-mixed",
+      "kind": "page"
+    },
+    {
+      "id": "source-visual-catalog",
+      "href": "examples/visual-catalog/report.md",
+      "source": "../examples/layout-mixed/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-visual-catalog-ru",
+      "href": "examples/visual-catalog/report.ru.md",
+      "source": "../examples/layout-mixed/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-interactive-catalog",
+      "href": "examples/interactive-catalog/index.html",
+      "source": "../examples/interactive-catalog",
+      "kind": "page"
+    },
+    {
       "id": "source-interactive-catalog",
       "href": "examples/interactive-catalog/report.md",
       "source": "../examples/interactive-catalog/report.md",
       "kind": "copy"
     },
     {
+      "id": "source-interactive-catalog-ru",
+      "href": "examples/interactive-catalog/report.ru.md",
+      "source": "../examples/interactive-catalog/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-visualization-catalog",
+      "href": "examples/visualization-catalog/index.html",
+      "source": "../examples/visualization-catalog",
+      "kind": "page"
+    },
+    {
       "id": "source-visualization-catalog",
       "href": "examples/visualization-catalog/report.md",
       "source": "../examples/visualization-catalog/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-visualization-catalog-ru",
+      "href": "examples/visualization-catalog/report.ru.md",
+      "source": "../examples/visualization-catalog/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-terminal-portfolio",
+      "href": "examples/terminal-portfolio/index.html",
+      "source": "../examples/terminal-portfolio",
+      "kind": "page"
+    },
+    {
+      "id": "source-terminal-portfolio",
+      "href": "examples/terminal-portfolio/report.md",
+      "source": "../examples/terminal-portfolio/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-terminal-portfolio-ru",
+      "href": "examples/terminal-portfolio/report.ru.md",
+      "source": "../examples/terminal-portfolio/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-cinematic-story",
+      "href": "examples/cinematic-story/index.html",
+      "source": "../examples/cinematic-story",
+      "kind": "page"
+    },
+    {
+      "id": "source-cinematic-story",
+      "href": "examples/cinematic-story/report.md",
+      "source": "../examples/cinematic-story/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-cinematic-story-ru",
+      "href": "examples/cinematic-story/report.ru.md",
+      "source": "../examples/cinematic-story/report.ru.md",
       "kind": "copy"
     },
     {

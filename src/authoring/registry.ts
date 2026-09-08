@@ -55,21 +55,21 @@ export const PAGE_TOKEN_FIELDS = [
 
 export const PAGE_PRESETS = [
   {
-    name: 'studio',
+    name: 'monument',
     description:
-      'Balanced product storytelling with a generous sans-serif rhythm and restrained depth.',
+      'Large-scale product storytelling with sculptural type, generous space, and staged depth.',
     tokens: {
-      density: 'comfortable',
+      density: 'spacious',
       font: 'sans',
       accent: 'indigo',
-      width: 'standard',
+      width: 'wide',
       radius: 'soft',
     },
   },
   {
-    name: 'editorial',
+    name: 'material',
     description:
-      'Field Manual reading with serif display type, compact controls, warm plates, and document navigation.',
+      'Editorial reading with serif display type, tactile warm plates, and document navigation.',
     tokens: {
       density: 'comfortable',
       font: 'serif',
@@ -90,16 +90,159 @@ export const PAGE_PRESETS = [
       radius: 'sharp',
     },
   },
+  {
+    name: 'terminal',
+    description:
+      'Console-oriented storytelling with mono type, luminous signals, scan texture, and explicit prompts.',
+    tokens: {
+      density: 'compact',
+      font: 'mono',
+      accent: 'teal',
+      width: 'wide',
+      radius: 'sharp',
+    },
+  },
+  {
+    name: 'cinematic',
+    description:
+      'Image-first narrative with deep staging, broad media, restrained overlays, and scroll-driven scenes.',
+    tokens: {
+      density: 'spacious',
+      font: 'sans',
+      accent: 'coral',
+      width: 'wide',
+      radius: 'round',
+    },
+  },
+  {
+    name: 'studio',
+    description: 'Compatibility identity mapped to the Monument visual system.',
+    tokens: {
+      density: 'spacious',
+      font: 'sans',
+      accent: 'indigo',
+      width: 'wide',
+      radius: 'soft',
+    },
+  },
+  {
+    name: 'editorial',
+    description: 'Compatibility identity mapped to the Material editorial visual system.',
+    tokens: {
+      density: 'comfortable',
+      font: 'serif',
+      accent: 'indigo',
+      width: 'wide',
+      radius: 'sharp',
+    },
+  },
 ] as const;
 
 export const PAGE_PRESET_NAMES = PAGE_PRESETS.map((preset) => preset.name) as unknown as readonly [
+  'monument',
+  'material',
+  'signal',
+  'terminal',
+  'cinematic',
   'studio',
   'editorial',
-  'signal',
 ];
 
+export const SECTION_RECIPES = [
+  {
+    name: 'none',
+    description: 'No high-level recipe; use the compatible detailed section defaults.',
+    attributes: {},
+  },
+  {
+    name: 'hero',
+    description: 'Staged opening with display type, broad cinematic media, depth, and one reveal.',
+    attributes: {
+      width: 'wide',
+      composition: 'stage',
+      viewport: 'full',
+      'section-density': 'immersive',
+      type: 'display',
+      media: 'bleed',
+      'media-fit': 'cover',
+      'media-aspect': 'cinematic',
+      surface: 'mesh',
+      transition: 'stagger',
+      scene: 'progress',
+    },
+  },
+  {
+    name: 'evidence',
+    description: 'Readable split evidence with bounded media and a clear illuminated surface.',
+    attributes: {
+      width: 'wide',
+      composition: 'split',
+      viewport: 'bounded',
+      media: 'mask',
+      'media-fit': 'cover',
+      'media-aspect': 'landscape',
+      surface: 'glow',
+      transition: 'reveal',
+    },
+  },
+  {
+    name: 'story',
+    description: 'Long-form scroll story with sticky narrative rhythm and progressive media.',
+    attributes: {
+      width: 'wide',
+      composition: 'story',
+      'section-density': 'immersive',
+      type: 'editorial',
+      media: 'bleed',
+      'media-fit': 'cover',
+      'media-aspect': 'cinematic',
+      surface: 'grain',
+      transition: 'reveal',
+      scene: 'progress',
+    },
+  },
+  {
+    name: 'rail',
+    description: 'Horizontal visual rail with broad gallery media and staged entrance.',
+    attributes: {
+      width: 'wide',
+      composition: 'stage',
+      'section-density': 'immersive',
+      media: 'gallery',
+      'media-fit': 'cover',
+      'media-aspect': 'landscape',
+      surface: 'grain',
+      transition: 'stagger',
+    },
+  },
+  {
+    name: 'metrics',
+    description: 'Compact data field with a responsive mosaic and kinetic numeric emphasis.',
+    attributes: {
+      width: 'wide',
+      composition: 'mosaic',
+      'section-density': 'compact',
+      surface: 'grid',
+      transition: 'stagger',
+      choreography: 'cascade',
+    },
+  },
+] as const;
+
+export const SECTION_RECIPE_NAMES = SECTION_RECIPES.map(
+  (recipe) => recipe.name,
+) as unknown as readonly ['none', 'hero', 'evidence', 'story', 'rail', 'metrics'];
+
+export function sectionRecipeDefaults(
+  recipeName: string | undefined,
+): Readonly<Record<string, string>> {
+  const recipe = SECTION_RECIPES.find((candidate) => candidate.name === (recipeName ?? 'none'));
+  if (recipe === undefined) return {};
+  return recipe.attributes;
+}
+
 export const PAGE_CONTRACT = {
-  defaultPreset: 'studio',
+  defaultPreset: 'monument',
   presets: PAGE_PRESETS,
   defaultLayout: 'document',
   layouts: ['document', 'dashboard', 'landing', 'mixed'],
@@ -841,8 +984,9 @@ export const authoringRegistry = {
       id: 'layout-mixed',
       path: 'layout-mixed',
       entry: 'report.md',
-      title: 'Mixed layout example',
-      description: 'Research brief combining long-form narrative with wide card and data sections.',
+      title: 'Complete visual language catalog',
+      description:
+        'Bilingual catalog covering the complete composition, media, surface, motion, and responsive vocabulary.',
       classes: ['research-report'],
     },
     {
@@ -908,6 +1052,24 @@ export const authoringRegistry = {
         'Fictional launch brief combining audience value, funnel evidence, operational gates, and a reversible rollout.',
       classes: ['landing-page', 'launch-readiness-showcase'],
     },
+    {
+      id: 'terminal-portfolio',
+      path: 'terminal-portfolio',
+      entry: 'report.md',
+      title: 'Terminal field notes',
+      description:
+        'Console-led systems portfolio with prompt rhythm, linked work, an operating log, and a reproducible handoff.',
+      classes: ['landing-page', 'terminal-portfolio-showcase'],
+    },
+    {
+      id: 'cinematic-story',
+      path: 'cinematic-story',
+      entry: 'report.md',
+      title: 'Image-first field story',
+      description:
+        'Local-media visual essay with a staged hero, scroll narrative, image rail, and measured summary.',
+      classes: ['landing-page', 'cinematic-story-showcase'],
+    },
   ],
 } as const satisfies AuthoringRegistryDefinition;
 
@@ -923,12 +1085,7 @@ function semanticContainers() {
     container('cards', 'Responsive grid, normally containing card directives.', {
       handoffs: ['semantic-document'],
     }),
-    container('card', 'One semantic card containing Markdown.', {
-      tagName: 'article',
-      requiredParent: 'cards',
-      preferredParent: 'cards',
-      handoffs: ['semantic-document'],
-    }),
+    cardDirective(),
     container(
       'steps',
       'Process or tutorial sequence containing Markdown, normally an ordered list.',
@@ -944,6 +1101,12 @@ function sectionDirective(): DirectiveDefinition {
     requiredTitleAttribute(),
     optionalIdentityAttribute('id', 'Optional stable section anchor.'),
     textAttribute('nav', 'Optional short primary-navigation label.', false),
+    enumAttribute(
+      'recipe',
+      'High-level package-owned section composition; explicit detailed attributes override its roles.',
+      SECTION_RECIPE_NAMES,
+      'none',
+    ),
     enumAttribute('width', 'Section content track.', ['reading', 'standard', 'wide'], 'standard'),
     enumAttribute('align', 'Section content alignment.', ['start', 'center'], 'start'),
     enumAttribute(
@@ -1649,6 +1812,10 @@ function linkAttribute(): DirectiveAttributeDefinition {
   };
 }
 
+function optionalLinkAttribute(): DirectiveAttributeDefinition {
+  return { ...linkAttribute(), required: false };
+}
+
 function sourceLinkAttribute(): DirectiveAttributeDefinition {
   return {
     name: 'href',
@@ -1856,6 +2023,27 @@ function container<const Name extends 'cards' | 'card' | 'steps'>(
     },
     security: { authorCode: false, rawHtml: false, localResourceOnly: false },
     handoffs: options.handoffs ?? ['semantic-document'],
+  };
+}
+
+function cardDirective(): DirectiveDefinition & { readonly name: 'card' } {
+  const attributes = [titleAttribute, optionalLinkAttribute()] as const;
+  return {
+    name: 'card',
+    description:
+      'One semantic card containing Markdown, optionally promoted to one safe whole-card link.',
+    forms: ['container'],
+    attributes,
+    children: 'markdown',
+    placement: { requiredParent: 'cards', preferredParent: 'cards' },
+    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
+    sanitizer: {
+      tagName: 'article',
+      className: 'semantic-card',
+      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
+    },
+    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
+    handoffs: ['semantic-document'],
   };
 }
 

@@ -62,9 +62,17 @@
         },
         "preset": {
           "type": "string",
-          "enum": ["studio", "editorial", "signal"],
+          "enum": [
+            "monument",
+            "material",
+            "signal",
+            "terminal",
+            "cinematic",
+            "studio",
+            "editorial"
+          ],
           "description": "Coordinated package-owned visual defaults; explicit bounded token values override the preset.",
-          "default": "studio"
+          "default": "monument"
         },
         "theme": {
           "type": "string",
@@ -223,6 +231,12 @@
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
               "description": "Optional short primary-navigation label."
             },
+            "recipe": {
+              "type": "string",
+              "enum": ["none", "hero", "evidence", "story", "rail", "metrics"],
+              "description": "High-level package-owned section composition; explicit detailed attributes override its roles.",
+              "default": "none"
+            },
             "width": {
               "type": "string",
               "enum": ["reading", "standard", "wide"],
@@ -366,6 +380,292 @@
             {
               "not": {
                 "allOf": [
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack"] } }
+                  },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["sticky"] } } }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "hero" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["mosaic", "stack"] } }
+                  },
+                  {
+                    "required": ["media"],
+                    "properties": { "media": { "enum": ["layers", "gallery"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "hero" } } },
+                  { "required": ["media"], "properties": { "media": { "enum": ["layers"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "hero" } } },
+                  {
+                    "anyOf": [
+                      {
+                        "required": ["scene"],
+                        "properties": { "scene": { "enum": ["progress"] } }
+                      },
+                      { "not": { "required": ["scene"] } }
+                    ]
+                  },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "hero" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack"] } }
+                  },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["sticky"] } } }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "evidence" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["mosaic", "stack"] } }
+                  },
+                  {
+                    "required": ["media"],
+                    "properties": { "media": { "enum": ["layers", "gallery"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "evidence" } } },
+                  { "required": ["media"], "properties": { "media": { "enum": ["layers"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "evidence" } } },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["progress"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "evidence" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack"] } }
+                  },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["sticky"] } } }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "story" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["mosaic", "stack"] } }
+                  },
+                  {
+                    "required": ["media"],
+                    "properties": { "media": { "enum": ["layers", "gallery"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "story" } } },
+                  { "required": ["media"], "properties": { "media": { "enum": ["layers"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "story" } } },
+                  {
+                    "anyOf": [
+                      {
+                        "required": ["scene"],
+                        "properties": { "scene": { "enum": ["progress"] } }
+                      },
+                      { "not": { "required": ["scene"] } }
+                    ]
+                  },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "story" } } },
+                  {
+                    "anyOf": [
+                      {
+                        "required": ["composition"],
+                        "properties": { "composition": { "enum": ["story", "stack"] } }
+                      },
+                      { "not": { "required": ["composition"] } }
+                    ]
+                  },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["sticky"] } } }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "rail" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["mosaic", "stack"] } }
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "required": ["media"],
+                        "properties": { "media": { "enum": ["layers", "gallery"] } }
+                      },
+                      { "not": { "required": ["media"] } }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "rail" } } },
+                  { "required": ["media"], "properties": { "media": { "enum": ["layers"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "rail" } } },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["progress"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "rail" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack"] } }
+                  },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["sticky"] } } }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "metrics" } } },
+                  {
+                    "anyOf": [
+                      {
+                        "required": ["composition"],
+                        "properties": { "composition": { "enum": ["mosaic", "stack"] } }
+                      },
+                      { "not": { "required": ["composition"] } }
+                    ]
+                  },
+                  {
+                    "required": ["media"],
+                    "properties": { "media": { "enum": ["layers", "gallery"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "metrics" } } },
+                  { "required": ["media"], "properties": { "media": { "enum": ["layers"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "metrics" } } },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["progress"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "metrics" } } },
                   {
                     "required": ["composition"],
                     "properties": { "composition": { "enum": ["story", "stack"] } }
@@ -665,6 +965,11 @@
               "type": "string",
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
               "description": "Visible title."
+            },
+            "href": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
+              "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected."
             }
           }
         }

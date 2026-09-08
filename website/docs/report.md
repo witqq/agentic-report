@@ -4,7 +4,7 @@ description: Human and agent documentation for the local declarative interactive
 language: en
 layout: document
 theme: system
-preset: editorial
+preset: material
 scrollProgress: true
 ---
 
@@ -24,9 +24,9 @@ Use Node.js 24.18.0 or newer. Start with the [agent quickstart](agent/index.html
 [direct Markdown version](agent/index.md), or install the [agent skill](../skills/agentic-report/SKILL.md).
 
 ```sh
-npx --yes agentic-report@0.12.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.13.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.12.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.13.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Build validates before publishing; use `validate` or `inspect` only
@@ -48,7 +48,7 @@ If you prefer to inspect the implementation instead of executing the published `
 package, clone a specific release tag and run the compiler directly from its build:
 
 ```sh
-git clone --branch v0.12.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.13.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -105,6 +105,11 @@ and composes supporting content with media below; gallery stages keep their sepa
 while split returns to flow before desktop navigation can make its tracks unreadable. Mosaic/stack
 composition cannot pair with layers/gallery media because both roles would own the same card layout; those
 four combinations fail before rendering.
+
+Use `recipe="hero|evidence|story|rail|metrics"` as the short path to a coordinated section; explicit detailed
+attributes override only their own recipe roles. The default preset is Monument. Material, Signal, Terminal,
+and Cinematic are the other recommended directions; Studio and Editorial remain compatible. A card may
+declare one safe `href` to become a single visibly linked keyboard target, but it cannot contain nested links.
 
 Section tone owns its background and foreground relationship. Decorative surfaces remain behind the
 authored content, while nested cards and visualizations restore their own readable package surface text.
@@ -224,13 +229,11 @@ copies only visible rendered text through the localized package control.
   reports the exact count without editing Markdown.
 - The compiler neither hosts nor deploys the result and never fetches remote source.
 
-The public [landing](../index.html), [incident review](../examples/incident-review/index.html),
-[vendor decision](../examples/vendor-decision/index.html), and
-[launch readiness page](../examples/launch-readiness/index.html) are all bilingual pages built through this
-same contract. The landing combines a full stage, data scene, media gallery, sticky desktop story with
-normal mobile flow, contextual review, mosaic, choreography, pointer depth, magnetic emphasis, and
-responsive action placement. The three demo pages reuse those public roles on independent layouts; their
-English and Russian Markdown sources are linked from the landing.
+The public [landing](../index.html) links to independently built bilingual starters, complete visual,
+interactive, and data catalogs, [Terminal portfolio](../examples/terminal-portfolio/index.html),
+[Cinematic story](../examples/cinematic-story/index.html), decision showcases, and Review/Response
+workspaces. Every page uses the same declarative contract on its own layout and exposes its English and
+Russian Markdown sources from the landing.
 
 ::::
 

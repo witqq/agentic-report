@@ -58,9 +58,9 @@
     },
     "preset": {
       "type": "string",
-      "enum": ["studio", "editorial", "signal"],
+      "enum": ["monument", "material", "signal", "terminal", "cinematic", "studio", "editorial"],
       "description": "Coordinated package-owned visual defaults; explicit bounded token values override the preset.",
-      "default": "studio"
+      "default": "monument"
     },
     "theme": {
       "type": "string",

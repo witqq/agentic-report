@@ -18,9 +18,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the resulting file:
 
 ```sh
-npx --yes agentic-report@0.12.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.13.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.12.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.13.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. `build` validates the complete source before publishing the
@@ -54,7 +54,7 @@ If you do not want to execute the published `agentic-report` npm package, clone 
 inspect the repository, run its checks, and invoke the compiled CLI directly:
 
 ```sh
-git clone --branch v0.12.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.13.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -131,7 +131,7 @@ description: Decision report
 language: en
 layout: document
 theme: system
-preset: editorial
+preset: material
 scrollProgress: true
 attribution: true
 tokens:
@@ -260,11 +260,13 @@ bucket cards also support drag-and-drop. The reader copies or downloads the same
 complete source is [`examples/response-workspace/report.md`](examples/response-workspace/report.md).
 
 The package owns four responsive page layouts: `document`, `dashboard`, `landing`, and `mixed`. Authors
-select one as metadata and may choose the coordinated `studio`, `editorial`, or `signal` preset, an
+select one as metadata and may choose `monument` (default), `material`, `signal`, `terminal`, or `cinematic`, an
 independent `system`, `light`, or `dark` color mode, and compact token overrides for `density`, `font`,
 `accent`, `width`, and `radius`. Preset defaults apply first and explicitly authored token values apply
-last. The `editorial` preset is the Field Manual system for warm long-form pages with compact controls,
-numbered contents, and package-owned action icons. These are closed validated values, not CSS or component code. Buildable examples under
+last. `studio` and `editorial` remain accepted compatibility identities for Monument and Material.
+Monument provides large-scale staged storytelling, Material provides warm editorial reading, Signal keeps
+dense data crisp, Terminal adds console texture and prompt rhythm, and Cinematic stages image-first stories.
+These are closed validated values, not CSS or component code. Buildable examples under
 `examples/layout-*` demonstrate every layout and are listed by
 `agentic-report examples --json`; `examples/interactive-catalog` and `examples/visualization-catalog`
 demonstrate the package-owned interaction and data primitives.
@@ -276,7 +278,9 @@ links, proportional typography, and wrapping remain ordinary Markdown; the local
 only visible rendered text rather than Markdown or HTML.
 
 Authors may replace heading-only structure with top-level `section` directives. Each section owns a
-visible H2 and stable anchor. Closed visual attributes compose package-owned arrangements (`flow`, `stage`,
+visible H2 and stable anchor. Start with `recipe="hero|evidence|story|rail|metrics"` for a coherent
+high-level composition; any explicitly authored detailed attribute overrides only its matching recipe role.
+Closed visual attributes compose package-owned arrangements (`flow`, `stage`,
 `split`, `mosaic`, `story`, `stack`), bounded viewport rhythm, compact/editorial/immersive density,
 body/display/editorial typography, natural/masked/layered/gallery/bleed media, image fit/aspect/focal point,
 and plain/mesh/glow/grain/grid surfaces. They are semantic choices, not CSS or component code; multi-column
@@ -292,6 +296,9 @@ mosaic/stack.
 `reveal="true"` remains supported. A nested `actions` group composes ordinary safe links with
 primary/secondary/quiet emphasis, `auto|edge|inline|bottom` placement, and an optional primary-only
 `magnetic` effect. Mobile bottom placement remains compact normal-flow content rather than a sticky overlay.
+Add `href` to a `card` when the whole card is one destination. The compiler reuses the safe-link contract,
+rejects nested links, and renders one keyboard focus target with a persistent link icon; cards without
+`href` remain informational articles.
 Legacy heading documents remain valid;
 their H2 headings define the primary navigation while H3 and component anchors remain owned descendant
 targets.
@@ -330,16 +337,22 @@ animation-frame-coalesced. Authors choose semantic roles, not timings, coordinat
 If `IntersectionObserver` is unavailable or non-callable, observer-dependent motion and pointer enhancement
 remain inert, baseline content stays readable, and navigation uses its bounded geometry fallback.
 
-## Realistic showcase portfolio
+## Public example portfolio
 
-Three non-starter examples show complete decision-oriented pages built through the same public source and
-compiler paths:
+The packaged portfolio includes complete pages built through the same public source and compiler paths:
 
-| Example                                          | Reader job                                                                                                   |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| [`incident-review`](examples/incident-review/)   | Reconstruct a fictional service incident, inspect evidence, and filter accountable follow-up                 |
-| [`vendor-decision`](examples/vendor-decision/)   | Separate mandatory procurement gates from weighted preference and approve a conditional path                 |
-| [`launch-readiness`](examples/launch-readiness/) | Judge a fictional regional beta from audience value, funnel evidence, launch gates, and a reversible rollout |
+| Example                                                    | Reader job                                                                                                   |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| [`layout-mixed`](examples/layout-mixed/)                   | Inspect the complete visual grammar and component range                                                      |
+| [`interactive-catalog`](examples/interactive-catalog/)     | Exercise package-owned interactions                                                                          |
+| [`visualization-catalog`](examples/visualization-catalog/) | Read the complete chart, diagram, and timeline range                                                         |
+| [`terminal-portfolio`](examples/terminal-portfolio/)       | Present systems work through console rhythm, scan treatment, and linked evidence                             |
+| [`cinematic-story`](examples/cinematic-story/)             | Follow an image-first story through staged media, scroll progress, and a gallery rail                        |
+| [`incident-review`](examples/incident-review/)             | Reconstruct a fictional service incident, inspect evidence, and filter accountable follow-up                 |
+| [`vendor-decision`](examples/vendor-decision/)             | Separate mandatory procurement gates from weighted preference and approve a conditional path                 |
+| [`launch-readiness`](examples/launch-readiness/)           | Judge a fictional regional beta from audience value, funnel evidence, launch gates, and a reversible rollout |
+| [`review-workspace`](examples/review-workspace/)           | Create, reopen, resolve, and export selected-text discussion threads                                         |
+| [`response-workspace`](examples/response-workspace/)       | Return typed triage, choices, ordering, scores, and comments                                                 |
 
 Every packaged starter, layout example, catalog, workspace example, realistic showcase, and the public
 landing pairs its canonical English source with a maintained Russian entry. A generated artifact chooses
@@ -351,7 +364,8 @@ From a repository or package-source checkout, build them with the public CLI:
 agentic-report build ./examples/incident-review --output ./incident-review.html
 agentic-report build ./examples/vendor-decision --output ./vendor-decision.html
 agentic-report build ./examples/launch-readiness --output ./launch-readiness.html
-agentic-report build ./examples/launch-readiness --format directory --output ./launch-readiness-directory
+agentic-report build ./examples/terminal-portfolio --output ./terminal-portfolio.html
+agentic-report build ./examples/cinematic-story --format directory --output ./cinematic-story-directory
 agentic-report build ./examples/tutorial --share --output ./tutorial-share.html
 ```
 
@@ -373,12 +387,10 @@ write their one reference document as a compact JSON line. `--json` is accepted 
 
 The canonical public landing is itself an ordinary compiler input at
 [`website/landing`](website/landing/). It uses only supported Markdown, frontmatter, semantic directives,
-and local screenshots generated from the three fictional showcases. Its visual narrative composes a
-full stage, data scene, media gallery, sticky desktop story with normal mobile flow, selected-text review,
-mosaic, choreography, pointer depth, magnetic emphasis, and responsive action placement. Its paired Russian
-entry and every public demo use the same multilingual contract as package consumers, while incident review,
-vendor decision, and launch readiness reuse the visual vocabulary on independent page layouts. Build it
-through the same public path as any user page:
+and local media. Its first viewport presents the value, actions, and a generated result; the remaining
+sections lead through style choice, the three-step author path, the full public gallery, selected-text Review,
+product reasons, agent setup, and the trust boundary. Its paired Russian entry and every public demo use the
+same multilingual contract as package consumers. Build it through the same public path as any user page:
 
 ```bash
 agentic-report build ./website/landing --output ./landing.html --json

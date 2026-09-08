@@ -29,11 +29,11 @@
         },
         {
           "path": "report.md",
-          "sha256": "35bf5c5ee9e4b8c0f0663eed08dd2b859e0cfeaf8a78dc2bfb10f614db61a0b8"
+          "sha256": "a8a0193ac5f05d55c75e733da14982baa392e8238ee103127e7c931d86e43148"
         },
         {
           "path": "report.ru.md",
-          "sha256": "91de4852687cfd3045b4c5bb770d96ff645f57bf01ae7c7b64adb7ae6e7d29fa"
+          "sha256": "86ae59498bc3b4922bd3ec2e145d54d9f6dfc9dc39d940e03ad955ddd46fe398"
         }
       ]
     },
@@ -64,11 +64,11 @@
         },
         {
           "path": "report.md",
-          "sha256": "1587de162ea80bb265403afdfb9ecdcbf90187a2e86716c98513abf8ffa4bd7e"
+          "sha256": "d80563015a3a077e686c28bc75971dcda7902767bf279a8d4ac5d08fc4993429"
         },
         {
           "path": "report.ru.md",
-          "sha256": "c2766c21ec54f8e7d3408feee03974e69e9263d15b89f74ff11976e1d09ba27e"
+          "sha256": "3efd02f112ddfcd3dc30c12e6fc93c9b45f2e78a262d08dada98ac687c017ca7"
         }
       ]
     },
@@ -99,11 +99,11 @@
         },
         {
           "path": "report.md",
-          "sha256": "24e8821f8538e39132c14d043879f9353dc4e5640c28b58192d202b9366084d1"
+          "sha256": "88f8ebf82e73ab2772b346e480924006365f8fa1a7e292a42c6d172171da7bb3"
         },
         {
           "path": "report.ru.md",
-          "sha256": "203e11b3298829ef9cefc94061a78a58af4d3c58d398ff96a34649d930270e8a"
+          "sha256": "285866c537015f579fb4c70906cb7fe9c84d620c5f16d2196dac62f831ee382e"
         }
       ]
     },
@@ -118,11 +118,11 @@
       "files": [
         {
           "path": "report.md",
-          "sha256": "5181ec2baf7198d08f6c5d05371403d7e58b028f51185dcd689d34a95d773d93"
+          "sha256": "eefb397427ceaea67b7c63ab3e104832c3c985186453e2e22d5f0535bb899c75"
         },
         {
           "path": "report.ru.md",
-          "sha256": "4c48f0a3f730c6ab6df0715a995f5524081d68f4567bf40010266ce478230f12"
+          "sha256": "078f63962fe14b573a1d9a79ccdae1218c7e0e8a79a707e186f79ef873eead20"
         }
       ]
     },
@@ -137,11 +137,11 @@
       "files": [
         {
           "path": "report.md",
-          "sha256": "d7ff19281bc300caeddef5ca6300442e7695900fb95455667ab2289681066d92"
+          "sha256": "8a46874f531ffceb40fbf45c3654f8fc7b09f8e15d7ec3983f9a7a4142dacf44"
         },
         {
           "path": "report.ru.md",
-          "sha256": "50159ecd9a6930b8e8a67d34799f2754040408eb7b4e683494adf49e23dca218"
+          "sha256": "81973c731187a6a5be803ca98a4934034d73aa31a65d7f1b90945be70310bdfb"
         }
       ]
     },
@@ -156,11 +156,11 @@
       "files": [
         {
           "path": "report.md",
-          "sha256": "467bdcf59df00819bbe329fffbc967c9b002bc787bb1b30f360f01c23e0ea7d6"
+          "sha256": "1b99e9a1f5f6275b9c1987fe647aa4a9d815fe0a7a628747bcfa5cfbd58c8a0b"
         },
         {
           "path": "report.ru.md",
-          "sha256": "6601fddd84ba9433ab7ec52bf92d2de9c2098e58ce8e9f1bb4a8a5479d94dd38"
+          "sha256": "8fb1720b8b83d377c1223bdacaf5b5d3833cc81d2baddcce919ffa5c6c0a5dd2"
         }
       ]
     },
@@ -230,8 +230,8 @@
       "id": "layout-mixed",
       "path": "layout-mixed",
       "entry": "report.md",
-      "title": "Mixed layout example",
-      "description": "Research brief combining long-form narrative with wide card and data sections.",
+      "title": "Complete visual language catalog",
+      "description": "Bilingual catalog covering the complete composition, media, surface, motion, and responsive vocabulary.",
       "classes": ["research-report"],
       "files": [
         {
@@ -244,11 +244,11 @@
         },
         {
           "path": "report.md",
-          "sha256": "f958bb57eaaee2cdee5da44b293290b517a29697587066306f4f0c1e538a1256"
+          "sha256": "3f52ab7f1d144e674ddbf5915c652e31d48c09ebd02ec10c779dfe0de45f1fca"
         },
         {
           "path": "report.ru.md",
-          "sha256": "4c28cd722eca3b68cbce8c03a1a78e66d0e0002e6c8db18d4591096e641f0e29"
+          "sha256": "f9a13a50b6e43920f8450aa87bd8502fa068b1ef7eb9c5159e6dbb6a2e90f2af"
         }
       ]
     },
@@ -284,11 +284,11 @@
         },
         {
           "path": "report.md",
-          "sha256": "5c222a7f755ac9acec3172fdf4da057bd108f1e79067675b530acca54034105f"
+          "sha256": "31a6a274c71876cf2e68593c7f266d7fc1e4e08ddb16e1c89ceceafd8385be08"
         },
         {
           "path": "report.ru.md",
-          "sha256": "8a162a55cbc00c3f41d314a53c3464f07d9309589942981eeb375aa1a304d903"
+          "sha256": "ddb90cf58812cd69c4652cea88c783cccdfd1673ea74cd4159199ba24472dea0"
         }
       ]
     },
@@ -302,11 +302,11 @@
       "files": [
         {
           "path": "report.md",
-          "sha256": "96c01772a5395d00671882d3fe4669e697bf0b3c0ef7d0f7e17949162e5e9676"
+          "sha256": "2f1ecc213f3ed6a566d2c4ea2af97c4dba9383de32d6bc57a9c28d066b285c42"
         },
         {
           "path": "report.ru.md",
-          "sha256": "ad12f64642e0b77e35ab0b1b20e77d7b84a00a54d53ff8702b7f0b793334c129"
+          "sha256": "1ed3235d30b051e46f0ce7f1d62f319226bba55d89a7ad809009b8b3ca0a245a"
         }
       ]
     },
@@ -427,6 +427,62 @@
         {
           "path": "report.ru.md",
           "sha256": "c35ded41d79d007c8af9238671d5a6078975c53f0e58a5188636ae4d6a08993b"
+        }
+      ]
+    },
+    {
+      "id": "terminal-portfolio",
+      "path": "terminal-portfolio",
+      "entry": "report.md",
+      "title": "Terminal field notes",
+      "description": "Console-led systems portfolio with prompt rhythm, linked work, an operating log, and a reproducible handoff.",
+      "classes": ["landing-page", "terminal-portfolio-showcase"],
+      "files": [
+        {
+          "path": "assets/constellation.jpg",
+          "sha256": "4472230f77a4d8be66f1e85a99d8fa15fd5b6caf7465870718323a98b459a508"
+        },
+        {
+          "path": "report.md",
+          "sha256": "9af9c3104ad8186c27c6efb9bf0bae69e2cff2e930d439f1836abdb8cd933fb2"
+        },
+        {
+          "path": "report.ru.md",
+          "sha256": "dc433f096ccaf49727aa6b54abd9e1e975543719a8edc43960d79f37c4e0d097"
+        }
+      ]
+    },
+    {
+      "id": "cinematic-story",
+      "path": "cinematic-story",
+      "entry": "report.md",
+      "title": "Image-first field story",
+      "description": "Local-media visual essay with a staged hero, scroll narrative, image rail, and measured summary.",
+      "classes": ["landing-page", "cinematic-story-showcase"],
+      "files": [
+        {
+          "path": "assets/aurora.jpg",
+          "sha256": "69848639429e0a3cd0c1e1c4305026fbafa6384d296df36e63210cf3c893e311"
+        },
+        {
+          "path": "assets/cinematic.jpg",
+          "sha256": "d3583e933e0dacdff482591ece37572fd100f8d55208419c22b2538cc93da429"
+        },
+        {
+          "path": "assets/gallery-red.jpg",
+          "sha256": "c6fd64c1b3c2042a910af5766cec85b0c5447a84b80d0e1156dec38d83146774"
+        },
+        {
+          "path": "assets/terrain.jpg",
+          "sha256": "b2d5d0ec09df6ef20c0ed9339c727fbe85b0c7b45125e2f6e83a01e44f2f1d13"
+        },
+        {
+          "path": "report.md",
+          "sha256": "0e6a36adfcd6a7a56299fcdc1ae07563932ec4d63a6d9d4d894ba7110c0b6de1"
+        },
+        {
+          "path": "report.ru.md",
+          "sha256": "c1337eb714526d479f5fa7db862990491bdc8c2b3ed94aab45a7eac676206db7"
         }
       ]
     }

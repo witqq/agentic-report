@@ -12,7 +12,7 @@ language: ru
 
 Эта основа делает текущие сигналы удобными для быстрого просмотра, сохраняя доказательство и владельца состояния.
 
-::::::section{title="Текущий сигнал поставки" id="signal" nav="Сигнал" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Текущий сигнал поставки" id="signal" nav="Сейчас" recipe="metrics"}
 ::::cards
 :::card{title="Состояние сборки"}
 **Зелёное**
@@ -37,7 +37,7 @@ Desktop- и mobile-артефакты открываются через `file://
 ::::
 ::::::
 
-::::::section{title="Пропускная способность и очередь" id="throughput" nav="Поток" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal" scene="progress"}
+::::::section{title="Пропускная способность и очередь" id="throughput" nav="Поток" recipe="evidence"}
 
 ::::chart{type="line" title="Принятая работа по контрольным точкам" description="Объём принятой работы рос на четырёх контрольных точках в одной границе выпуска." x-label="Контрольная точка" y-label="Принятые элементы"}
 :::series{label="Принято"}
@@ -61,7 +61,7 @@ Push, публикация npm, развёртывание и использов
 :::
 ::::::
 
-::::::section{title="Распределение рисков" id="risk" nav="Риск" width="wide" tone="accent" composition="mosaic" viewport="adaptive" section-density="compact" type="display" surface="glow" transition="stagger" choreography="cascade"}
+::::::section{title="Распределение рисков" id="risk" nav="Риск" recipe="rail"}
 
 ::::chart{type="pie" title="Оставшееся внимание" description="Больше всего внимания требует сверка документации, затем упаковка и итоговое браузерное ревью."}
 :::series{label="Внимание"}

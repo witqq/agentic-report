@@ -14,9 +14,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the result:
 
 ```sh
-npx --yes agentic-report@0.12.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.13.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.12.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.13.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. Build validates the complete source before writing, so
@@ -67,7 +67,7 @@ When the user does not trust the published package, do not silently fall back to
 release tag, let the user inspect the repository, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.12.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.13.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -92,7 +92,10 @@ Edit only the declarative source created by the first route: Markdown, YAML fron
 YAML/JSON manifest, confined Markdown partials, and local assets. Authors do not need React, JSX, browser
 JavaScript, CSS, or a frontend project.
 
-Compose distinctive sections through package-owned roles rather than custom layout code. `composition`
+Choose `monument` by default or select `material`, `signal`, `terminal`, or `cinematic`; `studio` and
+`editorial` remain compatibility identities. Start a section with
+`recipe="hero|evidence|story|rail|metrics"` when that reader job fits, then override only the detailed roles
+you need. Compose distinctive sections through package-owned roles rather than custom layout code. `composition`
 offers `flow`, `stage`, `split`, `mosaic`, `story`, and `stack`; pair it as needed with closed viewport,
 density, typography, media treatment, image fit/aspect/focal point, and surface attributes. On narrow
 screens, multi-column and layered arrangements return to source order and galleries keep their own scroll.
@@ -101,6 +104,9 @@ composes supporting content with media below; gallery stages retain their separa
 mosaic/stack composition with layers/gallery media: those roles would own the same card layout, so the
 compiler rejects the four combinations before rendering.
 
+A card with one destination may declare `href`; it becomes one safe keyboard target with a persistent link
+icon. Do not put another Markdown link inside it.
+
 ```markdown
 ::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
 The content remains ordinary Markdown and semantic directives.
@@ -108,8 +114,9 @@ The content remains ordinary Markdown and semantic directives.
 ```
 
 Use the installed `layout-mixed` example for the complete grammar, the landing starter for a smaller
-copyable narrative, and the public incident-review, vendor-decision, and launch-readiness sources for the
-same roles on different layouts. Use `schema --scope directives` for the exact closed domains and defaults.
+copyable narrative, `terminal-portfolio` for console-led composition, `cinematic-story` for image-first
+scroll storytelling, and the public decision showcases for the same roles on different layouts. Use
+`schema --scope directives` for the exact closed domains and defaults.
 
 Motion remains declarative: sections accept `transition="none|reveal|stagger"`,
 `scene="none|progress|sticky"`, `interaction="none|depth|tilt"`, and
@@ -229,16 +236,17 @@ registry's current `latest` release.
 - `dashboard` for dense status and metrics.
 - `landing` for a product or project page.
 
-`npx --yes agentic-report examples --json` lists the installed starters and realistic showcase sources.
+`npx --yes agentic-report examples --json` lists the installed starters, catalogs, workspaces, and showcase
+sources.
 
 ## Inspect the contract
 
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.12.0 describe --json
-npx --yes agentic-report@0.12.0 schema --scope source
-npx --yes agentic-report@0.12.0 examples --json
+npx --yes agentic-report@0.13.0 describe --json
+npx --yes agentic-report@0.13.0 schema --scope source
+npx --yes agentic-report@0.13.0 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),

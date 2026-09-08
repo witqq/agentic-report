@@ -7,12 +7,7 @@ localizations:
   ru: report.ru.md
 theme: dark
 layout: dashboard
-tokens:
-  density: compact
-  font: sans
-  accent: teal
-  width: wide
-  radius: sharp
+preset: signal
 ---
 
 # Delivery control room
@@ -22,7 +17,7 @@ demonstrate the report engine; replace it with verified project evidence before 
 
 This starter keeps current signals scan-friendly while preserving the evidence and owner behind each state.
 
-::::::section{title="Current delivery signal" id="signal" nav="Signal" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Current delivery signal" id="signal" nav="Now" recipe="metrics"}
 ::::cards
 :::card{title="Build health"}
 **Green**
@@ -47,7 +42,7 @@ No blocking finding remains in the accepted slice.
 ::::
 ::::::
 
-::::::section{title="Throughput and queue" id="throughput" nav="Throughput" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal" scene="progress"}
+::::::section{title="Throughput and queue" id="throughput" nav="Throughput" recipe="evidence"}
 
 ::::chart{type="line" title="Accepted work by checkpoint" description="Accepted work increased across four checkpoints while remaining within the same release boundary." x-label="Checkpoint" y-label="Accepted items"}
 :::series{label="Accepted"}
@@ -71,7 +66,7 @@ Push, npm publication, deployment, and credential use are not implied by a local
 :::
 ::::::
 
-::::::section{title="Risk distribution" id="risk" nav="Risk" width="wide" tone="accent" composition="mosaic" viewport="adaptive" section-density="compact" type="display" surface="glow" transition="stagger" choreography="cascade"}
+::::::section{title="Risk distribution" id="risk" nav="Risk" recipe="rail"}
 
 ::::chart{type="pie" title="Residual attention" description="Most remaining attention belongs to documentation reconciliation, followed by packaging and final browser review."}
 :::series{label="Attention"}

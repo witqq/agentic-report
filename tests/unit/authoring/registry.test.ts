@@ -221,7 +221,7 @@ describe('authoring registry', () => {
       'examples',
     ]);
     expect(authoringRegistry.page).toMatchObject({
-      defaultPreset: 'studio',
+      defaultPreset: 'monument',
       defaultLayout: 'document',
       layouts: ['document', 'dashboard', 'landing', 'mixed'],
       defaultTheme: 'system',
@@ -233,15 +233,19 @@ describe('authoring registry', () => {
         sectionReveal: {
           default: false,
           normalMotionOnly: true,
-          durationMs: 220,
-          translationPx: 12,
+          durationMs: 420,
+          translationPx: 24,
         },
       },
     });
     expect(authoringRegistry.page.presets.map((preset) => preset.name)).toEqual([
+      'monument',
+      'material',
+      'signal',
+      'terminal',
+      'cinematic',
       'studio',
       'editorial',
-      'signal',
     ]);
     expect(authoringRegistry.page.tokens.map((token) => token.name)).toEqual([
       'density',
@@ -268,6 +272,8 @@ describe('authoring registry', () => {
       'incident-review',
       'vendor-decision',
       'launch-readiness',
+      'terminal-portfolio',
+      'cinematic-story',
     ]);
     expect(
       authoringRegistry.examples
@@ -855,7 +861,7 @@ describe('authoring registry', () => {
       ]),
     );
 
-    const incompleteStudio = {
+    const incompleteMonument = {
       ...authoringRegistry.page.presets[0],
       tokens: {
         density: 'comfortable',
@@ -869,15 +875,11 @@ describe('authoring registry', () => {
         unsafeRegistryWith({
           page: {
             ...authoringRegistry.page,
-            presets: [
-              incompleteStudio,
-              authoringRegistry.page.presets[1],
-              authoringRegistry.page.presets[2],
-            ],
+            presets: [incompleteMonument, ...authoringRegistry.page.presets.slice(1)],
           },
         }),
       ),
-    ).toContain('page preset studio: token fields differ from registry token catalog');
+    ).toContain('page preset monument: token fields differ from registry token catalog');
   });
 
   it('rejects structurally ambiguous fields and returns issues for malformed constraints', () => {

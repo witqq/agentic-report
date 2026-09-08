@@ -1083,6 +1083,24 @@ a {
   transform: translateY(var(--motion-reveal-translation));
 }
 
+/* Section anchors stay geometrically stable while their contents reveal. */
+.semantic-section[data-reveal-motion]:not([data-transition='stagger']) {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+.semantic-section[data-reveal-motion]:not([data-transition='stagger']) > * {
+  transition:
+    opacity var(--motion-reveal-duration) ease-out,
+    transform var(--motion-reveal-duration) ease-out;
+}
+
+.semantic-section[data-reveal-motion][data-reveal-pending]:not([data-transition='stagger']) > * {
+  opacity: 0;
+  transform: translateY(var(--motion-reveal-translation));
+}
+
 [data-transition='stagger'][data-reveal-motion] {
   transition: none;
 }
@@ -3550,5 +3568,400 @@ span.semantic-source-link[data-source-link-neutralized] {
       calc(var(--pointer-x, 0) * var(--motion-magnetic)),
       calc(var(--pointer-y, 0) * var(--motion-magnetic))
     );
+  }
+}
+
+/* Quality-producing visual system: shared semantic roles, not component-specific palettes. */
+:root {
+  --role-page-bg: var(--color-bg);
+  --role-page-fg: var(--color-text);
+  --role-section-bg: var(--color-surface);
+  --role-section-fg: var(--color-text);
+  --role-component-bg: var(--color-surface);
+  --role-component-fg: var(--color-text);
+  --role-control-bg: var(--color-surface-raised);
+  --role-control-fg: var(--color-text);
+  --role-current-bg: var(--color-accent-soft);
+  --role-current-fg: var(--color-accent-strong);
+  --role-muted-bg: var(--color-surface-muted);
+  --role-muted-fg: var(--color-text-muted);
+  --role-inverse-bg: var(--color-text);
+  --role-inverse-fg: var(--color-bg);
+  --content-width: 108rem;
+}
+
+:root[data-width='narrow'] {
+  --content-width: 82rem;
+}
+
+:root[data-width='wide'] {
+  --content-width: 132rem;
+}
+
+:root:is([data-preset='monument'], [data-preset='studio']) {
+  --section-rhythm: calc(4.5rem * var(--space-factor));
+  --heading-weight: 820;
+  --heading-tracking: -0.065em;
+  --card-minimum: 17rem;
+  --page-backdrop:
+    radial-gradient(
+      circle at 82% 8%,
+      color-mix(in srgb, var(--visual-5) 22%, transparent),
+      transparent 34rem
+    ),
+    radial-gradient(
+      circle at 8% 42%,
+      color-mix(in srgb, var(--color-accent) 16%, transparent),
+      transparent 30rem
+    );
+}
+
+:root:is([data-preset='material'], [data-preset='editorial']) {
+  --section-rhythm: calc(4rem * var(--space-factor));
+  --body-leading: 1.68;
+  --heading-weight: 610;
+  --heading-tracking: -0.035em;
+  --card-minimum: 15rem;
+  --control-height: 2rem;
+  --control-inline-padding: 0.625rem;
+  --input-height: 2.25rem;
+  --action-height: 2.25rem;
+  --action-inline-padding: 0.75rem;
+}
+
+:root[data-preset='material'] {
+  --color-bg: #f2eee5;
+  --color-surface: #fbf8f1;
+  --color-surface-raised: #ece5d8;
+  --color-surface-muted: #e2dacb;
+  --color-text: #211f1b;
+  --color-text-muted: #625a4f;
+  --color-border: #cec3b2;
+  --color-border-strong: #817568;
+  --shadow-raised: 0 1.1rem 3rem rgb(60 48 34 / 13%);
+  --font-body:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-heading: 'Iowan Old Style', Charter, 'Bitstream Charter', Georgia, serif;
+  --page-backdrop: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--color-text) 11%, transparent) 0.5px,
+    transparent 0.75px
+  );
+}
+
+:root[data-preset='material'][data-theme='dark'] {
+  --color-bg: #171713;
+  --color-surface: #24231c;
+  --color-surface-raised: #302f27;
+  --color-surface-muted: #11110e;
+  --color-text: #f4f0e5;
+  --color-text-muted: #c8c1b4;
+  --color-border: #454237;
+  --color-border-strong: #746f60;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-preset='material'][data-theme='system'] {
+    --color-bg: #171713;
+    --color-surface: #24231c;
+    --color-surface-raised: #302f27;
+    --color-surface-muted: #11110e;
+    --color-text: #f4f0e5;
+    --color-text-muted: #c8c1b4;
+    --color-border: #454237;
+    --color-border-strong: #746f60;
+  }
+}
+
+:root[data-preset='terminal'] {
+  color-scheme: dark;
+  --color-bg: #050806;
+  --color-surface: #09110c;
+  --color-surface-raised: #0d1911;
+  --color-surface-muted: #122319;
+  --color-text: #e4ffe9;
+  --color-text-muted: #87aa8e;
+  --color-border: #20452a;
+  --color-border-strong: #3f7b4d;
+  --color-accent: #45ff72;
+  --color-accent-strong: #a1ffb7;
+  --color-accent-soft: #0c3218;
+  --color-focus: #f4ff57;
+  --visual-1: #45ff72;
+  --visual-2: #42f5d7;
+  --visual-3: #ff6b8a;
+  --visual-4: #f4ff57;
+  --visual-5: #a783ff;
+  --visual-6: #63b7ff;
+  --shadow-raised: 0 0 2.75rem rgb(69 255 114 / 16%);
+  --page-backdrop:
+    repeating-linear-gradient(0deg, rgb(69 255 114 / 3%) 0 1px, transparent 1px 4px),
+    linear-gradient(90deg, rgb(69 255 114 / 5%) 1px, transparent 1px),
+    linear-gradient(rgb(69 255 114 / 5%) 1px, transparent 1px);
+  background-size:
+    auto,
+    3rem 3rem,
+    3rem 3rem;
+}
+
+:root[data-preset='terminal'] body {
+  background-size:
+    auto,
+    3rem 3rem,
+    3rem 3rem;
+}
+
+:root[data-preset='cinematic'] {
+  --section-rhythm: calc(5rem * var(--space-factor));
+  --heading-weight: 790;
+  --heading-tracking: -0.06em;
+  --card-minimum: 18rem;
+  --page-backdrop:
+    radial-gradient(
+      circle at 72% 0%,
+      color-mix(in srgb, var(--visual-3) 24%, transparent),
+      transparent 38rem
+    ),
+    radial-gradient(
+      circle at 4% 52%,
+      color-mix(in srgb, var(--visual-6) 17%, transparent),
+      transparent 42rem
+    ),
+    linear-gradient(180deg, var(--color-bg), color-mix(in srgb, var(--color-bg) 88%, #000));
+}
+
+body {
+  background-color: var(--role-page-bg);
+  color: var(--role-page-fg);
+}
+
+.semantic-section {
+  color: var(--role-section-fg);
+}
+
+.semantic-section[data-tone='soft'] {
+  background-color: var(--role-section-bg);
+}
+
+:is(
+  .sidebar-label,
+  .topbar-current,
+  .review-summary,
+  .review-target-label,
+  .semantic-filter output,
+  .response-status
+) {
+  color: var(--role-muted-fg);
+}
+
+.review-response-kind {
+  background-color: var(--role-muted-bg);
+  color: var(--role-muted-fg);
+}
+
+:is(
+  .semantic-card,
+  .semantic-callout,
+  .semantic-decision,
+  .semantic-checklist,
+  .semantic-steps,
+  .semantic-glossary,
+  .semantic-disclosure,
+  .semantic-tabs,
+  .semantic-modal,
+  .semantic-popover,
+  .semantic-filter,
+  .semantic-toggle,
+  .semantic-response,
+  .semantic-chart,
+  .semantic-diagram,
+  .semantic-timeline,
+  .review-popover,
+  .review-panel
+) {
+  color: var(--role-component-fg);
+}
+
+:is(
+  .semantic-checklist,
+  .semantic-disclosure,
+  .semantic-tabs,
+  .semantic-modal,
+  .semantic-popover,
+  .semantic-filter,
+  .semantic-toggle,
+  .semantic-response,
+  .semantic-chart,
+  .semantic-diagram,
+  .semantic-timeline,
+  .review-popover,
+  .review-panel
+) {
+  background-color: var(--role-component-bg);
+}
+
+:is(
+  .semantic-tabs button,
+  .semantic-modal button,
+  .semantic-popover button,
+  .semantic-filter input,
+  .semantic-toggle button,
+  .semantic-response button,
+  .semantic-response input,
+  .semantic-response select,
+  .semantic-response textarea,
+  .review-popover button,
+  .review-popover input,
+  .review-popover select,
+  .review-popover textarea,
+  .review-panel button,
+  .review-panel input,
+  .review-panel select,
+  .review-panel textarea
+) {
+  background-color: var(--role-control-bg);
+  color: var(--role-control-fg);
+}
+
+:is([aria-current='location'], [aria-selected='true'], [aria-checked='true']) {
+  background-color: var(--role-current-bg);
+  color: var(--role-current-fg);
+}
+
+:is(button, input, select, textarea, summary, a)[disabled],
+:is(button, input, select, textarea, summary, a)[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.semantic-section[data-tone='contrast'] {
+  --role-component-bg: color-mix(in srgb, var(--role-inverse-bg) 88%, var(--role-page-bg));
+  --role-component-fg: var(--role-inverse-fg);
+  --role-control-bg: color-mix(in srgb, var(--role-inverse-fg) 12%, transparent);
+  --role-control-fg: var(--role-inverse-fg);
+  --role-muted-fg: color-mix(in srgb, var(--role-inverse-fg) 76%, transparent);
+}
+
+.semantic-card[data-linked-card] {
+  position: relative;
+  display: block;
+  border-color: color-mix(in srgb, var(--color-accent) 42%, var(--color-border));
+  color: var(--role-component-fg);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.semantic-card[data-linked-card]::before {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 20%, transparent);
+  pointer-events: none;
+  content: '';
+}
+
+.semantic-card-link-signifier {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.85rem;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-surface);
+}
+
+.semantic-card-link-signifier .package-icon {
+  display: block;
+}
+
+.semantic-card[data-linked-card]:is(:hover, :focus-visible) {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-raised);
+  transform: translateY(-0.2rem);
+}
+
+.semantic-card[data-linked-card]:active {
+  transform: translateY(0.05rem) scale(0.99);
+}
+
+:root[data-preset='terminal']
+  .semantic-section[data-transition='reveal']
+  > .semantic-section-title::after,
+:root[data-preset='terminal']
+  .semantic-section[data-transition='stagger']
+  > .semantic-section-title::after {
+  display: inline-block;
+  width: 0.08em;
+  height: 0.86em;
+  margin-inline-start: 0.12em;
+  background: var(--color-accent);
+  vertical-align: -0.04em;
+  content: '';
+  animation: agentic-cursor 1s steps(1, end) infinite;
+}
+
+:root[data-preset='terminal'] :is(h1, h2, h3)::before {
+  margin-inline-end: 0.45em;
+  color: var(--color-accent);
+  content: '>';
+}
+
+:root[data-preset='terminal'] .semantic-card[data-linked-card] {
+  border-left: 0.2rem solid var(--color-accent);
+  box-shadow: 0 0 0 transparent;
+}
+
+:root[data-preset='terminal'] .semantic-card[data-linked-card]:is(:hover, :focus-visible) {
+  box-shadow: 0 0 2.25rem rgb(69 255 114 / 18%);
+}
+
+:root[data-preset='cinematic'] .semantic-section[data-recipe='hero'],
+:root[data-preset='cinematic'] .semantic-section[data-recipe='story'] {
+  box-shadow: 0 2.5rem 7rem color-mix(in srgb, #000 24%, transparent);
+}
+
+@keyframes agentic-cursor {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (width >= 90rem) {
+  .report-shell {
+    width: min(calc(100% - 2rem), var(--content-width));
+  }
+
+  .report-content {
+    padding-inline: clamp(2rem, 4vw, 6rem);
+  }
+
+  .semantic-section[data-width='standard'] {
+    --section-measure: min(100%, 82rem);
+  }
+}
+
+@media (width <= 48rem) {
+  .semantic-section[data-type='display'] > .semantic-section-title,
+  .semantic-section[data-type='editorial'] > .semantic-section-title {
+    max-width: 13ch;
+    font-size: clamp(1.9rem, 9.5vw, 3rem);
+  }
+
+  .semantic-section[data-media='gallery'] > .semantic-cards {
+    grid-auto-columns: min(86vw, 28rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-preset='terminal']
+    .semantic-section:is([data-transition='reveal'], [data-transition='stagger'])
+    > .semantic-section-title::after {
+    animation: none;
   }
 }

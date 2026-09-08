@@ -127,6 +127,8 @@ export default async function globalSetup(): Promise<void> {
     'incident-review',
     'vendor-decision',
     'launch-readiness',
+    'terminal-portfolio',
+    'cinematic-story',
   ] as const;
   const starters = listExamples().filter((example) => example.starter !== undefined);
   await mkdir(shareSource, { recursive: true });
