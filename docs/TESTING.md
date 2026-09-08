@@ -200,6 +200,10 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   tarball into a clean temporary npm consumer, invokes discovery, and builds complete multilingual offline artifacts through the
   installed binary in both formats plus directory output through the ESM API. It also builds every packaged
   page-layout example and all six starters in both formats and verifies the selected layout. Installed
+  Terminal and Cinematic examples are built in both formats as well. Their complete source trees are then
+  copied from the installed package inside the isolated consumer, edited, and rebuilt as complementary
+  single-file and directory artifacts; the authored edit and expected preset identity must survive.
+  Installed
   first-use journeys initialize and edit a starter, then build directly for single-file and directory
   output without an analysis-command prerequisite. The single-file route first supplies invalid source to
   build and observes its diagnostic plus preservation of an existing output, then corrects the source and observes

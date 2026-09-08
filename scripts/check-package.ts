@@ -1,6 +1,7 @@
 import { execFile, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
+  cp,
   lstat,
   mkdir,
   mkdtemp,
@@ -528,6 +529,8 @@ const expectedLayoutExamples = [
   { id: 'incident-review', layout: 'mixed' },
   { id: 'vendor-decision', layout: 'document' },
   { id: 'launch-readiness', layout: 'landing' },
+  { id: 'terminal-portfolio', layout: 'landing' },
+  { id: 'cinematic-story', layout: 'landing' },
 ] as const;
 const installedExamples = examplesContract.examples.map((example) =>
   requireRecord(example, 'installed example'),
@@ -607,6 +610,45 @@ for (const expected of expectedLayoutExamples) {
         );
       }
     }
+  }
+}
+
+for (const editable of [
+  {
+    id: 'terminal-portfolio',
+    format: 'single-file',
+    marker: 'Installed Terminal source edit.',
+  },
+  {
+    id: 'cinematic-story',
+    format: 'directory',
+    marker: 'Installed Cinematic source edit.',
+  },
+] as const) {
+  const installedExample = installedExamples.find((example) => example.id === editable.id);
+  if (installedExample === undefined || typeof installedExample.entry !== 'string') {
+    throw new Error(`Installed examples contract is missing editable ${editable.id} source.`);
+  }
+  const editedProject = path.join(consumerDirectory, `edited-${editable.id}`);
+  await cp(path.dirname(installedExample.entry), editedProject, { recursive: true });
+  const editedEntry = path.join(editedProject, path.basename(installedExample.entry));
+  await writeFile(editedEntry, `${await readFile(editedEntry, 'utf8')}\n${editable.marker}\n`);
+  const editedOutput = path.join(consumerDirectory, `edited-${editable.id}-output`);
+  const arguments_ = ['build', editedProject, '--output', editedOutput];
+  if (editable.format === 'directory') arguments_.push('--format', 'directory');
+  await execFileAsync(binary, arguments_, { cwd: consumerDirectory });
+  const htmlPath =
+    editable.format === 'directory' ? path.join(editedOutput, 'index.html') : editedOutput;
+  const html = await readFile(htmlPath, 'utf8');
+  if (
+    !html.includes(editable.marker) ||
+    !html.includes(
+      `data-preset="${editable.id === 'terminal-portfolio' ? 'terminal' : 'cinematic'}"`,
+    )
+  ) {
+    throw new Error(
+      `Installed edited ${editable.id} source did not produce its expected artifact.`,
+    );
   }
 }
 
