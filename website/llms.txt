@@ -40,8 +40,8 @@ locale. Single-language review export is version 3; multilingual export is versi
 
 Requires Node.js 24.18.0 or newer. The first npx run requires npm registry access. Start with:
 
-    npx --yes agentic-report@0.12.0 init ./my-page --starter landing --json
-    npx --yes agentic-report@0.12.0 build ./my-page --output ./my-page.html --json
+    npx --yes agentic-report@0.13.0 init ./my-page --starter landing --json
+    npx --yes agentic-report@0.13.0 build ./my-page --output ./my-page.html --json
 
 Edit `my-page/report.md` between the two commands and open `my-page.html` through `file://`. Build validates
 the complete source before publishing. Use `validate` for separate diagnostics, `inspect` for source/catalog

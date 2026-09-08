@@ -18,9 +18,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the resulting file:
 
 ```sh
-npx --yes agentic-report@0.12.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.13.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.12.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.13.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. `build` validates the complete source before publishing the
@@ -54,7 +54,7 @@ If you do not want to execute the published `agentic-report` npm package, clone 
 inspect the repository, run its checks, and invoke the compiled CLI directly:
 
 ```sh
-git clone --branch v0.12.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.13.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
