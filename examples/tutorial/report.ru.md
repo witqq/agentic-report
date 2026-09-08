@@ -13,7 +13,7 @@ language: ru
 К концу руководства у вас будет один автономный HTML-файл из Markdown — без авторского JSX, CSS,
 браузерного JavaScript или конфигурации развёртывания.
 
-::::::section{title="Начните с одного результата" id="start" nav="Начало" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Начните с одного результата" id="start" nav="Начало" recipe="hero"}
 :::callout{kind="info" title="Перед началом"}
 Используйте поддерживаемую версию Node.js и установите `agentic-report` в рабочий проект.
 :::
@@ -27,7 +27,7 @@ language: ru
    :::
    ::::::
 
-::::::section{title="Выберите формат" id="output" nav="Формат" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal"}
+::::::section{title="Выберите формат" id="output" nav="Формат" recipe="story"}
 
 ::::tabs{title="Форматы результата"}
 :::tab{label="Один файл"}
@@ -49,7 +49,7 @@ agentic-report build ./my-page --format directory --output ./my-page-dist
 ::::
 ::::::
 
-::::::section{title="Добавьте смысловое содержимое" id="content" nav="Содержимое" width="wide" tone="plain" composition="mosaic" viewport="adaptive" section-density="compact" type="editorial" surface="grain" transition="stagger" choreography="cascade"}
+::::::section{title="Добавьте смысловое содержимое" id="content" nav="Содержимое" recipe="evidence"}
 
 ::::cards
 :::card{title="Выделите факт"}
@@ -74,7 +74,7 @@ theme: system
 :::
 ::::::
 
-::::::section{title="Практика и развитие" id="practice" nav="Практика" width="wide" tone="accent" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="glow" transition="reveal"}
+::::::section{title="Практика и развитие" id="practice" nav="Практика" recipe="metrics"}
 
 :::demo{title="Завершённые проверки руководства" start="0" step="1"}
 Увеличивайте счётчик после создания, редактирования, сборки и открытия своего артефакта.

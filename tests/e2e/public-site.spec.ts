@@ -65,7 +65,7 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
   test.skip(testInfo.project.name !== 'desktop-chromium');
   await page.goto(fileUrl('index.html'));
   await expect(
-    page.getByRole('heading', { name: 'Give your agent a page worth handing over.' }),
+    page.getByRole('heading', { name: 'A page worth handing over. From Markdown.' }),
   ).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
   const attribution = page.locator('[data-site-attribution]');
@@ -140,7 +140,22 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
     'This document defines the current author-facing input',
   );
 
-  for (const example of ['incident-review', 'vendor-decision', 'launch-readiness']) {
+  for (const example of [
+    'incident-review',
+    'vendor-decision',
+    'launch-readiness',
+    'basic',
+    'research',
+    'architecture',
+    'tutorial',
+    'dashboard',
+    'landing',
+    'visual-catalog',
+    'interactive-catalog',
+    'visualization-catalog',
+    'terminal-portfolio',
+    'cinematic-story',
+  ]) {
     await page.goto(fileUrl(`examples/${example}/index.html`));
     await expect(page.locator('main')).not.toBeEmpty();
     await expect(page.locator('[data-navigation]')).toBeVisible();

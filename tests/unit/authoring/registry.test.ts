@@ -272,6 +272,8 @@ describe('authoring registry', () => {
       'incident-review',
       'vendor-decision',
       'launch-readiness',
+      'terminal-portfolio',
+      'cinematic-story',
     ]);
     expect(
       authoringRegistry.examples

@@ -229,13 +229,11 @@ copies only visible rendered text through the localized package control.
   reports the exact count without editing Markdown.
 - The compiler neither hosts nor deploys the result and never fetches remote source.
 
-The public [landing](../index.html), [incident review](../examples/incident-review/index.html),
-[vendor decision](../examples/vendor-decision/index.html), and
-[launch readiness page](../examples/launch-readiness/index.html) are all bilingual pages built through this
-same contract. The landing combines a full stage, data scene, media gallery, sticky desktop story with
-normal mobile flow, contextual review, mosaic, choreography, pointer depth, magnetic emphasis, and
-responsive action placement. The three demo pages reuse those public roles on independent layouts; their
-English and Russian Markdown sources are linked from the landing.
+The public [landing](../index.html) links to independently built bilingual starters, complete visual,
+interactive, and data catalogs, [Terminal portfolio](../examples/terminal-portfolio/index.html),
+[Cinematic story](../examples/cinematic-story/index.html), decision showcases, and Review/Response
+workspaces. Every page uses the same declarative contract on its own layout and exposes its English and
+Russian Markdown sources from the landing.
 
 ::::
 

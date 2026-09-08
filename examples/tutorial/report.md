@@ -7,12 +7,7 @@ localizations:
   ru: report.ru.md
 theme: light
 layout: document
-tokens:
-  density: comfortable
-  font: sans
-  accent: coral
-  width: narrow
-  radius: round
+preset: material
 ---
 
 # Build your first portable page
@@ -23,7 +18,7 @@ demonstrate the report engine; replace it with verified project evidence before 
 By the end of this tutorial you will have one offline HTML file built from Markdown—without authoring JSX,
 CSS, browser JavaScript, or a deployment configuration.
 
-::::::section{title="Start with one outcome" id="start" nav="Start" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Start with one outcome" id="start" nav="Start" recipe="hero"}
 :::callout{kind="info" title="Before you start"}
 Use Node.js in the supported engine range and install `agentic-report` in the working project.
 :::
@@ -37,7 +32,7 @@ Use Node.js in the supported engine range and install `agentic-report` in the wo
    :::
    ::::::
 
-::::::section{title="Choose an output" id="output" nav="Output" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal"}
+::::::section{title="Choose an output" id="output" nav="Output" recipe="story"}
 
 ::::tabs{title="Output formats"}
 :::tab{label="Single file"}
@@ -59,7 +54,7 @@ agentic-report build ./my-page --format directory --output ./my-page-dist
 ::::
 ::::::
 
-::::::section{title="Add semantic content" id="content" nav="Content" width="wide" tone="plain" composition="mosaic" viewport="adaptive" section-density="compact" type="editorial" surface="grain" transition="stagger" choreography="cascade"}
+::::::section{title="Add semantic content" id="content" nav="Content" recipe="evidence"}
 
 ::::cards
 :::card{title="Call out a fact"}
@@ -84,7 +79,7 @@ theme: system
 :::
 ::::::
 
-::::::section{title="Practice and extend" id="practice" nav="Practice" width="wide" tone="accent" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="glow" transition="reveal"}
+::::::section{title="Practice and extend" id="practice" nav="Practice" recipe="metrics"}
 
 :::demo{title="Completed tutorial checks" start="0" step="1"}
 Increment the counter after you initialize, edit, build, and open your own artifact.

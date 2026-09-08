@@ -294,7 +294,9 @@ test('declarative visual families remain distinct, readable, and contained', asy
     await page.goto(artifactUrl);
     await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
     expect(await page.evaluate(() => scrollY)).toBe(0);
-    await expect(page.getByRole('heading', { name: 'Research synthesis', level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Complete visual language catalog', level: 1 }),
+    ).toBeVisible();
     const initialStage = page.locator('#stage');
     await expect
       .poll(() =>

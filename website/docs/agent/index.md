@@ -114,8 +114,9 @@ The content remains ordinary Markdown and semantic directives.
 ```
 
 Use the installed `layout-mixed` example for the complete grammar, the landing starter for a smaller
-copyable narrative, and the public incident-review, vendor-decision, and launch-readiness sources for the
-same roles on different layouts. Use `schema --scope directives` for the exact closed domains and defaults.
+copyable narrative, `terminal-portfolio` for console-led composition, `cinematic-story` for image-first
+scroll storytelling, and the public decision showcases for the same roles on different layouts. Use
+`schema --scope directives` for the exact closed domains and defaults.
 
 Motion remains declarative: sections accept `transition="none|reveal|stagger"`,
 `scene="none|progress|sticky"`, `interaction="none|depth|tilt"`, and
@@ -235,7 +236,8 @@ registry's current `latest` release.
 - `dashboard` for dense status and metrics.
 - `landing` for a product or project page.
 
-`npx --yes agentic-report examples --json` lists the installed starters and realistic showcase sources.
+`npx --yes agentic-report examples --json` lists the installed starters, catalogs, workspaces, and showcase
+sources.
 
 ## Inspect the contract
 

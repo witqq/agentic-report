@@ -144,9 +144,9 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   action geometry, section-local short-story floats, and nonintersecting Russian stage titles/media at both
   constrained and wide desktop widths. Wide visual-family coverage separately preserves stage, split, and
   gallery track behavior. Inspected captures supplement those geometry and computed-style assertions.
-  Public integration separately enumerates the closed staged inventory, opens the bilingual landing plus
-  incident review, vendor decision, and launch readiness, and reaches both canonical locale sources for each.
-  The landing and a non-landing page jointly exercise the same semantic visual identities. Initial and
+  Public integration separately enumerates the closed staged inventory, opens the bilingual landing, every
+  declared live example, and both canonical locale sources for each. It behaviorally distinguishes Terminal
+  console treatment and Cinematic image-first scenes rather than inferring them from preset labels. Initial and
   scrolled states at ultrawide, tall, desktop, mobile, and 304-pixel widths assert useful occupied space,
   readable text, local gallery overflow, real scene/motion state changes, reduced-motion suppression,
   localized switching, contrast, and unchanged document geometry while a selected-text thread is open.
@@ -216,7 +216,7 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
 
 The E2E setup also stages the same-origin public tree and builds directory-format documentation fixtures.
 Tests start from the staged landing, follow real `file://` links to human and direct agent documentation,
-open all three independently staged showcase pages, compare rendered documentation across output formats,
+open every independently staged example page, compare rendered documentation across output formats,
 assert code/content containment, exercise responsive navigation, and capture desktop/mobile documentation
 states in both formats. Screenshots supplement behavioral and byte assertions; they are never the only
 evidence.

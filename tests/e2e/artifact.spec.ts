@@ -623,7 +623,7 @@ for (const artifact of diagramTourArtifacts) {
 const presetShowcases = [
   {
     name: 'landing',
-    preset: 'studio',
+    preset: 'cinematic',
     heading: 'From Markdown to a page worth sharing',
     artifacts: landingSectionArtifacts,
   },
@@ -680,6 +680,14 @@ const presetFixtureExpectations = [
 ] as const;
 
 const expectedPresetCapturePaths = [
+  'cinematic/directory/dark/desktop.png',
+  'cinematic/directory/dark/mobile.png',
+  'cinematic/directory/light/desktop.png',
+  'cinematic/directory/light/mobile.png',
+  'cinematic/single-file/dark/desktop.png',
+  'cinematic/single-file/dark/mobile.png',
+  'cinematic/single-file/light/desktop.png',
+  'cinematic/single-file/light/mobile.png',
   'editorial/directory/dark/desktop.png',
   'editorial/directory/dark/mobile.png',
   'editorial/directory/light/desktop.png',
@@ -696,19 +704,12 @@ const expectedPresetCapturePaths = [
   'signal/single-file/dark/mobile.png',
   'signal/single-file/light/desktop.png',
   'signal/single-file/light/mobile.png',
-  'studio/directory/dark/desktop.png',
-  'studio/directory/dark/mobile.png',
-  'studio/directory/light/desktop.png',
-  'studio/directory/light/mobile.png',
-  'studio/single-file/dark/desktop.png',
-  'studio/single-file/dark/mobile.png',
-  'studio/single-file/light/desktop.png',
-  'studio/single-file/light/mobile.png',
 ] as const;
 
 const starters = [
   {
     id: 'basic',
+    preset: PAGE_CONTRACT.defaultPreset,
     heading: 'Release decision report',
     layout: 'document',
     component: '.semantic-timeline',
@@ -716,6 +717,7 @@ const starters = [
   },
   {
     id: 'research',
+    preset: 'material',
     heading: 'Assisted authoring research synthesis',
     layout: 'mixed',
     component: '.semantic-chart',
@@ -723,6 +725,7 @@ const starters = [
   },
   {
     id: 'architecture',
+    preset: 'terminal',
     heading: 'Portable page architecture',
     layout: 'document',
     component: '.semantic-diagram',
@@ -730,18 +733,21 @@ const starters = [
   },
   {
     id: 'tutorial',
+    preset: 'material',
     heading: 'Build your first portable page',
     layout: 'document',
     component: '.semantic-demo',
   },
   {
     id: 'dashboard',
+    preset: 'signal',
     heading: 'Delivery control room',
     layout: 'dashboard',
     component: '.semantic-filter',
   },
   {
     id: 'landing',
+    preset: 'cinematic',
     heading: 'From Markdown to a page worth sharing',
     layout: 'landing',
     component: '.semantic-timeline',
@@ -783,10 +789,7 @@ for (const starter of starters) {
   }, testInfo) => {
     await page.goto(starterArtifactUrl(starter.id));
     await expect(page.locator('html')).toHaveAttribute('data-layout', starter.layout);
-    await expect(page.locator('html')).toHaveAttribute(
-      'data-preset',
-      starter.id === 'landing' ? 'studio' : PAGE_CONTRACT.defaultPreset,
-    );
+    await expect(page.locator('html')).toHaveAttribute('data-preset', starter.preset);
     await expect(page.getByRole('heading', { name: starter.heading, level: 1 })).toBeVisible();
     await expect(page.locator(starter.component).first()).toBeVisible();
     await expect(page.locator('body')).not.toContainText(/lorem ipsum|todo|placeholder/iu);
@@ -912,12 +915,10 @@ for (const artifact of landingSectionArtifacts) {
     await expect(
       page.getByRole('heading', { name: 'Start with the work, not the framework', level: 2 }),
     ).toHaveAttribute('id', 'workflow-title');
-    await expect(page.locator('#workflow')).toHaveAttribute('data-width', 'wide');
-    await expect(page.locator('#workflow')).toHaveAttribute('data-tone', 'soft');
-    await expect(page.locator('#proof')).toHaveAttribute('data-width', 'wide');
-    await expect(page.locator('#proof')).toHaveAttribute('data-tone', 'accent');
+    await expect(page.locator('#workflow')).toHaveAttribute('data-recipe', 'hero');
+    await expect(page.locator('#proof')).toHaveAttribute('data-recipe', 'evidence');
     await expect(page.locator('#boundaries')).toHaveAttribute('data-align', 'center');
-    await expect(page.locator('#boundaries')).toHaveAttribute('data-tone', 'contrast');
+    await expect(page.locator('#boundaries')).toHaveAttribute('data-recipe', 'hero');
 
     const navigation = page.locator('[data-navigation]');
     await expect(navigation.locator('a')).toHaveCount(4);
@@ -2747,12 +2748,12 @@ test('captures exactly six 320 by 800 dense preset states', async ({ page }, tes
     }
   }
   expect((await readdir(captureRoot)).sort()).toEqual([
+    'cinematic-dark.png',
+    'cinematic-light.png',
     'editorial-dark.png',
     'editorial-light.png',
     'signal-dark.png',
     'signal-light.png',
-    'studio-dark.png',
-    'studio-light.png',
   ]);
 });
 
@@ -2809,7 +2810,7 @@ for (const example of [
     width: 'wide',
     fontFamily: 'Inter',
     radius: 'soft',
-    heading: 'Research synthesis',
+    heading: 'Complete visual language catalog',
     component: '.semantic-card',
     image: 'Four page layouts sharing one foundation',
     table: true,
@@ -2821,10 +2822,7 @@ for (const example of [
     await page.goto(layoutArtifactUrl(example.name));
     const root = page.locator('html');
     await expect(root).toHaveAttribute('data-layout', example.layout);
-    await expect(root).toHaveAttribute(
-      'data-preset',
-      example.name === 'layout-mixed' ? 'studio' : PAGE_CONTRACT.defaultPreset,
-    );
+    await expect(root).toHaveAttribute('data-preset', PAGE_CONTRACT.defaultPreset);
     await expect(root).toHaveAttribute('data-theme', example.theme);
     await expect(root).toHaveAttribute('data-density', example.density);
     await expect(root).toHaveAttribute('data-font', example.font);

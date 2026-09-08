@@ -520,11 +520,12 @@ remains enabled for both families so unchanged conditional requests can return `
 mutable landing or document.
 
 The product landing is compiled as an ordinary multi-scene bilingual input rather than receiving a site
-assembler theme or runtime hook. It combines the registry-owned stage, data, gallery, story, review, mosaic,
-choreography, pointer, and action-placement roles. Incident review, vendor decision, and launch readiness are
-separate bilingual compiler invocations that reuse the same grammar on different page layouts. Their preview
-images are captures of those `file://` artifacts; the independently staged live pages and direct Markdown
-routes remain the authoritative proof.
+assembler theme or runtime hook. Its first viewport, style chooser, author path, public gallery, Review
+explanation, agent setup, and trust boundary use the same registry-owned recipes, media, motion, cards, and
+actions as package consumers. Every starter, the complete visual/interactive/data catalogs, Terminal and
+Cinematic showcases, the three decision showcases, and Review/Response workspaces are separate bilingual
+compiler invocations. Preview images never replace their independently staged live pages or direct Markdown
+routes.
 
 The canonical skill is instruction-only. Its OpenAI and Claude plugin manifests point to the same
 `skills/` folder and carry the same package version, license, homepage, and compatibility contract.

@@ -13,7 +13,7 @@ language: ru
 Эта основа организует настоящее ревью: решение, подтверждающие его данные, оставшийся риск и следующие
 ответственные шаги. Замените примерные факты, сохранив смысловую структуру.
 
-::::::section{title="Сигнал решения" id="signal" nav="Сигнал" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Сигнал решения" id="signal" nav="Решение" recipe="hero"}
 
 :::callout{kind="success" title="Рекомендация"}
 Продолжить работу с локальным кандидатом на выпуск. Сценарий первого использования завершён, а в
@@ -23,7 +23,7 @@ language: ru
 {{include: partials/findings.ru.md}}
 ::::::
 
-::::::section{title="Карта доказательств" id="evidence" nav="Доказательства" width="wide" tone="soft" composition="mosaic" viewport="bounded" section-density="editorial" type="editorial" media="natural" media-fit="cover" media-aspect="landscape" surface="grain" transition="reveal"}
+::::::section{title="Карта доказательств" id="evidence" nav="Данные" recipe="evidence"}
 
 ![Движение доказательств от источника через проверку к решению о выпуске](assets/architecture.ru.svg)
 
@@ -42,7 +42,7 @@ language: ru
 ::::
 ::::::
 
-::::::section{title="Решение и ревью" id="decision" nav="Решение" width="wide" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="stagger" choreography="cascade"}
+::::::section{title="Решение и ревью" id="decision" nav="Ревью" recipe="story"}
 
 :::decision{title="Принять кандидата для подготовки выпуска"}
 Доказательства позволяют двигаться дальше. Любое новое блокирующее наблюдение повторно открывает решение
@@ -74,7 +74,7 @@ language: ru
   :::
   ::::::
 
-::::::section{title="Следующие действия" id="actions" nav="Действия" width="wide" tone="accent" composition="stack" viewport="adaptive" section-density="compact" type="display" surface="glow" transition="reveal"}
+::::::section{title="Следующие действия" id="actions" nav="Действия" recipe="metrics"}
 
 :::steps{title="Завершить передачу"}
 

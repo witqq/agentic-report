@@ -13,13 +13,13 @@ language: ru
 Эта основа фиксирует одно системное решение с достаточной детализацией для реализации и последующего отката.
 Граница доверия остаётся видимой, а не скрывается в коде фреймворка.
 
-::::::section{title="Граница системы" id="boundary" nav="Граница" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Граница системы" id="boundary" nav="Граница" recipe="hero"}
 ![Граница источника, компилятора, артефакта и браузера](assets/system-map.ru.svg)
 
 {{include: partials/decision.ru.md}}
 ::::::
 
-::::::section{title="Поток выполнения" id="flow" nav="Поток" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal" scene="progress"}
+::::::section{title="Поток выполнения" id="flow" nav="Поток" recipe="story"}
 
 :::diagram{title="Граница автономной сборки" description="Декларативный локальный вход проходит проверку и compile-time рендеринг и становится статическим браузерным артефактом." direction="right"}
 ::node{id="source" label="Локальный источник" kind="accent"}
@@ -32,7 +32,7 @@ language: ru
 :::
 ::::::
 
-::::::section{title="Альтернативы и последствия" id="alternatives" nav="Альтернативы" width="wide" tone="plain" composition="mosaic" viewport="adaptive" section-density="compact" type="editorial" surface="grain" transition="stagger" choreography="cascade"}
+::::::section{title="Альтернативы и последствия" id="alternatives" nav="Альтернативы" recipe="rail"}
 
 ::::tabs{title="Рассмотренные альтернативы"}
 :::tab{label="Примитивы пакета"}
@@ -67,7 +67,7 @@ language: ru
   :::
   ::::::
 
-::::::section{title="Внедрение" id="rollout" nav="Внедрение" width="wide" tone="accent" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="glow" transition="reveal"}
+::::::section{title="Внедрение" id="rollout" nav="Внедрение" recipe="metrics"}
 
 :::steps{title="Применить решение"}
 

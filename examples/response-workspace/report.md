@@ -7,7 +7,7 @@ localizations:
   ru: report.ru.md
 theme: system
 layout: document
-preset: editorial
+preset: material
 ---
 
 # Release decision response workspace
@@ -16,7 +16,7 @@ preset: editorial
 
 Complete the questions, add only the comments you need, then copy or download the deterministic response.
 
-::::::section{title="Triage in one local workspace" id="workspace" nav="Workspace" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Triage in one local workspace" id="workspace" nav="Workspace" recipe="hero"}
 :::::response{title="Release triage" id="release-triage"}
 ::::question{id="scope" kind="bucket" title="What should happen when?" prompt="Assign every item to a delivery bucket."}
 ::bucket{id="do" label="Do now"}

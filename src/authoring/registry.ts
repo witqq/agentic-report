@@ -984,8 +984,9 @@ export const authoringRegistry = {
       id: 'layout-mixed',
       path: 'layout-mixed',
       entry: 'report.md',
-      title: 'Mixed layout example',
-      description: 'Research brief combining long-form narrative with wide card and data sections.',
+      title: 'Complete visual language catalog',
+      description:
+        'Bilingual catalog covering the complete composition, media, surface, motion, and responsive vocabulary.',
       classes: ['research-report'],
     },
     {
@@ -1050,6 +1051,24 @@ export const authoringRegistry = {
       description:
         'Fictional launch brief combining audience value, funnel evidence, operational gates, and a reversible rollout.',
       classes: ['landing-page', 'launch-readiness-showcase'],
+    },
+    {
+      id: 'terminal-portfolio',
+      path: 'terminal-portfolio',
+      entry: 'report.md',
+      title: 'Terminal field notes',
+      description:
+        'Console-led systems portfolio with prompt rhythm, linked work, an operating log, and a reproducible handoff.',
+      classes: ['landing-page', 'terminal-portfolio-showcase'],
+    },
+    {
+      id: 'cinematic-story',
+      path: 'cinematic-story',
+      entry: 'report.md',
+      title: 'Image-first field story',
+      description:
+        'Local-media visual essay with a staged hero, scroll narrative, image rail, and measured summary.',
+      classes: ['landing-page', 'cinematic-story-showcase'],
     },
   ],
 } as const satisfies AuthoringRegistryDefinition;

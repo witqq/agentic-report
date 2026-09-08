@@ -33,9 +33,12 @@ const routeManifestPath = path.join(repositoryRoot, 'website/routes.json');
 const readRoutes = async (): Promise<RouteManifest> =>
   JSON.parse(await readFile(routeManifestPath, 'utf8')) as RouteManifest;
 
-const markdownLinks = (source: string): Set<string> =>
+const authoredLinks = (source: string): Set<string> =>
   new Set(
-    [...source.replace(/```[\s\S]*?```/gu, '').matchAll(/(?<!!)\[[^\]]+\]\(([^)]+)\)/gu)]
+    [
+      ...source.replace(/```[\s\S]*?```/gu, '').matchAll(/(?<!!)\[[^\]]+\]\(([^)]+)\)/gu),
+      ...source.matchAll(/\bhref="([^"]+)"/gu),
+    ]
       .flatMap((match) => (match[1] === undefined ? [] : [match[1]]))
       .filter((href) => !href.startsWith('#') && !href.startsWith('https://')),
   );
@@ -138,7 +141,7 @@ describe('public landing route and preview contracts', () => {
     const manifest = await readRoutes();
     const declared = new Set(manifest.routes.map((route) => route.href));
     for (const locale of ['report.md', 'report.ru.md']) {
-      const links = markdownLinks(await readFile(path.join(landingRoot, locale), 'utf8'));
+      const links = authoredLinks(await readFile(path.join(landingRoot, locale), 'utf8'));
       expect([...links].filter((href) => !declared.has(href))).toEqual([]);
     }
     for (const route of manifest.routes) {

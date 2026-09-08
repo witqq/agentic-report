@@ -7,7 +7,7 @@ localizations:
   ru: report.ru.md
 layout: document
 theme: system
-preset: studio
+preset: monument
 ---
 
 # Human review handoff
@@ -25,19 +25,19 @@ list-accessible after import, demonstrating backward-compatible binding without 
 After editing this source, rebuild with `--review review.json` to display truthful prior bindings and complete
 the next review round without a server or automatic Markdown rewriting.
 
-:::section{title="Activation evidence" id="activation" nav="Activation" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+:::section{title="Activation evidence" id="activation" nav="Activation" recipe="metrics"}
 Activation reached **68%** in the revised cohort.
 
 The evidence is ready for a reviewer to confirm or return for revision.
 :::
 
-:::section{title="Retention evidence" id="retention" nav="Retention" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal"}
+:::section{title="Retention evidence" id="retention" nav="Retention" recipe="evidence"}
 Activation reached **63%** in the observed cohort.
 
 This repeated statement demonstrates that review threads remain attached to distinct source blocks.
 :::
 
-:::section{title="Proposed handoff" id="handoff" nav="Handoff" width="wide" tone="accent" composition="story" viewport="adaptive" section-density="editorial" type="display" surface="glow" transition="stagger" interaction="depth"}
+:::section{title="Proposed handoff" id="handoff" nav="Handoff" recipe="story"}
 The reviewer can resolve a thread after accepting the agent's change or reopen it with another message.
 
 The exported review is local, deterministic, and descriptive; it is not an authenticated signature.

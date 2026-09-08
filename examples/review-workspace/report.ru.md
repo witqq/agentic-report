@@ -21,19 +21,19 @@ language: ru
 После изменения исходника повторите сборку с `--review review.json`, чтобы увидеть честное состояние прежних
 привязок и завершить следующий круг ревью без сервера и автоматического изменения Markdown.
 
-:::section{title="Данные активации" id="activation" nav="Активация" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+:::section{title="Данные активации" id="activation" nav="Активация" recipe="metrics"}
 Активация достигла **68%** в обновлённой когорте.
 
 Данные готовы к подтверждению рецензентом или возврату на доработку.
 :::
 
-:::section{title="Данные удержания" id="retention" nav="Удержание" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal"}
+:::section{title="Данные удержания" id="retention" nav="Удержание" recipe="evidence"}
 Активация достигла **63%** в наблюдаемой когорте.
 
 Повторяющееся утверждение показывает, что ветки ревью остаются привязаны к разным исходным блокам.
 :::
 
-:::section{title="Предлагаемая передача" id="handoff" nav="Передача" width="wide" tone="accent" composition="story" viewport="adaptive" section-density="editorial" type="display" surface="glow" transition="stagger" interaction="depth"}
+:::section{title="Предлагаемая передача" id="handoff" nav="Передача" recipe="story"}
 Рецензент может закрыть ветку после принятия изменения агента или снова открыть её новым сообщением.
 
 Экспорт ревью локален, детерминирован и описателен; это не аутентифицированная подпись.

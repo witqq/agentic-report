@@ -7,12 +7,7 @@ localizations:
   ru: report.ru.md
 theme: system
 layout: mixed
-tokens:
-  density: comfortable
-  font: sans
-  accent: teal
-  width: wide
-  radius: soft
+preset: material
 ---
 
 # Assisted authoring research synthesis
@@ -23,7 +18,7 @@ demonstrate the report engine; replace it with verified project evidence before 
 This starter turns a research question into a transparent recommendation. It keeps the method and evidence
 close enough for another agent to challenge the conclusion.
 
-::::::section{title="Research frame" id="frame" nav="Frame" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Research frame" id="frame" nav="Question" recipe="hero"}
 :::callout{kind="info" title="Research question"}
 Which authoring route gives agents the shortest path to a portable, reviewable interactive page?
 :::
@@ -31,7 +26,7 @@ Which authoring route gives agents the shortest path to a portable, reviewable i
 {{include: partials/method.md}}
 ::::::
 
-::::::section{title="Evidence model" id="evidence" nav="Evidence" width="wide" tone="soft" composition="story" viewport="bounded" section-density="editorial" type="editorial" media="mask" media-fit="contain" media-aspect="landscape" surface="grain" transition="reveal" interaction="depth"}
+::::::section{title="Evidence model" id="evidence" nav="Evidence" recipe="evidence"}
 
 ![Research inputs converging into a recommendation](assets/evidence-map.svg)
 
@@ -48,7 +43,7 @@ Long-term adoption and maintenance cost require longitudinal evidence beyond thi
 ::::
 ::::::
 
-::::::section{title="Comparison" id="comparison" nav="Comparison" width="wide" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="grid" transition="stagger" scene="progress" choreography="cascade"}
+::::::section{title="Comparison" id="comparison" nav="Comparison" recipe="metrics"}
 
 :::::chart{type="bar" title="First useful artifact" description="Median focused work units required to reach a reviewable local artifact; lower is better." x-label="Authoring route" y-label="Work units"}
 ::::series{label="Median effort"}
@@ -59,7 +54,7 @@ Long-term adoption and maintenance cost require longitudinal evidence beyond thi
 :::::
 ::::::
 
-::::::section{title="Interpretation and follow-up" id="interpretation" nav="Decision" width="wide" tone="accent" composition="stack" viewport="adaptive" section-density="compact" type="editorial" surface="glow" transition="reveal"}
+::::::section{title="Interpretation and follow-up" id="interpretation" nav="Decision" recipe="story"}
 
 :::disclosure{title="Read the validity limits" open="true"}
 The comparison measures a bounded local task, not every publishing workflow. It supports the recommendation

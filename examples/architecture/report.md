@@ -7,12 +7,7 @@ localizations:
   ru: report.ru.md
 theme: dark
 layout: document
-tokens:
-  density: comfortable
-  font: sans
-  accent: indigo
-  width: standard
-  radius: sharp
+preset: terminal
 ---
 
 # Portable page architecture
@@ -23,13 +18,13 @@ demonstrate the report engine; replace it with verified project evidence before 
 This starter records one system decision in enough detail for implementation and later reversal. It keeps
 the trust boundary visible instead of hiding it in framework code.
 
-::::::section{title="System boundary" id="boundary" nav="Boundary" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="System boundary" id="boundary" nav="Boundary" recipe="hero"}
 ![The source, compiler, artifact, and browser boundary](assets/system-map.svg)
 
 {{include: partials/decision.md}}
 ::::::
 
-::::::section{title="Runtime flow" id="flow" nav="Flow" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal" scene="progress"}
+::::::section{title="Runtime flow" id="flow" nav="Flow" recipe="story"}
 
 :::diagram{title="Offline compilation boundary" description="Declarative local input passes through validation and compile-time rendering into a static browser artifact." direction="right"}
 ::node{id="source" label="Local source" kind="accent"}
@@ -42,7 +37,7 @@ the trust boundary visible instead of hiding it in framework code.
 :::
 ::::::
 
-::::::section{title="Alternatives and consequences" id="alternatives" nav="Alternatives" width="wide" tone="plain" composition="mosaic" viewport="adaptive" section-density="compact" type="editorial" surface="grain" transition="stagger" choreography="cascade"}
+::::::section{title="Alternatives and consequences" id="alternatives" nav="Alternatives" recipe="rail"}
 
 ::::tabs{title="Alternatives considered"}
 :::tab{label="Package primitives"}
@@ -77,7 +72,7 @@ All filesystem references are confined before reads and all output works locally
   :::
   ::::::
 
-::::::section{title="Rollout" id="rollout" nav="Rollout" width="wide" tone="accent" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="glow" transition="reveal"}
+::::::section{title="Rollout" id="rollout" nav="Rollout" recipe="metrics"}
 
 :::steps{title="Adopt the decision"}
 

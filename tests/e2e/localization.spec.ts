@@ -30,20 +30,18 @@ test('system locale selects Russian and the visible switcher changes the complet
   for (const [index, url] of landingFormats.entries()) {
     await page.goto(url);
     await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
-    await expect(page).toHaveTitle(
-      'agentic-report — декларативные интерактивные страницы для передачи результатов агента',
-    );
+    await expect(page).toHaveTitle('agentic-report — красивые интерактивные страницы из Markdown');
     await expect(
       page.getByRole('heading', {
-        name: 'Дайте агенту страницу, которую не стыдно передать.',
+        name: 'Страница, которую хочется передать. Из Markdown.',
         level: 1,
       }),
     ).toBeVisible();
-    await expect(page.locator('[data-navigation] a').first()).toHaveText('Доказательство');
+    await expect(page.locator('[data-navigation] a').first()).toHaveText('Выбрать результат');
     await expect(page.getByRole('combobox', { name: 'Язык' })).toHaveValue('ru');
     await expect(page.locator('meta[name="description"]')).toHaveAttribute(
       'content',
-      'Превратите декларативный Markdown в готовую интерактивную страницу, которую агент передаст человеку.',
+      'Дайте агенту декларативный Markdown и получите готовую локальную страницу для человека.',
     );
 
     if (index === 0) {
@@ -58,13 +56,11 @@ test('system locale selects Russian and the visible switcher changes the complet
 
     await page.getByRole('combobox', { name: 'Язык' }).selectOption('en');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-    await expect(page).toHaveTitle(
-      'agentic-report — declarative interactive pages for agent handoffs',
-    );
+    await expect(page).toHaveTitle('agentic-report — polished interactive pages from Markdown');
     await expect(
-      page.getByRole('heading', { name: 'Give your agent a page worth handing over.', level: 1 }),
+      page.getByRole('heading', { name: 'A page worth handing over. From Markdown.', level: 1 }),
     ).toBeVisible();
-    await expect(page.locator('[data-navigation] a').first()).toHaveText('Proof');
+    await expect(page.locator('[data-navigation] a').first()).toHaveText('Choose a result');
     await expect(page.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
     await expect(page.getByRole('combobox', { name: 'Language' })).toBeFocused();
 

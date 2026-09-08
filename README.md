@@ -337,16 +337,22 @@ animation-frame-coalesced. Authors choose semantic roles, not timings, coordinat
 If `IntersectionObserver` is unavailable or non-callable, observer-dependent motion and pointer enhancement
 remain inert, baseline content stays readable, and navigation uses its bounded geometry fallback.
 
-## Realistic showcase portfolio
+## Public example portfolio
 
-Three non-starter examples show complete decision-oriented pages built through the same public source and
-compiler paths:
+The packaged portfolio includes complete pages built through the same public source and compiler paths:
 
-| Example                                          | Reader job                                                                                                   |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| [`incident-review`](examples/incident-review/)   | Reconstruct a fictional service incident, inspect evidence, and filter accountable follow-up                 |
-| [`vendor-decision`](examples/vendor-decision/)   | Separate mandatory procurement gates from weighted preference and approve a conditional path                 |
-| [`launch-readiness`](examples/launch-readiness/) | Judge a fictional regional beta from audience value, funnel evidence, launch gates, and a reversible rollout |
+| Example                                                    | Reader job                                                                                                   |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| [`layout-mixed`](examples/layout-mixed/)                   | Inspect the complete visual grammar and component range                                                      |
+| [`interactive-catalog`](examples/interactive-catalog/)     | Exercise package-owned interactions                                                                          |
+| [`visualization-catalog`](examples/visualization-catalog/) | Read the complete chart, diagram, and timeline range                                                         |
+| [`terminal-portfolio`](examples/terminal-portfolio/)       | Present systems work through console rhythm, scan treatment, and linked evidence                             |
+| [`cinematic-story`](examples/cinematic-story/)             | Follow an image-first story through staged media, scroll progress, and a gallery rail                        |
+| [`incident-review`](examples/incident-review/)             | Reconstruct a fictional service incident, inspect evidence, and filter accountable follow-up                 |
+| [`vendor-decision`](examples/vendor-decision/)             | Separate mandatory procurement gates from weighted preference and approve a conditional path                 |
+| [`launch-readiness`](examples/launch-readiness/)           | Judge a fictional regional beta from audience value, funnel evidence, launch gates, and a reversible rollout |
+| [`review-workspace`](examples/review-workspace/)           | Create, reopen, resolve, and export selected-text discussion threads                                         |
+| [`response-workspace`](examples/response-workspace/)       | Return typed triage, choices, ordering, scores, and comments                                                 |
 
 Every packaged starter, layout example, catalog, workspace example, realistic showcase, and the public
 landing pairs its canonical English source with a maintained Russian entry. A generated artifact chooses
@@ -358,7 +364,8 @@ From a repository or package-source checkout, build them with the public CLI:
 agentic-report build ./examples/incident-review --output ./incident-review.html
 agentic-report build ./examples/vendor-decision --output ./vendor-decision.html
 agentic-report build ./examples/launch-readiness --output ./launch-readiness.html
-agentic-report build ./examples/launch-readiness --format directory --output ./launch-readiness-directory
+agentic-report build ./examples/terminal-portfolio --output ./terminal-portfolio.html
+agentic-report build ./examples/cinematic-story --format directory --output ./cinematic-story-directory
 agentic-report build ./examples/tutorial --share --output ./tutorial-share.html
 ```
 
@@ -380,12 +387,10 @@ write their one reference document as a compact JSON line. `--json` is accepted 
 
 The canonical public landing is itself an ordinary compiler input at
 [`website/landing`](website/landing/). It uses only supported Markdown, frontmatter, semantic directives,
-and local screenshots generated from the three fictional showcases. Its visual narrative composes a
-full stage, data scene, media gallery, sticky desktop story with normal mobile flow, selected-text review,
-mosaic, choreography, pointer depth, magnetic emphasis, and responsive action placement. Its paired Russian
-entry and every public demo use the same multilingual contract as package consumers, while incident review,
-vendor decision, and launch readiness reuse the visual vocabulary on independent page layouts. Build it
-through the same public path as any user page:
+and local media. Its first viewport presents the value, actions, and a generated result; the remaining
+sections lead through style choice, the three-step author path, the full public gallery, selected-text Review,
+product reasons, agent setup, and the trust boundary. Its paired Russian entry and every public demo use the
+same multilingual contract as package consumers. Build it through the same public path as any user page:
 
 ```bash
 agentic-report build ./website/landing --output ./landing.html --json

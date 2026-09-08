@@ -462,16 +462,23 @@ placement, or a layout-specific template.
 The same inventory also contains the six initializable starters. Starters are buildable examples with
 `starter` metadata, not a second template or generator system.
 
-### Rebuild the realistic showcases
+### Rebuild the public showcases
 
-The registry also exposes three non-starter, decision-oriented examples. They are ordinary public source
-trees rather than templates or a separate showcase system:
+The registry also exposes non-starter public source trees. They are ordinary examples rather than templates
+or a separate showcase system:
 
-| ID                                                           | Page shape | Intended review                                                                          |
-| ------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------- |
-| [`incident-review`](../examples/incident-review/report.md)   | `mixed`    | Service impact, causal evidence, recovery, and owned follow-up                           |
-| [`vendor-decision`](../examples/vendor-decision/report.md)   | `document` | Mandatory procurement gates, weighted evidence, and conditional adoption                 |
-| [`launch-readiness`](../examples/launch-readiness/report.md) | `landing`  | Audience value, activation/funnel evidence, launch gates, and a reversible regional beta |
+| ID                                                                     | Page shape  | Intended use                                                                                                               |
+| ---------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `layout-mixed`                                                         | `mixed`     | Complete visual grammar and component range; public source route: [`visual-catalog`](../examples/visual-catalog/report.md) |
+| [`interactive-catalog`](../examples/interactive-catalog/report.md)     | `mixed`     | Package-owned interactive primitives                                                                                       |
+| [`visualization-catalog`](../examples/visualization-catalog/report.md) | `dashboard` | Charts, diagrams, timelines, and data controls                                                                             |
+| [`terminal-portfolio`](../examples/terminal-portfolio/report.md)       | `mixed`     | Console-led systems portfolio with prompt rhythm and linked evidence                                                       |
+| [`cinematic-story`](../examples/cinematic-story/report.md)             | `landing`   | Image-first scroll story with staged media and gallery rail                                                                |
+| [`incident-review`](../examples/incident-review/report.md)             | `mixed`     | Service impact, causal evidence, recovery, and owned follow-up                                                             |
+| [`vendor-decision`](../examples/vendor-decision/report.md)             | `document`  | Mandatory procurement gates, weighted evidence, and conditional adoption                                                   |
+| [`launch-readiness`](../examples/launch-readiness/report.md)           | `landing`   | Audience value, activation/funnel evidence, launch gates, and a reversible regional beta                                   |
+| [`review-workspace`](../examples/review-workspace/report.md)           | `document`  | Selected-text threads, prior feedback, and complete review export                                                          |
+| [`response-workspace`](../examples/response-workspace/report.md)       | `document`  | Typed triage, choices, ordering, scores, and comments                                                                      |
 
 Every starter, layout example, catalog, workspace example, and showcase declares its maintained Russian
 entry. Building any example produces one bilingual artifact; the initial variant follows the browser's
@@ -483,7 +490,8 @@ From a checkout containing the package-owned source paths:
 agentic-report build ./examples/incident-review --output ./incident-review.html
 agentic-report build ./examples/vendor-decision --output ./vendor-decision.html
 agentic-report build ./examples/launch-readiness --output ./launch-readiness.html
-agentic-report build ./examples/launch-readiness --format directory --output ./launch-readiness-directory
+agentic-report build ./examples/terminal-portfolio --output ./terminal-portfolio.html
+agentic-report build ./examples/cinematic-story --format directory --output ./cinematic-story-directory
 ```
 
 Open each single file or directory `index.html` through `file://`. For an installed package, first run
@@ -513,10 +521,11 @@ The CLI and ESM entry read this floor from installed package metadata before acc
 runtime exits with code `1` and `NODE_VERSION_UNSUPPORTED`; an ESM import throws `AgenticReportError` with
 the same diagnostic. Neither path continues after npm's engine warning.
 
-The repository's canonical product proof is [`../website/landing/report.md`](../website/landing/report.md). Its example cards
-link to separately publishable incident-review, vendor-decision, and launch-readiness pages plus direct
-public Markdown source routes. [`../website/routes.json`](../website/routes.json) owns those relative route
-identities for deterministic static staging; a screenshot alone is never treated as the live example.
+The repository's canonical product proof is [`../website/landing/report.md`](../website/landing/report.md).
+Its gallery links to independently publishable starters, catalogs, Terminal/Cinematic showcases, decision
+showcases, and Review/Response workspaces plus direct public Markdown source routes.
+[`../website/routes.json`](../website/routes.json) owns those relative route identities for deterministic
+static staging; an image alone is never treated as the live example.
 
 ## Semantic directives
 
@@ -726,8 +735,8 @@ sidebar can make its tracks unreadable. Explicit sections own real labelled
 section/H2 markup and primary navigation, while heading-only sources use H2 primary links. H3 and component
 anchors remain owned targets without becoming primary links. The packaged English/Russian `layout-mixed`
 source is the complete grammar catalog; locate it with `agentic-report examples --json`. The bilingual
-landing starter is the smaller copyable narrative, while the public incident-review, vendor-decision, and
-launch-readiness sources demonstrate reuse on signal, editorial, and studio pages.
+landing starter is the smaller copyable narrative. Use `terminal-portfolio` for console-led composition,
+`cinematic-story` for image-first scrolling, and the decision showcases for reuse across page layouts.
 
 Use top-level `::contents` to place the section map inside the article. It accepts no attributes, label, or
 children. The compiler fills it after final IDs are known: exact visible section headings become native

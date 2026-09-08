@@ -110,9 +110,9 @@ unresolved content facts.
   Keep important reading order in source because multi-column/layered arrangements flatten on narrow
   screens. A media stage keeps its title across the full section and composes support with media below;
   gallery stages keep their separate rail. Prefer image-only cards for `layers`. Use the bilingual
-  `layout-mixed` example as the complete
-  grammar catalog, the landing starter as a smaller copyable narrative, and the public incident-review,
-  vendor-decision, and launch-readiness sources as cross-layout composition references.
+  `layout-mixed` example as the complete grammar catalog, the landing starter as a smaller copyable narrative,
+  `terminal-portfolio` for console-led composition, `cinematic-story` for image-first scroll storytelling,
+  and the public decision showcases as cross-layout composition references.
 - Add motion through the same closed section grammar: `transition="none|reveal|stagger"`,
   `scene="none|progress|sticky"`, `interaction="none|depth|tilt"`, and
   `choreography="none|cascade"`. They default to `none`; legacy `reveal="true"` remains available. Do not
