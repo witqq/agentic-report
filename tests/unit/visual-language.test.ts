@@ -157,6 +157,67 @@ describe('declarative visual language', () => {
     });
   });
 
+  it('marks every gallery rail whose rendered structure can create continuation', async () => {
+    const workspace = await visualWorkspace('visual-language-gallery-scroll');
+    const rendered = await render(
+      [
+        ':::::section{title="Gallery structures" media="gallery"}',
+        '::::cards',
+        ':::card{title="Only"}',
+        'One card.',
+        ':::',
+        '::::',
+        '::::cards',
+        ':::card{title="Card plus prose"}',
+        'One card.',
+        ':::',
+        'Sibling Markdown creates another rendered track.',
+        '::::',
+        '::::cards{title="Titled rail"}',
+        ':::card{title="Card plus title"}',
+        'One card.',
+        ':::',
+        '::::',
+        '::::cards',
+        ':::card{title="First adjacent"}',
+        'One.',
+        ':::',
+        ':::card{title="Second adjacent"}',
+        'Two.',
+        ':::',
+        '::::',
+        '::::cards',
+        ':::card{title="First mixed"}',
+        'One.',
+        ':::',
+        'Intervening Markdown remains valid.',
+        ':::card{title="Second mixed"}',
+        'Two.',
+        ':::',
+        '::::',
+        ':::::',
+      ].join('\n'),
+      workspace,
+      'single-file',
+    );
+    const galleries = [...rendered.html.matchAll(/<[^>]+class="semantic-cards"[^>]*>/gu)].map(
+      ([tag]) => tag,
+    );
+    const singleGallery = galleries[0];
+
+    expect(galleries).toHaveLength(5);
+    expect(singleGallery).toBeDefined();
+    expect(singleGallery).not.toContain('data-gallery-rail');
+    expect(singleGallery).not.toContain('data-gallery-scroller');
+    for (const gallery of galleries.slice(1)) {
+      expect(gallery).toContain('data-gallery-rail=""');
+      expect(gallery).not.toContain('role="group"');
+      expect(gallery).not.toContain('aria-label=');
+      expect(gallery).not.toContain('tabindex=');
+      expect(gallery).not.toContain('data-gallery-scroller');
+    }
+  });
+
   it('renders the same confined visual declaration into inline and directory artifacts', async () => {
     const workspace = await visualWorkspace('visual-language-render');
     const markdown = visualSource();

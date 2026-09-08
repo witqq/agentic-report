@@ -102,7 +102,9 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   determinism, registry-owned page layouts/themes/token defaults, the complete closed section visual
   grammar with independent invalid-value and executable-attribute rejection, registry-declared rejection of
   mosaic/stack with layers/gallery card-layout conflicts, identical single-file/directory and
-  document/dashboard projections, GFM table rendering, collision-free
+  document/dashboard projections, post-enhancement per-rail gallery candidate marking across titles, sibling
+  prose, repeated and Markdown-separated structures plus true one-item omission, GFM table rendering,
+  collision-free
   document shell IDs, default attribution and explicit footer opt-out without changing authored content,
   compiler results, deterministic public-site staging, complete declared-route
   reachability, direct-file byte identity, release hashes, synchronized skill/plugin metadata, and public
@@ -158,7 +160,18 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   not occupy the viewport, missing semantic sections, and leaked directive fences. Dedicated semantic-tabs coverage builds every current
   tab-bearing starter, example, and fixture for desktop and mobile `file://` artifacts; it asserts readable
   non-shrinking single-line labels, list-owned overflow where needed, document containment, and pointer and
-  keyboard selection and focus. Dedicated localization coverage builds both formats and verifies ordered
+  keyboard selection and focus. Route-derived layout-integrity coverage also opens the complete registered
+  public page inventory at narrow mobile, mobile, and desktop widths. It compares cards, semantic surfaces,
+  tables, code blocks, tab lists, visualization frames, and gallery scrollers with their immediate layout
+  owner rather than treating the absence of root overflow as sufficient. An overflowing gallery must retain
+  effective user-scroll overflow, localized focus semantics and a visible contained next-item preview. Every
+  observed rail must also omit those scroll-only semantics whenever its current width has no overflow. A
+  generated repeated/mixed wide rail fixture distinguishes a contained one-item rail, compact title/prose/card
+  continuations with bidirectional focused keyboard scrolling, and ultrawide two-item tracks that fit without
+  a false focus stop or label. The same coverage opens every
+  authored popover at mobile and desktop sizes, requires a reversible document overlay host, measures whole-
+  panel visual-viewport containment and multi-point topmost hit testing, and repeats after document/nested
+  scrolling, viewport resizing, and localized DOM replacement. Dedicated localization coverage builds both formats and verifies ordered
   `navigator.languages` selection, unsupported preference fallback, conditional selector absence, complete
   metadata/content/navigation/chrome replacement, focus return, locale-local review/response/component
   state, version-4 active-locale export, localized visualization text and number formatting, and

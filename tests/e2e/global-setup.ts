@@ -112,6 +112,7 @@ export default async function globalSetup(): Promise<void> {
   const responseIsolationSource = path.join(fixtureRoot, 'response-isolation-source');
   const shareSource = path.join(fixtureRoot, 'share-source');
   const glossaryCodeSource = path.join(fixtureRoot, 'glossary-code-source');
+  const galleryStructureSource = path.join(fixtureRoot, 'gallery-structure-source');
   const diagramTourSource = path.join(fixtureRoot, 'diagram-tour-source');
   const russianChromeSource = path.join(fixtureRoot, 'russian-chrome-source');
   const russianPriorSource = path.join(fixtureRoot, 'russian-prior-source');
@@ -243,6 +244,53 @@ export default async function globalSetup(): Promise<void> {
       '```',
       '## Second section',
       'Authored content remains unchanged.',
+    ].join('\n'),
+  );
+  await mkdir(galleryStructureSource, { recursive: true });
+  await writeFile(
+    path.join(galleryStructureSource, 'report.md'),
+    [
+      '---',
+      'title: Gallery structure fixture',
+      'language: en',
+      'layout: mixed',
+      '---',
+      '# Gallery structure fixture',
+      ':::::section{title="Repeated and mixed rails" media="gallery" width="wide"}',
+      '::::cards',
+      ':::card{title="Only"}',
+      'One card.',
+      ':::',
+      '::::',
+      '::::cards',
+      ':::card{title="Card plus prose"}',
+      'One card.',
+      ':::',
+      'Sibling Markdown creates another rendered track.',
+      '::::',
+      '::::cards{title="Titled rail"}',
+      ':::card{title="Card plus title"}',
+      'One card.',
+      ':::',
+      '::::',
+      '::::cards',
+      ':::card{title="First adjacent"}',
+      'One.',
+      ':::',
+      ':::card{title="Second adjacent"}',
+      'Two.',
+      ':::',
+      '::::',
+      '::::cards',
+      ':::card{title="First mixed"}',
+      'One.',
+      ':::',
+      'Intervening Markdown is part of the same rail.',
+      ':::card{title="Second mixed"}',
+      'Two.',
+      ':::',
+      '::::',
+      ':::::',
     ].join('\n'),
   );
   for (const fixture of representativeSources) {
@@ -645,6 +693,10 @@ export default async function globalSetup(): Promise<void> {
     buildReport({
       input: glossaryCodeSource,
       output: path.join(fixtureRoot, 'glossary-code.html'),
+    }),
+    buildReport({
+      input: galleryStructureSource,
+      output: path.join(fixtureRoot, 'gallery-structure.html'),
     }),
     buildReport({
       input: glossaryCodeSource,

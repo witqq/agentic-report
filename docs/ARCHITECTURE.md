@@ -119,11 +119,14 @@ Markdown + metadata + local assets + partials + semantic directives
   keeps manual choice session-only. One delegated
   event controller handles theme/navigation controls, current-section ownership, bounded normal-motion
   progress, entrances, scenes, choreography and fine-pointer effects, responsive action placement, code copying, glossary hover/focus/tap explanations,
-  tab selection, modal/popover focus, filtering, switches, and bounded counters. A code-term explanation is
-  portalled to `body` while open, positioned against its trigger with viewport clamping and above/below
-  flipping, then restored to its semantic source position on close; this prevents scrollable code blocks from
-  clipping or relocating the panel. Interaction instances otherwise keep state in their own semantic DOM
-  subtree, so repeated components do not share accidental state.
+  tab selection, modal/popover focus, filtering, switches, and bounded counters. Every authored glossary or
+  popover panel is portalled to `body` while open, positioned against its trigger from the current visual
+  viewport with clamping and above/below flipping, then restored to its exact semantic source position on
+  close. This lets transient UI escape the section isolation and local scrolling that intentionally contain
+  authored and decorative content. Active panels share animation-frame-coalesced document, nested-scroll,
+  window, and `visualViewport` positioning listeners; the listeners exist only while a panel is open and are
+  torn down before localized DOM replacement. Interaction instances retain source-owner mappings and state
+  in their own semantic DOM subtree, so repeated components do not share accidental state.
 - `src/browser/review-workspace.ts` is a cohesive package-owned controller over the shared review contract.
   It parses the inert manifest once, maps native in-target or cross-target text ranges to deterministic
   anchors, owns in-memory discussion threads, ordered user/agent messages and segment-local resolution,
@@ -397,7 +400,15 @@ decorative surfaces. Section tone retains background/foreground ownership, while
 only the behind-content treatment and nested package components restore their own readable surface text.
 Full and bounded viewport profiles are capped rather than forcing unbounded empty
 height; display/editorial headings retain readable words; and wide media, galleries, tables, charts, and
-code scroll only within their owning surface instead of widening the document. Sidebar/mobile navigation
+code scroll only within their owning surface instead of widening the document. After generic directive
+enhancement has materialized optional titles and Markdown blocks, the compiler visits every direct cards
+rail in a gallery section and marks rails containing at least two direct rendered elements—the exact items
+CSS turns into columns. This structural marker drives container-relative next-item preview and direct-item
+snap targets. A page-bound `ResizeObserver` controller derives the separate interactive marker from effective
+overflow, adding localized focusable scroll-group semantics and rail-only `ArrowLeft`/`ArrowRight` movement
+only while scrolling is possible. Repeated rails and viewport changes cannot leave stale semantics, and a
+true one-item rail receives neither false continuation nor a scroll announcement.
+Sidebar/mobile navigation
 exists only with at least two
 eligible sections; an authored in-flow map remains ordinary visible content at every inventory size and
 viewport. One shell navigation link is always current: direct and descendant hashes resolve through section

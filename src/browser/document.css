@@ -1828,7 +1828,7 @@ th {
 .semantic-section[data-media='gallery'] > .semantic-cards {
   display: grid;
   max-width: 100%;
-  grid-auto-columns: min(78vw, 48rem);
+  grid-auto-columns: min(100%, 48rem);
   grid-auto-flow: column;
   grid-template-columns: none;
   overflow-x: auto;
@@ -1836,8 +1836,23 @@ th {
   overscroll-behavior-inline: contain;
 }
 
-.semantic-section[data-media='gallery'] > .semantic-cards > .semantic-card {
+.semantic-section[data-media='gallery'] > .semantic-cards[data-gallery-rail] {
+  grid-auto-columns: min(calc(100% - 2.5rem), 48rem);
+}
+
+.semantic-section[data-media='gallery'] > .semantic-cards[data-gallery-rail] > * {
   scroll-snap-align: center;
+}
+
+:is(
+  table,
+  pre,
+  .semantic-tab-list,
+  .visualization-frame,
+  .semantic-section[data-media='gallery'] > .semantic-cards
+) {
+  scrollbar-color: var(--color-border-strong) transparent;
+  scrollbar-width: thin;
 }
 
 @media (width <= 80rem) {
@@ -2543,7 +2558,8 @@ span.semantic-source-link[data-source-link-neutralized] {
 
 .semantic-popover [data-popover-panel],
 .semantic-term [data-glossary-panel],
-[data-glossary-portal] {
+[data-glossary-portal],
+[data-popover-portal] {
   position: absolute;
   z-index: 15;
   top: calc(100% - 0.5rem);
@@ -2575,6 +2591,17 @@ span.semantic-source-link[data-source-link-neutralized] {
   font-family: var(--font-body);
   line-height: var(--body-leading);
   white-space: normal;
+}
+
+[data-popover-portal] {
+  position: fixed;
+  z-index: 50;
+  max-width: none;
+  margin: 0;
+  overflow: auto;
+  background: var(--role-component-bg, var(--color-surface));
+  color: var(--role-component-fg, var(--color-text));
+  overscroll-behavior: contain;
 }
 
 .semantic-term [data-glossary-panel] .semantic-title,
@@ -3954,7 +3981,11 @@ body {
   }
 
   .semantic-section[data-media='gallery'] > .semantic-cards {
-    grid-auto-columns: min(86vw, 28rem);
+    grid-auto-columns: min(100%, 28rem);
+  }
+
+  .semantic-section[data-media='gallery'] > .semantic-cards[data-gallery-rail] {
+    grid-auto-columns: min(calc(100% - 2rem), 28rem);
   }
 }
 

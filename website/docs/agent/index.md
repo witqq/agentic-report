@@ -99,8 +99,10 @@ you need. Compose distinctive sections through package-owned roles rather than c
 offers `flow`, `stage`, `split`, `mosaic`, `story`, and `stack`; pair it as needed with closed viewport,
 density, typography, media treatment, image fit/aspect/focal point, and surface attributes. On narrow
 screens, multi-column and layered arrangements return to source order and galleries keep their own scroll.
-Every section contains its floats and local layer order. A media stage gives its title the full first row and
-composes supporting content with media below; gallery stages retain their separate rail. Do not pair
+A gallery's localized focus and arrow-key scroll route appears only while its rail actually overflows; do
+not add a parallel authored control. Every section contains its floats and local layer order. A media stage
+gives its title the full first row and composes supporting content with media below; gallery stages retain
+their separate rail. Do not pair
 mosaic/stack composition with layers/gallery media: those roles would own the same card layout, so the
 compiler rejects the four combinations before rendering.
 

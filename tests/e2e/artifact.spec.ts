@@ -2113,8 +2113,9 @@ test('declarative interactions preserve scoped state, focus, and responsive file
   await expect(page.locator('#glossary-decision-packet')).toContainText(
     'A compact bundle of evidence',
   );
-  const termReference = term.locator('..');
-  const termExplanation = termReference.getByRole('dialog', { name: 'Decision packet' });
+  const termPanelId = await term.getAttribute('aria-controls');
+  if (termPanelId === null) throw new Error('Decision packet term has no controlled panel.');
+  const termExplanation = page.locator(`#${termPanelId}`);
   if (!testInfo.project.name.startsWith('mobile')) {
     await term.hover();
     await expect(termExplanation).toBeVisible();
@@ -2128,7 +2129,7 @@ test('declarative interactions preserve scoped state, focus, and responsive file
   await expect(term).toBeFocused();
   await activate(term);
   await expect(termExplanation).toBeVisible();
-  const fullDefinitionLink = termReference.getByRole('link', { name: 'View full definition' });
+  const fullDefinitionLink = termExplanation.getByRole('link', { name: 'View full definition' });
   await expect(fullDefinitionLink).toHaveAttribute('href', '#glossary-decision-packet');
   await activate(fullDefinitionLink);
   await expect(page).toHaveURL(/#glossary-decision-packet$/u);
@@ -2136,9 +2137,10 @@ test('declarative interactions preserve scoped state, focus, and responsive file
   await page.getByRole('heading', { name: 'Progressive detail' }).click();
   await expect(termExplanation).toBeHidden();
   const secondTerm = terms.nth(1);
-  const secondExplanation = secondTerm.locator('..').getByRole('dialog', {
-    name: 'Decision packet',
-  });
+  const secondPanelId = await secondTerm.getAttribute('aria-controls');
+  if (secondPanelId === null)
+    throw new Error('Second decision packet term has no controlled panel.');
+  const secondExplanation = page.locator(`#${secondPanelId}`);
   await expect(secondExplanation).toBeHidden();
   await activate(secondTerm);
   await expect(secondExplanation).toBeVisible();

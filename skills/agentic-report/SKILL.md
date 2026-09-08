@@ -109,7 +109,9 @@ unresolved content facts.
   compiler rejects those pairs. Other composition/media pairs remain available.
   Keep important reading order in source because multi-column/layered arrangements flatten on narrow
   screens. A media stage keeps its title across the full section and composes support with media below;
-  gallery stages keep their separate rail. Prefer image-only cards for `layers`. Use the bilingual
+  gallery stages keep their separate rail. A multi-item gallery exposes its localized focusable arrow-key
+  scroll route only while its current rail overflows, so do not add a parallel authored control. Prefer
+  image-only cards for `layers`. Use the bilingual
   `layout-mixed` example as the complete grammar catalog, the landing starter as a smaller copyable narrative,
   `terminal-portfolio` for console-led composition, `cinematic-story` for image-first scroll storytelling,
   and the public decision showcases as cross-layout composition references.

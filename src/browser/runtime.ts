@@ -4,6 +4,7 @@ import { COPY_ICON_PATH } from '../iconography.js';
 import { packageStrings, type PackageLocale } from '../localization.js';
 import { PAGE_MOTION_POLICY } from '../page-motion.js';
 import type { ReviewArtifact } from '../review/contract.js';
+import { placeSurface, visualViewportBounds } from './overlay-position.js';
 import {
   installResponseWorkspaces,
   type ResponseWorkspacesController,
@@ -27,16 +28,20 @@ root.style.setProperty('--motion-depth', `${PAGE_MOTION_POLICY.pointer.depthPx}p
 root.style.setProperty('--motion-tilt', `${PAGE_MOTION_POLICY.pointer.tiltDegrees}deg`);
 root.style.setProperty('--motion-magnetic', `${PAGE_MOTION_POLICY.pointer.magneticPx}px`);
 const modalOpeners = new WeakMap<HTMLDialogElement, HTMLButtonElement>();
-const glossaryPortals = new Map<
+const popoverPortals = new Map<
   HTMLElement,
   { readonly panel: HTMLElement; readonly placeholder: Comment }
 >();
-const glossaryPortalOwners = new WeakMap<HTMLElement, HTMLElement>();
+const popoverPortalOwners = new WeakMap<HTMLElement, HTMLElement>();
 const pendingPopoverCloses = new Map<HTMLElement, number>();
+let overlayHost: HTMLElement | undefined;
+let popoverPositionAbort: AbortController | undefined;
+let popoverPositionFrame: number | undefined;
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
 let navigationController: NavigationController | undefined;
 let motionController: MotionController | undefined;
+let galleryController: GalleryController | undefined;
 let responseController: ResponseWorkspacesController | undefined;
 let reviewController: ReviewWorkspaceController | undefined;
 const responseControllers = new Map<PackageLocale, ResponseWorkspacesController>();
@@ -109,15 +114,13 @@ document.addEventListener('click', (event) => {
   const popoverTrigger = target.closest<HTMLElement>('[data-popover-trigger]');
   if (popoverTrigger !== null) {
     const popover = popoverTrigger.closest<HTMLElement>('[data-popover]');
-    const panel = popover?.querySelector<HTMLElement>('[data-popover-panel]');
-    if (panel !== undefined && panel !== null) {
-      if (popover?.matches('[data-glossary-reference]') === true) {
-        openPopover(popover);
-      } else {
-        panel.hidden = !panel.hidden;
-        popoverTrigger.setAttribute('aria-expanded', String(!panel.hidden));
-      }
+    const panel = popover === null ? null : popoverPanel(popover, popoverTrigger);
+    if (popover !== null && panel !== null) {
+      if (popover.matches('[data-glossary-reference]')) openPopover(popover);
+      else if (panel.hidden) openPopover(popover);
+      else closePopover(popover, false);
     }
+    return;
   }
 
   const toggle = target.closest<HTMLButtonElement>('[data-toggle-control]');
@@ -162,6 +165,13 @@ document.addEventListener('change', (event) => {
 document.addEventListener('keydown', (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
+  const gallery = target.closest<HTMLElement>('[data-gallery-scroller]');
+  if (gallery === target && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+    event.preventDefault();
+    const direction = event.key === 'ArrowRight' ? 1 : -1;
+    gallery.scrollBy({ left: direction * Math.max(40, gallery.clientWidth * 0.8) });
+    return;
+  }
   const tab = target.closest<HTMLButtonElement>('[data-tab]');
   if (tab !== null && ['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) {
     const controls = tabControls(tab);
@@ -329,6 +339,7 @@ function switchPageLocale(locale: PackageLocale): void {
   reviewController?.destroy();
   navigationController?.destroy();
   motionController?.destroy();
+  galleryController?.destroy();
   for (const popover of document.querySelectorAll<HTMLElement>('[data-popover]'))
     closePopover(popover, false);
   localizedPage.activate(locale);
@@ -342,6 +353,7 @@ function activateCurrentPage(): void {
   strings = packageStrings(page.dataset.pagePackageLocale);
   navigationController = createNavigationController();
   motionController = createMotionController(reducedMotion);
+  galleryController = createGalleryController(page);
   responseController = responseControllers.get(localizedPage.locale());
   if (responseController === undefined) {
     responseController = installResponseWorkspaces(page);
@@ -356,6 +368,49 @@ function activateCurrentPage(): void {
   for (const block of page.querySelectorAll<HTMLElement>('[data-copyable-prose]'))
     if (block.querySelector(':scope > [data-copy-prose]') === null)
       block.append(createCopyButton('prose'));
+}
+
+interface GalleryController {
+  readonly destroy: () => void;
+}
+
+function createGalleryController(page: HTMLElement): GalleryController | undefined {
+  const rails = [...page.querySelectorAll<HTMLElement>('[data-gallery-rail]')];
+  if (rails.length === 0) return undefined;
+  let active = true;
+  const sync = (): void => {
+    if (!active) return;
+    for (const rail of rails) {
+      const scrollable = rail.scrollWidth > rail.clientWidth + 1;
+      rail.toggleAttribute('data-gallery-scroller', scrollable);
+      if (scrollable) {
+        rail.setAttribute('role', 'group');
+        rail.setAttribute('aria-label', strings.scrollableGallery);
+        rail.tabIndex = 0;
+      } else {
+        rail.removeAttribute('role');
+        rail.removeAttribute('aria-label');
+        rail.removeAttribute('tabindex');
+        rail.scrollLeft = 0;
+      }
+    }
+  };
+  const observer = new ResizeObserver(sync);
+  for (const rail of rails) observer.observe(rail);
+  sync();
+  void document.fonts.ready.then(sync);
+  return {
+    destroy: () => {
+      active = false;
+      observer.disconnect();
+      for (const rail of rails) {
+        rail.removeAttribute('data-gallery-scroller');
+        rail.removeAttribute('role');
+        rail.removeAttribute('aria-label');
+        rail.removeAttribute('tabindex');
+      }
+    },
+  };
 }
 
 function createCopyButton(kind: 'code' | 'prose'): HTMLButtonElement {
@@ -1099,10 +1154,10 @@ function openPopover(popover: HTMLElement): void {
   const trigger = popover.querySelector<HTMLElement>('[data-popover-trigger]');
   const panel = popoverPanel(popover, trigger);
   if (trigger === null || panel === null || !panel.hidden) return;
-  if (popover.matches('.semantic-code-term')) portalGlossaryPanel(popover, panel);
+  portalPopoverPanel(popover, panel);
   panel.hidden = false;
   trigger.setAttribute('aria-expanded', 'true');
-  positionGlossaryPortal(popover);
+  positionPopoverPortal(popover);
 }
 
 function closePopover(popover: HTMLElement, restoreFocus: boolean): void {
@@ -1112,7 +1167,7 @@ function closePopover(popover: HTMLElement, restoreFocus: boolean): void {
   if (trigger === null || panel === null || panel.hidden) return;
   panel.hidden = true;
   trigger.setAttribute('aria-expanded', 'false');
-  restoreGlossaryPanel(popover);
+  restorePopoverPanel(popover);
   if (restoreFocus) trigger.focus();
 }
 
@@ -1120,7 +1175,7 @@ function schedulePopoverClose(popover: HTMLElement): void {
   cancelScheduledPopoverClose(popover);
   const timeout = window.setTimeout(() => {
     pendingPopoverCloses.delete(popover);
-    const portal = glossaryPortals.get(popover);
+    const portal = popoverPortals.get(popover);
     if (
       popover.matches(':hover') ||
       portal?.panel.matches(':hover') === true ||
@@ -1152,78 +1207,107 @@ function popoverPanel(popover: HTMLElement, trigger: HTMLElement | null): HTMLEl
 function popoverOwner(target: Element): HTMLElement | null {
   const direct = target.closest<HTMLElement>('[data-popover]');
   if (direct !== null) return direct;
-  const panel = target.closest<HTMLElement>('[data-glossary-portal]');
-  return panel === null ? null : (glossaryPortalOwners.get(panel) ?? null);
+  const panel = target.closest<HTMLElement>('[data-popover-portal]');
+  return panel === null ? null : (popoverPortalOwners.get(panel) ?? null);
 }
 
 function glossaryOwner(target: Element): HTMLElement | null {
   const direct = target.closest<HTMLElement>('[data-glossary-reference]');
   if (direct !== null) return direct;
-  const panel = target.closest<HTMLElement>('[data-glossary-portal]');
-  return panel === null ? null : (glossaryPortalOwners.get(panel) ?? null);
+  const panel = target.closest<HTMLElement>('[data-popover-portal]');
+  const owner = panel === null ? undefined : popoverPortalOwners.get(panel);
+  return owner?.matches('[data-glossary-reference]') === true ? owner : null;
 }
 
 function popoverContains(popover: HTMLElement, target: EventTarget | null): boolean {
   if (!(target instanceof Node)) return false;
   if (popover.contains(target)) return true;
-  return glossaryPortals.get(popover)?.panel.contains(target) === true;
+  return popoverPortals.get(popover)?.panel.contains(target) === true;
 }
 
-function portalGlossaryPanel(popover: HTMLElement, panel: HTMLElement): void {
-  if (glossaryPortals.has(popover)) return;
-  const placeholder = document.createComment('agentic-report glossary portal');
+function portalPopoverPanel(popover: HTMLElement, panel: HTMLElement): void {
+  if (popoverPortals.has(popover)) return;
+  const placeholder = document.createComment('agentic-report popover portal');
   panel.replaceWith(placeholder);
-  document.body.append(panel);
-  panel.dataset.glossaryPortal = '';
-  glossaryPortals.set(popover, { panel, placeholder });
-  glossaryPortalOwners.set(panel, popover);
-  if (glossaryPortals.size === 1) {
-    window.addEventListener('resize', positionGlossaryPortals);
-    document.addEventListener('scroll', positionGlossaryPortals, true);
-  }
+  overlayHostElement().append(panel);
+  panel.dataset.popoverPortal = '';
+  if (popover.matches('[data-glossary-reference]')) panel.dataset.glossaryPortal = '';
+  popoverPortals.set(popover, { panel, placeholder });
+  popoverPortalOwners.set(panel, popover);
+  if (popoverPortals.size === 1) startPopoverPositioning();
 }
 
-function restoreGlossaryPanel(popover: HTMLElement): void {
-  const portal = glossaryPortals.get(popover);
+function restorePopoverPanel(popover: HTMLElement): void {
+  const portal = popoverPortals.get(popover);
   if (portal === undefined) return;
   portal.placeholder.replaceWith(portal.panel);
+  portal.panel.removeAttribute('data-popover-portal');
   portal.panel.removeAttribute('data-glossary-portal');
   portal.panel.style.removeProperty('inset');
   portal.panel.style.removeProperty('top');
   portal.panel.style.removeProperty('left');
   portal.panel.style.removeProperty('width');
-  glossaryPortals.delete(popover);
-  glossaryPortalOwners.delete(portal.panel);
-  if (glossaryPortals.size === 0) {
-    window.removeEventListener('resize', positionGlossaryPortals);
-    document.removeEventListener('scroll', positionGlossaryPortals, true);
-  }
+  portal.panel.style.removeProperty('max-height');
+  popoverPortals.delete(popover);
+  popoverPortalOwners.delete(portal.panel);
+  if (popoverPortals.size === 0) stopPopoverPositioning();
 }
 
-function positionGlossaryPortals(): void {
-  for (const popover of glossaryPortals.keys()) positionGlossaryPortal(popover);
+function overlayHostElement(): HTMLElement {
+  if (overlayHost !== undefined) return overlayHost;
+  overlayHost = document.body;
+  overlayHost.dataset.overlayHost = '';
+  return overlayHost;
 }
 
-function positionGlossaryPortal(popover: HTMLElement): void {
-  const portal = glossaryPortals.get(popover);
-  const trigger = popover.querySelector<HTMLElement>('[data-glossary-trigger]');
+function startPopoverPositioning(): void {
+  popoverPositionAbort = new AbortController();
+  const signal = popoverPositionAbort.signal;
+  window.addEventListener('resize', schedulePopoverPositioning, { signal });
+  window.visualViewport?.addEventListener('resize', schedulePopoverPositioning, { signal });
+  window.visualViewport?.addEventListener('scroll', schedulePopoverPositioning, { signal });
+  document.addEventListener('scroll', schedulePopoverPositioning, { capture: true, signal });
+}
+
+function stopPopoverPositioning(): void {
+  popoverPositionAbort?.abort();
+  popoverPositionAbort = undefined;
+  if (popoverPositionFrame !== undefined) window.cancelAnimationFrame(popoverPositionFrame);
+  popoverPositionFrame = undefined;
+  overlayHost?.removeAttribute('data-overlay-host');
+  overlayHost = undefined;
+}
+
+function schedulePopoverPositioning(): void {
+  if (popoverPositionFrame !== undefined) return;
+  popoverPositionFrame = window.requestAnimationFrame(() => {
+    popoverPositionFrame = undefined;
+    for (const popover of popoverPortals.keys()) positionPopoverPortal(popover);
+  });
+}
+
+function positionPopoverPortal(popover: HTMLElement): void {
+  const portal = popoverPortals.get(popover);
+  const trigger = popover.querySelector<HTMLElement>('[data-popover-trigger]');
   if (portal === undefined || trigger === null || portal.panel.hidden) return;
-  const margin = 16;
+  const viewport = visualViewportBounds();
+  const gutter = 16;
+  const gap = popover.matches('.semantic-code-term') ? 0 : 8;
   const triggerRect = trigger.getBoundingClientRect();
   portal.panel.style.inset = 'auto';
-  portal.panel.style.width = `${Math.min(448, window.innerWidth - margin * 2)}px`;
+  portal.panel.style.width = `${Math.max(0, Math.min(448, viewport.right - viewport.left - gutter * 2))}px`;
+  portal.panel.style.maxHeight = `${Math.max(0, viewport.bottom - viewport.top - gutter * 2)}px`;
   const panelRect = portal.panel.getBoundingClientRect();
-  const below = window.innerHeight - triggerRect.bottom;
-  const placeBelow = below >= panelRect.height || below >= triggerRect.top;
-  const top = placeBelow
-    ? Math.min(triggerRect.bottom, window.innerHeight - panelRect.height - margin)
-    : Math.max(margin, triggerRect.top - panelRect.height);
-  const left = Math.min(
-    Math.max(margin, triggerRect.left),
-    window.innerWidth - panelRect.width - margin,
-  );
-  portal.panel.style.top = `${Math.max(margin, top)}px`;
-  portal.panel.style.left = `${Math.max(margin, left)}px`;
+  const position = placeSurface({
+    anchor: triggerRect,
+    surface: { width: panelRect.width, height: panelRect.height },
+    viewport,
+    gutter,
+    gap,
+    preference: 'block',
+  });
+  portal.panel.style.left = `${position.left}px`;
+  portal.panel.style.top = `${position.top}px`;
 }
 
 function applyFilter(input: HTMLInputElement): void {

@@ -100,7 +100,9 @@ arrangements. Closed attributes also select bounded viewport rhythm, density, ty
 layered/gallery/bleed media, independent image fit/aspect/focal point, and plain/mesh/glow/grain/grid
 surfaces. They work in both output formats without author CSS or JavaScript. Multi-column and layered
 arrangements flatten to the authored reading order on narrow screens; gallery overflow stays inside its
-rail. Every section contains its floats and local layer order. A media stage reserves a full-width title row
+rail. A multi-item rail shows compact continuation and receives localized focus and arrow-key scrolling only
+while it actually overflows; those scroll-only semantics disappear when a wide owner fits every item. Every
+section contains its floats and local layer order. A media stage reserves a full-width title row
 and composes supporting content with media below; gallery stages keep their separate title/rail arrangement,
 while split returns to flow before desktop navigation can make its tracks unreadable. Mosaic/stack
 composition cannot pair with layers/gallery media because both roles would own the same card layout; those

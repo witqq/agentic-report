@@ -284,7 +284,9 @@ Closed visual attributes compose package-owned arrangements (`flow`, `stage`,
 `split`, `mosaic`, `story`, `stack`), bounded viewport rhythm, compact/editorial/immersive density,
 body/display/editorial typography, natural/masked/layered/gallery/bleed media, image fit/aspect/focal point,
 and plain/mesh/glow/grain/grid surfaces. They are semantic choices, not CSS or component code; multi-column
-and layered arrangements return to authored order on narrow screens, and gallery overflow stays local. Every
+and layered arrangements return to authored order on narrow screens, and gallery overflow stays local. A
+multi-item gallery shows compact continuation and becomes a localized arrow-key focus target only while its
+rail actually overflows; the scroll-only semantics disappear when a wide owner fits every item. Every
 section contains its floats and local layer order. A media stage uses a full-width title row with supporting
 content and media composed below; gallery stages keep their separate title/rail arrangement, while split
 returns to flow before desktop navigation can make its tracks unreadable.

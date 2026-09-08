@@ -3016,6 +3016,7 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
       prependDirectiveTitle(node);
       if ('dataDemoCounter' in node.properties) enhanceCounter(node, strings);
     });
+    enhanceGalleryRails(tree);
     const appendixDefinitions = extractAppendixGlossaries(tree);
     if (appendixDefinitions.length > 0) {
       const appendixId = allocateId('glossary-appendix');
@@ -3255,6 +3256,25 @@ function enhanceSection(node: Element, allocateId: (base: string) => string): vo
     tagName: 'h2',
     properties: { id: titleId, className: ['semantic-section-title'] },
     children: [{ type: 'text', value: title }],
+  });
+}
+
+function enhanceGalleryRails(tree: HastRoot): void {
+  visit(tree, 'element', (section: Element) => {
+    if (
+      section.properties.dataSemantic !== 'section' ||
+      stringProperty(section, 'dataMedia') !== 'gallery'
+    ) {
+      return;
+    }
+    for (const rail of section.children.filter(
+      (child): child is Element =>
+        child.type === 'element' && hasClassName(child, 'semantic-cards'),
+    )) {
+      const trackItems = rail.children.filter((child) => child.type === 'element');
+      if (trackItems.length < 2) continue;
+      rail.properties.dataGalleryRail = '';
+    }
   });
 }
 
