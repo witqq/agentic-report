@@ -449,10 +449,15 @@ Monument is the recommended large-scale default; Material is the warm editorial 
 dense data family; Terminal adds console texture, prompts and scan rhythm; Cinematic stages image-first
 stories. `document`
 emphasizes long-form reading with persistent desktop contents. `dashboard` uses a wide dense
-surface and horizontal desktop navigation. `landing` provides a spacious centered hero and wide content
+surface and horizontal desktop navigation. `landing` provides a centered desktop opening, compact
+left-aligned mobile heading, and wide content
 sections. `mixed` combines a reading column with wide evidence, cards, tables, and media. Every layout
 collapses to one mobile column with a package-owned contents drawer. Wide tables and code remain locally
 scrollable rather than breaking the page.
+Composition tracks use large screens without widening paragraphs beyond their reading measure. Package
+controls receive icons and shared compact geometry automatically; modal/popover triggers and toggle labels
+stay visible on phones. Action groups wrap at content width instead of making every short label a full-width
+button. Authors do not supply icon markup or corrective CSS.
 
 Run `agentic-report examples --json` to locate the installed `layout-document`, `layout-dashboard`,
 `layout-landing`, `layout-mixed`, `interactive-catalog`, and `visualization-catalog` examples. The same
@@ -474,6 +479,8 @@ or a separate showcase system:
 | [`visualization-catalog`](../examples/visualization-catalog/report.md) | `dashboard` | Charts, diagrams, timelines, and data controls                                                                             |
 | [`terminal-portfolio`](../examples/terminal-portfolio/report.md)       | `mixed`     | Console-led systems portfolio with prompt rhythm and linked evidence                                                       |
 | [`cinematic-story`](../examples/cinematic-story/report.md)             | `landing`   | Image-first scroll story with staged media and gallery rail                                                                |
+| [`executive-brief`](../examples/executive-brief/report.md)             | `mixed`     | Monument decision narrative with evidence cards, timeline, local media and handoff                                         |
+| [`motion-showcase`](../examples/motion-showcase/report.md)             | `landing`   | Pointer depth, scrolling media, gallery, cascade and reduced-motion behavior                                               |
 | [`incident-review`](../examples/incident-review/report.md)             | `mixed`     | Service impact, causal evidence, recovery, and owned follow-up                                                             |
 | [`vendor-decision`](../examples/vendor-decision/report.md)             | `document`  | Mandatory procurement gates, weighted evidence, and conditional adoption                                                   |
 | [`launch-readiness`](../examples/launch-readiness/report.md)           | `landing`   | Audience value, activation/funnel evidence, launch gates, and a reversible regional beta                                   |
@@ -722,6 +729,12 @@ apply. Use `recipe="hero"`, `recipe="evidence"`, `recipe="story"`, `recipe="rail
 `recipe="metrics"`; omit it only when composing the detailed roles directly. A `card` may carry one safe
 `href`; linked cards render as one focusable anchor with a persistent icon, and nested Markdown links fail.
 
+Recipes also supply motion: hero uses stagger and a progress scene, evidence uses reveal, story uses reveal
+and a progress scene, rail uses stagger, and metrics uses stagger with cascade. For a pointer-depth hero,
+write `recipe="hero" scene="none" interaction="depth"` and add a local image. For a scrolling gallery,
+write `recipe="rail" scene="progress"` with image cards. The complete
+[`motion-showcase`](../examples/motion-showcase/report.md) demonstrates both without custom runtime code.
+
 Compose these roles instead of writing a bespoke layout. `media` owns the treatment, while fit, aspect, and
 focal point frame local images independently. Section `tone` owns its background/foreground relationship;
 `surface` stays behind authored content, and nested package components keep their own readable surface text.
@@ -826,10 +839,11 @@ and focuses its section heading. Do not add `menu` keyboard behavior or persist 
 
 Set root metadata `scrollProgress: true` only when decorative reading progress is useful. On a section,
 choose `transition="reveal|stagger"`, `scene="progress|sticky"`, `interaction="depth|tilt"`, or
-`choreography="cascade"`; each defaults to `none`. Legacy `reveal="true"` remains supported.
+`choreography="cascade"`; each defaults to `none` unless a recipe supplies it. Legacy `reveal="true"` remains supported.
 Reveal is a 420-millisecond, 24-pixel maximum entrance applied to section contents so anchor geometry remains
-stable. Stagger affects at most 12 direct children in 90-millisecond steps. Progress drives one normalized
-media transform; sticky media returns to normal flow at 48rem and below. Cascade orders at most 12 semantic
+stable. Reveal starts on viewport intersection even for a section taller than the screen. Stagger affects at
+most 12 direct children in 90-millisecond steps. Progress drives normalized media movement and bounded
+mesh/glow surface movement; sticky media returns to normal flow at 48rem and below. Cascade orders at most 12 semantic
 cards, chart points, or timeline items in 75-millisecond
 steps. Fine-pointer depth is bounded to 24 pixels, tilt to 4.5 degrees, and primary-action magnetic movement
 to 9 pixels; updates are visibility-bound and animation-frame-coalesced. Reduced motion leaves all content

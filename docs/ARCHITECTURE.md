@@ -127,6 +127,9 @@ Markdown + metadata + local assets + partials + semantic directives
   window, and `visualViewport` positioning listeners; the listeners exist only while a panel is open and are
   torn down before localized DOM replacement. Interaction instances retain source-owner mappings and state
   in their own semantic DOM subtree, so repeated components do not share accidental state.
+- `src/iconography.ts` owns the local SVG path vocabulary. `src/browser/icon.ts` creates runtime DOM icons
+  for copy, Review and Response controls; compiler and document rendering use the same vocabulary through
+  their HAST and React boundaries. No icon resource is fetched at runtime.
 - `src/browser/review-workspace.ts` is a cohesive package-owned controller over the shared review contract.
   It parses the inert manifest once, maps native in-target or cross-target text ranges to deterministic
   anchors, owns in-memory discussion threads, ordered user/agent messages and segment-local resolution,
@@ -398,6 +401,13 @@ rhythm, semantic page/section/component/control/current/muted/inverse color role
 composition and media grammar, component containment, and package-only
 decorative surfaces. Section tone retains background/foreground ownership, while decorative surfaces change
 only the behind-content treatment and nested package components restore their own readable surface text.
+Composition tracks expand separately from the prose reading measure. Compact headings scale down, shared
+control typography and padding limit bulk, and action groups wrap at content width. Authored modal, popover
+and toggle labels remain visible beside their icons on compact screens; the unambiguous modal close control
+may use icon-only presentation with its accessible name and title retained.
+Visualization surfaces, labels, axes and legends consume local component/control/muted roles. Node and
+timeline kind variants layer their signals within the owning rules, preserving distinctions in accent and
+inverse contexts.
 Full and bounded viewport profiles are capped rather than forcing unbounded empty
 height; display/editorial headings retain readable words; and wide media, galleries, tables, charts, and
 code scroll only within their owning surface instead of widening the document. After generic directive
@@ -493,10 +503,13 @@ authoritative output replacement.
 
 `scrollProgress` defaults to false. In normal motion, an enabled page installs one passive document scroll
 listener and one resize listener, coalesces updates through one animation frame, and changes one decorative
-`scaleX()` transform. Section transition, scene, interaction, and choreography roles default to `none`.
+`scaleX()` transform. Section transition, scene, interaction, and choreography roles default to `none`
+when no recipe supplies them; explicit attributes override recipe defaults.
 Reveal and legacy `reveal=true` use a one-time 24-pixel, 420-millisecond entrance on section contents while
 the anchor owner remains stable; stagger applies it to at most 12 direct children in 90-millisecond steps.
-Progress scenes drive one normalized media transform, while
+The one-shot observer activates on viewport intersection without requiring a fraction of the section's
+height, so long content remains reachable. Progress scenes drive normalized media movement and bounded
+mesh/glow surface movement, while
 sticky scenes return to normal flow at 48rem and below. Cascade orders at most 12 semantic cards, chart
 points, or timeline items in 75-millisecond steps. Fine-pointer depth, tilt, and primary magnetic effects are
 bounded to 24 pixels, 4.5 degrees, and 9 pixels; visibility gates and one animation frame coalesce their
@@ -534,7 +547,7 @@ The product landing is compiled as an ordinary multi-scene bilingual input rathe
 assembler theme or runtime hook. Its first viewport, style chooser, author path, public gallery, Review
 explanation, agent setup, and trust boundary use the same registry-owned recipes, media, motion, cards, and
 actions as package consumers. Every starter, the complete visual/interactive/data catalogs, Terminal and
-Cinematic showcases, the three decision showcases, and Review/Response workspaces are separate bilingual
+Cinematic showcases, Executive brief, Motion showcase, decision showcases, and Review/Response workspaces are separate bilingual
 compiler invocations. Preview images never replace their independently staged live pages or direct Markdown
 routes.
 

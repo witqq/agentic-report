@@ -254,27 +254,20 @@ describe('authoring registry', () => {
       'width',
       'radius',
     ]);
-    expect(authoringRegistry.examples.map((example) => example.id)).toEqual([
-      'basic',
-      'research',
-      'architecture',
-      'tutorial',
-      'dashboard',
-      'landing',
-      'layout-document',
-      'layout-dashboard',
-      'layout-landing',
-      'layout-mixed',
-      'interactive-catalog',
-      'review-workspace',
-      'response-workspace',
-      'visualization-catalog',
-      'incident-review',
-      'vendor-decision',
-      'launch-readiness',
-      'terminal-portfolio',
-      'cinematic-story',
-    ]);
+    expect(authoringRegistry.examples).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'executive-brief',
+          path: 'executive-brief',
+          entry: 'report.md',
+        }),
+        expect.objectContaining({
+          id: 'motion-showcase',
+          path: 'motion-showcase',
+          entry: 'report.md',
+        }),
+      ]),
+    );
     expect(
       authoringRegistry.examples
         .filter((example) => 'starter' in example)

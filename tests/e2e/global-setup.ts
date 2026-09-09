@@ -117,21 +117,9 @@ export default async function globalSetup(): Promise<void> {
   const russianChromeSource = path.join(fixtureRoot, 'russian-chrome-source');
   const russianPriorSource = path.join(fixtureRoot, 'russian-prior-source');
   const fallbackChromeSource = path.join(fixtureRoot, 'fallback-chrome-source');
-  const layoutExamples = [
-    'layout-document',
-    'layout-dashboard',
-    'layout-landing',
-    'layout-mixed',
-    'interactive-catalog',
-    'response-workspace',
-    'visualization-catalog',
-    'incident-review',
-    'vendor-decision',
-    'launch-readiness',
-    'terminal-portfolio',
-    'cinematic-story',
-  ] as const;
-  const starters = listExamples().filter((example) => example.starter !== undefined);
+  const examples = listExamples();
+  const nonStarterExamples = examples.filter((example) => example.starter === undefined);
+  const starters = examples.filter((example) => example.starter !== undefined);
   await mkdir(shareSource, { recursive: true });
   await writeFile(
     path.join(shareSource, 'report.md'),
@@ -593,10 +581,10 @@ export default async function globalSetup(): Promise<void> {
         output: path.join(fixtureRoot, `${fixture.name}.html`),
       }),
     ),
-    ...layoutExamples.map((example) =>
+    ...nonStarterExamples.map((example) =>
       buildReport({
-        input: path.resolve('examples', example),
-        output: path.join(fixtureRoot, `${example}.html`),
+        input: path.resolve('examples', example.path),
+        output: path.join(fixtureRoot, `${example.id}.html`),
       }),
     ),
     ...starters.map((starter) =>
@@ -641,10 +629,6 @@ export default async function globalSetup(): Promise<void> {
       input: reviewSource,
       output: path.join(fixtureRoot, 'review-directory'),
       format: 'directory',
-    }),
-    buildReport({
-      input: path.resolve('examples/review-workspace'),
-      output: path.join(fixtureRoot, 'review-workspace.html'),
     }),
     buildReport({
       input: path.resolve('examples/review-workspace'),

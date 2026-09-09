@@ -103,7 +103,7 @@
         },
         {
           "path": "report.ru.md",
-          "sha256": "285866c537015f579fb4c70906cb7fe9c84d620c5f16d2196dac62f831ee382e"
+          "sha256": "85d073d1b44ca74736b0da2ad4754069723486373a780300ef5a65ea1c5b778c"
         }
       ]
     },
@@ -122,7 +122,7 @@
         },
         {
           "path": "report.ru.md",
-          "sha256": "078f63962fe14b573a1d9a79ccdae1218c7e0e8a79a707e186f79ef873eead20"
+          "sha256": "a642641bb4a36c39ce5c80087a92541292344222397f03e03440c9a9f35ecc33"
         }
       ]
     },
@@ -160,7 +160,7 @@
         },
         {
           "path": "report.ru.md",
-          "sha256": "8fb1720b8b83d377c1223bdacaf5b5d3833cc81d2baddcce919ffa5c6c0a5dd2"
+          "sha256": "27887d6ab636b2760f639fa0e750f955f45f1ce18c9a6ad3d15bc51123cb79ce"
         }
       ]
     },
@@ -248,7 +248,7 @@
         },
         {
           "path": "report.ru.md",
-          "sha256": "f9a13a50b6e43920f8450aa87bd8502fa068b1ef7eb9c5159e6dbb6a2e90f2af"
+          "sha256": "62b2915cdb947002ca46bda9fe00080b4bcc055fdc0ce83ebe26660cf0b73a8c"
         }
       ]
     },
@@ -431,6 +431,70 @@
       ]
     },
     {
+      "id": "executive-brief",
+      "path": "executive-brief",
+      "entry": "report.md",
+      "title": "Executive decision brief",
+      "description": "Monument decision narrative with a staged opening, evidence field, operating path, and finished handoff.",
+      "classes": ["work-report", "executive-brief-showcase"],
+      "files": [
+        {
+          "path": "assets/field.jpg",
+          "sha256": "30aab33625aeab2eac9957c4de94b6ab01d87caabca7d6cf6f97b5c769ca731e"
+        },
+        {
+          "path": "assets/handoff.jpg",
+          "sha256": "d3583e933e0dacdff482591ece37572fd100f8d55208419c22b2538cc93da429"
+        },
+        {
+          "path": "assets/path.jpg",
+          "sha256": "b2d5d0ec09df6ef20c0ed9339c727fbe85b0c7b45125e2f6e83a01e44f2f1d13"
+        },
+        {
+          "path": "report.md",
+          "sha256": "67603ac2421f98a57d3461e1ea8299963c7f2f6535d6cb97d3f139c0c3466d9d"
+        },
+        {
+          "path": "report.ru.md",
+          "sha256": "4d9bf6060749a2efb74255c87235cbbedbdb1d71971678ded0ccf2e2f1e2f288"
+        }
+      ]
+    },
+    {
+      "id": "motion-showcase",
+      "path": "motion-showcase",
+      "entry": "report.md",
+      "title": "Motion and depth showcase",
+      "description": "Cinematic demonstration of scroll scenes, reveal, choreography, depth, tilt, and reduced-motion fallback.",
+      "classes": ["landing-page", "motion-showcase"],
+      "files": [
+        {
+          "path": "assets/aurora.jpg",
+          "sha256": "69848639429e0a3cd0c1e1c4305026fbafa6384d296df36e63210cf3c893e311"
+        },
+        {
+          "path": "assets/cinematic.jpg",
+          "sha256": "d3583e933e0dacdff482591ece37572fd100f8d55208419c22b2538cc93da429"
+        },
+        {
+          "path": "assets/gallery-red.jpg",
+          "sha256": "c6fd64c1b3c2042a910af5766cec85b0c5447a84b80d0e1156dec38d83146774"
+        },
+        {
+          "path": "assets/terrain.jpg",
+          "sha256": "b2d5d0ec09df6ef20c0ed9339c727fbe85b0c7b45125e2f6e83a01e44f2f1d13"
+        },
+        {
+          "path": "report.md",
+          "sha256": "034b427f79aec0ecf8943f964b2d2fa9e6bfb02a6c1752f134719c112b92ec48"
+        },
+        {
+          "path": "report.ru.md",
+          "sha256": "7808d0028aaa3f00eac7e3b8e99517498b402960511ae32df6d2c5c44524e60d"
+        }
+      ]
+    },
+    {
       "id": "terminal-portfolio",
       "path": "terminal-portfolio",
       "entry": "report.md",
@@ -482,7 +546,7 @@
         },
         {
           "path": "report.ru.md",
-          "sha256": "c1337eb714526d479f5fa7db862990491bdc8c2b3ed94aab45a7eac676206db7"
+          "sha256": "b2269e41e46a3b5db759a45d21a297fb3fd6391d0766eb087e27120a904900a6"
         }
       ]
     }

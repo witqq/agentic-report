@@ -1,10 +1,32 @@
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { authoringRegistry, PAGE_PRESETS } from '../../src/authoring/registry.js';
 import { expect, test } from './fixtures.js';
 
 const artifactUrl = (name: string): string =>
   pathToFileURL(path.resolve('test-results/e2e-generated', `${name}.html`)).href;
+const publicSiteRoot = path.resolve('test-results/e2e-site');
+const publicRoutes = (
+  JSON.parse(await readFile(path.resolve('website/routes.json'), 'utf8')) as {
+    readonly routes: readonly {
+      readonly id: string;
+      readonly href: string;
+      readonly kind: string;
+    }[];
+  }
+).routes.filter((route) => route.kind === 'page');
+const layoutDirectiveNames = new Set(['section', 'actions', 'cards']);
+const publicComponentNames = authoringRegistry.directives
+  .filter(
+    (directive) =>
+      directive.forms.some((form: string) => form === 'container') &&
+      directive.behavior.renderer === 'semantic-container' &&
+      !('requiredParent' in directive.placement) &&
+      !layoutDirectiveNames.has(directive.name),
+  )
+  .map((directive) => directive.name);
 
 test('compact shell exposes a quiet localized icon toolbar without synthetic page identity', async ({
   page,
@@ -107,6 +129,178 @@ test('localized landing keeps its heading and primary action in the compact open
   ]) {
     expect(opening.headingShare).toBeLessThan(0.3);
     expect(opening.actionBottom).toBeLessThan(opening.viewportHeight);
+  }
+});
+
+test('package-owned operations expose coherent icons without replacing their labels', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await page.goto(artifactUrl('interactive-catalog'));
+  const operations = [
+    ['[data-disclosure] > summary', 'arrow-down'],
+    ['[data-modal-open]', 'window'],
+    ['[data-modal-close]', 'x'],
+    ['.semantic-popover > [data-popover-trigger]', 'info'],
+    ['[data-toggle-control]', 'eye'],
+    ['[data-demo-increment]', 'plus'],
+    ['[data-filter] label', 'search'],
+    ['[data-copy-prose]', 'copy'],
+  ] as const;
+  for (const [controlSelector, icon] of operations) {
+    const control = page.locator(controlSelector).first();
+    await expect(control, controlSelector).toBeAttached();
+    await expect(control.locator(`[data-package-icon="${icon}"]`), controlSelector).toBeAttached();
+    expect((await control.innerText()).trim(), controlSelector).not.toBe('');
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const compactOperation = page.locator('[data-modal-open]').first();
+  const compactOperationState = await compactOperation.evaluate((control) => {
+    const label = control.querySelector<HTMLElement>('.package-control-label');
+    const box = control.getBoundingClientRect();
+    const labelBox = label?.getBoundingClientRect();
+    return {
+      width: box.width,
+      height: box.height,
+      labelWidth: labelBox?.width,
+      labelHeight: labelBox?.height,
+      accessibleName: control.getAttribute('aria-label'),
+      tooltip: control.getAttribute('title'),
+    };
+  });
+  expect(compactOperationState.width).toBeLessThanOrEqual(390);
+  expect(compactOperationState.width).toBeGreaterThanOrEqual(44);
+  expect(compactOperationState.height).toBeLessThanOrEqual(48);
+  expect(compactOperationState.height).toBeGreaterThanOrEqual(44);
+  expect(compactOperationState.labelWidth).toBeGreaterThan(1);
+  expect(compactOperationState.labelHeight).toBeGreaterThan(1);
+  expect(compactOperationState.accessibleName).not.toBe('');
+  expect(compactOperationState.tooltip).toBe(compactOperationState.accessibleName);
+
+  for (const width of [304, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const locale of ['en', 'ru']) {
+      await page.locator('[data-language-select]').selectOption(locale);
+      for (const selector of [
+        '[data-modal-open]',
+        '.semantic-popover > [data-popover-trigger]',
+        '[data-toggle-control]',
+      ]) {
+        const control = page.locator(selector).first();
+        const label = control.locator('.package-control-label');
+        await expect(label).toBeVisible();
+        const state = await control.evaluate((element) => {
+          const text = element.querySelector<HTMLElement>('.package-control-label');
+          if (text === null) throw new Error('Expected authored action label.');
+          const range = document.createRange();
+          range.selectNodeContents(text);
+          const box = element.getBoundingClientRect();
+          const textBox = range.getBoundingClientRect();
+          return {
+            labelWidth: text.getBoundingClientRect().width,
+            unclipped: getComputedStyle(text).clipPath === 'none',
+            contained:
+              textBox.left >= box.left &&
+              textBox.right <= box.right &&
+              textBox.top >= box.top &&
+              textBox.bottom <= box.bottom,
+          };
+        });
+        expect(state.labelWidth, `${width}/${locale}/${selector}`).toBeGreaterThan(1);
+        expect(state.unclipped, `${width}/${locale}/${selector}`).toBe(true);
+        expect(state.contained, `${width}/${locale}/${selector}`).toBe(true);
+      }
+      const trigger = page.locator('[data-modal-open]').first();
+      await trigger.click();
+      await expect(page.locator('dialog[data-modal-dialog]')).toBeVisible();
+      await page.locator('[data-modal-close]').click();
+      await expect(trigger).toBeFocused();
+    }
+  }
+
+  await page.goto(artifactUrl('response-workspace'));
+  for (const [controlSelector, icon] of [
+    ['[data-response-copy]', 'copy'],
+    ['[data-response-download]', 'download'],
+    ['.response-file-action', 'upload'],
+    ['[data-response-order-move="up"]', 'arrow-up'],
+    ['[data-response-order-move="down"]', 'arrow-down'],
+  ] as const) {
+    const control = page.locator(controlSelector).first();
+    await expect(control, controlSelector).toBeAttached();
+    await expect(control.locator(`[data-package-icon="${icon}"]`), controlSelector).toBeVisible();
+    expect((await control.innerText()).trim(), controlSelector).not.toBe('');
+  }
+});
+
+test('every public compact page keeps control groups contained without a full-width action wall', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  for (const viewport of [
+    { name: 'narrow', width: 304, height: 844 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    for (const route of publicRoutes) {
+      await page.goto(pathToFileURL(path.join(publicSiteRoot, route.href)).href);
+      const state = await page.evaluate(() => {
+        const visible = (element: HTMLElement): boolean => {
+          const style = getComputedStyle(element);
+          const rect = element.getBoundingClientRect();
+          return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0;
+        };
+        const controls = [
+          ...document.querySelectorAll<HTMLElement>(
+            'button, summary, .semantic-action, .response-file-action, .review-file-action',
+          ),
+        ].filter(visible);
+        return {
+          escaped: controls
+            .filter((control) => {
+              const owner = control.parentElement;
+              if (owner === null) return true;
+              const rect = control.getBoundingClientRect();
+              const ownerRect = owner.getBoundingClientRect();
+              const ownerOverflow = getComputedStyle(owner).overflowX;
+              if (ownerOverflow === 'auto' || ownerOverflow === 'scroll') return false;
+              return rect.left < ownerRect.left - 1 || rect.right > ownerRect.right + 1;
+            })
+            .map((control) => control.getAttribute('aria-label') ?? control.textContent?.trim()),
+          oversized: controls
+            .filter(
+              (control) =>
+                control.tagName !== 'SUMMARY' && control.getBoundingClientRect().height > 64,
+            )
+            .map((control) => control.getAttribute('aria-label') ?? control.textContent?.trim()),
+          actionWalls: [...document.querySelectorAll<HTMLElement>('.semantic-actions')]
+            .filter(visible)
+            .filter((group) => {
+              const actions = [
+                ...group.querySelectorAll<HTMLElement>(':scope > .semantic-action'),
+              ].filter(visible);
+              const forced = actions.filter((action) => {
+                const clone = action.cloneNode(true);
+                if (!(clone instanceof HTMLElement)) return false;
+                clone.style.cssText =
+                  'position:fixed;inset:auto auto -10000px -10000px;width:max-content;max-width:none;visibility:hidden';
+                document.body.append(clone);
+                const intrinsicWidth = clone.getBoundingClientRect().width;
+                clone.remove();
+                return (
+                  action.getBoundingClientRect().width >= group.clientWidth * 0.9 &&
+                  intrinsicWidth <= group.clientWidth * 0.9
+                );
+              });
+              return actions.length > 1 && forced.length === actions.length;
+            }).length,
+        };
+      });
+      expect(state.escaped, `${route.id}:${viewport.name}:escaped`).toEqual([]);
+      expect(state.oversized, `${route.id}:${viewport.name}:oversized`).toEqual([]);
+      expect(state.actionWalls, `${route.id}:${viewport.name}:action-wall`).toBe(0);
+    }
   }
 });
 
@@ -253,16 +447,7 @@ test('semantic component roles remain readable across every preset and theme ide
 }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium');
   await page.goto(artifactUrl('review-workspace'));
-  const samples = await page.evaluate(() => {
-    const presets = [
-      'monument',
-      'material',
-      'signal',
-      'terminal',
-      'cinematic',
-      'studio',
-      'editorial',
-    ];
+  const samples = await page.evaluate((presets) => {
     const themes = ['light', 'dark', 'system'];
     const root = document.documentElement;
     const parse = (value: string): [number, number, number] => {
@@ -272,7 +457,9 @@ test('semantic component roles remain readable across every preset and theme ide
         .map(Number);
       if (channels === undefined || channels.length !== 3)
         throw new Error(`Unparsed color: ${value}`);
-      return channels as [number, number, number];
+      return (
+        value.startsWith('color(srgb') ? channels.map((channel) => channel * 255) : channels
+      ) as [number, number, number];
     };
     const luminance = (color: [number, number, number]): number => {
       const channels = color.map((channel) => {
@@ -327,7 +514,8 @@ test('semantic component roles remain readable across every preset and theme ide
     }> = [];
     for (const preset of presets) {
       for (const theme of themes) {
-        root.dataset.preset = preset;
+        root.dataset.preset = preset.name;
+        Object.assign(root.dataset, preset.tokens);
         root.dataset.theme = theme;
         const surface = getComputedStyle(fixture);
         const controlStyle = getComputedStyle(control);
@@ -337,7 +525,7 @@ test('semantic component roles remain readable across every preset and theme ide
         const mutedStyle = getComputedStyle(muted);
         const inverseStyle = getComputedStyle(inverse);
         results.push({
-          id: `${preset}/${theme}`,
+          id: `${preset.name}/${theme}`,
           page: ratio(pageStyle.color, pageStyle.backgroundColor),
           section: ratio(getComputedStyle(sectionText).color, sectionStyle.backgroundColor),
           component: ratio(getComputedStyle(label).color, surface.backgroundColor),
@@ -352,7 +540,7 @@ test('semantic component roles remain readable across every preset and theme ide
     inverse.remove();
     fixture.remove();
     return results;
-  });
+  }, PAGE_PRESETS);
   for (const sample of samples) {
     expect(sample.page, `${sample.id} page`).toBeGreaterThanOrEqual(4.5);
     expect(sample.section, `${sample.id} section`).toBeGreaterThanOrEqual(4.5);
@@ -361,6 +549,192 @@ test('semantic component roles remain readable across every preset and theme ide
     expect(sample.current, `${sample.id} current`).toBeGreaterThanOrEqual(3);
     expect(sample.muted, `${sample.id} muted`).toBeGreaterThanOrEqual(4.5);
     expect(sample.inverse, `${sample.id} inverse`).toBeGreaterThanOrEqual(4.5);
+  }
+});
+
+test('every registered public component stays contained and readable in real generated pages', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await page.setViewportSize({ width: 390, height: 844 });
+  const seen = new Set<string>();
+  const containmentDefects: string[] = [];
+  const contrastDefects: string[] = [];
+
+  for (const route of publicRoutes) {
+    await page.goto(pathToFileURL(path.join(publicSiteRoot, route.href)).href);
+    const observations = await page.evaluate(
+      ({ componentNames, presets }) => {
+        const parseColor = (value: string): [number, number, number, number] => {
+          const channels = value.match(/[\d.]+/gu)?.map(Number);
+          if (channels === undefined || channels.length < 3) {
+            throw new Error(`Unparsed color: ${value}`);
+          }
+          const scale = value.startsWith('color(srgb') ? 255 : 1;
+          return [
+            (channels[0] ?? 0) * scale,
+            (channels[1] ?? 0) * scale,
+            (channels[2] ?? 0) * scale,
+            channels[3] ?? 1,
+          ];
+        };
+        const luminance = (color: readonly number[]): number => {
+          const channels = color.slice(0, 3).map((channel) => {
+            const value = (channel ?? 0) / 255;
+            return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+          });
+          return (
+            0.2126 * (channels[0] ?? 0) + 0.7152 * (channels[1] ?? 0) + 0.0722 * (channels[2] ?? 0)
+          );
+        };
+        const contrast = (foreground: string, background: string): number => {
+          const first = luminance(parseColor(foreground));
+          const second = luminance(parseColor(background));
+          return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+        };
+        const effectiveBackground = (element: HTMLElement): string => {
+          let current: HTMLElement | null = element;
+          while (current !== null) {
+            const background = getComputedStyle(current).backgroundColor;
+            if (parseColor(background)[3] > 0.98) return background;
+            current = current.parentElement;
+          }
+          return getComputedStyle(document.body).backgroundColor;
+        };
+        const isVisible = (element: HTMLElement): boolean => {
+          const style = getComputedStyle(element);
+          const box = element.getBoundingClientRect();
+          return style.display !== 'none' && style.visibility !== 'hidden' && box.width > 0;
+        };
+        const roots = [...document.querySelectorAll<HTMLElement>('[data-semantic]')].filter(
+          (element) => componentNames.includes(element.dataset.semantic ?? ''),
+        );
+        const results: Array<{
+          component: string;
+          identity: string;
+          minimumContrast: number;
+          contained: boolean;
+        }> = [];
+        for (const preset of presets) {
+          for (const theme of ['light', 'dark']) {
+            document.documentElement.dataset.preset = preset.name;
+            Object.assign(document.documentElement.dataset, preset.tokens);
+            document.documentElement.dataset.theme = theme;
+            for (const root of roots) {
+              const name = root.dataset.semantic ?? '';
+              const rootBox = root.getBoundingClientRect();
+              const contentBox = document
+                .querySelector<HTMLElement>('.report-content')
+                ?.getBoundingClientRect();
+              const textOwners = [
+                root,
+                ...root.querySelectorAll<HTMLElement>(
+                  'p, li, dt, dd, label, summary, button, input, select, textarea, .semantic-title',
+                ),
+              ].filter(
+                (element) =>
+                  isVisible(element) &&
+                  (element.matches('input, select, textarea') ||
+                    (element.textContent?.trim().length ?? 0) > 0),
+              );
+              const ratios = textOwners.map((element) => {
+                const style = getComputedStyle(element);
+                return contrast(style.color, effectiveBackground(element));
+              });
+              results.push({
+                component: name,
+                identity: `${preset.name}/${theme}`,
+                minimumContrast: Math.min(...ratios),
+                contained:
+                  contentBox !== undefined &&
+                  rootBox.left >= Math.max(0, contentBox.left) - 1 &&
+                  rootBox.right <= Math.min(innerWidth, contentBox.right) + 1 &&
+                  root.scrollWidth <= root.clientWidth + 1,
+              });
+            }
+          }
+        }
+        return results;
+      },
+      { componentNames: publicComponentNames, presets: PAGE_PRESETS },
+    );
+
+    for (const observation of observations) {
+      seen.add(observation.component);
+      const identity = `${route.id}:${observation.component}:${observation.identity}`;
+      if (!observation.contained) containmentDefects.push(identity);
+      if (observation.minimumContrast < 3) {
+        contrastDefects.push(`${identity}:${observation.minimumContrast.toFixed(2)}`);
+      }
+    }
+  }
+
+  expect(containmentDefects, 'contained components').toEqual([]);
+  expect(contrastDefects, 'readable components').toEqual([]);
+  expect([...seen].sort()).toEqual([...publicComponentNames].sort());
+});
+
+test('visualization kinds retain distinct visible signals inside contextual surfaces', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await page.goto(
+    pathToFileURL(path.join(publicSiteRoot, 'examples/visualization-catalog/index.html')).href,
+  );
+  const states = await page.evaluate((presets) => {
+    const diagram = document.querySelector<HTMLElement>('.semantic-diagram');
+    const timeline = document.querySelector<HTMLElement>('.semantic-timeline');
+    if (diagram === null || timeline === null) throw new Error('Expected public visualizations.');
+    const nodes = [...diagram.querySelectorAll<SVGElement>('.visualization-node')];
+    const events = [...timeline.querySelectorAll<HTMLElement>('.visualization-timeline-event')];
+    const observations = [];
+    for (const preset of presets) {
+      for (const theme of ['light', 'dark']) {
+        document.documentElement.dataset.preset = preset.name;
+        Object.assign(document.documentElement.dataset, preset.tokens);
+        document.documentElement.dataset.theme = theme;
+        for (const tone of ['plain', 'accent', 'contrast']) {
+          for (const visualization of [diagram, timeline]) {
+            const section = visualization.closest<HTMLElement>('.semantic-section');
+            if (section === null) throw new Error('Expected owning section.');
+            section.dataset.tone = tone;
+          }
+          const nodeSignals = new Map<string, string>();
+          for (const node of nodes) {
+            const kind = [...node.classList].find((name) => name.startsWith('visualization-node-'));
+            if (kind === undefined) throw new Error('Expected node kind.');
+            const style = getComputedStyle(node);
+            nodeSignals.set(kind, `${style.fill}/${style.stroke}`);
+          }
+          const eventSignals = new Map<string, string>();
+          for (const event of events) {
+            const kind = [...event.classList].find((name) =>
+              name.startsWith('visualization-event-'),
+            );
+            if (kind === undefined) throw new Error('Expected event kind.');
+            eventSignals.set(kind, getComputedStyle(event, '::before').backgroundColor);
+          }
+          observations.push({
+            identity: `${preset.name}/${theme}/${tone}`,
+            nodeKinds: nodeSignals.size,
+            nodesDistinctFromNeutral: [...nodeSignals].every(
+              ([kind, signal]) =>
+                kind === 'visualization-node-neutral' ||
+                signal !== nodeSignals.get('visualization-node-neutral'),
+            ),
+            eventKinds: eventSignals.size,
+            eventSignals: new Set(eventSignals.values()).size,
+          });
+        }
+      }
+    }
+    return observations;
+  }, PAGE_PRESETS);
+  for (const state of states) {
+    expect(state.nodeKinds, state.identity).toBeGreaterThan(1);
+    expect(state.nodesDistinctFromNeutral, state.identity).toBe(true);
+    expect(state.eventKinds, state.identity).toBeGreaterThan(1);
+    expect(state.eventSignals, state.identity).toBe(state.eventKinds);
   }
 });
 

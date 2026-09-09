@@ -230,6 +230,30 @@ test('reduced motion keeps content visible and installs no scene or pointer stat
   );
 });
 
+test('sections taller than the viewport reveal their content when reached near the end', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto(
+    pathToFileURL(path.resolve('test-results/e2e-generated/response-workspace.html')).href,
+  );
+  for (const locale of ['en', 'ru']) {
+    await page.locator('[data-language-select]').selectOption(locale);
+    const workspace = page.locator('#workspace');
+    const actions = workspace.locator('.response-actions');
+    await actions.scrollIntoViewIfNeeded();
+    expect(
+      await workspace.evaluate((element) => element.getBoundingClientRect().height / innerHeight),
+    ).toBeGreaterThan(5);
+    await expect(workspace).not.toHaveAttribute('data-reveal-pending', '');
+    await expectFullyVisible(workspace.locator(':scope > *'));
+    const download = actions.locator('[data-response-download]');
+    const downloaded = page.waitForEvent('download');
+    await download.click();
+    expect((await downloaded).suggestedFilename()).toMatch(/\.json$/u);
+  }
+});
+
 test('missing IntersectionObserver leaves enhancement content readable and runtime controls active', async ({
   page,
 }, info) => {

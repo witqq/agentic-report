@@ -1,10 +1,10 @@
 import './document.css';
 
-import { COPY_ICON_PATH } from '../iconography.js';
 import { packageStrings, type PackageLocale } from '../localization.js';
 import { PAGE_MOTION_POLICY } from '../page-motion.js';
 import type { ReviewArtifact } from '../review/contract.js';
 import { placeSurface, visualViewportBounds } from './overlay-position.js';
+import { browserIcon } from './icon.js';
 import {
   installResponseWorkspaces,
   type ResponseWorkspacesController,
@@ -423,23 +423,8 @@ function createCopyButton(kind: 'code' | 'prose'): HTMLButtonElement {
   label.dataset.copyLabel = '';
   if (kind === 'code') label.dataset.copyCodeLabel = '';
   label.textContent = strings.copy;
-  button.append(createCopyIcon(), label);
+  button.append(browserIcon('copy'), label);
   return button;
-}
-
-function createCopyIcon(): SVGSVGElement {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.classList.add('package-icon');
-  svg.dataset.packageIcon = 'copy';
-  svg.setAttribute('viewBox', '0 0 16 16');
-  svg.setAttribute('width', '16');
-  svg.setAttribute('height', '16');
-  svg.setAttribute('aria-hidden', 'true');
-  svg.setAttribute('focusable', 'false');
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', COPY_ICON_PATH);
-  svg.append(path);
-  return svg;
 }
 
 interface NavigationController {
@@ -1105,7 +1090,8 @@ function installSectionReveal(
         observer.unobserve(target);
       }
     },
-    { threshold: 0.18 },
+    // A section can be taller than the viewport; no fraction of its total height is required.
+    { threshold: 0 },
   );
   for (const target of pending) observer.observe(target);
   return () => {

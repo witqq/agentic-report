@@ -270,6 +270,10 @@ These are closed validated values, not CSS or component code. Buildable examples
 `examples/layout-*` demonstrate every layout and are listed by
 `agentic-report examples --json`; `examples/interactive-catalog` and `examples/visualization-catalog`
 demonstrate the package-owned interaction and data primitives.
+Composition tracks expand on large displays while paragraphs keep a separate reading measure. Compact
+headings scale down, and action groups wrap at their content width rather than forcing every button across
+the screen. Disclosure, modal, popover, filter, toggle, copy, Review and Response controls receive package
+icons automatically. Authored trigger labels remain visible on phones; no icon markup or CSS is required.
 The visualization catalog includes a 15-node grouped subsystem flow and an ordered compile-request sequence;
 both use the same bounded `diagram`/`group`/`node`/`edge` directives and compile offline.
 
@@ -294,7 +298,7 @@ Because mosaic/stack and layers/gallery would both own the same card layout, tho
 before rendering; use flow/stage/split/story with layered/gallery media or natural/mask/bleed media with
 mosaic/stack.
 `transition="reveal|stagger"`, `scene="progress|sticky"`, `interaction="depth|tilt"`, and
-`choreography="cascade"` add bounded package-owned motion while defaulting independently to `none`; legacy
+`choreography="cascade"` add bounded package-owned motion. Without a recipe these roles default to `none`; legacy
 `reveal="true"` remains supported. A nested `actions` group composes ordinary safe links with
 primary/secondary/quiet emphasis, `auto|edge|inline|bottom` placement, and an optional primary-only
 `magnetic` effect. Mobile bottom placement remains compact normal-flow content rather than a sticky overlay.
@@ -316,6 +320,12 @@ and defaults are in the
 [`section` source contract](docs/product/source-contract.md#semantic-primitives) and machine-readable
 directive schema.
 
+Recipes include their motion: `hero` combines stagger with a scroll-driven scene, `evidence` uses reveal,
+`story` combines reveal with a scroll-driven scene, `rail` uses stagger, and `metrics` combines stagger with
+cascade. To use pointer depth on a hero instead, set `recipe="hero" scene="none" interaction="depth"`.
+Keep the remaining defaults and add a confined local image; the package handles responsive framing and
+reduced motion. See [`motion-showcase`](examples/motion-showcase/report.md) for a complete composition.
+
 Place `::contents` at the document root to keep a generated route map inside the article. Its native links
 use exact visible section headings and final collision-free targets; optional short `nav` labels remain in
 the sidebar. The map stays visible at narrow widths and still renders with zero or one primary section,
@@ -333,7 +343,8 @@ collapse the non-modal sidebar without persisting state; mobile readers get a la
 contained focus and focus return. Exactly one link exposes `aria-current="location"`, including for
 descendant and outside hashes. `scrollProgress: true` enables a decorative progress line. Progress and
 section motion are entirely absent under reduced motion; content remains visible and navigation semantics
-remain available. Entrance and cascade sequences are capped at 12 items; pointer depth, tilt, and magnetic
+remain available. Reveal activates when any part of a section enters the viewport, including sections taller
+than the screen. Entrance and cascade sequences are capped at 12 items; pointer depth, tilt, and magnetic
 movement run only for a fine pointer, while scene progress and pointer updates are visibility-bound and
 animation-frame-coalesced. Authors choose semantic roles, not timings, coordinates, easing, or scripts.
 If `IntersectionObserver` is unavailable or non-callable, observer-dependent motion and pointer enhancement
@@ -343,18 +354,20 @@ remain inert, baseline content stays readable, and navigation uses its bounded g
 
 The packaged portfolio includes complete pages built through the same public source and compiler paths:
 
-| Example                                                    | Reader job                                                                                                   |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| [`layout-mixed`](examples/layout-mixed/)                   | Inspect the complete visual grammar and component range                                                      |
-| [`interactive-catalog`](examples/interactive-catalog/)     | Exercise package-owned interactions                                                                          |
-| [`visualization-catalog`](examples/visualization-catalog/) | Read the complete chart, diagram, and timeline range                                                         |
-| [`terminal-portfolio`](examples/terminal-portfolio/)       | Present systems work through console rhythm, scan treatment, and linked evidence                             |
-| [`cinematic-story`](examples/cinematic-story/)             | Follow an image-first story through staged media, scroll progress, and a gallery rail                        |
-| [`incident-review`](examples/incident-review/)             | Reconstruct a fictional service incident, inspect evidence, and filter accountable follow-up                 |
-| [`vendor-decision`](examples/vendor-decision/)             | Separate mandatory procurement gates from weighted preference and approve a conditional path                 |
-| [`launch-readiness`](examples/launch-readiness/)           | Judge a fictional regional beta from audience value, funnel evidence, launch gates, and a reversible rollout |
-| [`review-workspace`](examples/review-workspace/)           | Create, reopen, resolve, and export selected-text discussion threads                                         |
-| [`response-workspace`](examples/response-workspace/)       | Return typed triage, choices, ordering, scores, and comments                                                 |
+| Example                                                    | Reader job                                                                                                     |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| [`layout-mixed`](examples/layout-mixed/)                   | Inspect the complete visual grammar and component range                                                        |
+| [`interactive-catalog`](examples/interactive-catalog/)     | Exercise package-owned interactions                                                                            |
+| [`visualization-catalog`](examples/visualization-catalog/) | Read the complete chart, diagram, and timeline range                                                           |
+| [`terminal-portfolio`](examples/terminal-portfolio/)       | Present systems work through console rhythm, scan treatment, and linked evidence                               |
+| [`cinematic-story`](examples/cinematic-story/)             | Follow an image-first story through staged media, scroll progress, and a gallery rail                          |
+| [`executive-brief`](examples/executive-brief/)             | Compose a Monument decision narrative with evidence cards, a timeline, local imagery, and a handoff            |
+| [`motion-showcase`](examples/motion-showcase/)             | Explore pointer depth, scrolling media, a gallery rail, cascade, and the content-complete reduced-motion state |
+| [`incident-review`](examples/incident-review/)             | Reconstruct a fictional service incident, inspect evidence, and filter accountable follow-up                   |
+| [`vendor-decision`](examples/vendor-decision/)             | Separate mandatory procurement gates from weighted preference and approve a conditional path                   |
+| [`launch-readiness`](examples/launch-readiness/)           | Judge a fictional regional beta from audience value, funnel evidence, launch gates, and a reversible rollout   |
+| [`review-workspace`](examples/review-workspace/)           | Create, reopen, resolve, and export selected-text discussion threads                                           |
+| [`response-workspace`](examples/response-workspace/)       | Return typed triage, choices, ordering, scores, and comments                                                   |
 
 Every packaged starter, layout example, catalog, workspace example, realistic showcase, and the public
 landing pairs its canonical English source with a maintained Russian entry. A generated artifact chooses

@@ -13,6 +13,7 @@ import {
   type ResponseQuestionDefinition,
 } from '../response/contract.js';
 import { packageStrings, type PackageStrings } from '../localization.js';
+import { browserIcon } from './icon.js';
 
 class ResponseImportError extends Error {}
 
@@ -76,11 +77,11 @@ function createController(
     questions.append(renderQuestion(manifest.id, question, strings));
   const actions = document.createElement('div');
   actions.className = 'response-actions';
-  const copy = button(strings.copyResponse, 'responseCopy');
-  const download = button(strings.downloadResponse, 'responseDownload');
+  const copy = button(strings.copyResponse, 'responseCopy', 'copy');
+  const download = button(strings.downloadResponse, 'responseDownload', 'download');
   const importLabel = document.createElement('label');
   importLabel.className = 'response-file-action';
-  importLabel.textContent = strings.importResponse;
+  importLabel.append(browserIcon('upload'), document.createTextNode(strings.importResponse));
   const importInput = document.createElement('input');
   importInput.type = 'file';
   importInput.accept = 'application/json,.json';
@@ -439,9 +440,9 @@ function renderOrderQuestion(
     row.append(renderItemCard(question, item, strings));
     const actions = document.createElement('div');
     actions.className = 'response-item-actions';
-    const up = button(strings.moveUp, 'responseOrderMove');
+    const up = button(strings.moveUp, 'responseOrderMove', 'arrow-up');
     up.dataset.responseOrderMove = 'up';
-    const down = button(strings.moveDown, 'responseOrderMove');
+    const down = button(strings.moveDown, 'responseOrderMove', 'arrow-down');
     down.dataset.responseOrderMove = 'down';
     actions.append(up, down);
     row.append(actions);
@@ -660,10 +661,15 @@ function labelledControl<T extends HTMLElement>(control: T, label: string): HTML
   return owner;
 }
 
-function button(label: string, dataName: string): HTMLButtonElement {
+function button(
+  label: string,
+  dataName: string,
+  icon?: Parameters<typeof browserIcon>[0],
+): HTMLButtonElement {
   const control = document.createElement('button');
   control.type = 'button';
-  control.textContent = label;
+  if (icon !== undefined) control.append(browserIcon(icon));
+  control.append(document.createTextNode(label));
   control.dataset[dataName] = '';
   return control;
 }

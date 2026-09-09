@@ -269,9 +269,9 @@ that defaults come from the selected preset before explicit token fields apply. 
 `page.tokens` retains each generic normalization `default` with
 `defaultVisibility: normalization-only`; discovery consumers must materialize only `published` defaults as
 authored fields. `page.presets` contains every complete coordinated map.
-The public landing and vendor decision use the Field Manual `editorial` preset, the launch example uses
-`studio`, and the incident review uses `signal`; the packaged `layout-*` examples retain
-the default while exercising every layout.
+The public landing and Executive brief use `monument`, vendor decision uses `editorial`, launch readiness
+uses `studio`, and incident review uses `signal`. Terminal portfolio uses `terminal`; Cinematic story and
+Motion showcase use `cinematic`. These sources compose the same public components without page-specific CSS.
 The six starter examples combine these layouts with the public content, interaction, visualization,
 partial, and local-asset contracts; they introduce no additional syntax.
 
@@ -437,6 +437,12 @@ attribute overrides only its own role before the same incompatibility checks run
 and `metrics` creates a compact data mosaic. A card may declare one safe `href`; it then renders as one
 focusable anchor with a persistent link icon, while nested Markdown links fail validation.
 
+Recipe motion is part of those defaults: hero supplies stagger and a progress scene, evidence supplies
+reveal, story supplies reveal and a progress scene, rail supplies stagger, and metrics supplies stagger with
+cascade. Explicit `scene="none"` allows `interaction="depth"` or `interaction="tilt"` on a hero without
+conflicting transform owners. The [Motion showcase](../../examples/motion-showcase/report.md) and
+[Executive brief](../../examples/executive-brief/report.md) are complete bilingual recipe compositions.
+
 ```markdown
 ::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
 The content remains ordinary Markdown and semantic directives.
@@ -564,6 +570,12 @@ The text form `:asset[Label]{src="path"}` uses the authored accessible label. Th
 All state is local to the generated component instance. Browser behavior is package-owned, works through
 `file://` in both output formats, and never evaluates author content.
 
+Package controls supply their icons and responsive geometry. Modal/popover triggers and toggle labels remain
+visible beside icons at compact widths; close may use an icon-only button with its accessible name and title.
+Action groups wrap without forcing short labels to fill the container. Components and visualizations use
+paired local surface/text roles under every section tone; authored node and event kinds retain their visible
+signals. These presentation defaults require no additional source attributes.
+
 Response Workspace uses a closed version-1 manifest and export. Every exported question includes its stable
 id, kind, explicit `answered` boolean, and kind-specific value; authored defaults may be visible while
 `answered` remains false. Non-empty item comments are exported in a separate sorted array. Clipboard and
@@ -621,8 +633,10 @@ closes the dialog and focuses its target heading. Crossing to desktop while open
 
 `scrollProgress: true` installs one decorative transform-based progress indicator only in normal motion.
 `transition="reveal"` and legacy `reveal="true"` reveal section contents once using opacity and at most 24
-pixels of translation over 420 milliseconds while the section anchor remains stable. `transition="stagger"`
-applies the same entrance to at most 12 direct children with 90-millisecond steps. `scene="progress"` drives one bounded transform from normalized visible
+pixels of translation over 420 milliseconds while the section anchor remains stable. Activation follows
+viewport intersection rather than a fraction of section height, so long sections remain readable when
+reached. `transition="stagger"` applies the same entrance to at most 12 direct children with 90-millisecond
+steps. `scene="progress"` drives bounded media and mesh/glow decoration movement from normalized visible
 scroll progress; `scene="sticky"` keeps the direct image-bearing paragraph sticky on desktop and restores
 normal flow at 48rem and below. `choreography="cascade"` reveals at most 12 semantic cards, chart points, or
 timeline items in source order with 75-millisecond steps. `interaction="depth|tilt"` applies at most 24 pixels

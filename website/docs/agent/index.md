@@ -117,16 +117,29 @@ The content remains ordinary Markdown and semantic directives.
 
 Use the installed `layout-mixed` example for the complete grammar, the landing starter for a smaller
 copyable narrative, `terminal-portfolio` for console-led composition, `cinematic-story` for image-first
-scroll storytelling, and the public decision showcases for the same roles on different layouts. Use
+scroll storytelling, `executive-brief` for a Monument decision narrative, and `motion-showcase` for a complete
+combination of depth, scrolling media, gallery, cascade and reduced motion. Use
 `schema --scope directives` for the exact closed domains and defaults.
 
 Motion remains declarative: sections accept `transition="none|reveal|stagger"`,
 `scene="none|progress|sticky"`, `interaction="none|depth|tilt"`, and
-`choreography="none|cascade"`. Each defaults to `none`; reduced motion leaves all content visible and coarse
+`choreography="none|cascade"`. Each defaults to `none` unless a recipe supplies it; reduced motion leaves all content visible and coarse
 pointers receive no pointer effects. Layers/progress cannot combine with depth/tilt, and story/stack cannot
 combine with sticky. An `actions` group accepts `placement="auto|edge|inline|bottom"`; bottom stays at its
 authored position in normal flow. Only a primary action may use `effect="magnetic"`. The package owns the
 bounded timing, movement, responsive placement, and icons.
+
+Recipes already supply coordinated motion: hero uses stagger and a progress scene, evidence uses reveal,
+story uses reveal and a progress scene, rail uses stagger, and metrics uses stagger with cascade. For a
+pointer-depth hero, use `recipe="hero" scene="none" interaction="depth"` and a local image. For a scrolling
+gallery, use `recipe="rail" scene="progress"` and image cards. Open the
+[Motion showcase](../../examples/motion-showcase/index.html) or its
+[source](../../examples/motion-showcase/report.md) to reuse the full composition. Reveal activation does not
+depend on total section height, so long content remains readable.
+
+Use descriptive authored action labels and let package controls add icons. Modal/popover triggers and toggle
+labels stay visible on phones; groups wrap without forced full-width buttons. The package separates reading
+measure from large-screen composition, so authors need neither width repairs nor custom icon markup.
 
 Section tone owns its background/foreground relationship; decorative surfaces stay behind content, and
 nested package cards and visualizations retain their own readable surface text.

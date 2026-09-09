@@ -2092,12 +2092,17 @@ test('declarative interactions preserve scoped state, focus, and responsive file
       const style = getComputedStyle(element);
       return {
         height: element.getBoundingClientRect().height,
+        coarsePointer: matchMedia('(pointer: coarse)').matches,
+        compactOperation:
+          element.hasAttribute('data-package-operation') &&
+          matchMedia('(max-width: 48rem)').matches,
         paddingLeft: Number.parseFloat(style.paddingLeft),
         paddingRight: Number.parseFloat(style.paddingRight),
       };
     });
-    expect(metrics.height, name).toBeGreaterThanOrEqual(32);
-    expect(metrics.height, name).toBeLessThanOrEqual(40);
+    const touchTarget = metrics.coarsePointer || metrics.compactOperation;
+    expect(metrics.height, name).toBeGreaterThanOrEqual(touchTarget ? 44 : 32);
+    expect(metrics.height, name).toBeLessThanOrEqual(touchTarget ? 48 : 40);
     expect(metrics.paddingLeft, name).toBeLessThanOrEqual(12);
     expect(metrics.paddingRight, name).toBeLessThanOrEqual(12);
   };

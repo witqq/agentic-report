@@ -18,7 +18,7 @@
 - **`AR-PRODUCT-PUBLIC-PROOF` — Публичное доказательство продуктом.** Публичный лендинг собирается самим
   `agentic-report` из обычного декларативного источника. Он ведёт на независимо собранные страницы всех
   starters, полный визуальный и интерактивный каталоги, каталог визуализаций, Terminal-портфолио,
-  Cinematic-историю, incident review, vendor decision, launch readiness, Review Workspace и Response
+  Cinematic-историю, Executive brief, Motion showcase, incident review, vendor decision, launch readiness, Review Workspace и Response
   Workspace, а также на прямой Markdown-исходник каждой страницы. Лендинг и все демо содержат согласованные
   английскую и русскую версии в одном артефакте. Лендинг и демо показывают тем же публичным синтаксисом
   разные композиции, локальные медиа, данные, scrolling scenes, motion, contextual review и размещения
@@ -101,10 +101,13 @@
 - **`AR-TEMPLATE-MOTION` — Смысловое движение.** Reveal/stagger, progress/sticky scenes, data choreography,
   fine-pointer depth/tilt и редкий magnetic primary action задаются закрытыми ролями. Package runtime
   ограничивает движение, объединяет обновления по animation frame, отключает pointer-эффекты для coarse
-  pointer и оставляет весь контент видимым при reduced motion.
+  pointer и оставляет весь контент видимым при reduced motion. Появление секции срабатывает при её входе в
+  область просмотра, даже если высота секции больше экрана; длинная форма не остаётся пустой после прокрутки.
 - **`AR-TEMPLATE-CONTROLS` — Компактные управляющие элементы.** Одна action inventory поддерживает auto,
   edge, inline и normal-flow bottom placement. Package-owned иконки дополняют локализованные доступные имена;
   на очень узком экране topbar может оставить только узнаваемые иконки с tooltip, не расширяя документ.
+  Авторские подписи открытия modal/popover и переключателей остаются видимыми рядом с иконками. Группы
+  действий переносятся по доступной ширине, но не растягивают каждую короткую кнопку на весь экран.
 - **`AR-TEMPLATE-CONSISTENCY` — Единый дизайн.** Все встроенные компоненты используют общие токены,
   отступы, состояния и responsive-правила. Tone владеет фоном секции, декоративная surface остаётся позади
   содержимого, а вложенные package-компоненты владеют собственными читаемыми foreground/background-токенами.

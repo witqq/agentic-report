@@ -82,9 +82,15 @@ for (const format of formats) {
     await expect(scope.locator('article[data-response-item="copy"]')).toBeAttached();
     const loginSelect = scope.locator('[data-response-item="login"] [data-response-bucket-select]');
     if (info.project.name === 'desktop-chromium') {
-      await scope
-        .locator('article[data-response-item="login"]')
-        .dragTo(scope.locator('[data-response-bucket-column="skip"]'));
+      const card = scope.locator('article[data-response-item="login"]');
+      // Start on the card, then cross the drag threshold before scrolling to the destination.
+      await card.hover({ position: { x: 8, y: 8 } });
+      const box = await card.boundingBox();
+      if (box === null) throw new Error('The draggable card must have visible geometry.');
+      await page.mouse.down();
+      await page.mouse.move(box.x + 24, box.y + 8, { steps: 5 });
+      await scope.locator('[data-response-bucket-column="skip"]').hover();
+      await page.mouse.up();
     } else {
       await loginSelect.focus();
       await expect(loginSelect).toBeFocused();

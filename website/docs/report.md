@@ -124,10 +124,22 @@ The content remains ordinary Markdown and semantic directives.
 
 Sections also accept closed motion roles: `transition="none|reveal|stagger"`,
 `scene="none|progress|sticky"`, `interaction="none|depth|tilt"`, and
-`choreography="none|cascade"`. They default to `none`; reduced motion leaves content visible and pointer
+`choreography="none|cascade"`. Without a recipe they default to `none`; reduced motion leaves content visible and pointer
 effects require a fine pointer. Conflicting layout or transform owners fail validation. `actions` accepts
 `placement="auto|edge|inline|bottom"`, with bottom kept in normal flow, and only a primary action may use the
 bounded `effect="magnetic"`. The package owns timings, movement, responsive placement, and icons.
+
+Recipes include their entrance and scene behavior. For a pointer-depth opening, use
+`recipe="hero" scene="none" interaction="depth"` with a local image; for a scrolling image rail, use
+`recipe="rail" scene="progress"` with cards. The
+[Motion showcase](../examples/motion-showcase/index.html) demonstrates the complete combination and links
+to its [Markdown source](../examples/motion-showcase/report.md). The
+[Executive brief](../examples/executive-brief/index.html) shows a Monument decision page with evidence,
+timeline and handoff. Long sections reveal when reached even when they are taller than the screen.
+
+Package controls provide icons automatically. Authored modal/popover and toggle labels stay visible on
+phones, and action groups wrap without forcing every button across the screen. Large-screen composition
+tracks remain separate from the paragraph reading measure; no per-page CSS is needed.
 
 For a bilingual page, the primary entry declares `language: en` or `language: ru` and maps the other
 confined Markdown entry under `localizations`. Translate that variant's prose, partials, directive labels,
@@ -233,7 +245,9 @@ copies only visible rendered text through the localized package control.
 
 The public [landing](../index.html) links to independently built bilingual starters, complete visual,
 interactive, and data catalogs, [Terminal portfolio](../examples/terminal-portfolio/index.html),
-[Cinematic story](../examples/cinematic-story/index.html), decision showcases, and Review/Response
+[Cinematic story](../examples/cinematic-story/index.html),
+[Executive brief](../examples/executive-brief/index.html),
+[Motion showcase](../examples/motion-showcase/index.html), decision showcases, and Review/Response
 workspaces. Every page uses the same declarative contract on its own layout and exposes its English and
 Russian Markdown sources from the landing.
 

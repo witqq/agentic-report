@@ -605,7 +605,9 @@ describe('registry-driven semantic directives', () => {
     );
     expect(rendered.html).toContain('id="glossary-shared-concept"');
     expect(rendered.html).toMatch(/<details[^>]*data-disclosure=""[^>]*open/u);
-    expect(rendered.html).toContain('<summary class="semantic-disclosure-summary">Native details');
+    expect(rendered.html).toMatch(
+      /<summary class="semantic-disclosure-summary">[\s\S]*?data-package-icon="arrow-down"[\s\S]*?Native details[\s\S]*?<\/summary>/u,
+    );
     expect(rendered.html).toContain('id="tabs-1-tab-1"');
     expect(rendered.html).toContain('id="tabs-2-tab-1"');
     expect(rendered.html).toContain('aria-selected="true" tabindex="0"');
@@ -2809,11 +2811,19 @@ function assertRenderedAttribute(
       expect(rendered.html).toContain(`data-label="${serialized}"`);
       return;
     }
+    if (directive.name === 'toggle') {
+      expect(rendered.html).toContain(`aria-label="${serialized}"`);
+      expect(rendered.html).toContain(`title="${serialized}"`);
+      expect(rendered.html).toContain(`<span class="package-control-label">${serialized}</span>`);
+      return;
+    }
     expect(rendered.html).toContain(`>${serialized}</button>`);
     return;
   }
   if (attribute.name === 'trigger') {
-    expect(rendered.html).toContain(`>${serialized}</button>`);
+    expect(rendered.html).toContain(`aria-label="${serialized}"`);
+    expect(rendered.html).toContain(`title="${serialized}"`);
+    expect(rendered.html).toContain(`<span class="package-control-label">${serialized}</span>`);
     return;
   }
   if (attribute.name === 'placeholder') {

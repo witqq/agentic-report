@@ -1053,6 +1053,24 @@ export const authoringRegistry = {
       classes: ['landing-page', 'launch-readiness-showcase'],
     },
     {
+      id: 'executive-brief',
+      path: 'executive-brief',
+      entry: 'report.md',
+      title: 'Executive decision brief',
+      description:
+        'Monument decision narrative with a staged opening, evidence field, operating path, and finished handoff.',
+      classes: ['work-report', 'executive-brief-showcase'],
+    },
+    {
+      id: 'motion-showcase',
+      path: 'motion-showcase',
+      entry: 'report.md',
+      title: 'Motion and depth showcase',
+      description:
+        'Cinematic demonstration of scroll scenes, reveal, choreography, depth, tilt, and reduced-motion fallback.',
+      classes: ['landing-page', 'motion-showcase'],
+    },
+    {
       id: 'terminal-portfolio',
       path: 'terminal-portfolio',
       entry: 'report.md',

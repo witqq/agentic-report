@@ -19,6 +19,9 @@ editorial type, local media framing, mesh/glow/grain/grid surfaces, reveal/stagg
 data choreography, fine-pointer depth/tilt, and responsive action placement without author CSS or JavaScript.
 Reduced motion keeps all content visible. On narrow screens complex arrangements return to source order,
 gallery scroll stays local, and the topbar uses accessible icon controls without widening the document.
+Start with the Monument default and section recipes: hero, evidence, story, rail, or metrics. Recipes include
+coordinated motion; override only the role you need. Authored operation labels stay visible beside package
+icons on phones, and composition width remains separate from paragraph reading width.
 
 Sources may embed maintained English and Russian Markdown variants with `localizations`. The generated page
 selects an available system language, falls back to the primary entry, and shows a language selector only
@@ -34,6 +37,8 @@ locale. Single-language review export is version 3; multilingual export is versi
 - Incident review demo: examples/incident-review/index.html
 - Vendor decision demo: examples/vendor-decision/index.html
 - Launch readiness demo: examples/launch-readiness/index.html
+- Executive brief demo: examples/executive-brief/index.html
+- Motion and depth demo: examples/motion-showcase/index.html
 - Release identity and hashes: release.json
 - npm package: https://www.npmjs.com/package/agentic-report
 - Source repository: https://github.com/witqq/agentic-report

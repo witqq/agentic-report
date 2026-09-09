@@ -18,6 +18,7 @@ import {
 } from '../review/contract.js';
 import type { ResolvedReviewArtifact } from '../review/binding.js';
 import { packageStrings } from '../localization.js';
+import { browserIcon } from './icon.js';
 import { placeSurface, visualViewportBounds, type ViewportBounds } from './overlay-position.js';
 
 const mobileReview = window.matchMedia('(max-width: 56.99rem)');
@@ -550,7 +551,7 @@ function createController(
         if (segment.reportRevision === manifest.reportRevision) {
           const edit = document.createElement('button');
           edit.type = 'button';
-          edit.textContent = strings.edit;
+          edit.append(browserIcon('pencil'), document.createTextNode(strings.edit));
           edit.dataset.reviewMessageEdit = message.id;
           li.append(edit);
         }
@@ -665,7 +666,7 @@ function createController(
       marker.dataset.reviewHighlightMarker = entry.thread.id;
       marker.dataset.reviewThreadState = entry.segment.resolved ? 'resolved' : 'open';
       marker.setAttribute('aria-label', strings.openNote(entry.subject.label));
-      marker.textContent = '●';
+      marker.append(browserIcon('comment'));
       markerHost.append(marker);
       positionMarker(marker, entry.range);
     }

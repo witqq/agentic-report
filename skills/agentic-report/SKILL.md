@@ -114,15 +114,24 @@ unresolved content facts.
   image-only cards for `layers`. Use the bilingual
   `layout-mixed` example as the complete grammar catalog, the landing starter as a smaller copyable narrative,
   `terminal-portfolio` for console-led composition, `cinematic-story` for image-first scroll storytelling,
-  and the public decision showcases as cross-layout composition references.
+  `executive-brief` for a Monument decision narrative, and `motion-showcase` for a complete combination of
+  depth, scrolling media, gallery, cascade, and reduced-motion behavior. Locate their installed sources with
+  `examples --json`; these examples can be copied and edited without becoming new `init` starters.
 - Add motion through the same closed section grammar: `transition="none|reveal|stagger"`,
   `scene="none|progress|sticky"`, `interaction="none|depth|tilt"`, and
-  `choreography="none|cascade"`. They default to `none`; legacy `reveal="true"` remains available. Do not
+  `choreography="none|cascade"`. Without a recipe they default to `none`; legacy `reveal="true"` remains available. Do not
   combine layers or progress scenes with depth/tilt, or story/stack with sticky. Reduced motion leaves all
   content visible, and pointer effects require a fine pointer. Use
   `:::actions{placement="auto|edge|inline|bottom"}`;
   bottom stays compact normal-flow content. Reserve `effect="magnetic"` for a primary action. Do not invent
   animation timing, coordinates, CSS, or browser code—the package owns bounded behavior and icons.
+  Recipes already supply motion: hero uses stagger and a progress scene, evidence uses reveal, story uses
+  reveal and a progress scene, rail uses stagger, and metrics uses stagger with cascade. For a pointer-depth
+  hero, use `recipe="hero" scene="none" interaction="depth"` with a local image. Do not restate all recipe
+  attributes. Long sections reveal when reached, regardless of their height.
+- Let package controls supply their icons. Authored modal/popover triggers and toggle labels stay visible
+  on compact screens; action groups wrap without forced full-width buttons. Choose ordinary descriptive
+  labels and keep default geometry rather than adding icon markup, shortening meaning, or patching CSS.
 - Give a card `href` only when the whole card has one destination. The package validates the same safe-link
   domain as actions, renders one keyboard target and persistent icon, and rejects nested Markdown links.
 - When a finished artifact containing `source-link` will leave the source workstation, build it with

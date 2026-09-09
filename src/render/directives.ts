@@ -3593,7 +3593,7 @@ function enhanceDisclosure(node: Element, strings: PackageStrings): void {
     type: 'element',
     tagName: 'summary',
     properties: { className: ['semantic-disclosure-summary'] },
-    children: [{ type: 'text', value: title }],
+    children: [decorativeIcon('arrow-down'), { type: 'text', value: title }],
   });
 }
 
@@ -3667,7 +3667,7 @@ function enhanceModal(
   const content = node.children;
   node.properties.dataModal = '';
   node.children = [
-    actionButton(trigger, { dataModalOpen: dialogId, ariaHasPopup: 'dialog' }),
+    actionButton(trigger, { dataModalOpen: dialogId, ariaHasPopup: 'dialog' }, 'window'),
     {
       type: 'element',
       tagName: 'dialog',
@@ -3675,7 +3675,7 @@ function enhanceModal(
       children: [
         semanticTitle(title, titleId),
         ...content,
-        actionButton(strings.close, { dataModalClose: '' }),
+        actionButton(strings.close, { dataModalClose: '' }, 'x'),
       ],
     },
   ];
@@ -3694,12 +3694,16 @@ function enhancePopover(
   const content = node.children;
   node.properties.dataPopover = '';
   node.children = [
-    actionButton(trigger, {
-      dataPopoverTrigger: '',
-      ariaControls: [panelId],
-      ariaExpanded: 'false',
-      ariaHasPopup: 'dialog',
-    }),
+    actionButton(
+      trigger,
+      {
+        dataPopoverTrigger: '',
+        ariaControls: [panelId],
+        ariaExpanded: 'false',
+        ariaHasPopup: 'dialog',
+      },
+      'info',
+    ),
     {
       type: 'element',
       tagName: 'div',
@@ -3736,7 +3740,7 @@ function enhanceFilter(
           type: 'element',
           tagName: 'label',
           properties: { htmlFor: [inputId] },
-          children: [{ type: 'text', value: strings.filter }],
+          children: [decorativeIcon('search'), { type: 'text', value: strings.filter }],
         },
         {
           type: 'element',
@@ -3770,12 +3774,16 @@ function enhanceToggle(
   node.properties.dataToggle = '';
   node.children = [
     ...(title === undefined ? [] : [semanticTitle(title)]),
-    actionButton(label, {
-      role: 'switch',
-      ariaChecked: active ? 'true' : 'false',
-      ariaControls: [panelId],
-      dataToggleControl: '',
-    }),
+    actionButton(
+      label,
+      {
+        role: 'switch',
+        ariaChecked: active ? 'true' : 'false',
+        ariaControls: [panelId],
+        dataToggleControl: '',
+      },
+      'eye',
+    ),
     {
       type: 'element',
       tagName: 'div',
@@ -3792,7 +3800,7 @@ function enhanceCounter(node: Element, strings: PackageStrings): void {
     tagName: 'div',
     properties: { className: ['semantic-demo-controls'] },
     children: [
-      actionButton(strings.increment, { dataDemoIncrement: '' }),
+      actionButton(strings.increment, { dataDemoIncrement: '' }, 'plus'),
       { type: 'text', value: ' ' },
       {
         type: 'element',
@@ -3828,12 +3836,28 @@ function semanticTitle(value: string, id?: string): Element {
   };
 }
 
-function actionButton(label: string, properties: Element['properties']): Element {
+function actionButton(
+  label: string,
+  properties: Element['properties'],
+  icon?: Parameters<typeof decorativeIcon>[0],
+): Element {
   return {
     type: 'element',
     tagName: 'button',
-    properties: { type: 'button', ...properties },
-    children: [{ type: 'text', value: label }],
+    properties: {
+      type: 'button',
+      ...(icon === undefined ? {} : { ariaLabel: label, title: label, dataPackageOperation: '' }),
+      ...properties,
+    },
+    children: [
+      ...(icon === undefined ? [] : [decorativeIcon(icon)]),
+      {
+        type: 'element',
+        tagName: 'span',
+        properties: { className: ['package-control-label'] },
+        children: [{ type: 'text', value: label }],
+      },
+    ],
   };
 }
 
