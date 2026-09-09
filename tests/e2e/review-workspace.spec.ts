@@ -67,7 +67,9 @@ for (const format of formats) {
     await page.locator('[data-review-message]').fill('Explain why this evidence is sufficient.');
     await page.getByRole('button', { name: 'Add message' }).click();
     await expect(page.locator('[data-review-thread-messages]')).toContainText('Explain why');
-    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+    const editButton = page.getByRole('button', { name: 'Edit', exact: true });
+    await expect(editButton.locator('[data-package-icon="pencil"]')).toBeVisible();
+    await editButton.click();
     await page
       .locator('[data-review-message]')
       .fill('Explain why this evidence supports the conclusion.');
@@ -82,6 +84,9 @@ for (const format of formats) {
       'data-review-thread-state',
       'open',
     );
+    await expect(
+      page.locator('[data-review-highlight-marker] [data-package-icon="comment"]'),
+    ).toBeVisible();
     await page.locator('[data-review-popover-close]').click();
     await selectRange(page, target, 'evidence', 0, target, 'evidence', 'evidence'.length);
     const exactAction = page.locator(

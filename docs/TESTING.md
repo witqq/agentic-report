@@ -102,7 +102,9 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   determinism, registry-owned page layouts/themes/token defaults, the complete closed section visual
   grammar with independent invalid-value and executable-attribute rejection, registry-declared rejection of
   mosaic/stack with layers/gallery card-layout conflicts, identical single-file/directory and
-  document/dashboard projections, GFM table rendering, collision-free
+  document/dashboard projections, post-enhancement per-rail gallery candidate marking across titles, sibling
+  prose, repeated and Markdown-separated structures plus true one-item omission, GFM table rendering,
+  collision-free
   document shell IDs, default attribution and explicit footer opt-out without changing authored content,
   compiler results, deterministic public-site staging, complete declared-route
   reachability, direct-file byte identity, release hashes, synchronized skill/plugin metadata, and public
@@ -120,7 +122,8 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   narrow-screen visibility with the drawer closed, section lead and moved appendix definition states across
   desktop/mobile, light/dark and both formats, desktop collapse,
   native-dialog mobile
-  focus containment/return, normal/reduced-motion progress, reveal/stagger entrances, progress/sticky
+  focus containment/return, normal/reduced-motion progress, reveal/stagger entrances, long sections reached
+  near their end with visible rendered contents and a working export action, progress/sticky
   scenes, ordered semantic choreography, fine-pointer depth/tilt/magnetic effects, responsive action
   placement, offscreen idling and animation-frame coalescing, themes, visible focus,
   locally scrolling wide tables, protected loopback source-location links that preserve the report page,
@@ -144,6 +147,12 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   action geometry, section-local short-story floats, and nonintersecting Russian stage titles/media at both
   constrained and wide desktop widths. Wide visual-family coverage separately preserves stage, split, and
   gallery track behavior. Inspected captures supplement those geometry and computed-style assertions.
+  The public component matrix derives its roots and preset identities from the registry and applies each
+  preset's complete font, density, accent, width and radius before measuring containment and effective
+  text/surface contrast. Real diagram and timeline checks preserve kind signals inside plain, accent and
+  contrast contexts. Compact-operation checks observe unclipped bilingual labels, icons, touch targets and
+  dialog focus return. Public action groups are checked for forced full-width expansion separately from
+  naturally long text.
   Public integration separately enumerates the closed staged inventory, opens the bilingual landing, every
   declared live example, and both canonical locale sources for each. It behaviorally distinguishes Terminal
   console treatment and Cinematic image-first scenes rather than inferring them from preset labels. Initial and
@@ -158,7 +167,18 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   not occupy the viewport, missing semantic sections, and leaked directive fences. Dedicated semantic-tabs coverage builds every current
   tab-bearing starter, example, and fixture for desktop and mobile `file://` artifacts; it asserts readable
   non-shrinking single-line labels, list-owned overflow where needed, document containment, and pointer and
-  keyboard selection and focus. Dedicated localization coverage builds both formats and verifies ordered
+  keyboard selection and focus. Route-derived layout-integrity coverage also opens the complete registered
+  public page inventory at narrow mobile, mobile, and desktop widths. It compares cards, semantic surfaces,
+  tables, code blocks, tab lists, visualization frames, and gallery scrollers with their immediate layout
+  owner rather than treating the absence of root overflow as sufficient. An overflowing gallery must retain
+  effective user-scroll overflow, localized focus semantics and a visible contained next-item preview. Every
+  observed rail must also omit those scroll-only semantics whenever its current width has no overflow. A
+  generated repeated/mixed wide rail fixture distinguishes a contained one-item rail, compact title/prose/card
+  continuations with bidirectional focused keyboard scrolling, and ultrawide two-item tracks that fit without
+  a false focus stop or label. The same coverage opens every
+  authored popover at mobile and desktop sizes, requires a reversible document overlay host, measures whole-
+  panel visual-viewport containment and multi-point topmost hit testing, and repeats after document/nested
+  scrolling, viewport resizing, and localized DOM replacement. Dedicated localization coverage builds both formats and verifies ordered
   `navigator.languages` selection, unsupported preference fallback, conditional selector absence, complete
   metadata/content/navigation/chrome replacement, focus return, locale-local review/response/component
   state, version-4 active-locale export, localized visualization text and number formatting, and
@@ -219,6 +239,10 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   `test-results/package/candidate-evidence.json` handoff used by the release runbook.
 
 The E2E setup also stages the same-origin public tree and builds directory-format documentation fixtures.
+Starter and non-starter artifact preparation derives from the example registry, so newly registered pages
+do not require a second preparation list. Response pointer evidence begins a native drag on the card before
+scrolling to its destination; it then asserts the assigned bucket and exported state. Visibility evidence
+for animated content checks rendered opacity as well as geometry.
 Tests start from the staged landing, follow real `file://` links to human and direct agent documentation,
 open every independently staged example page, compare rendered documentation across output formats,
 assert code/content containment, exercise responsive navigation, and capture desktop/mobile documentation

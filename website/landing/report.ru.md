@@ -63,6 +63,14 @@ _Собрано обычным компилятором из публичног�
 :::card{title="Кинематографическая история" href="examples/cinematic-story/index.html"}
 Локальные изображения ведут сценический пролог, рассказ при прокрутке, медиаленту и итог.
 :::
+:::card{title="Краткий отчёт · Monument" href="examples/executive-brief/index.html"}
+Решительное вступление, просторный блок с доказательствами, порядок действий и готовая передача результата
+в стандартном оформлении Monument.
+:::
+:::card{title="Движение и глубина" href="examples/motion-showcase/index.html"}
+Прогресс прокрутки, появление элементов, каскад, глубина и наклон. Если в системе отключена анимация,
+страница сохраняет содержание и порядок чтения.
+:::
 :::card{title="Заготовка лендинга" href="examples/landing/index.html"}
 Сфокусированный продуктовый рассказ с ясными действиями, переносимым доказательством и явной границей.
 :::
@@ -123,6 +131,12 @@ npx --yes agentic-report build ./my-page --output ./my-page.html --json
 :::card{title="Атлас визуализаций" href="examples/visualization-catalog/index.html"}
 Графики, поток, последовательность и хронология из проверяемых директив.
 :::
+:::card{title="Краткий отчёт для руководителя" href="examples/executive-brief/index.html"}
+Стандартное оформление Monument для решения, построенного вокруг доказательств и дальнейших действий.
+:::
+:::card{title="Демонстрация движения" href="examples/motion-showcase/index.html"}
+Наглядный обзор визуальных эффектов, доступных через обычные декларативные роли.
+:::
 ::::
 
 [Отчёт](examples/basic/report.ru.md) · [Исследование](examples/research/report.ru.md) ·
@@ -130,7 +144,8 @@ npx --yes agentic-report build ./my-page --output ./my-page.html --json
 [Панель](examples/dashboard/report.ru.md) · [Лендинг](examples/landing/report.ru.md) ·
 [Визуальный каталог](examples/visual-catalog/report.ru.md) · [Взаимодействия](examples/interactive-catalog/report.ru.md) ·
 [Визуализации](examples/visualization-catalog/report.ru.md) · [Terminal](examples/terminal-portfolio/report.ru.md) ·
-[Cinematic](examples/cinematic-story/report.ru.md) · [Инцидент](examples/incident-review/report.ru.md) ·
+[Cinematic](examples/cinematic-story/report.ru.md) · [Краткий отчёт](examples/executive-brief/report.ru.md) ·
+[Движение](examples/motion-showcase/report.ru.md) · [Инцидент](examples/incident-review/report.ru.md) ·
 [Выбор поставщика](examples/vendor-decision/report.ru.md) · [Готовность запуска](examples/launch-readiness/report.ru.md)
 ::::::
 
@@ -162,7 +177,7 @@ Monument выбран по умолчанию. Material, Signal, Terminal и Cin
 поверхностями, медиа и характером движения.
 :::
 :::card{title="Небольшой публичный словарь"}
-Автор выбирает заготовку, preset и при необходимости рецепты разделов. Точные настройки доступны для
+Автор выбирает заготовку, визуальное оформление и при необходимости рецепты разделов. Точные настройки доступны для
 особых случаев, но для хорошего результата они не обязательны.
 :::
 :::card{title="Одна среда выполнения"}
@@ -170,7 +185,7 @@ Monument выбран по умолчанию. Material, Signal, Terminal и Cin
 состояния ревью.
 :::
 :::card{title="Узкая граница доверия"}
-Источник принимает Markdown, frontmatter, ограниченные части и локальные ресурсы. Raw HTML, удалённая
+Источник принимает Markdown, метаданные в начале файла, ограниченные включения и локальные ресурсы. Необработанный HTML, удалённая
 загрузка, исполняемые шаблоны и авторский браузерный код запрещены.
 :::
 ::::

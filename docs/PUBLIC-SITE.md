@@ -28,7 +28,7 @@ The landing is an ordinary multi-scene visual narrative whose first viewport con
 actions, and a generated visual result. Its style chooser, author path, public gallery, selected-text Review,
 agent setup, and trust boundary all come from the public declarative grammar. `website/routes.json` stages
 independent pages for every starter, the complete visual/interactive/data catalogs, Terminal and Cinematic
-showcases, the three decision showcases, and Review/Response workspaces. Their images are previews; the live
+showcases, the Executive brief, Motion showcase, decision showcases, and Review/Response workspaces. Their images are previews; the live
 bilingual pages and direct English/Russian Markdown routes are the authoritative proof.
 
 Site assembly adds one compact `Made with Moira` footer to every staged HTML page. The footer links to

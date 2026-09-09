@@ -18,6 +18,8 @@ import {
 } from '../review/contract.js';
 import type { ResolvedReviewArtifact } from '../review/binding.js';
 import { packageStrings } from '../localization.js';
+import { browserIcon } from './icon.js';
+import { placeSurface, visualViewportBounds, type ViewportBounds } from './overlay-position.js';
 
 const mobileReview = window.matchMedia('(max-width: 56.99rem)');
 const OPEN_HIGHLIGHT = 'agentic-review-open';
@@ -549,7 +551,7 @@ function createController(
         if (segment.reportRevision === manifest.reportRevision) {
           const edit = document.createElement('button');
           edit.type = 'button';
-          edit.textContent = strings.edit;
+          edit.append(browserIcon('pencil'), document.createTextNode(strings.edit));
           edit.dataset.reviewMessageEdit = message.id;
           li.append(edit);
         }
@@ -664,7 +666,7 @@ function createController(
       marker.dataset.reviewHighlightMarker = entry.thread.id;
       marker.dataset.reviewThreadState = entry.segment.resolved ? 'resolved' : 'open';
       marker.setAttribute('aria-label', strings.openNote(entry.subject.label));
-      marker.textContent = '●';
+      marker.append(browserIcon('comment'));
       markerHost.append(marker);
       positionMarker(marker, entry.range);
     }
@@ -723,7 +725,7 @@ function createController(
   }
 
   function positionAction(action: AnchoredAction): void {
-    const viewport = viewportRect();
+    const viewport = visualViewportBounds();
     const anchor = visibleRangeAnchorRect(action.range, viewport);
     const gutter = 8;
     const gap = 8;
@@ -861,7 +863,7 @@ function createController(
   function positionPopover(): void {
     if (el.popover.hidden || !popoverAnchor) return;
     const rect = popoverAnchor instanceof Range ? rangeAnchorRect(popoverAnchor) : popoverAnchor;
-    const viewport = viewportRect();
+    const viewport = visualViewportBounds();
     const gutter = 8;
     const gap = 10;
     if (mobileReview.matches) {
@@ -878,28 +880,16 @@ function createController(
     el.popover.style.maxHeight = `${Math.max(0, viewport.bottom - viewport.top - gutter * 2)}px`;
     const width = el.popover.offsetWidth;
     const height = el.popover.offsetHeight;
-    const rightFits = rect.right + gap + width <= viewport.right - gutter;
-    const leftFits = rect.left - gap - width >= viewport.left + gutter;
-    const left = rightFits
-      ? rect.right + gap
-      : leftFits
-        ? rect.left - gap - width
-        : Math.min(
-            Math.max(rect.left + rect.width / 2 - width / 2, viewport.left + gutter),
-            viewport.right - width - gutter,
-          );
-    const below = rect.bottom + gap;
-    const top =
-      rightFits || leftFits
-        ? Math.min(
-            Math.max(rect.top - gap, viewport.top + gutter),
-            viewport.bottom - height - gutter,
-          )
-        : below + height <= viewport.bottom - gutter
-          ? below
-          : Math.max(viewport.top + gutter, rect.top - height - gap);
-    el.popover.style.left = `${left}px`;
-    el.popover.style.top = `${top}px`;
+    const position = placeSurface({
+      anchor: rect,
+      surface: { width, height },
+      viewport,
+      gutter,
+      gap,
+      preference: 'inline',
+    });
+    el.popover.style.left = `${position.left}px`;
+    el.popover.style.top = `${position.top}px`;
   }
 
   return {
@@ -913,18 +903,6 @@ function createController(
       highlightRegistry()?.delete(RESOLVED_HIGHLIGHT);
       markerHost.remove();
     },
-  };
-}
-
-function viewportRect(): { left: number; top: number; right: number; bottom: number } {
-  const viewport = window.visualViewport;
-  const left = viewport?.offsetLeft ?? 0;
-  const top = viewport?.offsetTop ?? 0;
-  return {
-    left,
-    top,
-    right: left + (viewport?.width ?? window.innerWidth),
-    bottom: top + (viewport?.height ?? window.innerHeight),
   };
 }
 
@@ -1112,10 +1090,7 @@ function rangeAnchorRect(range: Range): DOMRect {
   return rectangles.at(-1) ?? range.getBoundingClientRect();
 }
 
-function visibleRangeAnchorRect(
-  range: Range,
-  viewport: { left: number; top: number; right: number; bottom: number },
-): DOMRect | undefined {
+function visibleRangeAnchorRect(range: Range, viewport: ViewportBounds): DOMRect | undefined {
   return [...range.getClientRects()]
     .filter((rect) => rect.width > 0 || rect.height > 0)
     .filter(
@@ -1129,7 +1104,7 @@ function visibleRangeAnchorRect(
 }
 
 function positionMarker(marker: HTMLButtonElement, range: Range): void {
-  const viewport = viewportRect();
+  const viewport = visualViewportBounds();
   const rect = visibleRangeAnchorRect(range, viewport);
   if (rect === undefined) {
     marker.hidden = true;

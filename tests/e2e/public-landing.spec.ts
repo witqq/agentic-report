@@ -16,49 +16,6 @@ const landingArtifacts = [
   { format: 'directory', url: generatedUrl('public-landing-directory/index.html') },
 ] as const;
 
-const publicProofs = [
-  {
-    page: 'index.html',
-    sources: ['source/landing/report.md', 'source/landing/report.ru.md'],
-  },
-  {
-    page: 'examples/incident-review/index.html',
-    sources: ['examples/incident-review/report.md', 'examples/incident-review/report.ru.md'],
-  },
-  {
-    page: 'examples/vendor-decision/index.html',
-    sources: ['examples/vendor-decision/report.md', 'examples/vendor-decision/report.ru.md'],
-  },
-  {
-    page: 'examples/launch-readiness/index.html',
-    sources: ['examples/launch-readiness/report.md', 'examples/launch-readiness/report.ru.md'],
-  },
-  {
-    page: 'examples/review-workspace/index.html',
-    sources: ['examples/review-workspace/report.md', 'examples/review-workspace/report.ru.md'],
-  },
-  {
-    page: 'examples/response-workspace/index.html',
-    sources: ['examples/response-workspace/report.md', 'examples/response-workspace/report.ru.md'],
-  },
-  ...[
-    'basic',
-    'research',
-    'architecture',
-    'tutorial',
-    'dashboard',
-    'landing',
-    'visual-catalog',
-    'interactive-catalog',
-    'visualization-catalog',
-    'terminal-portfolio',
-    'cinematic-story',
-  ].map((id) => ({
-    page: `examples/${id}/index.html`,
-    sources: [`examples/${id}/report.md`, `examples/${id}/report.ru.md`],
-  })),
-] as const;
-
 const siteRoutes = JSON.parse(await readFile(path.resolve('website/routes.json'), 'utf8')) as {
   readonly routes: readonly {
     readonly id: string;
@@ -67,6 +24,28 @@ const siteRoutes = JSON.parse(await readFile(path.resolve('website/routes.json')
     readonly kind: 'page' | 'copy' | 'generated';
   }[];
 };
+
+const publicProofs = siteRoutes.routes
+  .filter(
+    (route) => route.kind === 'page' && (route.id === 'landing' || route.id.startsWith('example-')),
+  )
+  .map((route) => {
+    const sourceDirectory =
+      route.id === 'landing' ? 'source/landing' : path.posix.dirname(route.href);
+    const sources = siteRoutes.routes
+      .filter(
+        (candidate) =>
+          candidate.kind === 'copy' &&
+          path.posix.dirname(candidate.href) === sourceDirectory &&
+          ['report.md', 'report.ru.md'].includes(path.posix.basename(candidate.href)),
+      )
+      .map((candidate) => candidate.href)
+      .sort();
+    if (sources.length !== 2) {
+      throw new Error(`Expected an English/Russian source pair for ${route.id}.`);
+    }
+    return { page: route.href, sources };
+  });
 
 const expectNoOverflow = async (page: Page): Promise<void> => {
   expect(
@@ -179,7 +158,9 @@ test('the staged public gallery opens every bilingual artifact and canonical sou
               ?.slice(0, 3)
               .map(Number);
             if (channels?.length !== 3) throw new Error(`Unsupported color: ${value}`);
-            return channels as unknown as readonly [number, number, number];
+            return (value.startsWith('color(srgb')
+              ? channels.map((channel) => channel * 255)
+              : channels) as unknown as readonly [number, number, number];
           };
           const luminance = (value: string): number => {
             const linear = (channel: number): number => {
@@ -378,6 +359,74 @@ test('Terminal and Cinematic gallery pages expose different structural experienc
     .not.toBe(initial);
   await expect(story).toHaveAttribute('data-scene-active', '');
   await expectNoOverflow(page);
+});
+
+test('executive and motion showcases exercise package-owned composition and fallbacks', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop-chromium');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+
+  await page.goto(stagedUrl('examples/executive-brief/index.html'));
+  await expect(page.locator('html')).toHaveAttribute('data-preset', 'monument');
+  await expect(page.locator('#opening')).toHaveAttribute('data-recipe', 'hero');
+  await expect(page.locator('#evidence')).toHaveAttribute('data-recipe', 'metrics');
+  await expect(page.locator('#path')).toHaveAttribute('data-recipe', 'story');
+  await expect(page.locator('#handoff')).toHaveAttribute('data-interaction', 'tilt');
+  await expect(page.locator('.visualization-timeline-event')).toHaveCount(4);
+  await page.locator('#evidence').scrollIntoViewIfNeeded();
+  await expectSettledSection(page.locator('#evidence'));
+  const metricCards = await page.locator('#evidence .semantic-card').evaluateAll((cards) =>
+    cards.map((card) => {
+      const box = card.getBoundingClientRect();
+      return { top: Math.round(box.top), height: box.height };
+    }),
+  );
+  expect(new Set(metricCards.map((card) => card.top)).size).toBeLessThanOrEqual(2);
+  expect(Math.max(...metricCards.map((card) => card.height))).toBeLessThanOrEqual(
+    Math.min(...metricCards.map((card) => card.height)) + 1,
+  );
+  await expectLoadedImages(page);
+  await expectNoOverflow(page);
+
+  await page.goto(stagedUrl('examples/motion-showcase/index.html'));
+  await expect(page.locator('html')).toHaveAttribute('data-preset', 'cinematic');
+  await expect(page.locator('#opening')).toHaveAttribute('data-interaction', 'depth');
+  await expect(page.locator('#rail')).toHaveAttribute('data-scene', 'progress');
+  await expect(page.locator('#rail .semantic-card')).toHaveCount(3);
+  const rail = page.locator('#rail');
+  expect(
+    await rail.evaluate((section) => {
+      const viewport = section.querySelector<HTMLElement>('.semantic-cards');
+      if (viewport === null) throw new Error('Motion rail viewport is absent.');
+      const boundary = viewport.getBoundingClientRect();
+      return [...viewport.querySelectorAll<HTMLElement>(':scope > .semantic-card')].filter(
+        (card) => {
+          const box = card.getBoundingClientRect();
+          return box.right > boundary.left && box.left < boundary.right;
+        },
+      ).length;
+    }),
+  ).toBeGreaterThanOrEqual(2);
+  const initial = Number(
+    await rail.evaluate((node) => node.style.getPropertyValue('--scene-progress')),
+  );
+  await rail.scrollIntoViewIfNeeded();
+  await expect
+    .poll(() => rail.evaluate((node) => Number(node.style.getPropertyValue('--scene-progress'))))
+    .not.toBe(initial);
+  await expect(rail).toHaveAttribute('data-scene-active', '');
+  await expectLoadedImages(page);
+  await expectNoOverflow(page);
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.reload();
+  await expect(
+    page.locator('[data-scene-active], [data-choreography-motion], [data-pointer-active]'),
+  ).toHaveCount(0);
+  await expect(page.locator('#opening img')).toBeVisible();
+  await expect(page.locator('#rail .semantic-card')).toHaveCount(3);
+  await expect(page.locator('#fallback')).toBeVisible();
 });
 
 test('viewport matrix keeps content readable, mobile concise, and wide layouts occupied', async ({

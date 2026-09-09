@@ -42,6 +42,8 @@ describe('package reader localization', () => {
     expect(packageStrings('en').threadsSummary(1, 1)).toBe('1 thread · unresolved: 1');
     expect(packageStrings('en').languageName('ru')).toBe('Russian');
     expect(packageStrings('ru').languageName('en')).toBe('Английский');
+    expect(packageStrings('en').scrollableGallery).toBe('Scrollable gallery');
+    expect(ru.scrollableGallery).toBe('Прокручиваемая галерея');
   });
 
   it('localizes every closed prior binding and textless target fallback', () => {

@@ -69,6 +69,12 @@ Mono type, prompt rhythm, scan texture, cursor, and clearly linked work cards.
 :::card{title="Cinematic story" href="examples/cinematic-story/index.html"}
 Local imagery drives a staged hero, scroll narrative, media rail, and measured close.
 :::
+:::card{title="Executive brief · Monument" href="examples/executive-brief/index.html"}
+A decisive opening, broad evidence field, operating path, and finished handoff using the default preset.
+:::
+:::card{title="Motion and depth showcase" href="examples/motion-showcase/index.html"}
+Scroll progress, reveal, choreography, depth, tilt, and their complete reduced-motion fallback.
+:::
 :::card{title="Landing starter" href="examples/landing/index.html"}
 A focused product narrative with clear actions, a portable proof, and an explicit boundary.
 :::
@@ -128,6 +134,12 @@ A practical build journey with tabs, progressive detail, and a bounded practice 
 :::card{title="Visualization atlas" href="examples/visualization-catalog/index.html"}
 Charts, a flow diagram, sequence, and timeline rendered from validated directives.
 :::
+:::card{title="Executive decision brief" href="examples/executive-brief/index.html"}
+The default Monument system applied to an evidence-led decision and operating handoff.
+:::
+:::card{title="Motion and depth" href="examples/motion-showcase/index.html"}
+A direct tour of the visual effects available through ordinary declarative roles.
+:::
 ::::
 
 [Report source](examples/basic/report.md) · [Research](examples/research/report.md) ·
@@ -135,7 +147,9 @@ Charts, a flow diagram, sequence, and timeline rendered from validated directive
 [Dashboard](examples/dashboard/report.md) · [Landing](examples/landing/report.md) ·
 [Visual catalog](examples/visual-catalog/report.md) · [Interactions](examples/interactive-catalog/report.md) ·
 [Visualizations](examples/visualization-catalog/report.md) · [Terminal](examples/terminal-portfolio/report.md) ·
-[Cinematic](examples/cinematic-story/report.md)
+[Cinematic](examples/cinematic-story/report.md) ·
+[Executive brief](examples/executive-brief/report.md) ·
+[Motion showcase](examples/motion-showcase/report.md)
 ::::::
 
 ::::::section{title="Comment where the question lives." id="review" nav="Review in place" recipe="evidence" interaction="depth"}

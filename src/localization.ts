@@ -33,6 +33,7 @@ export interface PackageStrings {
   readonly dialog: string;
   readonly openDialog: string;
   readonly showDetails: string;
+  readonly scrollableGallery: string;
   readonly filterItems: string;
   readonly filter: string;
   readonly toggleContent: string;
@@ -149,6 +150,7 @@ const en: PackageStrings = {
   dialog: 'Dialog',
   openDialog: 'Open dialog',
   showDetails: 'Show details',
+  scrollableGallery: 'Scrollable gallery',
   filterItems: 'Filter items',
   filter: 'Filter',
   toggleContent: 'Toggle content',
@@ -270,6 +272,7 @@ const ru: PackageStrings = {
   dialog: 'Диалог',
   openDialog: 'Открыть диалог',
   showDetails: 'Показать подробности',
+  scrollableGallery: 'Прокручиваемая галерея',
   filterItems: 'Фильтровать элементы',
   filter: 'Фильтр',
   toggleContent: 'Переключить содержимое',

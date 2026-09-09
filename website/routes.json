@@ -369,6 +369,42 @@
       "kind": "copy"
     },
     {
+      "id": "example-executive-brief",
+      "href": "examples/executive-brief/index.html",
+      "source": "../examples/executive-brief",
+      "kind": "page"
+    },
+    {
+      "id": "source-executive-brief",
+      "href": "examples/executive-brief/report.md",
+      "source": "../examples/executive-brief/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-executive-brief-ru",
+      "href": "examples/executive-brief/report.ru.md",
+      "source": "../examples/executive-brief/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-motion-showcase",
+      "href": "examples/motion-showcase/index.html",
+      "source": "../examples/motion-showcase",
+      "kind": "page"
+    },
+    {
+      "id": "source-motion-showcase",
+      "href": "examples/motion-showcase/report.md",
+      "source": "../examples/motion-showcase/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-motion-showcase-ru",
+      "href": "examples/motion-showcase/report.ru.md",
+      "source": "../examples/motion-showcase/report.ru.md",
+      "kind": "copy"
+    },
+    {
       "id": "example-terminal-portfolio",
       "href": "examples/terminal-portfolio/index.html",
       "source": "../examples/terminal-portfolio",

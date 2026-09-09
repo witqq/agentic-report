@@ -2092,12 +2092,17 @@ test('declarative interactions preserve scoped state, focus, and responsive file
       const style = getComputedStyle(element);
       return {
         height: element.getBoundingClientRect().height,
+        coarsePointer: matchMedia('(pointer: coarse)').matches,
+        compactOperation:
+          element.hasAttribute('data-package-operation') &&
+          matchMedia('(max-width: 48rem)').matches,
         paddingLeft: Number.parseFloat(style.paddingLeft),
         paddingRight: Number.parseFloat(style.paddingRight),
       };
     });
-    expect(metrics.height, name).toBeGreaterThanOrEqual(32);
-    expect(metrics.height, name).toBeLessThanOrEqual(40);
+    const touchTarget = metrics.coarsePointer || metrics.compactOperation;
+    expect(metrics.height, name).toBeGreaterThanOrEqual(touchTarget ? 44 : 32);
+    expect(metrics.height, name).toBeLessThanOrEqual(touchTarget ? 48 : 40);
     expect(metrics.paddingLeft, name).toBeLessThanOrEqual(12);
     expect(metrics.paddingRight, name).toBeLessThanOrEqual(12);
   };
@@ -2113,8 +2118,9 @@ test('declarative interactions preserve scoped state, focus, and responsive file
   await expect(page.locator('#glossary-decision-packet')).toContainText(
     'A compact bundle of evidence',
   );
-  const termReference = term.locator('..');
-  const termExplanation = termReference.getByRole('dialog', { name: 'Decision packet' });
+  const termPanelId = await term.getAttribute('aria-controls');
+  if (termPanelId === null) throw new Error('Decision packet term has no controlled panel.');
+  const termExplanation = page.locator(`#${termPanelId}`);
   if (!testInfo.project.name.startsWith('mobile')) {
     await term.hover();
     await expect(termExplanation).toBeVisible();
@@ -2128,7 +2134,7 @@ test('declarative interactions preserve scoped state, focus, and responsive file
   await expect(term).toBeFocused();
   await activate(term);
   await expect(termExplanation).toBeVisible();
-  const fullDefinitionLink = termReference.getByRole('link', { name: 'View full definition' });
+  const fullDefinitionLink = termExplanation.getByRole('link', { name: 'View full definition' });
   await expect(fullDefinitionLink).toHaveAttribute('href', '#glossary-decision-packet');
   await activate(fullDefinitionLink);
   await expect(page).toHaveURL(/#glossary-decision-packet$/u);
@@ -2136,9 +2142,10 @@ test('declarative interactions preserve scoped state, focus, and responsive file
   await page.getByRole('heading', { name: 'Progressive detail' }).click();
   await expect(termExplanation).toBeHidden();
   const secondTerm = terms.nth(1);
-  const secondExplanation = secondTerm.locator('..').getByRole('dialog', {
-    name: 'Decision packet',
-  });
+  const secondPanelId = await secondTerm.getAttribute('aria-controls');
+  if (secondPanelId === null)
+    throw new Error('Second decision packet term has no controlled panel.');
+  const secondExplanation = page.locator(`#${secondPanelId}`);
   await expect(secondExplanation).toBeHidden();
   await activate(secondTerm);
   await expect(secondExplanation).toBeVisible();
