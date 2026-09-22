@@ -312,6 +312,9 @@ function checkPageContract(registry: RegistryIntegrityInput, issues: string[]): 
   const layout = registry.manifestFields.find((field) => field.name === 'layout');
   const scrollProgress = registry.manifestFields.find((field) => field.name === 'scrollProgress');
   const attribution = registry.manifestFields.find((field) => field.name === 'attribution');
+  const review = registry.manifestFields.find((field) => field.name === 'review');
+  const themeToggle = registry.manifestFields.find((field) => field.name === 'themeToggle');
+  const presetSwitcher = registry.manifestFields.find((field) => field.name === 'presetSwitcher');
   if (preset?.default !== registry.page.defaultPreset) {
     issues.push('page preset: manifest default differs from registry default');
   }
@@ -332,6 +335,21 @@ function checkPageContract(registry: RegistryIntegrityInput, issues: string[]): 
     attribution.default !== registry.page.defaultAttribution
   ) {
     issues.push('page attribution: field differs from registry default');
+  }
+  if (review?.constraint?.kind !== 'boolean' || review.default !== registry.page.defaultReview) {
+    issues.push('page review: field differs from registry default');
+  }
+  if (
+    themeToggle?.constraint?.kind !== 'boolean' ||
+    themeToggle.default !== registry.page.defaultThemeToggle
+  ) {
+    issues.push('page theme control: field differs from registry default');
+  }
+  if (
+    presetSwitcher?.constraint?.kind !== 'boolean' ||
+    presetSwitcher.default !== registry.page.defaultPresetSwitcher
+  ) {
+    issues.push('page preset switcher: field differs from registry default');
   }
 
   const tokens = registry.manifestFields.find((field) => field.name === 'tokens');

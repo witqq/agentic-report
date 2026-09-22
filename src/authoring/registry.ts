@@ -242,7 +242,7 @@ export function sectionRecipeDefaults(
 }
 
 export const PAGE_CONTRACT = {
-  defaultPreset: 'monument',
+  defaultPreset: 'material',
   presets: PAGE_PRESETS,
   defaultLayout: 'document',
   layouts: ['document', 'dashboard', 'landing', 'mixed'],
@@ -250,6 +250,9 @@ export const PAGE_CONTRACT = {
   themes: ['system', 'light', 'dark'],
   defaultScrollProgress: false,
   defaultAttribution: true,
+  defaultReview: false,
+  defaultThemeToggle: true,
+  defaultPresetSwitcher: false,
   motion: PAGE_MOTION_POLICY,
   tokens: PAGE_TOKEN_FIELDS,
 } as const;
@@ -272,7 +275,7 @@ export const DIAGRAM_CONTRACT = {
       ungrouped: 0,
       incomplete: 1,
       minimum: 2,
-      maximum: 3,
+      maximum: 5,
       requireEveryNode: true,
       direction: 'right',
     },
@@ -672,6 +675,30 @@ export const authoringRegistry = {
         'Shows the package-owned “Made with Agentic Report” footer link; set false to omit it.',
       required: false,
       default: PAGE_CONTRACT.defaultAttribution,
+      constraint: { kind: 'boolean' },
+    },
+    {
+      name: 'themeToggle',
+      description:
+        'Shows the package-owned light and dark control; set false for a page that must stay in the scheme it was built with.',
+      required: false,
+      default: PAGE_CONTRACT.defaultThemeToggle,
+      constraint: { kind: 'boolean' },
+    },
+    {
+      name: 'presetSwitcher',
+      description:
+        'Shows a package-owned visual-style selector that swaps preset and its tokens live; the colour scheme stays where the reader put it.',
+      required: false,
+      default: PAGE_CONTRACT.defaultPresetSwitcher,
+      constraint: { kind: 'boolean' },
+    },
+    {
+      name: 'review',
+      description:
+        'Enables the package-owned review workspace; off by default so an ordinary page ships as a document rather than a review surface.',
+      required: false,
+      default: PAGE_CONTRACT.defaultReview,
       constraint: { kind: 'boolean' },
     },
     {
@@ -1646,6 +1673,12 @@ function visualizationDirectives(): readonly DirectiveDefinition[] {
           DIAGRAM_CONTRACT.defaultType,
         ),
         enumAttribute('direction', 'Flow direction.', ['right', 'down'], 'right'),
+        enumAttribute(
+          'spacing',
+          'Layout breathing room; the package keeps a readable result at every value.',
+          ['compact', 'comfortable', 'spacious'],
+          'comfortable',
+        ),
       ],
       children: 'group-node-and-edge-directives',
     }),
@@ -1670,6 +1703,15 @@ function visualizationDirectives(): readonly DirectiveDefinition[] {
           ['neutral', 'accent', 'success', 'warning'],
           'neutral',
         ),
+        {
+          name: 'row',
+          description:
+            'Optional one-based layout row; nodes sharing a row line up across groups and connect with a straight edge.',
+          required: false,
+          constraint: { kind: 'integer', minimum: 1, maximum: 20 },
+          renderProperty: 'dataRow',
+          invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
+        },
       ],
       children: 'none',
       requiredParent: 'diagram',
@@ -1681,6 +1723,12 @@ function visualizationDirectives(): readonly DirectiveDefinition[] {
         identityAttribute('from', 'Source node identity.'),
         identityAttribute('to', 'Target node identity.'),
         textAttribute('label', 'Optional connection label.', false),
+        enumAttribute(
+          'route',
+          'Optional routing override; auto keeps the shortest readable path.',
+          ['auto', 'direct', 'around'],
+          'auto',
+        ),
       ],
       children: 'none',
       requiredParent: 'diagram',

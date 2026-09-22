@@ -263,6 +263,7 @@ describe('report analysis', () => {
       [
         '---',
         'title: Reviewable visualization',
+        'review: true',
         'language: en',
         '---',
         '# Reviewable visualization',
@@ -864,6 +865,7 @@ async function reviewWorkspace(prefix: string): Promise<string> {
     [
       '---',
       'title: Review protocol',
+      'review: true',
       '---',
       '# Review protocol',
       '',

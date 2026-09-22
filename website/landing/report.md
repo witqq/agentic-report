@@ -8,6 +8,7 @@ localizations:
 theme: system
 layout: landing
 preset: monument
+review: true
 scrollProgress: true
 ---
 

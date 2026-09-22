@@ -243,7 +243,7 @@ optional fixed-shape `en`/`ru` localization map, theme, layout, a coordinated pr
 progress, a default-on boolean package attribution, compact page-token overrides, and output defaults.
 `attribution: false` removes only the renderer-owned
 **Made with Agentic Report** footer; default and opt-out behavior are identical across output formats.
-`monument` is the registry-owned default; `material`, `signal`, `terminal`, and `cinematic` provide the other
+`material` is the registry-owned default; `monument`, `signal`, `terminal`, and `cinematic` provide the other
 recommended visual families. `studio` and `editorial` remain compatibility identities mapped to Monument and
 Material. Theme remains an independent color mode, and explicitly authored bounded tokens
 override the preset on density, typography, accent, content width, and radius. The icon vocabulary is a

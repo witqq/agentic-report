@@ -72,7 +72,7 @@
             "editorial"
           ],
           "description": "Coordinated package-owned visual defaults; explicit bounded token values override the preset.",
-          "default": "monument"
+          "default": "material"
         },
         "theme": {
           "type": "string",
@@ -95,6 +95,21 @@
           "type": "boolean",
           "description": "Shows the package-owned “Made with Agentic Report” footer link; set false to omit it.",
           "default": true
+        },
+        "themeToggle": {
+          "type": "boolean",
+          "description": "Shows the package-owned light and dark control; set false for a page that must stay in the scheme it was built with.",
+          "default": true
+        },
+        "presetSwitcher": {
+          "type": "boolean",
+          "description": "Shows a package-owned visual-style selector that swaps preset and its tokens live; the colour scheme stays where the reader put it.",
+          "default": false
+        },
+        "review": {
+          "type": "boolean",
+          "description": "Enables the package-owned review workspace; off by default so an ordinary page ships as a document rather than a review surface.",
+          "default": false
         },
         "tokens": {
           "type": "object",
@@ -1552,6 +1567,12 @@
               "enum": ["right", "down"],
               "description": "Flow direction.",
               "default": "right"
+            },
+            "spacing": {
+              "type": "string",
+              "enum": ["compact", "comfortable", "spacious"],
+              "description": "Layout breathing room; the package keeps a readable result at every value.",
+              "default": "comfortable"
             }
           },
           "required": ["title", "description"]
@@ -1615,6 +1636,12 @@
               "enum": ["neutral", "accent", "success", "warning"],
               "description": "Package-owned node emphasis.",
               "default": "neutral"
+            },
+            "row": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "description": "Optional one-based layout row; nodes sharing a row line up across groups and connect with a straight edge."
             }
           },
           "required": ["id", "label"]
@@ -1646,6 +1673,12 @@
               "type": "string",
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
               "description": "Optional connection label."
+            },
+            "route": {
+              "type": "string",
+              "enum": ["auto", "direct", "around"],
+              "description": "Optional routing override; auto keeps the shortest readable path.",
+              "default": "auto"
             }
           },
           "required": ["from", "to"]

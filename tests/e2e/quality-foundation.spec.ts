@@ -32,7 +32,10 @@ test('compact shell exposes a quiet localized icon toolbar without synthetic pag
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(artifactUrl('public-landing'));
+  // Обычная страница ревью не заказывала, поэтому кнопки ревью у неё нет вовсе.
+  await page.goto(artifactUrl('layout-document'));
+  await expect(page.locator('[data-review-toggle]')).toHaveCount(0);
+  await page.goto(artifactUrl('review-workspace'));
 
   await expect(page.locator('.topbar-context')).toBeHidden();
   await expect(page.locator('[data-nav-toggle] [data-package-icon="three-bars"]')).toBeVisible();

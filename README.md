@@ -260,7 +260,7 @@ bucket cards also support drag-and-drop. The reader copies or downloads the same
 complete source is [`examples/response-workspace/report.md`](examples/response-workspace/report.md).
 
 The package owns four responsive page layouts: `document`, `dashboard`, `landing`, and `mixed`. Authors
-select one as metadata and may choose `monument` (default), `material`, `signal`, `terminal`, or `cinematic`, an
+select one as metadata and may choose `material` (default), `monument`, `signal`, `terminal`, or `cinematic`, an
 independent `system`, `light`, or `dark` color mode, and compact token overrides for `density`, `font`,
 `accent`, `width`, and `radius`. Preset defaults apply first and explicitly authored token values apply
 last. `studio` and `editorial` remain accepted compatibility identities for Monument and Material.

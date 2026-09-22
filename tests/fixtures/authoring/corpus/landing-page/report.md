@@ -4,6 +4,7 @@ description: Bounded landing-page contract coverage.
 language: en
 preset: studio
 scrollProgress: true
+presetSwitcher: true
 ---
 
 # Landing registry corpus

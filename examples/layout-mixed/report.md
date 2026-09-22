@@ -7,6 +7,7 @@ localizations:
 theme: system
 layout: mixed
 preset: monument
+presetSwitcher: true
 tokens:
   density: comfortable
   font: sans

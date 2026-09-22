@@ -418,7 +418,14 @@ theme, and optional token values:
 - `language`: selects reader chrome for one source variant; unsupported single-language tags use English;
 - `localizations.en` / `localizations.ru`: optional confined alternate Markdown entry for the other
   package-supported locale; a multilingual primary must itself be English or Russian;
-- `preset`: `monument` (default), `material`, `signal`, `terminal`, or `cinematic`; compatibility identities
+  The colour scheme and the visual style are two separate things, and each has its own optional control.
+  `theme` picks light or dark and the reader flips it with the scheme button; `themeToggle: false` removes
+  that button from a page that must stay in the scheme it was built with. `preset` picks the visual style,
+  and `presetSwitcher: true` adds a style selector that swaps the preset together with all five of its tokens
+  live, without touching the scheme the reader chose. Both controls are independent: a page may show one,
+  both, or neither.
+
+- `preset`: `material` (default), `monument`, `signal`, `terminal`, or `cinematic`; compatibility identities
   `studio` and `editorial` remain accepted;
 - `theme`: `system` (default), `light`, or `dark`;
 - `scrollProgress`: boolean, default `false`; decorative normal-motion reading progress;
@@ -675,15 +682,25 @@ Open the result directly through `file://`.
 `chart.type` is `bar`, `line`, or `pie`. Charts accept 1–6 series with 1–12 points each; series share the
 same unique ordered labels. Pie charts accept exactly one non-negative series with a positive total.
 `diagram.type` is `flow` by default or `sequence`. A flow accepts 1–20 unique nodes and up to 40 validated
-edges. It is either ungrouped or declares 2–3 non-empty groups and assigns every node to one; a single
+edges. It is either ungrouped or declares 2–5 non-empty groups and assigns every node to one; a single
 group builds and reports `INCOMPLETE_DIAGRAM_GROUPING` so grouping can be finished later. Ungrouped flows
 accept `direction="right|down"`; grouped subsystem columns are rightward. A sequence accepts 2–6 node participants and 1–40 labelled edge messages;
 participant and message order is source order, while groups, direction and self-messages are rejected.
-Grouped members use authored row order; longer intra-group connections route through the group's inner
-gutter. The first handoff for an adjacent group pair uses its inter-column gutter. Non-adjacent handoffs and
-additional edges for an already-used pair receive distinct bottom-corridor lanes outside all groups, which
-expands the SVG viewBox height within the finite edge bound. Split a dense arbitrary graph rather than treating
-this bounded flow layout as a general graph optimizer.
+
+Layout is measured rather than fixed: a node box grows to fit its own wrapped label, a group column grows
+to fit its widest node, and every visible label stays horizontal. Routing follows geometry. Nodes sharing a
+row in adjacent groups connect with a level line; different rows in adjacent groups use a lane in the gap
+between the columns; a longer connection inside one group uses its own left-hand gutter; only a backward or
+column-skipping edge takes a lane under the diagram. Three optional attributes let the author overrule the
+default without being required for a readable result:
+
+| Attribute                                  | Where     | Meaning                                                                                             |
+| ------------------------------------------ | --------- | --------------------------------------------------------------------------------------------------- |
+| `spacing="compact\|comfortable\|spacious"` | `diagram` | Breathing room between rows and columns; every value stays readable.                                |
+| `row="1..20"`                              | `node`    | One-based layout row. Nodes given the same row line up across groups and connect with a level line. |
+| `route="auto\|direct\|around"`             | `edge`    | `direct` keeps the short path even across columns; `around` sends the edge under the diagram.       |
+
+Split a dense arbitrary graph rather than treating this bounded flow layout as a general graph optimizer.
 Timelines accept 1–20 direct events. Every visual requires a title and description and compiles into
 theme-aware responsive SVG or semantic HTML without visualization runtime code. A chart or diagram is one
 atomic accessible image whose description includes the complete authored data; visible axis and connection

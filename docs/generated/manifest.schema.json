@@ -60,7 +60,7 @@
       "type": "string",
       "enum": ["monument", "material", "signal", "terminal", "cinematic", "studio", "editorial"],
       "description": "Coordinated package-owned visual defaults; explicit bounded token values override the preset.",
-      "default": "monument"
+      "default": "material"
     },
     "theme": {
       "type": "string",
@@ -83,6 +83,21 @@
       "type": "boolean",
       "description": "Shows the package-owned “Made with Agentic Report” footer link; set false to omit it.",
       "default": true
+    },
+    "themeToggle": {
+      "type": "boolean",
+      "description": "Shows the package-owned light and dark control; set false for a page that must stay in the scheme it was built with.",
+      "default": true
+    },
+    "presetSwitcher": {
+      "type": "boolean",
+      "description": "Shows a package-owned visual-style selector that swaps preset and its tokens live; the colour scheme stays where the reader put it.",
+      "default": false
+    },
+    "review": {
+      "type": "boolean",
+      "description": "Enables the package-owned review workspace; off by default so an ordinary page ships as a document rather than a review surface.",
+      "default": false
     },
     "tokens": {
       "type": "object",

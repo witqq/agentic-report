@@ -646,6 +646,7 @@ describe('agent discovery contract', () => {
 });
 
 const generatedProjectionPaths = [
+  'skills/agentic-report/references/catalog.md',
   'docs/generated/manifest.schema.json',
   'docs/generated/directives.schema.json',
   'docs/generated/source.schema.json',
