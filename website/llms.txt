@@ -9,7 +9,7 @@ Install the ready-made agent skill with:
 Use it for static agent-to-human handoffs where evidence, relationships, code explanations, timelines,
 visualizations, selected-text notes, or fragment-level review are clearer as a page than as a long chat
 response. A custom skill may own domain research and call the pinned agentic-report CLI as its final rendering
-stage. In a generated report, select eligible text and choose **Create note**; an anchored popover owns the
+stage. With `review: true` in the frontmatter, select eligible text and choose **Create note**; an anchored popover owns the
 complete discussion and saved open/resolved ranges remain highlighted. **Review** is only a non-reflowing
 list/import/export overlay. Review Workspace exports every selected-text note and compatible imported
 whole-block thread together in one local `review.json`.
@@ -19,7 +19,7 @@ editorial type, local media framing, mesh/glow/grain/grid surfaces, reveal/stagg
 data choreography, fine-pointer depth/tilt, and responsive action placement without author CSS or JavaScript.
 Reduced motion keeps all content visible. On narrow screens complex arrangements return to source order,
 gallery scroll stays local, and the topbar uses accessible icon controls without widening the document.
-Start with the Monument default and section recipes: hero, evidence, story, rail, or metrics. Recipes include
+Start with the Material default and section recipes: hero, evidence, story, rail, or metrics. Recipes include
 coordinated motion; override only the role you need. Authored operation labels stay visible beside package
 icons on phones, and composition width remains separate from paragraph reading width.
 
@@ -45,8 +45,8 @@ locale. Single-language review export is version 3; multilingual export is versi
 
 Requires Node.js 24.18.0 or newer. The first npx run requires npm registry access. Start with:
 
-    npx --yes agentic-report@0.14.0 init ./my-page --starter landing --json
-    npx --yes agentic-report@0.14.0 build ./my-page --output ./my-page.html --json
+    npx --yes agentic-report@0.15.0 init ./my-page --starter landing --json
+    npx --yes agentic-report@0.15.0 build ./my-page --output ./my-page.html --json
 
 Edit `my-page/report.md` between the two commands and open `my-page.html` through `file://`. Build validates
 the complete source before publishing. Use `validate` for separate diagnostics, `inspect` for source/catalog

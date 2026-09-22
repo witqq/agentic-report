@@ -341,7 +341,7 @@ The registry owns a closed data vocabulary for `chart`/`series`/`point`,
 `diagram`/`group`/`node`/`edge`, and
 `timeline`/`event`. Charts support `bar`, `line`, and `pie`; series are bounded, share an ordered category
 domain, and use finite numeric values. Flow diagrams contain up to twenty uniquely identified nodes, bounded
-directed references, and optionally two or three complete subsystem groups; a single group builds with an
+directed references, and optionally two to five complete subsystem groups; a single group builds with an
 authored warning so grouping can be finished later. Sequence diagrams retain
 participant and labelled message order. The registry owns both form-specific bounds and unsupported
 combinations. Timeline events retain ordinary Markdown bodies. Every top-level visual requires a visible

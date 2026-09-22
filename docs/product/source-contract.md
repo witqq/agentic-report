@@ -36,10 +36,15 @@ Frontmatter takes precedence. Supported fields are:
   metadata. Presentation and output settings come from the primary entry. An empty object, unsupported
   locale, recursive localization declaration, canonical alias, or lexical/symlink escape fails before
   publication;
-- `preset`: coordinated `monument`, `material`, `signal`, `terminal`, or `cinematic` package-owned visual
+- `preset`: coordinated `material`, `monument`, `signal`, `terminal`, or `cinematic` package-owned visual
   defaults; `studio` and `editorial` remain compatibility identities;
 - `theme`: `system`, `light`, or `dark`;
 - `layout`: `document`, `dashboard`, `landing`, or `mixed`;
+- `themeToggle`: boolean; default `true`; shows the reader's package-owned light/dark button;
+- `presetSwitcher`: boolean; default `false`; adds a reader style selector that swaps the preset and its five
+  tokens live without changing the color scheme;
+- `review`: boolean; default `false`; ships Review Workspace. A build given a prior review sidecar enables it
+  automatically;
 - `scrollProgress`: boolean; default `false`; enables decorative normal-motion reading progress;
 - `attribution`: boolean; default `true`; shows the package-owned footer link **Made with Agentic Report**
   to `https://agentic-report.witqq.dev/`. Set `false` to omit only that footer; authored links and prose are
@@ -186,7 +191,9 @@ complete input files are never returned.
 
 ### Review Workspace reader interface
 
-When a report contains review targets, annotation is always available and its topbar includes `Review`; there
+Review Workspace ships only when `review` is `true` or a prior review sidecar is supplied; otherwise the page
+carries no review manifest, topbar action, or annotation layer. When an enabled report contains review targets,
+annotation is always available and its topbar includes `Review`; there
 is no activation mode, target outline, block button, or exit action. Selecting eligible rendered text exposes
 one localized **Create note** action beside the native selection. Activation snapshots the range and opens a
 compact anchored popover containing the exact quote, message history, compose/edit actions, and resolve or
@@ -245,8 +252,9 @@ The root metadata value, `tokens`, and `output` must be objects; scalar and arra
 silently replaced by defaults. Validation diagnostics point to the actual manifest or frontmatter field
 range that supplied the failing value.
 
-Defaults are `layout: document`, `theme: system`, `preset: monument`, `scrollProgress: false`, and
-`attribution: true`. Presets provide these coordinated
+Defaults are `layout: document`, `theme: system`, `preset: material`, `themeToggle: true`,
+`presetSwitcher: false`, `review: false`, `scrollProgress: false`, and `attribution: true`. Presets provide
+these coordinated
 token defaults:
 
 | Preset      | Density     | Font  | Accent | Width | Radius |
@@ -498,16 +506,20 @@ Top-level visuals require `title` and `description`. A chart accepts 1–6 `seri
 leaf `point` values, and every series must use the same unique labels in the same order. Values are finite
 decimal numbers between `-999999999` and `999999999`, with at most four decimal places. Pie charts require
 one series, non-negative values, and at least one positive value. `diagram.type` defaults to `flow`. A flow
-accepts 1–20 unique nodes and up to 40 edges; it is ungrouped or declares 2–3 non-empty groups, with one group accepted as unfinished grouping and warned about, and gives every
+accepts 1–20 unique nodes and up to 40 edges; it is ungrouped or declares 2–5 non-empty groups, with one group accepted as unfinished grouping and warned about, and gives every
 node a declared group. Ungrouped flows accept `direction="right|down"`; grouped subsystem columns are
 rightward. A `sequence` accepts 2–6 node participants and 1–40
 labelled edge messages in authored order; group records, group membership, direction and self-messages fail.
 Every edge or message references two distinct declared node IDs.
-Grouped members use authored row order. Longer intra-group connections route through the group's inner gutter,
-and the first connection for an adjacent group pair uses its inter-column gutter. Non-adjacent connections and
-additional edges for an already-used pair receive distinct bottom-corridor lanes outside all groups; each lane
-increases the SVG viewBox height within the finite edge bound. Dense arbitrary graph optimization remains
-outside the bounded flow contract.
+Layout is measured: a node box grows to fit its wrapped label, a group column grows to fit its widest node,
+and labels stay horizontal. Grouped members use authored row order unless a node sets `row="1..20"`; nodes
+sharing a row across adjacent groups line up and connect with a level line, and different rows in adjacent
+groups use a lane in the gap between the columns. A longer intra-group connection routes through the group's
+own gutter; only a backward or column-skipping edge takes a bottom-corridor lane outside all groups, and each
+lane increases the SVG viewBox height within the finite edge bound. `edge` accepts
+`route="auto|direct|around"`: `direct` keeps the short path across columns and `around` sends the edge under
+the diagram. `diagram` accepts `spacing="compact|comfortable|spacious"` (default `comfortable`). Dense
+arbitrary graph optimization remains outside the bounded flow contract.
 A timeline accepts 1–20 direct events. Visual data containers reject prose as a direct child, while an
 event body accepts ordinary Markdown.
 
@@ -597,7 +609,7 @@ bucket question, 4,000 characters per text or comment value, and 2,000,000 bytes
 | `toggle`            | Button with `role="switch"` and a controlled panel; `default="off"` hides content, `on` shows it.                                                                                                                                                                                                                                                                                                                                                           | Native button `Enter`/`Space` toggles `aria-checked` and panel visibility.                                                                                                                                                 | Click/tap toggles the same state. Instances are isolated.                                                                                                                                              |
 | `demo`              | Bounded numeric output starts at `start` (default `0`).                                                                                                                                                                                                                                                                                                                                                                                                     | Native Increment button activation adds `step` (default `1`).                                                                                                                                                              | Click/tap performs the same package-owned increment; no author script is accepted.                                                                                                                     |
 | `copyable`          | Ordinary paragraphs, emphasis, links and wrapping remain visible body prose. One package button copies rendered visible text only; its own label and hidden helper/panel content are outside the content owner.                                                                                                                                                                                                                                             | Native Copy button activation supports focus, `Enter`, and `Space`; success/failure text follows document locale.                                                                                                          | Click/tap performs the same clipboard action. Clipboard failure changes only the button label and leaves prose unchanged.                                                                              |
-| Review Workspace    | Annotation is always available without block controls or a mode. **Create note** opens the exact selection in an anchored full-thread popover; desktop flips/shifts/clamps it and mobile uses a bounded visual-viewport bottom surface. Saved open/resolved ranges stay visibly distinct. `Review` opens only an overlay list/import/export surface and never reflows the report. Legacy whole-block threads remain list-only.                              | `Shift` release focuses **Create note**. Each highlight has a focusable overlay marker; the popover textarea, edit, resolve/reopen, close, and list/import/export controls use native keyboard behavior and restore focus. | Pointer/touch selection exposes **Create note**; hover/tap on a saved range exposes **View thread**. Window and visual-viewport changes keep active controls on screen. Invalid ranges create nothing. |
+| Review Workspace    | With `review: true`, annotation is available without block controls or a mode. **Create note** opens the exact selection in an anchored full-thread popover; desktop flips/shifts/clamps it and mobile uses a bounded visual-viewport bottom surface. Saved open/resolved ranges stay visibly distinct. `Review` opens only an overlay list/import/export surface and never reflows the report. Legacy whole-block threads remain list-only.                | `Shift` release focuses **Create note**. Each highlight has a focusable overlay marker; the popover textarea, edit, resolve/reopen, close, and list/import/export controls use native keyboard behavior and restore focus. | Pointer/touch selection exposes **Create note**; hover/tap on a saved range exposes **View thread**. Window and visual-viewport changes keep active controls on screen. Invalid ranges create nothing. |
 | `response`          | Native fieldsets, legends, radio buttons, checkboxes, selects, number inputs, textareas, ordered lists, safe original anchors, status output, import control, and copy/file export. Each form owns isolated current-tab state.                                                                                                                                                                                                                              | Native fields cover every value. Bucket selects are the complete fallback to drag-and-drop; explicit Move up/down buttons reorder items. Copy, download, import, and original links use native controls.                   | Bucket cards may additionally be dragged between named columns. Pointer changes use the same state as keyboard controls; original links do not mutate answers.                                         |
 
 `actions`/`action` does not appear in the stateful table because it is an ordinary group of links. Native

@@ -3,7 +3,7 @@ name: agentic-report
 description: Create and build polished local interactive reports, research pages, architecture pages, tutorials, dashboards, decisions, and landing pages from declarative Markdown, with optional diagnostic inspection. Use for static agent-to-human page handoff; do not use for hosted apps, live collaboration, deployment, publication, or bespoke frontend development.
 license: MIT
 metadata:
-  version: '0.14.0'
+  version: '0.15.0'
   homepage: https://agentic-report.witqq.dev/
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run.
 ---
@@ -17,8 +17,8 @@ Create a local declarative source, build it, open it, and hand the user a finish
 Use the release pinned in this skill:
 
 ```sh
-npx --yes agentic-report@0.14.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.14.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.15.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.15.0 build ./my-page --output ./my-page.html --json
 ```
 
 Choose a different starter or destination name when the task requires it. Edit the generated source between
@@ -94,7 +94,7 @@ unresolved content facts.
   child with `placement="appendix"`; do not move it to a separate hand-maintained source list.
 - Compose visually distinct sections with the closed package grammar before considering a bespoke page:
   start with `recipe="hero|evidence|story|rail|metrics"` when one of those reader jobs fits, then add only
-  the detailed overrides that are actually needed. Monument is the default preset; Material, Signal,
+  the detailed overrides that are actually needed. Material is the default preset; Monument, Signal,
   Terminal, and Cinematic are the other recommended directions, while Studio and Editorial remain accepted
   compatibility identities.
   `composition="flow|stage|split|mosaic|story|stack"`, `viewport="adaptive|full|bounded"`,
@@ -320,7 +320,8 @@ written down rather than silently.
 
 ## Review the result with a human
 
-Use Review Workspace for always-on local selected-text discussion. A reader selects eligible text, chooses
+Use Review Workspace for local selected-text discussion; it ships only with `review: true` in the frontmatter
+(or when a prior sidecar is passed through `--review`). A reader selects eligible text, chooses
 **Create note**, and writes in the anchored full-thread popover; saved open/resolved ranges stay highlighted,
 and **View thread** reopens the same popover by pointer, touch, or focusable marker. The topbar **Review**
 action opens only a non-reflowing list/import/export overlay. It exports every selection plus imported legacy
@@ -353,7 +354,7 @@ If the user does not trust the published npm package, do not run it through `npx
 pinned by this skill, expose the checked commit for review, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.14.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.15.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -363,7 +364,7 @@ pnpm build
 node dist/node/cli.js init ../my-page --starter report --json
 ```
 
-Substitute `node dist/node/cli.js` for every `npx --yes agentic-report@0.14.0` command above. Keep page
+Substitute `node dist/node/cli.js` for every `npx --yes agentic-report@0.15.0` command above. Keep page
 sources and outputs outside the cloned repository.
 
 Explain that this avoids executing the `agentic-report` npm package but is not registry-free:

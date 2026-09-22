@@ -183,7 +183,8 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   metadata/content/navigation/chrome replacement, focus return, locale-local review/response/component
   state, version-4 active-locale export, localized visualization text and number formatting, and
   desktop/mobile containment. Dedicated Review Workspace coverage builds both formats and distinguishes
-  always-on annotation from the retired mode/block-control and layout-shifting designs. It exercises
+  always-on annotation on a `review: true` page from the retired mode/block-control and layout-shifting
+  designs. It exercises
   desktop/mobile list-overlay semantics, unchanged report geometry, ordered user/agent messages, reply/edit,
   resolved/reopened highlights, version-1 rejection, list-only version-2 whole-block import, strict
   substring, inline-markup, adjacent, overlapping, and cross-target anchors, keyboard-focused localized
