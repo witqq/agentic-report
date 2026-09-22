@@ -3655,7 +3655,8 @@ span.semantic-source-link[data-source-link-neutralized] {
   *::before,
   *::after {
     scroll-behavior: auto;
-    transition-duration: 0.01ms;
+    /* Suppress motion without creating transitions on otherwise static geometry. */
+    transition: none;
   }
 
   [data-transition] > *,
