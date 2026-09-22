@@ -80,7 +80,7 @@ describe('authoring registry', () => {
         groups: {
           ungrouped: 0,
           minimum: 2,
-          maximum: 3,
+          maximum: 5,
           requireEveryNode: true,
           direction: 'right',
         },
@@ -221,7 +221,7 @@ describe('authoring registry', () => {
       'examples',
     ]);
     expect(authoringRegistry.page).toMatchObject({
-      defaultPreset: 'monument',
+      defaultPreset: 'material',
       defaultLayout: 'document',
       layouts: ['document', 'dashboard', 'landing', 'mixed'],
       defaultTheme: 'system',

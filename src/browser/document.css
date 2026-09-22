@@ -452,6 +452,7 @@ a {
 .review-toggle:hover,
 .theme-toggle:hover,
 .language-select select:hover,
+.preset-select select:hover,
 .copy-code:hover,
 .copy-prose:hover,
 .semantic-demo button:hover,
@@ -490,13 +491,15 @@ a {
   text-align: start;
 }
 
-.language-select {
+.language-select,
+.preset-select {
   position: relative;
   display: inline-flex;
   min-width: 0;
 }
 
-.language-select select {
+.language-select select,
+.preset-select select {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -510,7 +513,7 @@ a {
 }
 
 .topbar :is(.nav-toggle, .review-toggle, .theme-toggle),
-.topbar .language-select {
+.topbar :is(.language-select, .preset-select) {
   position: relative;
   display: inline-flex;
   width: var(--toolbar-control-size);
@@ -527,13 +530,13 @@ a {
 }
 
 .topbar :is(.nav-toggle, .review-toggle, .theme-toggle):hover,
-.topbar .language-select:hover {
+.topbar :is(.language-select, .preset-select):hover {
   border-color: transparent;
   background: var(--color-accent-soft);
   color: var(--color-accent-strong);
 }
 
-.topbar .language-select:focus-within {
+.topbar :is(.language-select, .preset-select):focus-within {
   outline: 0.2rem solid var(--color-focus);
   outline-offset: 0.08rem;
 }
@@ -2254,10 +2257,16 @@ span.semantic-source-link[data-source-link-neutralized] {
 
 .visualization-axis-label,
 .visualization-axis-title,
-.visualization-edge-label {
+.visualization-edge-label-text {
   fill: var(--visualization-muted);
   font-family: var(--font-body);
   font-size: 12px;
+}
+
+/* Плашка под подписью: под ребром может проходить чужая линия, и текст обязан читаться. */
+.visualization-edge-label-plate {
+  fill: var(--color-bg);
+  opacity: 0.88;
 }
 
 .visualization-axis-title {
@@ -3646,7 +3655,8 @@ span.semantic-source-link[data-source-link-neutralized] {
   *::before,
   *::after {
     scroll-behavior: auto;
-    transition-duration: 0.01ms;
+    /* Suppress motion without creating transitions on otherwise static geometry. */
+    transition: none;
   }
 
   [data-transition] > *,

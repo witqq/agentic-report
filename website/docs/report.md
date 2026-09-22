@@ -24,9 +24,9 @@ Use Node.js 24.18.0 or newer. Start with the [agent quickstart](agent/index.html
 [direct Markdown version](agent/index.md), or install the [agent skill](../skills/agentic-report/SKILL.md).
 
 ```sh
-npx --yes agentic-report@0.14.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.15.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.14.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.15.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Build validates before publishing; use `validate` or `inspect` only
@@ -48,7 +48,7 @@ If you prefer to inspect the implementation instead of executing the published `
 package, clone a specific release tag and run the compiler directly from its build:
 
 ```sh
-git clone --branch v0.14.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.15.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -109,7 +109,7 @@ composition cannot pair with layers/gallery media because both roles would own t
 four combinations fail before rendering.
 
 Use `recipe="hero|evidence|story|rail|metrics"` as the short path to a coordinated section; explicit detailed
-attributes override only their own recipe roles. The default preset is Monument. Material, Signal, Terminal,
+attributes override only their own recipe roles. The default preset is Material. Monument, Signal, Terminal,
 and Cinematic are the other recommended directions; Studio and Editorial remain compatible. A card may
 declare one safe `href` to become a single visibly linked keyboard target, but it cannot contain nested links.
 
@@ -175,7 +175,9 @@ runtime truth.
 
 ::::section{title="Review and return feedback" id="review" nav="Review" width="standard" align="start" tone="accent" reveal="true"}
 
-Generated pages include always-on local Review Workspace annotations. Select an eligible passage and choose
+Set `review: true` in the frontmatter to ship local Review Workspace annotations; an ordinary page is a plain
+document, and a build given a prior sidecar through `--review` enables them automatically. Select an eligible
+passage and choose
 **Create note**; the anchored popover opens with the exact quote and keeps reply, edit, resolve, and reopen
 beside the text. A selection may cross inline markup or adjacent review targets. Saved open/resolved ranges
 stay visibly distinct; hover/tap exposes **View thread**, and focusable markers provide the keyboard route.

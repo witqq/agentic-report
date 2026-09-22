@@ -15,6 +15,9 @@ const baseOptions = {
     layout: 'document',
     scrollProgress: false,
     attribution: true,
+    review: false,
+    themeToggle: true,
+    presetSwitcher: false,
     tokens: {
       density: 'comfortable',
       font: 'sans',
@@ -68,6 +71,7 @@ describe('renderDocument runtime boundary', () => {
     const localized = renderDocument({
       ...inlineOptions,
       language: 'ru-RU',
+      page: { ...inlineOptions.page, review: true },
       contentHtml:
         '<p data-review-target="rt-target">Содержимое</p><h2 id="a">А</h2><h2 id="b">Б</h2>',
       navigation: [
@@ -189,9 +193,10 @@ describe('renderDocument runtime boundary', () => {
     expect(html.match(/data-navigation="true"/gu)).toHaveLength(1);
   });
 
-  it('renders a collision-free labelled Review Workspace only when targets exist', () => {
+  it('renders a collision-free labelled Review Workspace only when it is requested', () => {
     const html = renderDocument({
       ...inlineOptions,
+      page: { ...inlineOptions.page, review: true },
       contentHtml: '<p id="report-review-dialog" data-review-target="rt-target">Review target</p>',
       reviewManifest: {
         contractVersion: 1,
@@ -223,6 +228,78 @@ describe('renderDocument runtime boundary', () => {
     expect(html).not.toContain('data-review-exit');
     expect(html).not.toContain('data-review-target-editor');
     expect(renderDocument(inlineOptions)).not.toContain('data-review-toggle');
+  });
+
+  it('offers the style selector only on request and keeps the scheme control separable', () => {
+    const plain = renderDocument(inlineOptions);
+    expect(plain).not.toContain('data-preset-select');
+    expect(plain).not.toContain('<template data-preset-catalog');
+    expect(plain).toContain('class="theme-toggle"');
+
+    const switchable = renderDocument({
+      ...inlineOptions,
+      page: { ...inlineOptions.page, presetSwitcher: true },
+    });
+    expect(switchable).toContain('data-preset-select');
+    expect(switchable).toContain('data-package-icon="palette"');
+    // Каталог несёт стиль вместе с его токенами: без них смена дала бы смешанный вид.
+    const catalog = /<template data-preset-catalog="true">(.*?)<\/template>/su.exec(
+      switchable,
+    )?.[1];
+    expect(catalog).toBeDefined();
+    const parsed = JSON.parse((catalog ?? '{}').replaceAll('&quot;', '"')) as Record<
+      string,
+      Record<string, string>
+    >;
+    expect(Object.keys(parsed)).toEqual([
+      'monument',
+      'material',
+      'signal',
+      'terminal',
+      'cinematic',
+    ]);
+    expect(parsed.terminal).toEqual({
+      density: 'compact',
+      font: 'mono',
+      accent: 'teal',
+      width: 'wide',
+      radius: 'sharp',
+    });
+
+    const withoutScheme = renderDocument({
+      ...inlineOptions,
+      page: { ...inlineOptions.page, themeToggle: false },
+    });
+    expect(withoutScheme).not.toContain('class="theme-toggle"');
+    expect(withoutScheme).not.toContain('data-theme-toggle');
+  });
+
+  it('keeps the review workspace out of an ordinary page even when targets exist', () => {
+    const withTargets = {
+      ...inlineOptions,
+      contentHtml: '<p data-review-target="rt-target">Review target</p>',
+      reviewManifest: {
+        contractVersion: 1,
+        reportRevision: `sha256:${'b'.repeat(64)}`,
+        targets: [
+          {
+            id: 'rt-target',
+            kind: 'markdown:paragraph',
+            fingerprint: `sha256:${'c'.repeat(64)}`,
+            source: { file: 'report.md', line: 1, column: 1, endLine: 1, endColumn: 14 },
+          },
+        ],
+      },
+    } as const satisfies DocumentRenderOptions;
+    const defaulted = renderDocument(withTargets);
+    expect(defaulted).not.toContain('class="review-toggle"');
+    expect(defaulted).not.toContain('<template data-review-manifest');
+    const requested = renderDocument({
+      ...withTargets,
+      page: { ...withTargets.page, review: true },
+    });
+    expect(requested).toContain('class="review-toggle"');
+    expect(requested).toContain('<template data-review-manifest');
   });
 });
 

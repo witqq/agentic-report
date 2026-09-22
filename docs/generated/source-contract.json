@@ -1187,6 +1187,13 @@
           "required": false,
           "default": "right",
           "description": "Flow direction."
+        },
+        "spacing": {
+          "kind": "enum",
+          "values": ["compact", "comfortable", "spacious"],
+          "required": false,
+          "default": "comfortable",
+          "description": "Layout breathing room; the package keeps a readable result at every value."
         }
       },
       "children": "group-node-and-edge-directives",
@@ -1261,6 +1268,13 @@
           "required": false,
           "default": "neutral",
           "description": "Package-owned node emphasis."
+        },
+        "row": {
+          "kind": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "required": false,
+          "description": "Optional one-based layout row; nodes sharing a row line up across groups and connect with a straight edge."
         }
       },
       "children": "none",
@@ -1299,6 +1313,13 @@
           "maxLength": 160,
           "required": false,
           "description": "Optional connection label."
+        },
+        "route": {
+          "kind": "enum",
+          "values": ["auto", "direct", "around"],
+          "required": false,
+          "default": "auto",
+          "description": "Optional routing override; auto keeps the shortest readable path."
         }
       },
       "children": "none",
@@ -1467,7 +1488,7 @@
     "runtimePlacement": { "single-file": "inline", "directory": "external" }
   },
   "page": {
-    "defaultPreset": "monument",
+    "defaultPreset": "material",
     "presets": [
       {
         "name": "monument",
@@ -1553,6 +1574,9 @@
     "themes": ["system", "light", "dark"],
     "defaultScrollProgress": false,
     "defaultAttribution": true,
+    "defaultReview": false,
+    "defaultThemeToggle": true,
+    "defaultPresetSwitcher": false,
     "motion": {
       "scrollProgress": { "normalMotionOnly": true },
       "sectionReveal": {
@@ -1631,7 +1655,7 @@
           "ungrouped": 0,
           "incomplete": 1,
           "minimum": 2,
-          "maximum": 3,
+          "maximum": 5,
           "requireEveryNode": true,
           "direction": "right"
         }

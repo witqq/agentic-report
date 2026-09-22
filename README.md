@@ -18,9 +18,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the resulting file:
 
 ```sh
-npx --yes agentic-report@0.14.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.15.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.14.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.15.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. `build` validates the complete source before publishing the
@@ -42,6 +42,9 @@ starter, writes declarative source, builds the local HTML, opens it, and returns
 paths. Validation and inspection remain available when focused diagnostics are useful. The skill is
 intended for finished agent-to-human handoffs with evidence, relationships,
 timelines, code explanations, visualizations, or fragment-level review; simple answers should stay in chat.
+Beside `SKILL.md` the skill carries [`references/catalog.md`](skills/agentic-report/references/catalog.md),
+generated from the package contract with every field, directive, and allowed value, and English and Russian
+prose guides; `pnpm check:authoring` fails when the catalog drifts from the compiler.
 
 You can also use the CLI as the rendering stage of a domain-specific skill. The custom skill owns research,
 judgment, and the trigger; `agentic-report` owns the safe source contract, responsive page, packaged
@@ -54,7 +57,7 @@ If you do not want to execute the published `agentic-report` npm package, clone 
 inspect the repository, run its checks, and invoke the compiled CLI directly:
 
 ```sh
-git clone --branch v0.14.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.15.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -210,7 +213,10 @@ resolved project, entry, format, runtime placement, and warnings. Inspection add
 source-file inventory, observed directives and local-resource occurrence counts, and the registry-derived
 command/format/starter/capability catalog.
 
-Generated pages also carry an inert deterministic review-target manifest. Use
+Review Workspace is opt-in. An ordinary page ships as a document without review chrome; set `review: true` in
+frontmatter or the manifest when a reader should discuss fragments. Passing a prior review sidecar with
+`--review` turns it on for that build automatically. An enabled page carries an inert deterministic
+review-target manifest. Use
 `inspectReview({ input, review })` or `agentic-report review <review> [input] --json` to validate a confined
 review and resolve each discussion thread to the current Markdown or partial range. Single-language pages
 export version 3. Multilingual pages export version 4 with the active `report.locale`, so Node-side review,
@@ -221,8 +227,8 @@ command never rewrites source.
 The manifest accepts at most 5,000 reviewable targets and 750,000 serialized bytes; the byte ceiling may
 bind first when source-location records are unusually long.
 
-In the generated page, select any eligible text and choose **Create note**; annotation is always available
-without a review mode or block controls. A selection may cross inline markup or adjacent review targets; its
+On a review-enabled page, select any eligible text and choose **Create note**; annotation is available
+everywhere without a separate review mode or block controls. A selection may cross inline markup or adjacent review targets; its
 anchor records both target references and Unicode code-point offsets. The anchored popover shows
 the exact quote and keeps compose, reply, edit, resolve, and reopen beside it. Saved open/resolved ranges
 remain visibly distinct; hover/tap exposes **View thread**, and focusable markers provide the keyboard route.
@@ -260,13 +266,17 @@ bucket cards also support drag-and-drop. The reader copies or downloads the same
 complete source is [`examples/response-workspace/report.md`](examples/response-workspace/report.md).
 
 The package owns four responsive page layouts: `document`, `dashboard`, `landing`, and `mixed`. Authors
-select one as metadata and may choose `monument` (default), `material`, `signal`, `terminal`, or `cinematic`, an
+select one as metadata and may choose `material` (default), `monument`, `signal`, `terminal`, or `cinematic`, an
 independent `system`, `light`, or `dark` color mode, and compact token overrides for `density`, `font`,
 `accent`, `width`, and `radius`. Preset defaults apply first and explicitly authored token values apply
 last. `studio` and `editorial` remain accepted compatibility identities for Monument and Material.
-Monument provides large-scale staged storytelling, Material provides warm editorial reading, Signal keeps
+Material provides warm editorial reading, Monument provides large-scale staged storytelling, Signal keeps
 dense data crisp, Terminal adds console texture and prompt rhythm, and Cinematic stages image-first stories.
-These are closed validated values, not CSS or component code. Buildable examples under
+These are closed validated values, not CSS or component code.
+The reader gets two independent package-owned controls. The light/dark button is on by default;
+`themeToggle: false` removes it from a page that must stay in the scheme it was built with.
+`presetSwitcher: true` adds a style selector that swaps the preset and its five tokens live without changing
+the reader's color scheme. Buildable examples under
 `examples/layout-*` demonstrate every layout and are listed by
 `agentic-report examples --json`; `examples/interactive-catalog` and `examples/visualization-catalog`
 demonstrate the package-owned interaction and data primitives.
@@ -275,7 +285,10 @@ headings scale down, and action groups wrap at their content width rather than f
 the screen. Disclosure, modal, popover, filter, toggle, copy, Review and Response controls receive package
 icons automatically. Authored trigger labels remain visible on phones; no icon markup or CSS is required.
 The visualization catalog includes a 15-node grouped subsystem flow and an ordered compile-request sequence;
-both use the same bounded `diagram`/`group`/`node`/`edge` directives and compile offline.
+both use the same bounded `diagram`/`group`/`node`/`edge` directives and compile offline. Flow layout
+measures its labels, accepts two to five groups, and needs no tuning; `row` on a node lines it up with nodes
+in other groups, `route="direct|around"` overrides one edge, and `spacing="compact|comfortable|spacious"`
+sets the diagram's breathing room.
 
 Use `:::copyable` for prose that a reader should paste into a message or handoff. Paragraphs, emphasis,
 links, proportional typography, and wrapping remain ordinary Markdown; the localized Copy control writes

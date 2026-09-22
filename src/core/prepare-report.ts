@@ -169,6 +169,11 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
       tokens: source.manifest.tokens,
       scrollProgress: source.manifest.scrollProgress,
       attribution: source.manifest.attribution,
+      // Приложенный артефакт прошлого ревью включает рабочее место сам: иначе флаг принимался бы
+      // молча и не давал ничего.
+      review: source.manifest.review || routedPrior !== undefined,
+      themeToggle: source.manifest.themeToggle,
+      presetSwitcher: source.manifest.presetSwitcher,
     },
     contentSecurityPolicy: createContentSecurityPolicy(runtimePlacement, inlineRuntime),
     styles:

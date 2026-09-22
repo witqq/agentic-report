@@ -76,12 +76,12 @@ Additional evidence is visible initially.
 :::
 ::::
 
-:::diagram{title="Evidence flow" description="Local evidence moves through validation into a portable result." type="flow" direction="right"}
+:::diagram{title="Evidence flow" description="Local evidence moves through validation into a portable result." type="flow" direction="right" spacing="comfortable"}
 ::group{id="inputs" label="Inputs"}
 ::group{id="outputs" label="Outputs"}
-::node{id="local" label="Local evidence" group="inputs" kind="accent"}
-::node{id="validated" label="Validated model" group="outputs" kind="success"}
-::edge{from="local" to="validated" label="check"}
+::node{id="local" label="Local evidence" group="inputs" kind="accent" row="1"}
+::node{id="validated" label="Validated model" group="outputs" kind="success" row="1"}
+::edge{from="local" to="validated" label="check" route="auto"}
 :::
 
 ::::timeline{title="Research path" description="A short path from question to verified finding."}

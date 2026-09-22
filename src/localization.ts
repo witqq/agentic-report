@@ -17,6 +17,8 @@ export interface PackageStrings {
   readonly reportAttribution: string;
   readonly review: string;
   readonly theme: string;
+  readonly style: string;
+  readonly chooseStyle: string;
   readonly toggleTheme: string;
   readonly documentContents: string;
   readonly onThisPage: string;
@@ -134,6 +136,8 @@ const en: PackageStrings = {
   reportAttribution: 'Made with Agentic Report',
   review: 'Review',
   theme: 'Theme',
+  style: 'Style',
+  chooseStyle: 'Choose visual style',
   toggleTheme: 'Toggle color theme',
   documentContents: 'Document contents',
   onThisPage: 'On this page',
@@ -255,7 +259,9 @@ const ru: PackageStrings = {
   languageName: (locale) => (locale === 'ru' ? 'Русский' : 'Английский'),
   reportAttribution: 'Создано с Agentic Report',
   review: 'Ревью',
-  theme: 'Тема',
+  theme: 'Схема',
+  style: 'Стиль',
+  chooseStyle: 'Выбрать визуальный стиль',
   toggleTheme: 'Переключить цветовую тему',
   documentContents: 'Содержание документа',
   onThisPage: 'На этой странице',

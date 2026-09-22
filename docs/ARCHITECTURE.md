@@ -243,7 +243,7 @@ optional fixed-shape `en`/`ru` localization map, theme, layout, a coordinated pr
 progress, a default-on boolean package attribution, compact page-token overrides, and output defaults.
 `attribution: false` removes only the renderer-owned
 **Made with Agentic Report** footer; default and opt-out behavior are identical across output formats.
-`monument` is the registry-owned default; `material`, `signal`, `terminal`, and `cinematic` provide the other
+`material` is the registry-owned default; `monument`, `signal`, `terminal`, and `cinematic` provide the other
 recommended visual families. `studio` and `editorial` remain compatibility identities mapped to Monument and
 Material. Theme remains an independent color mode, and explicitly authored bounded tokens
 override the preset on density, typography, accent, content width, and radius. The icon vocabulary is a
@@ -341,7 +341,7 @@ The registry owns a closed data vocabulary for `chart`/`series`/`point`,
 `diagram`/`group`/`node`/`edge`, and
 `timeline`/`event`. Charts support `bar`, `line`, and `pie`; series are bounded, share an ordered category
 domain, and use finite numeric values. Flow diagrams contain up to twenty uniquely identified nodes, bounded
-directed references, and optionally two or three complete subsystem groups; a single group builds with an
+directed references, and optionally two to five complete subsystem groups; a single group builds with an
 authored warning so grouping can be finished later. Sequence diagrams retain
 participant and labelled message order. The registry owns both form-specific bounds and unsupported
 combinations. Timeline events retain ordinary Markdown bodies. Every top-level visual requires a visible

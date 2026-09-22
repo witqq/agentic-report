@@ -917,7 +917,7 @@ describe('buildReport', () => {
     const warned = (await buildReport({ input: workspace, output })).warnings[0];
     expect(warned?.level).toBe('warning');
     expect(warned?.source?.file).toBe(entry);
-    expect(warned?.message).toContain('2 to 3 groups');
+    expect(warned?.message).toContain('2 to 5 groups');
 
     // Unfinished grouping does not suspend the rules around it: the warning must not end the
     // check, or a one-group flow would stop being validated for membership at all.

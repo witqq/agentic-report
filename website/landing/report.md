@@ -8,6 +8,8 @@ localizations:
 theme: system
 layout: landing
 preset: monument
+presetSwitcher: true
+review: true
 scrollProgress: true
 ---
 
@@ -16,8 +18,8 @@ scrollProgress: true
 **Give your agent one declarative source. Get a finished interactive report, tutorial, dashboard, or visual story.**
 
 No frontend project, hosted editor, or author JavaScript. `agentic-report` compiles locally into one
-portable HTML file by default, with responsive composition, interactions, localization, and selected-text
-review already built in.
+portable HTML file by default, with responsive composition, interactions, and localization built in.
+Selected-text review and a reader-side style selector are one frontmatter flag each.
 
 ::::actions{placement="edge"}
 ::action[Build the first page]{href="#workflow" kind="primary" effect="magnetic"}
@@ -44,7 +46,8 @@ System language chooses the first view, and the selector appears only when a loc
 ::::::section{title="Choose the result. Then choose its character." id="styles" nav="Choose a result" recipe="rail" interaction="depth"}
 :::lead
 Start from the reader's job. A preset supplies coordinated type, surfaces, spacing, controls, media, and
-motion; section recipes shape the story without a wall of visual attributes.
+motion; section recipes shape the story without a wall of visual attributes. This page ships the style
+selector: switch it in the top bar and the same source restyles itself live.
 :::
 
 ![Incident review with impact and causal evidence](assets/incident-review.png)
@@ -54,7 +57,7 @@ motion; section recipes shape the story without a wall of visual attributes.
 ![Launch readiness with activation evidence and a reversible path](assets/launch-readiness.png)
 
 ::::cards
-:::card{title="Decision report · Monument" href="examples/basic/index.html"}
+:::card{title="Decision report · Material" href="examples/basic/index.html"}
 Large-scale hierarchy for evidence, decisions, risks, and accountable next actions.
 :::
 :::card{title="Research brief · Material" href="examples/research/index.html"}
@@ -70,7 +73,7 @@ Mono type, prompt rhythm, scan texture, cursor, and clearly linked work cards.
 Local imagery drives a staged hero, scroll narrative, media rail, and measured close.
 :::
 :::card{title="Executive brief · Monument" href="examples/executive-brief/index.html"}
-A decisive opening, broad evidence field, operating path, and finished handoff using the default preset.
+A decisive opening, broad evidence field, operating path, and finished handoff in large-scale Monument.
 :::
 :::card{title="Motion and depth showcase" href="examples/motion-showcase/index.html"}
 Scroll progress, reveal, choreography, depth, tilt, and their complete reduced-motion fallback.
@@ -135,7 +138,7 @@ A practical build journey with tabs, progressive detail, and a bounded practice 
 Charts, a flow diagram, sequence, and timeline rendered from validated directives.
 :::
 :::card{title="Executive decision brief" href="examples/executive-brief/index.html"}
-The default Monument system applied to an evidence-led decision and operating handoff.
+The Monument system applied to an evidence-led decision and operating handoff.
 :::
 :::card{title="Motion and depth" href="examples/motion-showcase/index.html"}
 A direct tour of the visual effects available through ordinary declarative roles.
@@ -173,8 +176,8 @@ control remains a compact list and export surface.
 ::::::section{title="Quality lives in the package." id="reasons" nav="Why it works" recipe="metrics"}
 ::::cards
 :::card{title="Strong defaults"}
-Monument is the default. Material, Signal, Terminal, and Cinematic each carry their own composition,
-typography, surface, media, and motion character.
+Material is the default for comfortable long reading. Monument, Signal, Terminal, and Cinematic each carry
+their own composition, typography, surface, media, and motion character.
 :::
 :::card{title="A small public vocabulary"}
 Authors choose a starter, a preset, and optional section recipes. Detailed overrides remain available for a

@@ -154,13 +154,44 @@ document.addEventListener('click', (event) => {
 });
 
 document.addEventListener('change', (event) => {
-  const select =
-    event.target instanceof HTMLSelectElement && event.target.matches('[data-language-select]')
-      ? event.target
-      : undefined;
-  if (select === undefined || (select.value !== 'en' && select.value !== 'ru')) return;
-  switchPageLocale(select.value);
+  const target = event.target;
+  if (!(target instanceof HTMLSelectElement)) return;
+  if (target.matches('[data-preset-select]')) {
+    applyPreset(target.value);
+    return;
+  }
+  if (!target.matches('[data-language-select]')) return;
+  if (target.value !== 'en' && target.value !== 'ru') return;
+  switchPageLocale(target.value);
 });
+
+/**
+ * Стиль меняется целиком: имя плюс его токены. Цветовую схему он не трогает — светлый или тёмный
+ * режим остаётся там, куда его поставил читатель.
+ */
+function applyPreset(name: string): void {
+  const template = document.querySelector<HTMLTemplateElement>('template[data-preset-catalog]');
+  if (template === null) return;
+  let catalog: Record<string, Record<string, string>>;
+  try {
+    catalog = JSON.parse(template.content.textContent ?? '{}') as Record<
+      string,
+      Record<string, string>
+    >;
+  } catch {
+    return;
+  }
+  const tokens = catalog[name];
+  if (tokens === undefined) return;
+  const root = document.documentElement;
+  root.dataset.preset = name;
+  for (const [token, value] of Object.entries(tokens)) {
+    root.setAttribute(`data-${token}`, value);
+  }
+  for (const select of document.querySelectorAll<HTMLSelectElement>('[data-preset-select]')) {
+    select.value = name;
+  }
+}
 
 document.addEventListener('keydown', (event) => {
   const target = event.target;

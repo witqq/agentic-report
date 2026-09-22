@@ -168,6 +168,7 @@ export default async function globalSetup(): Promise<void> {
     [
       '---',
       'title: Русский интерфейс отчёта',
+      'review: true',
       'language: ru-RU',
       '---',
       '# Русский интерфейс отчёта',
@@ -449,6 +450,7 @@ export default async function globalSetup(): Promise<void> {
       'title: Review Workspace fixture',
       'language: en',
       'layout: document',
+      'review: true',
       'theme: light',
       'preset: studio',
       '---',
@@ -770,6 +772,7 @@ export default async function globalSetup(): Promise<void> {
   ]);
   await mkdir(russianPriorSource, { recursive: true });
   const russianPriorEntry = path.join(russianPriorSource, 'report.md');
+  // Источник уже заказывает ревью, поэтому копируется как есть.
   await writeFile(
     russianPriorEntry,
     await readFile(path.join(russianChromeSource, 'report.md'), 'utf8'),

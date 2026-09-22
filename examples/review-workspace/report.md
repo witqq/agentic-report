@@ -6,6 +6,7 @@ language: en
 localizations:
   ru: report.ru.md
 layout: document
+review: true
 theme: system
 preset: monument
 ---

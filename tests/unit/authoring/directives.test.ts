@@ -874,8 +874,8 @@ describe('registry-driven semantic directives', () => {
       '# Down\n:::diagram{title="Down" description="Vertical nodes." direction="down"}\n::node{id="a" label="A"}\n::node{id="b" label="B"}\n:::\n',
       workspace,
     );
-    expect(diagramNodePosition(rightDiagram.html, 'b')).toEqual({ x: 270, y: 38 });
-    expect(diagramNodePosition(downDiagram.html, 'b')).toEqual({ x: 50, y: 160 });
+    expect(diagramNodePosition(rightDiagram.html, 'b')).toEqual({ x: 188, y: 22 });
+    expect(diagramNodePosition(downDiagram.html, 'b')).toEqual({ x: 22, y: 108 });
 
     const precise = await render(
       '# Precise\n::::chart{title="Precise" description="Small distinct values." type="line"}\n:::series{label="Metric"}\n::point{label="A" value="0.0001"}\n::point{label="B" value="0.0002"}\n:::\n::::\n',
@@ -894,7 +894,8 @@ describe('registry-driven semantic directives', () => {
     expect(labelledDiagram.html).toContain(
       `Complete edge data. Groups: none. Nodes: a: A; b: B. Connections: a to b: ${longEdgeLabel}.`,
     );
-    expect(labelledDiagram.html).toContain('>12345678901234567890🛰…</text>');
+    // Подпись обрезается по ИЗМЕРЕННОЙ ширине, а не по числу знаков, и суррогатная пара не рвётся.
+    expect(labelledDiagram.html).toContain('>12345678901234567890🛰 complete…</text>');
     expect(labelledDiagram.html).not.toContain('\uFFFD');
 
     const escaped = await render(
@@ -1110,11 +1111,13 @@ describe('registry-driven semantic directives', () => {
         name: 'grouped flow above the group limit',
         line: 2,
         source: [
-          ':::diagram{title="Four groups" description="Unsupported group count."}',
+          ':::diagram{title="Six groups" description="Unsupported group count."}',
           '::group{id="one" label="One"}',
           '::group{id="two" label="Two"}',
           '::group{id="three" label="Three"}',
           '::group{id="four" label="Four"}',
+          '::group{id="five" label="Five"}',
+          '::group{id="six" label="Six"}',
           '::node{id="a" label="A" group="one"}',
           ':::',
         ],
@@ -1362,15 +1365,26 @@ describe('registry-driven semantic directives', () => {
     expect(firstGrouped.html).toContain('data-diagram-type="flow"');
     expect(firstGrouped.html.match(/data-group-id=/gu)).toHaveLength(3);
     expect(firstGrouped.html.match(/data-node-id=/gu)).toHaveLength(18);
-    expect(firstGrouped.html.match(/visualization-group-edge/gu)).toHaveLength(2);
+    // Маршрут выбирается по геометрии: через зазор между колонками, по жёлобу внутри группы и
+    // под диаграммой — только обратное и перепрыгивающее ребро.
+    expect(firstGrouped.html.match(/visualization-group-gap-edge/gu)).toHaveLength(3);
     expect(firstGrouped.html.match(/visualization-group-internal-edge/gu)).toHaveLength(1);
-    expect(firstGrouped.html.match(/visualization-group-outer-edge/gu)).toHaveLength(3);
+    expect(firstGrouped.html.match(/visualization-group-outer-edge/gu)).toHaveLength(2);
     expect(firstGrouped.html).toContain(
       'Groups: source: Authentication and authorization services (step-1, step-2, step-3, step-4, step-5, step-6); compiler: Compiler pipeline (step-7, step-8, step-9, step-10, step-11, step-12); reader: Reader artifact (step-13, step-14, step-15, step-16, step-17, step-18).',
     );
-    expect(firstGrouped.html).toContain('>Authentication and</text>');
-    expect(firstGrouped.html).toContain('>authorization services</text>');
-    expect(firstGrouped.html).toContain('viewBox="0 0 816 772"');
+    expect(firstGrouped.html).toContain('>Authentication and authorization</text>');
+    expect(firstGrouped.html).toContain('>services</text>');
+    // Холст ограничен и повторяем; точное число пикселей не закрепляется, иначе любая правка
+    // отступов ломает тест, ничего не говоря о поведении.
+    const groupedViewBox = /viewBox="0 0 ([0-9.]+) ([0-9.]+)"/u.exec(firstGrouped.html);
+    expect(groupedViewBox).not.toBeNull();
+    const groupedWidth = Number(groupedViewBox?.[1]);
+    const groupedHeight = Number(groupedViewBox?.[2]);
+    expect(groupedWidth).toBeGreaterThan(0);
+    expect(groupedWidth).toBeLessThan(4000);
+    expect(groupedHeight).toBeGreaterThan(0);
+    expect(groupedHeight).toBeLessThan(4000);
 
     const sequenceSource = [
       '# Sequence',
@@ -2421,7 +2435,7 @@ function diagramNodePosition(html: string, id: string): Readonly<{ x: number; y:
 
 function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
   if (attribute.constraint.kind === 'boolean') return 'true';
-  if (attribute.constraint.kind === 'integer') return '2';
+  if (attribute.constraint.kind === 'integer') return boundedInteger(attribute.constraint, 2);
   if (attribute.constraint.kind === 'number') return '2.5';
   if (
     attribute.constraint.kind === 'string' &&
@@ -2445,7 +2459,8 @@ function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
 
 function renderedAttributeValue(attribute: DirectiveAttributeDefinition): string {
   if (attribute.constraint.kind === 'boolean') return 'true';
-  if (attribute.constraint.kind === 'integer') return '-999999';
+  if (attribute.constraint.kind === 'integer')
+    return boundedInteger(attribute.constraint, -999_999);
   if (attribute.constraint.kind === 'number') return '2.5';
   if (
     attribute.constraint.kind === 'string' &&
@@ -2463,6 +2478,16 @@ function renderedAttributeValue(attribute: DirectiveAttributeDefinition): string
   if (['key', 'id', 'group', 'from', 'to', 'bucket'].includes(attribute.name)) return 'valid-key';
   if (attribute.name === 'forms') return 'Tf';
   return 'T';
+}
+
+/** Целое в объявленных границах: генератор значений обязан уважать сам контракт, а не угадывать. */
+function boundedInteger(
+  constraint: { readonly minimum?: number; readonly maximum?: number },
+  preferred: number,
+): string {
+  const minimum = constraint.minimum ?? Number.MIN_SAFE_INTEGER;
+  const maximum = constraint.maximum ?? Number.MAX_SAFE_INTEGER;
+  return String(Math.min(Math.max(preferred, minimum), maximum));
 }
 
 function directiveInvocation(

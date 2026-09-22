@@ -671,7 +671,13 @@ if (
   throw new Error('Installed CLI did not initialize the first-use project.');
 }
 const firstUseEntry = path.join(firstUseProject, 'report.md');
-const editedSource = `${await readFile(firstUseEntry, 'utf8')}\nAgent-authored edit.\n`;
+// Рабочее место ревью выключено по умолчанию, а этот прогон проверяет именно его протокол,
+// поэтому страница заказывает режим явно, как это делает автор.
+const starterSource = (await readFile(firstUseEntry, 'utf8')).replace(
+  /^---\n/u,
+  '---\nreview: true\n',
+);
+const editedSource = `${starterSource}\nAgent-authored edit.\n`;
 const credentialBearingSource = `${editedSource}\n![Broken](https://alice:secret@local.test/image.png?token=private&X-Amz-Credential=credential-sentinel&X-Amz-Signature=signature-sentinel&X-Amz-Security-Token=security-token-sentinel)\n`;
 await writeFile(firstUseEntry, credentialBearingSource);
 
@@ -1024,7 +1030,7 @@ if (
 const directoryJourneyEntry = path.join(directoryJourneyProject, 'report.md');
 await writeFile(
   directoryJourneyEntry,
-  `${await readFile(directoryJourneyEntry, 'utf8')}\nDirectory journey agent edit.\n`,
+  `${(await readFile(directoryJourneyEntry, 'utf8')).replace(/^---\n/u, '---\nreview: true\n')}\nDirectory journey agent edit.\n`,
 );
 const directoryJourneyOutput = path.join(directoryJourneyProject, 'built-directory');
 const directoryJourneyBuild = await runCommand(
@@ -1598,6 +1604,9 @@ async function expectedTarballFiles(): Promise<string[]> {
     ].map((file) => `package/docs/${file}`),
   ]);
   expected.add('package/skills/agentic-report/SKILL.md');
+  expected.add('package/skills/agentic-report/references/catalog.md');
+  expected.add('package/skills/agentic-report/references/prose-en.md');
+  expected.add('package/skills/agentic-report/references/prose-ru.md');
 
   for (const source of await recursiveRelativeFiles(path.resolve('src'))) {
     if (

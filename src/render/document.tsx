@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 
-import type { PageLocaleChoice } from '../authoring/registry.js';
+import { PAGE_PRESETS, type PageLocaleChoice } from '../authoring/registry.js';
 import type { ReportManifest } from '../contracts.js';
 import { PACKAGE_ICON_PATHS, type PackageIconName } from '../iconography.js';
 import { packageStrings, resolvePackageLocale, type PackageStrings } from '../localization.js';
@@ -27,7 +27,15 @@ export interface DocumentPageVariantOptions {
 export interface DocumentRenderOptions extends DocumentPageVariantOptions {
   readonly page: Pick<
     ReportManifest,
-    'preset' | 'theme' | 'layout' | 'tokens' | 'scrollProgress' | 'attribution'
+    | 'preset'
+    | 'theme'
+    | 'layout'
+    | 'tokens'
+    | 'scrollProgress'
+    | 'attribution'
+    | 'review'
+    | 'themeToggle'
+    | 'presetSwitcher'
   >;
   readonly contentSecurityPolicy: string;
   readonly styles: { readonly inline?: string; readonly href?: string };
@@ -38,6 +46,23 @@ export interface DocumentRenderOptions extends DocumentPageVariantOptions {
 export type DocumentRuntime =
   | { readonly inline: string; readonly src?: never }
   | { readonly src: string; readonly inline?: never };
+
+/**
+ * Стили, предлагаемые переключателем: только самостоятельные, без совместимых псевдонимов —
+ * читателю незачем выбирать между двумя именами одного и того же вида.
+ */
+const SWITCHABLE_PRESETS = PAGE_PRESETS.filter(
+  (preset) => !preset.description.startsWith('Compatibility identity'),
+);
+
+/** Стиль вместе со своими токенами: подменять надо весь набор, иначе вид останется смешанным. */
+const PRESET_CATALOG = Object.fromEntries(
+  SWITCHABLE_PRESETS.map((preset) => [preset.name, preset.tokens]),
+);
+
+function presetLabel(name: string): string {
+  return `${name.slice(0, 1).toUpperCase()}${name.slice(1)}`;
+}
 
 export function renderDocument(options: DocumentRenderOptions): string {
   const variants = [options, ...(options.localizations ?? [])];
@@ -77,6 +102,10 @@ export function renderDocument(options: DocumentRenderOptions): string {
             options={options}
             variants={variants}
             attribution={options.page.attribution}
+            review={options.page.review}
+            themeToggle={options.page.themeToggle}
+            presetSwitcher={options.page.presetSwitcher}
+            preset={options.page.preset}
           />
         </div>
         {(options.localizations ?? []).map((variant) => (
@@ -85,6 +114,10 @@ export function renderDocument(options: DocumentRenderOptions): string {
               options={variant}
               variants={variants}
               attribution={options.page.attribution}
+              review={options.page.review}
+              themeToggle={options.page.themeToggle}
+              presetSwitcher={options.page.presetSwitcher}
+              preset={options.page.preset}
             />
           </template>
         ))}
@@ -103,14 +136,24 @@ function PageVariant({
   options,
   variants,
   attribution,
+  review,
+  themeToggle,
+  presetSwitcher,
+  preset,
 }: {
   readonly options: DocumentPageVariantOptions;
   readonly variants: readonly DocumentPageVariantOptions[];
   readonly attribution: boolean;
+  readonly review: boolean;
+  readonly themeToggle: boolean;
+  readonly presetSwitcher: boolean;
+  readonly preset: string;
 }) {
   const strings = packageStrings(options.language);
   const hasNavigation = options.navigation.length >= 2;
-  const hasReviewTargets = options.reviewManifest.targets.length > 0;
+  // Рабочее место ревью ставится только по явному согласию автора страницы: наличие целей само по
+  // себе означает лишь то, что комментировать есть что, а не то, что страницу заказали как ревью.
+  const hasReviewTargets = review && options.reviewManifest.targets.length > 0;
   const documentIdentity = compactDocumentIdentity(options.title);
   const usedIds = new Set(
     [...options.contentHtml.matchAll(/\sid="([^"]+)"/gu)].map((match) => match[1] ?? ''),
@@ -208,18 +251,38 @@ function PageVariant({
               </select>
             </label>
           ) : null}
-          <button
-            className="theme-toggle"
-            type="button"
-            aria-label={strings.toggleTheme}
-            title={strings.toggleTheme}
-            data-theme-toggle
-          >
-            <PackageIcon name="sun" size={20} />
-            <span data-theme-toggle-label data-topbar-control-label>
-              {strings.theme}
-            </span>
-          </button>
+          {presetSwitcher ? (
+            <label className="preset-select" title={strings.chooseStyle}>
+              <PackageIcon name="palette" size={20} />
+              <span className="visually-hidden">{strings.style}</span>
+              <select
+                aria-label={strings.chooseStyle}
+                title={strings.chooseStyle}
+                defaultValue={preset}
+                data-preset-select
+              >
+                {SWITCHABLE_PRESETS.map((candidate) => (
+                  <option key={candidate.name} value={candidate.name}>
+                    {presetLabel(candidate.name)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {themeToggle ? (
+            <button
+              className="theme-toggle"
+              type="button"
+              aria-label={strings.toggleTheme}
+              title={strings.toggleTheme}
+              data-theme-toggle
+            >
+              <PackageIcon name="sun" size={20} />
+              <span data-theme-toggle-label data-topbar-control-label>
+                {strings.theme}
+              </span>
+            </button>
+          ) : null}
         </div>
       </header>
       <div
@@ -280,10 +343,15 @@ function PageVariant({
           }}
         />
       ) : null}
-      <template data-review-manifest>{JSON.stringify(options.reviewManifest)}</template>
-      {options.priorReview === undefined ? null : (
+      {presetSwitcher ? (
+        <template data-preset-catalog>{JSON.stringify(PRESET_CATALOG)}</template>
+      ) : null}
+      {hasReviewTargets ? (
+        <template data-review-manifest>{JSON.stringify(options.reviewManifest)}</template>
+      ) : null}
+      {hasReviewTargets && options.priorReview !== undefined ? (
         <template data-prior-review>{JSON.stringify(options.priorReview)}</template>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -521,20 +521,24 @@ for (const artifact of diagramTourArtifacts) {
     );
     await expect(page.locator('[data-diagram-type="flow"] [data-group-id]')).toHaveCount(3);
     await expect(page.locator('[data-diagram-type="flow"] [data-node-id]')).toHaveCount(18);
-    await expect(page.locator('[data-diagram-type="flow"] .visualization-group-edge')).toHaveCount(
-      2,
-    );
+    await expect(
+      page.locator('[data-diagram-type="flow"] .visualization-group-gap-edge'),
+    ).toHaveCount(3);
     await expect(
       page.locator('[data-diagram-type="flow"] .visualization-group-internal-edge'),
     ).toHaveCount(1);
     await expect(
       page.locator('[data-diagram-type="flow"] .visualization-group-outer-edge'),
-    ).toHaveCount(3);
-    expect(
+    ).toHaveCount(2);
+    const outerLanes = (
       await page
         .locator('[data-diagram-type="flow"] .visualization-group-outer-edge')
-        .evaluateAll((edges) => edges.map((edge) => edge.getAttribute('data-route-lane'))),
-    ).toEqual(['694', '714', '734']);
+        .evaluateAll((edges) => edges.map((edge) => edge.getAttribute('data-route-lane')))
+    ).map((lane) => Number(lane));
+    expect(outerLanes).toHaveLength(2);
+    expect(new Set(outerLanes).size).toBe(outerLanes.length);
+    expect(outerLanes.every((lane) => Number.isFinite(lane) && lane > 0)).toBe(true);
+    expect([...outerLanes].sort((first, second) => first - second)).toEqual(outerLanes);
     await expectDiagramEdgesAvoidNodes(flow);
     await expect(page.locator('[data-diagram-type="sequence"] [data-participant]')).toHaveCount(4);
     await expect(page.locator('[data-diagram-type="sequence"] [data-message-order]')).toHaveCount(
@@ -1882,7 +1886,9 @@ test('reduced motion omits progress and reveal machinery while normal motion sta
     const disabledEvidence = await readMotionEvidence(page);
     expect(disabledEvidence.rafRequests).toBe(0);
     expect(disabledEvidence.documentScrollAdds).toBe(0);
-    expect(disabledEvidence.windowResizeAdds).toBe(2);
+    // Обычная страница ревью не заказывала, поэтому слушателей на изменение окна стало на один
+    // меньше: рабочее место ревью свой не ставит.
+    expect(disabledEvidence.windowResizeAdds).toBe(1);
   }
 
   for (const artifact of navigationArtifacts) {
@@ -1895,7 +1901,7 @@ test('reduced motion omits progress and reveal machinery while normal motion sta
       rafRequests: 0,
       documentScrollAdds: 0,
       documentScrollRemoves: 0,
-      windowResizeAdds: 2,
+      windowResizeAdds: 1,
       windowResizeRemoves: 0,
       observers: 1,
       observerDisconnects: 0,
@@ -2047,7 +2053,7 @@ test('reduced motion omits progress and reveal machinery while normal motion sta
     await expect(page.locator('[data-reveal-pending]')).toHaveCount(0);
     const restoredEvidence = await readMotionEvidence(page);
     expect(restoredEvidence.documentScrollAdds).toBe(2);
-    expect(restoredEvidence.windowResizeAdds).toBe(4);
+    expect(restoredEvidence.windowResizeAdds).toBe(3);
     expect(restoredEvidence.revealTargets).toBe(revealedBeforeRestore);
   }
 });
@@ -2767,13 +2773,15 @@ test('captures exactly six 320 by 800 dense preset states', async ({ page }, tes
 for (const example of [
   {
     name: 'layout-document',
+    preset: PAGE_CONTRACT.defaultPreset,
     layout: 'document',
     theme: 'system',
     density: 'comfortable',
     font: 'serif',
     accent: 'indigo',
     width: 'narrow',
-    fontFamily: 'Charter',
+    fontFamily: 'Inter',
+    headingFontFamily: 'Charter',
     radius: 'soft',
     heading: 'Architecture decision record',
     component: '.semantic-decision',
@@ -2782,6 +2790,7 @@ for (const example of [
   },
   {
     name: 'layout-dashboard',
+    preset: PAGE_CONTRACT.defaultPreset,
     layout: 'dashboard',
     theme: 'dark',
     density: 'compact',
@@ -2796,6 +2805,7 @@ for (const example of [
   },
   {
     name: 'layout-landing',
+    preset: PAGE_CONTRACT.defaultPreset,
     layout: 'landing',
     theme: 'light',
     density: 'spacious',
@@ -2809,6 +2819,7 @@ for (const example of [
   },
   {
     name: 'layout-mixed',
+    preset: 'monument',
     layout: 'mixed',
     theme: 'system',
     density: 'comfortable',
@@ -2829,7 +2840,7 @@ for (const example of [
     await page.goto(layoutArtifactUrl(example.name));
     const root = page.locator('html');
     await expect(root).toHaveAttribute('data-layout', example.layout);
-    await expect(root).toHaveAttribute('data-preset', PAGE_CONTRACT.defaultPreset);
+    await expect(root).toHaveAttribute('data-preset', example.preset);
     await expect(root).toHaveAttribute('data-theme', example.theme);
     await expect(root).toHaveAttribute('data-density', example.density);
     await expect(root).toHaveAttribute('data-font', example.font);
@@ -2849,6 +2860,10 @@ for (const example of [
         shell: shell?.getBoundingClientRect().width,
         viewport: window.innerWidth,
         fontFamily: getComputedStyle(document.body).fontFamily,
+        headingFontFamily: (() => {
+          const level1 = document.querySelector('h1');
+          return level1 === null ? '' : getComputedStyle(level1).fontFamily;
+        })(),
         focusVisible:
           focused !== null &&
           getComputedStyle(focused).outlineStyle !== 'none' &&
@@ -2863,6 +2878,9 @@ for (const example of [
     expect(visualState.shell ?? 0).toBeGreaterThan(visualState.viewport * 0.75);
     expect(visualState.shell ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(visualState.viewport);
     expect(visualState.fontFamily).toContain(example.fontFamily);
+    if ('headingFontFamily' in example) {
+      expect(visualState.headingFontFamily).toContain(example.headingFontFamily);
+    }
     expect(visualState.focusVisible).toBe(true);
     expect(visualState.surfaceVisible).toBe(true);
 
@@ -2904,6 +2922,36 @@ for (const example of [
     }
   });
 }
+
+test('style selector swaps the preset with its tokens and leaves the colour scheme alone', async ({
+  page,
+}) => {
+  await page.goto(layoutArtifactUrl('layout-mixed'));
+  const root = page.locator('html');
+  await expect(root).toHaveAttribute('data-preset', 'monument');
+
+  // Схема переводится читателем и обязана пережить смену стиля.
+  await page.getByRole('button', { name: 'Toggle color theme' }).click();
+  const chosenScheme = await root.getAttribute('data-theme');
+  expect(chosenScheme).toBe('dark');
+
+  const background = async (): Promise<string> =>
+    page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const before = await background();
+
+  await page.locator('[data-preset-select]').selectOption('terminal');
+  await expect(root).toHaveAttribute('data-preset', 'terminal');
+  await expect(root).toHaveAttribute('data-font', 'mono');
+  await expect(root).toHaveAttribute('data-density', 'compact');
+  await expect(root).toHaveAttribute('data-radius', 'sharp');
+  await expect(root).toHaveAttribute('data-theme', chosenScheme ?? 'dark');
+  expect(await background()).not.toBe(before);
+
+  await page.locator('[data-preset-select]').selectOption('material');
+  await expect(root).toHaveAttribute('data-preset', 'material');
+  await expect(root).toHaveAttribute('data-font', 'serif');
+  await expect(root).toHaveAttribute('data-theme', chosenScheme ?? 'dark');
+});
 
 test('system theme follows dark preference and becomes an explicit theme after activation', async ({
   page,

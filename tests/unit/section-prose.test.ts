@@ -62,12 +62,12 @@ describe('section lead and nearby appendix definitions', () => {
       expect(inFlow).not.toContain('Glossary');
       expect(html.match(/data-review-target=/gu)).toHaveLength(reviewManifest.targets.length);
       const movedTarget = reviewManifest.targets.find(
-        (target) => target.kind === 'directive:glossary' && target.source.line === 14,
+        (target) => target.kind === 'directive:glossary' && target.source.line === 18,
       );
       expect(movedTarget).toBeDefined();
       expect(appendix).toContain(`data-review-target="${movedTarget?.id}"`);
       const leadTargets = reviewManifest.targets.filter(
-        (target) => target.kind === 'markdown:paragraph' && target.source.line === 9,
+        (target) => target.kind === 'markdown:paragraph' && target.source.line === 13,
       );
       expect(leadTargets).toHaveLength(1);
       expect(firstSection).toContain(`data-review-target="${leadTargets[0]?.id}"`);
@@ -212,6 +212,11 @@ function embeddedReviewManifest(html: string): ReviewTargetManifest {
 
 function validSectionProseSource(): string {
   return [
+    '---',
+    'title: Section prose',
+    // Этот случай проверяет манифест целей ревью, поэтому страница заказывает режим явно.
+    'review: true',
+    '---',
     '# Section prose',
     '',
     '## Glossary nearby',
