@@ -439,7 +439,19 @@ function manifestIssueMessage(issue: ZodIssue | undefined): string {
   if (unrecognized.length > 0) {
     return `Report metadata has ${unrecognized.length === 1 ? 'an unknown key' : 'unknown keys'}: ${unrecognized.join(', ')}.`;
   }
+  const choice = invalidManifestChoice(issue);
+  if (choice !== undefined)
+    return `Report metadata ${choice.field} has a value outside its domain.`;
   return 'Invalid report metadata.';
+}
+
+/** Поле с закрытым набором значений и сам набор: автору нужно слово, а не ссылка на всю схему. */
+function invalidManifestChoice(
+  issue: ZodIssue | undefined,
+): { readonly field: string; readonly values: readonly string[] } | undefined {
+  if (issue === undefined || issue.code !== 'invalid_value' || issue.path.length === 0)
+    return undefined;
+  return { field: issue.path.join('.'), values: issue.values.map((value) => String(value)) };
 }
 
 /**
@@ -449,6 +461,8 @@ function manifestIssueMessage(issue: ZodIssue | undefined): string {
 function manifestIssueRemediation(issue: ZodIssue | undefined): string {
   const unrecognized = unrecognizedManifestKeys(issue);
   if (unrecognized.length === 0) {
+    const choice = invalidManifestChoice(issue);
+    if (choice !== undefined) return `Set ${choice.field} to one of: ${choice.values.join(', ')}.`;
     return 'Run `agentic-report schema` and update the manifest or frontmatter.';
   }
   const [first] = unrecognized;

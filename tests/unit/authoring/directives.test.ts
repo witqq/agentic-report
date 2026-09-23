@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { Ajv2020 } from 'ajv/dist/2020.js';
@@ -40,6 +40,10 @@ describe('registry-driven semantic directives', () => {
     const workspace = await trackedWorkspace('directive-renderers');
     await writeFile(path.join(workspace, 'data.json'), '{"local":true}\n');
     await writeFile(path.join(workspace, 'reader.woff'), 'package-owned-font-bytes');
+    await copyFile(
+      path.resolve('tests/fixtures/video/playback.webm'),
+      path.join(workspace, 'clip.webm'),
+    );
     const markdown = [
       '# Registry renderers',
       '::contents',
@@ -126,6 +130,8 @@ describe('registry-driven semantic directives', () => {
       '::node{id="source" label="Source" group="input" kind="accent"}',
       '::node{id="output" label="Output" group="result" kind="success"}',
       '::edge{from="source" to="output" label="compile"}',
+      '::legend{title="Key"}',
+      '::legend-item{node="accent" label="Input side"}',
       ':::',
       '::::timeline{title="Delivery" description="Two delivery phases."}',
       ':::event{date="Now" title="Build" kind="accent"}',
@@ -137,6 +143,7 @@ describe('registry-driven semantic directives', () => {
       ':::',
       ':asset[Named download]{src="data.json"}',
       '::asset{src="data.json"}',
+      '::video{src="clip.webm" caption="Recorded run"}',
       '::font{src="reader.woff" family="Reader Sans"}',
     ].join('\n');
 
@@ -489,6 +496,14 @@ describe('registry-driven semantic directives', () => {
   it('projects every permitted form and explicit or default attribute into sanitized output', async () => {
     const workspace = await trackedWorkspace('directive-projection-matrix');
     await writeFile(path.join(workspace, 'local file.bin'), 'local-resource');
+    await copyFile(
+      path.resolve('tests/fixtures/video/playback.webm'),
+      path.join(workspace, 'local video.webm'),
+    );
+    await copyFile(
+      path.resolve('tests/fixtures/video/poster.png'),
+      path.join(workspace, 'local poster.png'),
+    );
 
     for (const directive of authoringRegistry.directives as readonly DirectiveDefinition[]) {
       for (const form of directive.forms) {
@@ -856,7 +871,7 @@ describe('registry-driven semantic directives', () => {
     );
     expect(first.html).toContain('data-node-id="a"');
     expect(first.html).toContain(
-      'A validated edge. Groups: none. Nodes: a: A; b: B. Connections: a to b: next.',
+      'A validated edge. Nodes: 2; flow layers: 2. Layers along the flow: 1. A. 2. B. Connections along the flow: A → B: next.',
     );
     expect(first.html).not.toMatch(/class="semantic-(?:point|node)[^"]*"[^>]*role=/u);
     expect(first.html).toContain('class="semantic-event visualization-timeline-event');
@@ -874,8 +889,15 @@ describe('registry-driven semantic directives', () => {
       '# Down\n:::diagram{title="Down" description="Vertical nodes." direction="down"}\n::node{id="a" label="A"}\n::node{id="b" label="B"}\n:::\n',
       workspace,
     );
-    expect(diagramNodePosition(rightDiagram.html, 'b')).toEqual({ x: 188, y: 22 });
-    expect(diagramNodePosition(downDiagram.html, 'b')).toEqual({ x: 22, y: 108 });
+    // Без связи оба узла стоят в первом слое: вправо слой — колонка, вниз — строка.
+    const rightA = diagramNodePosition(defaultView(rightDiagram.html), 'a');
+    const rightB = diagramNodePosition(defaultView(rightDiagram.html), 'b');
+    const downA = diagramNodePosition(defaultView(downDiagram.html), 'a');
+    const downB = diagramNodePosition(defaultView(downDiagram.html), 'b');
+    expect(rightB.x).toBe(rightA.x);
+    expect(rightB.y).toBeGreaterThan(rightA.y);
+    expect(downB.y).toBe(downA.y);
+    expect(downB.x).toBeGreaterThan(downA.x);
 
     const precise = await render(
       '# Precise\n::::chart{title="Precise" description="Small distinct values." type="line"}\n:::series{label="Metric"}\n::point{label="A" value="0.0001"}\n::point{label="B" value="0.0002"}\n:::\n::::\n',
@@ -892,10 +914,19 @@ describe('registry-driven semantic directives', () => {
       workspace,
     );
     expect(labelledDiagram.html).toContain(
-      `Complete edge data. Groups: none. Nodes: a: A; b: B. Connections: a to b: ${longEdgeLabel}.`,
+      `Complete edge data. Nodes: 2; flow layers: 2. Layers along the flow: 1. A. 2. B. Connections along the flow: A → B: ${longEdgeLabel}.`,
     );
-    // Подпись обрезается по ИЗМЕРЕННОЙ ширине, а не по числу знаков, и суррогатная пара не рвётся.
-    expect(labelledDiagram.html).toContain('>12345678901234567890🛰 complete…</text>');
+    // Длинная подпись переносится по словам, а не режется: на странице видна целиком, и суррогатная
+    // пара не рвётся.
+    const labelText = /<g class="visualization-edge-label">[\s\S]*?<\/g>/u.exec(
+      labelledDiagram.html,
+    )?.[0];
+    const labelLines = [...(labelText ?? '').matchAll(/<tspan[^>]*>([^<]*)<\/tspan>/gu)].map(
+      (match) => match[1],
+    );
+    expect(labelLines.length).toBeGreaterThan(1);
+    expect(labelLines.join(' ')).toBe(longEdgeLabel);
+    expect(labelText).not.toContain('…');
     expect(labelledDiagram.html).not.toContain('\uFFFD');
 
     const escaped = await render(
@@ -1098,6 +1129,88 @@ describe('registry-driven semantic directives', () => {
         ],
       },
       {
+        name: 'legend item naming both an edge and a node',
+        line: 4,
+        source: [
+          ':::diagram{title="Legend" description="Legend rules."}',
+          '::node{id="a" label="A"}',
+          '::legend-item{edge="call" node="accent" label="Both"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'legend item naming nothing',
+        line: 4,
+        source: [
+          ':::diagram{title="Legend" description="Legend rules."}',
+          '::node{id="a" label="A"}',
+          '::legend-item{label="Nothing"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'node legend item without words',
+        line: 4,
+        source: [
+          ':::diagram{title="Legend" description="Legend rules."}',
+          '::node{id="a" label="A"}',
+          '::legend-item{node="success"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'hidden legend item with words',
+        line: 4,
+        source: [
+          ':::diagram{title="Legend" description="Legend rules."}',
+          '::node{id="a" label="A"}',
+          '::legend-item{edge="data" hidden="true" label="Kept"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'duplicate legend item',
+        line: 5,
+        source: [
+          ':::diagram{title="Legend" description="Legend rules."}',
+          '::node{id="a" label="A"}',
+          '::legend-item{node="success" label="One"}',
+          '::legend-item{node="success" label="Two"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'second legend directive',
+        line: 5,
+        source: [
+          ':::diagram{title="Legend" description="Legend rules."}',
+          '::node{id="a" label="A"}',
+          '::legend{title="One"}',
+          '::legend{title="Two"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'flow naming both layout and direction',
+        line: 2,
+        source: [
+          ':::diagram{title="Both" description="One default view." layout="down" direction="right"}',
+          '::node{id="a" label="A"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'sequence with a layout',
+        line: 2,
+        source: [
+          ':::diagram{title="Sequence" description="No flow layout." type="sequence" layout="down"}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          '::edge{from="a" to="b" label="call"}',
+          ':::',
+        ],
+      },
+      {
         name: 'diagram self-edge',
         line: 4,
         source: [
@@ -1130,29 +1243,6 @@ describe('registry-driven semantic directives', () => {
           '::group{id="same" label="One"}',
           '::group{id="same" label="Two"}',
           '::node{id="a" label="A" group="same"}',
-          ':::',
-        ],
-      },
-      {
-        name: 'grouped flow with unsupported down direction',
-        line: 2,
-        source: [
-          ':::diagram{title="Grouped down" description="Columns are rightward." direction="down"}',
-          '::group{id="one" label="One"}',
-          '::group{id="two" label="Two"}',
-          '::node{id="a" label="A" group="one"}',
-          '::node{id="b" label="B" group="two"}',
-          ':::',
-        ],
-      },
-      {
-        name: 'grouped flow with an unassigned node',
-        line: 5,
-        source: [
-          ':::diagram{title="Unassigned" description="Every node needs membership."}',
-          '::group{id="one" label="One"}',
-          '::group{id="two" label="Two"}',
-          '::node{id="a" label="A"}',
           ':::',
         ],
       },
@@ -1239,17 +1329,6 @@ describe('registry-driven semantic directives', () => {
           '::node{id="a" label="A" group="flow"}',
           '::node{id="b" label="B"}',
           '::edge{from="a" to="b" label="call"}',
-          ':::',
-        ],
-      },
-      {
-        name: 'sequence self-message',
-        line: 5,
-        source: [
-          ':::diagram{title="Sequence" description="Self messages are unsupported." type="sequence"}',
-          '::node{id="a" label="A"}',
-          '::node{id="b" label="B"}',
-          '::edge{from="a" to="a" label="recursive call"}',
           ':::',
         ],
       },
@@ -1363,21 +1442,40 @@ describe('registry-driven semantic directives', () => {
     const secondGrouped = await render(groupedSource, workspace);
     expect(secondGrouped.html).toBe(firstGrouped.html);
     expect(firstGrouped.html).toContain('data-diagram-type="flow"');
-    expect(firstGrouped.html.match(/data-group-id=/gu)).toHaveLength(3);
-    expect(firstGrouped.html.match(/data-node-id=/gu)).toHaveLength(18);
-    // Маршрут выбирается по геометрии: через зазор между колонками, по жёлобу внутри группы и
-    // под диаграммой — только обратное и перепрыгивающее ребро.
-    expect(firstGrouped.html.match(/visualization-group-gap-edge/gu)).toHaveLength(3);
-    expect(firstGrouped.html.match(/visualization-group-internal-edge/gu)).toHaveLength(1);
-    expect(firstGrouped.html.match(/visualization-group-outer-edge/gu)).toHaveLength(2);
-    expect(firstGrouped.html).toContain(
-      'Groups: source: Authentication and authorization services (step-1, step-2, step-3, step-4, step-5, step-6); compiler: Compiler pipeline (step-7, step-8, step-9, step-10, step-11, step-12); reader: Reader artifact (step-13, step-14, step-15, step-16, step-17, step-18).',
+    const groupedView = defaultView(firstGrouped.html);
+    expect(groupedView.match(/data-group-id=/gu)).toHaveLength(3);
+    expect(groupedView.match(/data-node-id=/gu)).toHaveLength(18);
+    // Слои идут по потоку: каждая прямая связь ведёт в более поздний слой, а обратная связь
+    // описывается отдельно и в слоях ничего не ломает.
+    const layerOf = new Map(
+      [...groupedView.matchAll(/data-node-id="([^"]+)"[^>]*data-layer="(\d+)"/gu)].map((match) => [
+        match[1] ?? '',
+        Number(match[2]),
+      ]),
     );
-    expect(firstGrouped.html).toContain('>Authentication and authorization</text>');
-    expect(firstGrouped.html).toContain('>services</text>');
+    expect(layerOf.size).toBe(18);
+    for (let index = 1; index < 18; index += 1) {
+      expect(layerOf.get(`step-${index + 1}`) ?? 0).toBeGreaterThan(
+        layerOf.get(`step-${index}`) ?? 0,
+      );
+    }
+    expect(firstGrouped.html).toContain(
+      'Groups: “Authentication and authorization services”: Step 1 detail, Step 2 detail, Step 3 detail, Step 4 detail, Step 5 detail, Step 6 detail; “Compiler pipeline”: Step 7 detail, Step 8 detail, Step 9 detail, Step 10 detail, Step 11 detail, Step 12 detail; “Reader artifact”: Step 13 detail, Step 14 detail, Step 15 detail, Step 16 detail, Step 17 detail, Step 18 detail.',
+    );
+    expect(firstGrouped.html).toContain(
+      'Connections back against the flow: Step 18 detail → Step 3 detail: reverse feedback.',
+    );
+    // Длинный заголовок группы переносится, но не теряет слов.
+    const sourceTitle = [
+      ...(/<g data-group-id="source"[\s\S]*?<\/g>/u.exec(groupedView)?.[0] ?? '').matchAll(
+        /class="visualization-group-label">([^<]*)<\/text>/gu,
+      ),
+    ].map((match) => match[1]);
+    expect(sourceTitle.length).toBeGreaterThan(1);
+    expect(sourceTitle.join(' ')).toBe('Authentication and authorization services');
     // Холст ограничен и повторяем; точное число пикселей не закрепляется, иначе любая правка
     // отступов ломает тест, ничего не говоря о поведении.
-    const groupedViewBox = /viewBox="0 0 ([0-9.]+) ([0-9.]+)"/u.exec(firstGrouped.html);
+    const groupedViewBox = /viewBox="0 0 ([0-9.]+) ([0-9.]+)"/u.exec(groupedView);
     expect(groupedViewBox).not.toBeNull();
     const groupedWidth = Number(groupedViewBox?.[1]);
     const groupedHeight = Number(groupedViewBox?.[2]);
@@ -1406,7 +1504,7 @@ describe('registry-driven semantic directives', () => {
     expect(firstSequence.html.match(/data-participant=/gu)).toHaveLength(4);
     expect(firstSequence.html.match(/data-message-order=/gu)).toHaveLength(4);
     expect(firstSequence.html).toContain(
-      'Messages in order: 1. agent to loader: load source; 2. loader to compiler: validated graph; 3. compiler to browser: write artifact; 4. browser to agent: review result.',
+      'Participants from left to right: Authoring agent; Source loader; Compiler; Browser. Messages in order: 1. Authoring agent → Source loader: load source. 2. Source loader → Compiler: validated graph. 3. Compiler → Browser: write artifact. 4. Browser → Authoring agent: review result.',
     );
 
     const maximumFlow = await render(
@@ -1421,7 +1519,7 @@ describe('registry-driven semantic directives', () => {
       ].join('\n'),
       workspace,
     );
-    expect(maximumFlow.html.match(/data-node-id="maximum-/gu)).toHaveLength(20);
+    expect(defaultView(maximumFlow.html).match(/data-node-id="maximum-/gu)).toHaveLength(20);
 
     const maximumFlowEdges = await render(
       [
@@ -1437,7 +1535,7 @@ describe('registry-driven semantic directives', () => {
       ].join('\n'),
       workspace,
     );
-    expect(maximumFlowEdges.html.match(/data-edge=/gu)).toHaveLength(40);
+    expect(defaultView(maximumFlowEdges.html).match(/data-edge=/gu)).toHaveLength(40);
 
     const minimumSequence = await render(
       [
@@ -1975,7 +2073,16 @@ describe('registry-driven semantic directives', () => {
     for (const directive of required) {
       const requiredParent = directive.placement.requiredParent;
       if (requiredParent === undefined) throw new Error('Required parent disappeared');
-      const valid = ['series', 'point', 'group', 'node', 'edge', 'event'].includes(directive.name)
+      const valid = [
+        'series',
+        'point',
+        'group',
+        'node',
+        'edge',
+        'legend',
+        'legend-item',
+        'event',
+      ].includes(directive.name)
         ? visualizationInvocation(directive.name, {})
         : nestedDirectiveInvocation(requiredParent, directive.name);
       expect((await render(`# Valid parent\n${valid}\n`, workspace)).html).toMatch(
@@ -2423,6 +2530,14 @@ function sourceOffsetAt(source: string, line: number, column: number): number {
   return offset + column - 1;
 }
 
+/** Разметка без скрытых видов раскладки: геометрию и счёт узлов проверяет вид по умолчанию. */
+function defaultView(html: string): string {
+  return html.replace(
+    /<div id="[^"]*" role="tabpanel"[^>]*\bhidden\b[^>]*>[\s\S]*?<\/svg><\/div><\/div>/gu,
+    '',
+  );
+}
+
 function diagramNodePosition(html: string, id: string): Readonly<{ x: number; y: number }> {
   const match = html.match(
     new RegExp(`data-node-id="${id}"[^>]*><rect x="([^"]+)" y="([^"]+)"`, 'u'),
@@ -2434,6 +2549,9 @@ function diagramNodePosition(html: string, id: string): Readonly<{ x: number; y:
 }
 
 function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
+  // Видео и постер проверяются по типу файла, поэтому им нужны свои расширения.
+  if (attribute.renderProperty === 'dataVideoSource') return 'local%20video.webm';
+  if (attribute.renderProperty === 'dataVideoPoster') return 'local%20poster.png';
   if (attribute.constraint.kind === 'boolean') return 'true';
   if (attribute.constraint.kind === 'integer') return boundedInteger(attribute.constraint, 2);
   if (attribute.constraint.kind === 'number') return '2.5';
@@ -2458,6 +2576,9 @@ function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
 }
 
 function renderedAttributeValue(attribute: DirectiveAttributeDefinition): string {
+  // Видео и постер проверяются по типу файла, поэтому им нужны свои расширения.
+  if (attribute.renderProperty === 'dataVideoSource') return 'local%20video.webm';
+  if (attribute.renderProperty === 'dataVideoPoster') return 'local%20poster.png';
   if (attribute.constraint.kind === 'boolean') return 'true';
   if (attribute.constraint.kind === 'integer')
     return boundedInteger(attribute.constraint, -999_999);
@@ -2499,9 +2620,19 @@ function directiveInvocation(
     return responseInvocation(directive.name, overrides);
   }
   if (
-    ['chart', 'series', 'point', 'diagram', 'group', 'node', 'edge', 'timeline', 'event'].includes(
-      directive.name,
-    )
+    [
+      'chart',
+      'series',
+      'point',
+      'diagram',
+      'group',
+      'node',
+      'edge',
+      'legend',
+      'legend-item',
+      'timeline',
+      'event',
+    ].includes(directive.name)
   ) {
     return visualizationInvocation(directive.name, overrides);
   }
@@ -2649,6 +2780,23 @@ function visualizationInvocation(
       ':::',
     ].join('\n');
   }
+  if (target === 'legend' || target === 'legend-item') {
+    // Пункт называет ровно одно: выделение узла требует слов, вид связи — нет.
+    const item = 'node' in overrides ? { label: 'Meaning' } : { edge: 'dependency' };
+    const legend = attributes('legend');
+    return [
+      `:::diagram{${attributes('diagram')}}`,
+      '::node{id="first" label="First" kind="accent"}',
+      '::node{id="second" label="Second"}',
+      '::edge{from="first" to="second" label="call"}',
+      '::edge{from="second" to="first" label="values" kind="data"}',
+      legend.length === 0 ? '::legend' : `::legend{${legend}}`,
+      target === 'legend-item'
+        ? `::legend-item{${attributes('legend-item', item)}}`
+        : '::legend-item{node="accent" label="Marked"}',
+      ':::',
+    ].join('\n');
+  }
   if (target === 'group') {
     return [
       `:::diagram{${attributes('diagram')}}`,
@@ -2765,21 +2913,44 @@ function assertRenderedAttribute(
 ): void {
   if (expected === undefined) throw new Error(`Missing expected value for ${directive.name}`);
   const serialized = String(expected);
+  if (directive.name === 'legend-item' && attribute.name === 'hidden') {
+    // Скрытый пункт исчезает из легенды: проекция видна по его отсутствию.
+    if (serialized === 'true') expect(rendered.html).not.toContain('data-edge-kind="dependency"');
+    else expect(rendered.html).toContain('data-edge-kind="dependency"');
+    return;
+  }
   if (
-    ['chart', 'series', 'point', 'diagram', 'group', 'node', 'edge', 'timeline', 'event'].includes(
-      directive.name,
-    )
+    [
+      'chart',
+      'series',
+      'point',
+      'diagram',
+      'group',
+      'node',
+      'edge',
+      'legend',
+      'legend-item',
+      'timeline',
+      'event',
+    ].includes(directive.name)
   ) {
     const visualExpectation: Readonly<Record<string, string>> = {
       'chart.type': `data-chart-type="${serialized}"`,
       'diagram.type': `data-diagram-type="${serialized}"`,
       'diagram.direction': `data-diagram-direction="${serialized}"`,
+      'diagram.layout': `data-diagram-layout="${serialized}"`,
       'group.id': `data-group-id="${serialized}"`,
       'node.id': `data-node-id="${serialized}"`,
       'node.group': `data-group="${serialized}"`,
       'node.kind': `visualization-node-${serialized}`,
       'edge.from': `data-from="${serialized}"`,
       'edge.to': `data-to="${serialized}"`,
+      'legend.title': `class="visualization-legend-title">${serialized}</p>`,
+      // Автоматическая часть легенды добавляет вид связи, который автор не назвал.
+      'legend.auto': 'data-edge-kind="data"',
+      'legend-item.edge': `data-edge-kind="${serialized}"`,
+      'legend-item.node': `data-node-kind="${serialized}"`,
+      'legend-item.label': `</svg>${serialized}</li>`,
       'event.kind': `visualization-event-${serialized}`,
     };
     expect(rendered.html, `${directive.name}.${attribute.name}`).toContain(
@@ -2871,6 +3042,21 @@ function assertRenderedAttribute(
     case 'dataFontSource':
       expect(rendered.fontCss, `${directive.name}.${attribute.name}`).toContain(
         'src:url("data:application/octet-stream;base64,',
+      );
+      return;
+    case 'dataVideoSource':
+      expect(rendered.html, `${directive.name}.${attribute.name}`).toContain(
+        '<source src="data:video/webm;base64,',
+      );
+      return;
+    case 'dataVideoPoster':
+      expect(rendered.html, `${directive.name}.${attribute.name}`).toContain(
+        'poster="data:image/png;base64,',
+      );
+      return;
+    case 'dataVideoCaption':
+      expect(rendered.html, `${directive.name}.${attribute.name}`).toContain(
+        `<figcaption class="semantic-video-caption">${serialized}</figcaption>`,
       );
       return;
     case 'dataFontFamily':

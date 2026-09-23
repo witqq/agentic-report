@@ -285,10 +285,19 @@ headings scale down, and action groups wrap at their content width rather than f
 the screen. Disclosure, modal, popover, filter, toggle, copy, Review and Response controls receive package
 icons automatically. Authored trigger labels remain visible on phones; no icon markup or CSS is required.
 The visualization catalog includes a 15-node grouped subsystem flow and an ordered compile-request sequence;
-both use the same bounded `diagram`/`group`/`node`/`edge` directives and compile offline. Flow layout
-measures its labels, accepts two to five groups, and needs no tuning; `row` on a node lines it up with nodes
-in other groups, `route="direct|around"` overrides one edge, and `spacing="compact|comfortable|spacious"`
-sets the diagram's breathing room.
+both use the same bounded `diagram`/`group`/`node`/`edge` directives and compile offline. Flow layout goes
+by layers along the flow, picks its direction and node order itself, keeps every connection on its own path
+with its label on it, and needs no tuning. Readers switch between top-to-bottom, left-to-right, and
+right-angle views with buttons above the diagram; `layout="auto|down|right|orthogonal"` sets the view shown
+first and printed, and `auto` picks the clearest one. Groups surround only the nodes they mean. A connection
+says what it is with `kind="call|data|event|dependency"`, a node can add a smaller `detail` line, and
+`legend`/`legend-item` title the legend and name kinds and node emphasis in the author's words. Every
+diagram is also written out in words under the picture.
+
+Recordings play inside the page. `::video{src="assets/run.webm" poster="assets/frame.png" caption="…"}` or a
+plain `![Alt](assets/run.webm)` becomes a muted, looping `<video>` with controls, embedded in single-file
+output and copied beside `index.html` in directory output. It starts while on screen and waits for the reader
+who prefers reduced motion.
 
 Use `:::copyable` for prose that a reader should paste into a message or handoff. Paragraphs, emphasis,
 links, proportional typography, and wrapping remain ordinary Markdown; the localized Copy control writes

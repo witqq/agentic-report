@@ -9,14 +9,15 @@ const generatedRoot = path.resolve('test-results/e2e-generated');
 const artifactUrl = (name: string): string => pathToFileURL(path.join(generatedRoot, name)).href;
 
 const tabConsumers = [
-  { name: 'architecture', artifact: 'starter-architecture.html', groups: 1 },
-  { name: 'incident review', artifact: 'incident-review.html', groups: 1 },
+  // Схема добавляет свой список вкладок: переключатель раскладок проходит ту же проверку.
+  { name: 'architecture', artifact: 'starter-architecture.html', groups: 2 },
+  { name: 'incident review', artifact: 'incident-review.html', groups: 2 },
   { name: 'interactive catalog', artifact: 'interactive-catalog.html', groups: 2 },
   { name: 'launch readiness', artifact: 'launch-readiness.html', groups: 1 },
   { name: 'research', artifact: 'starter-research.html', groups: 1 },
   { name: 'tutorial', artifact: 'starter-tutorial.html', groups: 1 },
   { name: 'vendor decision', artifact: 'vendor-decision.html', groups: 1 },
-  { name: 'research authoring fixture', artifact: 'research-corpus.html', groups: 1 },
+  { name: 'research authoring fixture', artifact: 'research-corpus.html', groups: 3 },
 ] as const;
 
 interface TabGeometry {
@@ -98,7 +99,10 @@ test('semantic tab labels stay readable and overflow within their list from file
 
     if (mobile && consumer.name === 'incident review') {
       expect(
-        await tabLists.first().evaluate((element) => element.scrollWidth > element.clientWidth),
+        await page
+          .locator('[role="tablist"]:not(.visualization-layout-switch)')
+          .first()
+          .evaluate((element) => element.scrollWidth > element.clientWidth),
         'the dense incident tab row uses its local scroller',
       ).toBe(true);
     }

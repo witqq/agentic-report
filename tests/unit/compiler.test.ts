@@ -88,6 +88,7 @@ describe('buildReport', () => {
       "object-src 'none'",
       'img-src data:',
       'font-src data:',
+      'media-src data:',
       "style-src 'unsafe-inline'",
       `script-src 'sha256-${createHash('sha256').update(inlineRuntime).digest('base64')}'`,
     ]);
@@ -230,6 +231,7 @@ describe('buildReport', () => {
       "object-src 'none'",
       "img-src data: 'self'",
       "font-src data: 'self'",
+      "media-src data: 'self'",
       "style-src 'unsafe-inline' 'self'",
       "script-src 'self'",
     ]);
@@ -853,7 +855,7 @@ describe('buildReport', () => {
     ]);
   });
 
-  it('builds a flow whose grouping is unfinished and says what is still missing', async () => {
+  it('builds a flow where only some nodes belong to groups and refuses an undeclared group', async () => {
     const workspace = await trackedWorkspace('incomplete-grouping');
     const entry = path.join(workspace, 'report.md');
     const output = path.join(workspace, 'report.html');
@@ -884,6 +886,14 @@ describe('buildReport', () => {
       '::edge{from="a" to="b" label="n"}',
       ':::',
     ];
+    const strayNode = [
+      ':::diagram{title="F" description="One group, stray node."}',
+      '::group{id="g1" label="Первая"}',
+      '::node{id="a" label="Аккаунт" group="g1"}',
+      '::node{id="b" label="Бюджет"}',
+      '::edge{from="a" to="b" label="n"}',
+      ':::',
+    ];
     const twoGroups = [
       ':::diagram{title="F" description="Two groups." direction="right"}',
       '::group{id="g1" label="Первая"}',
@@ -894,12 +904,12 @@ describe('buildReport', () => {
       ':::',
     ];
 
-    // Three observations at once per case: the outcome, the presence or absence of the warning, and
-    // the nodes in the built page. The outcome alone cannot tell an accepted-with-warning flow from
-    // one accepted silently.
+    // A group marks only the nodes it means: one group, or nodes left outside every group, is a
+    // finished flow and builds silently. The node's group attribute shows which side it landed on.
     for (const [label, body, expected] of [
       ['ungrouped', ungrouped, []],
-      ['one group', oneGroup, ['INCOMPLETE_DIAGRAM_GROUPING']],
+      ['one group', oneGroup, []],
+      ['stray node', strayNode, []],
       ['two groups', twoGroups, []],
     ] as const) {
       await writeFile(entry, diagram(...body));
@@ -913,21 +923,20 @@ describe('buildReport', () => {
       expect(html, label).toContain('Бюджет');
     }
 
-    await writeFile(entry, diagram(...oneGroup));
-    const warned = (await buildReport({ input: workspace, output })).warnings[0];
-    expect(warned?.level).toBe('warning');
-    expect(warned?.source?.file).toBe(entry);
-    expect(warned?.message).toContain('2 to 5 groups');
+    await writeFile(entry, diagram(...strayNode));
+    await buildReport({ input: workspace, output });
+    const strayHtml = await readFile(output, 'utf8');
+    expect(strayHtml).toMatch(/<g data-node-id="a" data-group="g1"/u);
+    expect(strayHtml).toMatch(/<g data-node-id="b" data-layer/u);
 
-    // Unfinished grouping does not suspend the rules around it: the warning must not end the
-    // check, or a one-group flow would stop being validated for membership at all.
+    // A named group must still be declared: leaving a node outside is allowed, a typo is not.
     await writeFile(
       entry,
       diagram(
-        ':::diagram{title="F" description="One group, stray node." direction="right"}',
+        ':::diagram{title="F" description="Undeclared group."}',
         '::group{id="g1" label="Первая"}',
         '::node{id="a" label="Аккаунт" group="g1"}',
-        '::node{id="b" label="Бюджет"}',
+        '::node{id="b" label="Бюджет" group="g2"}',
         '::edge{from="a" to="b" label="n"}',
         ':::',
       ),
@@ -935,7 +944,7 @@ describe('buildReport', () => {
     await expect(buildReport({ input: workspace, output })).rejects.toMatchObject({
       diagnostic: {
         code: 'INVALID_VISUALIZATION_DATA',
-        message: 'Every node in a grouped flow requires a group.',
+        message: 'Diagram node references an undeclared group: g2.',
       },
     });
   });

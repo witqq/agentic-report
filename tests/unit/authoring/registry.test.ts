@@ -61,10 +61,13 @@ describe('authoring registry', () => {
       'group',
       'node',
       'edge',
+      'legend',
+      'legend-item',
       'timeline',
       'event',
       'demo',
       'asset',
+      'video',
       'font',
     ]);
     expect(OUTPUT_FORMATS).toEqual(['single-file', 'directory']);
@@ -73,16 +76,21 @@ describe('authoring registry', () => {
     expect(authoringRegistry.visualizations.diagram).toMatchObject({
       defaultType: 'flow',
       types: ['flow', 'sequence'],
+      edgeKinds: ['call', 'data', 'event', 'dependency'],
+      defaultEdgeKind: 'call',
+      nodeKinds: ['neutral', 'accent', 'success', 'warning'],
+      edgeKindLegend: { minimumKinds: 2 },
+      legend: { maximumPerDiagram: 1, maximumItems: 8 },
       flow: {
         nodes: { minimum: 1, maximum: 20 },
         edges: { maximum: 40 },
         selfEdges: false,
+        layouts: ['auto', 'down', 'right', 'orthogonal'],
+        directions: ['auto', 'right', 'down'],
         groups: {
-          ungrouped: 0,
-          minimum: 2,
           maximum: 5,
-          requireEveryNode: true,
-          direction: 'right',
+          minimumMembers: 1,
+          requireEveryNode: false,
         },
       },
       sequence: {
@@ -91,7 +99,7 @@ describe('authoring registry', () => {
         groups: false,
         participantGroups: false,
         direction: 'forbidden',
-        selfMessages: false,
+        selfMessages: true,
       },
     });
     expect(authoringRegistry.source.codeFenceMetadata.terms).toMatchObject({
@@ -447,6 +455,7 @@ describe('authoring registry', () => {
               ...authoringRegistry.visualizations.diagram,
               defaultType: 'sequence',
               types: ['flow'],
+              defaultEdgeKind: 'broadcast',
               flow: {
                 ...authoringRegistry.visualizations.diagram.flow,
                 nodes: { minimum: 2, maximum: 1 },
@@ -467,6 +476,8 @@ describe('authoring registry', () => {
         'diagram contract: unsupported flow policy',
         'diagram contract: unsupported sequence policy',
         'diagram contract: directive type domain differs from visualization contract',
+        'diagram contract: invalid edge kind domain',
+        'diagram contract: edge kind domain differs from visualization contract',
       ]),
     );
 

@@ -630,6 +630,8 @@ The package-owned runtime increments a number. Author JavaScript is never execut
 
 ::asset{src="assets/evidence.json"}
 
+::video{src="assets/playback.webm" poster="assets/playback-frame.png" caption="The card slides in and settles."}
+
 ::font{src="assets/report.woff2" family="Report Sans"}
 ````
 
@@ -682,32 +684,58 @@ Open the result directly through `file://`.
 `chart.type` is `bar`, `line`, or `pie`. Charts accept 1–6 series with 1–12 points each; series share the
 same unique ordered labels. Pie charts accept exactly one non-negative series with a positive total.
 `diagram.type` is `flow` by default or `sequence`. A flow accepts 1–20 unique nodes and up to 40 validated
-edges. It is either ungrouped or declares 2–5 non-empty groups and assigns every node to one; a single
-group builds and reports `INCOMPLETE_DIAGRAM_GROUPING` so grouping can be finished later. Ungrouped flows
-accept `direction="right|down"`; grouped subsystem columns are rightward. A sequence accepts 2–6 node participants and 1–40 labelled edge messages;
-participant and message order is source order, while groups, direction and self-messages are rejected.
+edges, and up to 5 non-empty groups. A group surrounds only the nodes that name it with `group`; a node
+without a group stands beside the groups, and a named group must be declared. A sequence accepts 2–6 node
+participants and 1–40 labelled edge messages; participant and message order is source order, while groups and
+direction are rejected. A message whose `from` equals `to` is a step inside that participant and is drawn as a
+loop on its lifeline with the label beside it; a flow still rejects a self-edge.
 
-Layout is measured rather than fixed: a node box grows to fit its own wrapped label, a group column grows
-to fit its widest node, and every visible label stays horizontal. Routing follows geometry. Nodes sharing a
-row in adjacent groups connect with a level line; different rows in adjacent groups use a lane in the gap
-between the columns; a longer connection inside one group uses its own left-hand gutter; only a backward or
-column-skipping edge takes a lane under the diagram. Three optional attributes let the author overrule the
-default without being required for a readable result:
+A flow is laid out by layers along the flow, the way Mermaid's flowcharts are. A connection that returns
+along an already started path is drawn backward and described separately. Nodes inside a layer are ordered to
+reduce crossings, every connection keeps its own path with its ends spread along the node side, and a label
+sits on its own connection without landing on a node or another label. Node boxes and labels are measured: a
+label wraps by words and is never cut. Every flow ships three views built at compile time, and a package
+switcher above the diagram (a keyboard-operable tab list labelled in the page language) shows one at a time:
+`down` (layers top to bottom), `right` (layers left to right), and `orthogonal` (right-angle connections in
+their own lanes, groups as nested frames). `layout="auto|down|right|orthogonal"` names the view shown first
+and printed; `auto` picks the view with the fewest crossings that fits the page best. A diagram wider than the
+page column shrinks to at most three quarters of its size and scrolls inside its frame.
+`direction="right|down"` is the older spelling of the same choice and cannot be combined with `layout`; any
+`layout` on a sequence fails.
 
-| Attribute                                  | Where     | Meaning                                                                                             |
-| ------------------------------------------ | --------- | --------------------------------------------------------------------------------------------------- |
-| `spacing="compact\|comfortable\|spacious"` | `diagram` | Breathing room between rows and columns; every value stays readable.                                |
-| `row="1..20"`                              | `node`    | One-based layout row. Nodes given the same row line up across groups and connect with a level line. |
-| `route="auto\|direct\|around"`             | `edge`    | `direct` keeps the short path even across columns; `around` sends the edge under the diagram.       |
+Four attributes say what the picture means without styling it:
+
+| Attribute                                   | Where     | Meaning                                                                                         |
+| ------------------------------------------- | --------- | ----------------------------------------------------------------------------------------------- |
+| `kind="call\|data\|event\|dependency"`      | `edge`    | Connection kind; each has a package-drawn line and arrowhead. Default `call`.                   |
+| `detail="…"`                                | `node`    | A smaller second line under the label: what the node holds or does.                             |
+| `::legend{title="…" auto="true\|false"}`    | `diagram` | At most one. Titles the legend; `auto="false"` leaves out kinds without a legend item.          |
+| `::legend-item{edge=… \| node=… label="…"}` | `diagram` | Names a connection kind or a node emphasis in the author's words; `hidden="true"` hides a kind. |
+
+A diagram mixing two or more connection kinds gets a legend of the kinds present, in package words. Legend
+items come first in authored order, then the kinds the diagram mixes that no item names. Node emphasis
+(`kind="neutral|accent|success|warning"` on a node) has no package meaning, so it appears in the legend only
+through an item with a label. The legend's words also name kinds and emphasis in the diagram description.
+
+Three optional attributes let the author overrule the default without being required for a readable result:
+
+| Attribute                                  | Where     | Meaning                                                                                  |
+| ------------------------------------------ | --------- | ---------------------------------------------------------------------------------------- |
+| `spacing="compact\|comfortable\|spacious"` | `diagram` | Breathing room between layers and nodes; every value stays readable.                     |
+| `row="1..20"`                              | `node`    | Flow layer hint. Nodes given the same row share a layer when their connections allow it. |
+| `route="auto\|direct\|around"`             | `edge`    | Layout pull: `direct` keeps the connection short and straight, `around` lets it stretch. |
 
 Split a dense arbitrary graph rather than treating this bounded flow layout as a general graph optimizer.
 Timelines accept 1–20 direct events. Every visual requires a title and description and compiles into
 theme-aware responsive SVG or semantic HTML without visualization runtime code. A chart or diagram is one
-atomic accessible image whose description includes the complete authored data; visible axis and connection
-labels may be shortened to preserve layout, but accessible point values, group membership, node identities,
-participants, and ordered messages are not truncated. Numeric output retains up to six fractional digits and
-uses the reader locale for decimal and grouping separators; authored numeric values and labels retain their
-meaning.
+atomic accessible image whose description includes the complete authored data; visible axis labels may be
+shortened to preserve layout, but accessible point values, group membership, node identities,
+participants, and ordered messages are not truncated. A diagram's description is written as text rather than
+a raw list: the node and layer count, groups with their members, layers in flow order, connections along the
+flow, and backward connections separately, each connection kind named in the legend's words. The same text
+appears under the picture in a closed «diagram in words» disclosure. Numeric output retains up to six
+fractional digits and uses the reader locale for decimal and grouping separators; authored numeric values
+and labels retain their meaning.
 
 `callout.kind` is a lowercase presentation token. `demo.start` and `demo.step` are bounded integers.
 `section` is top-level only and requires `title`. Its optional `id` is a lowercase letter-led identity;
@@ -806,7 +834,11 @@ remains workstation-specific. For distribution, add `--share`: the label becomes
 payload is absent from output bytes, and the result reports the exact neutralized count. The profile does not
 scan arbitrary prose or replace ordinary links.
 
-`asset.src` and `font.src` must resolve to existing files under the canonical source root. The first font
+`asset.src`, `video.src`, `video.poster`, and `font.src` must resolve to existing files under the canonical
+source root. A video is a `.webm`, `.mp4`, `.m4v`, or `.ogv` file (Playwright `recordVideo` writes WebM) and is
+drawn as a muted, looping `<video>` with controls; `![Alt](recording.webm)` gives the same player in place of the
+image. The player starts while on screen and waits for the reader under reduced motion; embedded video counts
+toward `output.maxInlineBytes`, so long recordings belong in `--format directory`. The first font
 directive becomes the document font; later directives register additional faces. The text form uses its
 authored label; the leaf asset form receives `Download <filename>` so it remains visible and accessible.
 `tab` must be directly nested in `tabs`. Glossary keys and canonical terms are unique. In prose,

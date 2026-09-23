@@ -391,6 +391,7 @@ a {
 .copy-prose,
 .semantic-demo button,
 .semantic-tabs button,
+.visualization-layout-switch button,
 .semantic-modal button,
 .semantic-popover button,
 .semantic-toggle button,
@@ -457,6 +458,7 @@ a {
 .copy-prose:hover,
 .semantic-demo button:hover,
 .semantic-tabs button:hover,
+.visualization-layout-switch button:hover,
 .semantic-modal button:hover,
 .semantic-popover button:hover,
 .semantic-toggle button:hover,
@@ -1135,7 +1137,9 @@ a {
     transform var(--motion-reveal-duration) ease-out;
 }
 
-.semantic-section[data-reveal-motion][data-reveal-pending]:not([data-transition='stagger']) > * {
+/* Содержимое прячется уже по data-reveal-pending, до того как runtime включит переход атрибутом
+   data-reveal-motion: иначе включение перехода запускает видимое угасание с полной непрозрачности. */
+.semantic-section[data-reveal-pending]:not([data-transition='stagger']) > * {
   opacity: 0;
   transform: translateY(var(--motion-reveal-translation));
 }
@@ -1279,6 +1283,32 @@ img {
   height: auto;
   margin: calc(1.5rem * var(--space-factor)) auto;
   border-radius: var(--radius-medium);
+}
+
+/* Запись проигрывания — такая же иллюстрация, как картинка: во всю ширину колонки, не шире себя. */
+.semantic-video-player {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  margin: calc(1.5rem * var(--space-factor)) auto;
+  border-radius: var(--radius-medium);
+  background: var(--color-surface-raised);
+}
+
+.semantic-video {
+  margin: calc(1.5rem * var(--space-factor)) 0;
+}
+
+.semantic-video > .semantic-video-player {
+  margin-block: 0;
+}
+
+.semantic-video-caption {
+  margin-top: 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  text-align: center;
 }
 
 blockquote {
@@ -2201,7 +2231,19 @@ span.semantic-source-link[data-source-link-neutralized] {
   width: 100%;
   overflow-x: auto;
   border-radius: var(--radius-small);
-  background: var(--visualization-surface);
+  /* Тени по краям видны, только пока за краем есть что прокрутить: светлые заплатки едут вместе
+     с содержимым (local) и закрывают тень у того края, до которого прокрутка уже дошла. На macOS
+     полоса прокрутки скрыта, и без теней обрезанная схема выглядит целой. */
+  background:
+    linear-gradient(to right, var(--visualization-surface) 40%, transparent) left center / 3rem 100%
+      no-repeat local,
+    linear-gradient(to left, var(--visualization-surface) 40%, transparent) right center / 3rem 100%
+      no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgb(0 0 0 / 22%), transparent) left center / 1rem 100%
+      no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgb(0 0 0 / 22%), transparent) right center / 1rem
+      100% no-repeat scroll,
+    var(--visualization-surface);
 }
 
 .visualization-svg {
@@ -2213,8 +2255,40 @@ span.semantic-source-link[data-source-link-neutralized] {
   color: var(--visualization-foreground);
 }
 
+.visualization-layout-switch {
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+/* Печатается вид, который выбрал автор, а не тот, на который переключился читатель. Селекторы с
+   классом контейнера перебивают и список вкладок пакета, и общее правило [hidden]. */
+@media print {
+  .visualization-layouts > .visualization-layout-switch,
+  .visualization-layouts > .visualization-layout-view {
+    display: none;
+  }
+
+  .visualization-layouts > .visualization-layout-view[data-layout-default] {
+    display: block;
+  }
+}
+
+/* Схему шире колонки страница ужимает, но не мельче трёх четвертей: дальше текст не читается, и
+   остаток прокручивается внутри рамки. */
 .visualization-diagram {
-  min-width: 0;
+  width: auto;
+  max-width: 100%;
+  min-width: calc(var(--diagram-width, 0px) * 0.75);
+  margin-inline: auto;
+  /* Схема по слоям растёт вниз: потолок высоты ужал бы её вместе с текстом ниже читаемого. */
+  max-height: none;
+}
+
+/* На бумаге прокрутки нет: схема ужимается до ширины листа целиком. */
+@media print {
+  .visualization-diagram {
+    min-width: 0;
+  }
 }
 
 .visualization-group {
@@ -2226,7 +2300,7 @@ span.semantic-source-link[data-source-link-neutralized] {
 .visualization-group-label {
   fill: var(--visualization-foreground);
   font-family: var(--font-heading);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 780;
 }
 
@@ -2261,6 +2335,10 @@ span.semantic-source-link[data-source-link-neutralized] {
   fill: var(--visualization-muted);
   font-family: var(--font-body);
   font-size: 12px;
+}
+
+.visualization-edge-label-text {
+  font-size: 13px;
 }
 
 /* Плашка под подписью: под ребром может проходить чужая линия, и текст обязан читаться. */
@@ -2372,6 +2450,79 @@ span.semantic-source-link[data-source-link-neutralized] {
   fill: var(--visualization-muted);
 }
 
+/* Вид связи читается начертанием и наконечником, а не цветом: так он различим и в печати. */
+.visualization-edge-kind-data {
+  stroke-dasharray: 8 5;
+}
+
+.visualization-edge-kind-event {
+  stroke-dasharray: 1 5;
+  stroke-linecap: round;
+}
+
+.visualization-edge-kind-dependency {
+  stroke-width: 1.4;
+}
+
+.visualization-sequence-message.visualization-edge-kind-dependency {
+  stroke-width: 1.6;
+}
+
+.visualization-edge-arrow-open {
+  fill: none;
+  stroke: var(--visualization-muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.visualization-edge-arrow-hollow {
+  fill: var(--visualization-surface);
+  stroke: var(--visualization-muted);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+.visualization-legend-sample {
+  height: 0.8rem;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.visualization-legend-title {
+  margin: 0.9rem 0 0;
+  color: var(--visualization-foreground);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.visualization-legend-title + .visualization-legend {
+  margin-top: 0.4rem;
+}
+
+/* Схема словами: тот же текст, что в описании картинки, для читателя, которому картинка не помогает. */
+.visualization-transcript {
+  margin-top: 0.75rem;
+  color: var(--visualization-muted);
+  font-size: 0.85rem;
+}
+
+.visualization-transcript summary {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.visualization-transcript p,
+.visualization-transcript ul,
+.visualization-transcript ol {
+  margin: 0.4rem 0 0;
+}
+
+.visualization-transcript-heading {
+  color: var(--visualization-foreground);
+  font-weight: 650;
+}
+
 .visualization-node {
   fill: var(--visualization-control);
   stroke: color-mix(in srgb, var(--visualization-foreground) 36%, transparent);
@@ -2396,8 +2547,15 @@ span.semantic-source-link[data-source-link-neutralized] {
 .visualization-node-label {
   fill: var(--visualization-foreground);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 720;
+}
+
+.visualization-node-detail {
+  fill: var(--visualization-muted);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 500;
 }
 
 .visualization-timeline-list {
@@ -2419,10 +2577,12 @@ span.semantic-source-link[data-source-link-neutralized] {
 
 .visualization-timeline-event::before {
   position: absolute;
-  top: 0.35rem;
-  left: -0.48rem;
-  width: 0.8rem;
-  height: 0.8rem;
+  top: 0.2rem;
+  /* Середина точки на середине двухпиксельной линии: отсчёт идёт от внутреннего края рамки. */
+  left: calc(-0.5rem - 1px);
+  box-sizing: border-box;
+  width: 1rem;
+  height: 1rem;
   border: 2px solid var(--visualization-surface);
   border-radius: 50%;
   background: var(--visualization-muted);
@@ -2460,6 +2620,10 @@ span.semantic-source-link[data-source-link-neutralized] {
   margin-bottom: 0;
 }
 
+.visualization-timeline-title + * {
+  margin-top: 0;
+}
+
 @media (width <= 620px) {
   .semantic-chart,
   .semantic-diagram,
@@ -2472,7 +2636,7 @@ span.semantic-source-link[data-source-link-neutralized] {
   }
 
   .visualization-diagram {
-    min-width: 48rem;
+    min-width: max(31rem, calc(var(--diagram-width, 0px) * 0.75));
   }
 }
 
@@ -3922,6 +4086,7 @@ body {
 
 :is(
   .semantic-tabs button,
+  .visualization-layout-switch button,
   .semantic-modal button,
   .semantic-popover button,
   .semantic-filter input,
@@ -4147,6 +4312,7 @@ body {
     .semantic-disclosure-summary,
     .semantic-demo button,
     .semantic-tabs button,
+    .visualization-layout-switch button,
     .semantic-modal button,
     .semantic-popover button,
     .semantic-toggle button,

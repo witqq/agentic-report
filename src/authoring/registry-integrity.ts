@@ -178,18 +178,23 @@ function checkDiagramContract(registry: RegistryIntegrityInput, issues: string[]
   ) {
     issues.push('diagram contract: invalid flow bounds');
   }
-  if (
-    contract.flow.groups.minimum < 2 ||
-    contract.flow.groups.maximum < contract.flow.groups.minimum
-  ) {
+  if (contract.flow.groups.maximum < 1 || contract.flow.groups.minimumMembers < 1) {
     issues.push('diagram contract: invalid group bounds');
   }
   if (
     contract.flow.selfEdges ||
-    !contract.flow.groups.requireEveryNode ||
-    contract.flow.groups.direction !== 'right'
+    contract.flow.groups.requireEveryNode ||
+    !sameOrderedValues(contract.flow.layouts, ['auto', 'down', 'right', 'orthogonal']) ||
+    !sameOrderedValues(contract.flow.directions, ['auto', 'right', 'down'])
   ) {
     issues.push('diagram contract: unsupported flow policy');
+  }
+  if (
+    !contract.edgeKinds.includes(contract.defaultEdgeKind) ||
+    new Set(contract.edgeKinds).size !== contract.edgeKinds.length ||
+    contract.edgeKindLegend.minimumKinds < 2
+  ) {
+    issues.push('diagram contract: invalid edge kind domain');
   }
   if (
     contract.sequence.participants.minimum < 2 ||
@@ -204,7 +209,7 @@ function checkDiagramContract(registry: RegistryIntegrityInput, issues: string[]
     contract.sequence.participantGroups ||
     contract.sequence.direction !== 'forbidden' ||
     !contract.sequence.messages.labelRequired ||
-    contract.sequence.selfMessages
+    !contract.sequence.selfMessages
   ) {
     issues.push('diagram contract: unsupported sequence policy');
   }
@@ -216,6 +221,15 @@ function checkDiagramContract(registry: RegistryIntegrityInput, issues: string[]
     type.default !== contract.defaultType
   ) {
     issues.push('diagram contract: directive type domain differs from visualization contract');
+  }
+  const edge = registry.directives.find((directive) => directive.name === 'edge');
+  const kind = edge?.attributes.find((attribute) => attribute.name === 'kind');
+  if (
+    kind?.constraint.kind !== 'enum' ||
+    !sameOrderedValues(kind.constraint.values, contract.edgeKinds) ||
+    kind.default !== contract.defaultEdgeKind
+  ) {
+    issues.push('diagram contract: edge kind domain differs from visualization contract');
   }
 }
 
@@ -232,6 +246,8 @@ function expectedSanitizerProperties(directive: DirectiveDefinition): readonly s
       return [...properties, 'download'];
     case 'font-registration':
       return [...properties, 'hidden'];
+    case 'embedded-video':
+      return properties;
     default: {
       const exhaustive: never = directive.behavior.renderer;
       return exhaustive;
@@ -423,6 +439,7 @@ export function rendererDisposition(renderer: RendererKey): 'trusted-private-han
     case 'semantic-container':
     case 'download-asset':
     case 'font-registration':
+    case 'embedded-video':
       return 'trusted-private-handler';
     default: {
       const exhaustive: never = renderer;

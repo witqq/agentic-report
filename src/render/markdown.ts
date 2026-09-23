@@ -65,6 +65,7 @@ export interface MarkdownRenderResult {
   readonly reviewTargets: readonly ReviewTargetReference[];
   readonly observedResources: {
     readonly images: number;
+    readonly videos: number;
     readonly downloads: number;
     readonly fonts: number;
   };
@@ -79,7 +80,7 @@ interface AssetCollector {
   resourceFiles: Map<string, Buffer>;
   sourceFiles: Set<string>;
   resourceDigests: Map<string, string>;
-  observedResources: { images: number; downloads: number; fonts: number };
+  observedResources: { images: number; videos: number; downloads: number; fonts: number };
 }
 
 interface AssetPluginOptions extends MarkdownRenderOptions {
@@ -130,11 +131,36 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
 }
 
+/** Видео, которое браузеры играют сами, и тип, который объявляет `<source>`. */
+const VIDEO_TYPES: Readonly<Record<string, string>> = {
+  '.webm': 'video/webm',
+  '.mp4': 'video/mp4',
+  '.m4v': 'video/mp4',
+  '.ogv': 'video/ogg',
+};
+
+const POSTER_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif']);
+
+function videoType(reference: string): string | undefined {
+  const withoutQuery = reference.split(/[?#]/, 1)[0] ?? '';
+  return VIDEO_TYPES[path.extname(withoutQuery).toLowerCase()];
+}
+
+type AssetTargetKind = 'image' | 'video' | 'asset' | 'font';
+
 const rehypeAssets: Plugin<[AssetPluginOptions], Root> = (options) => async (tree) => {
-  const targets: Array<{ readonly node: Element; readonly kind: 'image' | 'asset' | 'font' }> = [];
+  const targets: Array<{ readonly node: Element; readonly kind: AssetTargetKind }> = [];
   visit(tree, 'element', (node: Element) => {
     if (node.tagName === 'img' && typeof node.properties.src === 'string') {
-      targets.push({ node, kind: 'image' });
+      // Картинка Markdown с видеофайлом становится плеером: `<img>` видео не показывает.
+      targets.push({
+        node,
+        kind: videoType(node.properties.src) === undefined ? 'image' : 'video',
+      });
+      return;
+    }
+    if (node.tagName === 'figure' && typeof node.properties.dataVideoSource === 'string') {
+      targets.push({ node, kind: 'video' });
       return;
     }
     if (node.tagName === 'a' && typeof node.properties.dataLocalAsset === 'string') {
@@ -194,7 +220,7 @@ export async function renderMarkdown(
     resourceFiles: new Map(),
     sourceFiles: new Set(),
     resourceDigests: new Map(),
-    observedResources: { images: 0, downloads: 0, fonts: 0 },
+    observedResources: { images: 0, videos: 0, downloads: 0, fonts: 0 },
   };
   const observedDirectives = new Set<string>();
   const shareTransform = { neutralizedSourceLinks: 0 };
@@ -266,11 +292,15 @@ export async function renderMarkdown(
 }
 
 async function processAssetTarget(
-  target: { readonly node: Element; readonly kind: 'image' | 'asset' | 'font' },
+  target: { readonly node: Element; readonly kind: AssetTargetKind },
   options: AssetPluginOptions,
 ): Promise<void> {
   const source = assetSource(target);
   if (typeof source !== 'string') {
+    return;
+  }
+  if (target.kind === 'video') {
+    await processVideoTarget(target.node, source, options);
     return;
   }
   if (/^https?:\/\//i.test(source)) {
@@ -331,16 +361,133 @@ async function processAssetTarget(
   delete target.node.properties.dataFontFamily;
 }
 
+/**
+ * Встраивает локальное видео как `<video>`: картинку Markdown с видеофайлом — плеером на её месте,
+ * директиву `video` — плеером с подписью. Плеер беззвучный и зацикленный, с элементами управления;
+ * запуск при появлении на экране и остановку по «меньше движения» делает runtime пакета по
+ * `data-video-autoplay`, без скрипта видео запускают кнопкой.
+ */
+async function processVideoTarget(
+  node: Element,
+  source: string,
+  options: AssetPluginOptions,
+): Promise<void> {
+  if (/^https?:\/\//i.test(source)) {
+    throw new AgenticReportError({
+      level: 'error',
+      code: 'REMOTE_ASSET_BLOCKED',
+      message: `Remote asset fetching is disabled: ${source}`,
+      remediation: 'Download the video into the report source directory and use a relative path.',
+    });
+  }
+  const type = videoType(source);
+  if (type === undefined) {
+    throw new AgenticReportError({
+      level: 'error',
+      code: 'INVALID_VIDEO_SOURCE',
+      message: `A video must be a .webm, .mp4, .m4v, or .ogv file: ${source}`,
+      remediation:
+        'Convert the recording to WebM or MP4 (Playwright recordVideo writes WebM) and point src at it.',
+    });
+  }
+  const video = await materializeLocalAsset(source, options);
+  countEmbedded(video, options);
+  const poster = node.properties.dataVideoPoster;
+  let posterUrl: string | undefined;
+  if (typeof poster === 'string') {
+    const extension = path.extname(poster.split(/[?#]/, 1)[0] ?? '').toLowerCase();
+    if (!POSTER_EXTENSIONS.has(extension)) {
+      throw new AgenticReportError({
+        level: 'error',
+        code: 'INVALID_VIDEO_SOURCE',
+        message: `A video poster must be a .png, .jpg, .jpeg, .webp, .gif, or .avif image: ${poster}`,
+        remediation: 'Export one frame of the recording as PNG or JPEG and point poster at it.',
+      });
+    }
+    const posterReference = await materializeLocalAsset(poster, options);
+    countEmbedded(posterReference, options);
+    options.collector.observedResources.images += 1;
+    posterUrl = posterReference.url;
+  }
+  options.collector.observedResources.videos += 1;
+
+  const caption =
+    node.tagName === 'img'
+      ? typeof node.properties.alt === 'string' && node.properties.alt.trim() !== ''
+        ? node.properties.alt.trim()
+        : undefined
+      : typeof node.properties.dataVideoCaption === 'string'
+        ? node.properties.dataVideoCaption
+        : undefined;
+  const player: Element = {
+    type: 'element',
+    tagName: 'video',
+    properties: {
+      className: ['semantic-video-player'],
+      controls: true,
+      muted: true,
+      loop: true,
+      playsInline: true,
+      preload: posterUrl === undefined ? 'metadata' : 'none',
+      dataVideoAutoplay: '',
+      ...(posterUrl === undefined ? {} : { poster: posterUrl }),
+      ...(caption === undefined ? {} : { ariaLabel: caption }),
+    },
+    children: [
+      {
+        type: 'element',
+        tagName: 'source',
+        properties: { src: video.url, type },
+        children: [],
+      },
+    ],
+  };
+  if (node.tagName === 'img') {
+    node.tagName = 'video';
+    node.properties = player.properties;
+    node.children = player.children;
+    return;
+  }
+  node.properties = { className: ['semantic-video'] };
+  node.children = [
+    player,
+    ...(caption === undefined
+      ? []
+      : [
+          {
+            type: 'element' as const,
+            tagName: 'figcaption',
+            properties: { className: ['semantic-video-caption'] },
+            children: [{ type: 'text' as const, value: caption }],
+          },
+        ]),
+  ];
+}
+
+function countEmbedded(
+  reference: { readonly url: string; readonly sourcePath: string; readonly sha256: string },
+  options: AssetPluginOptions,
+): void {
+  options.collector.sourceFiles.add(reference.sourcePath);
+  options.collector.resourceDigests.set(reference.sourcePath, reference.sha256);
+  if (options.format === 'single-file') {
+    options.collector.embeddedAssets += 1;
+    options.collector.embeddedBytes += Buffer.byteLength(reference.url);
+  }
+}
+
 function assetSource(target: {
   readonly node: Element;
-  readonly kind: 'image' | 'asset' | 'font';
+  readonly kind: AssetTargetKind;
 }): string | undefined {
   const source =
-    target.kind === 'image'
+    target.kind === 'image' || (target.kind === 'video' && target.node.tagName === 'img')
       ? target.node.properties.src
-      : target.kind === 'asset'
-        ? target.node.properties.dataLocalAsset
-        : target.node.properties.dataFontSource;
+      : target.kind === 'video'
+        ? target.node.properties.dataVideoSource
+        : target.kind === 'asset'
+          ? target.node.properties.dataLocalAsset
+          : target.node.properties.dataFontSource;
   return typeof source === 'string' ? source : undefined;
 }
 

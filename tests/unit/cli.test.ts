@@ -535,7 +535,7 @@ describe('CLI transport', () => {
       sourceFiles: expect.arrayContaining(['report.md', 'assets/diagram.svg']),
       observed: {
         directives: ['asset', 'callout', 'demo', 'font'],
-        resources: { images: 2, downloads: 1, fonts: 1 },
+        resources: { images: 2, videos: 0, downloads: 1, fonts: 1 },
       },
       catalog: {
         commands: expect.objectContaining({
@@ -776,6 +776,27 @@ describe('CLI transport', () => {
       expect(farRecord.remediation).toContain('Accepted keys are');
       expect(farRecord.remediation).not.toMatch(/Use \w+ instead/u);
     }
+  });
+
+  it('names the field and its allowed values when a manifest value is outside its domain', async () => {
+    const workspace = await createTestWorkspace('cli-manifest-value');
+    workspaces.push(workspace);
+    const source = path.join(workspace, 'report.md');
+    // Слово стартера в поле раскладки — ошибка, которую автор делает, путая `init --starter` с frontmatter.
+    await writeFile(
+      source,
+      ['---', 'title: Probe', 'layout: architecture', '---', '', '# Probe', ''].join('\n'),
+    );
+    const result = await runCli(['validate', source], workspace);
+    expect(result).toMatchObject({ exitCode: 1, stderr: '' });
+    const record = JSON.parse(result.stdout) as {
+      readonly code: string;
+      readonly message: string;
+      readonly remediation: string;
+    };
+    expect(record.code).toBe('INVALID_MANIFEST');
+    expect(record.message).toBe('Report metadata layout has a value outside its domain.');
+    expect(record.remediation).toBe('Set layout to one of: document, dashboard, landing, mixed.');
   });
 
   it('prints a useful human validate result', async () => {

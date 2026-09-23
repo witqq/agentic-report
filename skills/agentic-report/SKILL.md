@@ -41,7 +41,20 @@ unresolved content facts.
 
 ## Work within the product boundary
 
-- Select `report`, `research`, `architecture`, `tutorial`, `dashboard`, or `landing` for the requested page.
+- Pick the starter for the requested page with `init --starter report|research|architecture|tutorial|dashboard|landing`.
+  These are starter names, not a frontmatter field. A source written by hand needs only a title:
+
+  ```yaml
+  ---
+  title: Bookstore checkout architecture
+  description: How an order becomes a paid, shipped parcel.
+  ---
+  ```
+
+  `layout` is `document` (default), `dashboard`, `landing`, or `mixed`; `preset` and `theme` are covered in
+  «Choose the look». A frontmatter value outside its domain fails with `INVALID_MANIFEST`, and `--json`
+  lists the allowed values in `details.issues`.
+
 - Author Markdown, YAML frontmatter or the optional manifest, supported directives, confined Markdown
   partials, and local assets. Do not introduce JSX, raw HTML, browser JavaScript, CSS, executable
   templates, plugins, or remote source fetching.
@@ -71,8 +84,6 @@ unresolved content facts.
 - Run `agentic-report fix <source>` to apply the replacements the product computed exactly; it is the only
   command that writes to your Markdown, and it leaves every other byte alone. Violations it reports as
   remaining need your decision.
-- A grouped flow diagram with a single group builds and returns the `INCOMPLETE_DIAGRAM_GROUPING` warning:
-  unfinished grouping does not block the page, so finish the remaining groups or remove the only one.
 - One failed run reports every authored violation it found while interpreting directives, including
   several over the same element, minus the ones that only repeat a refusal already reported: a descendant
   of a rejected directive, an annotation pointing at a key whose own `glossary` definition was refused,
@@ -162,6 +173,7 @@ for.
 | what something looks like inside               | a fenced code block, plus `source-link` to open the real file |
 | how parts hand work to each other              | `diagram` with `type="flow"`                                  |
 | the order of calls in time                     | `diagram` with `type="sequence"`                              |
+| to watch an animation or a recorded run        | `video` with a local `.webm` or `.mp4`                        |
 | how a number moved                             | `chart`                                                       |
 | when things happened                           | `timeline`                                                    |
 | a definition they will meet again              | `glossary` with `term`                                        |
@@ -187,21 +199,108 @@ chapter of three sentences usually belongs inside its neighbour.
 
 ### Build a diagram that stays readable
 
-The layout measures the text: a node box grows to fit its own label, a group column grows to fit its widest
-node, labels stay horizontal, and routing follows geometry rather than declaration order. That means a
-plain diagram needs no tuning. What still helps:
+Describe the graph; laying it out is the package's job. A flow goes by layers along the flow, the way
+Mermaid's flowcharts do: backward connections are drawn and described apart, nodes inside a layer are
+ordered to cross less, every connection keeps its own path, and each label sits on its own connection.
+Above every flow the reader switches between three views built at compile time: top to bottom (`down`),
+left to right (`right`), and right angles (`orthogonal`, connections of horizontal and vertical segments
+that run in their own lanes around groups). `layout` names the view shown first and printed; the default
+`auto` picks the one with the fewest crossings that fits the page best. The switcher is package UI:
+keyboard, localized labels, and print are handled for you. `direction="right|down"` is the older spelling
+of the same choice; set one of the two, not both.
 
-- **Name a node by what it is, not by everything it does.** `Stage: advance, back, goTo` reads; the same
-  node carrying six verbs becomes a paragraph in a box. Put the rest in the prose next to the diagram.
-- **Give related nodes the same `row`.** Nodes sharing a row across groups line up and connect with a
-  level line, which is the most readable edge there is.
-- **Let the router choose.** Use `route="around"` only when a specific edge must visibly detour, and
-  `route="direct"` only when a skipping edge is more readable as a straight line.
-- **Use `spacing`** to fit a diagram to the page: `compact` for a dense picture beside text, `spacious` for
-  a diagram that carries a whole chapter.
-- **Split instead of cramming.** The flow accepts up to 20 nodes, 40 edges, and 2–5 groups, but a picture
-  a reader must decode is worse than two pictures they can read. Every group must have at least one node
-  and no node may sit outside a group once grouping exists.
+Pick the diagram by the question, then leave the view to `auto` unless you know better:
+
+| The picture answers                             | Use                                                       |
+| ----------------------------------------------- | --------------------------------------------------------- |
+| who creates, calls, or feeds whom, with no time | `type="flow"` (default)                                   |
+| what happens in which order between 2–6 parties | `type="sequence"`                                         |
+| subsystems with many connections between them   | a flow with `group`; `layout="orthogonal"` if you pin one |
+| a short pipeline, five nodes or fewer           | a flow; `layout="right"` reads like a sentence            |
+| a tall chain of steps                           | a flow; `layout="down"`                                   |
+
+A flow to start from — groups, kinds, detail, and a legend in the author's words:
+
+```markdown
+:::diagram{title="How a frame is shown" description="The driver ticks the player, the player writes values, and the accessor hands the renderer one matrix per target."}
+::group{id="engine" label="Engine"}
+::node{id="driver" label="Driver" detail="requestAnimationFrame" group="engine"}
+::node{id="player" label="Player" group="engine"}
+::node{id="accessor" label="Canvas accessor" kind="accent"}
+::node{id="renderer" label="Renderer"}
+::edge{from="driver" to="player" label="tick(time)"}
+::edge{from="player" to="accessor" label="write(target, path, value)" kind="data"}
+::edge{from="accessor" to="renderer" label="applyTransform: one matrix per frame"}
+::legend{title="How to read"}
+::legend-item{edge="call" label="calls a method"}
+::legend-item{edge="data" label="passes values"}
+::legend-item{node="accent" label="new in this change"}
+:::
+```
+
+A sequence to start from — a self-message is a step inside one participant:
+
+```markdown
+:::diagram{type="sequence" title="Opening a show" description="The canvas opens the stage, which collects its clips and creates the player."}
+::node{id="canvas" label="Canvas"}
+::node{id="stage" label="Stage"}
+::node{id="player" label="Player"}
+::edge{from="canvas" to="stage" label="open(deck, { accessor, driver })"}
+::edge{from="stage" to="stage" label="collect clips"}
+::edge{from="stage" to="player" label="createPlayer({ accessor, driver })"}
+:::
+```
+
+What still helps:
+
+- **Name a node by what it is, and put the rest in `detail`.** `::node{id="engine" label="Engine"
+detail="time and frame computation"}` draws a smaller second line under the label. A node carrying six
+  verbs in its label becomes a paragraph in a box.
+- **Say what each connection is with `kind`.** `call` (default), `data`, `event`, and `dependency` each have
+  their own line and arrowhead. As soon as a diagram mixes two kinds, a legend of the kinds present appears.
+- **Name things in your own words with `legend` and `legend-item`.** `::legend{title="How to read"}` titles
+  the legend; `::legend-item{edge="call" label="calls a method"}` renames a kind;
+  `::legend-item{node="success" label="in trunk"}` says what a node emphasis marks, which is the only way a
+  node `kind` gets a meaning; `::legend-item{edge="event" hidden="true"}` hides a kind; `auto="false"` on
+  `legend` keeps only your items. Those words also name kinds in the diagram's description.
+- **Write the whole call in a connection label.** Edge and message labels wrap by words onto as many lines
+  as they need and are never cut, so `open(deck, accessor = binding, driver, onUndriven)` needs no
+  shortening; the layout makes room for it.
+- **Group only what forms a subsystem.** A `group` surrounds the nodes that name it; other nodes stand
+  beside it. Up to five groups, each with at least one node, in either direction.
+- **Show a step inside one participant** of a `sequence` with an edge whose `from` equals its `to`, such as
+  `::edge{from="stage" to="stage" label="collect clips"}`: it is drawn as a labelled loop on that
+  participant's lifeline. A `flow` still rejects a self-edge.
+- **Leave the hints alone unless the picture needs them.** `row` asks for a flow layer: nodes given the same
+  row share one when their connections allow it. `route="direct"` keeps one connection short and straight,
+  `route="around"` lets it stretch. `spacing` fits a flow to the page: `compact` beside text, `spacious` for a
+  diagram that carries a chapter. `row`, `route`, `spacing`, `layout`, and `group` are flow-only; a
+  sequence places participants and messages itself.
+- **Keep a sequence to five participants or fewer.** The page column beside `contents` is about 640 pixels
+  at a 1100-pixel window; five participants fit it, six already shrink the text. `legend` and `legend-item`
+  work on a sequence exactly as on a flow.
+- **Split instead of cramming.** The flow accepts up to 20 nodes and 40 edges, but a picture a reader must
+  decode is worse than two pictures they can read.
+
+Every diagram is also written out in words: its description lists groups with members, layers in flow
+order, and forward and backward connections, and the page repeats that text under the picture in a closed
+«diagram in words» disclosure. Do not restate the diagram in prose next to it; explain what it means.
+
+### Show a recording
+
+Put the file under the source directory and embed it:
+
+```markdown
+::video{src="assets/playback.webm" poster="assets/playback-frame.png" caption="The card slides in, overshoots, and settles."}
+```
+
+`src` is a `.webm`, `.mp4`, `.m4v`, or `.ogv` file — Playwright `recordVideo` writes WebM, so its output goes
+in as is. `poster` is an optional PNG, JPEG, WebP, GIF, or AVIF frame shown before playback and in print;
+`caption` sits under the video and names it for screen readers. A plain `![What the recording
+shows](assets/playback.webm)` gives the same player without a caption. The player is muted, loops, has
+controls, starts while on screen, and waits for a reader who prefers reduced motion. Single-file output
+embeds the bytes, and they count toward `output.maxInlineBytes`: keep recordings short, or build with
+`--format directory` when a page carries several.
 
 ### Choose the look
 

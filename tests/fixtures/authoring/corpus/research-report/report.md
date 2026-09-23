@@ -79,9 +79,23 @@ Additional evidence is visible initially.
 :::diagram{title="Evidence flow" description="Local evidence moves through validation into a portable result." type="flow" direction="right" spacing="comfortable"}
 ::group{id="inputs" label="Inputs"}
 ::group{id="outputs" label="Outputs"}
-::node{id="local" label="Local evidence" group="inputs" kind="accent" row="1"}
-::node{id="validated" label="Validated model" group="outputs" kind="success" row="1"}
-::edge{from="local" to="validated" label="check" route="auto"}
+::node{id="local" label="Local evidence" detail="files the author can open" group="inputs" kind="accent" row="1"}
+::node{id="validated" label="Validated model" group="outputs" kind="success" row="2"}
+::edge{from="local" to="validated" label="check" route="auto" kind="call"}
+::edge{from="validated" to="local" label="citations" kind="data"}
+::legend{title="How to read" auto="true"}
+::legend-item{edge="call" label="validates"}
+::legend-item{node="accent" label="collected locally"}
+::legend-item{node="success" label="verified"}
+::legend-item{edge="data" hidden="true"}
+:::
+
+:::diagram{title="Evidence at right angles" description="The same evidence path drawn with right-angle connectors." layout="orthogonal"}
+::group{id="gather" label="Gather"}
+::group{id="decide" label="Decide"}
+::node{id="notes" label="Field notes" group="gather"}
+::node{id="finding" label="Finding" group="decide"}
+::edge{from="notes" to="finding" label="supports"}
 :::
 
 ::::timeline{title="Research path" description="A short path from question to verified finding."}

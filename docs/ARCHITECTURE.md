@@ -100,9 +100,11 @@ Markdown + metadata + local assets + partials + semantic directives
   accessible package-owned tabs, dialogs, popovers, filters, switches, and bounded counters without
   accepting author code. Authored term labels remain visible forms of one canonical key; appendix glossary
   definitions are moved after review targeting and retain their source identities.
-- `src/render/visualizations.ts` projects validated chart series/points, diagram nodes/edges, and timeline
-  events into deterministic accessible SVG or semantic HTML. It is compile-time code and does not add a
-  visualization browser runtime.
+- `src/render/visualizations.ts` projects validated chart series/points, diagram nodes/edges/legends, and
+  timeline events into deterministic accessible SVG or semantic HTML. It is compile-time code and does not
+  add a visualization browser runtime. `src/render/flow-layout.ts` lays out flow diagrams by layers, and
+  `src/render/diagram-description.ts` writes a diagram out in words for its `desc` and its
+  «diagram in words» disclosure.
 - `src/render/navigation.ts` derives the final explicit-section or legacy H2 inventory structurally from
   enhanced HAST, fills authored in-flow maps with exact headings, and projects optional short labels for the
   shell. Appendix and subordinate headings remain excluded without parsing serialized HTML.
@@ -338,24 +340,99 @@ panels before reading text.
 ## Visualization model
 
 The registry owns a closed data vocabulary for `chart`/`series`/`point`,
-`diagram`/`group`/`node`/`edge`, and
+`diagram`/`group`/`node`/`edge`/`legend`/`legend-item`, and
 `timeline`/`event`. Charts support `bar`, `line`, and `pie`; series are bounded, share an ordered category
 domain, and use finite numeric values. Flow diagrams contain up to twenty uniquely identified nodes, bounded
-directed references, and optionally two to five complete subsystem groups; a single group builds with an
-authored warning so grouping can be finished later. Sequence diagrams retain
-participant and labelled message order. The registry owns both form-specific bounds and unsupported
+directed references, and up to five subsystem groups around some of the nodes; a node without a group stands
+beside them. Every connection has one of four package-drawn kinds (`call`, `data`, `event`, `dependency`),
+and a node may carry a smaller `detail` line. A diagram mixing two or more connection kinds gets a legend of
+the kinds present; `legend` titles it and `legend-item` renames, adds, or hides entries and names node
+emphasis. Sequence diagrams retain participant and labelled message order. The registry owns both form-specific bounds and unsupported
 combinations. Timeline events retain ordinary Markdown bodies. Every top-level visual requires a visible
 title and meaningful description.
 
 Visualization output is generated after Markdown sanitization from values already checked by the registry
 schemas and cross-record validator. SVG uses deterministic document-order IDs, a responsive `viewBox`,
 package theme variables, and an atomic image role. Its accessible `title` and `desc` expose the authored
-summary plus complete chart series/point data, grouped-flow membership/connections, or sequence participants/
-messages; decorative SVG descendants do not make unreachable nested-role claims. Timelines use an ordered
+summary plus complete chart series/point data; for a diagram they carry the text of
+`src/render/diagram-description.ts`: groups with their members, layers in flow order, connections along the
+flow and backward connections separately, named in the legend's words, or sequence participants and ordered
+messages. The same text is repeated under the picture in a closed «diagram in words» `<details>`.
+Decorative SVG descendants do not make unreachable nested-role claims. Timelines use an ordered
 semantic list. No source value becomes
 JavaScript, CSS, raw HTML, a URL, or an executable graph expression.
 
-The implementation uses package-owned compile-time SVG/HTML rather than a new dependency. The bounded
+### Flow layout
+
+A flow is laid out by layers in the manner of Sugiyama. The package assigns layers itself: connections that
+return along an already started path are reversed by a depth-first walk in authored order, each node takes
+the longest incoming path, nodes sharing a `row` are raised to one layer, and free nodes then move to where
+their connections are shortest, a grouped node staying within the layers of its group mates when its
+connections allow it, so one far target does not stretch the group frame across the diagram. The same layers
+drive the diagram description and every view, so the text never depends on the view a reader picked.
+
+Two build-time engines draw those layers; neither adds browser code, network access, or an output-format
+branch.
+
+- [dagre](https://github.com/dagrejs/dagre) (`@dagrejs/dagre` 3.1.1, MIT) draws the two layered views,
+  `down` and `right`, in `src/render/flow-layout.ts`. It receives the layers through its `ranker` hook and
+  does node order inside a layer, coordinates, subsystem groups as clusters, and a label node on the middle
+  rank of every labelled connection, so a label never lands on a node or another label. The package runs
+  dagre with each of its alignments, both authored node orders, and six seeded shuffles; attaches every end
+  to the node face the connection comes from; straightens small bends that do not clear a node; and keeps the
+  candidate with the fewest crossings that fits the page width best. It then shrinks every group frame to its
+  own nodes, because dagre widens a cluster for connections passing by and for the place of its title, and
+  puts the title into the leftmost band above the nodes that no connection, label, or node crosses. Three or
+  more parallel connections between the same two nodes are laid out as one bundle and drawn side by side with
+  stacked labels: dagre 3.1 loses the coordinates of its dummy nodes when three parallel connections leave a
+  group. Its in-layer `constraints` option is not used for the same reason: it gives two nodes of one layer
+  the same order and one of them no coordinates.
+- [ELK](https://github.com/kieler/elkjs) (`elkjs` 0.12.0, dual-licensed EPL-2.0 or GPL-3.0; this package uses
+  it under EPL-2.0) draws the `orthogonal` view in `src/render/flow-elk.ts`: its layered algorithm with
+  right-angle routing, groups as nested nodes, and labels placed on their own connection
+  (`elk.edgeLabels.inline` is read from each label, not from the graph). Top to bottom, connections enter a
+  group through its top edge, so a group entered from outside gets its title as a separate node one layer
+  above all of its nodes, held there by service connections that are not drawn; ELK routes real connections
+  around the title as around any node. Layer constraints are not used for this: ELK layers are global, so
+  `FIRST` would lift the title to the top of the whole diagram, and `FIRST_SEPARATE` fails in ELK 0.12
+  together with authored order. The ELK layout call is asynchronous, which is why the diagram step of
+  `rehypeEnhanceDirectives` prepares all diagrams before it rewrites them.
+
+Edges are straight segments with rounded corners (radius 18 in the layered views, 8 at right angles): a spline
+through the same points bulges out on sharp turns and can cross a neighbouring node.
+
+Writing these layouts in the package would mean owning crossing reduction, Brandes–Köpf coordinate
+assignment, cluster-aware ordering, and orthogonal routing, which dagre and ELK already implement and Mermaid
+uses for its own flowcharts.
+
+### Flow views and the switcher
+
+`enhanceFlowDiagram` builds three views of every flow at compile time: `down` and `right` from dagre and
+`orthogonal` from ELK in the direction the layered layout chose. `layoutFlowViews` scores each view by its
+crossings, by connections drawn against the flow, and by its width across the page; `layout="auto"` (the
+default) shows the best of the three first, and `down`, `right`, or `orthogonal` name the first view
+explicitly. The views become panels of the package tab list: the same `data-tabs`, `data-tab`, and
+`data-tab-panel` markup as the `tabs` directive, so the existing runtime handles clicks, arrow keys, Home and
+End without any diagram code in the browser. The default view carries `data-layout-default`; print CSS shows
+only that panel and hides the switcher.
+
+Every diagram SVG has its natural width and a `--diagram-width` custom property. The page shrinks a diagram
+wider than the column, but not below three quarters of that width; the rest scrolls inside the frame, which
+shows a shadow at each edge that still has content beyond it, and in print the diagram fits the sheet whole.
+
+### Sequence layout
+
+Participant names wrap by words in boxes at most 128 wide; a single word longer than that widens its box
+instead of being cut. The gap between two neighbouring lifelines grows for the labels of messages between
+exactly those two participants and for self-message loops, each capped at 240, within a 640-pixel width
+budget, which is the report column beside `contents` at a 1100-pixel window; a message crossing several
+participants uses the sum of the gaps. A message to its own participant is a loop to the right, or to the left
+for the last participant, so it never widens the picture on its own. Flow layout uses the same 640-pixel budget
+when it compares candidates.
+
+### Why the rest is package-owned
+
+Charts, sequence diagrams, and timelines use package-owned compile-time SVG/HTML. The bounded
 comparison found that [Chart.js renders canvas whose accessible alternative remains the integrator's
 responsibility](https://www.chartjs.org/docs/latest/general/accessibility.html),
 [Mermaid defaults to non-deterministic IDs and exposes a broad security-sensitive diagram
@@ -363,8 +440,25 @@ configuration](https://mermaid.js.org/config/schema-docs/config.html), and
 [Vega-Lite compiles a broad JSON grammar into Vega specifications](https://vega.github.io/vega-lite/docs/)
 while covering charts rather than the complete diagram/timeline surface. The local package spike measured
 published tarballs at 1,576,314 bytes for Chart.js 4.5.1, 17,619,777 bytes for Mermaid 11.16.1, and
-1,078,939 bytes for Vega-Lite 6.4.3. The closed renderer therefore adds no package dependency, runtime,
-network behavior, CSP directive, or output-format branch.
+1,078,939 bytes for Vega-Lite 6.4.3. Those libraries would bring their own grammar and browser runtime,
+so the closed renderer keeps charts, sequences, and timelines free of any runtime, network behavior, CSP
+directive, or output-format branch; only flow layout borrows the algorithms of dagre and ELK at build time.
+
+## Embedded video
+
+The resource step of `src/render/markdown.ts` runs after sanitization and turns two sources into a player: a
+Markdown image whose file is a video type, and the `video` directive, which the registry renders as a
+`figure.semantic-video` carrying only its validated `src`, `poster`, and `caption`. `<video>` and `<source>`
+never pass through the sanitizer; the package builds them from those values. The video and poster use the same
+local-asset path as images: confined to the source root, `data:` URLs in `single-file`, content-addressed
+files in `directory`, recorded in the source digests, and counted toward `output.maxInlineBytes`. The Content
+Security Policy gains `media-src` with the same sources as `img-src`.
+
+The player is muted, looping, inline, with controls, and carries `data-video-autoplay`. Playback belongs to
+`src/browser/video-autoplay.ts`: an `IntersectionObserver` plays a video while half of it is visible and pauses
+it when it leaves, never under `prefers-reduced-motion: reduce`, and a pause the reader made is not undone. A
+muted video may start without a user gesture, so no fallback path is needed; a refused `play()` leaves the
+controls. Without the runtime the video still plays from its controls.
 
 ## Output model
 

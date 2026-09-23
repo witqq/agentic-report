@@ -108,7 +108,7 @@ describe('report analysis', () => {
       ],
       observed: {
         directives: ['asset', 'callout', 'demo', 'font'],
-        resources: { images: 2, downloads: 1, fonts: 1 },
+        resources: { images: 2, videos: 0, downloads: 1, fonts: 1 },
       },
       catalog: { formats: ['single-file', 'directory'], page: authoringRegistry.page },
       warnings: [],

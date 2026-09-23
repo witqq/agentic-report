@@ -190,6 +190,7 @@ export interface InspectReportResult {
     readonly directives: readonly string[];
     readonly resources: {
       readonly images: number;
+      readonly videos: number;
       readonly downloads: number;
       readonly fonts: number;
     };
