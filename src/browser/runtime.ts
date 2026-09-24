@@ -10,6 +10,7 @@ import {
   type ResponseWorkspacesController,
 } from './response-workspace.js';
 import { installReviewWorkspace, type ReviewWorkspaceController } from './review-workspace.js';
+import { installVideoAutoplay } from './video-autoplay.js';
 
 const root = document.documentElement;
 const localizedPage = createLocalizedPageController();
@@ -47,6 +48,7 @@ let reviewController: ReviewWorkspaceController | undefined;
 const responseControllers = new Map<PackageLocale, ResponseWorkspacesController>();
 const reviewStates = new Map<PackageLocale, ReviewArtifact>();
 activateCurrentPage();
+installVideoAutoplay(reducedMotion);
 
 reducedMotion.addEventListener('change', () => motionController?.sync());
 finePointer.addEventListener('change', () => motionController?.sync());

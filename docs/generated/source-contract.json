@@ -1183,10 +1183,17 @@
         },
         "direction": {
           "kind": "enum",
-          "values": ["right", "down"],
+          "values": ["auto", "right", "down"],
           "required": false,
-          "default": "right",
-          "description": "Flow direction."
+          "default": "auto",
+          "description": "Direction in which flow layers follow each other; auto lets the layout pick the one that reads larger on the page."
+        },
+        "layout": {
+          "kind": "enum",
+          "values": ["auto", "down", "right", "orthogonal"],
+          "required": false,
+          "default": "auto",
+          "description": "Flow view shown first and printed: auto picks the clearest; down and right are layered, orthogonal routes at right angles; readers can switch."
         },
         "spacing": {
           "kind": "enum",
@@ -1196,7 +1203,7 @@
           "description": "Layout breathing room; the package keeps a readable result at every value."
         }
       },
-      "children": "group-node-and-edge-directives",
+      "children": "diagram-part-directives",
       "placement": {},
       "resource": "none",
       "runtime": "none",
@@ -1204,7 +1211,7 @@
       "handoffs": ["semantic-document"]
     },
     "group": {
-      "description": "One labelled subsystem group in a flow diagram.",
+      "description": "One labelled subsystem group around some nodes of a flow diagram.",
       "forms": ["leaf"],
       "attributes": {
         "id": {
@@ -1253,6 +1260,14 @@
           "required": true,
           "description": "Visible node label."
         },
+        "detail": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "description": "Optional second line under the label, set smaller: what the node holds or does."
+        },
         "group": {
           "kind": "string",
           "normalization": "trim",
@@ -1260,21 +1275,21 @@
           "maxLength": 64,
           "pattern": "^[a-z][a-z0-9-]{0,63}$",
           "required": false,
-          "description": "Optional subsystem group identity for this node."
+          "description": "Optional subsystem group identity; nodes without one stand beside the groups."
         },
         "kind": {
           "kind": "enum",
           "values": ["neutral", "accent", "success", "warning"],
           "required": false,
           "default": "neutral",
-          "description": "Package-owned node emphasis."
+          "description": "Package-owned node emphasis; a legend item names what it means."
         },
         "row": {
           "kind": "integer",
           "minimum": 1,
           "maximum": 20,
           "required": false,
-          "description": "Optional one-based layout row; nodes sharing a row line up across groups and connect with a straight edge."
+          "description": "Optional one-based flow layer; nodes sharing a row share a layer when their connections allow it."
         }
       },
       "children": "none",
@@ -1285,7 +1300,7 @@
       "handoffs": ["semantic-document"]
     },
     "edge": {
-      "description": "One directed connection between diagram nodes.",
+      "description": "One directed connection between diagram nodes; in a sequence, from equal to to is a step inside one participant drawn as a loop.",
       "forms": ["leaf"],
       "attributes": {
         "from": {
@@ -1304,7 +1319,7 @@
           "maxLength": 64,
           "pattern": "^[a-z][a-z0-9-]{0,63}$",
           "required": true,
-          "description": "Target node identity."
+          "description": "Target node identity; a flow requires a different node."
         },
         "label": {
           "kind": "string",
@@ -1312,14 +1327,85 @@
           "minLength": 1,
           "maxLength": 160,
           "required": false,
-          "description": "Optional connection label."
+          "description": "Optional connection label, required in a sequence; a long label wraps onto several lines and is never cut."
+        },
+        "kind": {
+          "kind": "enum",
+          "values": ["call", "data", "event", "dependency"],
+          "required": false,
+          "default": "call",
+          "description": "What the connection means; each kind has its own package-drawn line and arrowhead."
         },
         "route": {
           "kind": "enum",
           "values": ["auto", "direct", "around"],
           "required": false,
           "default": "auto",
-          "description": "Optional routing override; auto keeps the shortest readable path."
+          "description": "Optional layout pull; direct keeps the connection short and straight, around lets it stretch."
+        }
+      },
+      "children": "none",
+      "placement": { "requiredParent": "diagram" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "legend": {
+      "description": "Optional title and policy for the diagram legend; at most one per diagram.",
+      "forms": ["leaf"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "description": "Visible legend title."
+        },
+        "auto": {
+          "kind": "boolean",
+          "required": false,
+          "default": true,
+          "description": "Add the connection kinds the diagram mixes without a legend item of their own."
+        }
+      },
+      "children": "none",
+      "placement": { "requiredParent": "diagram" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "legend-item": {
+      "description": "One legend entry: names a connection kind or a node emphasis in the author's words, or hides a connection kind.",
+      "forms": ["leaf"],
+      "attributes": {
+        "edge": {
+          "kind": "enum",
+          "values": ["call", "data", "event", "dependency"],
+          "required": false,
+          "description": "Connection kind this entry names; exclusive with node."
+        },
+        "node": {
+          "kind": "enum",
+          "values": ["neutral", "accent", "success", "warning"],
+          "required": false,
+          "description": "Node emphasis this entry names; exclusive with edge and requires a label."
+        },
+        "label": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "description": "Entry text; a connection kind without one keeps its package name."
+        },
+        "hidden": {
+          "kind": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Leave this connection kind out of the legend."
         }
       },
       "children": "none",
@@ -1447,6 +1533,44 @@
       "children": "label-or-generated-label",
       "placement": {},
       "resource": "download",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": true },
+      "handoffs": ["resource-graph"]
+    },
+    "video": {
+      "description": "Embedded local video (webm, mp4, m4v, or ogv) with controls, muted and looping; plays when visible unless the reader prefers reduced motion.",
+      "forms": ["leaf"],
+      "attributes": {
+        "src": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "format": "relative-local-path",
+          "required": true,
+          "description": "Relative local video path: .webm, .mp4, .m4v, or .ogv."
+        },
+        "poster": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "format": "relative-local-path",
+          "required": false,
+          "description": "Relative local image shown before playback and in print: .png, .jpg, .jpeg, .webp, .gif, or .avif."
+        },
+        "caption": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 300,
+          "required": false,
+          "description": "Visible caption under the video; it also names the video for assistive technology."
+        }
+      },
+      "children": "none",
+      "placement": {},
+      "resource": "video",
       "runtime": "none",
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": true },
       "handoffs": ["resource-graph"]
@@ -1647,18 +1771,18 @@
     "diagram": {
       "defaultType": "flow",
       "types": ["flow", "sequence"],
+      "edgeKinds": ["call", "data", "event", "dependency"],
+      "defaultEdgeKind": "call",
+      "nodeKinds": ["neutral", "accent", "success", "warning"],
+      "edgeKindLegend": { "minimumKinds": 2 },
+      "legend": { "maximumPerDiagram": 1, "maximumItems": 8 },
       "flow": {
         "nodes": { "minimum": 1, "maximum": 20 },
         "edges": { "maximum": 40 },
         "selfEdges": false,
-        "groups": {
-          "ungrouped": 0,
-          "incomplete": 1,
-          "minimum": 2,
-          "maximum": 5,
-          "requireEveryNode": true,
-          "direction": "right"
-        }
+        "layouts": ["auto", "down", "right", "orthogonal"],
+        "directions": ["auto", "right", "down"],
+        "groups": { "maximum": 5, "minimumMembers": 1, "requireEveryNode": false }
       },
       "sequence": {
         "participants": { "minimum": 2, "maximum": 6 },
@@ -1666,7 +1790,7 @@
         "groups": false,
         "participantGroups": false,
         "direction": "forbidden",
-        "selfMessages": false
+        "selfMessages": true
       }
     }
   },
@@ -1744,19 +1868,36 @@
     {
       "subject": "diagram/flow",
       "rules": [
+        { "id": "layout-or-direction", "dependsOn": [] },
         { "id": "node-count", "dependsOn": [] },
         { "id": "edge-count", "dependsOn": [] },
-        { "id": "group-count", "dependsOn": [] },
-        { "id": "group-direction", "dependsOn": [] }
+        { "id": "group-count", "dependsOn": [] }
       ]
     },
     { "subject": "diagram/flow/node", "rules": [{ "id": "group-assignment", "dependsOn": [] }] },
     { "subject": "diagram/flow/group", "rules": [{ "id": "group-membership", "dependsOn": [] }] },
     {
+      "subject": "diagram/legend",
+      "rules": [
+        { "id": "legend-count", "dependsOn": [] },
+        { "id": "item-count", "dependsOn": [] }
+      ]
+    },
+    {
+      "subject": "diagram/legend-item",
+      "rules": [
+        { "id": "one-subject", "dependsOn": [] },
+        { "id": "node-label", "dependsOn": ["one-subject"] },
+        { "id": "hidden-edge-only", "dependsOn": ["one-subject"] },
+        { "id": "unique-subject", "dependsOn": ["one-subject"] }
+      ]
+    },
+    {
       "subject": "diagram/sequence",
       "rules": [
         { "id": "no-groups", "dependsOn": [] },
         { "id": "no-direction", "dependsOn": [] },
+        { "id": "no-layout", "dependsOn": [] },
         { "id": "participant-count", "dependsOn": [] },
         { "id": "message-count", "dependsOn": [] }
       ]

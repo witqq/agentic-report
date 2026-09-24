@@ -1,40 +1,103 @@
 import type { Element, ElementContent } from 'hast';
+
+import { DIAGRAM_CONTRACT, type DiagramEdgeKindChoice } from '../authoring/registry.js';
 import type { PackageStrings } from '../localization.js';
+import {
+  type DescribedEdge,
+  type DescribedNode,
+  type DiagramDescription,
+  describeFlow,
+  describeSequence,
+  descriptionSentence,
+} from './diagram-description.js';
+import {
+  ARROW_LENGTH,
+  DIAGRAM_MARGIN,
+  type DiagramEdge,
+  type DiagramGroup,
+  type DiagramNode,
+  diagramGroup,
+  diagramNode,
+  EDGE_LABEL_MIN_WIDTH,
+  EDGE_LABEL_RISE,
+  edgeArrow,
+  edgeLabel,
+  element,
+  GROUP_FONT_SIZE,
+  GROUP_TITLE_LINE_HEIGHT,
+  layoutEdgeLabel,
+  layoutNodeBox,
+  NODE_DEFAULT_HEIGHT,
+  NODE_DEFAULT_WIDTH,
+  round,
+  text,
+  wrapMeasured,
+} from './diagram-svg.js';
+import {
+  type FlowLayout,
+  type FlowViewKind,
+  type FlowViews,
+  type LayoutPoint,
+  layoutFlowViews,
+} from './flow-layout.js';
 
 const CHART_WIDTH = 720;
 const CHART_HEIGHT = 360;
 const PLOT = { left: 72, top: 34, width: 600, height: 242 } as const;
 const PALETTE_SIZE = 6;
-const NODE_FONT_SIZE = 13;
-const GROUP_FONT_SIZE = 15;
-const EDGE_FONT_SIZE = 12;
-const NODE_LINE_HEIGHT = 18;
-const NODE_PADDING_X = 16;
-const NODE_PADDING_Y = 13;
-const NODE_MIN_WIDTH = 132;
-const NODE_MAX_WIDTH = 252;
-const NODE_MIN_HEIGHT = 56;
-const NODE_MAX_LINES = 4;
-const NODE_DEFAULT_WIDTH = 140;
-const NODE_DEFAULT_HEIGHT = 72;
-const GROUP_TITLE_HEIGHT = 52;
-const GROUP_PADDING_X = 20;
-const GROUP_PADDING_BOTTOM = 20;
-const DIAGRAM_MARGIN = 22;
-const LANE_STEP = 16;
-const OUTER_LANE_STEP = 30;
+const SEQUENCE_MESSAGE_STEP = 62;
+const SEQUENCE_SELF_LOOP_WIDTH = 34;
+const SEQUENCE_SELF_LOOP_HEIGHT = 24;
+/** Участник последовательности переносит имя уже, чем узел флоу: шесть коробок встают в колонку. */
+const SEQUENCE_NODE_MAX_WIDTH = 128;
+/** Самый узкий промежуток между линиями жизни. */
+const SEQUENCE_MIN_GAP = 120;
+/** Зазор между коробками соседних участников. */
+const SEQUENCE_BOX_GAP = 20;
+/** Шире этого подпись сообщения не раздвигает участников, а переносится. */
+const SEQUENCE_LABEL_ROOM = 240;
+/** Поле слева от первого участника и справа от последнего. */
+const SEQUENCE_MARGIN = 24;
+/** Картинка последовательности не уже этого. */
+const SEQUENCE_MIN_WIDTH = 480;
+/** Ширина, в которую последовательность старается уложиться: та же колонка, что у флоу. */
+const SEQUENCE_WIDTH_BUDGET = 640;
+/** Остриё стрелки не доходит до линии жизни на столько, чтобы не сливаться с её штрихом. */
+const SEQUENCE_ARROW_GAP = 3;
+const GROUP_TITLE_MAX_WIDTH = 260;
+/** Ширина, до которой переносится подпись связи во флоу: подпись становится узлом раскладки. */
+const FLOW_LABEL_WIDTH = 112;
 /**
- * Ширина, после которой страница ужимает диаграмму и подпись узла уходит ниже читаемого размера.
- * Бюджет тратится в первую очередь на содержимое: запас под подписи рёбер отдаётся первым.
+ * Узел флоу уже узла последовательности: ширина слоя складывается из узлов и подписей, и узкие узлы
+ * держат всю схему крупнее на странице.
  */
-const DIAGRAM_WIDTH_BUDGET = 860;
-const NARROW_GLYPHS = new Set(['i', 'l', 'j', 't', 'f', 'r', '.', ',', ';', ':', '!', '|']);
-const WIDE_GLYPHS = new Set(['m', 'w', 'M', 'W']);
+const FLOW_NODE_MAX_WIDTH = 196;
+/**
+ * Ширина колонки отчёта с оглавлением сбоку при окне 1100 px: шире неё схема ужимается вместе с
+ * текстом. Без оглавления колонка шире, и схема просто встаёт в неё целиком.
+ */
+const FLOW_WIDTH_BUDGET = 640;
+const EDGE_CORNER_RADIUS = 18;
+/** Прямые углы скругляются меньше: дорожки ELK идут в двенадцати пикселях друг от друга. */
+const ORTHOGONAL_CORNER_RADIUS = 8;
+/** Насколько связь тянет свои концы друг к другу: `direct` держит её короткой, `around` отпускает. */
+const ROUTE_WEIGHT: Readonly<Record<string, number>> = { auto: 1, direct: 4, around: 0.25 };
 const SPACING_SCALE: Readonly<Record<string, number>> = {
   compact: 0.78,
   comfortable: 1,
   spacious: 1.3,
 };
+
+/** Одна раскладка схемы, готовая к рисованию: переключатель показывает их по одной. */
+interface FlowView {
+  readonly mode: FlowViewKind;
+  readonly width: number;
+  readonly height: number;
+  readonly groups: readonly DiagramGroup[];
+  readonly nodes: readonly DiagramNode[];
+  readonly edges: readonly Element[];
+  readonly labels: readonly Element[];
+}
 
 interface ChartPoint {
   readonly label: string;
@@ -46,97 +109,137 @@ interface ChartSeries {
   readonly points: readonly ChartPoint[];
 }
 
-interface DiagramNode {
+interface FlowGroupRecord {
   readonly id: string;
   readonly label: string;
-  readonly kind: string;
-  readonly group?: string;
-  readonly x: number;
-  readonly y: number;
-  /** Размер коробки; когда его нет, берётся прежний постоянный. */
-  readonly width?: number;
-  readonly height?: number;
-  /** Готовые строки подписи, посчитанные при раскладке. */
-  readonly lines?: readonly string[];
-}
-
-/** Узел до размещения: размер посчитан, места ещё нет. */
-interface MeasuredNode {
-  readonly id: string;
-  readonly label: string;
-  readonly kind: string;
-  readonly group?: string;
-  readonly width: number;
-  readonly height: number;
   readonly lines: readonly string[];
-  /** Строка, названная автором атрибутом `row`; нумерация с единицы. */
-  readonly requestedRow?: number;
+  readonly titleWidth: number;
+  readonly titleHeight: number;
 }
 
-interface FlowEdgeRecord {
-  readonly from: string;
-  readonly to: string;
-  readonly route: string;
-  readonly label?: string;
-}
-
-type FlowEdgePlan =
-  | { readonly kind: 'direct'; readonly edge: FlowEdgeRecord; readonly index: number }
-  | {
-      readonly kind: 'straight';
-      readonly edge: FlowEdgeRecord;
-      readonly index: number;
-      readonly gapIndex: number;
-    }
-  | {
-      readonly kind: 'gap';
-      readonly edge: FlowEdgeRecord;
-      readonly index: number;
-      readonly gapIndex: number;
-      readonly lane: number;
-    }
-  | { readonly kind: 'vertical'; readonly edge: FlowEdgeRecord; readonly index: number }
-  | {
-      readonly kind: 'gutter';
-      readonly edge: FlowEdgeRecord;
-      readonly index: number;
-      readonly lane: number;
-    }
-  | {
-      readonly kind: 'outer';
-      readonly edge: FlowEdgeRecord;
-      readonly index: number;
-      readonly lane: number;
-    };
-
-/** Место узла в сетке без групп. */
-interface GridPlacement {
-  readonly box: MeasuredNode;
-  readonly row: number;
-  column: number;
-}
-
-interface FlowGeometry {
-  readonly groups: readonly DiagramGroup[];
-  readonly nodes: readonly DiagramNode[];
-  readonly width: number;
-  readonly height: number;
-  readonly gapLaneX: (gapIndex: number, lane: number) => number;
-}
-
-interface DiagramGroup {
+interface FlowBox {
   readonly id: string;
   readonly label: string;
-  readonly x: number;
-  readonly y: number;
+  readonly kind: string;
+  readonly lines: readonly string[];
+  readonly detailLines: readonly string[];
   readonly width: number;
   readonly height: number;
+  readonly detail?: string;
+  readonly group?: string;
+  readonly row?: number;
 }
 
-interface DiagramEdge {
-  readonly from: string;
-  readonly to: string;
-  readonly label?: string;
+interface FlowEdgeRecord extends DiagramEdge {
+  readonly route: string;
+}
+
+/**
+ * Флоу, измеренный и разложенный до обогащения разметки: вид «прямые углы» считает ELK, а его вызов
+ * асинхронный, тогда как обогащение идёт синхронным обходом дерева.
+ */
+export interface PreparedFlow {
+  readonly groups: readonly FlowGroupRecord[];
+  readonly boxes: readonly FlowBox[];
+  readonly edges: readonly FlowEdgeRecord[];
+  readonly views: FlowViews;
+}
+
+/** Читает свойство, не забирая его: подготовка идёт до обогащения, которое заберёт его само. */
+function peek(node: Element, property: string): string | undefined {
+  const value = node.properties[property];
+  return typeof value === 'string' ? value : undefined;
+}
+
+/**
+ * Раскладывает флоу во все виды заранее. Для графиков, хронологий и последовательностей подготовка
+ * не нужна.
+ */
+export async function prepareVisualization(
+  node: Element,
+  strings: PackageStrings,
+): Promise<PreparedFlow | undefined> {
+  if (node.properties.dataSemantic !== 'diagram' || peek(node, 'dataType') === 'sequence') {
+    return undefined;
+  }
+  const scale = SPACING_SCALE[peek(node, 'dataSpacing') ?? 'comfortable'] ?? 1;
+  const layout = peek(node, 'dataLayout') ?? 'auto';
+  const direction = peek(node, 'dataDirection') ?? 'auto';
+  const groups = semanticChildren(node, 'group').map((child): FlowGroupRecord => {
+    const label = peek(child, 'dataLabel') ?? '';
+    const wrapped = wrapMeasured(label, GROUP_TITLE_MAX_WIDTH, 2, GROUP_FONT_SIZE, 780);
+    return {
+      id: peek(child, 'dataId') ?? '',
+      label,
+      lines: wrapped.lines,
+      titleWidth: Math.ceil(wrapped.width) + 12,
+      titleHeight: wrapped.lines.length * GROUP_TITLE_LINE_HEIGHT + 4,
+    };
+  });
+  const boxes = semanticChildren(node, 'node').map((child, index): FlowBox => {
+    const label = peek(child, 'dataLabel') ?? strings.node(index + 1);
+    const detail = peek(child, 'dataDetail');
+    const group = peek(child, 'dataGroup');
+    const row = peek(child, 'dataRow');
+    return {
+      id: peek(child, 'dataId') ?? `node-${index + 1}`,
+      label,
+      kind: peek(child, 'dataKind') ?? 'neutral',
+      ...layoutNodeBox(label, detail, FLOW_NODE_MAX_WIDTH),
+      ...(detail === undefined ? {} : { detail }),
+      ...(group === undefined ? {} : { group }),
+      ...(row === undefined ? {} : { row: Number.parseInt(row, 10) }),
+    };
+  });
+  const edges = semanticChildren(node, 'edge').map((edge): FlowEdgeRecord => {
+    const label = peek(edge, 'dataLabel');
+    return {
+      from: peek(edge, 'dataFrom') ?? '',
+      to: peek(edge, 'dataTo') ?? '',
+      route: peek(edge, 'dataRoute') ?? 'auto',
+      kind: edgeKindOf(peek(edge, 'dataKind')),
+      ...(label === undefined ? {} : { label }),
+    };
+  });
+  const layered =
+    layout === 'down' || layout === 'right'
+      ? layout
+      : direction === 'down' || direction === 'right'
+        ? direction
+        : 'auto';
+  const views = await layoutFlowViews({
+    nodes: boxes.map((box) => ({
+      id: box.id,
+      width: box.width,
+      height: box.height,
+      ...(box.group === undefined ? {} : { group: box.group }),
+      ...(box.row === undefined || !Number.isInteger(box.row) ? {} : { row: box.row }),
+    })),
+    groups: groups.map((group) => ({
+      id: group.id,
+      titleWidth: group.titleWidth,
+      titleHeight: group.titleHeight,
+    })),
+    edges: edges.map((edge) => {
+      const label =
+        edge.label === undefined ? undefined : layoutEdgeLabel(edge.label, FLOW_LABEL_WIDTH);
+      return {
+        from: edge.from,
+        to: edge.to,
+        weight: ROUTE_WEIGHT[edge.route] ?? 1,
+        // Поля вокруг плашки: соседняя связь проходит мимо подписи, а не впритык к ней.
+        ...(label === undefined
+          ? {}
+          : { label: { width: label.width + 4, height: label.height + 4 } }),
+      };
+    }),
+    direction: layered,
+    widthBudget: FLOW_WIDTH_BUDGET,
+    nodeGap: Math.round(24 * scale),
+    layerGap: Math.round(60 * scale),
+    margin: DIAGRAM_MARGIN,
+  });
+  return { groups, boxes, edges, views };
 }
 
 export function enhanceVisualization(
@@ -145,13 +248,14 @@ export function enhanceVisualization(
   instance: number,
   allocateId: (base: string) => string,
   strings: PackageStrings,
+  prepared?: PreparedFlow,
 ): boolean {
   if (semantic === 'chart') {
     enhanceChart(node, instance, allocateId, strings);
     return true;
   }
   if (semantic === 'diagram') {
-    enhanceDiagram(node, instance, allocateId, strings);
+    enhanceDiagram(node, instance, allocateId, strings, prepared);
     return true;
   }
   if (semantic === 'timeline') {
@@ -211,6 +315,19 @@ function enhanceChart(
   ];
 }
 
+/** Сколько делений примерно хочет ось значений. */
+const AXIS_TICKS = 4;
+
+/** Шаг делений из ряда 1, 2, 2.5 и 5, умноженных на степень десяти: подписи оси — круглые числа. */
+function niceStep(rough: number): number {
+  if (!(rough > 0)) return 1;
+  const power = 10 ** Math.floor(Math.log10(rough));
+  const fraction = rough / power;
+  const nice =
+    fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 2.5 ? 2.5 : fraction <= 5 ? 5 : 10;
+  return nice * power;
+}
+
 function renderCartesian(
   type: string,
   series: readonly ChartSeries[],
@@ -219,16 +336,18 @@ function renderCartesian(
   formatNumber: (value: number) => string,
 ): readonly ElementContent[] {
   const values = series.flatMap((item) => item.points.map((point) => point.value));
-  const minimum = Math.min(0, ...values);
-  const maximum = Math.max(0, ...values);
-  const span = maximum - minimum || 1;
+  const step = niceStep((Math.max(0, ...values) - Math.min(0, ...values)) / AXIS_TICKS);
+  const minimum = Math.floor(Math.min(0, ...values) / step) * step;
+  const maximum = Math.max(minimum + step, Math.ceil(Math.max(0, ...values) / step) * step);
+  const span = maximum - minimum;
   const labels = series[0]?.points.map((point) => point.label) ?? [];
   const y = (value: number): number => PLOT.top + ((maximum - value) / span) * PLOT.height;
   const zeroY = y(0);
   const children: ElementContent[] = [];
 
-  for (let tick = 0; tick <= 4; tick += 1) {
-    const value = minimum + (span * tick) / 4;
+  for (let tick = 0; minimum + tick * step <= maximum + step / 2; tick += 1) {
+    // Сложение шагов копит двоичную погрешность: 0.1 × 3 даёт 0.30000000000000004.
+    const value = Number((minimum + tick * step).toPrecision(12));
     const tickY = y(value);
     children.push(
       element('line', {
@@ -449,17 +568,106 @@ function enhanceDiagram(
   instance: number,
   allocateId: (base: string) => string,
   strings: PackageStrings,
+  prepared: PreparedFlow | undefined,
 ): void {
   const title = take(node, 'dataDirectiveTitle') ?? strings.diagram;
   const description = take(node, 'dataDescription') ?? title;
   const type = take(node, 'dataType') ?? 'flow';
-  const direction = take(node, 'dataDirection') ?? 'right';
+  const direction = take(node, 'dataDirection') ?? 'auto';
+  const layout = take(node, 'dataLayout') ?? 'auto';
   const spacing = take(node, 'dataSpacing') ?? 'comfortable';
   if (type === 'sequence') {
     enhanceSequenceDiagram(node, instance, allocateId, title, description, strings);
     return;
   }
-  enhanceFlowDiagram(node, instance, allocateId, title, description, direction, spacing, strings);
+  if (prepared === undefined) {
+    throw new Error('A flow diagram reached enhancement without its prepared layout.');
+  }
+  enhanceFlowDiagram(
+    node,
+    instance,
+    allocateId,
+    title,
+    description,
+    direction,
+    layout,
+    spacing,
+    strings,
+    prepared,
+  );
+}
+
+function edgeKindOf(value: string | undefined): DiagramEdgeKindChoice {
+  return (
+    DIAGRAM_CONTRACT.edgeKinds.find((kind) => kind === value) ?? DIAGRAM_CONTRACT.defaultEdgeKind
+  );
+}
+
+type LegendEntry =
+  | { readonly subject: 'edge'; readonly kind: DiagramEdgeKindChoice; readonly label: string }
+  | { readonly subject: 'node'; readonly kind: string; readonly label: string };
+
+interface DiagramLegend {
+  readonly title?: string;
+  readonly entries: readonly LegendEntry[];
+  /** Слова, которыми схема называет вид связи: авторские из легенды или пакетные. */
+  readonly edgeWords: (kind: DiagramEdgeKindChoice) => string;
+  /** Авторский смысл выделения узла; у выделения без пункта легенды смысла нет. */
+  readonly nodeWords: (kind: string) => string | undefined;
+  /** Показывать ли вид связи в описании: только если легенда его различает. */
+  readonly namesEdgeKinds: boolean;
+}
+
+/**
+ * Легенда: пункты автора в его порядке, затем виды связей, которые схема смешивает, если автор их
+ * не назвал и не скрыл. Начертания пунктов рисует пакет, автор задаёт только слова.
+ */
+function readLegend(
+  node: Element,
+  edges: readonly DiagramEdge[],
+  strings: PackageStrings,
+): DiagramLegend {
+  const settings = semanticChildren(node, 'legend')[0];
+  const title = settings === undefined ? undefined : take(settings, 'dataTitle');
+  const automatic = settings === undefined || take(settings, 'dataAuto') !== 'false';
+  const items = semanticChildren(node, 'legend-item').map((item) => {
+    // `take` забирает свойство, поэтому читается один раз, до сравнения.
+    const edge = take(item, 'dataEdge');
+    return {
+      edge: DIAGRAM_CONTRACT.edgeKinds.find((kind) => kind === edge),
+      node: take(item, 'dataNode'),
+      label: take(item, 'dataLabel'),
+      hidden: take(item, 'dataHidden') === 'true',
+    };
+  });
+  const edgeWords = (kind: DiagramEdgeKindChoice): string =>
+    items.find((item) => item.edge === kind && item.label !== undefined)?.label ??
+    strings.edgeKinds[kind];
+  const entries: LegendEntry[] = items.flatMap((item): LegendEntry[] => {
+    if (item.hidden) return [];
+    if (item.edge !== undefined) {
+      return [{ subject: 'edge', kind: item.edge, label: edgeWords(item.edge) }];
+    }
+    return item.node === undefined || item.label === undefined
+      ? []
+      : [{ subject: 'node', kind: item.node, label: item.label }];
+  });
+  const mixed = DIAGRAM_CONTRACT.edgeKinds.filter((kind) =>
+    edges.some((edge) => edge.kind === kind),
+  );
+  if (automatic && mixed.length >= DIAGRAM_CONTRACT.edgeKindLegend.minimumKinds) {
+    for (const kind of mixed) {
+      if (items.some((item) => item.edge === kind)) continue;
+      entries.push({ subject: 'edge', kind, label: edgeWords(kind) });
+    }
+  }
+  return {
+    ...(title === undefined ? {} : { title }),
+    entries,
+    edgeWords,
+    nodeWords: (kind) => items.find((item) => item.node === kind)?.label,
+    namesEdgeKinds: entries.some((entry) => entry.subject === 'edge'),
+  };
 }
 
 function enhanceFlowDiagram(
@@ -469,500 +677,169 @@ function enhanceFlowDiagram(
   title: string,
   description: string,
   direction: string,
+  layout: string,
   spacing: string,
   strings: PackageStrings,
+  prepared: PreparedFlow,
 ): void {
-  const scale = SPACING_SCALE[spacing] ?? 1;
-  const rowGap = Math.round(30 * scale);
-  const columnGap = Math.round(34 * scale);
-  const rawGroups = semanticChildren(node, 'group');
-  const rawNodes = semanticChildren(node, 'node');
-  const groupRecords = rawGroups.map((child) => ({
-    id: take(child, 'dataId') ?? '',
-    label: take(child, 'dataLabel') ?? '',
-  }));
-  const boxes = rawNodes.map((child, index) => {
-    const group = take(child, 'dataGroup');
-    const row = take(child, 'dataRow');
-    const label = take(child, 'dataLabel') ?? strings.node(index + 1);
-    const measured = layoutNodeBox(label);
-    return {
-      id: take(child, 'dataId') ?? `node-${index + 1}`,
-      label,
-      kind: take(child, 'dataKind') ?? 'neutral',
-      lines: measured.lines,
-      width: measured.width,
-      height: measured.height,
-      ...(group === undefined ? {} : { group }),
-      ...(row === undefined ? {} : { requestedRow: Number.parseInt(row, 10) }),
-    };
+  const { groups: groupRecords, boxes, edges: edgeRecords, views: placedViews } = prepared;
+  const view = (mode: FlowViewKind, placed: FlowLayout): FlowView => ({
+    mode,
+    width: placed.width,
+    height: placed.height,
+    nodes: boxes.map((box) => ({
+      ...box,
+      ...(placed.nodes.get(box.id) ?? { x: 0, y: 0 }),
+      layer: placed.layers.get(box.id) ?? 0,
+    })),
+    groups: groupRecords.map((group) => {
+      const box = placed.groups.get(group.id);
+      return {
+        id: group.id,
+        label: group.label,
+        lines: group.lines,
+        x: box?.x ?? 0,
+        y: box?.y ?? 0,
+        width: box?.width ?? 0,
+        height: box?.height ?? 0,
+        title: box?.title ?? { x: 0, y: 0 },
+        titleAlign: box?.titleAlign ?? 'middle',
+      };
+    }),
+    edges: edgeRecords.flatMap((edge, index) =>
+      flowEdge(
+        edge,
+        index,
+        placed.edges[index]?.points ?? [],
+        placed.edges[index]?.label,
+        mode === 'orthogonal' ? ORTHOGONAL_CORNER_RADIUS : EDGE_CORNER_RADIUS,
+      ),
+    ),
+    labels: edgeRecords.flatMap((edge, index) => {
+      const point = placed.edges[index]?.label;
+      return edge.label === undefined || point === undefined
+        ? []
+        : [edgeLabel(edge.label, point.x, point.y + 4, 'middle', FLOW_LABEL_WIDTH, 'center')];
+    }),
   });
-  const edgeRecords = semanticChildren(node, 'edge').map((edge) => {
-    const label = take(edge, 'dataLabel');
-    const route = take(edge, 'dataRoute') ?? 'auto';
-    return {
-      from: take(edge, 'dataFrom') ?? '',
-      to: take(edge, 'dataTo') ?? '',
-      route,
-      ...(label === undefined ? {} : { label }),
-    };
-  });
-  const grouped = groupRecords.length > 0;
-  const rowOfNode = assignRows(
-    boxes,
-    grouped ? groupRecords.map((group) => group.id) : [undefined],
-  );
-  const grid = grouped ? undefined : gridPlacement(boxes, rowOfNode, direction);
-  const plans = planFlowEdges(edgeRecords, boxes, rowOfNode, groupRecords, grouped, grid);
-  const geometry =
-    grouped || grid === undefined
-      ? groupedGeometry(groupRecords, boxes, rowOfNode, plans, rowGap, columnGap)
-      : gridGeometry(grid, plans, rowGap, columnGap, scale);
-  const { groups, nodes } = geometry;
-  let { width, height } = geometry;
-  const byId = new Map(nodes.map((item) => [item.id, item]));
-  const outerPlans = plans.filter((plan) => plan.kind === 'outer');
-  const outerStart =
-    groups.length === 0
-      ? height + 4
-      : Math.max(...groups.map((group) => group.y + group.height)) + 20;
-  if (outerPlans.length > 0) height = outerStart + outerPlans.length * OUTER_LANE_STEP + 20;
-  const titleId = allocateId(`visual-${instance}-title`);
-  const descriptionId = allocateId(`visual-${instance}-description`);
-  const groupById = new Map(groups.map((group) => [group.id, group]));
-  const edgeElements = plans.flatMap((plan) => {
-    const from = byId.get(plan.edge.from);
-    const to = byId.get(plan.edge.to);
-    if (from === undefined || to === undefined) return [];
-    switch (plan.kind) {
-      case 'direct':
-        return straightEdge(from, to, plan.edge.label, plan.index, plan.edge.route);
-      case 'straight':
-        return levelEdge(from, to, plan.edge.label, plan.index, plan.edge.route);
-      case 'vertical':
-        return columnEdge(from, to, plan.edge.label, plan.index, plan.edge.route);
-      case 'gap': {
-        const gap = geometry.gapLaneX(plan.gapIndex, plan.lane);
-        return gapEdge(from, to, plan.edge.label, plan.index, gap, plan.edge.route);
-      }
-      case 'gutter': {
-        const group = groupById.get(from.group ?? '');
-        if (group === undefined) return [];
-        return gutterEdge(
-          from,
-          to,
-          plan.edge.label,
-          plan.index,
-          group.x + 16 + plan.lane * LANE_STEP,
-          plan.lane,
-          plan.edge.route,
-        );
-      }
-      case 'outer': {
-        const fromGroup = groupById.get(from.group ?? '');
-        const toGroup = groupById.get(to.group ?? '');
-        return outerEdge(
-          from,
-          to,
-          fromGroup,
-          toGroup,
-          plan.edge.label,
-          plan.index,
-          outerStart + plan.lane * OUTER_LANE_STEP,
-          plan.edge.route,
-        );
-      }
-      default:
-        return unreachableEdgePlan(plan);
-    }
-  });
-  const plainEdges: readonly DiagramEdge[] = edgeRecords.map((edge) => ({
-    from: edge.from,
-    to: edge.to,
-    ...(edge.label === undefined ? {} : { label: edge.label }),
-  }));
-  const accessibleDescription = flowDiagramDescription(
-    description,
-    groups,
-    nodes,
-    plainEdges,
+  const views: readonly FlowView[] = [
+    view('down', placedViews.down),
+    view('right', placedViews.right),
+    view('orthogonal', placedViews.orthogonal),
+  ];
+  const defaultView = resolveDefaultView(layout, direction, placedViews.preferred);
+  const described = views[0] ?? view('down', placedViews.down);
+  const legend = readLegend(node, edgeRecords, strings);
+  const words = describeFlow(
+    described.nodes.map((item) => describedNode(item, legend)),
+    described.groups,
+    edgeRecords.map((edge, index) => ({
+      ...describedEdge(edge, legend),
+      backward: placedViews.down.edges[index]?.backward ?? false,
+    })),
     strings,
   );
+  const summary = descriptionSentence(description, words);
+  const panels = views.map((view) => {
+    const selected = view.mode === defaultView;
+    const titleId = allocateId(`visual-${instance}-${view.mode}-title`);
+    const descriptionId = allocateId(`visual-${instance}-${view.mode}-description`);
+    const panelId = allocateId(`visual-${instance}-${view.mode}`);
+    const tabId = allocateId(`visual-${instance}-${view.mode}-tab`);
+    const svg = element(
+      'svg',
+      {
+        viewBox: `0 0 ${round(view.width)} ${round(view.height)}`,
+        // Естественная ширина: страница ужимает схему, когда та не помещается, но не раздувает её.
+        width: round(view.width),
+        style: `--diagram-width: ${round(view.width)}px`,
+        role: 'img',
+        ariaLabelledBy: [titleId],
+        ariaDescribedBy: [descriptionId],
+        className: ['visualization-svg', 'visualization-diagram'],
+      },
+      [
+        element('title', { id: titleId }, [text(title)]),
+        element('desc', { id: descriptionId }, [text(summary)]),
+        ...view.groups.map((item) => diagramGroup(item)),
+        ...view.edges,
+        ...view.nodes.map((item) => diagramNode(item)),
+        // Подписи идут последним слоем: иначе линия соседней связи перечёркивает чужую подпись.
+        ...view.labels,
+      ],
+    );
+    return {
+      button: element(
+        'button',
+        {
+          type: 'button',
+          id: tabId,
+          role: 'tab',
+          ariaControls: [panelId],
+          ariaSelected: selected ? 'true' : 'false',
+          tabIndex: selected ? 0 : -1,
+          dataTab: '',
+          dataLayoutMode: view.mode,
+        },
+        [text(strings.diagramLayouts[view.mode])],
+      ),
+      panel: element(
+        'div',
+        {
+          id: panelId,
+          role: 'tabpanel',
+          ariaLabelledBy: [tabId],
+          tabIndex: 0,
+          dataTabPanel: '',
+          dataLayoutView: view.mode,
+          ...(selected ? { dataLayoutDefault: '' } : { hidden: true }),
+          className: ['visualization-layout-view'],
+        },
+        [element('div', { className: ['visualization-frame'] }, [svg])],
+      ),
+    };
+  });
 
   node.tagName = 'figure';
   node.properties.dataVisualization = 'diagram';
   node.properties.dataDiagramType = 'flow';
   node.properties.dataDiagramDirection = direction;
+  node.properties.dataDiagramLayout = layout;
+  // Вид, который автор получает по умолчанию и который уходит в печать.
+  node.properties.dataDiagramDefaultView = defaultView;
   node.properties.dataDiagramSpacing = spacing;
   node.children = [
     caption(title, description),
-    element('div', { className: ['visualization-frame'] }, [
+    // Переключатель — те же вкладки пакета: клавиатура и выбор уже живут в их среде выполнения.
+    element('div', { className: ['visualization-layouts'], dataTabs: '' }, [
       element(
-        'svg',
+        'div',
         {
-          viewBox: `0 0 ${round(width)} ${round(height)}`,
-          role: 'img',
-          ariaLabelledBy: [titleId],
-          ariaDescribedBy: [descriptionId],
-          className: ['visualization-svg', 'visualization-diagram'],
+          role: 'tablist',
+          ariaLabel: strings.diagramLayouts.switcher,
+          className: ['semantic-tab-list', 'visualization-layout-switch'],
         },
-        [
-          element('title', { id: titleId }, [text(title)]),
-          element('desc', { id: descriptionId }, [text(accessibleDescription)]),
-          ...groups.map((item) => diagramGroup(item)),
-          ...edgeElements.filter((item) => !isEdgeLabel(item)),
-          ...nodes.map((item) => diagramNode(item)),
-          ...edgeElements.filter((item) => isEdgeLabel(item)),
-        ],
+        panels.map((item) => item.button),
       ),
+      ...panels.map((item) => item.panel),
     ]),
+    ...diagramLegend(legend, strings),
+    diagramTranscript(words, strings),
   ];
 }
 
-/** Строка узла: объявленная автором, иначе следующая свободная в его группе. */
-function assignRows(
-  boxes: readonly MeasuredNode[],
-  groupIds: readonly (string | undefined)[],
-): ReadonlyMap<string, number> {
-  const rows = new Map<string, number>();
-  for (const groupId of groupIds) {
-    const members = boxes.filter((box) => (groupId === undefined ? true : box.group === groupId));
-    const taken = new Set<number>();
-    for (const member of members) {
-      const requested = member.requestedRow;
-      if (requested !== undefined && Number.isInteger(requested) && requested > 0) {
-        taken.add(requested - 1);
-      }
-    }
-    let next = 0;
-    for (const member of members) {
-      const requested = member.requestedRow;
-      if (requested !== undefined && Number.isInteger(requested) && requested > 0) {
-        rows.set(member.id, requested - 1);
-        continue;
-      }
-      while (taken.has(next)) next += 1;
-      taken.add(next);
-      rows.set(member.id, next);
-    }
-  }
-  return rows;
-}
-
 /**
- * Маршрут выбирается по ГЕОМЕТРИИ, а не по счётчику: соседние группы на одной строке соединяются
- * прямой, разные строки — полосой в зазоре между группами, и только обратное или перепрыгивающее
- * ребро уходит под диаграмму. Автор может назвать маршрут сам атрибутом `route`.
+ * Вид по умолчанию: названный `layout`, иначе направление из `direction`, иначе тот, что раскладка
+ * сочла лучшим по пересечениям, размеру на странице и порядку потока.
  */
-function planFlowEdges(
-  edges: readonly FlowEdgeRecord[],
-  boxes: readonly MeasuredNode[],
-  rowOfNode: ReadonlyMap<string, number>,
-  groupRecords: readonly { readonly id: string }[],
-  grouped: boolean,
-  grid?: ReadonlyMap<string, GridPlacement>,
-): readonly FlowEdgePlan[] {
-  const boxById = new Map(boxes.map((box) => [box.id, box]));
-  const groupIndex = new Map(groupRecords.map((group, index) => [group.id, index]));
-  const gapLanes = new Map<number, number>();
-  const gutterLanes = new Map<string, number>();
-  let outerLane = 0;
-  const plans: FlowEdgePlan[] = [];
-  for (const [index, edge] of edges.entries()) {
-    const from = boxById.get(edge.from);
-    const to = boxById.get(edge.to);
-    if (from === undefined || to === undefined) continue;
-    const rowFrom = rowOfNode.get(from.id) ?? 0;
-    const rowTo = rowOfNode.get(to.id) ?? 0;
-    if (!grouped) {
-      const fromCell = grid?.get(from.id);
-      const toCell = grid?.get(to.id);
-      if (fromCell === undefined || toCell === undefined) {
-        plans.push({ kind: 'direct', edge, index });
-        continue;
-      }
-      const columnStep = toCell.column - fromCell.column;
-      const rowStep = toCell.row - fromCell.row;
-      if (rowStep === 0 && Math.abs(columnStep) === 1 && edge.route !== 'around') {
-        plans.push({
-          kind: 'straight',
-          edge,
-          index,
-          gapIndex: Math.min(fromCell.column, toCell.column),
-        });
-        continue;
-      }
-      if (columnStep === 0 && Math.abs(rowStep) === 1 && edge.route !== 'around') {
-        plans.push({ kind: 'vertical', edge, index });
-        continue;
-      }
-      // Всё остальное пересекло бы чужие коробки по диагонали, поэтому идёт полосой под сеткой.
-      plans.push({ kind: 'outer', edge, index, lane: outerLane });
-      outerLane += 1;
-      continue;
-    }
-    if (from.group === to.group) {
-      const group = from.group ?? '';
-      if (Math.abs(rowFrom - rowTo) <= 1 && edge.route !== 'around') {
-        plans.push({ kind: 'direct', edge, index });
-        continue;
-      }
-      const lane = gutterLanes.get(group) ?? 0;
-      gutterLanes.set(group, lane + 1);
-      plans.push({ kind: 'gutter', edge, index, lane });
-      continue;
-    }
-    const fromIndex = groupIndex.get(from.group ?? '') ?? 0;
-    const toIndex = groupIndex.get(to.group ?? '') ?? 0;
-    const forwardStep = toIndex - fromIndex;
-    const around = edge.route === 'around' || (edge.route !== 'direct' && forwardStep !== 1);
-    if (around) {
-      plans.push({ kind: 'outer', edge, index, lane: outerLane });
-      outerLane += 1;
-      continue;
-    }
-    const gapIndex = Math.min(fromIndex, toIndex);
-    if (rowFrom === rowTo) {
-      plans.push({ kind: 'straight', edge, index, gapIndex });
-      continue;
-    }
-    const lane = gapLanes.get(gapIndex) ?? 0;
-    gapLanes.set(gapIndex, lane + 1);
-    plans.push({ kind: 'gap', edge, index, gapIndex, lane });
-  }
-  return plans;
-}
-
-/** Колонки групп: ширина каждой считается от самого широкого узла, зазор — от числа полос в нём. */
-function groupedGeometry(
-  groupRecords: readonly { readonly id: string; readonly label: string }[],
-  boxes: readonly MeasuredNode[],
-  rowOfNode: ReadonlyMap<string, number>,
-  plans: readonly FlowEdgePlan[],
-  rowGap: number,
-  columnGap: number,
-): FlowGeometry {
-  const rowCount = Math.max(1, ...boxes.map((box) => (rowOfNode.get(box.id) ?? 0) + 1));
-  const rowHeights = Array.from({ length: rowCount }, (_, row) =>
-    Math.max(
-      NODE_MIN_HEIGHT,
-      ...boxes.filter((box) => rowOfNode.get(box.id) === row).map((box) => box.height),
-    ),
-  );
-  const rowTop: number[] = [];
-  let cursor = GROUP_TITLE_HEIGHT;
-  for (const height of rowHeights) {
-    rowTop.push(cursor);
-    cursor += height + rowGap;
-  }
-  const groupHeight = cursor - rowGap + GROUP_PADDING_BOTTOM;
-  const reserveByGroup = new Map<string, number>();
-  const widestByGroup = new Map<string, number>();
-  for (const group of groupRecords) {
-    const gutterPlans = plans.filter(
-      (plan) =>
-        plan.kind === 'gutter' &&
-        boxes.find((box) => box.id === plan.edge.from)?.group === group.id,
-    );
-    const gutterLabel = Math.max(
-      0,
-      ...gutterPlans
-        .map((plan) => plan.edge.label)
-        .filter((label): label is string => label !== undefined)
-        .map((label) => Math.min(measureText(label, EDGE_FONT_SIZE, 400), 130)),
-    );
-    reserveByGroup.set(
-      group.id,
-      gutterPlans.length === 0
-        ? GROUP_PADDING_X
-        : GROUP_PADDING_X + gutterPlans.length * LANE_STEP + Math.ceil(gutterLabel) + 16,
-    );
-    widestByGroup.set(
-      group.id,
-      Math.max(
-        NODE_MIN_WIDTH,
-        ...boxes.filter((box) => box.group === group.id).map((box) => box.width),
-      ),
-    );
-  }
-  const gapWidths = Array.from({ length: Math.max(0, groupRecords.length - 1) }, (_, gapIndex) => {
-    const lanes = plans.filter((plan) => plan.kind === 'gap' && plan.gapIndex === gapIndex).length;
-    // Подпись ребра живёт в зазоре, поэтому зазор обязан её вместить: иначе она обрезается
-    // многоточием, хотя места на странице сколько угодно.
-    const labels = plans
-      .filter(
-        (plan) => (plan.kind === 'straight' || plan.kind === 'gap') && plan.gapIndex === gapIndex,
-      )
-      .map((plan) => plan.edge.label)
-      .filter((label): label is string => label !== undefined)
-      .map((label) => measureText(label, EDGE_FONT_SIZE, 400));
-    // Потолок держит картинку читаемой: широкая диаграмма ужимается страницей, и подпись узла
-    // вместе с ней уходит ниже читаемого размера.
-    const labelRoom = labels.length === 0 ? 0 : Math.max(...labels) + 20;
-    return Math.max(columnGap, 30 + lanes * LANE_STEP, Math.min(labelRoom, 170));
-  });
-  const columnWidths = groupRecords.map(
-    (group) =>
-      (reserveByGroup.get(group.id) ?? GROUP_PADDING_X) +
-      (widestByGroup.get(group.id) ?? NODE_MIN_WIDTH) +
-      GROUP_PADDING_X,
-  );
-  shrinkGapsToBudget(gapWidths, columnWidths, columnGap, plans);
-  const groups: DiagramGroup[] = [];
-  let x = DIAGRAM_MARGIN;
-  for (const [index, group] of groupRecords.entries()) {
-    const width = columnWidths[index] ?? NODE_MIN_WIDTH;
-    groups.push({ ...group, x, y: DIAGRAM_MARGIN, width, height: groupHeight });
-    x += width + (gapWidths[index] ?? 0);
-  }
-  const groupById = new Map(groups.map((group) => [group.id, group]));
-  const nodes: DiagramNode[] = boxes.map((box) => {
-    const group = groupById.get(box.group ?? '');
-    const row = rowOfNode.get(box.id) ?? 0;
-    if (group === undefined) throw new Error(`Validated diagram group is missing: ${box.group}.`);
-    const reserve = reserveByGroup.get(group.id) ?? GROUP_PADDING_X;
-    const inner = group.width - reserve - GROUP_PADDING_X;
-    return {
-      ...box,
-      x: group.x + reserve + Math.round((inner - box.width) / 2),
-      y: group.y + (rowTop[row] ?? GROUP_TITLE_HEIGHT),
-    };
-  });
-  const gapStart = groups.map((group) => group.x + group.width);
-  return {
-    groups,
-    nodes,
-    // После последней группы зазор не добавлялся, поэтому вычитать его отсюда нельзя.
-    width: x + DIAGRAM_MARGIN,
-    height: DIAGRAM_MARGIN * 2 + groupHeight,
-    gapLaneX: (gapIndex, lane) => (gapStart[gapIndex] ?? 0) + 16 + lane * LANE_STEP,
-  };
-}
-
-/**
- * Запас под подписи рёбер отдаётся, пока картинка не уложится в бюджет ширины. Ниже минимума,
- * который нужен полосам маршрутов, зазор не опускается: там уже идут линии, а не воздух.
- */
-function shrinkGapsToBudget(
-  gapWidths: number[],
-  columnWidths: readonly number[],
-  columnGap: number,
-  plans: readonly FlowEdgePlan[],
-): void {
-  const minimums = gapWidths.map((_, gapIndex) => {
-    const lanes = plans.filter((plan) => plan.kind === 'gap' && plan.gapIndex === gapIndex).length;
-    return Math.max(24, 30 + lanes * LANE_STEP - columnGap + 24);
-  });
-  const total = (): number =>
-    DIAGRAM_MARGIN * 2 +
-    columnWidths.reduce((sum, width) => sum + width, 0) +
-    gapWidths.reduce((sum, width) => sum + width, 0);
-  while (total() > DIAGRAM_WIDTH_BUDGET) {
-    let widest = -1;
-    for (const [index, width] of gapWidths.entries()) {
-      if (width <= (minimums[index] ?? 24)) continue;
-      if (widest === -1 || width > (gapWidths[widest] ?? 0)) widest = index;
-    }
-    if (widest === -1) return;
-    gapWidths[widest] = Math.max(minimums[widest] ?? 24, (gapWidths[widest] ?? 0) - 8);
-  }
-}
-
-/** Место каждого узла в сетке: строка по автору или по порядку, колонка по порядку внутри строки. */
-function gridPlacement(
-  boxes: readonly MeasuredNode[],
-  rowOfNode: ReadonlyMap<string, number>,
+function resolveDefaultView(
+  layout: string,
   direction: string,
-): ReadonlyMap<string, GridPlacement> {
-  const count = boxes.length;
-  const primary = Math.min(4, Math.max(1, count));
-  const perRow = direction === 'right' ? primary : Math.max(1, Math.ceil(count / primary));
-  const explicitRows = boxes.some((box) => box.requestedRow !== undefined);
-  const placement = boxes.map<GridPlacement>((box, index) => ({
-    box,
-    row: explicitRows ? (rowOfNode.get(box.id) ?? 0) : Math.floor(index / perRow),
-    column: explicitRows ? 0 : index % perRow,
-  }));
-  if (explicitRows) {
-    const perRowIndex = new Map<number, number>();
-    for (const item of placement) {
-      const next = perRowIndex.get(item.row) ?? 0;
-      item.column = next;
-      perRowIndex.set(item.row, next + 1);
-    }
-  }
-  return new Map(placement.map((item) => [item.box.id, item]));
-}
-
-/**
- * Сетка без групп. Зазор между колонками и между строками считается от подписей тех связей, что
- * через него проходят: подпись живёт в зазоре, и узкий зазор обрезает её или кладёт на чужую коробку.
- */
-function gridGeometry(
-  grid: ReadonlyMap<string, GridPlacement>,
-  plans: readonly FlowEdgePlan[],
-  rowGap: number,
-  columnGap: number,
-  scale: number,
-): FlowGeometry {
-  const placement = [...grid.values()];
-  const rowCount = Math.max(1, ...placement.map((item) => item.row + 1));
-  const columnCount = Math.max(1, ...placement.map((item) => item.column + 1));
-  const columnWidths = Array.from({ length: columnCount }, (_, column) =>
-    Math.max(
-      NODE_MIN_WIDTH,
-      ...placement.filter((item) => item.column === column).map((item) => item.box.width),
-    ),
-  );
-  const rowHeights = Array.from({ length: rowCount }, (_, row) =>
-    Math.max(
-      NODE_MIN_HEIGHT,
-      ...placement.filter((item) => item.row === row).map((item) => item.box.height),
-    ),
-  );
-  const labelWidth = (plan: FlowEdgePlan): number =>
-    plan.edge.label === undefined ? 0 : measureText(plan.edge.label, EDGE_FONT_SIZE, 400);
-  const columnGaps = Array.from({ length: Math.max(0, columnCount - 1) }, (_, gapIndex) => {
-    const widths = plans
-      .filter((plan) => plan.kind === 'straight' && plan.gapIndex === gapIndex)
-      .map(labelWidth);
-    const room = widths.length === 0 ? 0 : Math.max(...widths) + Math.round(26 * scale);
-    return Math.max(columnGap, Math.min(room, 230));
-  });
-  // Подпись вертикальной связи стоит сбоку от линии, поэтому ей нужна высота строки, а не ширина.
-  const verticalLabel = Math.max(
-    0,
-    ...plans.filter((plan) => plan.kind === 'vertical').map(labelWidth),
-  );
-  const rowGaps = Array.from({ length: Math.max(0, rowCount - 1) }, () =>
-    Math.max(rowGap, verticalLabel === 0 ? rowGap : 46),
-  );
-  const columnX: number[] = [];
-  let x = DIAGRAM_MARGIN;
-  for (const [index, width] of columnWidths.entries()) {
-    columnX.push(x);
-    x += width + (columnGaps[index] ?? 0);
-  }
-  const rowY: number[] = [];
-  let y = DIAGRAM_MARGIN;
-  for (const [index, height] of rowHeights.entries()) {
-    rowY.push(y);
-    y += height + (rowGaps[index] ?? 0);
-  }
-  const nodes: DiagramNode[] = placement.map((item) => ({
-    ...item.box,
-    x:
-      (columnX[item.column] ?? DIAGRAM_MARGIN) +
-      Math.round(((columnWidths[item.column] ?? item.box.width) - item.box.width) / 2),
-    y: rowY[item.row] ?? DIAGRAM_MARGIN,
-  }));
-  return {
-    groups: [],
-    nodes,
-    width: x + DIAGRAM_MARGIN,
-    height: y + DIAGRAM_MARGIN,
-    gapLaneX: () => 0,
-  };
+  preferred: FlowViewKind,
+): FlowViewKind {
+  if (layout === 'down' || layout === 'right' || layout === 'orthogonal') return layout;
+  if (direction === 'down' || direction === 'right') return direction;
+  return preferred;
 }
 
 function enhanceSequenceDiagram(
@@ -975,35 +852,47 @@ function enhanceSequenceDiagram(
 ): void {
   const measured = semanticChildren(node, 'node').map((child, index) => {
     const label = take(child, 'dataLabel') ?? strings.participant(index + 1);
-    const box = layoutNodeBox(label);
+    const detail = take(child, 'dataDetail');
     return {
       id: take(child, 'dataId') ?? `participant-${index + 1}`,
       label,
       kind: take(child, 'dataKind') ?? 'neutral',
-      ...box,
+      ...layoutNodeBox(label, detail, SEQUENCE_NODE_MAX_WIDTH),
+      ...(detail === undefined ? {} : { detail }),
     };
   });
-  const pitch = Math.max(160, Math.max(0, ...measured.map((item) => item.width)) + 28);
-  const participants = measured.map((item, index) => ({
-    ...item,
-    x: 50 + index * pitch + Math.round((pitch - 28 - item.width) / 2),
-    y: 28,
-  }));
   const messages = semanticChildren(node, 'edge').map((edge) => ({
     from: take(edge, 'dataFrom') ?? '',
     to: take(edge, 'dataTo') ?? '',
     label: take(edge, 'dataLabel') ?? '',
+    kind: edgeKindOf(take(edge, 'dataKind')),
   }));
-  const width = Math.max(720, participants.length * pitch + 40);
-  const height = 150 + messages.length * 62;
+  const gaps = sequenceGaps(measured, messages);
+  const firstLifeline = SEQUENCE_MARGIN + (measured[0]?.width ?? 0) / 2;
+  const participants = measured.map((item, index) => {
+    const lifeline = firstLifeline + gaps.slice(0, index).reduce((sum, gap) => sum + gap, 0);
+    return { ...item, x: Math.round(lifeline - item.width / 2), y: 28 };
+  });
   const byId = new Map(participants.map((participant) => [participant.id, participant]));
+  const placed = placeSequenceMessages(messages, byId, gaps, participants);
+  const lastMessage = placed.at(-1);
+  const lastParticipant = participants.at(-1);
+  const width = Math.max(
+    SEQUENCE_MIN_WIDTH,
+    lastParticipant === undefined ? 0 : lastParticipant.x + lastParticipant.width + SEQUENCE_MARGIN,
+    ...placed.map((message) => message.right + DIAGRAM_MARGIN),
+  );
+  const height =
+    lastMessage === undefined
+      ? 150
+      : Math.max(lastMessage.y + 80, lastMessage.y + lastMessage.below + 42);
   const titleId = allocateId(`visual-${instance}-title`);
   const descriptionId = allocateId(`visual-${instance}-description`);
   const bottom = height - 24;
   const participantElements = participants.flatMap((participant) => [
     element('line', {
       x1: participant.x + participant.width / 2,
-      y1: 100,
+      y1: participant.y + participant.height,
       x2: participant.x + participant.width / 2,
       y2: bottom,
       className: ['visualization-sequence-lifeline'],
@@ -1011,16 +900,15 @@ function enhanceSequenceDiagram(
     }),
     diagramNode(participant),
   ]);
-  const messageElements = messages.flatMap((message, index) => {
-    const from = byId.get(message.from);
-    const to = byId.get(message.to);
-    if (from === undefined || to === undefined) return [];
-    return sequenceMessage(from, to, message.label, index, 132 + index * 62);
-  });
-  const accessibleDescription = sequenceDiagramDescription(
-    description,
-    participants,
-    messages,
+  const messageElements = placed.flatMap((message, index) =>
+    message.from === message.to
+      ? sequenceSelfMessage(message, index)
+      : sequenceMessage(message, index),
+  );
+  const legend = readLegend(node, messages, strings);
+  const words = describeSequence(
+    participants.map((item) => describedNode(item, legend)),
+    messages.map((message) => describedEdge(message, legend)),
     strings,
   );
 
@@ -1034,6 +922,8 @@ function enhanceSequenceDiagram(
         'svg',
         {
           viewBox: `0 0 ${width} ${height}`,
+          width,
+          style: `--diagram-width: ${width}px`,
           role: 'img',
           ariaLabelledBy: [titleId],
           ariaDescribedBy: [descriptionId],
@@ -1041,582 +931,389 @@ function enhanceSequenceDiagram(
         },
         [
           element('title', { id: titleId }, [text(title)]),
-          element('desc', { id: descriptionId }, [text(accessibleDescription)]),
+          element('desc', { id: descriptionId }, [text(descriptionSentence(description, words))]),
           ...participantElements,
           ...messageElements,
         ],
       ),
     ]),
+    ...diagramLegend(legend, strings),
+    diagramTranscript(words, strings),
   ];
 }
 
-/** Вертикальная связь соседних строк одной колонки: подпись стоит сбоку от линии. */
-function columnEdge(
-  from: DiagramNode,
-  to: DiagramNode,
-  label: string | undefined,
-  index: number,
-  route: string,
-): readonly Element[] {
-  const source = nodeBox(from);
-  const target = nodeBox(to);
-  const downward = target.centerY >= source.centerY;
-  const startY = downward ? source.bottom + 6 : source.top - 6;
-  const endY = downward ? target.top - 6 : target.bottom + 6;
-  const x = source.centerX;
-  const children: Element[] = [
-    element('line', {
-      x1: round(x),
-      y1: round(startY),
-      x2: round(target.centerX),
-      y2: round(endY),
-      className: ['semantic-edge', 'visualization-edge'],
-      dataEdge: String(index + 1),
-      dataFrom: from.id,
-      dataTo: to.id,
-      dataRoute: route,
-    }),
-    arrowHead(target.centerX, endY, 0, downward ? 1 : -1),
-  ];
-  if (label !== undefined) {
-    children.push(edgeLabel(label, x + 10, (startY + endY) / 2 + 4, 'start', 200));
+/**
+ * Ломаная раскладки со скруглёнными углами. Сплайн через те же точки на резком повороте выгибается
+ * наружу и задевает соседний узел; скругление остаётся внутри угла, а прямые участки раскладка уже
+ * провела мимо узлов.
+ */
+function roundedPath(
+  points: readonly LayoutPoint[],
+  radius: number,
+  sharp: LayoutPoint | undefined,
+): string {
+  const [first] = points;
+  if (first === undefined) return '';
+  const commands = [`M ${round(first.x)} ${round(first.y)}`];
+  for (let index = 1; index < points.length - 1; index += 1) {
+    const before = points[index - 1] ?? first;
+    const corner = points[index] ?? first;
+    const after = points[index + 1] ?? corner;
+    const incoming = Math.hypot(corner.x - before.x, corner.y - before.y) || 1;
+    const outgoing = Math.hypot(after.x - corner.x, after.y - corner.y) || 1;
+    // Точка подписи остаётся на линии: скругление срезало бы угол мимо неё.
+    const cut = corner === sharp ? 0 : Math.min(radius, incoming / 2, outgoing / 2);
+    const enter = {
+      x: corner.x - ((corner.x - before.x) / incoming) * cut,
+      y: corner.y - ((corner.y - before.y) / incoming) * cut,
+    };
+    const leave = {
+      x: corner.x + ((after.x - corner.x) / outgoing) * cut,
+      y: corner.y + ((after.y - corner.y) / outgoing) * cut,
+    };
+    commands.push(
+      `L ${round(enter.x)} ${round(enter.y)} Q ${round(corner.x)} ${round(corner.y)} ${round(leave.x)} ${round(leave.y)}`,
+    );
   }
-  return children;
+  const last = points.at(-1) ?? first;
+  commands.push(`L ${round(last.x)} ${round(last.y)}`);
+  return commands.join(' ');
 }
 
-/** Подписи выносятся отдельным слоем: иначе линия соседнего ребра перечёркивает чужую подпись. */
-function isEdgeLabel(item: Element): boolean {
-  const className = item.properties.className;
-  return Array.isArray(className) && className.includes('visualization-edge-label');
-}
-
-function diagramGroup(group: DiagramGroup): Element {
-  const wrapped = wrapMeasured(group.label, group.width - 36, 2, GROUP_FONT_SIZE, 780);
-  return element('g', { dataGroupId: group.id, className: ['semantic-group'] }, [
-    element('rect', {
-      x: group.x,
-      y: group.y,
-      width: group.width,
-      height: group.height,
-      rx: 16,
-      className: ['visualization-group'],
-    }),
-    ...wrapped.lines.map((line, index) =>
-      element(
-        'text',
-        {
-          x: group.x + 18,
-          y: group.y + 26 + index * 18,
-          className: ['visualization-group-label'],
-        },
-        [text(line)],
+/** Связь флоу: своя кривая через свои точки, наконечник по виду связи на грани цели. */
+function flowEdge(
+  edge: {
+    readonly from: string;
+    readonly to: string;
+    readonly route: string;
+    readonly kind: DiagramEdgeKindChoice;
+  },
+  index: number,
+  points: readonly LayoutPoint[],
+  label: LayoutPoint | undefined,
+  radius: number,
+): readonly Element[] {
+  const end = points.at(-1);
+  const before = points.at(-2);
+  if (end === undefined || before === undefined) return [];
+  const length = Math.hypot(end.x - before.x, end.y - before.y) || 1;
+  const unitX = (end.x - before.x) / length;
+  const unitY = (end.y - before.y) / length;
+  // Наконечник отступает от грани узла, а линия кончается под его основанием и не торчит из острия.
+  const tip = { x: end.x - unitX * 2, y: end.y - unitY * 2 };
+  const shaftEnd = { x: tip.x - unitX * (ARROW_LENGTH - 2), y: tip.y - unitY * (ARROW_LENGTH - 2) };
+  return [
+    element('path', {
+      d: roundedPath(
+        [...points.slice(0, -1), shaftEnd],
+        radius,
+        points.find((point) => point.x === label?.x && point.y === label.y),
       ),
-    ),
-  ]);
+      fill: 'none',
+      className: ['semantic-edge', 'visualization-edge', `visualization-edge-kind-${edge.kind}`],
+      dataEdge: String(index + 1),
+      dataFrom: edge.from,
+      dataTo: edge.to,
+      dataRoute: edge.route,
+      dataEdgeKind: edge.kind,
+    }),
+    edgeArrow(edge.kind, tip.x, tip.y, unitX, unitY),
+  ];
 }
 
-function diagramNode(node: DiagramNode): Element {
-  const width = node.width ?? NODE_DEFAULT_WIDTH;
-  const height = node.height ?? NODE_DEFAULT_HEIGHT;
-  const lines = node.lines ?? layoutNodeBox(node.label).lines;
-  return element(
-    'g',
-    { dataNodeId: node.id, dataGroup: node.group, className: ['semantic-node'] },
-    [
-      element('rect', {
-        x: node.x,
-        y: node.y,
-        width,
-        height,
-        rx: 12,
-        className: ['visualization-node', `visualization-node-${node.kind}`],
-      }),
-      ...lines.map((line, index) =>
-        element(
-          'text',
-          {
-            x: node.x + width / 2,
-            y: node.y + height / 2 + 5 + (index - (lines.length - 1) / 2) * NODE_LINE_HEIGHT,
-            textAnchor: 'middle',
-            className: ['visualization-node-label'],
-          },
-          [text(line)],
+/** Образец пункта легенды рисуется тем же начертанием, что и связь или узел на схеме. */
+function legendSample(entry: LegendEntry): Element {
+  return entry.subject === 'edge'
+    ? element(
+        'svg',
+        { viewBox: '0 0 44 12', className: ['visualization-legend-sample'], ariaHidden: 'true' },
+        [
+          element('path', {
+            d: 'M 2 6 H 32',
+            fill: 'none',
+            className: ['visualization-edge', `visualization-edge-kind-${entry.kind}`],
+          }),
+          edgeArrow(entry.kind, 42, 6, 1, 0),
+        ],
+      )
+    : element(
+        'svg',
+        { viewBox: '0 0 30 18', className: ['visualization-legend-sample'], ariaHidden: 'true' },
+        [
+          element('rect', {
+            x: 1,
+            y: 1,
+            width: 28,
+            height: 16,
+            rx: 5,
+            className: ['visualization-node', `visualization-node-${entry.kind}`],
+          }),
+        ],
+      );
+}
+
+function diagramLegend(legend: DiagramLegend, strings: PackageStrings): Element[] {
+  if (legend.entries.length === 0) return [];
+  return [
+    element('div', { className: ['semantic-legend', 'visualization-diagram-legend'] }, [
+      ...(legend.title === undefined
+        ? []
+        : [element('p', { className: ['visualization-legend-title'] }, [text(legend.title)])]),
+      element(
+        'ul',
+        {
+          className: ['visualization-legend', 'visualization-edge-legend'],
+          ariaLabel: legend.title ?? strings.legend,
+        },
+        legend.entries.map((entry) =>
+          element(
+            'li',
+            {
+              className: ['semantic-legend-item'],
+              ...(entry.subject === 'edge'
+                ? { dataEdgeKind: entry.kind }
+                : { dataNodeKind: entry.kind }),
+            },
+            [legendSample(entry), text(entry.label)],
+          ),
         ),
       ),
-    ],
-  );
+    ]),
+  ];
 }
 
-/** Ширина строки в единицах вида, считанная по начертаниям: коробка узла растёт от подписи. */
-function glyphWidth(character: string): number {
-  if (character === ' ') return 0.29;
-  if (NARROW_GLYPHS.has(character)) return 0.34;
-  if (WIDE_GLYPHS.has(character)) return 0.92;
-  if (character >= '0' && character <= '9') return 0.58;
-  if (character !== character.toLowerCase() && character === character.toUpperCase()) return 0.7;
-  return 0.56;
-}
-
-function measureText(value: string, fontSize: number, weight: number): number {
-  let units = 0;
-  for (const character of value) units += glyphWidth(character);
-  return units * fontSize * (weight >= 700 ? 1.05 : 1);
-}
-
-function truncateMeasured(
-  value: string,
-  maximumWidth: number,
-  fontSize: number,
-  weight: number,
-): string {
-  if (measureText(value, fontSize, weight) <= maximumWidth) return value;
-  let result = '';
-  for (const point of value) {
-    if (measureText(`${result}${point}…`, fontSize, weight) > maximumWidth) break;
-    result += point;
-  }
-  return `${result.trimEnd()}…`;
-}
-
-function wrapMeasured(
-  value: string,
-  maximumWidth: number,
-  maximumLines: number,
-  fontSize: number,
-  weight: number,
-): { readonly lines: readonly string[]; readonly width: number } {
-  const words = value.split(/\s+/u).filter((word) => word.length > 0);
-  const lines: string[] = [];
-  for (const word of words) {
-    const current = lines.at(-1);
-    const candidate = current === undefined ? word : `${current} ${word}`;
-    if (current !== undefined && measureText(candidate, fontSize, weight) <= maximumWidth) {
-      lines[lines.length - 1] = candidate;
-    } else {
-      lines.push(word);
-    }
-  }
-  if (lines.length === 0) lines.push(value);
-  const bounded =
-    lines.length <= maximumLines
-      ? lines
-      : [...lines.slice(0, maximumLines - 1), lines.slice(maximumLines - 1).join(' ')];
-  const trimmed = bounded.map((line) => truncateMeasured(line, maximumWidth, fontSize, weight));
+function describedNode(node: DiagramNode, legend: DiagramLegend): DescribedNode {
+  const meaning = legend.nodeWords(node.kind);
   return {
-    lines: trimmed,
-    width: Math.max(...trimmed.map((line) => measureText(line, fontSize, weight))),
+    id: node.id,
+    label: node.label,
+    ...(node.detail === undefined ? {} : { detail: node.detail }),
+    ...(meaning === undefined ? {} : { meaning }),
+    ...(node.group === undefined ? {} : { group: node.group }),
+    ...(node.layer === undefined ? {} : { layer: node.layer }),
   };
 }
 
-function layoutNodeBox(label: string): {
-  readonly lines: readonly string[];
-  readonly width: number;
-  readonly height: number;
-} {
-  const wrapped = wrapMeasured(
-    label,
-    NODE_MAX_WIDTH - NODE_PADDING_X * 2,
-    NODE_MAX_LINES,
-    NODE_FONT_SIZE,
-    720,
-  );
+function describedEdge(edge: DiagramEdge, legend: DiagramLegend): DescribedEdge {
   return {
-    lines: wrapped.lines,
-    width: Math.min(
-      NODE_MAX_WIDTH,
-      Math.max(NODE_MIN_WIDTH, Math.ceil(wrapped.width) + NODE_PADDING_X * 2),
-    ),
-    height: Math.max(NODE_MIN_HEIGHT, wrapped.lines.length * NODE_LINE_HEIGHT + NODE_PADDING_Y * 2),
+    from: edge.from,
+    to: edge.to,
+    ...(edge.label === undefined ? {} : { label: edge.label }),
+    ...(legend.namesEdgeKinds ? { kind: legend.edgeWords(edge.kind) } : {}),
   };
 }
 
-function nodeBox(node: DiagramNode): {
-  readonly left: number;
-  readonly right: number;
-  readonly top: number;
-  readonly bottom: number;
-  readonly centerX: number;
-  readonly centerY: number;
-} {
-  const width = node.width ?? NODE_DEFAULT_WIDTH;
-  const height = node.height ?? NODE_DEFAULT_HEIGHT;
-  return {
-    left: node.x,
-    right: node.x + width,
-    top: node.y,
-    bottom: node.y + height,
-    centerX: node.x + width / 2,
-    centerY: node.y + height / 2,
-  };
-}
-
-function edgeLabel(
-  value: string,
-  x: number,
-  y: number,
-  anchor: 'start' | 'middle' | 'end',
-  maximumWidth: number,
-): Element {
-  const shown = truncateMeasured(value, maximumWidth, EDGE_FONT_SIZE, 400);
-  const width = measureText(shown, EDGE_FONT_SIZE, 400) + 8;
-  const left = anchor === 'start' ? x - 4 : anchor === 'end' ? x - width + 4 : x - width / 2;
-  return element('g', { className: ['visualization-edge-label'] }, [
-    element('rect', {
-      x: round(left),
-      y: round(y - 12),
-      width: round(width),
-      height: 16,
-      rx: 4,
-      className: ['visualization-edge-label-plate'],
-    }),
-    element(
-      'text',
-      {
-        x: round(x),
-        y: round(y),
-        textAnchor: anchor,
-        className: ['visualization-edge-label-text'],
-      },
-      [text(shown)],
-    ),
+/**
+ * Схема словами под картинкой: закрытый `<details>` для читателя, которому картинка не помогает.
+ * Текст тот же, что в `<desc>`, только разложен по спискам.
+ */
+function diagramTranscript(words: DiagramDescription, strings: PackageStrings): Element {
+  return element('details', { className: ['visualization-transcript'] }, [
+    element('summary', {}, [text(strings.diagramText.transcript)]),
+    element('p', {}, [text(words.lead)]),
+    ...words.sections.flatMap((section) => [
+      element('p', { className: ['visualization-transcript-heading'] }, [text(section.heading)]),
+      element(
+        section.ordered ? 'ol' : 'ul',
+        {},
+        section.items.map((item) => element('li', {}, [text(item)])),
+      ),
+    ]),
   ]);
 }
 
-function arrowHead(x: number, y: number, unitX: number, unitY: number): Element {
-  const baseX = x - unitX * 11;
-  const baseY = y - unitY * 11;
-  const perpendicularX = -unitY * 5;
-  const perpendicularY = unitX * 5;
-  return element('polygon', {
-    points: `${round(x)},${round(y)} ${round(baseX + perpendicularX)},${round(baseY + perpendicularY)} ${round(baseX - perpendicularX)},${round(baseY - perpendicularY)}`,
-    className: ['visualization-edge-arrow'],
+interface PlacedSequenceMessage {
+  readonly from: DiagramNode;
+  readonly to: DiagramNode;
+  readonly label: string;
+  readonly kind: DiagramEdgeKindChoice;
+  /** Линия сообщения; у сообщения самому себе — середина петли. */
+  readonly y: number;
+  readonly labelWidth: number;
+  /** Сколько сообщение занимает под своей линией. */
+  readonly below: number;
+  /** Правый край сообщения вместе с подписью. */
+  readonly right: number;
+  /** Петля сообщения самому себе смотрит влево от линии жизни. */
+  readonly mirrored: boolean;
+}
+
+function lifelineX(participant: DiagramNode): number {
+  return participant.x + (participant.width ?? NODE_DEFAULT_WIDTH) / 2;
+}
+
+/**
+ * Шаг между сообщениями считается от высоты подписей: многострочная подпись растёт вверх от своей
+ * линии и не должна доставать до линии предыдущего сообщения.
+ */
+/**
+ * Промежутки между соседними линиями жизни. Промежуток не уже соседних коробок и растёт под подписи
+ * сообщений между этими двумя участниками и под петли левого из них, но не шире
+ * SEQUENCE_LABEL_ROOM и в пределах SEQUENCE_WIDTH_BUDGET: длинная подпись переносится, а не
+ * раздувает картинку. Сообщение через несколько участников места не просит — ему хватает суммы
+ * промежутков.
+ */
+function sequenceGaps(
+  participants: readonly { readonly id: string; readonly width: number }[],
+  messages: readonly { readonly from: string; readonly to: string; readonly label: string }[],
+): number[] {
+  const position = new Map(participants.map((participant, index) => [participant.id, index]));
+  const wanted = participants.slice(0, -1).map((participant, index) => {
+    const next = participants[index + 1];
+    const boxes = (participant.width + (next?.width ?? 0)) / 2 + SEQUENCE_BOX_GAP;
+    const labels = messages.flatMap((message) => {
+      const from = position.get(message.from);
+      const to = position.get(message.to);
+      if (from === undefined || to === undefined) return [];
+      const natural = layoutEdgeLabel(message.label, Number.POSITIVE_INFINITY, 700).width;
+      if (from === to) {
+        const loopSide = from === participants.length - 1 ? from - 1 : from;
+        return loopSide === index
+          ? [Math.min(natural, SEQUENCE_LABEL_ROOM) + SEQUENCE_SELF_LOOP_WIDTH + 36]
+          : [];
+      }
+      return Math.min(from, to) === index && Math.max(from, to) === index + 1
+        ? [Math.min(natural, SEQUENCE_LABEL_ROOM) + 24]
+        : [];
+    });
+    return {
+      base: Math.max(SEQUENCE_MIN_GAP, boxes),
+      wanted: Math.max(SEQUENCE_MIN_GAP, boxes, ...labels),
+    };
   });
+  // Подписям достаётся только то, что остаётся от бюджета ширины после коробок: иначе страница
+  // ужимает всю картинку, и мельчает текст всех сообщений, а не переносится одна подпись.
+  const ends = ((participants[0]?.width ?? 0) + (participants.at(-1)?.width ?? 0)) / 2;
+  const available = SEQUENCE_WIDTH_BUDGET - 2 * SEQUENCE_MARGIN - ends;
+  const base = wanted.reduce((sum, gap) => sum + gap.base, 0);
+  const extra = wanted.reduce((sum, gap) => sum + gap.wanted - gap.base, 0);
+  const share = extra === 0 ? 0 : Math.min(1, Math.max(0, (available - base) / extra));
+  return wanted.map((gap) => Math.ceil(gap.base + (gap.wanted - gap.base) * share));
 }
 
-/** Прямая между центрами, обрезанная по граням коробок: длина зависит от РАЗМЕРА узла, не от числа. */
-function straightEdge(
-  from: DiagramNode,
-  to: DiagramNode,
-  label: string | undefined,
-  index: number,
-  route: string,
-): readonly Element[] {
-  const source = nodeBox(from);
-  const target = nodeBox(to);
-  const deltaX = target.centerX - source.centerX;
-  const deltaY = target.centerY - source.centerY;
-  const length = Math.hypot(deltaX, deltaY) || 1;
-  const unitX = deltaX / length;
-  const unitY = deltaY / length;
-  const start = boundaryPoint(source, unitX, unitY, 6);
-  const end = boundaryPoint(target, -unitX, -unitY, 6);
-  const children: Element[] = [
-    element('line', {
-      x1: round(start.x),
-      y1: round(start.y),
-      x2: round(end.x),
-      y2: round(end.y),
-      className: ['semantic-edge', 'visualization-edge'],
-      dataEdge: String(index + 1),
-      dataFrom: from.id,
-      dataTo: to.id,
-      dataRoute: route,
-    }),
-    arrowHead(end.x, end.y, unitX, unitY),
-  ];
-  if (label !== undefined) {
-    const vertical = Math.abs(deltaY) > Math.abs(deltaX);
-    children.push(
-      edgeLabel(
-        label,
-        (start.x + end.x) / 2 + (vertical ? 12 : 0),
-        (start.y + end.y) / 2 + (vertical ? 4 : -9),
-        vertical ? 'start' : 'middle',
-        vertical ? 150 : Math.max(90, Math.abs(deltaX)),
-      ),
-    );
-  }
-  return children;
-}
-
-function boundaryPoint(
-  box: ReturnType<typeof nodeBox>,
-  unitX: number,
-  unitY: number,
-  inset: number,
-): { readonly x: number; readonly y: number } {
-  const halfWidth = (box.right - box.left) / 2 + inset;
-  const halfHeight = (box.bottom - box.top) / 2 + inset;
-  const scaleX = unitX === 0 ? Number.POSITIVE_INFINITY : halfWidth / Math.abs(unitX);
-  const scaleY = unitY === 0 ? Number.POSITIVE_INFINITY : halfHeight / Math.abs(unitY);
-  const scale = Math.min(scaleX, scaleY);
-  return { x: box.centerX + unitX * scale, y: box.centerY + unitY * scale };
-}
-
-/** Соседние группы, одна строка: горизонтальная прямая, подпись над серединой зазора. */
-function levelEdge(
-  from: DiagramNode,
-  to: DiagramNode,
-  label: string | undefined,
-  index: number,
-  route: string,
-): readonly Element[] {
-  const source = nodeBox(from);
-  const target = nodeBox(to);
-  const rightward = target.centerX >= source.centerX;
-  const startX = rightward ? source.right + 6 : source.left - 6;
-  const endX = rightward ? target.left - 6 : target.right + 6;
-  const y = source.centerY;
-  const children: Element[] = [
-    element('line', {
-      x1: round(startX),
-      y1: round(y),
-      x2: round(endX),
-      y2: round(target.centerY),
-      className: ['semantic-edge', 'visualization-edge'],
-      dataEdge: String(index + 1),
-      dataFrom: from.id,
-      dataTo: to.id,
-      dataRoute: route,
-    }),
-    arrowHead(endX, target.centerY, rightward ? 1 : -1, 0),
-  ];
-  if (label !== undefined) {
-    children.push(
-      edgeLabel(
-        label,
-        (startX + endX) / 2,
-        y - 9,
-        'middle',
-        Math.max(70, Math.abs(endX - startX) - 8),
-      ),
-    );
-  }
-  return children;
-}
-
-/** Соседние группы, разные строки: полоса в зазоре между колонками, подпись горизонтальная. */
-function gapEdge(
-  from: DiagramNode,
-  to: DiagramNode,
-  label: string | undefined,
-  index: number,
-  laneX: number,
-  route: string,
-): readonly Element[] {
-  const source = nodeBox(from);
-  const target = nodeBox(to);
-  const rightward = target.centerX >= source.centerX;
-  const startX = rightward ? source.right + 6 : source.left - 6;
-  const endX = rightward ? target.left - 6 : target.right + 6;
-  const children: Element[] = [
-    element('path', {
-      d: `M ${round(startX)} ${round(source.centerY)} H ${round(laneX)} V ${round(target.centerY)} H ${round(endX)}`,
-      fill: 'none',
-      className: ['semantic-edge', 'visualization-edge', 'visualization-group-gap-edge'],
-      dataEdge: String(index + 1),
-      dataFrom: from.id,
-      dataTo: to.id,
-      dataRoute: route,
-    }),
-    arrowHead(endX, target.centerY, rightward ? 1 : -1, 0),
-  ];
-  if (label !== undefined) {
-    children.push(
-      edgeLabel(
-        label,
-        startX + (rightward ? 6 : -6),
-        source.centerY - 10,
-        rightward ? 'start' : 'end',
-        Math.max(110, Math.abs(laneX - startX) + 60),
-      ),
-    );
-  }
-  return children;
-}
-
-/** Далёкие строки одной группы: собственный жёлоб слева, подпись горизонтальная над поворотом. */
-function gutterEdge(
-  from: DiagramNode,
-  to: DiagramNode,
-  label: string | undefined,
-  index: number,
-  laneX: number,
-  lane: number,
-  route: string,
-): readonly Element[] {
-  const source = nodeBox(from);
-  const target = nodeBox(to);
-  const children: Element[] = [
-    element('path', {
-      d: `M ${round(source.left - 6)} ${round(source.centerY)} H ${round(laneX)} V ${round(target.centerY)} H ${round(target.left - 6)}`,
-      fill: 'none',
-      className: ['semantic-edge', 'visualization-edge', 'visualization-group-internal-edge'],
-      dataEdge: String(index + 1),
-      dataFrom: from.id,
-      dataTo: to.id,
-      dataRoute: route,
-    }),
-    arrowHead(target.left - 6, target.centerY, 1, 0),
-  ];
-  if (label !== undefined) {
-    // Подпись сидит на своей полосе: середина отрезка разводит рёбра с разными концами, номер
-    // полосы — рёбра, у которых концы совпали или совпал источник.
-    children.push(
-      edgeLabel(
-        label,
-        laneX + 6,
-        (source.centerY + target.centerY) / 2 + 4 + lane * 15,
-        'start',
-        Math.max(60, source.left - laneX - 12),
-      ),
-    );
-  }
-  return children;
-}
-
-/** Обратное или перепрыгивающее ребро: полоса под группами, подпись горизонтальная над полосой. */
-function outerEdge(
-  from: DiagramNode,
-  to: DiagramNode,
-  fromGroup: DiagramGroup | undefined,
-  toGroup: DiagramGroup | undefined,
-  label: string | undefined,
-  index: number,
-  laneY: number,
-  route: string,
-): readonly Element[] {
-  const source = nodeBox(from);
-  const target = nodeBox(to);
-  const rightward = target.centerX >= source.centerX;
-  const startX = rightward ? source.right + 6 : source.left - 6;
-  const endX = rightward ? target.left - 6 : target.right + 6;
-  const sourceLaneX =
-    fromGroup === undefined
-      ? startX
-      : rightward
-        ? fromGroup.x + fromGroup.width + 10
-        : fromGroup.x - 10;
-  const targetLaneX =
-    toGroup === undefined ? endX : rightward ? toGroup.x - 10 : toGroup.x + toGroup.width + 10;
-  const children: Element[] = [
-    element('path', {
-      d: `M ${round(startX)} ${round(source.centerY)} H ${round(sourceLaneX)} V ${round(laneY)} H ${round(targetLaneX)} V ${round(target.centerY)} H ${round(endX)}`,
-      fill: 'none',
-      className: ['semantic-edge', 'visualization-edge', 'visualization-group-outer-edge'],
-      dataEdge: String(index + 1),
-      dataFrom: from.id,
-      dataTo: to.id,
-      dataRoute: route,
-      dataRouteLane: String(laneY),
-    }),
-    arrowHead(endX, target.centerY, rightward ? 1 : -1, 0),
-  ];
-  if (label !== undefined) {
-    children.push(
-      edgeLabel(
-        label,
-        (sourceLaneX + targetLaneX) / 2,
-        laneY - 8,
-        'middle',
-        Math.max(80, Math.abs(targetLaneX - sourceLaneX) - 10),
-      ),
-    );
-  }
-  return children;
-}
-
-function unreachableEdgePlan(plan: never): never {
-  throw new Error(`Unsupported grouped edge plan: ${JSON.stringify(plan)}.`);
-}
-
-function flowDiagramDescription(
-  description: string,
-  groups: readonly DiagramGroup[],
-  nodes: readonly DiagramNode[],
-  edges: readonly DiagramEdge[],
-  strings: PackageStrings,
-): string {
-  const groupText =
-    groups.length === 0
-      ? strings.none
-      : groups
-          .map((group) => {
-            const members = nodes
-              .filter((node) => node.group === group.id)
-              .map((node) => node.id)
-              .join(', ');
-            return `${group.id}: ${group.label} (${members})`;
-          })
-          .join('; ');
-  const nodeText = nodes.map((node) => `${node.id}: ${node.label}`).join('; ');
-  const edgeText =
-    edges.length === 0
-      ? strings.none
-      : edges
-          .map(
-            (edge) =>
-              `${edge.from} ${strings.to} ${edge.to}${edge.label === undefined ? '' : `: ${edge.label}`}`,
-          )
-          .join('; ');
-  return `${description} ${strings.groups}: ${groupText}. ${strings.nodes}: ${nodeText}. ${strings.connections}: ${edgeText}.`;
-}
-
-function sequenceDiagramDescription(
-  description: string,
+function placeSequenceMessages(
+  messages: readonly {
+    readonly from: string;
+    readonly to: string;
+    readonly label: string;
+    readonly kind: DiagramEdgeKindChoice;
+  }[],
+  byId: ReadonlyMap<string, DiagramNode>,
+  gaps: readonly number[],
   participants: readonly DiagramNode[],
-  messages: readonly DiagramEdge[],
-  strings: PackageStrings,
-): string {
-  const participantText = participants
-    .map((participant) => `${participant.id}: ${participant.label}`)
-    .join('; ');
-  const messageText = messages
-    .map(
-      (message, index) =>
-        `${index + 1}. ${message.from} ${strings.to} ${message.to}: ${message.label ?? ''}`,
-    )
-    .join('; ');
-  return `${description} ${strings.participants}: ${participantText}. ${strings.messagesInOrder}: ${messageText}.`;
+): readonly PlacedSequenceMessage[] {
+  const headerBottom =
+    28 +
+    Math.max(0, ...participants.map((participant) => participant.height ?? NODE_DEFAULT_HEIGHT));
+  const placed: PlacedSequenceMessage[] = [];
+  for (const message of messages) {
+    const from = byId.get(message.from);
+    const to = byId.get(message.to);
+    if (from === undefined || to === undefined) continue;
+    const self = from === to;
+    const position = participants.indexOf(from);
+    // Петля занимает промежуток до правого соседа, у последнего участника — до левого.
+    const room = gaps[position] ?? gaps[position - 1] ?? SEQUENCE_MIN_GAP;
+    const labelWidth = self
+      ? Math.max(EDGE_LABEL_MIN_WIDTH, room - SEQUENCE_SELF_LOOP_WIDTH - 36)
+      : Math.max(EDGE_LABEL_MIN_WIDTH, Math.abs(lifelineX(to) - lifelineX(from)) - 24);
+    const layout = layoutEdgeLabel(message.label, labelWidth, 700);
+    const above = self
+      ? Math.max(SEQUENCE_SELF_LOOP_HEIGHT / 2, layout.height / 2 + 4)
+      : EDGE_LABEL_RISE + layout.height - 17;
+    const below = self ? Math.max(SEQUENCE_SELF_LOOP_HEIGHT / 2 + 6, layout.height / 2 - 4) : 6;
+    const previous = placed.at(-1);
+    const y =
+      previous === undefined
+        ? Math.max(132, headerBottom + 14 + above)
+        : Math.max(previous.y + SEQUENCE_MESSAGE_STEP, previous.y + previous.below + 14 + above);
+    // У последнего участника справа нет соседа: петля и подпись уходят влево, и картинка не
+    // расширяется ради одной подписи.
+    const mirrored = self && from === participants.at(-1);
+    const right =
+      self && !mirrored
+        ? lifelineX(from) + SEQUENCE_SELF_LOOP_WIDTH + 10 + layout.width
+        : Math.max(lifelineX(from), lifelineX(to));
+    placed.push({
+      from,
+      to,
+      label: message.label,
+      kind: message.kind,
+      y,
+      labelWidth,
+      below,
+      right,
+      mirrored,
+    });
+  }
+  return placed;
 }
 
-function sequenceMessage(
-  from: DiagramNode,
-  to: DiagramNode,
-  label: string,
-  index: number,
-  y: number,
-): readonly Element[] {
-  const fromX = from.x + (from.width ?? NODE_DEFAULT_WIDTH) / 2;
-  const toX = to.x + (to.width ?? NODE_DEFAULT_WIDTH) / 2;
+function sequenceMessage(message: PlacedSequenceMessage, index: number): readonly Element[] {
+  const { from, to, label, kind, y, labelWidth } = message;
+  const fromX = lifelineX(from);
+  const toX = lifelineX(to);
   const direction = Math.sign(toX - fromX) || 1;
-  const endX = toX - direction * 9;
-  const baseX = endX - direction * 11;
+  const endX = toX - direction * SEQUENCE_ARROW_GAP;
   return [
     element('line', {
       x1: fromX,
       y1: y,
-      x2: endX,
+      // Линия кончается под основанием наконечника, чтобы не торчать из полого или открытого.
+      x2: endX - direction * (ARROW_LENGTH - 2),
       y2: y,
-      className: ['semantic-edge', 'visualization-edge', 'visualization-sequence-message'],
+      className: [
+        'semantic-edge',
+        'visualization-edge',
+        'visualization-sequence-message',
+        `visualization-edge-kind-${kind}`,
+      ],
       dataEdge: String(index + 1),
       dataFrom: from.id,
       dataTo: to.id,
       dataMessageOrder: String(index + 1),
+      dataEdgeKind: kind,
     }),
-    element('polygon', {
-      points: `${round(endX)},${round(y)} ${round(baseX)},${round(y - 5)} ${round(baseX)},${round(y + 5)}`,
-      className: ['visualization-edge-arrow'],
+    edgeArrow(kind, endX, y, direction, 0),
+    edgeLabel(label, (fromX + toX) / 2, y - 9, 'middle', labelWidth, 'up', true),
+  ];
+}
+
+/** Шаг внутри участника: петля от линии жизни и обратно, подпись справа от петли. */
+function sequenceSelfMessage(message: PlacedSequenceMessage, index: number): readonly Element[] {
+  const { from: participant, label, kind, y, labelWidth, mirrored } = message;
+  const x = lifelineX(participant);
+  const side = mirrored ? -1 : 1;
+  const top = y - SEQUENCE_SELF_LOOP_HEIGHT / 2;
+  const bottom = y + SEQUENCE_SELF_LOOP_HEIGHT / 2;
+  const outer = x + side * SEQUENCE_SELF_LOOP_WIDTH;
+  const tip = x + side * SEQUENCE_ARROW_GAP;
+  return [
+    element('path', {
+      d: `M ${round(x)} ${round(top)} H ${round(outer)} V ${round(bottom)} H ${round(tip + side * (ARROW_LENGTH - 2))}`,
+      fill: 'none',
+      className: [
+        'semantic-edge',
+        'visualization-edge',
+        'visualization-sequence-message',
+        'visualization-sequence-self-message',
+        `visualization-edge-kind-${kind}`,
+      ],
+      dataEdge: String(index + 1),
+      dataFrom: participant.id,
+      dataTo: participant.id,
+      dataMessageOrder: String(index + 1),
+      dataEdgeKind: kind,
     }),
-    element(
-      'text',
-      {
-        x: (fromX + toX) / 2,
-        y: y - 9,
-        textAnchor: 'middle',
-        className: ['visualization-edge-label-text', 'visualization-sequence-label'],
-      },
-      [text(shortLabel(label, 36))],
+    edgeArrow(kind, tip, bottom, -side, 0),
+    edgeLabel(
+      label,
+      outer + side * 10,
+      y + 4,
+      mirrored ? 'end' : 'start',
+      labelWidth,
+      'center',
+      true,
     ),
   ];
 }
@@ -1676,30 +1373,6 @@ function take(node: Element, property: string): string | undefined {
   const value = node.properties[property];
   delete node.properties[property];
   return typeof value === 'string' ? value : undefined;
-}
-
-function element(
-  tagName: string,
-  properties: Readonly<
-    Record<string, string | readonly string[] | number | boolean | null | undefined>
-  >,
-  children: ElementContent[] = [],
-): Element {
-  const serialized = Object.fromEntries(
-    Object.entries(properties).map(([name, value]) => [
-      name,
-      typeof value === 'number' ? String(round(value)) : value,
-    ]),
-  ) as Element['properties'];
-  return { type: 'element', tagName, properties: serialized, children };
-}
-
-function text(value: string): ElementContent {
-  return { type: 'text', value };
-}
-
-function round(value: number): number {
-  return Math.round(value * 100) / 100;
 }
 
 function shortLabel(value: string, maximum: number): string {

@@ -34,7 +34,7 @@ import {
 import { resolveSourceLocation, resolveSourceRange } from '../source/source-map.js';
 import { decorativeIcon } from './icons.js';
 import { resolveDocumentNavigation, type NavigationItem } from './navigation.js';
-import { enhanceVisualization } from './visualizations.js';
+import { enhanceVisualization, type PreparedFlow, prepareVisualization } from './visualizations.js';
 
 interface SourcePosition {
   readonly start: {
@@ -1391,6 +1391,17 @@ interface FlowGroupSubject extends VisualizationContext {
   readonly nodes: readonly DirectiveNode[];
 }
 
+interface DiagramLegendSubject extends VisualizationContext {
+  readonly diagram: DirectiveNode;
+  readonly legends: readonly DirectiveNode[];
+  readonly items: readonly DirectiveNode[];
+}
+
+interface LegendItemSubject extends VisualizationContext {
+  readonly item: DirectiveNode;
+  readonly earlier: readonly DirectiveNode[];
+}
+
 interface SequenceDiagramSubject extends VisualizationContext {
   readonly diagram: DirectiveNode;
   readonly groups: readonly DirectiveNode[];
@@ -1482,7 +1493,10 @@ const chartSeriesRules = declareAuthoredRules<ChartSeriesSubject>({
   ],
 });
 
-/** Reference validity and self-connection are separate readings of the same edge. */
+/**
+ * Reference validity and self-connection are separate readings of the same edge. A sequence accepts a
+ * message to its own participant as a step inside it; a flow has no geometry for a self-edge.
+ */
 const diagramEdgeRules = declareAuthoredRules<DiagramEdgeSubject>({
   subject: 'diagram/edge',
   rules: [
@@ -1512,10 +1526,8 @@ const diagramEdgeRules = declareAuthoredRules<DiagramEdgeSubject>({
         return from === to && !selfConnectionAllowed
           ? fail(
               edge,
-              type === 'sequence'
-                ? 'Sequence self-messages are not supported.'
-                : 'Diagram self-edges are not supported.',
-              'Connect two distinct nodes.',
+              'Flow diagram self-edges are not supported.',
+              'Connect two distinct nodes, or use type="sequence" to show a step inside one participant.',
             )
           : undefined;
       },
@@ -1523,10 +1535,24 @@ const diagramEdgeRules = declareAuthoredRules<DiagramEdgeSubject>({
   ],
 });
 
-/** Size, grouping arity and direction are independent questions about one flow diagram. */
+/** Size, grouping arity and the default view are independent questions about one flow diagram. */
 const flowDiagramRules = declareAuthoredRules<FlowDiagramSubject>({
   subject: 'diagram/flow',
   rules: [
+    {
+      id: 'layout-or-direction',
+      check: ({ diagram, fail }) =>
+        diagram.attributes?.layout !== undefined &&
+        diagram.attributes?.layout !== null &&
+        diagram.attributes?.direction !== undefined &&
+        diagram.attributes?.direction !== null
+          ? fail(
+              diagram,
+              'A flow diagram names its default view once: layout and direction cannot both be set.',
+              'Keep layout="…"; direction is its older spelling.',
+            )
+          : undefined,
+    },
     {
       id: 'node-count',
       check: ({ diagram, nodes, fail }) => {
@@ -1555,39 +1581,13 @@ const flowDiagramRules = declareAuthoredRules<FlowDiagramSubject>({
     },
     {
       id: 'group-count',
-      check: ({ diagram, groups, fail, warn }) => {
+      check: ({ diagram, groups, fail }) => {
         const contract = DIAGRAM_CONTRACT.flow;
-        if (groups.length === contract.groups.incomplete) {
-          // A single group is how a grouped flow looks while it is being written: the author has
-          // started grouping and has not finished. Refusing it would make the source unbuildable
-          // mid-edit, so the run continues and says what is still missing.
-          warn(
-            diagram,
-            'INCOMPLETE_DIAGRAM_GROUPING',
-            `A grouped flow with one group is incomplete: ${contract.groups.minimum} to ${contract.groups.maximum} groups are supported.`,
-            'Add the remaining subsystem groups or remove the only group for an ungrouped flow.',
-          );
-          return undefined;
-        }
-        return groups.length !== contract.groups.ungrouped &&
-          (groups.length < contract.groups.minimum || groups.length > contract.groups.maximum)
+        return groups.length > contract.groups.maximum
           ? fail(
               diagram,
-              `Grouped flows require ${contract.groups.minimum} to ${contract.groups.maximum} groups.`,
-              'Remove all groups or declare the supported number of subsystem groups.',
-            )
-          : undefined;
-      },
-    },
-    {
-      id: 'group-direction',
-      check: ({ diagram, groups, attributes, fail }) => {
-        const contract = DIAGRAM_CONTRACT.flow;
-        return groups.length > 0 && attributes(diagram).direction !== contract.groups.direction
-          ? fail(
-              diagram,
-              'Grouped flows support only rightward subsystem columns.',
-              'Use direction="right" or remove groups for an ungrouped down flow.',
+              `Flow diagrams support at most ${contract.groups.maximum} groups.`,
+              'Merge related groups or split the flow into two diagrams.',
             )
           : undefined;
       },
@@ -1601,28 +1601,16 @@ const flowNodeRules = declareAuthoredRules<FlowNodeSubject>({
   rules: [
     {
       id: 'group-assignment',
-      check: ({ node, groups, knownGroups, attributes, fail }) => {
-        const contract = DIAGRAM_CONTRACT.flow;
+      check: ({ node, knownGroups, attributes, fail }) => {
         const group = attributes(node).group;
-        if (groups.length === 0) {
-          return group === undefined
-            ? undefined
-            : fail(
-                node,
-                `Diagram node references an undeclared group: ${String(group)}.`,
-                'Declare the group or remove the group attribute.',
-              );
-        }
-        return contract.groups.requireEveryNode &&
-          (group === undefined || !knownGroups.has(String(group)))
-          ? fail(
+        // A node may stand outside every group; a named group must be one the diagram declares.
+        return group === undefined || knownGroups.has(String(group))
+          ? undefined
+          : fail(
               node,
-              group === undefined
-                ? 'Every node in a grouped flow requires a group.'
-                : `Diagram node references an unknown group: ${String(group)}.`,
-              'Reference one of the groups declared in this diagram.',
-            )
-          : undefined;
+              `Diagram node references an undeclared group: ${String(group)}.`,
+              'Declare the group or remove the group attribute.',
+            );
       },
     },
   ],
@@ -1643,6 +1631,102 @@ const flowGroupRules = declareAuthoredRules<FlowGroupSubject>({
               `Diagram group has no nodes: ${id}.`,
               'Assign at least one node to this group.',
             );
+      },
+    },
+  ],
+});
+
+/** How many legends and entries one diagram declares; each entry is read on its own below. */
+const diagramLegendRules = declareAuthoredRules<DiagramLegendSubject>({
+  subject: 'diagram/legend',
+  rules: [
+    {
+      id: 'legend-count',
+      check: ({ diagram, legends, fail }) =>
+        legends.length > DIAGRAM_CONTRACT.legend.maximumPerDiagram
+          ? fail(
+              legends[1] ?? diagram,
+              'A diagram accepts at most one legend directive.',
+              'Keep one legend and move its title and policy there.',
+            )
+          : undefined,
+    },
+    {
+      id: 'item-count',
+      check: ({ diagram, items, fail }) =>
+        items.length > DIAGRAM_CONTRACT.legend.maximumItems
+          ? fail(
+              items[DIAGRAM_CONTRACT.legend.maximumItems] ?? diagram,
+              `A diagram legend accepts at most ${DIAGRAM_CONTRACT.legend.maximumItems} items.`,
+              'Name only the kinds a reader needs to tell apart.',
+            )
+          : undefined,
+    },
+  ],
+});
+
+/** One legend entry names exactly one kind, once, and a node emphasis always needs words. */
+const legendItemRules = declareAuthoredRules<LegendItemSubject>({
+  subject: 'diagram/legend-item',
+  rules: [
+    {
+      id: 'one-subject',
+      check: ({ item, attributes, fail }) => {
+        const values = attributes(item);
+        return (values.edge === undefined) === (values.node === undefined)
+          ? fail(
+              item,
+              'A legend item names exactly one connection kind (edge) or one node emphasis (node).',
+              'Set either edge="…" or node="…" on this legend item.',
+            )
+          : undefined;
+      },
+    },
+    {
+      id: 'node-label',
+      dependsOn: ['one-subject'],
+      check: ({ item, attributes, fail }) => {
+        const values = attributes(item);
+        return values.node !== undefined && values.label === undefined
+          ? fail(
+              item,
+              'A node emphasis has no package meaning, so its legend item needs a label.',
+              'Add label="…" saying what this emphasis marks.',
+            )
+          : undefined;
+      },
+    },
+    {
+      id: 'hidden-edge-only',
+      dependsOn: ['one-subject'],
+      check: ({ item, attributes, fail }) => {
+        const values = attributes(item);
+        if (values.hidden !== true) return undefined;
+        return values.node !== undefined || values.label !== undefined
+          ? fail(
+              item,
+              'Only a connection kind without a label can be hidden from the legend.',
+              'Remove hidden="true", or remove the node or label attribute.',
+            )
+          : undefined;
+      },
+    },
+    {
+      id: 'unique-subject',
+      dependsOn: ['one-subject'],
+      check: ({ item, earlier, attributes, fail }) => {
+        const values = attributes(item);
+        const same = earlier.some(
+          (other) =>
+            attributes(other).edge === values.edge && attributes(other).node === values.node,
+        );
+        return same
+          ? fail(
+              item,
+              `The legend already has an item for ${String(values.edge ?? values.node)}.`,
+              'Keep one item per connection kind or node emphasis.',
+            )
+          : undefined;
       },
     },
   ],
@@ -1672,6 +1756,17 @@ const sequenceDiagramRules = declareAuthoredRules<SequenceDiagramSubject>({
               diagram,
               'Sequence diagrams do not accept a flow direction.',
               'Remove the direction attribute from this sequence diagram.',
+            )
+          : undefined,
+    },
+    {
+      id: 'no-layout',
+      check: ({ diagram, fail }) =>
+        diagram.attributes?.layout !== undefined && diagram.attributes?.layout !== null
+          ? fail(
+              diagram,
+              'Sequence diagrams do not accept a flow layout.',
+              'Remove the layout attribute from this sequence diagram.',
             )
           : undefined,
     },
@@ -1789,7 +1884,11 @@ function validateVisualizationData(
   }
 
   function validateDiagram(diagram: DirectiveNode, found: AgenticReportError[]): void {
-    const children = requireOnlyDirectiveChildren(diagram, ['group', 'node', 'edge'], found);
+    const children = requireOnlyDirectiveChildren(
+      diagram,
+      ['group', 'node', 'edge', 'legend', 'legend-item'],
+      found,
+    );
     if (children === undefined) return;
     const type = String(attributes(diagram).type);
     const groups = children.filter((child) => child.name === 'group');
@@ -1809,6 +1908,20 @@ function validateVisualizationData(
     }
     if (type === 'flow') validateFlowDiagram(diagram, groups, nodes, edges, groupIds, found);
     else validateSequenceDiagram(diagram, groups, nodes, edges, found);
+    const legends = children.filter((child) => child.name === 'legend');
+    const legendItems = children.filter((child) => child.name === 'legend-item');
+    runAuthoredRules(
+      diagramLegendRules,
+      { ...context, diagram, legends, items: legendItems },
+      found,
+    );
+    for (const [index, item] of legendItems.entries()) {
+      runAuthoredRules(
+        legendItemRules,
+        { ...context, item, earlier: legendItems.slice(0, index) },
+        found,
+      );
+    }
     const known = new Set(ids);
     // Edges are read against the declared nodes, not against each other, so every edge answers for
     // itself and a refused one does not hide the next.
@@ -2811,8 +2924,18 @@ function skipQuotedValue(value: string, start: number, quote: '"' | "'"): number
 }
 
 export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], HastRoot> =
-  (options) => (tree) => {
+  (options) => async (tree) => {
     const strings = packageStrings(options.language);
+    // Флоу раскладывается заранее: вид «прямые углы» считает ELK, а его вызов асинхронный.
+    const diagrams: Element[] = [];
+    visit(tree, 'element', (node: Element) => {
+      if (node.properties.dataSemantic === 'diagram') diagrams.push(node);
+    });
+    const prepared = new Map<Element, PreparedFlow | undefined>(
+      await Promise.all(
+        diagrams.map(async (node) => [node, await prepareVisualization(node, strings)] as const),
+      ),
+    );
     const allocateId = createDocumentIdAllocator(tree, options);
     const glossary = new Map<
       string,
@@ -2956,7 +3079,7 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
       }
       if (semantic !== undefined && ['chart', 'diagram', 'timeline'].includes(semantic)) {
         instance += 1;
-        enhanceVisualization(node, semantic, instance, allocateId, strings);
+        enhanceVisualization(node, semantic, instance, allocateId, strings, prepared.get(node));
         return;
       }
       if (semantic === 'term') {
@@ -3987,8 +4110,8 @@ function allowedDirectiveChildren(
       return ['point'];
     case 'node-and-edge-directives':
       return ['node', 'edge'];
-    case 'group-node-and-edge-directives':
-      return ['group', 'node', 'edge'];
+    case 'diagram-part-directives':
+      return ['group', 'node', 'edge', 'legend', 'legend-item'];
     case 'event-directives':
       return ['event'];
     case 'response-question-directives':
@@ -4040,6 +4163,9 @@ function renderDirective(
       break;
     case 'font-registration':
       properties.hidden = '';
+      break;
+    case 'embedded-video':
+      // Разметку плеера строит шаг ресурсов после очистки: `<video>` в схему очистки не входит.
       break;
     default: {
       const exhaustive: never = directive.behavior.renderer;

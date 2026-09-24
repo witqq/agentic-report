@@ -214,8 +214,10 @@ for (const artifact of russianChromeArtifacts) {
     await expect(page.locator('[data-chart-type="bar"] desc')).toContainText(
       'Результат, А: 1 234,5',
     );
-    await expect(page.locator('[data-diagram-type="flow"] desc')).toContainText(
-      'Узлы: first: Первый; second: Второй. Связи: first к second: переход.',
+    await expect(
+      page.locator('[data-diagram-type="flow"] [data-layout-default] desc'),
+    ).toContainText(
+      'Узлов: 2, слоёв потока: 2. Слои по потоку: 1. Первый. 2. Второй. Связи по потоку: Первый → Второй: переход.',
     );
 
     const review = page.locator('[data-review-toggle]');
@@ -514,31 +516,47 @@ for (const artifact of diagramTourArtifacts) {
     await expect(flow).toBeVisible();
     await expect(sequence).toBeVisible();
     await expect(flow).toHaveAccessibleDescription(
-      /Groups: source: Authentication and authorization services \(step-1, step-2, step-3, step-4, step-5, step-6\).*reader: Reader artifact.*step-18: Step 18 detail/u,
+      /Groups: “Authentication and authorization services”: Step 1 detail, Step 2 detail.*“Reader artifact”: Step 13 detail.*Connections back against the flow: Step 18 detail → Step 3 detail: reverse feedback/u,
     );
     await expect(sequence).toHaveAccessibleDescription(
-      /Participants: agent: Authoring agent.*Messages in order: 1\. agent to loader: load source; 2\. loader to compiler: validated graph; 3\. compiler to browser: write artifact; 4\. browser to agent: review result/u,
+      /Participants from left to right: Authoring agent.*Messages in order: 1\. Authoring agent → Source loader: load source\. 2\. Source loader → Compiler: validated graph\. 3\. Compiler → Browser: write artifact\. 4\. Browser → Authoring agent: review result/u,
     );
-    await expect(page.locator('[data-diagram-type="flow"] [data-group-id]')).toHaveCount(3);
-    await expect(page.locator('[data-diagram-type="flow"] [data-node-id]')).toHaveCount(18);
     await expect(
-      page.locator('[data-diagram-type="flow"] .visualization-group-gap-edge'),
+      page.locator('[data-diagram-type="flow"] [data-layout-default] [data-group-id]'),
     ).toHaveCount(3);
     await expect(
-      page.locator('[data-diagram-type="flow"] .visualization-group-internal-edge'),
-    ).toHaveCount(1);
+      page.locator('[data-diagram-type="flow"] [data-layout-default] [data-node-id]'),
+    ).toHaveCount(18);
+    // Слои идут по потоку: цепочка шагов спускается слой за слоем, а связь назад описана отдельно.
+    const layers: [string, number][] = await page
+      .locator('[data-diagram-type="flow"] [data-layout-default] [data-node-id]')
+      .evaluateAll((nodes) =>
+        nodes.map((node): [string, number] => [
+          node.getAttribute('data-node-id') ?? '',
+          Number(node.getAttribute('data-layer')),
+        ]),
+      );
+    const layerOf = new Map(layers);
+    for (let step = 1; step < 18; step += 1) {
+      expect(layerOf.get(`step-${step + 1}`) ?? 0).toBeGreaterThan(
+        layerOf.get(`step-${step}`) ?? 0,
+      );
+    }
+    // Читатель переключает раскладку, а печать всё равно отдаёт вид автора и прячет переключатель.
+    const flowFigure = page.locator('[data-diagram-type="flow"]');
+    await flowFigure.getByRole('tab', { name: 'Left to right' }).click();
+    await expect(flowFigure.locator('[data-layout-view="right"]')).toBeVisible();
+    await page.emulateMedia({ media: 'print' });
+    await expect(flowFigure.locator('[data-layout-default]')).toBeVisible();
+    await expect(flowFigure.locator('[data-layout-view="right"]')).toBeHidden();
+    await expect(flowFigure.getByRole('tablist')).toBeHidden();
+    await page.emulateMedia({ media: 'screen' });
+    await flowFigure.getByRole('tab', { name: 'Top to bottom' }).click();
+    const transcript = page.locator('[data-diagram-type="flow"] .visualization-transcript');
+    await transcript.locator('summary').click();
     await expect(
-      page.locator('[data-diagram-type="flow"] .visualization-group-outer-edge'),
-    ).toHaveCount(2);
-    const outerLanes = (
-      await page
-        .locator('[data-diagram-type="flow"] .visualization-group-outer-edge')
-        .evaluateAll((edges) => edges.map((edge) => edge.getAttribute('data-route-lane')))
-    ).map((lane) => Number(lane));
-    expect(outerLanes).toHaveLength(2);
-    expect(new Set(outerLanes).size).toBe(outerLanes.length);
-    expect(outerLanes.every((lane) => Number.isFinite(lane) && lane > 0)).toBe(true);
-    expect([...outerLanes].sort((first, second) => first - second)).toEqual(outerLanes);
+      transcript.getByText('Step 18 detail → Step 3 detail: reverse feedback'),
+    ).toBeVisible();
     await expectDiagramEdgesAvoidNodes(flow);
     await expect(page.locator('[data-diagram-type="sequence"] [data-participant]')).toHaveCount(4);
     await expect(page.locator('[data-diagram-type="sequence"] [data-message-order]')).toHaveCount(
@@ -552,45 +570,59 @@ for (const artifact of diagramTourArtifacts) {
         ),
     ).toEqual(['1', '2', '3', '4']);
 
-    const groupContainment = await page.locator('[data-diagram-type="flow"]').evaluate((root) => {
-      const groups = [...root.querySelectorAll<SVGGElement>('[data-group-id]')];
-      return groups.every((group) => {
-        const id = group.getAttribute('data-group-id');
-        const boundary = group.querySelector<SVGRectElement>('.visualization-group')?.getBBox();
-        if (boundary === undefined) return false;
-        const members = [...root.querySelectorAll<SVGGElement>(`[data-group="${id}"]`)];
-        const labels = [...group.querySelectorAll<SVGTextElement>('.visualization-group-label')];
-        return (
-          members.length > 0 &&
-          labels.length > 0 &&
-          labels.every((label) => {
-            const box = label.getBBox();
-            return (
-              box.x >= boundary.x &&
-              box.y >= boundary.y &&
-              box.x + box.width <= boundary.x + boundary.width &&
-              box.y + box.height <= boundary.y + 54
-            );
-          }) &&
-          members.every((member) => {
-            const box = member.getBBox();
-            return (
-              box.x >= boundary.x &&
-              box.y >= boundary.y &&
-              box.x + box.width <= boundary.x + boundary.width &&
-              box.y + box.height <= boundary.y + boundary.height
-            );
-          })
-        );
+    const groupContainment = await page
+      .locator('[data-diagram-type="flow"] [data-layout-default]')
+      .evaluate((root) => {
+        const groups = [...root.querySelectorAll<SVGGElement>('[data-group-id]')];
+        return groups.every((group) => {
+          const id = group.getAttribute('data-group-id');
+          const boundary = group.querySelector<SVGRectElement>('.visualization-group')?.getBBox();
+          if (boundary === undefined) return false;
+          const members = [...root.querySelectorAll<SVGGElement>(`[data-group="${id}"]`)];
+          const labels = [...group.querySelectorAll<SVGTextElement>('.visualization-group-label')];
+          return (
+            members.length > 0 &&
+            labels.length > 0 &&
+            // Заголовок стоит в своей группе и не заходит ни на один её узел.
+            labels.every((label) => {
+              const box = label.getBBox();
+              return (
+                box.x >= boundary.x &&
+                box.y >= boundary.y &&
+                box.x + box.width <= boundary.x + boundary.width &&
+                box.y + box.height <= boundary.y + boundary.height &&
+                members.every((member) => {
+                  const node = member.getBBox();
+                  return (
+                    box.x + box.width <= node.x ||
+                    node.x + node.width <= box.x ||
+                    box.y + box.height <= node.y ||
+                    node.y + node.height <= box.y
+                  );
+                })
+              );
+            }) &&
+            members.every((member) => {
+              const box = member.getBBox();
+              return (
+                box.x >= boundary.x &&
+                box.y >= boundary.y &&
+                box.x + box.width <= boundary.x + boundary.width &&
+                box.y + box.height <= boundary.y + boundary.height
+              );
+            })
+          );
+        });
       });
-    });
     expect(groupContainment).toBe(true);
 
     const geometry = await page.locator('[data-visualization="diagram"]').evaluateAll((figures) =>
       figures.map((figure) => {
         const frame = figure.querySelector<HTMLElement>('.visualization-frame');
-        const svg = figure.querySelector<SVGSVGElement>('svg');
-        const label = figure.querySelector<SVGTextElement>('.visualization-node-label');
+        // У флоу несколько видов раскладки; измеряется тот, что показан по умолчанию.
+        const view = figure.querySelector<HTMLElement>('[data-layout-default]') ?? figure;
+        const svg = view.querySelector<SVGSVGElement>('svg');
+        const label = view.querySelector<SVGTextElement>('.visualization-node-label');
         if (frame === null || svg === null || label === null)
           throw new Error('Diagram geometry missing.');
         const scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
@@ -2282,17 +2314,23 @@ for (const artifact of visualizationArtifacts) {
     const flowDiagram = page.getByRole('img', { name: /Offline compilation flow/u });
     await expect(flowDiagram).toBeVisible();
     await expect(flowDiagram).toHaveAccessibleDescription(
-      /Groups: authoring: Authoring graph.*source: Declarative source.*source to validate: parse/u,
+      /Groups: “Authoring graph”: Declarative source.*Connections along the flow: Declarative source → Validate data: parse/u,
     );
-    await expect(page.locator('[data-diagram-type="flow"] [data-group-id]')).toHaveCount(3);
-    await expect(page.locator('[data-diagram-type="flow"] [data-node-id]')).toHaveCount(15);
-    await expect(page.locator('[data-node-id="source"]')).toBeAttached();
-    await expect(page.locator('[data-from="source"][data-to="validate"]')).toBeAttached();
+    await expect(
+      page.locator('[data-diagram-type="flow"] [data-layout-default] [data-group-id]'),
+    ).toHaveCount(3);
+    await expect(
+      page.locator('[data-diagram-type="flow"] [data-layout-default] [data-node-id]'),
+    ).toHaveCount(15);
+    await expect(page.locator('[data-layout-default] [data-node-id="source"]')).toBeAttached();
+    await expect(
+      page.locator('[data-layout-default] [data-from="source"][data-to="validate"]'),
+    ).toBeAttached();
     await expectDiagramEdgesAvoidNodes(flowDiagram);
     const sequenceDiagram = page.getByRole('img', { name: /Compile request sequence/u });
     await expect(sequenceDiagram).toBeVisible();
     await expect(sequenceDiagram).toHaveAccessibleDescription(
-      /Messages in order: 1\. agent to loader: load source.*4\. browser to agent: review result/u,
+      /Messages in order: 1\. Authoring agent → Source loader: load source.*4\. Browser → Authoring agent: review result/u,
     );
     await expect(page.locator('.visualization-timeline-event')).toHaveCount(4);
     await expect(page.getByText('Compile offline', { exact: true })).toBeVisible();

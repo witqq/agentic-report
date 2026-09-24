@@ -362,11 +362,14 @@ rewriting their historical targets. Invalid sidecars fail before authoritative o
 - `toggle`: switch-controlled content with required `label`, optional `title`, and `default` state;
 - `chart`, nested `series`, and nested leaf `point`: compile-time `bar`, `line`, or `pie` SVG from bounded
   labelled numeric values;
-- `diagram` with leaf `group`, `node`, and `edge` children: compile-time grouped flow or ordered sequence SVG
-  with validated identities and references;
+- `diagram` with leaf `group`, `node`, `edge`, `legend`, and `legend-item` children: compile-time layered
+  flow or ordered sequence SVG with validated identities and references, a legend, and the diagram in words;
 - `timeline` and directly nested `event`: semantic ordered chronology; each event may contain Markdown;
 - `demo`: safe built-in counter with optional `title`, `start`, and `step`; it never evaluates author code;
 - `asset`: downloadable local resource with required `src`;
+- `video`: embedded local `.webm`, `.mp4`, `.m4v`, or `.ogv` recording with required `src`, optional image
+  `poster`, and optional `caption`; a Markdown image whose file is one of those video types becomes the same
+  player without a caption;
 - `font`: local WOFF2, WOFF, TTF, OTF, or other MIME-detected font resource with required `src` and
   validated `family`.
 
@@ -506,27 +509,39 @@ Top-level visuals require `title` and `description`. A chart accepts 1–6 `seri
 leaf `point` values, and every series must use the same unique labels in the same order. Values are finite
 decimal numbers between `-999999999` and `999999999`, with at most four decimal places. Pie charts require
 one series, non-negative values, and at least one positive value. `diagram.type` defaults to `flow`. A flow
-accepts 1–20 unique nodes and up to 40 edges; it is ungrouped or declares 2–5 non-empty groups, with one group accepted as unfinished grouping and warned about, and gives every
-node a declared group. Ungrouped flows accept `direction="right|down"`; grouped subsystem columns are
-rightward. A `sequence` accepts 2–6 node participants and 1–40
-labelled edge messages in authored order; group records, group membership, direction and self-messages fail.
-Every edge or message references two distinct declared node IDs.
-Layout is measured: a node box grows to fit its wrapped label, a group column grows to fit its widest node,
-and labels stay horizontal. Grouped members use authored row order unless a node sets `row="1..20"`; nodes
-sharing a row across adjacent groups line up and connect with a level line, and different rows in adjacent
-groups use a lane in the gap between the columns. A longer intra-group connection routes through the group's
-own gutter; only a backward or column-skipping edge takes a bottom-corridor lane outside all groups, and each
-lane increases the SVG viewBox height within the finite edge bound. `edge` accepts
-`route="auto|direct|around"`: `direct` keeps the short path across columns and `around` sends the edge under
-the diagram. `diagram` accepts `spacing="compact|comfortable|spacious"` (default `comfortable`). Dense
+accepts 1–20 unique nodes, up to 40 edges, and up to 5 groups; every declared group needs a member, a node's
+`group` must name a declared group, and a node without `group` stands outside every group. Every flow is
+compiled into three views and shows a package tab list above the diagram to switch between them: `down`,
+`right`, and `orthogonal`. `layout` is `auto|down|right|orthogonal` (default `auto`, which picks the view with
+the fewest crossings that fits the page best) and names the view shown first and the only one printed.
+`direction` is `auto|right|down` and is the older spelling
+of the same choice; a flow that sets both `layout` and `direction` fails, and a `sequence` rejects `layout`. A `sequence` accepts 2–6 node participants and 1–40
+labelled edge messages in authored order; group records, group membership and direction fail. Every edge or
+message references declared node IDs; a flow edge joins two distinct nodes, while a sequence message whose
+`from` equals `to` is a step inside that participant, drawn as a labelled loop on its lifeline.
+`edge.kind` is `call|data|event|dependency` (default `call`); each kind has a package-drawn line and
+arrowhead. `node.detail` adds a smaller second line under the label. A diagram accepts at most one
+`legend{title auto}` and up to eight `legend-item` leaves. An item names exactly one `edge` kind or one `node`
+emphasis; a node item requires `label`, and `hidden="true"` is accepted only on an edge item without a label.
+A duplicate item fails. The legend lists authored items in order, then the connection kinds the diagram mixes
+(two or more) that no item names, unless `auto="false"`.
+A flow is laid out by layers along the flow. Connections returning along an already started path are drawn
+backward; nodes inside a layer are ordered to reduce crossings; groups become clusters; every labelled
+connection gets its label in the middle of its own path, clear of nodes and other labels; ends of connections
+meeting one node side are spread along it. Labels wrap by words and are never cut. `row="1..20"` asks for a
+flow layer: nodes sharing a row share a layer when their connections allow it. `edge` accepts
+`route="auto|direct|around"` as a layout pull: `direct` keeps the connection short and straight, `around`
+lets it stretch. `diagram` accepts `spacing="compact|comfortable|spacious"` (default `comfortable`). Dense
 arbitrary graph optimization remains outside the bounded flow contract.
 A timeline accepts 1–20 direct events. Visual data containers reject prose as a direct child, while an
 event body accepts ordinary Markdown.
 
 The compiler emits responsive deterministic SVG for charts and diagrams and semantic HTML for timelines.
 Titles and descriptions are visible and label each atomic SVG image. The SVG accessible description also
-contains every complete series/point value, flow group/member/node/connection, or sequence participant and
-ordered message, including text shortened only in the visible plot. Values retain up to the supported four decimal places in observable text. Colors come
+contains every complete series/point value, or for a diagram a text: node and layer count, groups with
+members, layers in flow order, connections along the flow and backward connections separately in the
+legend's words, or sequence participants and ordered messages, including text shortened only in the visible
+plot. A diagram repeats that text under the picture in a closed «diagram in words» disclosure. Values retain up to the supported four decimal places in observable text. Colors come
 from package-owned theme variables. There is no visualization-time JavaScript, canvas, network request,
 author CSS, executable graph DSL, or separate behavior between `single-file` and `directory`.
 
@@ -576,6 +591,17 @@ and authored source range.
 
 The text form `:asset[Label]{src="path"}` uses the authored accessible label. The leaf form
 `::asset{src="path"}` is also valid and receives the deterministic visible label `Download <filename>`.
+
+`::video{src="path" poster="frame.png" caption="…"}` compiles to a `<figure>` with a `<video>` that has
+controls, is muted, loops, plays inline, and names itself by the caption, followed by the caption as
+`<figcaption>`. `![Alt text](recording.webm)` compiles to the same `<video>` in place of the image, named by
+its alt text. The video and poster are embedded as `data:` URLs in `single-file` output and written as
+content-addressed files under `assets/` in `directory` output; the Content Security Policy allows media from
+exactly those places. Embedded video counts toward `output.maxInlineBytes` like any other resource. The
+package runtime starts a video while at least half of it is on screen and pauses it when it leaves, unless the
+reader prefers reduced motion, in which case the reader starts it with the player controls; a reader's own
+pause is kept. A `src` of another type or a `poster` that is not a PNG, JPEG, WebP, GIF, or AVIF image fails
+with `INVALID_VIDEO_SOURCE`.
 
 ## Interactive reader contract
 

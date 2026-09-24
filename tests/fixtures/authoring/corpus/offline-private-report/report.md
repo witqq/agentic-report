@@ -14,4 +14,6 @@ Corpus class: offline-private-report
 
 ::asset{src="private-data.json"}
 
+::video{src="private-recording.webm" poster="private-recording.png" caption="Retained playback recording."}
+
 ::font{src="private-font.woff" family="Private Reader"}

@@ -218,7 +218,7 @@ test('visualization titles, accessible data, and number formatting switch cohere
     ).toHaveAccessibleDescription(/Н1: 61,5/u);
     await expect(
       page.getByRole('img', { name: /Поток офлайн-компиляции/u }),
-    ).toHaveAccessibleDescription(/Группы: authoring: Граф авторинга/u);
+    ).toHaveAccessibleDescription(/Группы: «Граф авторинга»: Декларативный исходник/u);
 
     await page.getByRole('combobox', { name: 'Язык' }).selectOption('en');
     await expect(page.getByRole('img', { name: /Weekly active agents/u })).toBeVisible();

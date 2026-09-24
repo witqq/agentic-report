@@ -65,7 +65,7 @@ Every accepted field; anything else is refused as an unknown field.
 
 ## Directives
 
-41 directives are accepted.
+44 directives are accepted.
 
 ### `action`
 
@@ -230,15 +230,16 @@ Forms: container. Children: markdown.
 
 Directed flow diagram rendered as deterministic SVG.
 
-Forms: container. Children: group-node-and-edge-directives.
+Forms: container. Children: diagram-part-directives.
 
-| Attribute     | Values                               | Required | Default       |
-| ------------- | ------------------------------------ | -------- | ------------- |
-| `title`       | text (min 1, max 200)                | yes      | —             |
-| `description` | text (min 1, max 300)                | yes      | —             |
-| `type`        | `flow`, `sequence`                   | no       | `flow`        |
-| `direction`   | `right`, `down`                      | no       | `right`       |
-| `spacing`     | `compact`, `comfortable`, `spacious` | no       | `comfortable` |
+| Attribute     | Values                                | Required | Default       |
+| ------------- | ------------------------------------- | -------- | ------------- |
+| `title`       | text (min 1, max 200)                 | yes      | —             |
+| `description` | text (min 1, max 300)                 | yes      | —             |
+| `type`        | `flow`, `sequence`                    | no       | `flow`        |
+| `direction`   | `auto`, `right`, `down`               | no       | `auto`        |
+| `layout`      | `auto`, `down`, `right`, `orthogonal` | no       | `auto`        |
+| `spacing`     | `compact`, `comfortable`, `spacious`  | no       | `comfortable` |
 
 ### `disclosure`
 
@@ -253,16 +254,17 @@ Forms: container. Children: markdown.
 
 ### `edge`
 
-One directed connection between diagram nodes.
+One directed connection between diagram nodes; in a sequence, from equal to to is a step inside one participant drawn as a loop.
 
 Forms: leaf. Children: none. Required parent: `diagram`.
 
-| Attribute | Values                     | Required | Default |
-| --------- | -------------------------- | -------- | ------- |
-| `from`    | text (min 1, max 64)       | yes      | —       |
-| `to`      | text (min 1, max 64)       | yes      | —       |
-| `label`   | text (min 1, max 160)      | no       | —       |
-| `route`   | `auto`, `direct`, `around` | no       | `auto`  |
+| Attribute | Values                                | Required | Default |
+| --------- | ------------------------------------- | -------- | ------- |
+| `from`    | text (min 1, max 64)                  | yes      | —       |
+| `to`      | text (min 1, max 64)                  | yes      | —       |
+| `label`   | text (min 1, max 160)                 | no       | —       |
+| `kind`    | `call`, `data`, `event`, `dependency` | no       | `call`  |
+| `route`   | `auto`, `direct`, `around`            | no       | `auto`  |
 
 ### `event`
 
@@ -313,7 +315,7 @@ Forms: container. Children: markdown.
 
 ### `group`
 
-One labelled subsystem group in a flow diagram.
+One labelled subsystem group around some nodes of a flow diagram.
 
 Forms: leaf. Children: none. Required parent: `diagram`.
 
@@ -344,6 +346,30 @@ One emphasized opening thesis paragraph inside a section.
 
 Forms: container. Children: markdown. Required parent: `section`.
 
+### `legend`
+
+Optional title and policy for the diagram legend; at most one per diagram.
+
+Forms: leaf. Children: none. Required parent: `diagram`.
+
+| Attribute | Values                | Required | Default |
+| --------- | --------------------- | -------- | ------- |
+| `title`   | text (min 1, max 160) | no       | —       |
+| `auto`    | true or false         | no       | `true`  |
+
+### `legend-item`
+
+One legend entry: names a connection kind or a node emphasis in the author's words, or hides a connection kind.
+
+Forms: leaf. Children: none. Required parent: `diagram`.
+
+| Attribute | Values                                    | Required | Default |
+| --------- | ----------------------------------------- | -------- | ------- |
+| `edge`    | `call`, `data`, `event`, `dependency`     | no       | —       |
+| `node`    | `neutral`, `accent`, `success`, `warning` | no       | —       |
+| `label`   | text (min 1, max 160)                     | no       | —       |
+| `hidden`  | true or false                             | no       | `false` |
+
 ### `modal`
 
 Modal dialog opened by a package-owned control.
@@ -365,6 +391,7 @@ Forms: leaf. Children: none. Required parent: `diagram`.
 | --------- | ----------------------------------------- | -------- | --------- |
 | `id`      | text (min 1, max 64)                      | yes      | —         |
 | `label`   | text (min 1, max 160)                     | yes      | —         |
+| `detail`  | text (min 1, max 160)                     | no       | —         |
 | `group`   | text (min 1, max 64)                      | no       | —         |
 | `kind`    | `neutral`, `accent`, `success`, `warning` | no       | `neutral` |
 | `row`     | integer from 1 to 20                      | no       | —         |
@@ -543,6 +570,18 @@ Forms: container. Children: markdown.
 | `label`   | text (min 1, max 160) | yes      | —       |
 | `default` | `off`, `on`           | no       | `off`   |
 
+### `video`
+
+Embedded local video (webm, mp4, m4v, or ogv) with controls, muted and looping; plays when visible unless the reader prefers reduced motion.
+
+Forms: leaf. Children: none.
+
+| Attribute | Values                | Required | Default |
+| --------- | --------------------- | -------- | ------- |
+| `src`     | text (min 1, max 200) | yes      | —       |
+| `poster`  | text (min 1, max 200) | no       | —       |
+| `caption` | text (min 1, max 300) | no       | —       |
+
 ## Visualization limits
 
 ```json
@@ -550,6 +589,16 @@ Forms: container. Children: markdown.
   "diagram": {
     "defaultType": "flow",
     "types": ["flow", "sequence"],
+    "edgeKinds": ["call", "data", "event", "dependency"],
+    "defaultEdgeKind": "call",
+    "nodeKinds": ["neutral", "accent", "success", "warning"],
+    "edgeKindLegend": {
+      "minimumKinds": 2
+    },
+    "legend": {
+      "maximumPerDiagram": 1,
+      "maximumItems": 8
+    },
     "flow": {
       "nodes": {
         "minimum": 1,
@@ -559,13 +608,12 @@ Forms: container. Children: markdown.
         "maximum": 40
       },
       "selfEdges": false,
+      "layouts": ["auto", "down", "right", "orthogonal"],
+      "directions": ["auto", "right", "down"],
       "groups": {
-        "ungrouped": 0,
-        "incomplete": 1,
-        "minimum": 2,
         "maximum": 5,
-        "requireEveryNode": true,
-        "direction": "right"
+        "minimumMembers": 1,
+        "requireEveryNode": false
       }
     },
     "sequence": {
@@ -581,7 +629,7 @@ Forms: container. Children: markdown.
       "groups": false,
       "participantGroups": false,
       "direction": "forbidden",
-      "selfMessages": false
+      "selfMessages": true
     }
   }
 }
@@ -627,10 +675,12 @@ Forms: container. Children: markdown.
 - {"subject":"chart","rules":[{"id":"pie-single-series","dependsOn":[]}]}
 - {"subject":"chart/series","rules":[{"id":"unique-point-labels","dependsOn":[]},{"id":"pie-values","dependsOn":[]},{"id":"aligned-categories","dependsOn":["unique-point-labels"]}]}
 - {"subject":"diagram/edge","rules":[{"id":"known-endpoints","dependsOn":[]},{"id":"self-connection","dependsOn":[]}]}
-- {"subject":"diagram/flow","rules":[{"id":"node-count","dependsOn":[]},{"id":"edge-count","dependsOn":[]},{"id":"group-count","dependsOn":[]},{"id":"group-direction","dependsOn":[]}]}
+- {"subject":"diagram/flow","rules":[{"id":"layout-or-direction","dependsOn":[]},{"id":"node-count","dependsOn":[]},{"id":"edge-count","dependsOn":[]},{"id":"group-count","dependsOn":[]}]}
 - {"subject":"diagram/flow/node","rules":[{"id":"group-assignment","dependsOn":[]}]}
 - {"subject":"diagram/flow/group","rules":[{"id":"group-membership","dependsOn":[]}]}
-- {"subject":"diagram/sequence","rules":[{"id":"no-groups","dependsOn":[]},{"id":"no-direction","dependsOn":[]},{"id":"participant-count","dependsOn":[]},{"id":"message-count","dependsOn":[]}]}
+- {"subject":"diagram/legend","rules":[{"id":"legend-count","dependsOn":[]},{"id":"item-count","dependsOn":[]}]}
+- {"subject":"diagram/legend-item","rules":[{"id":"one-subject","dependsOn":[]},{"id":"node-label","dependsOn":["one-subject"]},{"id":"hidden-edge-only","dependsOn":["one-subject"]},{"id":"unique-subject","dependsOn":["one-subject"]}]}
+- {"subject":"diagram/sequence","rules":[{"id":"no-groups","dependsOn":[]},{"id":"no-direction","dependsOn":[]},{"id":"no-layout","dependsOn":[]},{"id":"participant-count","dependsOn":[]},{"id":"message-count","dependsOn":[]}]}
 - {"subject":"diagram/sequence/participant","rules":[{"id":"no-participant-group","dependsOn":[]}]}
 - {"subject":"diagram/sequence/message","rules":[{"id":"label-required","dependsOn":[]}]}
 - {"subject":"code-fence/terms","rules":[{"id":"known-keys","dependsOn":[]},{"id":"locatable-terms","dependsOn":["known-keys"]},{"id":"no-overlap","dependsOn":["known-keys","locatable-terms"]}]}

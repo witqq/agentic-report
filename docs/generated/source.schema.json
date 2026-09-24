@@ -214,10 +214,13 @@
         { "$ref": "#/$defs/group" },
         { "$ref": "#/$defs/node" },
         { "$ref": "#/$defs/edge" },
+        { "$ref": "#/$defs/legend" },
+        { "$ref": "#/$defs/legend-item" },
         { "$ref": "#/$defs/timeline" },
         { "$ref": "#/$defs/event" },
         { "$ref": "#/$defs/demo" },
         { "$ref": "#/$defs/asset" },
+        { "$ref": "#/$defs/video" },
         { "$ref": "#/$defs/font" }
       ]
     },
@@ -1564,9 +1567,15 @@
             },
             "direction": {
               "type": "string",
-              "enum": ["right", "down"],
-              "description": "Flow direction.",
-              "default": "right"
+              "enum": ["auto", "right", "down"],
+              "description": "Direction in which flow layers follow each other; auto lets the layout pick the one that reads larger on the page.",
+              "default": "auto"
+            },
+            "layout": {
+              "type": "string",
+              "enum": ["auto", "down", "right", "orthogonal"],
+              "description": "Flow view shown first and printed: auto picks the clearest; down and right are layered, orthogonal routes at right angles; readers can switch.",
+              "default": "auto"
             },
             "spacing": {
               "type": "string",
@@ -1626,22 +1635,27 @@
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
               "description": "Visible node label."
             },
+            "detail": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Optional second line under the label, set smaller: what the node holds or does."
+            },
             "group": {
               "type": "string",
               "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
-              "description": "Optional subsystem group identity for this node."
+              "description": "Optional subsystem group identity; nodes without one stand beside the groups."
             },
             "kind": {
               "type": "string",
               "enum": ["neutral", "accent", "success", "warning"],
-              "description": "Package-owned node emphasis.",
+              "description": "Package-owned node emphasis; a legend item names what it means.",
               "default": "neutral"
             },
             "row": {
               "type": "integer",
               "minimum": 1,
               "maximum": 20,
-              "description": "Optional one-based layout row; nodes sharing a row line up across groups and connect with a straight edge."
+              "description": "Optional one-based flow layer; nodes sharing a row share a layer when their connections allow it."
             }
           },
           "required": ["id", "label"]
@@ -1667,21 +1681,87 @@
             "to": {
               "type": "string",
               "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
-              "description": "Target node identity."
+              "description": "Target node identity; a flow requires a different node."
             },
             "label": {
               "type": "string",
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
-              "description": "Optional connection label."
+              "description": "Optional connection label, required in a sequence; a long label wraps onto several lines and is never cut."
+            },
+            "kind": {
+              "type": "string",
+              "enum": ["call", "data", "event", "dependency"],
+              "description": "What the connection means; each kind has its own package-drawn line and arrowhead.",
+              "default": "call"
             },
             "route": {
               "type": "string",
               "enum": ["auto", "direct", "around"],
-              "description": "Optional routing override; auto keeps the shortest readable path.",
+              "description": "Optional layout pull; direct keeps the connection short and straight, around lets it stretch.",
               "default": "auto"
             }
           },
           "required": ["from", "to"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "legend": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "legend" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Visible legend title."
+            },
+            "auto": {
+              "type": "boolean",
+              "description": "Add the connection kinds the diagram mixes without a legend item of their own.",
+              "default": true
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "legend-item": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "legend-item" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "edge": {
+              "type": "string",
+              "enum": ["call", "data", "event", "dependency"],
+              "description": "Connection kind this entry names; exclusive with node."
+            },
+            "node": {
+              "type": "string",
+              "enum": ["neutral", "accent", "success", "warning"],
+              "description": "Node emphasis this entry names; exclusive with edge and requires a label."
+            },
+            "label": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Entry text; a connection kind without one keeps its package name."
+            },
+            "hidden": {
+              "type": "boolean",
+              "description": "Leave this connection kind out of the legend.",
+              "default": false
+            }
+          }
         }
       },
       "required": ["name", "form", "attributes"]
@@ -1793,6 +1873,39 @@
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
               "format": "relative-local-path",
               "description": "Relative local resource path."
+            }
+          },
+          "required": ["src"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "video": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "video" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "src": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "format": "relative-local-path",
+              "description": "Relative local video path: .webm, .mp4, .m4v, or .ogv."
+            },
+            "poster": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "format": "relative-local-path",
+              "description": "Relative local image shown before playback and in print: .png, .jpg, .jpeg, .webp, .gif, or .avif."
+            },
+            "caption": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,298}\\S))\\s*$",
+              "description": "Visible caption under the video; it also names the video for assistive technology."
             }
           },
           "required": ["src"]

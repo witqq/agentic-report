@@ -267,17 +267,35 @@ export type PresetChoice = (typeof PAGE_PRESET_NAMES)[number];
 export const DIAGRAM_CONTRACT = {
   defaultType: 'flow',
   types: ['flow', 'sequence'],
+  /**
+   * Closed set of connection meanings. Each one has its own line and arrowhead drawn by the package,
+   * so the author names what a connection means and cannot restyle it.
+   */
+  edgeKinds: ['call', 'data', 'event', 'dependency'],
+  defaultEdgeKind: 'call',
+  /** Node emphasis has no meaning of its own: the author names it with a legend item. */
+  nodeKinds: ['neutral', 'accent', 'success', 'warning'],
+  /**
+   * A legend of the edge kinds present appears as soon as one diagram mixes two or more kinds.
+   * `legend` and `legend-item` rename, add, or hide entries and title the legend.
+   */
+  edgeKindLegend: { minimumKinds: 2 },
+  legend: { maximumPerDiagram: 1, maximumItems: 8 },
   flow: {
     nodes: { minimum: 1, maximum: 20 },
     edges: { maximum: 40 },
     selfEdges: false,
+    /**
+     * Every flow ships three views: layered top-down, layered left-to-right, and orthogonal
+     * (right-angle routes by ELK); readers switch between them. `layout` names the one shown first
+     * and printed; `auto` picks the view with the fewest crossings that reads largest on the page.
+     */
+    layouts: ['auto', 'down', 'right', 'orthogonal'],
+    directions: ['auto', 'right', 'down'],
     groups: {
-      ungrouped: 0,
-      incomplete: 1,
-      minimum: 2,
       maximum: 5,
-      requireEveryNode: true,
-      direction: 'right',
+      minimumMembers: 1,
+      requireEveryNode: false,
     },
   },
   sequence: {
@@ -286,10 +304,11 @@ export const DIAGRAM_CONTRACT = {
     groups: false,
     participantGroups: false,
     direction: 'forbidden',
-    selfMessages: false,
+    selfMessages: true,
   },
 } as const;
 export type DiagramTypeChoice = (typeof DIAGRAM_CONTRACT.types)[number];
+export type DiagramEdgeKindChoice = (typeof DIAGRAM_CONTRACT.edgeKinds)[number];
 
 export const REVIEW_TARGET_OWNERSHIP_CONTRACT = {
   parentOwnedDirectives: ['lead', 'series', 'question', 'bucket', 'option', 'item'],
@@ -392,7 +411,8 @@ export interface DirectiveIncompatibleCombinationDefinition {
   readonly remediation: string;
 }
 
-export type RendererKey = 'semantic-container' | 'download-asset' | 'font-registration';
+export type RendererKey =
+  'semantic-container' | 'download-asset' | 'font-registration' | 'embedded-video';
 export type CapabilityHandoff = 'semantic-document' | 'resource-graph' | 'reader-runtime';
 
 export interface DirectiveDefinition {
@@ -412,7 +432,7 @@ export interface DirectiveDefinition {
     | 'series-directives'
     | 'point-directives'
     | 'node-and-edge-directives'
-    | 'group-node-and-edge-directives'
+    | 'diagram-part-directives'
     | 'event-directives'
     | 'response-question-directives'
     | 'response-field-directives'
@@ -425,7 +445,7 @@ export interface DirectiveDefinition {
   };
   readonly behavior: {
     readonly renderer: RendererKey;
-    readonly resource: 'none' | 'download' | 'font';
+    readonly resource: 'none' | 'download' | 'font' | 'video';
     readonly runtime:
       | 'none'
       | 'native-disclosure'
@@ -440,7 +460,7 @@ export interface DirectiveDefinition {
       | 'package-owned-copy';
   };
   readonly sanitizer: {
-    readonly tagName: 'a' | 'article' | 'aside' | 'div' | 'nav' | 'section' | 'span';
+    readonly tagName: 'a' | 'article' | 'aside' | 'div' | 'figure' | 'nav' | 'section' | 'span';
     readonly className: string;
     readonly properties: readonly [string, ...string[]];
   };
@@ -826,6 +846,48 @@ export const authoringRegistry = {
         tagName: 'a',
         className: 'semantic-asset',
         properties: ['dataLocalAsset', 'download'],
+      },
+      security: { authorCode: false, rawHtml: false, localResourceOnly: true },
+      handoffs: ['resource-graph'],
+    },
+    {
+      name: 'video',
+      description:
+        'Embedded local video (webm, mp4, m4v, or ogv) with controls, muted and looping; plays when visible unless the reader prefers reduced motion.',
+      forms: ['leaf'],
+      attributes: [
+        pathAttribute(
+          'src',
+          'Relative local video path: .webm, .mp4, .m4v, or .ogv.',
+          'dataVideoSource',
+        ),
+        pathAttribute(
+          'poster',
+          'Relative local image shown before playback and in print: .png, .jpg, .jpeg, .webp, .gif, or .avif.',
+          'dataVideoPoster',
+          false,
+        ),
+        {
+          name: 'caption',
+          description:
+            'Visible caption under the video; it also names the video for assistive technology.',
+          required: false,
+          constraint: { kind: 'string', normalization: 'trim', minLength: 1, maxLength: 300 },
+          renderProperty: 'dataVideoCaption',
+          invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
+        },
+      ],
+      children: 'none',
+      placement: {},
+      behavior: {
+        renderer: 'embedded-video',
+        resource: 'video',
+        runtime: 'none',
+      },
+      sanitizer: {
+        tagName: 'figure',
+        className: 'semantic-video',
+        properties: ['dataVideoSource', 'dataVideoPoster', 'dataVideoCaption'],
       },
       security: { authorCode: false, rawHtml: false, localResourceOnly: true },
       handoffs: ['resource-graph'],
@@ -1672,7 +1734,18 @@ function visualizationDirectives(): readonly DirectiveDefinition[] {
           DIAGRAM_CONTRACT.types,
           DIAGRAM_CONTRACT.defaultType,
         ),
-        enumAttribute('direction', 'Flow direction.', ['right', 'down'], 'right'),
+        enumAttribute(
+          'direction',
+          'Direction in which flow layers follow each other; auto lets the layout pick the one that reads larger on the page.',
+          DIAGRAM_CONTRACT.flow.directions,
+          'auto',
+        ),
+        enumAttribute(
+          'layout',
+          'Flow view shown first and printed: auto picks the clearest; down and right are layered, orthogonal routes at right angles; readers can switch.',
+          DIAGRAM_CONTRACT.flow.layouts,
+          'auto',
+        ),
         enumAttribute(
           'spacing',
           'Layout breathing room; the package keeps a readable result at every value.',
@@ -1680,33 +1753,45 @@ function visualizationDirectives(): readonly DirectiveDefinition[] {
           'comfortable',
         ),
       ],
-      children: 'group-node-and-edge-directives',
+      children: 'diagram-part-directives',
     }),
-    visualizationContainer('group', 'One labelled subsystem group in a flow diagram.', {
-      attributes: [
-        identityAttribute('id', 'Unique group identity within the diagram.'),
-        textAttribute('label', 'Visible group label.', true),
-      ],
-      children: 'none',
-      requiredParent: 'diagram',
-      tagName: 'span',
-      forms: ['leaf'],
-    }),
+    visualizationContainer(
+      'group',
+      'One labelled subsystem group around some nodes of a flow diagram.',
+      {
+        attributes: [
+          identityAttribute('id', 'Unique group identity within the diagram.'),
+          textAttribute('label', 'Visible group label.', true),
+        ],
+        children: 'none',
+        requiredParent: 'diagram',
+        tagName: 'span',
+        forms: ['leaf'],
+      },
+    ),
     visualizationContainer('node', 'One labelled node in a flow diagram.', {
       attributes: [
         identityAttribute('id', 'Unique node identity within the diagram.'),
         textAttribute('label', 'Visible node label.', true),
-        optionalIdentityAttribute('group', 'Optional subsystem group identity for this node.'),
+        textAttribute(
+          'detail',
+          'Optional second line under the label, set smaller: what the node holds or does.',
+          false,
+        ),
+        optionalIdentityAttribute(
+          'group',
+          'Optional subsystem group identity; nodes without one stand beside the groups.',
+        ),
         enumAttribute(
           'kind',
-          'Package-owned node emphasis.',
-          ['neutral', 'accent', 'success', 'warning'],
+          'Package-owned node emphasis; a legend item names what it means.',
+          DIAGRAM_CONTRACT.nodeKinds,
           'neutral',
         ),
         {
           name: 'row',
           description:
-            'Optional one-based layout row; nodes sharing a row line up across groups and connect with a straight edge.',
+            'Optional one-based flow layer; nodes sharing a row share a layer when their connections allow it.',
           required: false,
           constraint: { kind: 'integer', minimum: 1, maximum: 20 },
           renderProperty: 'dataRow',
@@ -1718,23 +1803,90 @@ function visualizationDirectives(): readonly DirectiveDefinition[] {
       tagName: 'span',
       forms: ['leaf'],
     }),
-    visualizationContainer('edge', 'One directed connection between diagram nodes.', {
-      attributes: [
-        identityAttribute('from', 'Source node identity.'),
-        identityAttribute('to', 'Target node identity.'),
-        textAttribute('label', 'Optional connection label.', false),
-        enumAttribute(
-          'route',
-          'Optional routing override; auto keeps the shortest readable path.',
-          ['auto', 'direct', 'around'],
-          'auto',
-        ),
-      ],
-      children: 'none',
-      requiredParent: 'diagram',
-      tagName: 'span',
-      forms: ['leaf'],
-    }),
+    visualizationContainer(
+      'edge',
+      'One directed connection between diagram nodes; in a sequence, from equal to to is a step inside one participant drawn as a loop.',
+      {
+        attributes: [
+          identityAttribute('from', 'Source node identity.'),
+          identityAttribute('to', 'Target node identity; a flow requires a different node.'),
+          textAttribute(
+            'label',
+            'Optional connection label, required in a sequence; a long label wraps onto several lines and is never cut.',
+            false,
+          ),
+          enumAttribute(
+            'kind',
+            'What the connection means; each kind has its own package-drawn line and arrowhead.',
+            DIAGRAM_CONTRACT.edgeKinds,
+            DIAGRAM_CONTRACT.defaultEdgeKind,
+          ),
+          enumAttribute(
+            'route',
+            'Optional layout pull; direct keeps the connection short and straight, around lets it stretch.',
+            ['auto', 'direct', 'around'],
+            'auto',
+          ),
+        ],
+        children: 'none',
+        requiredParent: 'diagram',
+        tagName: 'span',
+        forms: ['leaf'],
+      },
+    ),
+    visualizationContainer(
+      'legend',
+      'Optional title and policy for the diagram legend; at most one per diagram.',
+      {
+        attributes: [
+          textAttribute('title', 'Visible legend title.', false),
+          booleanAttribute(
+            'auto',
+            'Add the connection kinds the diagram mixes without a legend item of their own.',
+            true,
+          ),
+        ],
+        children: 'none',
+        requiredParent: 'diagram',
+        tagName: 'span',
+        forms: ['leaf'],
+      },
+    ),
+    visualizationContainer(
+      'legend-item',
+      "One legend entry: names a connection kind or a node emphasis in the author's words, or hides a connection kind.",
+      {
+        attributes: [
+          {
+            name: 'edge',
+            description: 'Connection kind this entry names; exclusive with node.',
+            required: false,
+            constraint: { kind: 'enum', values: DIAGRAM_CONTRACT.edgeKinds },
+            renderProperty: 'dataEdge',
+            invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
+          },
+          {
+            name: 'node',
+            description:
+              'Node emphasis this entry names; exclusive with edge and requires a label.',
+            required: false,
+            constraint: { kind: 'enum', values: DIAGRAM_CONTRACT.nodeKinds },
+            renderProperty: 'dataNode',
+            invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
+          },
+          textAttribute(
+            'label',
+            'Entry text; a connection kind without one keeps its package name.',
+            false,
+          ),
+          booleanAttribute('hidden', 'Leave this connection kind out of the legend.', false),
+        ],
+        children: 'none',
+        requiredParent: 'diagram',
+        tagName: 'span',
+        forms: ['leaf'],
+      },
+    ),
     visualizationContainer('timeline', 'Semantic chronological sequence with bounded events.', {
       attributes: [requiredTitleAttribute(), descriptionAttribute()],
       children: 'event-directives',
@@ -1757,7 +1909,18 @@ function visualizationDirectives(): readonly DirectiveDefinition[] {
 }
 
 function visualizationContainer(
-  name: 'chart' | 'series' | 'point' | 'diagram' | 'group' | 'node' | 'edge' | 'timeline' | 'event',
+  name:
+    | 'chart'
+    | 'series'
+    | 'point'
+    | 'diagram'
+    | 'group'
+    | 'node'
+    | 'edge'
+    | 'legend'
+    | 'legend-item'
+    | 'timeline'
+    | 'event',
   description: string,
   options: {
     readonly attributes: readonly DirectiveAttributeDefinition[];
@@ -2230,14 +2393,15 @@ function integerAttribute(
 }
 
 function pathAttribute(
-  name: 'src',
+  name: 'src' | 'poster',
   description: string,
-  renderProperty: 'dataLocalAsset' | 'dataFontSource',
+  renderProperty: 'dataLocalAsset' | 'dataFontSource' | 'dataVideoSource' | 'dataVideoPoster',
+  required = true,
 ): DirectiveAttributeDefinition {
   return {
     name,
     description,
-    required: true,
+    required,
     constraint: {
       kind: 'string',
       normalization: 'trim',

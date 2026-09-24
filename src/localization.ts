@@ -50,13 +50,33 @@ export interface PackageStrings {
   readonly timeline: string;
   readonly event: string;
   readonly data: string;
-  readonly groups: string;
-  readonly nodes: string;
-  readonly connections: string;
-  readonly participants: string;
   readonly messagesInOrder: string;
   readonly none: string;
   readonly to: string;
+  readonly diagramText: {
+    readonly flowLead: (nodes: number, layers: number) => string;
+    readonly sequenceLead: (participants: number, messages: number) => string;
+    readonly groups: string;
+    readonly group: (label: string, members: readonly string[]) => string;
+    readonly layers: string;
+    readonly forward: string;
+    readonly backward: string;
+    readonly participants: string;
+    readonly insideItself: string;
+    readonly transcript: string;
+  };
+  readonly diagramLayouts: {
+    readonly switcher: string;
+    readonly down: string;
+    readonly right: string;
+    readonly orthogonal: string;
+  };
+  readonly edgeKinds: {
+    readonly call: string;
+    readonly data: string;
+    readonly event: string;
+    readonly dependency: string;
+  };
   readonly items: (count: number) => string;
   readonly reviewWorkspace: string;
   readonly reviewThisReport: string;
@@ -170,13 +190,34 @@ const en: PackageStrings = {
   timeline: 'Timeline',
   event: 'Event',
   data: 'Data',
-  groups: 'Groups',
-  nodes: 'Nodes',
-  connections: 'Connections',
-  participants: 'Participants',
   messagesInOrder: 'Messages in order',
   none: 'none',
   to: 'to',
+  diagramText: {
+    flowLead: (nodes, layers) => `Nodes: ${nodes}; flow layers: ${layers}.`,
+    sequenceLead: (participants, messages) =>
+      `Participants: ${participants}; messages: ${messages}.`,
+    groups: 'Groups',
+    group: (label, members) => `“${label}”: ${members.join(', ')}`,
+    layers: 'Layers along the flow',
+    forward: 'Connections along the flow',
+    backward: 'Connections back against the flow',
+    participants: 'Participants from left to right',
+    insideItself: 'inside itself',
+    transcript: 'Diagram in words',
+  },
+  diagramLayouts: {
+    switcher: 'Diagram layout',
+    down: 'Top to bottom',
+    right: 'Left to right',
+    orthogonal: 'Right angles',
+  },
+  edgeKinds: {
+    call: 'call',
+    data: 'data or values',
+    event: 'event or callback',
+    dependency: 'dependency or creation',
+  },
   reviewWorkspace: 'Review workspace',
   reviewThisReport: 'Review this report',
   noThreads: 'No discussion threads yet',
@@ -293,13 +334,34 @@ const ru: PackageStrings = {
   timeline: 'Хронология',
   event: 'Событие',
   data: 'Данные',
-  groups: 'Группы',
-  nodes: 'Узлы',
-  connections: 'Связи',
-  participants: 'Участники',
   messagesInOrder: 'Сообщения по порядку',
   none: 'нет',
   to: 'к',
+  diagramText: {
+    flowLead: (nodes, layers) => `Узлов: ${nodes}, слоёв потока: ${layers}.`,
+    sequenceLead: (participants, messages) =>
+      `Участников: ${participants}, сообщений: ${messages}.`,
+    groups: 'Группы',
+    group: (label, members) => `«${label}»: ${members.join(', ')}`,
+    layers: 'Слои по потоку',
+    forward: 'Связи по потоку',
+    backward: 'Обратные связи',
+    participants: 'Участники слева направо',
+    insideItself: 'внутри себя',
+    transcript: 'Схема словами',
+  },
+  diagramLayouts: {
+    switcher: 'Раскладка схемы',
+    down: 'Сверху вниз',
+    right: 'Слева направо',
+    orthogonal: 'Прямые углы',
+  },
+  edgeKinds: {
+    call: 'вызов',
+    data: 'данные или значения',
+    event: 'событие или обратный вызов',
+    dependency: 'зависимость или создание',
+  },
   items: (count) => `${count} ${russianCountForm(count, 'элемент', 'элемента', 'элементов')}`,
   reviewWorkspace: 'Пространство ревью',
   reviewThisReport: 'Ревью отчёта',

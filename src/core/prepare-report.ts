@@ -232,10 +232,11 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
     observedResources: routedVariants.reduce(
       (totals, variant) => ({
         images: totals.images + variant.markdown.observedResources.images,
+        videos: totals.videos + variant.markdown.observedResources.videos,
         downloads: totals.downloads + variant.markdown.observedResources.downloads,
         fonts: totals.fonts + variant.markdown.observedResources.fonts,
       }),
-      { images: 0, downloads: 0, fonts: 0 },
+      { images: 0, videos: 0, downloads: 0, fonts: 0 },
     ),
     resourceSourceFiles: allResourceSourceFiles,
     reviewManifest: primary.reviewManifest,
@@ -535,6 +536,7 @@ function createContentSecurityPolicy(placement: RuntimePlacement, runtime: strin
     "object-src 'none'",
     `img-src data:${localSource}`,
     `font-src data:${localSource}`,
+    `media-src data:${localSource}`,
     `style-src 'unsafe-inline'${localSource}`,
     `script-src ${scriptSource}`,
   ].join('; ');
