@@ -290,8 +290,13 @@ describe('CLI transport', () => {
     expect(registered.length).toBeGreaterThan(0);
     expect([...registered].sort()).toEqual([...prose, ...indented].sort());
 
-    for (const command of [...prose, ...indented]) {
-      const help = await runCli([command, '--help']);
+    const helps = await Promise.all(
+      [...prose, ...indented].map(async (command) => ({
+        command,
+        help: await runCli([command, '--help']),
+      })),
+    );
+    for (const { command, help } of helps) {
       expect(help).toMatchObject({ exitCode: 0, stderr: '' });
       const promisesProse = / --human +Emit prose /u.test(help.stdout.replace(/\s+/gu, ' '));
       expect({ command, promisesProse }).toEqual({
@@ -331,10 +336,20 @@ describe('CLI transport', () => {
     // The rule is stated as a property of the CLI, so it is observed on every command rather than
     // on the ones that were convenient to change: a command that rejects the flags, or answers the
     // same way with and without them, breaks the statement the distributed documents make.
-    for (const command of ['schema', 'describe', 'examples']) {
-      const agent = await runCli([command]);
-      const accepted = await runCli([command, '--json']);
-      const human = await runCli([command, '--human']);
+    // Each command runs in its own process, so all nine answers are gathered at once: run one after
+    // another they spent the test's whole time budget on process start-up under a loaded suite.
+    const commands = ['schema', 'describe', 'examples'] as const;
+    const answers = await Promise.all(
+      commands.map(async (command) => {
+        const [agent, accepted, human] = await Promise.all([
+          runCli([command]),
+          runCli([command, '--json']),
+          runCli([command, '--human']),
+        ]);
+        return { command, agent, accepted, human };
+      }),
+    );
+    for (const { agent, accepted, human } of answers) {
       expect(agent).toMatchObject({ exitCode: 0, stderr: '' });
       expect(accepted).toMatchObject({ exitCode: 0, stderr: '' });
       expect(human).toMatchObject({ exitCode: 0, stderr: '' });
@@ -347,8 +362,11 @@ describe('CLI transport', () => {
 
     // Reference data stays reference data: the human projection of a schema is the same document,
     // only indented, so an agent that reads either form gets equal facts.
-    const compactSchema = await runCli(['schema']);
-    const indentedSchema = await runCli(['schema', '--human']);
+    const schema = answers.find((answer) => answer.command === 'schema');
+    const compactSchema = schema?.agent;
+    const indentedSchema = schema?.human;
+    if (compactSchema === undefined || indentedSchema === undefined)
+      throw new Error('Missing schema answers.');
     expect(JSON.parse(indentedSchema.stdout)).toEqual(JSON.parse(compactSchema.stdout));
     expect(indentedSchema.stdout.split('\n').length).toBeGreaterThan(2);
   });
@@ -921,6 +939,31 @@ describe('CLI transport', () => {
       remediation: 'Run `agentic-report --help` and correct the command or option value.',
     });
     expect(JSON.parse(result.stdout).runId).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('passes --url through build, validate and inspect and refuses an unsafe public URL', async () => {
+    const workspace = await createTestWorkspace('cli-public-url');
+    workspaces.push(workspace);
+    const output = path.join(workspace, 'page.html');
+    const [built, validated, inspected, refused] = await Promise.all([
+      runCli(['build', 'examples/basic', '--url', 'https://example.com/basic/', '-o', output]),
+      runCli(['validate', 'examples/basic', '--url', 'https://example.com/basic/']),
+      runCli(['inspect', 'examples/basic', '--url', 'https://example.com/basic/']),
+      runCli(['validate', 'examples/basic', '--url', 'https://user:secret@example.com/']),
+    ]);
+
+    expect(built).toMatchObject({ exitCode: 0, stderr: '' });
+    expect(await readFile(output, 'utf8')).toContain(
+      '<link rel="canonical" href="https://example.com/basic/"/>',
+    );
+    expect(validated).toMatchObject({ exitCode: 0, stderr: '' });
+    expect(inspected).toMatchObject({ exitCode: 0, stderr: '' });
+    expect(refused.exitCode).toBe(1);
+    expect(JSON.parse(refused.stdout)).toMatchObject({
+      type: 'diagnostic',
+      level: 'error',
+      code: 'PUBLIC_URL_INVALID',
+    });
   });
 
   it('rejects the retired scripts option instead of preserving a compatibility branch', async () => {

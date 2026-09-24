@@ -539,6 +539,21 @@ previous authoritative output, remove compiler-owned staging paths, and allow an
 `output.maxInlineBytes` is a warning threshold over the exact serialized inline CSS, package runtime, and
 image/download data-URL occurrences. Font data URLs are counted once through the serialized stylesheet.
 
+### Pages served on the web
+
+Declare the address a page is served from as `url` in its metadata, or pass `--url` to `build`:
+
+```bash
+agentic-report build ./site-source --format directory --url https://example.com/guide/ --output ./public/guide
+```
+
+The page head then carries `<link rel="canonical">`, OpenGraph (`og:url`, `og:title`, `og:description`,
+`og:locale` and the other embedded language as `og:locale:alternate`) and a Twitter card. An optional local
+`image` becomes an absolute `og:image` for link previews in a directory build. Build public pages as
+`directory`: Googlebot reads only the first 2,097,152 bytes of an HTML file, and directory output keeps
+images, fonts, styles and the runtime out of the HTML. A public page above that size reports
+`PUBLIC_PAGE_OVER_CRAWLER_LIMIT`.
+
 For implementation boundaries and verification guarantees, see
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/TESTING.md`](docs/TESTING.md).
 

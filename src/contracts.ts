@@ -102,6 +102,8 @@ export interface BuildReportOptions {
   readonly format?: OutputFormat;
   readonly review?: string;
   readonly share?: boolean;
+  /** Absolute public http(s) URL of the page; overrides the manifest `url`. */
+  readonly url?: string;
 }
 
 export interface BuildReportResult {
@@ -133,6 +135,7 @@ export interface ValidateReportOptions {
   readonly input: string;
   readonly format?: OutputFormat;
   readonly review?: string;
+  readonly url?: string;
 }
 
 export interface ValidateReportResult {
@@ -175,6 +178,7 @@ export interface InspectReportOptions {
   readonly input: string;
   readonly format?: OutputFormat;
   readonly review?: string;
+  readonly url?: string;
 }
 
 export interface InspectReportResult {

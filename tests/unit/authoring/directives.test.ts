@@ -21,6 +21,7 @@ import {
 } from '../../../src/authoring/registry.js';
 import { authoringRegistryIntegrityIssues } from '../../../src/authoring/registry-integrity.js';
 import { isNormalizedPackageRelativePosixPath } from '../../../src/authoring/local-reference.js';
+import { isPublicUrl } from '../../../src/authoring/public-url.js';
 import { interpretDirectiveAttributes } from '../../../src/authoring/schemas.js';
 import { buildReport } from '../../../src/core/compiler.js';
 import { AgenticReportError } from '../../../src/diagnostics.js';
@@ -2367,6 +2368,7 @@ describe('six-class declarative registry corpus', () => {
       type: 'string',
       validate: isNormalizedPackageRelativePosixPath,
     });
+    ajv.addFormat('absolute-http-url', { type: 'string', validate: isPublicUrl });
     const validateDirective = ajv.compile(getAuthoringSchema('directives'));
     const validateSource = ajv.compile(getAuthoringSchema('source'));
 

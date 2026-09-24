@@ -404,7 +404,7 @@ uses another locale.
 To ship both languages in one artifact, set the primary entry to `language: en` or `language: ru` and map
 only the other locale under `localizations`. The alternate file must declare the matching language and may
 set only `contractVersion`, `title`, `description`, and `language`; keep layout, theme, preset, tokens,
-attribution, output, and `localizations` in the primary. Translate its Markdown, partials, visible SVG text,
+attribution, output, `url`, `image`, and `localizations` in the primary. Translate its Markdown, partials, visible SVG text,
 and authored directive labels explicitly—the compiler does not machine-translate them. At startup the
 browser uses ordered system preferences to select an available variant, falls back to the primary, and
 shows a native selector only for the multilingual artifact. Manual switching replaces the whole page and
@@ -944,6 +944,15 @@ Exit code `3` means an unexpected internal failure occurred.
 - Use `--format directory` when separate content-addressed assets are more important than one-file
   portability. The package runtime is embedded for `single-file` and external for `directory`; callers do
   not select its placement.
+- For a page served on the web, declare its absolute address as `url` in the primary entry or pass
+  `--url https://…/` to `build`. The head then carries `<link rel="canonical">`, OpenGraph (`og:url`,
+  `og:title`, `og:description`, `og:locale` and alternates for the other embedded language) and a Twitter
+  card. Build such a page with `--format directory`: images, fonts, styles and the runtime leave the HTML,
+  which keeps it under the 2,097,152 bytes Googlebot reads; a larger public page reports
+  `PUBLIC_PAGE_OVER_CRAWLER_LIMIT`. Add a local `image` (PNG, JPEG, WebP, GIF or AVIF) for a link preview;
+  it becomes an absolute `og:image` only in a directory build with a URL and otherwise reports
+  `SOCIAL_IMAGE_NOT_PUBLISHED`. Leave `url` out of packaged or shared sources that are not published at one
+  address, and pass it per build instead.
 - Add `--share` when the artifact leaves the source workstation. Source-link labels remain readable
   non-links derived as path-free filename/line from the validated helper, with `source:line` for an unsafe
   terminal. An already matching short label remains exact; directory-bearing and free-form labels are

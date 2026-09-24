@@ -24,6 +24,7 @@ import { visit } from 'unist-util-visit';
 
 import {
   authoringRegistry,
+  STILL_IMAGE_EXTENSIONS,
   type AuthoringRegistryDefinition,
   type DirectiveDefinition,
   type PageLocaleChoice,
@@ -145,8 +146,6 @@ const VIDEO_TYPES: Readonly<Record<string, string>> = {
   '.m4v': 'video/mp4',
   '.ogv': 'video/ogg',
 };
-
-const POSTER_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif']);
 
 function videoType(reference: string): string | undefined {
   const withoutQuery = reference.split(/[?#]/, 1)[0] ?? '';
@@ -574,7 +573,7 @@ async function processVideoTarget(
   let posterUrl: string | undefined;
   if (typeof poster === 'string') {
     const extension = path.extname(poster.split(/[?#]/, 1)[0] ?? '').toLowerCase();
-    if (!POSTER_EXTENSIONS.has(extension)) {
+    if (!STILL_IMAGE_EXTENSIONS.has(extension)) {
       throw new AgenticReportError({
         level: 'error',
         code: 'INVALID_VIDEO_SOURCE',
@@ -672,12 +671,33 @@ function assetSource(target: {
 async function materializeLocalAsset(
   source: string,
   options: AssetPluginOptions,
-): Promise<{
+): Promise<LocalResource> {
+  const resource = await resolveLocalResource(source, options);
+  if (resource.file !== undefined) {
+    options.collector.resourceFiles.set(resource.file.relativePath, resource.file.bytes);
+    options.collector.externalAssets += 1;
+  }
+  return resource;
+}
+
+export interface LocalResource {
+  /** `data:` URL в single-file и относительный путь `assets/<имя>.<12 hex><расширение>` в directory. */
   readonly url: string;
   readonly extension: string;
   readonly sourcePath: string;
   readonly sha256: string;
-}> {
+  /** Файл, который directory-вывод положит рядом со страницей; в single-file его нет. */
+  readonly file?: PreparedResourceFile;
+}
+
+/**
+ * Одна дорога локального ресурса для содержимого и для метаданных страницы: ограничение корнем
+ * источника, защита вывода от перезаписи источника, чтение, тип и имя с хешем содержимого.
+ */
+export async function resolveLocalResource(
+  source: string,
+  options: Pick<MarkdownRenderOptions, 'sourceRoot' | 'format' | 'outputFilePath'>,
+): Promise<LocalResource> {
   const withoutQuery = source.split(/[?#]/, 1)[0];
   if (withoutQuery === undefined || withoutQuery.length === 0) {
     throw new AgenticReportError({
@@ -726,11 +746,15 @@ async function materializeLocalAsset(
     return { url, extension, sourcePath: assetPath, sha256 };
   }
 
-  const digest = createHash('sha256').update(bytes).digest('hex').slice(0, 12);
-  const fileName = `${path.basename(assetPath, extension)}.${digest}${extension}`;
-  options.collector.resourceFiles.set(`assets/${fileName}`, bytes);
-  options.collector.externalAssets += 1;
-  return { url: `assets/${fileName}`, extension, sourcePath: assetPath, sha256 };
+  const fileName = `${path.basename(assetPath, extension)}.${sha256.slice(0, 12)}${extension}`;
+  const relativePath = `assets/${fileName}`;
+  return {
+    url: relativePath,
+    extension,
+    sourcePath: assetPath,
+    sha256,
+    file: { relativePath, bytes },
+  };
 }
 
 function isNonLocalReference(reference: string): boolean {

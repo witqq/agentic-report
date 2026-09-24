@@ -33,9 +33,23 @@ Frontmatter takes precedence. Supported fields are:
   paths. The primary entry must itself resolve to `en` or `ru`, may not repeat its own locale, and remains
   the fallback. Every alternate must declare the matching `language`, use the same `contractVersion`, be a
   distinct ordinary file, and may contain only `contractVersion`, `title`, `description`, and `language`
-  metadata. Presentation and output settings come from the primary entry. An empty object, unsupported
+  metadata. Presentation, output, `url`, and `image` settings come from the primary entry. An empty object, unsupported
   locale, recursive localization declaration, canonical alias, or lexical/symlink escape fails before
   publication;
+- `url`: optional absolute `http`/`https` address the page is served from, without user name, password
+  or `#fragment`; it is normalized to its canonical URL form and never requested. With a URL the page head
+  carries `<link rel="canonical">`, `og:type`, `og:url`, `og:title`, `og:description`, `og:locale` with one
+  `og:locale:alternate` per other embedded language, and a Twitter card, all taken from the primary entry.
+  A language tag with a two-letter region maps to `ll_TT` (`pt-BR` → `pt_BR`); `en` and `ru` without a
+  region map to `en_US` and `ru_RU`; other tags without a two-letter region and `und` get no `og:locale`.
+  Give a page served as a directory index its address with the trailing `/` (`https://example.com/guide/`),
+  because the social image address is resolved against it. Without a URL the head
+  carries none of these tags;
+- `image`: optional confined relative path to a PNG, JPEG, WebP, GIF, or AVIF social preview image. A
+  `directory` build with a URL writes it under `assets/` with a content-hash name and publishes the absolute
+  address as `og:image` and `twitter:image` with a `summary_large_image` card. A `single-file` build, or a
+  build without a URL, omits the image and reports `SOCIAL_IMAGE_NOT_PUBLISHED`. Another file type, or a
+  path that is not a readable file, fails with `INVALID_SOCIAL_IMAGE` at the `image` field;
 - `preset`: coordinated `material`, `monument`, `signal`, `terminal`, or `cinematic` package-owned visual
   defaults; `studio` and `editorial` remain compatibility identities;
 - `theme`: `system`, `light`, or `dark`;
@@ -116,15 +130,19 @@ the resulting artifact through `file://`. Build runs the complete source and ren
 publishes output, so neither `validate` nor `inspect` is a prerequisite. Use those read-only operations only
 when their separate diagnostic or discovery result is useful.
 
-The ESM `validateReport({ input, format?, review? })` and `inspectReport({ input, format?, review? })` operations use the
+The ESM `validateReport({ input, format?, review?, url? })` and `inspectReport({ input, format?, review?, url? })` operations use the
 production source and render preparation without output publication. CLI `validate [input] [--format
-<format>] [--json]` and `inspect [input] [--format <format>] [--json]` are adapters of the same
+<format>] [--url <url>] [--json]` and `inspect [input] [--format <format>] [--url <url>] [--json]` are adapters of the same
 functions. Validation reports resolved project/entry identity, output format, derived runtime placement,
 and warnings. Inspection also reports sorted relative source files, observed directives and local-resource
 occurrence counts, and the registry-derived command/format/starter/capability catalog. Both commands read
 and validate all resources required by the selected format but do not create or replace an output artifact.
 
-`buildReport({ input, output?, format?, review?, share? })` is the publishing operation. `share: true`, or
+`buildReport({ input, output?, format?, review?, share?, url? })` is the publishing operation. `url`, and
+CLI `--url <url>` on `build`, `validate` and `inspect`, overrides the manifest `url` with the same validation
+and fails with `PUBLIC_URL_INVALID` otherwise. A page with a public URL whose HTML exceeds 2,097,152 bytes,
+the part of an HTML file Googlebot reads, reports `PUBLIC_PAGE_OVER_CRAWLER_LIMIT` with the measured size;
+directory output keeps images, fonts, styles, and the runtime out of the HTML and removes that risk. `share: true`, or
 CLI `build --share`, neutralizes compiler-owned workstation source links before serialization in either
 output format. `BuildReportResult.share` identifies the selected profile and
 `neutralizedSourceLinks` is the exact transformed-node count; human output prints the count for a share

@@ -56,6 +56,18 @@
       },
       "description": "Confined alternate Markdown entries for package-supported reader locales; the primary entry is the fallback."
     },
+    "url": {
+      "type": "string",
+      "pattern": "^\\s*(?:(?=(?:[Hh][Tt][Tt][Pp][Ss]?://\\S+)(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,}\\S))\\s*$",
+      "format": "absolute-http-url",
+      "description": "Absolute public http(s) URL of the page; enables canonical, OpenGraph and Twitter card metadata."
+    },
+    "image": {
+      "type": "string",
+      "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,}\\S))\\s*$",
+      "format": "relative-local-path",
+      "description": "Local PNG, JPEG, WebP, GIF or AVIF social preview image; published as og:image by a directory build with a public URL."
+    },
     "preset": {
       "type": "string",
       "enum": ["monument", "material", "signal", "terminal", "cinematic", "studio", "editorial"],

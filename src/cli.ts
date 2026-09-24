@@ -49,6 +49,7 @@ interface BuildCommandOptions {
   readonly json?: boolean;
   readonly review?: string;
   readonly share?: boolean;
+  readonly url?: string;
 }
 
 interface InitCommandOptions {
@@ -60,6 +61,7 @@ interface AnalysisCommandOptions {
   readonly format?: OutputFormat;
   readonly json?: boolean;
   readonly review?: string;
+  readonly url?: string;
 }
 
 const program = new Command();
@@ -109,6 +111,7 @@ program
   .option('--format <format>', 'single-file or directory', parseFormat)
   .option('--review <path>', 'Confined prior review JSON sidecar')
   .option('--share', 'Neutralize workstation source links for distribution')
+  .option('--url <url>', 'Absolute public URL of the page; overrides the manifest url')
   .option('--json', 'Accepted; agent NDJSON is the default output')
   .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
   .action(async (input: string, commandOptions: BuildCommandOptions) => {
@@ -118,6 +121,7 @@ program
         ...(commandOptions.output === undefined ? {} : { output: commandOptions.output }),
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
         ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
+        ...(commandOptions.url === undefined ? {} : { url: commandOptions.url }),
         share: commandOptions.share === true,
       });
       writeSuccess(result, invocationRunId, outputMode);
@@ -136,6 +140,7 @@ program
   .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
   .option('--format <format>', 'single-file or directory', parseFormat)
   .option('--review <path>', 'Confined prior review JSON sidecar')
+  .option('--url <url>', 'Absolute public URL of the page; overrides the manifest url')
   .option('--json', 'Accepted; agent NDJSON is the default output')
   .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
   .action(async (input: string, commandOptions: AnalysisCommandOptions) => {
@@ -144,6 +149,7 @@ program
         input,
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
         ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
+        ...(commandOptions.url === undefined ? {} : { url: commandOptions.url }),
       });
       writeValidateSuccess(result, invocationRunId, outputMode);
     } catch (error) {
@@ -159,6 +165,7 @@ program
   .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
   .option('--format <format>', 'single-file or directory', parseFormat)
   .option('--review <path>', 'Confined prior review JSON sidecar')
+  .option('--url <url>', 'Absolute public URL of the page; overrides the manifest url')
   .option('--json', 'Accepted; agent NDJSON is the default output')
   .option('--human', 'Emit the indented catalog for a human reader instead of agent NDJSON')
   .action(async (input: string, commandOptions: AnalysisCommandOptions) => {
@@ -167,6 +174,7 @@ program
         input,
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
         ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
+        ...(commandOptions.url === undefined ? {} : { url: commandOptions.url }),
       });
       writeInspectSuccess(result, invocationRunId, outputMode);
     } catch (error) {

@@ -240,6 +240,10 @@ copies only visible rendered text through the localized package control.
   short `section.nav` labels remain exclusive to sidebar/mobile navigation.
 - A section may start with one bounded `:::lead` paragraph. Appendix glossary definitions may be direct
   section children and compile into the existing ordered appendix without leaving an in-flow placeholder.
+- A page served on the web declares its address as `url` (or `build --url`). The head gains a canonical
+  link, OpenGraph with locale alternates and a Twitter card; an optional `image` becomes an absolute
+  `og:image` in directory output. Build public pages as `directory` to keep the HTML under the
+  2,097,152 bytes search crawlers read; a larger public page reports `PUBLIC_PAGE_OVER_CRAWLER_LIMIT`.
 - `build --share` derives path-free non-link filename/line text from each validated source helper, falls back
   to `source:line` for unsafe terminals, omits workstation paths and authored directory/free-form labels, and
   reports the exact count without editing Markdown.

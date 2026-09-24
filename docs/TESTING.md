@@ -32,7 +32,12 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   byte-identical to full-bundle output for aliased, `terms`-annotated, lazily embedding (Markdown
   frontmatter and nested fences), injected (tagged templates, and `jsx`/`angular-html` under a parent-scope injection in a
   module-isolated file), `include`-dependent (`jinja-html`),
-  unknown and language-less fences, image/download/font embedding and copying, absent-only starter
+  unknown and language-less fences, public page metadata read from the written file — the exact canonical,
+  OpenGraph, locale-alternate and Twitter tags of a bilingual directory page whose `og:image` resolves to the
+  asset the build wrote, no image and one warning in single-file or without a URL, region and catalog
+  locale mapping, option-over-manifest precedence, refused URL and image classes, primary-only ownership,
+  and the crawler warning at exactly 2,097,152 against 2,097,153 measured HTML bytes —
+  image/download/font embedding and copying, absent-only starter
   initialization, installed starter-root resolution, no-overwrite/incomplete-state behavior, CLI
   diagnostics — including one run whose three independent violations appear in both projections, the
   agent one without any flag and the prose one under `--human` with a `file:line:column` place per

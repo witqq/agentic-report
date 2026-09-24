@@ -14,16 +14,23 @@ import path from 'node:path';
 
 import type { BuildReportOptions, BuildReportResult } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
-import { prepareReport, validateRequestedFormat, type PreparedReport } from './prepare-report.js';
+import {
+  prepareReport,
+  validateRequestedFormat,
+  validateRequestedUrl,
+  type PreparedReport,
+} from './prepare-report.js';
 
 export async function buildReport(options: BuildReportOptions): Promise<BuildReportResult> {
   const requestedFormat = validateRequestedFormat(options.format);
   const share = validateShareOption(options.share);
+  const url = validateRequestedUrl(options.url);
   const prepared = await prepareReport({
     input: options.input,
     ...(requestedFormat === undefined ? {} : { format: requestedFormat }),
     ...(options.output === undefined ? {} : { output: options.output }),
     ...(options.review === undefined ? {} : { review: options.review }),
+    ...(url === undefined ? {} : { url }),
     share,
     publication: true,
   });

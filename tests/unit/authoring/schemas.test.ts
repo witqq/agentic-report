@@ -24,6 +24,7 @@ import type {
   FieldDefinition,
 } from '../../../src/authoring/registry.js';
 import { isNormalizedPackageRelativePosixPath } from '../../../src/authoring/local-reference.js';
+import { isPublicUrl } from '../../../src/authoring/public-url.js';
 
 describe('authoring schema projections', () => {
   it('derives input and normalized TypeScript domains from literal registry fields', () => {
@@ -351,6 +352,10 @@ describe('authoring schema projections', () => {
           radius: 'round',
         },
       }),
+      accepted('public https URL', { url: 'https://example.com/docs/' }),
+      accepted('trimmed public http URL', { url: '  http://example.com/  ' }),
+      accepted('public URL with query', { url: 'https://example.com/page?lang=en' }),
+      accepted('social image', { image: 'assets/preview.png' }),
       accepted('empty output', { output: {} }),
       accepted('directory output', {
         output: { format: 'directory', maxInlineBytes: 1 },
@@ -367,6 +372,15 @@ describe('authoring schema projections', () => {
       rejected('non-object localizations', { localizations: 'report.ru.md' }),
       rejected('unknown localization locale', { localizations: { de: 'report.de.md' } }),
       rejected('escaping localization entry', { localizations: { ru: '../report.ru.md' } }),
+      rejected('relative public URL', { url: 'docs/page/' }),
+      rejected('root-relative public URL', { url: '/docs/' }),
+      rejected('javascript public URL', { url: 'javascript:alert(1)' }),
+      rejected('non-http public URL', { url: 'ftp://example.com/' }),
+      rejected('credential-bearing public URL', { url: 'https://user:secret@example.com/' }),
+      rejected('fragment public URL', { url: 'https://example.com/#top' }),
+      rejected('numeric public URL', { url: 1 }),
+      rejected('escaping social image', { image: '../preview.png' }),
+      rejected('absolute social image path', { image: '/tmp/preview.png' }),
       rejected('unknown preset', { preset: 'neon' }),
       rejected('numeric preset', { preset: 1 }),
       rejected('unknown theme', { theme: 'sepia' }),
@@ -954,6 +968,7 @@ function createAjv(options: { readonly useDefaults?: boolean } = {}): Ajv2020 {
     type: 'string',
     validate: isNormalizedPackageRelativePosixPath,
   });
+  ajv.addFormat('absolute-http-url', { type: 'string', validate: isPublicUrl });
   return ajv;
 }
 

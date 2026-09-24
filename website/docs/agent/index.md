@@ -177,6 +177,12 @@ An appendix glossary definition may sit directly beside the section explanation;
 the single appendix and preserves the same full-definition link. Do not nest appendix definitions in lists,
 quotes, the lead, or unrelated components.
 
+When the page will be served at a known address, build it with `--format directory --url <address>` or
+declare `url` in the primary entry. The head then carries a canonical link, OpenGraph and a Twitter card;
+an optional local `image` becomes an absolute `og:image` in that directory build. Directory output keeps
+the HTML under the 2,097,152 bytes search crawlers read, and a larger public page reports
+`PUBLIC_PAGE_OVER_CRAWLER_LIMIT`.
+
 When the artifact leaves the source workstation, add `--share`. The compiler derives path-free non-link
 filename/line text from each validated source helper and uses `source:line` for unsafe terminals;
 compiler-owned local paths and authored directory/free-form labels are omitted, and the JSON result reports

@@ -115,7 +115,11 @@ Markdown + metadata + local assets + partials + semantic directives
   enhanced HAST, fills authored in-flow maps with exact headings, and projects optional short labels for the
   shell. Appendix and subordinate headings remain excluded without parsing serialized HTML.
 - `src/render/document.tsx` creates the static HTML document from prepared locale variants, navigation,
-  selected registry-owned page layout/tokens, responsive shell, metadata, and content security policy. One
+  selected registry-owned page layout/tokens, responsive shell, metadata, and content security policy. For a
+  page with a public URL it also writes a static canonical link, OpenGraph, and Twitter card metadata from
+  the primary variant; `src/render/public-page.ts` maps language tags to OpenGraph locales through the
+  registry-owned `PUBLIC_PAGE_CONTRACT`. That head metadata sits outside the locale templates, so a
+  reader's language switch never rewrites it. One
   active variant and inert alternate templates contain complete localized shell/article state; the native
   selector exists only when more than one variant is present. It allocates collision-free shell IDs around
   each variant's authored content IDs and uses them consistently for navigation and accessibility
@@ -485,6 +489,18 @@ entry, manifest, included partial, or referenced local asset. Publication failur
 not report success. Hostile concurrent path replacement and process/OS crash recovery are outside the
 proportionate filesystem model. The inline warning threshold counts the actual serialized CSS, inline
 runtime, and image/download data URLs; a font data URL is counted once through generated CSS.
+
+A public URL comes from the primary manifest `url` or from the `build`/`validate`/`inspect` `--url` option
+and ESM `url`, which takes precedence; `src/authoring/public-url.ts` is the one validator for the manifest
+format, the option, and the JSON Schema format `absolute-http-url`. The loader checks an optional manifest
+`image` at its authored field — a PNG, JPEG, WebP, GIF, or AVIF file inside the source root — and reports
+`INVALID_SOCIAL_IMAGE` with that range otherwise. Preparation derives the page metadata from the URL,
+resolves the image through the same confined local-resource path as content assets, protects it from
+output collision like any source file, and publishes the image as a hashed `assets/` file with an absolute `og:image` only for directory
+output. It warns with `SOCIAL_IMAGE_NOT_PUBLISHED` when a declared image cannot be published and with
+`PUBLIC_PAGE_OVER_CRAWLER_LIMIT` when the serialized HTML of a public page exceeds
+`PUBLIC_PAGE_CONTRACT.crawlerHtmlByteLimit` (2,097,152 bytes). Without a URL the document head and bytes are
+unchanged.
 
 `build --share` and ESM `share: true` are one build profile over the same preparation/publication path in
 both formats. The typed result always identifies the profile and exact neutralized source-link count;

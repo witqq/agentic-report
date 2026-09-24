@@ -150,6 +150,11 @@ unresolved content facts.
   links are part of the requested handoff; share output derives path-free filename/line labels from validated
   helpers and uses `source:line` when a terminal is unsafe. Directory-bearing and free-form authored labels
   remain available only in the default workstation build.
+- When the page will be served at a known web address, build it with `--format directory --url <address>`
+  (or declare `url` in the primary entry). The build adds canonical, OpenGraph and Twitter card metadata;
+  directory output keeps the HTML under the 2,097,152 bytes search crawlers read. Add a local `image` for a
+  link preview. Report `PUBLIC_PAGE_OVER_CRAWLER_LIMIT` or `SOCIAL_IMAGE_NOT_PUBLISHED` if the result
+  carries them. Do not invent an address the user did not give.
 - Do not deploy, publish, use credentials, or mutate unrelated files. This skill authorizes only local
   installation, source authoring, validation, inspection, build, and artifact review.
 

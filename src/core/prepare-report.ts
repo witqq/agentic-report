@@ -3,8 +3,10 @@ import { readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { normalizePublicUrl, publicUrlProblem } from '../authoring/public-url.js';
 import {
   OUTPUT_FORMATS,
+  PUBLIC_PAGE_CONTRACT,
   runtimePlacementForFormat,
   type PageLocaleChoice,
   type RuntimePlacement,
@@ -29,9 +31,11 @@ import { createReviewTargetManifest } from '../review/targets.js';
 import { renderDocument, type DocumentPageVariantOptions } from '../render/document.js';
 import {
   renderMarkdown,
+  resolveLocalResource,
   type MarkdownRenderResult,
   type PreparedResourceFile,
 } from '../render/markdown.js';
+import { openGraphLocale, type PublicPageMetadata } from '../render/public-page.js';
 import { loadSource, resolveLocalPath } from '../source/load-source.js';
 
 export interface PrepareReportOptions {
@@ -41,6 +45,7 @@ export interface PrepareReportOptions {
   readonly publication?: true;
   readonly review?: string;
   readonly share?: boolean;
+  readonly url?: string;
 }
 
 export interface PreparedPageVariant {
@@ -139,10 +144,16 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
     priorArtifact === undefined ? variants : routePriorReview(priorArtifact, variants);
   const routedPrior = routedVariants.find((variant) => variant.priorReview)?.priorReview;
 
+  const socialImage =
+    source.manifest.image === undefined
+      ? undefined
+      : await resolveSocialImage(source.manifest.image, source.sourceRoot, format, outputFilePath);
+
   if (collisionTargetPath !== undefined)
     await assertOutputDoesNotCollide(collisionTargetPath, [
       ...source.sourceFiles,
       ...allResourceSourceFiles,
+      ...(socialImage === undefined ? [] : [socialImage.sourcePath]),
       ...(priorReviewFile === undefined ? [] : [priorReviewFile]),
     ]);
 
@@ -157,6 +168,19 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
     runtimePlacement === 'inline'
       ? { styleHref: undefined, scriptSrc: undefined, files: [] as PreparedResourceFile[] }
       : prepareBrowserAssets(runtime, documentStyles);
+  const publicUrl = options.url ?? source.manifest.url;
+  const publishedImage =
+    socialImage !== undefined && publicUrl !== undefined && socialImage.file !== undefined
+      ? socialImage
+      : undefined;
+  const publicPage: PublicPageMetadata | undefined =
+    publicUrl === undefined
+      ? undefined
+      : publicPageMetadata(
+          publicUrl,
+          publishedImage === undefined ? undefined : new URL(publishedImage.url, publicUrl).href,
+          routedVariants.map((variant) => variant.source.manifest.language),
+        );
   const documentVariants = routedVariants.map(toDocumentVariant);
   const [primaryDocument, ...localizedDocuments] = documentVariants;
   if (primaryDocument === undefined) throw new Error('Prepared report has no primary locale.');
@@ -185,6 +209,7 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
         ? { inline: inlineRuntime }
         : { src: requireAssetReference(external.scriptSrc, 'runtime script') },
     ...(localizedDocuments.length === 0 ? {} : { localizations: localizedDocuments }),
+    ...(publicPage === undefined ? {} : { publicPage }),
   });
 
   const warnings: Diagnostic[] = routedVariants.flatMap((variant) => variant.markdown.warnings);
@@ -202,9 +227,39 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
       details: { bundledBytes, threshold: source.manifest.output.maxInlineBytes },
     });
 
-  const markdownResourceFiles = mergeResourceFiles(
-    routedVariants.flatMap((variant) => variant.markdown.resourceFiles),
-  );
+  const htmlBytes = Buffer.byteLength(html);
+  if (publicUrl !== undefined && htmlBytes > PUBLIC_PAGE_CONTRACT.crawlerHtmlByteLimit)
+    warnings.push({
+      level: 'warning',
+      code: 'PUBLIC_PAGE_OVER_CRAWLER_LIMIT',
+      message: `The public page HTML is ${htmlBytes} bytes; search crawlers read only the first ${PUBLIC_PAGE_CONTRACT.crawlerHtmlByteLimit} bytes, so later content is not indexed.`,
+      remediation:
+        'Build the public page with directory output, which moves images, fonts, styles and the runtime into separate hashed files.',
+      details: { htmlBytes, limit: PUBLIC_PAGE_CONTRACT.crawlerHtmlByteLimit },
+    });
+  if (socialImage !== undefined && publishedImage === undefined)
+    warnings.push({
+      level: 'warning',
+      code: 'SOCIAL_IMAGE_NOT_PUBLISHED',
+      message:
+        publicUrl === undefined
+          ? 'The social image needs a public URL to become an absolute og:image address.'
+          : 'Single-file output has no public address for the social image, so og:image is omitted.',
+      remediation:
+        publicUrl === undefined
+          ? 'Declare url in the manifest or pass --url together with directory output.'
+          : 'Build the public page with directory output to publish the image as og:image.',
+      details: {
+        image: source.manifest.image,
+        format,
+        publicUrl: publicUrl !== undefined,
+      },
+    });
+
+  const markdownResourceFiles = mergeResourceFiles([
+    ...routedVariants.flatMap((variant) => variant.markdown.resourceFiles),
+    ...(publishedImage?.file === undefined ? [] : [publishedImage.file]),
+  ]);
   const primary = routedVariants[0];
   return {
     source,
@@ -238,7 +293,10 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
       }),
       { images: 0, videos: 0, downloads: 0, fonts: 0 },
     ),
-    resourceSourceFiles: allResourceSourceFiles,
+    resourceSourceFiles:
+      socialImage === undefined
+        ? allResourceSourceFiles
+        : unique([...allResourceSourceFiles, socialImage.sourcePath]),
     reviewManifest: primary.reviewManifest,
     ...(routedPrior === undefined ? {} : { priorReview: routedPrior }),
   };
@@ -315,6 +373,55 @@ function routePriorReview(
           : 'Use a version-4 multilingual review carrying an explicit locale.',
     });
   }
+}
+
+/** Тип и наличие файла уже проверил загрузчик у своего поля; здесь превью только разрешается. */
+async function resolveSocialImage(
+  image: string,
+  sourceRoot: string,
+  format: OutputFormat,
+  outputFilePath: string | undefined,
+) {
+  return await resolveLocalResource(image, {
+    sourceRoot,
+    format,
+    ...(outputFilePath === undefined ? {} : { outputFilePath }),
+  });
+}
+
+function publicPageMetadata(
+  url: string,
+  image: string | undefined,
+  languages: readonly string[],
+): PublicPageMetadata {
+  const [primaryLanguage, ...alternateLanguages] = languages;
+  const locale = primaryLanguage === undefined ? undefined : openGraphLocale(primaryLanguage);
+  const alternateLocales = unique(
+    alternateLanguages
+      .map(openGraphLocale)
+      .filter((value): value is string => value !== undefined && value !== locale),
+  );
+  return {
+    url,
+    ...(image === undefined ? {} : { image }),
+    ...(locale === undefined ? {} : { locale }),
+    alternateLocales,
+  };
+}
+
+export function validateRequestedUrl(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  const normalized =
+    typeof value === 'string'
+      ? normalizePublicUrl(value)
+      : ({ ok: false, reason: 'not-absolute' } as const);
+  if (normalized.ok) return normalized.value;
+  throw new AgenticReportError({
+    level: 'error',
+    code: 'PUBLIC_URL_INVALID',
+    message: publicUrlProblem(normalized.reason),
+    remediation: 'Pass the absolute public http(s) address the page will be served from.',
+  });
 }
 
 function toDocumentVariant(variant: PreparedPageVariant): DocumentPageVariantOptions {
