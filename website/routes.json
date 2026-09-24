@@ -1,5 +1,6 @@
 {
   "contractVersion": 1,
+  "origin": "https://agentic-report.witqq.dev",
   "routes": [
     {
       "id": "landing",

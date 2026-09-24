@@ -645,10 +645,15 @@ resize, short-final and document-bottom ownership through bounded terminal geome
 ## Public site staging
 
 The public site is not a compiler mode or a multi-page framework. `scripts/build-site.ts` reads the closed
-`website/routes.json` inventory, invokes the normal page compiler independently for the landing, each
-showcase, and each rendered documentation page, and copies canonical direct Markdown/text/skill files
-without rewriting their bytes. It publishes the complete new tree by one sibling-directory rename and
-refuses an existing destination.
+`website/routes.json` inventory with its declared public `origin`, invokes the normal page compiler
+independently for the landing, each showcase, and each rendered documentation page, and copies canonical
+direct Markdown/text/skill files without rewriting their bytes. Every page route is a directory index built
+in `directory` format with the public URL of its place in the tree (`examples/basic/index.html` →
+`<origin>/examples/basic/`), in a private scratch directory whose files are then moved into the staged tree
+without overwriting any staged file; the landing's tree is therefore the site root while every other route
+lives below it. After all routes are staged, the assembler runs the package `generateSitemap` operation,
+so `sitemap.xml` and `robots.txt` come from the pages' own canonical URLs. It publishes the complete new tree
+by one sibling-directory rename and refuses an existing destination.
 
 Every staged route is relative and confined to the output tree. Every declared source is relative to
 `website/` and confined to the repository before use; copied sources must be ordinary non-symlink files.
@@ -660,8 +665,8 @@ and revision produce identical staged bytes.
 The human docs, direct agent quickstart, complete agent reference, source contract, canonical skill, and
 `llms.txt` are available under the same static origin as the product-built landing and separately built
 examples. Every staged bilingual demo and the landing also expose their canonical English and Russian
-Markdown entries as direct copy routes. Hosting is outside the compiler. A valid deployment serves these files directly with appropriate
-MIME types, a real 404 rather than an SPA fallback, and ordinary publicly trusted HTTPS. The reference
+Markdown entries as direct copy routes. Hosting is outside the compiler. A valid deployment serves these files, including
+`robots.txt` and `sitemap.xml`, directly with appropriate MIME types, a real 404 rather than an SPA fallback, and ordinary publicly trusted HTTPS. The reference
 Nginx policy requires every mutable HTML, Markdown, manifest, and release-metadata route to revalidate while
 allowing a one-year immutable cache only for filenames containing the compiler's 12-hex content hash. ETag
 remains enabled for both families so unchanged conditional requests can return `304` without risking a stale

@@ -134,7 +134,11 @@ const createSiteFixture = async (
   );
   await writeFile(
     path.join(root, 'website/routes.json'),
-    `${JSON.stringify({ contractVersion: 1, routes: options.routes ?? baseFixtureRoutes })}\n`,
+    `${JSON.stringify({
+      contractVersion: 1,
+      origin: 'https://example.com',
+      routes: options.routes ?? baseFixtureRoutes,
+    })}\n`,
   );
   return root;
 };
@@ -161,6 +165,9 @@ const extractInternalLinks = (source: string, route: string): string[] => {
     });
 };
 
+const isPageAsset = (link: string): boolean =>
+  /(?:^|\/)assets\/[^/]+\.[0-9a-f]{12}\.[^/]+$/u.test(link);
+
 const crawlRoutes = async (
   root: string,
   declaredRoutes: ReadonlySet<string>,
@@ -184,7 +191,16 @@ const crawlRoutes = async (
     }
     visited.add(route);
     if (navigableRoutes.has(route)) {
-      const links = extractInternalLinks(await readFile(absolute, 'utf8'), route);
+      const allLinks = extractInternalLinks(await readFile(absolute, 'utf8'), route);
+      // Хешированные ресурсы directory-страницы — её файлы, а не маршруты сайта: они обязаны лежать
+      // рядом со страницей, но в перечень маршрутов не входят.
+      const assetLinks = allLinks.filter(isPageAsset);
+      for (const asset of assetLinks) {
+        if (!(await lstat(path.join(root, ...asset.split('/')))).isFile()) {
+          throw new Error(`Page asset is not a regular file: ${asset}`);
+        }
+      }
+      const links = allLinks.filter((link) => !isPageAsset(link));
       queue.push(...links.filter((link) => declaredRoutes.has(link)));
       const undeclaredExistingLinks = links.filter((link) => !declaredRoutes.has(link));
       if (undeclaredExistingLinks.length > 0) {
@@ -247,6 +263,46 @@ describe('deterministic public site staging', () => {
         'docs/deliberately-missing.md',
       ),
     ).rejects.toThrow(/ENOENT/u);
+  });
+
+  it('stages every page as an indexable public page with its canonical URL, sitemap, and robots file', async () => {
+    const manifest = JSON.parse(
+      await readFile(path.join(repositoryRoot, 'website/routes.json'), 'utf8'),
+    ) as { readonly origin: string; readonly routes: readonly SiteRoute[] };
+    const pageRoutes = manifest.routes.filter((route) => route.kind === 'page');
+    const expectedUrl = (href: string): string =>
+      `${manifest.origin}/${href.slice(0, -'index.html'.length)}`;
+
+    // Каждая страница несёт адрес своего места в дереве: корень — `/`, вложенная — `/dir/`.
+    for (const route of pageRoutes) {
+      const html = await readFile(path.join(firstSite, ...route.href.split('/')), 'utf8');
+      expect(html, route.href).toContain(
+        `<link rel="canonical" href="${expectedUrl(route.href)}"/>`,
+      );
+    }
+    expect(expectedUrl('index.html')).toBe('https://agentic-report.witqq.dev/');
+    expect(expectedUrl('examples/basic/index.html')).toBe(
+      'https://agentic-report.witqq.dev/examples/basic/',
+    );
+
+    const sitemap = await readFile(path.join(firstSite, 'sitemap.xml'), 'utf8');
+    expect([...sitemap.matchAll(/<loc>([^<]+)<\/loc>/gu)].map((match) => match[1])).toEqual(
+      pageRoutes.map((route) => expectedUrl(route.href)).sort(),
+    );
+    expect(await readFile(path.join(firstSite, 'robots.txt'), 'utf8')).toBe(
+      'User-agent: *\nAllow: /\n\nSitemap: https://agentic-report.witqq.dev/sitemap.xml\n',
+    );
+    expect((await readRelease()).files.map((file) => file.path)).toEqual(
+      expect.arrayContaining(['robots.txt', 'sitemap.xml']),
+    );
+
+    // Лендинг несёт десятки картинок на двух языках; поисковик читает первые 2 097 152 байта HTML.
+    const landing = await readFile(path.join(firstSite, 'index.html'));
+    expect(landing.byteLength).toBeLessThan(2_097_152);
+    expect(landing.toString('utf8')).not.toContain('data:image/');
+    expect(landing.toString('utf8')).toMatch(
+      /<meta property="og:image" content="https:\/\/agentic-report\.witqq\.dev\/assets\/monument\.[0-9a-f]{12}\.jpg"\/>/u,
+    );
   });
 
   it('follows real Markdown links while ignoring illustrative links in fenced code', () => {

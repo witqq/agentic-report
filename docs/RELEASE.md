@@ -77,10 +77,12 @@ After a healthy deploy, perform one public smoke test:
 ```sh
 curl --fail --silent --show-error https://agentic-report.witqq.dev/release.json
 curl --fail --silent --show-error --output /dev/null https://agentic-report.witqq.dev/
+curl --fail --silent --show-error https://agentic-report.witqq.dev/robots.txt
+curl --fail --silent --show-error --output /dev/null https://agentic-report.witqq.dev/sitemap.xml
 ```
 
 Confirm `release.json` reports package `0.16.0` and the accepted merge commit, the landing returns HTML over
-trusted TLS, and then update `/Users/mike/WebstormProjects/DEPLOYMENT-INVENTORY.md`. This single smoke checks
+trusted TLS, `robots.txt` names the absolute sitemap and `sitemap.xml` is served, and then update `/Users/mike/WebstormProjects/DEPLOYMENT-INVENTORY.md`. This single smoke checks
 the public route and deployed identity; deterministic route and browser behavior were already covered by
 `pnpm verify`.
 

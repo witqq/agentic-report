@@ -117,8 +117,10 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   prose, repeated and Markdown-separated structures plus true one-item omission, GFM table rendering,
   collision-free
   document shell IDs, default attribution and explicit footer opt-out without changing authored content,
-  compiler results, deterministic public-site staging, complete declared-route
-  reachability, direct-file byte identity, release hashes, synchronized skill/plugin metadata, and public
+  compiler results, deterministic public-site staging, every staged page's canonical URL of its place in
+  the tree with `sitemap.xml`, `robots.txt` and their `release.json` entries, the landing under the crawler
+  byte limit with a hashed `og:image`, complete declared-route
+  reachability with each page's hashed assets present, direct-file byte identity, release hashes, synchronized skill/plugin metadata, and public
   tree safety. Public-site staging also rejects route/source escapes, canonically external page sources,
   symlinked direct inputs, an existing destination, release-identity divergence, and invalid generated routes
   while proving failed candidates are removed and prior destination bytes are preserved. Hostile concurrent
