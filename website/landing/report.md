@@ -11,6 +11,7 @@ preset: monument
 presetSwitcher: true
 review: true
 scrollProgress: true
+image: assets/monument.jpg
 ---
 
 # A page worth handing over. From Markdown.

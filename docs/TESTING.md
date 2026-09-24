@@ -28,7 +28,18 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
 ## Tiers
 
 - `unit` uses Vitest for source loading, validation, lexical and symlink partial/asset confinement,
-  Markdown/directive rendering, image/download/font embedding and copying, absent-only starter
+  Markdown/directive rendering, code highlighting that loads only the grammars a document's fences need and stays
+  byte-identical to full-bundle output for aliased, `terms`-annotated, lazily embedding (Markdown
+  frontmatter and nested fences), injected (tagged templates, and `jsx`/`angular-html` under a parent-scope injection in a
+  module-isolated file), `include`-dependent (`jinja-html`),
+  unknown and language-less fences, public page metadata read from the written file — the exact canonical,
+  OpenGraph, locale-alternate and Twitter tags of a bilingual directory page whose `og:image` resolves to the
+  asset the build wrote, no image and one warning in single-file or without a URL, region and catalog
+  locale mapping, option-over-manifest precedence, refused URL and image classes, primary-only ownership,
+  and the crawler warning at exactly 2,097,152 against 2,097,153 measured HTML bytes — the exact
+  `sitemap.xml` and `robots.txt` bytes for a compiler-built tree with root, nested directory, query-bearing
+  and foreign pages, and every sitemap refusal leaving a byte-identical tree —
+  image/download/font embedding and copying, absent-only starter
   initialization, installed starter-root resolution, no-overwrite/incomplete-state behavior, CLI
   diagnostics — including one run whose three independent violations appear in both projections, the
   agent one without any flag and the prose one under `--human` with a `file:line:column` place per
@@ -106,8 +117,10 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   prose, repeated and Markdown-separated structures plus true one-item omission, GFM table rendering,
   collision-free
   document shell IDs, default attribution and explicit footer opt-out without changing authored content,
-  compiler results, deterministic public-site staging, complete declared-route
-  reachability, direct-file byte identity, release hashes, synchronized skill/plugin metadata, and public
+  compiler results, deterministic public-site staging, every staged page's canonical URL of its place in
+  the tree with `sitemap.xml`, `robots.txt` and their `release.json` entries, the landing under the crawler
+  byte limit with a hashed `og:image`, complete declared-route
+  reachability with each page's hashed assets present, direct-file byte identity, release hashes, synchronized skill/plugin metadata, and public
   tree safety. Public-site staging also rejects route/source escapes, canonically external page sources,
   symlinked direct inputs, an existing destination, release-identity divergence, and invalid generated routes
   while proving failed candidates are removed and prior destination bytes are preserved. Hostile concurrent
@@ -268,7 +281,10 @@ ETag/conditional `304`, health, and real `404` behavior.
 - Do not record artifact hashes, byte sizes, complete generated JSON, or descriptive prose as golden
   expectations. Determinism compares independent current builds; content-addressing and integrity compute the
   expected digest from the current input bytes. Assert an exact string only when that string is itself a
-  public, serialized, accessibility, diagnostic, localization, or security contract.
+  public, serialized, accessibility, diagnostic, localization, or security contract. The one exception is
+  equivalence with a published renderer: when a change must keep output byte-identical to a released
+  version, the expected bytes are captured from that published version, never from the working tree, and
+  are refreshed only by capturing them again from it — as the code-highlighting fixtures do with 0.16.0.
 - Choose evidence that distinguishes the required behavior from a superficially similar implementation.
   For responsive or animated UI, assert geometry, state transitions, ordering, reduced-motion behavior, and
   bounded work directly. Use an ordinary settled viewport capture for visual inspection; a stitched

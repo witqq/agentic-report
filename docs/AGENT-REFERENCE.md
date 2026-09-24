@@ -9,9 +9,9 @@ Use Node.js 24.18.0 or newer. Initialize a suitable packaged starter, replace it
 once, and open the result:
 
 ```bash
-npx --yes agentic-report@0.16.0 init ./my-report --starter report --json
+npx --yes agentic-report@0.17.0 init ./my-report --starter report --json
 # Edit ./my-report/report.md and its local assets.
-npx --yes agentic-report@0.16.0 build ./my-report --output ./my-report.html --json
+npx --yes agentic-report@0.17.0 build ./my-report --output ./my-report.html --json
 ```
 
 Open `my-report.html` through `file://`. Build runs the complete source and render preparation before
@@ -126,9 +126,9 @@ contain source file contents.
 
 Every command answers an agent without a flag, accepts `--json` as the name of that default, and offers
 `--human` for a person. The agent shape follows what the command returns: `init`, `build`, `validate`,
-`inspect`, `fix` and `review` report a run and write NDJSON records; `schema`, `describe` and `examples`
+`inspect`, `fix`, `review` and `sitemap` report a run and write NDJSON records; `schema`, `describe` and `examples`
 return one reference document and write it as a single compact JSON line. The human projection is prose
-wherever prose exists — `init`, `build`, `validate`, `fix`, `review` and `examples` — and the same
+wherever prose exists — `init`, `build`, `validate`, `fix`, `review`, `sitemap` and `examples` — and the same
 document indented for `inspect`, `schema` and `describe`, whose answer is a catalog or a schema that no
 summary line can carry.
 Both projections of a run carry the same facts — every
@@ -404,7 +404,7 @@ uses another locale.
 To ship both languages in one artifact, set the primary entry to `language: en` or `language: ru` and map
 only the other locale under `localizations`. The alternate file must declare the matching language and may
 set only `contractVersion`, `title`, `description`, and `language`; keep layout, theme, preset, tokens,
-attribution, output, and `localizations` in the primary. Translate its Markdown, partials, visible SVG text,
+attribution, output, `url`, `image`, and `localizations` in the primary. Translate its Markdown, partials, visible SVG text,
 and authored directive labels explicitly—the compiler does not machine-translate them. At startup the
 browser uses ordered system preferences to select an available variant, falls back to the primary, and
 shows a native selector only for the multilingual artifact. Manual switching replaces the whole page and
@@ -944,6 +944,23 @@ Exit code `3` means an unexpected internal failure occurred.
 - Use `--format directory` when separate content-addressed assets are more important than one-file
   portability. The package runtime is embedded for `single-file` and external for `directory`; callers do
   not select its placement.
+- For a page served on the web, declare its absolute address as `url` in the primary entry or pass
+  `--url https://…/` to `build`. The head then carries `<link rel="canonical">`, OpenGraph (`og:url`,
+  `og:title`, `og:description`, `og:locale` and alternates for the other embedded language) and a Twitter
+  card. Build such a page with `--format directory`: images, fonts, styles and the runtime leave the HTML,
+  which keeps it under the 2,097,152 bytes Googlebot reads; a larger public page reports
+  `PUBLIC_PAGE_OVER_CRAWLER_LIMIT`. Add a local `image` (PNG, JPEG, WebP, GIF or AVIF) for a link preview;
+  it becomes an absolute `og:image` only in a directory build with a URL and otherwise reports
+  `SOCIAL_IMAGE_NOT_PUBLISHED`. Leave `url` out of packaged or shared sources that are not published at one
+  address, and pass it per build instead.
+- After the pages of one origin are published into a directory whose root is the origin root, run
+  `agentic-report sitemap <directory>`. It writes `sitemap.xml` from the pages' canonical URLs and a
+  `robots.txt` with an absolute `Sitemap:` line, lists HTML from other tools as `skipped`, and refuses
+  without writing when either file exists (`SITEMAP_TARGET_EXISTS`), origins differ
+  (`SITEMAP_ORIGIN_MISMATCH`), a URL is not the page's place in the tree — a directory index needs its
+  trailing `/` (`SITEMAP_PATH_MISMATCH`) — an agentic-report page has no URL
+  (`SITEMAP_PAGE_WITHOUT_URL`), the tree has no agentic-report page (`SITEMAP_NO_PAGES`), contains a symbolic
+  link or special file (`SITEMAP_SPECIAL_FILE`), or the path is not a directory (`SITEMAP_DIRECTORY_INVALID`).
 - Add `--share` when the artifact leaves the source workstation. Source-link labels remain readable
   non-links derived as path-free filename/line from the validated helper, with `source:line` for an unsafe
   terminal. An already matching short label remains exact; directory-bearing and free-form labels are

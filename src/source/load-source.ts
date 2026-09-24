@@ -7,7 +7,7 @@ import matter from 'gray-matter';
 import { parse as parseYaml } from 'yaml';
 import type { ZodIssue } from 'zod';
 
-import { authoringRegistry } from '../authoring/registry.js';
+import { authoringRegistry, STILL_IMAGE_EXTENSIONS } from '../authoring/registry.js';
 import { normalizePackageRelativePosixReference } from '../authoring/local-reference.js';
 import {
   ReportManifestSchema,
@@ -192,6 +192,17 @@ async function loadSourceEntry(
     });
   }
 
+  if (manifestResult.data.image !== undefined) {
+    const imageOrigin = metadataPathComesFrom(frontmatterData, ['image'])
+      ? frontmatterOrigin
+      : (manifestDocument.origin ?? frontmatterOrigin);
+    await assertSocialImage(
+      sourceRoot,
+      manifestResult.data.image,
+      metadataPathLocation(imageOrigin, ['image']),
+    );
+  }
+
   const expanded = await expandPartials(
     parsed.content,
     sourceRoot,
@@ -216,6 +227,39 @@ async function loadSourceEntry(
     sourceMap: expanded.sourceMap,
     sourceDigests: sourceDigests(entryPath, raw, manifestDocument.origin, expanded.sourceMap),
   };
+}
+
+/**
+ * Превью страницы проверяется у поля, которое его объявило: тип и существование файла — это ошибки
+ * метаданных, и автору нужна строка манифеста, а не путь к файлу, которого, возможно, нет.
+ */
+async function assertSocialImage(
+  sourceRoot: string,
+  image: string,
+  source: SourceLocation,
+): Promise<void> {
+  if (!STILL_IMAGE_EXTENSIONS.has(path.extname(image).toLowerCase())) {
+    throw new AgenticReportError({
+      level: 'error',
+      code: 'INVALID_SOCIAL_IMAGE',
+      message: `The social image must be a .png, .jpg, .jpeg, .webp, .gif, or .avif file: ${image}`,
+      remediation: 'Point image at a local raster preview image under the source directory.',
+      source,
+      details: { image },
+    });
+  }
+  const imagePath = await resolveLocalPath(sourceRoot, image, 'ASSET_OUTSIDE_SOURCE');
+  const imageStat = await stat(imagePath).catch(() => undefined);
+  if (imageStat === undefined || !imageStat.isFile()) {
+    throw new AgenticReportError({
+      level: 'error',
+      code: 'INVALID_SOCIAL_IMAGE',
+      message: `The social image is not a readable file under the source directory: ${image}`,
+      remediation: 'Add the preview image under the source directory or fix the image path.',
+      source,
+      details: { image, target: imagePath },
+    });
+  }
 }
 
 function assertLocalizedMetadata(data: Record<string, unknown>, origin: MetadataOrigin): void {

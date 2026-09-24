@@ -93,7 +93,18 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
     expect(focusStyle.width, theme).toBeGreaterThanOrEqual(2);
     expect(focusStyle.color, theme).not.toBe('rgba(0, 0, 0, 0)');
   }
-  expect(await attribution.evaluate((element) => element.nextElementSibling === null)).toBe(true);
+  // The attribution closes the visible page. In directory output the deferred runtime appends its
+  // hidden navigation sentinel and scroll indicator after it, so only hidden elements may follow.
+  expect(
+    await attribution.evaluate((element) => {
+      const following: string[] = [];
+      for (let next = element.nextElementSibling; next !== null; next = next.nextElementSibling) {
+        if (next.tagName !== 'SCRIPT' && next.getAttribute('aria-hidden') !== 'true')
+          following.push(next.outerHTML.slice(0, 80));
+      }
+      return following;
+    }),
+  ).toEqual([]);
   await page.locator('a[href="docs/index.html"]').first().click();
   await expect(page).toHaveTitle('agentic-report documentation');
   await expect(

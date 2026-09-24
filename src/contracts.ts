@@ -102,6 +102,8 @@ export interface BuildReportOptions {
   readonly format?: OutputFormat;
   readonly review?: string;
   readonly share?: boolean;
+  /** Absolute public http(s) URL of the page; overrides the manifest `url`. */
+  readonly url?: string;
 }
 
 export interface BuildReportResult {
@@ -114,6 +116,21 @@ export interface BuildReportResult {
   readonly share: boolean;
   readonly neutralizedSourceLinks: number;
   readonly warnings: readonly Diagnostic[];
+}
+
+export interface GenerateSitemapOptions {
+  /** Root of a published static tree; it corresponds to the root of the pages' origin. */
+  readonly directory: string;
+}
+
+export interface GenerateSitemapResult {
+  readonly directory: string;
+  readonly sitemap: string;
+  readonly robots: string;
+  /** Canonical URLs of the indexed pages, sorted. */
+  readonly urls: readonly string[];
+  /** HTML files in the tree that agentic-report did not build, relative to the directory. */
+  readonly skipped: readonly string[];
 }
 
 export interface InitProjectOptions {
@@ -133,6 +150,7 @@ export interface ValidateReportOptions {
   readonly input: string;
   readonly format?: OutputFormat;
   readonly review?: string;
+  readonly url?: string;
 }
 
 export interface ValidateReportResult {
@@ -175,6 +193,7 @@ export interface InspectReportOptions {
   readonly input: string;
   readonly format?: OutputFormat;
   readonly review?: string;
+  readonly url?: string;
 }
 
 export interface InspectReportResult {

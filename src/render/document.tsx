@@ -7,6 +7,7 @@ import { packageStrings, resolvePackageLocale, type PackageStrings } from '../lo
 import type { ResolvedReviewArtifact } from '../review/binding.js';
 import type { ReviewArtifact, ReviewTargetManifest } from '../review/contract.js';
 import type { NavigationItem } from './navigation.js';
+import type { PublicPageMetadata } from './public-page.js';
 
 export type { NavigationItem } from './navigation.js';
 
@@ -41,6 +42,7 @@ export interface DocumentRenderOptions extends DocumentPageVariantOptions {
   readonly styles: { readonly inline?: string; readonly href?: string };
   readonly runtime: DocumentRuntime;
   readonly localizations?: readonly DocumentPageVariantOptions[];
+  readonly publicPage?: PublicPageMetadata;
 }
 
 export type DocumentRuntime =
@@ -88,6 +90,13 @@ export function renderDocument(options: DocumentRenderOptions): string {
         <meta name="generator" content="agentic-report" />
         <meta httpEquiv="Content-Security-Policy" content={options.contentSecurityPolicy} />
         <title>{options.title}</title>
+        {options.publicPage === undefined ? null : (
+          <PublicPageHead
+            metadata={options.publicPage}
+            title={options.title}
+            description={options.description ?? options.title}
+          />
+        )}
         {options.styles.inline === undefined ? null : (
           // biome-ignore lint/security/noDangerouslySetInnerHtml: CSS is the package-owned Vite build artifact.
           <style dangerouslySetInnerHTML={{ __html: options.styles.inline }} />
@@ -130,6 +139,42 @@ export function renderDocument(options: DocumentRenderOptions): string {
     </html>,
   );
   return `<!doctype html>${markup}`;
+}
+
+/**
+ * Canonical и карточки для поисковиков и мессенджеров. Они читают статичный `<head>` и не
+ * исполняют переключение языка, поэтому заголовок и описание берутся у основного варианта.
+ */
+function PublicPageHead({
+  metadata,
+  title,
+  description,
+}: {
+  readonly metadata: PublicPageMetadata;
+  readonly title: string;
+  readonly description: string;
+}) {
+  return (
+    <>
+      <link rel="canonical" href={metadata.url} />
+      <meta property="og:type" content="website" />
+      <meta property="og:url" content={metadata.url} />
+      <meta property="og:title" content={title} />
+      <meta property="og:description" content={description} />
+      {metadata.locale === undefined ? null : (
+        <meta property="og:locale" content={metadata.locale} />
+      )}
+      {metadata.alternateLocales.map((locale) => (
+        <meta key={locale} property="og:locale:alternate" content={locale} />
+      ))}
+      {metadata.image === undefined ? null : <meta property="og:image" content={metadata.image} />}
+      <meta
+        name="twitter:card"
+        content={metadata.image === undefined ? 'summary' : 'summary_large_image'}
+      />
+      {metadata.image === undefined ? null : <meta name="twitter:image" content={metadata.image} />}
+    </>
+  );
 }
 
 function PageVariant({

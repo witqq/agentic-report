@@ -227,6 +227,7 @@ describe('authoring registry', () => {
       'describe',
       'schema',
       'examples',
+      'sitemap',
     ]);
     expect(authoringRegistry.page).toMatchObject({
       defaultPreset: 'material',

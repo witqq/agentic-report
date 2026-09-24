@@ -15,6 +15,7 @@ import {
   isNormalizedPackageRelativePosixPath,
   normalizePackageRelativePosixReference,
 } from './local-reference.js';
+import { normalizePublicUrl, publicUrlProblem } from './public-url.js';
 import { authoringRegistryIntegrityIssues } from './registry-integrity.js';
 
 export type JsonSchema = Readonly<Record<string, unknown>>;
@@ -343,9 +344,9 @@ function zodConstraint(constraint: ConstraintDefinition): z.ZodType {
             });
           }
         });
-      return constraint.format === 'relative-local-path'
-        ? zodNormalizedLocalReference(schema)
-        : schema;
+      if (constraint.format === 'relative-local-path') return zodNormalizedLocalReference(schema);
+      if (constraint.format === 'absolute-http-url') return zodPublicUrl(schema);
+      return schema;
     }
     case 'integer': {
       let schema = z.number().int();
@@ -402,6 +403,17 @@ function zodNormalizedLocalReference(schema: z.ZodType<string>): z.ZodType<strin
             ? 'Local reference is not valid URI text.'
             : 'Local reference must be a confined relative POSIX path.',
       });
+      return z.NEVER;
+    }
+    return normalized.value;
+  });
+}
+
+function zodPublicUrl(schema: z.ZodType<string>): z.ZodType<string> {
+  return schema.transform((value, context) => {
+    const normalized = normalizePublicUrl(value);
+    if (!normalized.ok) {
+      context.addIssue({ code: 'custom', message: publicUrlProblem(normalized.reason) });
       return z.NEVER;
     }
     return normalized.value;

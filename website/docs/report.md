@@ -24,9 +24,9 @@ Use Node.js 24.18.0 or newer. Start with the [agent quickstart](agent/index.html
 [direct Markdown version](agent/index.md), or install the [agent skill](../skills/agentic-report/SKILL.md).
 
 ```sh
-npx --yes agentic-report@0.16.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.17.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.16.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.17.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Build validates before publishing; use `validate` or `inspect` only
@@ -48,7 +48,7 @@ If you prefer to inspect the implementation instead of executing the published `
 package, clone a specific release tag and run the compiler directly from its build:
 
 ```sh
-git clone --branch v0.16.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.17.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -72,7 +72,7 @@ tag pinned so later commands continue to use the revision you inspected.
 ::::section{title="Validate, explain, and repair" id="diagnostics" nav="Diagnostics" width="standard" align="start" tone="soft" reveal="true"}
 
 The CLI commands are discoverable: `init`, `validate`, `inspect`, `build`, `fix`, `review`,
-`describe`, `schema`, and `examples`. Agent output is the default—NDJSON for run commands and one compact
+`sitemap`, `describe`, `schema`, and `examples`. Agent output is the default—NDJSON for run commands and one compact
 JSON line for reference commands. `--json` explicitly names that default; `--human` selects prose or
 indented JSON without dropping diagnostic facts.
 
@@ -240,6 +240,13 @@ copies only visible rendered text through the localized package control.
   short `section.nav` labels remain exclusive to sidebar/mobile navigation.
 - A section may start with one bounded `:::lead` paragraph. Appendix glossary definitions may be direct
   section children and compile into the existing ordered appendix without leaving an in-flow placeholder.
+- A page served on the web declares its address as `url` (or `build --url`). The head gains a canonical
+  link, OpenGraph with locale alternates and a Twitter card; an optional `image` becomes an absolute
+  `og:image` in directory output. Build public pages as `directory` to keep the HTML under the
+  2,097,152 bytes search crawlers read; a larger public page reports `PUBLIC_PAGE_OVER_CRAWLER_LIMIT`.
+- `sitemap <directory>` indexes a published tree of such pages: it writes `sitemap.xml` from their canonical
+  URLs and a `robots.txt` naming it, and refuses without writing when a URL does not match the page's place
+  in the tree or either file already exists.
 - `build --share` derives path-free non-link filename/line text from each validated source helper, falls back
   to `source:line` for unsafe terminals, omits workstation paths and authored directory/free-form labels, and
   reports the exact count without editing Markdown.

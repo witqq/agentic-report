@@ -257,6 +257,26 @@ export const PAGE_CONTRACT = {
   tokens: PAGE_TOKEN_FIELDS,
 } as const;
 
+/**
+ * Публичная страница: предел, после которого Googlebot перестаёт читать HTML, и OpenGraph-локали
+ * тех языков каталога, у которых в теге нет региона. Остальные теги без региона `og:locale` не
+ * получают: территорию пакет не угадывает.
+ */
+export const PUBLIC_PAGE_CONTRACT = {
+  crawlerHtmlByteLimit: 2_097_152,
+  openGraphLocales: { en: 'en_US', ru: 'ru_RU' },
+} as const;
+
+/** Картинки, которые показывают браузеры и карточки ссылок: постер видео и превью страницы. */
+export const STILL_IMAGE_EXTENSIONS: ReadonlySet<string> = new Set([
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.webp',
+  '.gif',
+  '.avif',
+]);
+
 export const PAGE_LOCALES = ['en', 'ru'] as const;
 export type PageLocaleChoice = (typeof PAGE_LOCALES)[number];
 
@@ -321,7 +341,7 @@ export type ConstraintDefinition =
       readonly minLength: number;
       readonly maxLength?: number;
       readonly pattern?: string;
-      readonly format?: 'relative-local-path';
+      readonly format?: 'relative-local-path' | 'absolute-http-url';
     }
   | {
       readonly kind: 'integer';
@@ -660,6 +680,31 @@ export const authoringRegistry = {
       ],
     },
     {
+      name: 'url',
+      description:
+        'Absolute public http(s) URL of the page; enables canonical, OpenGraph and Twitter card metadata.',
+      required: false,
+      constraint: {
+        kind: 'string',
+        normalization: 'trim',
+        minLength: 1,
+        pattern: '^[Hh][Tt][Tt][Pp][Ss]?://\\S+$',
+        format: 'absolute-http-url',
+      },
+    },
+    {
+      name: 'image',
+      description:
+        'Local PNG, JPEG, WebP, GIF or AVIF social preview image; published as og:image by a directory build with a public URL.',
+      required: false,
+      constraint: {
+        kind: 'string',
+        normalization: 'trim',
+        minLength: 1,
+        format: 'relative-local-path',
+      },
+    },
+    {
       name: 'preset',
       description:
         'Coordinated package-owned visual defaults; explicit bounded token values override the preset.',
@@ -980,6 +1025,11 @@ export const authoringRegistry = {
       description: 'Return manifest, directive, or complete source JSON Schema.',
     },
     { id: 'examples', description: 'List packaged buildable examples.' },
+    {
+      id: 'sitemap',
+      description:
+        'Write sitemap.xml and robots.txt for a published tree of pages built with a public URL.',
+    },
   ],
   examples: [
     {

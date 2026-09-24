@@ -15,6 +15,7 @@ export { buildReport } from './core/compiler.js';
 export { inspectReport, validateReport } from './core/analyze-report.js';
 export { inspectReview } from './core/inspect-review.js';
 export { fixReport } from './core/fix-report.js';
+export { generateSitemap } from './core/site-index.js';
 export { initProject } from './authoring/init-project.js';
 export type {
   AppliedFix,
@@ -24,6 +25,8 @@ export type {
   DiagnosticFix,
   FixReportOptions,
   FixReportResult,
+  GenerateSitemapOptions,
+  GenerateSitemapResult,
   InitProjectOptions,
   InitProjectResult,
   InspectReportOptions,

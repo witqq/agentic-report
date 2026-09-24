@@ -4,6 +4,7 @@ import {
   copyFile,
   lstat,
   mkdir,
+  mkdtemp,
   readFile,
   readdir,
   realpath,
@@ -17,7 +18,7 @@ import { promisify } from 'node:util';
 
 import { parse as parseYaml } from 'yaml';
 
-import { buildReport } from '../dist/node/index.js';
+import { buildReport, generateSitemap } from '../dist/node/index.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -33,6 +34,8 @@ interface SiteRoute {
 
 interface RouteManifest {
   readonly contractVersion: 1;
+  /** Public origin the staged tree is served from; every page carries its URL below it. */
+  readonly origin: string;
   readonly routes: readonly SiteRoute[];
 }
 
@@ -171,7 +174,78 @@ const readRouteManifest = async (repositoryRoot: string): Promise<RouteManifest>
   if (new Set(routes.map((route) => route.href)).size !== routes.length) {
     throw new Error('Route href values must be unique.');
   }
-  return { contractVersion: 1, routes };
+  for (const route of routes) {
+    if (
+      route.kind === 'page' &&
+      route.href !== 'index.html' &&
+      !route.href.endsWith('/index.html')
+    ) {
+      throw new Error(`Page route ${route.id} must be a directory index ending in index.html.`);
+    }
+  }
+  return { contractVersion: 1, origin: requireOrigin(record.origin), routes };
+};
+
+const requireOrigin = (value: unknown): string => {
+  if (typeof value !== 'string')
+    throw new Error('website/routes.json must declare its public origin.');
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error('website/routes.json origin must be an absolute URL.');
+  }
+  if (parsed.protocol !== 'https:' || parsed.origin !== value) {
+    throw new Error('website/routes.json origin must be a bare https origin without a path.');
+  }
+  return parsed.origin;
+};
+
+/** Адрес страницы — её место в опубликованном дереве: `a/b/index.html` → `<origin>/a/b/`. */
+const pageUrl = (origin: string, href: string): string =>
+  `${origin}/${href.slice(0, -'index.html'.length)}`;
+
+/**
+ * Страница собирается каталогом в отдельную временную папку и переносится на своё место: у
+ * лендинга это корень, внутри которого уже лежат другие маршруты, а публикация каталога требует
+ * пустой цели. Перенос не перезаписывает ни одного уже поставленного файла.
+ */
+const stagePage = async (
+  staging: string,
+  target: string,
+  route: SiteRoute,
+  input: string,
+  origin: string,
+): Promise<void> => {
+  const scratch = await mkdtemp(
+    path.join(path.dirname(staging), `.${path.basename(staging)}-page-`),
+  );
+  try {
+    const built = path.join(scratch, 'page');
+    await buildReport({
+      input,
+      output: built,
+      format: 'directory',
+      url: pageUrl(origin, route.href),
+      ...(route.review === undefined ? {} : { review: route.review }),
+    });
+    const pageDirectory = path.dirname(target);
+    for (const file of await listFiles(built)) {
+      const destination = path.join(pageDirectory, ...file.split('/'));
+      try {
+        await lstat(destination);
+        throw new Error(`Page ${route.id} would overwrite a staged file: ${file}`);
+      } catch (error) {
+        if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
+      }
+      await mkdir(path.dirname(destination), { recursive: true });
+      await rename(path.join(built, ...file.split('/')), destination);
+    }
+  } finally {
+    await rm(scratch, { recursive: true, force: true });
+  }
+  const compiled = await readFile(target, 'utf8');
+  await writeFile(target, addMoiraAttribution(compiled));
 };
 
 const resolveCanonicalRepositorySource = async (
@@ -300,17 +374,15 @@ export const stageSite = async (options: StageSiteOptions): Promise<StagedSiteRe
       );
       await mkdir(path.dirname(target), { recursive: true });
       if (route.kind === 'page') {
-        await buildReport({
-          input: canonicalSource,
-          output: target,
-          ...(route.review === undefined ? {} : { review: route.review }),
-        });
-        const compiled = await readFile(target, 'utf8');
-        await writeFile(target, addMoiraAttribution(compiled));
+        await stagePage(staging, target, route, canonicalSource, manifest.origin);
       } else {
         await assertRegularDirectFile(repositoryRoot, source);
         await copyFile(canonicalSource, target);
       }
+    }
+
+    if (manifest.routes.some((route) => route.kind === 'page')) {
+      await generateSitemap({ directory: staging });
     }
 
     const inventoryPaths = (await listFiles(staging)).filter((file) => file !== 'release.json');

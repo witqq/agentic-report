@@ -3,7 +3,7 @@ name: agentic-report
 description: Create and build polished local interactive reports, research pages, architecture pages, tutorials, dashboards, decisions, and landing pages from declarative Markdown, with optional diagnostic inspection. Use for static agent-to-human page handoff; do not use for hosted apps, live collaboration, deployment, publication, or bespoke frontend development.
 license: MIT
 metadata:
-  version: '0.16.0'
+  version: '0.17.0'
   homepage: https://agentic-report.witqq.dev/
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run.
 ---
@@ -17,8 +17,8 @@ Create a local declarative source, build it, open it, and hand the user a finish
 Use the release pinned in this skill:
 
 ```sh
-npx --yes agentic-report@0.16.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.16.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.17.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.17.0 build ./my-page --output ./my-page.html --json
 ```
 
 Choose a different starter or destination name when the task requires it. Edit the generated source between
@@ -32,7 +32,7 @@ may be a symbolic link, and the reported `projectPath` then names the resolved l
 destination is refused with `INIT_DESTINATION_EXISTS`. The first `npx` call requires registry/network access.
 
 Every command answers an agent without a flag and accepts `--json` as the name of that default: the run
-commands `init`, `build`, `validate`, `inspect`, `fix` and `review` write NDJSON records, while `schema`,
+commands `init`, `build`, `validate`, `inspect`, `fix`, `review` and `sitemap` write NDJSON records, while `schema`,
 `describe` and `examples` write one compact JSON document. `--human` selects the form for a person. One
 failed run lists every independent violation it found, so fix them together.
 
@@ -150,6 +150,13 @@ unresolved content facts.
   links are part of the requested handoff; share output derives path-free filename/line labels from validated
   helpers and uses `source:line` when a terminal is unsafe. Directory-bearing and free-form authored labels
   remain available only in the default workstation build.
+- When the page will be served at a known web address, build it with `--format directory --url <address>`
+  (or declare `url` in the primary entry). The build adds canonical, OpenGraph and Twitter card metadata;
+  directory output keeps the HTML under the 2,097,152 bytes search crawlers read. Add a local `image` for a
+  link preview. Report `PUBLIC_PAGE_OVER_CRAWLER_LIMIT` or `SOCIAL_IMAGE_NOT_PUBLISHED` if the result
+  carries them. Do not invent an address the user did not give. When the user publishes a whole tree of
+  such pages at one origin, the `sitemap` command (`agentic-report sitemap <published-directory>`) writes `sitemap.xml` and
+  `robots.txt` from the pages' own canonical URLs and refuses a page whose URL does not match its place.
 - Do not deploy, publish, use credentials, or mutate unrelated files. This skill authorizes only local
   installation, source authoring, validation, inspection, build, and artifact review.
 
@@ -453,7 +460,7 @@ If the user does not trust the published npm package, do not run it through `npx
 pinned by this skill, expose the checked commit for review, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.16.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.17.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -463,7 +470,7 @@ pnpm build
 node dist/node/cli.js init ../my-page --starter report --json
 ```
 
-Substitute `node dist/node/cli.js` for every `npx --yes agentic-report@0.16.0` command above. Keep page
+Substitute `node dist/node/cli.js` for every `npx --yes agentic-report@0.17.0` command above. Keep page
 sources and outputs outside the cloned repository.
 
 Explain that this avoids executing the `agentic-report` npm package but is not registry-free:

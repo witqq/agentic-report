@@ -11,6 +11,7 @@ import {
   type Diagnostic,
   type InitProjectResult,
   type FixReportResult,
+  type GenerateSitemapResult,
   type InspectReportResult,
   type InspectReviewResult,
   type OutputFormat,
@@ -20,6 +21,7 @@ import { inspectReport, validateReport } from './core/analyze-report.js';
 import { buildReport } from './core/compiler.js';
 import { inspectReview } from './core/inspect-review.js';
 import { fixReport } from './core/fix-report.js';
+import { generateSitemap } from './core/site-index.js';
 import {
   emitDiagnostic,
   emitResultRecord,
@@ -49,6 +51,7 @@ interface BuildCommandOptions {
   readonly json?: boolean;
   readonly review?: string;
   readonly share?: boolean;
+  readonly url?: string;
 }
 
 interface InitCommandOptions {
@@ -60,6 +63,7 @@ interface AnalysisCommandOptions {
   readonly format?: OutputFormat;
   readonly json?: boolean;
   readonly review?: string;
+  readonly url?: string;
 }
 
 const program = new Command();
@@ -109,6 +113,7 @@ program
   .option('--format <format>', 'single-file or directory', parseFormat)
   .option('--review <path>', 'Confined prior review JSON sidecar')
   .option('--share', 'Neutralize workstation source links for distribution')
+  .option('--url <url>', 'Absolute public URL of the page; overrides the manifest url')
   .option('--json', 'Accepted; agent NDJSON is the default output')
   .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
   .action(async (input: string, commandOptions: BuildCommandOptions) => {
@@ -118,6 +123,7 @@ program
         ...(commandOptions.output === undefined ? {} : { output: commandOptions.output }),
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
         ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
+        ...(commandOptions.url === undefined ? {} : { url: commandOptions.url }),
         share: commandOptions.share === true,
       });
       writeSuccess(result, invocationRunId, outputMode);
@@ -136,6 +142,7 @@ program
   .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
   .option('--format <format>', 'single-file or directory', parseFormat)
   .option('--review <path>', 'Confined prior review JSON sidecar')
+  .option('--url <url>', 'Absolute public URL of the page; overrides the manifest url')
   .option('--json', 'Accepted; agent NDJSON is the default output')
   .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
   .action(async (input: string, commandOptions: AnalysisCommandOptions) => {
@@ -144,6 +151,7 @@ program
         input,
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
         ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
+        ...(commandOptions.url === undefined ? {} : { url: commandOptions.url }),
       });
       writeValidateSuccess(result, invocationRunId, outputMode);
     } catch (error) {
@@ -159,6 +167,7 @@ program
   .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
   .option('--format <format>', 'single-file or directory', parseFormat)
   .option('--review <path>', 'Confined prior review JSON sidecar')
+  .option('--url <url>', 'Absolute public URL of the page; overrides the manifest url')
   .option('--json', 'Accepted; agent NDJSON is the default output')
   .option('--human', 'Emit the indented catalog for a human reader instead of agent NDJSON')
   .action(async (input: string, commandOptions: AnalysisCommandOptions) => {
@@ -167,6 +176,7 @@ program
         input,
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
         ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
+        ...(commandOptions.url === undefined ? {} : { url: commandOptions.url }),
       });
       writeInspectSuccess(result, invocationRunId, outputMode);
     } catch (error) {
@@ -190,6 +200,23 @@ program
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
       });
       writeFixSuccess(result, invocationRunId, outputMode);
+    } catch (error) {
+      const diagnostic = toDiagnostic(error);
+      emitDiagnostic(diagnostic, invocationRunId, outputMode);
+      process.exitCode = exitCodeForDiagnostic(diagnostic);
+    }
+  });
+
+program
+  .command('sitemap')
+  .description('Write sitemap.xml and robots.txt for a published tree of public pages.')
+  .argument('<directory>', 'Root directory of the published static tree')
+  .option('--json', 'Accepted; agent NDJSON is the default output')
+  .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
+  .action(async (directory: string) => {
+    try {
+      const result = await generateSitemap({ directory });
+      writeSitemapSuccess(result, invocationRunId, outputMode);
     } catch (error) {
       const diagnostic = toDiagnostic(error);
       emitDiagnostic(diagnostic, invocationRunId, outputMode);
@@ -357,6 +384,17 @@ function writeFixSuccess(result: FixReportResult, runId: string, mode: OutputMod
   if (result.remaining.length > 0) {
     process.stdout.write(`${result.remaining.length} violations need an author decision\n`);
   }
+}
+
+function writeSitemapSuccess(result: GenerateSitemapResult, runId: string, mode: OutputMode): void {
+  const sanitized = sanitizeTransportValue(result);
+  if (mode === 'agent') {
+    emitResultRecord(sanitized, runId);
+    return;
+  }
+  process.stdout.write(
+    `Indexed ${sanitized.urls.length} page${sanitized.urls.length === 1 ? '' : 's'} in ${sanitized.sitemap} and wrote ${sanitized.robots}${sanitized.skipped.length === 0 ? '' : `; skipped ${sanitized.skipped.length} HTML file${sanitized.skipped.length === 1 ? '' : 's'} not built by agentic-report`}\n`,
+  );
 }
 
 function writeInspectSuccess(result: InspectReportResult, runId: string, mode: OutputMode): void {

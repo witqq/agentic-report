@@ -52,6 +52,8 @@ Every accepted field; anything else is refused as an unknown field.
 | `description`     | string  | —                                                   | Plain-text document description for metadata.                                                                                       |
 | `language`        | string  | `"und"`                                             | Language tag using the supported 2-8 letter primary and optional 2-8 character alphanumeric subtags.                                |
 | `localizations`   | object  | —                                                   | Confined alternate Markdown entries for package-supported reader locales; the primary entry is the fallback.                        |
+| `url`             | string  | —                                                   | Absolute public http(s) URL of the page; enables canonical, OpenGraph and Twitter card metadata.                                    |
+| `image`           | string  | —                                                   | Local PNG, JPEG, WebP, GIF or AVIF social preview image; published as og:image by a directory build with a public URL.              |
 | `preset`          | string  | `"material"`                                        | Coordinated package-owned visual defaults; explicit bounded token values override the preset.                                       |
 | `theme`           | string  | `"system"`                                          | Initial document color theme.                                                                                                       |
 | `layout`          | string  | `"document"`                                        | Responsive page composition selected from the package-owned layout catalog.                                                         |
@@ -660,7 +662,8 @@ Forms: leaf. Children: none.
   "fix": "Apply the replacements the product computed exactly, and nothing else.",
   "describe": "Return the complete source contract.",
   "schema": "Return manifest, directive, or complete source JSON Schema.",
-  "examples": "List packaged buildable examples."
+  "examples": "List packaged buildable examples.",
+  "sitemap": "Write sitemap.xml and robots.txt for a published tree of pages built with a public URL."
 }
 ```
 

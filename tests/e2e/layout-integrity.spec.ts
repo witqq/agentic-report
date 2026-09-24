@@ -376,7 +376,21 @@ test('an authored popover stays trigger-anchored through scroll and visual viewp
   await page.goto(routeUrl('examples/interactive-catalog/index.html'));
 
   const trigger = page.locator('.semantic-popover [data-popover-trigger]').first();
-  await trigger.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+  // Исходное положение меряется на остановившейся странице. Плавная прокрутка документа закончилась
+  // бы уже после замера, а ступенчатое появление секции сдвигает триггер на 24 px ещё 420 мс после
+  // пересечения — тогда триггер уезжал вниз вместо ожидаемого подъёма, и тест падал от раза к разу.
+  await trigger.evaluate((element) =>
+    element.scrollIntoView({ block: 'center', behavior: 'instant' }),
+  );
+  await page.waitForFunction(() =>
+    document
+      .querySelector('.semantic-popover [data-popover-trigger]')
+      ?.closest('[data-semantic="section"]')
+      ?.hasAttribute('data-reveal-shown'),
+  );
+  await page.evaluate(async () => {
+    await Promise.all(document.getAnimations().map((animation) => animation.finished));
+  });
   await trigger.click();
   const panel = page.locator('[data-popover-portal]');
 

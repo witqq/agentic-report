@@ -9,7 +9,12 @@ import type {
   ValidateReportResult,
 } from '../contracts.js';
 import { AgenticReportError, sanitizeDiagnostic, sanitizeTransportValue } from '../diagnostics.js';
-import { prepareReport, validateRequestedFormat, type PreparedReport } from './prepare-report.js';
+import {
+  prepareReport,
+  validateRequestedFormat,
+  validateRequestedUrl,
+  type PreparedReport,
+} from './prepare-report.js';
 
 export async function validateReport(
   options: ValidateReportOptions,
@@ -71,6 +76,7 @@ function validateAnalysisOptions(options: ValidateReportOptions | InspectReportO
   readonly input: string;
   readonly format?: OutputFormat;
   readonly review?: string;
+  readonly url?: string;
 } {
   const value: unknown = options;
   if (!isRecord(value)) throw analysisOptionsError();
@@ -78,18 +84,20 @@ function validateAnalysisOptions(options: ValidateReportOptions | InspectReportO
     const keys = Reflect.ownKeys(value);
     if (
       !Object.hasOwn(value, 'input') ||
-      keys.some((key) => !['input', 'format', 'review'].includes(String(key)))
+      keys.some((key) => !['input', 'format', 'review', 'url'].includes(String(key)))
     ) {
       throw analysisOptionsError();
     }
     const inputDescriptor = Object.getOwnPropertyDescriptor(value, 'input');
     const formatDescriptor = Object.getOwnPropertyDescriptor(value, 'format');
     const reviewDescriptor = Object.getOwnPropertyDescriptor(value, 'review');
+    const urlDescriptor = Object.getOwnPropertyDescriptor(value, 'url');
     if (
       inputDescriptor === undefined ||
       !('value' in inputDescriptor) ||
       (formatDescriptor !== undefined && !('value' in formatDescriptor)) ||
-      (reviewDescriptor !== undefined && !('value' in reviewDescriptor))
+      (reviewDescriptor !== undefined && !('value' in reviewDescriptor)) ||
+      (urlDescriptor !== undefined && !('value' in urlDescriptor))
     ) {
       throw analysisOptionsError();
     }
@@ -99,12 +107,14 @@ function validateAnalysisOptions(options: ValidateReportOptions | InspectReportO
       throw analysisOptionsError();
     }
     const format = validateRequestedFormat(formatDescriptor?.value);
+    const url = validateRequestedUrl(urlDescriptor?.value);
     if (review !== undefined && (typeof review !== 'string' || review.length === 0))
       throw analysisOptionsError();
     return {
       input,
       ...(format === undefined ? {} : { format }),
       ...(review === undefined ? {} : { review }),
+      ...(url === undefined ? {} : { url }),
     };
   } catch (error) {
     if (error instanceof AgenticReportError) throw error;
@@ -116,8 +126,9 @@ function analysisOptionsError(): AgenticReportError {
   return new AgenticReportError({
     level: 'error',
     code: 'ANALYSIS_OPTIONS_INVALID',
-    message: 'Analysis options must contain an input and an optional supported format.',
-    remediation: 'Pass { input: string, format?: "single-file" | "directory" }.',
+    message: 'Analysis options must contain an input and optional format, review and url values.',
+    remediation:
+      'Pass { input: string, format?: "single-file" | "directory", review?: string, url?: string }.',
     details: { supportedFormats: OUTPUT_FORMATS },
   });
 }

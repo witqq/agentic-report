@@ -5,6 +5,8 @@ language: en
 preset: studio
 scrollProgress: true
 presetSwitcher: true
+url: https://example.com/landing/
+image: preview.png
 ---
 
 # Landing registry corpus

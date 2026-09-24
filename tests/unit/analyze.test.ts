@@ -122,6 +122,7 @@ describe('report analysis', () => {
       'inspect',
       'review',
       'schema',
+      'sitemap',
       'validate',
     ]);
     expect(inspected.catalog.starters.map(({ id }) => id)).toStrictEqual([

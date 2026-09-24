@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import rehypeShiki from '@shikijs/rehype';
+import rehypeShikiFromHighlighter from '@shikijs/rehype/core';
 import type { Element, Root } from 'hast';
 import { lookup as lookupMime } from 'mime-types';
 import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from 'rehype-sanitize';
@@ -12,11 +12,19 @@ import remarkDirective from 'remark-directive';
 import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
+import {
+  bundledLanguages,
+  getSingletonHighlighter,
+  isSpecialLang,
+  type HighlighterGeneric,
+  type LanguageRegistration,
+} from 'shiki';
 import { unified, type Plugin } from 'unified';
 import { visit } from 'unist-util-visit';
 
 import {
   authoringRegistry,
+  STILL_IMAGE_EXTENSIONS,
   type AuthoringRegistryDefinition,
   type DirectiveDefinition,
   type PageLocaleChoice,
@@ -139,12 +147,188 @@ const VIDEO_TYPES: Readonly<Record<string, string>> = {
   '.ogv': 'video/ogg',
 };
 
-const POSTER_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif']);
-
 function videoType(reference: string): string | undefined {
   const withoutQuery = reference.split(/[?#]/, 1)[0] ?? '';
   return VIDEO_TYPES[path.extname(withoutQuery).toLowerCase()];
 }
+
+const CODE_THEMES = { light: 'github-light', dark: 'github-dark' } as const;
+
+/**
+ * Подсветчик один на процесс и стартует без грамматик: компиляция всех встроенных грамматик Shiki
+ * стоит секунды на каждый процесс, а отчёту нужны только грамматики его собственных блоков кода.
+ */
+let codeHighlighter: Promise<HighlighterGeneric<string, string>> | undefined;
+const grammarLoads = new Map<string, Promise<void>>();
+
+function sharedCodeHighlighter(): Promise<HighlighterGeneric<string, string>> {
+  codeHighlighter ??= getSingletonHighlighter({
+    themes: Object.values(CODE_THEMES),
+    langs: [],
+  }) as Promise<HighlighterGeneric<string, string>>;
+  return codeHighlighter;
+}
+
+interface GrammarIndex {
+  /** Всякое имя, под которым полный набор регистрировал язык: id, псевдоним, имя грамматики. */
+  readonly byName: ReadonlyMap<string, readonly LanguageRegistration[]>;
+  /** Грамматика по своей области: так на неё ссылаются `include` других грамматик. */
+  readonly byScope: ReadonlyMap<string, LanguageRegistration>;
+  /** Грамматики-инъекции по области, в которую они встраивают свои правила. */
+  readonly injectionsByScope: ReadonlyMap<string, readonly LanguageRegistration[]>;
+}
+
+let grammarIndex: Promise<GrammarIndex> | undefined;
+
+/**
+ * Метаданные всех встроенных грамматик без их компиляции. Импорт модулей дёшев; дорого только то,
+ * что делает `loadLanguage`, и оно достаётся лишь грамматикам, которые нужны документу.
+ */
+function sharedGrammarIndex(): Promise<GrammarIndex> {
+  grammarIndex ??= (async () => {
+    const byName = new Map<string, LanguageRegistration[]>();
+    const byScope = new Map<string, LanguageRegistration>();
+    const injectionsByScope = new Map<string, LanguageRegistration[]>();
+    const seen = new Set<LanguageRegistration>();
+    const register = (name: string, grammars: readonly LanguageRegistration[]): void => {
+      if (!byName.has(name)) byName.set(name, [...grammars]);
+    };
+    for (const [id, load] of Object.entries(bundledLanguages)) {
+      const grammars = (await load()).default;
+      register(id, grammars);
+      for (const grammar of grammars) {
+        if (seen.has(grammar)) continue;
+        seen.add(grammar);
+        register(grammar.name, [grammar]);
+        if (!byScope.has(grammar.scopeName)) byScope.set(grammar.scopeName, grammar);
+        for (const alias of grammar.aliases ?? []) register(alias, [grammar]);
+        for (const scope of grammar.injectTo ?? []) {
+          injectionsByScope.set(scope, [...(injectionsByScope.get(scope) ?? []), grammar]);
+        }
+      }
+    }
+    return { byName, byScope, injectionsByScope };
+  })();
+  return grammarIndex;
+}
+
+const includedScopeCache = new WeakMap<LanguageRegistration, readonly string[]>();
+
+/** Внешние области, на которые правила грамматики ссылаются через `include`: `source.css#rule`. */
+function includedScopes(grammar: LanguageRegistration): readonly string[] {
+  const cached = includedScopeCache.get(grammar);
+  if (cached !== undefined) return cached;
+  const scopes = new Set<string>();
+  const pending: unknown[] = [grammar];
+  for (let value = pending.pop(); value !== undefined; value = pending.pop()) {
+    if (Array.isArray(value)) {
+      pending.push(...value);
+    } else if (typeof value === 'object' && value !== null) {
+      for (const [key, nested] of Object.entries(value)) {
+        if (key === 'include' && typeof nested === 'string') {
+          const scope = nested.split('#', 1)[0] ?? '';
+          if (scope !== '' && !scope.startsWith('$')) scopes.add(scope);
+        } else {
+          pending.push(nested);
+        }
+      }
+    }
+  }
+  const result = [...scopes];
+  includedScopeCache.set(grammar, result);
+  return result;
+}
+
+/**
+ * Грамматики блоков вместе со всем, от чего зависит их подсветка: встроенными сразу и лениво
+ * языками, областями из `include` и инъекциями в любую уже взятую область. Полный набор давал это
+ * неявно; без замыкания блок `markdown` теряет YAML во frontmatter, `typescript` — CSS и HTML в
+ * теговых шаблонах, а `jinja-html` — сами конструкции Jinja.
+ */
+function grammarClosure(index: GrammarIndex, languages: Iterable<string>): LanguageRegistration[] {
+  const selected = new Map<string, LanguageRegistration>();
+  const pending = [...languages].flatMap((language) => index.byName.get(language) ?? []);
+  for (let grammar = pending.pop(); grammar !== undefined; grammar = pending.pop()) {
+    if (selected.has(grammar.name)) continue;
+    selected.set(grammar.name, grammar);
+    for (const embedded of [
+      ...(grammar.embeddedLangs ?? []),
+      ...(grammar.embeddedLangsLazy ?? []),
+    ]) {
+      pending.push(...(index.byName.get(embedded) ?? []));
+    }
+    for (const scope of includedScopes(grammar)) {
+      const included = index.byScope.get(scope);
+      if (included !== undefined) pending.push(included);
+    }
+    // Shiki применяет к грамматике инъекции в каждый точечный префикс её области: `source.js.jsx`
+    // получает и то, что встраивается в `source.js`.
+    const scopeParts = grammar.scopeName.split('.');
+    for (let length = 1; length <= scopeParts.length; length += 1) {
+      const scope = scopeParts.slice(0, length).join('.');
+      pending.push(...(index.injectionsByScope.get(scope) ?? []));
+    }
+  }
+  return [...selected.values()];
+}
+
+/** Одна загрузка на грамматику для всех параллельных сборок; неудачная не остаётся в кеше. */
+async function loadGrammars(
+  highlighter: HighlighterGeneric<string, string>,
+  grammars: readonly LanguageRegistration[],
+): Promise<void> {
+  const loaded = new Set(highlighter.getLoadedLanguages());
+  const missing = grammars.filter(
+    (grammar) => !loaded.has(grammar.name) && !grammarLoads.has(grammar.name),
+  );
+  if (missing.length > 0) {
+    const load = highlighter.loadLanguage(...missing);
+    for (const grammar of missing) grammarLoads.set(grammar.name, load);
+    load.catch(() => {
+      for (const grammar of missing) {
+        if (grammarLoads.get(grammar.name) === load) grammarLoads.delete(grammar.name);
+      }
+    });
+  }
+  await Promise.all(grammars.map((grammar) => grammarLoads.get(grammar.name)));
+}
+
+/** Язык блока так же, как его читает `@shikijs/rehype`: класс `language-*` первого `code` в `pre`. */
+function fenceLanguage(node: Element): string | undefined {
+  const head = node.children[0];
+  if (head?.type !== 'element' || head.tagName !== 'code') return undefined;
+  const classes = head.properties.className;
+  const languageClass = Array.isArray(classes)
+    ? classes.find((value) => typeof value === 'string' && value.startsWith('language-'))
+    : undefined;
+  return typeof languageClass === 'string' ? languageClass.slice('language-'.length) : undefined;
+}
+
+/**
+ * Догружает грамматики, нужные блокам документа, и подсвечивает без ленивого режима: блок с
+ * неизвестным языком остаётся простым кодом, как и при полном наборе грамматик, а не роняет сборку.
+ */
+const rehypeHighlightCode: Plugin<[], Root> = () => async (tree, file) => {
+  const languages = new Set<string>();
+  visit(tree, 'element', (node: Element) => {
+    if (node.tagName !== 'pre') return;
+    const language = fenceLanguage(node);
+    if (language !== undefined && !isSpecialLang(language)) languages.add(language);
+  });
+  const highlighter = await sharedCodeHighlighter();
+  if (languages.size > 0) {
+    await loadGrammars(highlighter, grammarClosure(await sharedGrammarIndex(), languages));
+  }
+  const highlight = rehypeShikiFromHighlighter(highlighter, {
+    themes: CODE_THEMES,
+    defaultColor: false,
+    parseMetaString: (metaString) => {
+      const metadata = parseCodeTermMetadata(metaString);
+      return metadata.kind === 'valid' ? { dataCodeTerms: metadata.keys.join(',') } : undefined;
+    },
+  });
+  await highlight(tree, file, () => undefined);
+};
 
 type AssetTargetKind = 'image' | 'video' | 'asset' | 'font';
 
@@ -244,14 +428,7 @@ export async function renderMarkdown(
     .use(remarkRehype)
     .use(rehypeSanitize, semanticSanitizeSchema)
     .use(rehypeSlug)
-    .use(rehypeShiki, {
-      themes: { light: 'github-light', dark: 'github-dark' },
-      defaultColor: false,
-      parseMetaString: (metaString) => {
-        const metadata = parseCodeTermMetadata(metaString);
-        return metadata.kind === 'valid' ? { dataCodeTerms: metadata.keys.join(',') } : undefined;
-      },
-    })
+    .use(rehypeHighlightCode)
     .use(rehypeReviewTargets, {
       sourceRoot: options.sourceRoot,
       sourceMap: options.sourceMap,
@@ -396,7 +573,7 @@ async function processVideoTarget(
   let posterUrl: string | undefined;
   if (typeof poster === 'string') {
     const extension = path.extname(poster.split(/[?#]/, 1)[0] ?? '').toLowerCase();
-    if (!POSTER_EXTENSIONS.has(extension)) {
+    if (!STILL_IMAGE_EXTENSIONS.has(extension)) {
       throw new AgenticReportError({
         level: 'error',
         code: 'INVALID_VIDEO_SOURCE',
@@ -494,12 +671,33 @@ function assetSource(target: {
 async function materializeLocalAsset(
   source: string,
   options: AssetPluginOptions,
-): Promise<{
+): Promise<LocalResource> {
+  const resource = await resolveLocalResource(source, options);
+  if (resource.file !== undefined) {
+    options.collector.resourceFiles.set(resource.file.relativePath, resource.file.bytes);
+    options.collector.externalAssets += 1;
+  }
+  return resource;
+}
+
+export interface LocalResource {
+  /** `data:` URL в single-file и относительный путь `assets/<имя>.<12 hex><расширение>` в directory. */
   readonly url: string;
   readonly extension: string;
   readonly sourcePath: string;
   readonly sha256: string;
-}> {
+  /** Файл, который directory-вывод положит рядом со страницей; в single-file его нет. */
+  readonly file?: PreparedResourceFile;
+}
+
+/**
+ * Одна дорога локального ресурса для содержимого и для метаданных страницы: ограничение корнем
+ * источника, защита вывода от перезаписи источника, чтение, тип и имя с хешем содержимого.
+ */
+export async function resolveLocalResource(
+  source: string,
+  options: Pick<MarkdownRenderOptions, 'sourceRoot' | 'format' | 'outputFilePath'>,
+): Promise<LocalResource> {
   const withoutQuery = source.split(/[?#]/, 1)[0];
   if (withoutQuery === undefined || withoutQuery.length === 0) {
     throw new AgenticReportError({
@@ -548,11 +746,15 @@ async function materializeLocalAsset(
     return { url, extension, sourcePath: assetPath, sha256 };
   }
 
-  const digest = createHash('sha256').update(bytes).digest('hex').slice(0, 12);
-  const fileName = `${path.basename(assetPath, extension)}.${digest}${extension}`;
-  options.collector.resourceFiles.set(`assets/${fileName}`, bytes);
-  options.collector.externalAssets += 1;
-  return { url: `assets/${fileName}`, extension, sourcePath: assetPath, sha256 };
+  const fileName = `${path.basename(assetPath, extension)}.${sha256.slice(0, 12)}${extension}`;
+  const relativePath = `assets/${fileName}`;
+  return {
+    url: relativePath,
+    extension,
+    sourcePath: assetPath,
+    sha256,
+    file: { relativePath, bytes },
+  };
 }
 
 function isNonLocalReference(reference: string): boolean {

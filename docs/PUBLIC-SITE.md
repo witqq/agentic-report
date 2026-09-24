@@ -4,6 +4,13 @@ The public static tree is assembled by `pnpm build:site`. The compiler still bui
 the staging command only places independently compiled HTML pages and canonical direct files under one
 origin. It adds no router, server, or second authoring format.
 
+`website/routes.json` declares that origin (`https://agentic-report.witqq.dev`). Every page route is a
+directory index built as `directory` output with the URL of its place in the tree, so each page carries its
+canonical link, OpenGraph and Twitter card metadata and keeps its images, fonts, styles and runtime in hashed
+files under its own `assets/`; the landing HTML stays well below the 2,097,152 bytes search crawlers read.
+The landing declares `image`, so links to it unfurl with a preview. After staging, `agentic-report sitemap`
+writes `sitemap.xml` with every page URL and a `robots.txt` that names it.
+
 ## Build and inspect locally
 
 Use Node.js 24.18.0 or newer from a clean committed revision:
@@ -14,8 +21,8 @@ pnpm build:site -- --output ./site --revision "$(git rev-parse HEAD)"
 ```
 
 The output destination must not exist. Open `site/index.html` through `file://`, then inspect
-`site/release.json`. Every route and every staged file other than `release.json` has a recorded SHA-256
-digest and byte count. Direct Markdown and skill files are copied from their canonical repository sources;
+`site/release.json`. Every route and every staged file other than `release.json`, including `sitemap.xml`,
+`robots.txt` and each page's hashed assets, has a recorded SHA-256 digest and byte count. Direct Markdown and skill files are copied from their canonical repository sources;
 they are not rendered or maintained as separate copies.
 
 The landing and every staged demo are ordinary bilingual compiler inputs. Their canonical English entries
@@ -45,6 +52,8 @@ Deploy the complete `site/` tree without an SPA fallback. Before accepting the d
 - no `-k`, custom CA, browser certificate bypass, hosts override, or HTTP downgrade;
 - HTTP 2xx for every route in `website/routes.json` and the expected MIME family: HTML for `.html`,
   Markdown/plain text for `.md` and `.txt`, and JSON for `.json`;
+- `robots.txt` as plain text naming `https://agentic-report.witqq.dev/sitemap.xml`, and `sitemap.xml` as XML,
+  both revalidated rather than cached as immutable;
 - a deliberate absent path returning a real 404 rather than the landing HTML;
 - hosted direct-file bytes matching `release.json`, normal landing navigation, and normal browser behavior.
 

@@ -18,9 +18,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the resulting file:
 
 ```sh
-npx --yes agentic-report@0.16.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.17.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.16.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.17.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. `build` validates the complete source before publishing the
@@ -57,7 +57,7 @@ If you do not want to execute the published `agentic-report` npm package, clone 
 inspect the repository, run its checks, and invoke the compiled CLI directly:
 
 ```sh
-git clone --branch v0.16.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.17.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -415,10 +415,10 @@ other byte alone. Today one check computes them: the term reference that a regis
 missing. It is the only command that writes to an authored source.
 
 Every command answers an agent without a flag, because agents are who run this package: `init`, `build`,
-`validate`, `inspect`, `fix` and `review` write NDJSON records, and `schema`, `describe` and `examples`
+`validate`, `inspect`, `fix`, `review` and `sitemap` write NDJSON records, and `schema`, `describe` and `examples`
 write their one reference document as a compact JSON line. `--json` is accepted and names that default. Add
-`--human` when a person is reading — it prints prose from `init`, `build`, `validate`, `fix`, `review` and
-`examples`, and the same document indented from `inspect`, `schema` and `describe`.
+`--human` when a person is reading — it prints prose from `init`, `build`, `validate`, `fix`, `review`, `sitemap`
+and `examples`, and the same document indented from `inspect`, `schema` and `describe`.
 
 ## Product-built landing
 
@@ -475,6 +475,7 @@ node dist/node/cli.js schema
 node dist/node/cli.js schema --scope directives
 node dist/node/cli.js schema --scope source
 node dist/node/cli.js examples --json
+node dist/node/cli.js sitemap ./public
 ```
 
 To exercise the current installable artifact rather than repository-relative `dist`, create a tarball and
@@ -538,6 +539,34 @@ private sibling directory and published by rename. Injected write and rename fai
 previous authoritative output, remove compiler-owned staging paths, and allow an immediate retry.
 `output.maxInlineBytes` is a warning threshold over the exact serialized inline CSS, package runtime, and
 image/download data-URL occurrences. Font data URLs are counted once through the serialized stylesheet.
+
+### Pages served on the web
+
+Declare the address a page is served from as `url` in its metadata, or pass `--url` to `build`:
+
+```bash
+agentic-report build ./site-source --format directory --url https://example.com/guide/ --output ./public/guide
+```
+
+The page head then carries `<link rel="canonical">`, OpenGraph (`og:url`, `og:title`, `og:description`,
+`og:locale` and the other embedded language as `og:locale:alternate`) and a Twitter card. An optional local
+`image` becomes an absolute `og:image` for link previews in a directory build. Build public pages as
+`directory`: Googlebot reads only the first 2,097,152 bytes of an HTML file, and directory output keeps
+images, fonts, styles and the runtime out of the HTML. A public page above that size reports
+`PUBLIC_PAGE_OVER_CRAWLER_LIMIT`.
+
+After publishing a tree of such pages at one origin, index it:
+
+```bash
+agentic-report sitemap ./public
+```
+
+`sitemap` reads the canonical URL each agentic-report page carries and writes `sitemap.xml` and a
+`robots.txt` that names it. The tree root is the origin root, so every page URL must match the page's
+place in the tree — `guide/index.html` is `https://example.com/guide/`. The command refuses, without
+writing anything, when the files already exist, pages disagree on the origin, a URL does not match its
+place, an agentic-report page has no URL, the tree has no agentic-report page, contains a symbolic link or
+special file, or the path is not a directory; HTML from other tools is listed as skipped.
 
 For implementation boundaries and verification guarantees, see
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/TESTING.md`](docs/TESTING.md).

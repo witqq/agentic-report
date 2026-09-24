@@ -14,9 +14,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the result:
 
 ```sh
-npx --yes agentic-report@0.16.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.17.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.16.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.17.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. Build validates the complete source before writing, so
@@ -67,7 +67,7 @@ When the user does not trust the published package, do not silently fall back to
 release tag, let the user inspect the repository, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.16.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.17.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -177,6 +177,14 @@ An appendix glossary definition may sit directly beside the section explanation;
 the single appendix and preserves the same full-definition link. Do not nest appendix definitions in lists,
 quotes, the lead, or unrelated components.
 
+When the page will be served at a known address, build it with `--format directory --url <address>` or
+declare `url` in the primary entry. The head then carries a canonical link, OpenGraph and a Twitter card;
+an optional local `image` becomes an absolute `og:image` in that directory build. Directory output keeps
+the HTML under the 2,097,152 bytes search crawlers read, and a larger public page reports
+`PUBLIC_PAGE_OVER_CRAWLER_LIMIT`. After the pages of one origin are published, run
+`agentic-report sitemap <published-directory>` to write `sitemap.xml` and `robots.txt` from their
+canonical URLs.
+
 When the artifact leaves the source workstation, add `--share`. The compiler derives path-free non-link
 filename/line text from each validated source helper and uses `source:line` for unsafe terminals;
 compiler-owned local paths and authored directory/free-form labels are omitted, and the JSON result reports
@@ -259,9 +267,9 @@ sources.
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.16.0 describe --json
-npx --yes agentic-report@0.16.0 schema --scope source
-npx --yes agentic-report@0.16.0 examples --json
+npx --yes agentic-report@0.17.0 describe --json
+npx --yes agentic-report@0.17.0 schema --scope source
+npx --yes agentic-report@0.17.0 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),

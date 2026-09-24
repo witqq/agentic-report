@@ -54,7 +54,13 @@ Markdown + metadata + local assets + partials + semantic directives
   replacement.
 - `src/render/markdown.ts` uses the unified/remark/rehype AST pipeline with GitHub Flavored Markdown table,
   strikethrough, task-list, and autolink-literal parsing. Raw HTML is not passed through; rehype sanitization
-  runs before trusted compile-time syntax highlighting. The authoring registry owns the serializable
+  runs before trusted compile-time syntax highlighting. One process-level Shiki highlighter loads only the
+  grammars a document's fences need: each fence language, resolved through every name the Shiki bundle
+  registers, together with the grammars it embeds eagerly or lazily, the scopes its rules `include`, and
+  the injection grammars targeting any of those scopes or a dot-prefix of one, which is how Shiki applies
+  injections. Output is therefore the same as with every bundled grammar loaded, while a document without
+  fences loads none; a fence in a language Shiki does not bundle, or without a language, stays plain
+  escaped code. The authoring registry owns the serializable
   code-fence `terms` envelope, shared key constraint, bounds, uniqueness and exact-match policy; discovery
   projects those fields and the mdast parser consumes the same contract before transporting validated keys
   through Shiki metadata. Trusted post-Shiki enhancement splits existing styled HAST spans around bounded
@@ -109,7 +115,11 @@ Markdown + metadata + local assets + partials + semantic directives
   enhanced HAST, fills authored in-flow maps with exact headings, and projects optional short labels for the
   shell. Appendix and subordinate headings remain excluded without parsing serialized HTML.
 - `src/render/document.tsx` creates the static HTML document from prepared locale variants, navigation,
-  selected registry-owned page layout/tokens, responsive shell, metadata, and content security policy. One
+  selected registry-owned page layout/tokens, responsive shell, metadata, and content security policy. For a
+  page with a public URL it also writes a static canonical link, OpenGraph, and Twitter card metadata from
+  the primary variant; `src/render/public-page.ts` maps language tags to OpenGraph locales through the
+  registry-owned `PUBLIC_PAGE_CONTRACT`. That head metadata sits outside the locale templates, so a
+  reader's language switch never rewrites it. One
   active variant and inert alternate templates contain complete localized shell/article state; the native
   selector exists only when more than one variant is present. It allocates collision-free shell IDs around
   each variant's authored content IDs and uses them consistently for navigation and accessibility
@@ -163,6 +173,13 @@ Markdown + metadata + local assets + partials + semantic directives
   declarative source, invokes `build` once, and opens the artifact: build itself crosses the complete
   preparation boundary before publication. `validate` and `inspect` are optional projections, not stateful
   prerequisites for compilation.
+- `src/core/site-index.ts` indexes a published static tree for search engines. It walks the tree and
+  refuses it whole when any symbolic link or special file is present, recognizes agentic-report pages by the package `generator` meta, reads only
+  their `<head>`, and takes each page's own canonical URL; other HTML files are reported as skipped and
+  never interpreted. All canonical URLs must share one origin and each must equal the page's place in the
+  tree, whose root is the origin root. It then creates `sitemap.xml` and `robots.txt` exclusively, and
+  refuses without writing on any mismatch or when either file exists. It is exposed as ESM
+  `generateSitemap()` and CLI `sitemap <directory>`.
 - `src/core/inspect-review.ts` reads one strictly bounded review JSON file confined under the prepared
   source root, validates it, binds its threads and revision segments to the current target manifest, and returns a
   centrally sanitized result without publishing output or editing Markdown.
@@ -171,7 +188,7 @@ Markdown + metadata + local assets + partials + semantic directives
   above never do. Replacements whose ranges overlap within one round are deferred rather than merged, and
   the run repeats validation until no applicable replacement is left or a bounded number of rounds is
   reached, reporting whatever remains.
-- `src/cli.ts` adapts initialization, building, validation, inspection, repair, review binding, and discovery to
+- `src/cli.ts` adapts initialization, building, validation, inspection, repair, review binding, site indexing, and discovery to
   one diagnostic model, and `src/cli-output.ts` projects that model. The agent projection is the default
   because the package is consumed by agents, and `--json` remains accepted for what already happens. Its
   shape follows the kind of answer: a run reports through NDJSON records, while the discovery commands
@@ -192,7 +209,8 @@ The npm package exposes one `agentic-report` executable and one ESM root export.
 available through `describe`/`discover`, scoped `schema`, and `examples`. `fix` and its ESM equivalent
 `fixReport()` apply the replacements diagnostics carry in their `fix` field — a file, a range in the
 authored text and the replacement — and write nothing else; a diagnostic carries that field only where
-applying it preserves every authored construction the range spans. The ESM root exposes
+applying it preserves every authored construction the range spans. `sitemap` and its ESM equivalent
+`generateSitemap()` write `sitemap.xml` and `robots.txt` into a published tree and nothing else. The ESM root exposes
 `sourceContract`, defensive `getSourceContract()` and `getAuthoringSchema()` values, and example discovery;
 concrete Zod schemas remain internal. The root also exposes `initProject()`, which selects the default or
 any initializable named starter or alias from the typed registry, resolves its complete tree beside the installed
@@ -480,6 +498,20 @@ not report success. Hostile concurrent path replacement and process/OS crash rec
 proportionate filesystem model. The inline warning threshold counts the actual serialized CSS, inline
 runtime, and image/download data URLs; a font data URL is counted once through generated CSS.
 
+A public URL comes from the primary manifest `url` or from the `build`/`validate`/`inspect` `--url` option
+and ESM `url`, which takes precedence; `src/authoring/public-url.ts` is the one validator for the manifest
+format, the option, and the JSON Schema format `absolute-http-url`. The loader checks an optional manifest
+`image` at its authored field — a PNG, JPEG, WebP, GIF, or AVIF regular file inside the source root. A
+`../` path fails as `INVALID_MANIFEST` at the field, a symbolic link resolving outside the root as
+`ASSET_OUTSIDE_SOURCE`, and another type or a path that is not a regular file as `INVALID_SOCIAL_IMAGE` with
+the field range. Preparation derives the page metadata from the URL,
+resolves the image through the same confined local-resource path as content assets, protects it from
+output collision like any source file, and publishes the image as a hashed `assets/` file with an absolute `og:image` only for directory
+output. It warns with `SOCIAL_IMAGE_NOT_PUBLISHED` when a declared image cannot be published and with
+`PUBLIC_PAGE_OVER_CRAWLER_LIMIT` when the serialized HTML of a public page exceeds
+`PUBLIC_PAGE_CONTRACT.crawlerHtmlByteLimit` (2,097,152 bytes). Without a URL the document head and bytes are
+unchanged.
+
 `build --share` and ESM `share: true` are one build profile over the same preparation/publication path in
 both formats. The typed result always identifies the profile and exact neutralized source-link count;
 human output states that count for an explicit share build. Validation and inspection do not publish and
@@ -615,10 +647,15 @@ resize, short-final and document-bottom ownership through bounded terminal geome
 ## Public site staging
 
 The public site is not a compiler mode or a multi-page framework. `scripts/build-site.ts` reads the closed
-`website/routes.json` inventory, invokes the normal page compiler independently for the landing, each
-showcase, and each rendered documentation page, and copies canonical direct Markdown/text/skill files
-without rewriting their bytes. It publishes the complete new tree by one sibling-directory rename and
-refuses an existing destination.
+`website/routes.json` inventory with its declared public `origin`, invokes the normal page compiler
+independently for the landing, each showcase, and each rendered documentation page, and copies canonical
+direct Markdown/text/skill files without rewriting their bytes. Every page route is a directory index built
+in `directory` format with the public URL of its place in the tree (`examples/basic/index.html` →
+`<origin>/examples/basic/`), in a private scratch directory whose files are then moved into the staged tree
+without overwriting any staged file; the landing's tree is therefore the site root while every other route
+lives below it. After all routes are staged, the assembler runs the package `generateSitemap` operation,
+so `sitemap.xml` and `robots.txt` come from the pages' own canonical URLs. It publishes the complete new tree
+by one sibling-directory rename and refuses an existing destination.
 
 Every staged route is relative and confined to the output tree. Every declared source is relative to
 `website/` and confined to the repository before use; copied sources must be ordinary non-symlink files.
@@ -630,8 +667,8 @@ and revision produce identical staged bytes.
 The human docs, direct agent quickstart, complete agent reference, source contract, canonical skill, and
 `llms.txt` are available under the same static origin as the product-built landing and separately built
 examples. Every staged bilingual demo and the landing also expose their canonical English and Russian
-Markdown entries as direct copy routes. Hosting is outside the compiler. A valid deployment serves these files directly with appropriate
-MIME types, a real 404 rather than an SPA fallback, and ordinary publicly trusted HTTPS. The reference
+Markdown entries as direct copy routes. Hosting is outside the compiler. A valid deployment serves these files, including
+`robots.txt` and `sitemap.xml`, directly with appropriate MIME types, a real 404 rather than an SPA fallback, and ordinary publicly trusted HTTPS. The reference
 Nginx policy requires every mutable HTML, Markdown, manifest, and release-metadata route to revalidate while
 allowing a one-year immutable cache only for filenames containing the compiler's 12-hex content hash. ETag
 remains enabled for both families so unchanged conditional requests can return `304` without risking a stale
