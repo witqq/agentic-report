@@ -9,9 +9,9 @@ Use Node.js 24.18.0 or newer. Initialize a suitable packaged starter, replace it
 once, and open the result:
 
 ```bash
-npx --yes agentic-report@0.15.0 init ./my-report --starter report --json
+npx --yes agentic-report@0.16.0 init ./my-report --starter report --json
 # Edit ./my-report/report.md and its local assets.
-npx --yes agentic-report@0.15.0 build ./my-report --output ./my-report.html --json
+npx --yes agentic-report@0.16.0 build ./my-report --output ./my-report.html --json
 ```
 
 Open `my-report.html` through `file://`. Build runs the complete source and render preparation before
