@@ -181,7 +181,9 @@ When the page will be served at a known address, build it with `--format directo
 declare `url` in the primary entry. The head then carries a canonical link, OpenGraph and a Twitter card;
 an optional local `image` becomes an absolute `og:image` in that directory build. Directory output keeps
 the HTML under the 2,097,152 bytes search crawlers read, and a larger public page reports
-`PUBLIC_PAGE_OVER_CRAWLER_LIMIT`.
+`PUBLIC_PAGE_OVER_CRAWLER_LIMIT`. After the pages of one origin are published, run
+`agentic-report sitemap <published-directory>` to write `sitemap.xml` and `robots.txt` from their
+canonical URLs.
 
 When the artifact leaves the source workstation, add `--share`. The compiler derives path-free non-link
 filename/line text from each validated source helper and uses `source:line` for unsafe terminals;

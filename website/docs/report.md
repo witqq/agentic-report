@@ -244,6 +244,9 @@ copies only visible rendered text through the localized package control.
   link, OpenGraph with locale alternates and a Twitter card; an optional `image` becomes an absolute
   `og:image` in directory output. Build public pages as `directory` to keep the HTML under the
   2,097,152 bytes search crawlers read; a larger public page reports `PUBLIC_PAGE_OVER_CRAWLER_LIMIT`.
+- `sitemap <directory>` indexes a published tree of such pages: it writes `sitemap.xml` from their canonical
+  URLs and a `robots.txt` naming it, and refuses without writing when a URL does not match the page's place
+  in the tree or either file already exists.
 - `build --share` derives path-free non-link filename/line text from each validated source helper, falls back
   to `source:line` for unsafe terminals, omits workstation paths and authored directory/free-form labels, and
   reports the exact count without editing Markdown.

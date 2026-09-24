@@ -475,6 +475,7 @@ node dist/node/cli.js schema
 node dist/node/cli.js schema --scope directives
 node dist/node/cli.js schema --scope source
 node dist/node/cli.js examples --json
+node dist/node/cli.js sitemap ./public
 ```
 
 To exercise the current installable artifact rather than repository-relative `dist`, create a tarball and
@@ -553,6 +554,18 @@ The page head then carries `<link rel="canonical">`, OpenGraph (`og:url`, `og:ti
 `directory`: Googlebot reads only the first 2,097,152 bytes of an HTML file, and directory output keeps
 images, fonts, styles and the runtime out of the HTML. A public page above that size reports
 `PUBLIC_PAGE_OVER_CRAWLER_LIMIT`.
+
+After publishing a tree of such pages at one origin, index it:
+
+```bash
+agentic-report sitemap ./public
+```
+
+`sitemap` reads the canonical URL each agentic-report page carries and writes `sitemap.xml` and a
+`robots.txt` that names it. The tree root is the origin root, so every page URL must match the page's
+place in the tree — `guide/index.html` is `https://example.com/guide/`. The command refuses, without
+writing anything, when the files already exist, pages disagree on the origin, a URL does not match its
+place, or an agentic-report page has no URL; HTML from other tools is listed as skipped.
 
 For implementation boundaries and verification guarantees, see
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/TESTING.md`](docs/TESTING.md).

@@ -154,7 +154,9 @@ unresolved content facts.
   (or declare `url` in the primary entry). The build adds canonical, OpenGraph and Twitter card metadata;
   directory output keeps the HTML under the 2,097,152 bytes search crawlers read. Add a local `image` for a
   link preview. Report `PUBLIC_PAGE_OVER_CRAWLER_LIMIT` or `SOCIAL_IMAGE_NOT_PUBLISHED` if the result
-  carries them. Do not invent an address the user did not give.
+  carries them. Do not invent an address the user did not give. When the user publishes a whole tree of
+  such pages at one origin, the `sitemap` command (`agentic-report sitemap <published-directory>`) writes `sitemap.xml` and
+  `robots.txt` from the pages' own canonical URLs and refuses a page whose URL does not match its place.
 - Do not deploy, publish, use credentials, or mutate unrelated files. This skill authorizes only local
   installation, source authoring, validation, inspection, build, and artifact review.
 

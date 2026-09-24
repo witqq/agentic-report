@@ -173,6 +173,13 @@ Markdown + metadata + local assets + partials + semantic directives
   declarative source, invokes `build` once, and opens the artifact: build itself crosses the complete
   preparation boundary before publication. `validate` and `inspect` are optional projections, not stateful
   prerequisites for compilation.
+- `src/core/site-index.ts` indexes a published static tree for search engines. It walks the tree without
+  following symbolic links, recognizes agentic-report pages by the package `generator` meta, reads only
+  their `<head>`, and takes each page's own canonical URL; other HTML files are reported as skipped and
+  never interpreted. All canonical URLs must share one origin and each must equal the page's place in the
+  tree, whose root is the origin root. It then creates `sitemap.xml` and `robots.txt` exclusively, and
+  refuses without writing on any mismatch or when either file exists. It is exposed as ESM
+  `generateSitemap()` and CLI `sitemap <directory>`.
 - `src/core/inspect-review.ts` reads one strictly bounded review JSON file confined under the prepared
   source root, validates it, binds its threads and revision segments to the current target manifest, and returns a
   centrally sanitized result without publishing output or editing Markdown.
@@ -202,7 +209,8 @@ The npm package exposes one `agentic-report` executable and one ESM root export.
 available through `describe`/`discover`, scoped `schema`, and `examples`. `fix` and its ESM equivalent
 `fixReport()` apply the replacements diagnostics carry in their `fix` field — a file, a range in the
 authored text and the replacement — and write nothing else; a diagnostic carries that field only where
-applying it preserves every authored construction the range spans. The ESM root exposes
+applying it preserves every authored construction the range spans. `sitemap` and its ESM equivalent
+`generateSitemap()` write `sitemap.xml` and `robots.txt` into a published tree and nothing else. The ESM root exposes
 `sourceContract`, defensive `getSourceContract()` and `getAuthoringSchema()` values, and example discovery;
 concrete Zod schemas remain internal. The root also exposes `initProject()`, which selects the default or
 any initializable named starter or alias from the typed registry, resolves its complete tree beside the installed

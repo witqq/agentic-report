@@ -662,7 +662,8 @@ Forms: leaf. Children: none.
   "fix": "Apply the replacements the product computed exactly, and nothing else.",
   "describe": "Return the complete source contract.",
   "schema": "Return manifest, directive, or complete source JSON Schema.",
-  "examples": "List packaged buildable examples."
+  "examples": "List packaged buildable examples.",
+  "sitemap": "Write sitemap.xml and robots.txt for a published tree of pages built with a public URL."
 }
 ```
 

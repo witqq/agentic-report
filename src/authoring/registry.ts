@@ -1025,6 +1025,11 @@ export const authoringRegistry = {
       description: 'Return manifest, directive, or complete source JSON Schema.',
     },
     { id: 'examples', description: 'List packaged buildable examples.' },
+    {
+      id: 'sitemap',
+      description:
+        'Write sitemap.xml and robots.txt for a published tree of pages built with a public URL.',
+    },
   ],
   examples: [
     {

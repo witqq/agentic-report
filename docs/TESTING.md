@@ -36,7 +36,9 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   OpenGraph, locale-alternate and Twitter tags of a bilingual directory page whose `og:image` resolves to the
   asset the build wrote, no image and one warning in single-file or without a URL, region and catalog
   locale mapping, option-over-manifest precedence, refused URL and image classes, primary-only ownership,
-  and the crawler warning at exactly 2,097,152 against 2,097,153 measured HTML bytes —
+  and the crawler warning at exactly 2,097,152 against 2,097,153 measured HTML bytes — the exact
+  `sitemap.xml` and `robots.txt` bytes for a compiler-built tree with root, nested directory, query-bearing
+  and foreign pages, and every sitemap refusal leaving a byte-identical tree —
   image/download/font embedding and copying, absent-only starter
   initialization, installed starter-root resolution, no-overwrite/incomplete-state behavior, CLI
   diagnostics — including one run whose three independent violations appear in both projections, the

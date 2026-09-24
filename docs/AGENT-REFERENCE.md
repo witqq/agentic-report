@@ -953,6 +953,13 @@ Exit code `3` means an unexpected internal failure occurred.
   it becomes an absolute `og:image` only in a directory build with a URL and otherwise reports
   `SOCIAL_IMAGE_NOT_PUBLISHED`. Leave `url` out of packaged or shared sources that are not published at one
   address, and pass it per build instead.
+- After the pages of one origin are published into a directory whose root is the origin root, run
+  `agentic-report sitemap <directory>`. It writes `sitemap.xml` from the pages' canonical URLs and a
+  `robots.txt` with an absolute `Sitemap:` line, lists HTML from other tools as `skipped`, and refuses
+  without writing when either file exists (`SITEMAP_TARGET_EXISTS`), origins differ
+  (`SITEMAP_ORIGIN_MISMATCH`), a URL is not the page's place in the tree — a directory index needs its
+  trailing `/` (`SITEMAP_PATH_MISMATCH`) — or an agentic-report page has no URL
+  (`SITEMAP_PAGE_WITHOUT_URL`).
 - Add `--share` when the artifact leaves the source workstation. Source-link labels remain readable
   non-links derived as path-free filename/line from the validated helper, with `source:line` for an unsafe
   terminal. An already matching short label remains exact; directory-bearing and free-form labels are

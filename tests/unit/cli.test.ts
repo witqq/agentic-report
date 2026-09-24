@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  buildReport,
   fixReport,
   getAuthoringSchema,
   getSourceContract,
@@ -275,7 +276,7 @@ describe('CLI transport', () => {
     // from a command that emits a document makes those documents false, and the promise is what a
     // reader acts on — so the division is observed against the help text of every command below, and
     // the two lists together must name every command the CLI registers.
-    const prose = ['init', 'build', 'validate', 'fix', 'review', 'examples'];
+    const prose = ['init', 'build', 'validate', 'fix', 'review', 'examples', 'sitemap'];
     const indented = ['inspect', 'schema', 'describe'];
 
     // The two lists are checked against the CLI itself, not against a number written here: a command
@@ -964,6 +965,39 @@ describe('CLI transport', () => {
       level: 'error',
       code: 'PUBLIC_URL_INVALID',
     });
+  });
+
+  it('indexes a published tree through sitemap in both projections', async () => {
+    const workspace = await createTestWorkspace('cli-sitemap');
+    workspaces.push(workspace);
+    const agentTree = path.join(workspace, 'agent');
+    const humanTree = path.join(workspace, 'human');
+    for (const tree of [agentTree, humanTree]) {
+      await buildReport({
+        input: 'examples/basic',
+        output: path.join(tree, 'index.html'),
+        url: 'https://example.com/',
+      });
+    }
+
+    const [agent, human, refused] = await Promise.all([
+      runCli(['sitemap', agentTree]),
+      runCli(['sitemap', humanTree, '--human']),
+      runCli(['sitemap', path.join(workspace, 'missing')]),
+    ]);
+
+    expect(agent).toMatchObject({ exitCode: 0, stderr: '' });
+    expect(JSON.parse(agent.stdout)).toMatchObject({
+      type: 'result',
+      urls: ['https://example.com/'],
+      skipped: [],
+    });
+    expect(human).toMatchObject({ exitCode: 0, stderr: '' });
+    expect(human.stdout).toBe(
+      `Indexed 1 page in ${path.join(await realpath(humanTree), 'sitemap.xml')} and wrote ${path.join(await realpath(humanTree), 'robots.txt')}\n`,
+    );
+    expect(refused.exitCode).toBe(1);
+    expect(JSON.parse(refused.stdout)).toMatchObject({ code: 'SITEMAP_DIRECTORY_INVALID' });
   });
 
   it('rejects the retired scripts option instead of preserving a compatibility branch', async () => {

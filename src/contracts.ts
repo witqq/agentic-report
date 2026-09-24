@@ -118,6 +118,21 @@ export interface BuildReportResult {
   readonly warnings: readonly Diagnostic[];
 }
 
+export interface GenerateSitemapOptions {
+  /** Root of a published static tree; it corresponds to the root of the pages' origin. */
+  readonly directory: string;
+}
+
+export interface GenerateSitemapResult {
+  readonly directory: string;
+  readonly sitemap: string;
+  readonly robots: string;
+  /** Canonical URLs of the indexed pages, sorted. */
+  readonly urls: readonly string[];
+  /** HTML files in the tree that agentic-report did not build, relative to the directory. */
+  readonly skipped: readonly string[];
+}
+
 export interface InitProjectOptions {
   readonly destination: string;
   readonly starter?: string;
