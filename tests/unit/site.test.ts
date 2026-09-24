@@ -211,6 +211,9 @@ const crawlRoutes = async (
   return visited;
 };
 
+// Две независимые полные сборки сайта (21 страница в directory-выводе плюс индекс для поисковиков) и
+// одна страница — около шести секунд одного прогона и больше десяти под параллельной нагрузкой, где
+// неявный бюджет хука Vitest исчерпывался раньше работы. Бюджет задан от замера с запасом.
 beforeAll(async () => {
   await rm(firstSite, { recursive: true, force: true });
   await rm(secondSite, { recursive: true, force: true });
@@ -222,7 +225,7 @@ beforeAll(async () => {
     input: path.join(repositoryRoot, 'website/docs/agent/index.md'),
     output: standalonePage,
   });
-});
+}, 60_000);
 
 describe('deterministic public site staging', () => {
   it('produces identical complete bytes for identical source, package, and revision inputs', async () => {
