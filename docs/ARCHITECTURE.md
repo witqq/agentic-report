@@ -54,7 +54,13 @@ Markdown + metadata + local assets + partials + semantic directives
   replacement.
 - `src/render/markdown.ts` uses the unified/remark/rehype AST pipeline with GitHub Flavored Markdown table,
   strikethrough, task-list, and autolink-literal parsing. Raw HTML is not passed through; rehype sanitization
-  runs before trusted compile-time syntax highlighting. The authoring registry owns the serializable
+  runs before trusted compile-time syntax highlighting. One process-level Shiki highlighter loads only the
+  grammars a document's fences need: each fence language, resolved through every name the Shiki bundle
+  registers, together with the grammars it embeds eagerly or lazily, the scopes its rules `include`, and
+  the injection grammars targeting any of those scopes or a dot-prefix of one, which is how Shiki applies
+  injections. Output is therefore the same as with every bundled grammar loaded, while a document without
+  fences loads none; a fence in a language Shiki does not bundle, or without a language, stays plain
+  escaped code. The authoring registry owns the serializable
   code-fence `terms` envelope, shared key constraint, bounds, uniqueness and exact-match policy; discovery
   projects those fields and the mdast parser consumes the same contract before transporting validated keys
   through Shiki metadata. Trusted post-Shiki enhancement splits existing styled HAST spans around bounded

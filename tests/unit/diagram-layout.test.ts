@@ -434,35 +434,42 @@ describe('flow diagram layout', () => {
     }
   });
 
-  it('never runs a connection through a node in seeded random flows', async () => {
-    for (const body of randomFlows(40)) {
-      // Обе раскладки по слоям видны читателю через переключатель, поэтому проверяются обе.
-      const all = await renderAllViews(body);
-      for (const html of [layoutView(all, 'down'), layoutView(all, 'right')]) {
-        const boxes = nodeBoxesById(html);
-        for (const route of edgePaths(html)) {
-          for (const [id, box] of boxes) {
-            if (id === route.from || id === route.to) continue;
-            const inner = {
-              x: box.x + 1,
-              y: box.y + 1,
-              width: box.width - 2,
-              height: box.height - 2,
-            };
-            for (let index = 0; index < route.points.length - 1; index += 1) {
-              const from = route.points[index];
-              const to = route.points[index + 1];
-              if (from === undefined || to === undefined) continue;
-              expect(
-                segmentHitsBox(from, to, inner),
-                `${route.from} -> ${route.to} crosses ${id}`,
-              ).toBe(false);
+  // Сорок полных раскладок по три вида — около четырёх секунд одного прогона, у самой границы
+  // неявных пяти секунд vitest: под четырьмя параллельными воркерами тест падал по времени, не по
+  // свойству. Бюджет задан от измеренной работы с запасом на нагрузку.
+  it(
+    'never runs a connection through a node in seeded random flows',
+    { timeout: 20_000 },
+    async () => {
+      for (const body of randomFlows(40)) {
+        // Обе раскладки по слоям видны читателю через переключатель, поэтому проверяются обе.
+        const all = await renderAllViews(body);
+        for (const html of [layoutView(all, 'down'), layoutView(all, 'right')]) {
+          const boxes = nodeBoxesById(html);
+          for (const route of edgePaths(html)) {
+            for (const [id, box] of boxes) {
+              if (id === route.from || id === route.to) continue;
+              const inner = {
+                x: box.x + 1,
+                y: box.y + 1,
+                width: box.width - 2,
+                height: box.height - 2,
+              };
+              for (let index = 0; index < route.points.length - 1; index += 1) {
+                const from = route.points[index];
+                const to = route.points[index + 1];
+                if (from === undefined || to === undefined) continue;
+                expect(
+                  segmentHitsBox(from, to, inner),
+                  `${route.from} -> ${route.to} crosses ${id}`,
+                ).toBe(false);
+              }
             }
           }
         }
       }
-    }
-  });
+    },
+  );
 
   it('keeps every label on its own connection and spreads the ends at one node side', async () => {
     const html = await renderDiagram(REFERENCE_FLOW);

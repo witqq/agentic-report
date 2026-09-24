@@ -28,7 +28,11 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
 ## Tiers
 
 - `unit` uses Vitest for source loading, validation, lexical and symlink partial/asset confinement,
-  Markdown/directive rendering, image/download/font embedding and copying, absent-only starter
+  Markdown/directive rendering, code highlighting that loads only the grammars a document's fences need and stays
+  byte-identical to full-bundle output for aliased, `terms`-annotated, lazily embedding (Markdown
+  frontmatter and nested fences), injected (tagged templates, and `jsx`/`angular-html` under a parent-scope injection in a
+  module-isolated file), `include`-dependent (`jinja-html`),
+  unknown and language-less fences, image/download/font embedding and copying, absent-only starter
   initialization, installed starter-root resolution, no-overwrite/incomplete-state behavior, CLI
   diagnostics — including one run whose three independent violations appear in both projections, the
   agent one without any flag and the prose one under `--human` with a `file:line:column` place per
