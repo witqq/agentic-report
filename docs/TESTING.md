@@ -281,7 +281,10 @@ ETag/conditional `304`, health, and real `404` behavior.
 - Do not record artifact hashes, byte sizes, complete generated JSON, or descriptive prose as golden
   expectations. Determinism compares independent current builds; content-addressing and integrity compute the
   expected digest from the current input bytes. Assert an exact string only when that string is itself a
-  public, serialized, accessibility, diagnostic, localization, or security contract.
+  public, serialized, accessibility, diagnostic, localization, or security contract. The one exception is
+  equivalence with a published renderer: when a change must keep output byte-identical to a released
+  version, the expected bytes are captured from that published version, never from the working tree, and
+  are refreshed only by capturing them again from it — as the code-highlighting fixtures do with 0.16.0.
 - Choose evidence that distinguishes the required behavior from a superficially similar implementation.
   For responsive or animated UI, assert geometry, state transitions, ordering, reduced-motion behavior, and
   bounded work directly. Use an ordinary settled viewport capture for visual inspection; a stitched

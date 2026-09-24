@@ -173,8 +173,8 @@ Markdown + metadata + local assets + partials + semantic directives
   declarative source, invokes `build` once, and opens the artifact: build itself crosses the complete
   preparation boundary before publication. `validate` and `inspect` are optional projections, not stateful
   prerequisites for compilation.
-- `src/core/site-index.ts` indexes a published static tree for search engines. It walks the tree without
-  following symbolic links, recognizes agentic-report pages by the package `generator` meta, reads only
+- `src/core/site-index.ts` indexes a published static tree for search engines. It walks the tree and
+  refuses it whole when any symbolic link or special file is present, recognizes agentic-report pages by the package `generator` meta, reads only
   their `<head>`, and takes each page's own canonical URL; other HTML files are reported as skipped and
   never interpreted. All canonical URLs must share one origin and each must equal the page's place in the
   tree, whose root is the origin root. It then creates `sitemap.xml` and `robots.txt` exclusively, and
@@ -188,7 +188,7 @@ Markdown + metadata + local assets + partials + semantic directives
   above never do. Replacements whose ranges overlap within one round are deferred rather than merged, and
   the run repeats validation until no applicable replacement is left or a bounded number of rounds is
   reached, reporting whatever remains.
-- `src/cli.ts` adapts initialization, building, validation, inspection, repair, review binding, and discovery to
+- `src/cli.ts` adapts initialization, building, validation, inspection, repair, review binding, site indexing, and discovery to
   one diagnostic model, and `src/cli-output.ts` projects that model. The agent projection is the default
   because the package is consumed by agents, and `--json` remains accepted for what already happens. Its
   shape follows the kind of answer: a run reports through NDJSON records, while the discovery commands
@@ -501,8 +501,10 @@ runtime, and image/download data URLs; a font data URL is counted once through g
 A public URL comes from the primary manifest `url` or from the `build`/`validate`/`inspect` `--url` option
 and ESM `url`, which takes precedence; `src/authoring/public-url.ts` is the one validator for the manifest
 format, the option, and the JSON Schema format `absolute-http-url`. The loader checks an optional manifest
-`image` at its authored field — a PNG, JPEG, WebP, GIF, or AVIF file inside the source root — and reports
-`INVALID_SOCIAL_IMAGE` with that range otherwise. Preparation derives the page metadata from the URL,
+`image` at its authored field — a PNG, JPEG, WebP, GIF, or AVIF regular file inside the source root. A
+`../` path fails as `INVALID_MANIFEST` at the field, a symbolic link resolving outside the root as
+`ASSET_OUTSIDE_SOURCE`, and another type or a path that is not a regular file as `INVALID_SOCIAL_IMAGE` with
+the field range. Preparation derives the page metadata from the URL,
 resolves the image through the same confined local-resource path as content assets, protects it from
 output collision like any source file, and publishes the image as a hashed `assets/` file with an absolute `og:image` only for directory
 output. It warns with `SOCIAL_IMAGE_NOT_PUBLISHED` when a declared image cannot be published and with

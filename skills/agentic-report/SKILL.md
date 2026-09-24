@@ -32,7 +32,7 @@ may be a symbolic link, and the reported `projectPath` then names the resolved l
 destination is refused with `INIT_DESTINATION_EXISTS`. The first `npx` call requires registry/network access.
 
 Every command answers an agent without a flag and accepts `--json` as the name of that default: the run
-commands `init`, `build`, `validate`, `inspect`, `fix` and `review` write NDJSON records, while `schema`,
+commands `init`, `build`, `validate`, `inspect`, `fix`, `review` and `sitemap` write NDJSON records, while `schema`,
 `describe` and `examples` write one compact JSON document. `--human` selects the form for a person. One
 failed run lists every independent violation it found, so fix them together.
 

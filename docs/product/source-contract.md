@@ -49,7 +49,8 @@ Frontmatter takes precedence. Supported fields are:
   `directory` build with a URL writes it under `assets/` with a content-hash name and publishes the absolute
   address as `og:image` and `twitter:image` with a `summary_large_image` card. A `single-file` build, or a
   build without a URL, omits the image and reports `SOCIAL_IMAGE_NOT_PUBLISHED`. Another file type, or a
-  path that is not a readable file, fails with `INVALID_SOCIAL_IMAGE` at the `image` field;
+  path that is not a regular file, fails with `INVALID_SOCIAL_IMAGE` at the `image` field, and a path that
+  leaves the source directory is refused like any other local reference;
 - `preset`: coordinated `material`, `monument`, `signal`, `terminal`, or `cinematic` package-owned visual
   defaults; `studio` and `editorial` remain compatibility identities;
 - `theme`: `system`, `light`, or `dark`;

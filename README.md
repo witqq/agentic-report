@@ -415,10 +415,10 @@ other byte alone. Today one check computes them: the term reference that a regis
 missing. It is the only command that writes to an authored source.
 
 Every command answers an agent without a flag, because agents are who run this package: `init`, `build`,
-`validate`, `inspect`, `fix` and `review` write NDJSON records, and `schema`, `describe` and `examples`
+`validate`, `inspect`, `fix`, `review` and `sitemap` write NDJSON records, and `schema`, `describe` and `examples`
 write their one reference document as a compact JSON line. `--json` is accepted and names that default. Add
-`--human` when a person is reading — it prints prose from `init`, `build`, `validate`, `fix`, `review` and
-`examples`, and the same document indented from `inspect`, `schema` and `describe`.
+`--human` when a person is reading — it prints prose from `init`, `build`, `validate`, `fix`, `review`, `sitemap`
+and `examples`, and the same document indented from `inspect`, `schema` and `describe`.
 
 ## Product-built landing
 
@@ -565,7 +565,8 @@ agentic-report sitemap ./public
 `robots.txt` that names it. The tree root is the origin root, so every page URL must match the page's
 place in the tree — `guide/index.html` is `https://example.com/guide/`. The command refuses, without
 writing anything, when the files already exist, pages disagree on the origin, a URL does not match its
-place, or an agentic-report page has no URL; HTML from other tools is listed as skipped.
+place, an agentic-report page has no URL, the tree has no agentic-report page, contains a symbolic link or
+special file, or the path is not a directory; HTML from other tools is listed as skipped.
 
 For implementation boundaries and verification guarantees, see
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/TESTING.md`](docs/TESTING.md).

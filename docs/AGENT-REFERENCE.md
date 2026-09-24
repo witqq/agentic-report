@@ -126,9 +126,9 @@ contain source file contents.
 
 Every command answers an agent without a flag, accepts `--json` as the name of that default, and offers
 `--human` for a person. The agent shape follows what the command returns: `init`, `build`, `validate`,
-`inspect`, `fix` and `review` report a run and write NDJSON records; `schema`, `describe` and `examples`
+`inspect`, `fix`, `review` and `sitemap` report a run and write NDJSON records; `schema`, `describe` and `examples`
 return one reference document and write it as a single compact JSON line. The human projection is prose
-wherever prose exists — `init`, `build`, `validate`, `fix`, `review` and `examples` — and the same
+wherever prose exists — `init`, `build`, `validate`, `fix`, `review`, `sitemap` and `examples` — and the same
 document indented for `inspect`, `schema` and `describe`, whose answer is a catalog or a schema that no
 summary line can carry.
 Both projections of a run carry the same facts — every
@@ -958,8 +958,9 @@ Exit code `3` means an unexpected internal failure occurred.
   `robots.txt` with an absolute `Sitemap:` line, lists HTML from other tools as `skipped`, and refuses
   without writing when either file exists (`SITEMAP_TARGET_EXISTS`), origins differ
   (`SITEMAP_ORIGIN_MISMATCH`), a URL is not the page's place in the tree — a directory index needs its
-  trailing `/` (`SITEMAP_PATH_MISMATCH`) — or an agentic-report page has no URL
-  (`SITEMAP_PAGE_WITHOUT_URL`).
+  trailing `/` (`SITEMAP_PATH_MISMATCH`) — an agentic-report page has no URL
+  (`SITEMAP_PAGE_WITHOUT_URL`), the tree has no agentic-report page (`SITEMAP_NO_PAGES`), contains a symbolic
+  link or special file (`SITEMAP_SPECIAL_FILE`), or the path is not a directory (`SITEMAP_DIRECTORY_INVALID`).
 - Add `--share` when the artifact leaves the source workstation. Source-link labels remain readable
   non-links derived as path-free filename/line from the validated helper, with `source:line` for an unsafe
   terminal. An already matching short label remains exact; directory-bearing and free-form labels are

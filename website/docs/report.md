@@ -72,7 +72,7 @@ tag pinned so later commands continue to use the revision you inspected.
 ::::section{title="Validate, explain, and repair" id="diagnostics" nav="Diagnostics" width="standard" align="start" tone="soft" reveal="true"}
 
 The CLI commands are discoverable: `init`, `validate`, `inspect`, `build`, `fix`, `review`,
-`describe`, `schema`, and `examples`. Agent output is the default—NDJSON for run commands and one compact
+`sitemap`, `describe`, `schema`, and `examples`. Agent output is the default—NDJSON for run commands and one compact
 JSON line for reference commands. `--json` explicitly names that default; `--human` selects prose or
 indented JSON without dropping diagnostic facts.
 
