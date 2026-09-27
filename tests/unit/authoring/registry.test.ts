@@ -25,13 +25,27 @@ describe('authoring registry', () => {
     expect(unique(authoringRegistry.commands.map((command) => command.id))).toBe(true);
     expect(unique(authoringRegistry.examples.map((example) => example.id))).toBe(true);
     expect(authoringRegistry.directives.map((directive) => directive.name)).toEqual([
+      'eyebrow',
       'section',
       'contents',
       'lead',
+      'muted',
+      'meta',
       'actions',
       'action',
       'source-link',
       'callout',
+      'source-line',
+      'beat',
+      'count',
+      'plural',
+      'time',
+      'swap',
+      'typing',
+      'mark',
+      'process',
+      'appear',
+      'notes',
       'decision',
       'decision-option',
       'checklist',
@@ -39,6 +53,11 @@ describe('authoring registry', () => {
       'cards',
       'card',
       'steps',
+      'diff',
+      'findings',
+      'finding',
+      'conversation',
+      'message',
       'response',
       'question',
       'bucket',
@@ -54,6 +73,8 @@ describe('authoring registry', () => {
       'popover',
       'filter',
       'toggle',
+      'compare',
+      'spotlight',
       'chart',
       'series',
       'point',
@@ -63,12 +84,15 @@ describe('authoring registry', () => {
       'edge',
       'legend',
       'legend-item',
+      'zoom',
       'timeline',
       'event',
       'demo',
       'asset',
       'video',
       'font',
+      'each',
+      'expect',
     ]);
     expect(OUTPUT_FORMATS).toEqual(['single-file', 'directory']);
     expect(authoringRegistry.output).toBe(OUTPUT_CONTRACT);
@@ -79,12 +103,16 @@ describe('authoring registry', () => {
       edgeKinds: ['call', 'data', 'event', 'dependency'],
       defaultEdgeKind: 'call',
       nodeKinds: ['neutral', 'accent', 'success', 'warning'],
+      nodeStatuses: ['done', 'review', 'returned', 'pending'],
+      edgeCount: { minimum: 1, maximum: 999 },
+      zoom: { maximumPerDiagram: 1 },
+      pulse: { minimumNodes: 2, maximumNodes: 12 },
       edgeKindLegend: { minimumKinds: 2 },
       legend: { maximumPerDiagram: 1, maximumItems: 8 },
       flow: {
         nodes: { minimum: 1, maximum: 20 },
         edges: { maximum: 40 },
-        selfEdges: false,
+        selfEdges: true,
         layouts: ['auto', 'down', 'right', 'orthogonal'],
         directions: ['auto', 'right', 'down'],
         groups: {
@@ -138,6 +166,12 @@ describe('authoring registry', () => {
         'package-owned-popover',
         'package-owned-filter',
         'package-owned-toggle',
+        'package-owned-compare',
+        'package-owned-scene',
+        'package-owned-count',
+        'package-owned-typography',
+        'package-owned-spotlight',
+        'package-owned-slides',
         'package-owned-response',
         'package-owned-copy',
       ]).toContain(directive.behavior.runtime);
@@ -192,12 +226,13 @@ describe('authoring registry', () => {
         .find((field) => field.name === 'output')
         ?.fields?.map((field) => field.name),
     ).toEqual(['format', 'maxInlineBytes']);
-    expect(authoringRegistry.examples.filter((example) => 'starter' in example)).toHaveLength(6);
+    expect(authoringRegistry.examples.filter((example) => 'starter' in example)).toHaveLength(5);
     expect(authoringRegistry.examples[0]).toMatchObject({
-      id: 'basic',
-      path: 'basic',
+      id: 'document',
+      path: 'document',
       entry: 'report.md',
-      starter: { default: true, aliases: ['report'] },
+      category: 'document',
+      starter: { default: true },
     });
     expect(authoringRegistry.capabilities).toEqual([
       {
@@ -224,44 +259,50 @@ describe('authoring registry', () => {
       'review',
       'build',
       'fix',
+      'theme',
       'describe',
       'schema',
       'examples',
       'sitemap',
+      'snapshot',
+      'effect-check',
     ]);
     expect(authoringRegistry.page).toMatchObject({
-      defaultPreset: 'material',
       defaultLayout: 'document',
-      layouts: ['document', 'dashboard', 'landing', 'mixed'],
-      defaultTheme: 'system',
-      themes: ['system', 'light', 'dark'],
-      defaultScrollProgress: false,
+      defaultTheme: 'neutral',
+      themeFileExtensions: ['.yaml', '.yml', '.json'],
+      layouts: ['document', 'dashboard', 'landing', 'mixed', 'slides', 'screens'],
+      defaultScheme: 'system',
+      schemes: ['system', 'light', 'dark'],
+      defaultProgress: 'none',
+      progress: ['none', 'page', 'chapters', 'nodes'],
+      defaultMotion: 'expressive',
+      motionLevels: ['none', 'restrained', 'expressive'],
+      defaultOpening: 'center',
+      openings: ['center', 'start'],
       defaultAttribution: true,
       motion: {
-        scrollProgress: { normalMotionOnly: true },
+        progress: { pageNormalMotionOnly: true },
         sectionReveal: {
           default: false,
           normalMotionOnly: true,
           durationMs: 420,
-          translationPx: 24,
+          translationPx: 16,
         },
       },
     });
-    expect(authoringRegistry.page.presets.map((preset) => preset.name)).toEqual([
-      'monument',
-      'material',
-      'signal',
+    expect(authoringRegistry.page.themes.map((theme) => theme.name)).toEqual([
+      'calm-paper',
+      'neutral',
+      'frost',
+      'daylight',
+      'midnight',
+      'noir',
+      'aurora',
+      'blueprint',
+      'ember',
+      'synthwave',
       'terminal',
-      'cinematic',
-      'studio',
-      'editorial',
-    ]);
-    expect(authoringRegistry.page.tokens.map((token) => token.name)).toEqual([
-      'density',
-      'font',
-      'accent',
-      'width',
-      'radius',
     ]);
     expect(authoringRegistry.examples).toEqual(
       expect.arrayContaining([
@@ -281,7 +322,7 @@ describe('authoring registry', () => {
       authoringRegistry.examples
         .filter((example) => 'starter' in example)
         .map((example) => example.id),
-    ).toEqual(['basic', 'research', 'architecture', 'tutorial', 'dashboard', 'landing']);
+    ).toEqual(['document', 'answer', 'presentation', 'dashboard', 'landing']);
   });
 
   it('detects each semantic integrity mutation independently', () => {
@@ -311,7 +352,7 @@ describe('authoring registry', () => {
       authoringRegistryIntegrityIssues(
         registryWith({ examples: [authoringRegistry.examples[0], ...authoringRegistry.examples] }),
       ),
-    ).toContain('example: duplicate basic');
+    ).toContain('example: duplicate document');
     expect(
       authoringRegistryIntegrityIssues(
         registryWith({
@@ -460,7 +501,8 @@ describe('authoring registry', () => {
               flow: {
                 ...authoringRegistry.visualizations.diagram.flow,
                 nodes: { minimum: 2, maximum: 1 },
-                selfEdges: true,
+                // A flow without self-connections could not draw the loop of a repeating step.
+                selfEdges: false,
               },
               sequence: {
                 ...authoringRegistry.visualizations.diagram.sequence,
@@ -520,100 +562,73 @@ describe('authoring registry', () => {
         'example: expected exactly one default starter',
       ]),
     );
+    const examples = authoringRegistry.examples as readonly ExampleDefinition[];
+    const withExample = (
+      change: (example: ExampleDefinition) => ExampleDefinition,
+    ): [ExampleDefinition, ...ExampleDefinition[]] =>
+      examples.map(change) as [ExampleDefinition, ...ExampleDefinition[]];
     expect(
-      authoringRegistryIntegrityIssues(
-        registryWith({
-          examples: [
-            authoringRegistry.examples[0],
-            {
-              ...authoringRegistry.examples[0],
-              id: 'second',
-              path: 'second',
-              starter: { default: true, aliases: [] },
-            },
-          ],
-        }),
-      ),
-    ).toContain('example: expected exactly one default starter');
-    expect(
-      authoringRegistryIntegrityIssues(
-        registryWith({
-          examples: [
-            {
-              ...authoringRegistry.examples[0],
-              starter: { default: false, aliases: [] },
-            },
-          ],
-        }),
-      ),
-    ).toEqual(['example: expected exactly one default starter']);
-    expect(
-      authoringRegistryIntegrityIssues(
-        registryWith({
-          examples: [
-            authoringRegistry.examples[0],
-            {
-              ...authoringRegistry.examples[0],
-              id: 'second',
-              path: 'second',
-              starter: { default: false, aliases: [] },
-            },
-          ],
-        }),
-      ),
+      authoringRegistryIntegrityIssues(registryWith({ examples: withExample((e) => e) })),
     ).toEqual([]);
     expect(
       authoringRegistryIntegrityIssues(
         registryWith({
-          examples: [
-            {
-              ...authoringRegistry.examples[0],
-              starter: { default: true, aliases: ['../unsafe', 'basic', 'report', 'report'] },
-            },
-          ],
+          examples: withExample((example) =>
+            example.id === 'landing' ? { ...example, starter: { default: true } } : example,
+          ),
         }),
       ),
-    ).toEqual(
-      expect.arrayContaining([
-        'basic: unsafe starter alias ../unsafe',
-        'basic: starter alias conflicts with basic',
-        'basic: starter alias conflicts with report',
-        'basic: duplicate starter alias',
-      ]),
-    );
+    ).toContain('example: expected exactly one default starter');
+    // Каждая категория обязана иметь стартер с её именем, и стартер — только категория.
     expect(
       authoringRegistryIntegrityIssues(
         registryWith({
-          examples: [
-            authoringRegistry.examples[0],
-            {
-              ...authoringRegistry.examples[1],
-              starter: { default: false, aliases: ['report'] },
-            },
-          ],
+          examples: withExample((example) => {
+            if (example.id !== 'answer') return example;
+            const { starter: _dropped, ...rest } = example;
+            return rest;
+          }),
         }),
       ),
-    ).toContain('research: starter alias conflicts with report');
+    ).toEqual(['answer: category has no starter']);
     expect(
       authoringRegistryIntegrityIssues(
         registryWith({
-          examples: authoringRegistry.examples.map((example) =>
-            example.id === 'basic'
-              ? { ...example, starter: { default: true, aliases: ['layout-document'] } }
+          examples: withExample((example) =>
+            example.id === 'research' ? { ...example, starter: { default: false } } : example,
+          ),
+        }),
+      ),
+    ).toEqual(['research: starter is not named after a category']);
+    expect(
+      authoringRegistryIntegrityIssues(
+        registryWith({
+          examples: withExample((example) =>
+            example.id === 'dashboard'
+              ? { ...example, category: 'answer', subvariant: 'survey' }
               : example,
-          ) as unknown as [ExampleDefinition, ...ExampleDefinition[]],
+          ),
         }),
       ),
-    ).toContain('basic: starter alias conflicts with layout-document');
+    ).toEqual(['dashboard: starter belongs to category answer']);
+    expect(
+      authoringRegistryIntegrityIssues(
+        registryWith({
+          examples: withExample((example) =>
+            example.id === 'research' ? { ...example, subvariant: 'portfolio' } : example,
+          ),
+        }),
+      ),
+    ).toEqual(['research: unknown document subvariant portfolio']);
   });
 
   it('accepts only normalized package-relative POSIX example paths', () => {
-    for (const accepted of ['basic', 'nested/tutorial', 'safe..name/report.v1']) {
+    for (const accepted of ['document', 'nested/tutorial', 'safe..name/report.v1']) {
       expect(
         authoringRegistryIntegrityIssues(
           registryWith({ examples: [{ ...authoringRegistry.examples[0], path: accepted }] }),
         ),
-      ).not.toContain('basic: non-relative example path');
+      ).not.toContain('document: non-relative example path');
     }
 
     for (const rejected of [
@@ -632,7 +647,7 @@ describe('authoring registry', () => {
         authoringRegistryIntegrityIssues(
           registryWith({ examples: [{ ...authoringRegistry.examples[0], path: rejected }] }),
         ),
-      ).toContain('basic: non-relative example path');
+      ).toContain('document: non-relative example path');
     }
   });
 
@@ -743,17 +758,11 @@ describe('authoring registry', () => {
     ).toContain('output format: registry default differs from canonical output contract');
   });
 
-  it('rejects page contract domain, default, and token projection drift', () => {
-    const preset = authoringRegistry.manifestFields.find((field) => field.name === 'preset');
+  it('rejects page contract domain and default drift', () => {
     const theme = authoringRegistry.manifestFields.find((field) => field.name === 'theme');
+    const scheme = authoringRegistry.manifestFields.find((field) => field.name === 'scheme');
     const layout = authoringRegistry.manifestFields.find((field) => field.name === 'layout');
-    const tokens = authoringRegistry.manifestFields.find((field) => field.name === 'tokens');
-    if (
-      preset === undefined ||
-      theme === undefined ||
-      layout === undefined ||
-      tokens?.fields === undefined
-    ) {
+    if (theme === undefined || scheme === undefined || layout === undefined) {
       throw new Error('Missing page manifest fields');
     }
 
@@ -762,18 +771,17 @@ describe('authoring registry', () => {
         unsafeRegistryWith({
           page: {
             ...authoringRegistry.page,
-            presets: authoringRegistry.page.presets.slice(0, 2),
-            themes: ['system', 'light'],
+            themes: authoringRegistry.page.themes.slice(0, 2),
+            schemes: ['system', 'light'],
             layouts: ['document', 'landing'],
           },
         }),
       ),
     ).toEqual(
       expect.arrayContaining([
-        'page preset: registry domain differs from canonical page contract',
-        'page preset: manifest domain differs from registry domain',
-        'page theme: registry domain differs from canonical page contract',
-        'page theme: manifest domain differs from registry domain',
+        'page theme: registry catalog differs from the built-in theme data',
+        'page scheme: registry domain differs from canonical page contract',
+        'page scheme: manifest domain differs from registry domain',
         'page layout: registry domain differs from canonical page contract',
         'page layout: manifest domain differs from registry domain',
       ]),
@@ -800,8 +808,8 @@ describe('authoring registry', () => {
       authoringRegistryIntegrityIssues(
         registryWith({
           manifestFields: authoringRegistry.manifestFields.map((field) => {
-            if (field.name === 'preset') return { ...preset, default: 'signal' };
-            if (field.name === 'theme') return { ...theme, default: 'dark' };
+            if (field.name === 'theme') return { ...theme, default: 'blueprint' };
+            if (field.name === 'scheme') return { ...scheme, default: 'dark' };
             if (field.name === 'layout') return { ...layout, default: 'mixed' };
             return field;
           }) as [FieldDefinition, ...FieldDefinition[]],
@@ -809,82 +817,11 @@ describe('authoring registry', () => {
       ),
     ).toEqual(
       expect.arrayContaining([
-        'page preset: manifest default differs from registry default',
-        'page theme: manifest default differs from registry default',
+        'page theme: manifest field differs from registry default',
+        'page scheme: manifest default differs from registry default',
         'page layout: manifest default differs from registry default',
       ]),
     );
-
-    expect(
-      authoringRegistryIntegrityIssues(
-        registryWith({
-          manifestFields: authoringRegistry.manifestFields.filter(
-            (field) => field.name !== 'tokens',
-          ) as [FieldDefinition, ...FieldDefinition[]],
-        }),
-      ),
-    ).toContain('page tokens: manifest token object is missing');
-
-    const missingRadius = {
-      ...tokens,
-      fields: tokens.fields.filter((field) => field.name !== 'radius'),
-    } as unknown as FieldDefinition;
-    expect(
-      authoringRegistryIntegrityIssues(
-        registryWith({
-          manifestFields: authoringRegistry.manifestFields.map((field) =>
-            field.name === 'tokens' ? missingRadius : field,
-          ) as [FieldDefinition, ...FieldDefinition[]],
-        }),
-      ),
-    ).toContain('page tokens: manifest fields differ from registry token catalog');
-
-    const divergentAccent = {
-      ...tokens,
-      fields: tokens.fields.map((field) =>
-        field.name === 'accent'
-          ? {
-              ...field,
-              default: 'coral',
-              constraint: { kind: 'enum', values: ['indigo', 'coral'] },
-            }
-          : field,
-      ),
-    } as unknown as FieldDefinition;
-    expect(
-      authoringRegistryIntegrityIssues(
-        registryWith({
-          manifestFields: authoringRegistry.manifestFields.map((field) =>
-            field.name === 'tokens' ? divergentAccent : field,
-          ) as [FieldDefinition, ...FieldDefinition[]],
-        }),
-      ),
-    ).toEqual(
-      expect.arrayContaining([
-        'page token accent: manifest domain differs from registry domain',
-        'page token accent: manifest default differs from registry default',
-      ]),
-    );
-
-    const incompleteMonument = {
-      ...authoringRegistry.page.presets[0],
-      tokens: {
-        density: 'comfortable',
-        font: 'sans',
-        accent: 'indigo',
-        width: 'standard',
-      },
-    };
-    expect(
-      authoringRegistryIntegrityIssues(
-        unsafeRegistryWith({
-          page: {
-            ...authoringRegistry.page,
-            presets: [incompleteMonument, ...authoringRegistry.page.presets.slice(1)],
-          },
-        }),
-      ),
-    ).toContain('page preset monument: token fields differ from registry token catalog');
   });
 
   it('rejects structurally ambiguous fields and returns issues for malformed constraints', () => {
@@ -947,7 +884,10 @@ describe('authoring registry', () => {
       }),
     );
     expect(malformedLanguageIssues).toEqual(
-      expect.arrayContaining(['manifest.language: invalid string pattern', 'basic: empty title']),
+      expect.arrayContaining([
+        'manifest.language: invalid string pattern',
+        'document: empty title',
+      ]),
     );
 
     const demo = directive('demo');
@@ -1086,6 +1026,10 @@ function classifyConstraint(constraint: ConstraintDefinition): ConstraintDefinit
       return 'boolean';
     case 'enum':
       return 'enum';
+    case 'theme-reference':
+      return 'theme-reference';
+    case 'local-path-list':
+      return 'local-path-list';
     default: {
       const exhaustive: never = constraint;
       return exhaustive;
@@ -1113,6 +1057,12 @@ function expectValidDefault(attribute: DirectiveDefinition['attributes'][number]
       return;
     case 'boolean':
       expect(typeof attribute.default).toBe('boolean');
+      return;
+    case 'theme-reference':
+      expect(typeof attribute.default).toBe('string');
+      return;
+    case 'local-path-list':
+      expect(Array.isArray(attribute.default)).toBe(true);
       return;
     default: {
       assertNever(attribute.constraint);

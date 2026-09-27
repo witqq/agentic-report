@@ -5,10 +5,10 @@ description: A focused landing page for an offline, agent-friendly interactive p
 language: en
 localizations:
   ru: report.ru.md
-theme: light
 layout: landing
-preset: cinematic
-scrollProgress: true
+theme: neutral
+scheme: light
+progress: page
 ---
 
 # From Markdown to a page worth sharing
@@ -24,6 +24,19 @@ tutorials, dashboards, and landing pages that open directly from disk.
 ::action[Review the proof]{href="#proof" kind="secondary"}
 ::action[Read the boundaries]{href="#boundaries" kind="quiet"}
 ::::
+
+::::::section{title="Source and result" id="demo" nav="Demo" recipe="demo"}
+
+```md
+:::callout{kind="success" title="One portable result"}
+A single HTML file that opens from disk.
+:::
+```
+
+:::callout{kind="success" title="One portable result"}
+A single HTML file that opens from disk.
+:::
+::::::
 
 ::contents
 
@@ -68,6 +81,9 @@ Create one file or a content-addressed directory.
 :::event{date="Open" title="Review the artifact" kind="warning"}
 Exercise the real page at desktop and mobile widths through `file://`.
 :::
+::legend-item{event="accent" label="Manual edit"}
+::legend-item{event="success" label="Automatic build"}
+::legend-item{event="warning" label="Needs your review"}
 ::::
 :::::
 
@@ -98,7 +114,7 @@ outside the portable trust boundary.
 :::
 
 :::actions{placement="bottom"}
-::action[Back to workflow]{href="#workflow" kind="primary" effect="magnetic"}
+::action[Back to workflow]{href="#workflow" kind="primary"}
 ::action[Project documentation]{href="../../docs/product/source-contract.md" kind="secondary"}
 ::action[Review the source contract]{href="../../docs/product/source-contract.md" kind="quiet"}
 :::

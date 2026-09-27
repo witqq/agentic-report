@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto';
-
 import type { Element, ElementContent, Root as HastRoot } from 'hast';
 import type { Code, Root as MdastRoot } from 'mdast';
 import { decodeString } from 'micromark-util-decode-string';
@@ -8,58 +6,56 @@ import { SKIP, visit } from 'unist-util-visit';
 
 import {
   authoringRegistry,
-  DIAGRAM_CONTRACT,
   type DirectiveAttributeDefinition,
   type DirectiveDefinition,
   type DirectiveForm,
   type CodeFenceMetadataDefinition,
 } from '../authoring/registry.js';
+import { allowedDirectiveChildren } from '../authoring/directive-contract.js';
+import type {
+  Block,
+  BlockAttributeValues,
+  BlockEnhancementServices,
+  BlockNodeSubject,
+  BlockPageSettings,
+  BlockValidationContext,
+  BlockValidator,
+} from '../blocks/define-block.js';
+import {
+  hasClassName,
+  hastRawText,
+  hastText,
+  prependDirectiveTitle,
+  semanticTitle,
+  stringProperty,
+  takeStringProperty,
+} from '../blocks/hast.js';
+import { blockByName } from '../blocks/index.js';
+import {
+  type DirectiveNode,
+  isCodeNode,
+  isDirectiveNode,
+  isTraversableNode,
+  type LocatedNode,
+  type SourcePosition,
+  type TraversableNode,
+} from '../blocks/mdast.js';
 import { interpretDirectiveAttributes } from '../authoring/schemas.js';
+import { BLOCK_STYLE_PROPERTY } from '../authoring/style-rules.js';
 import type { Diagnostic, DiagnosticFix, SourceMapSegment } from '../contracts.js';
 import { AgenticReportError, isTransportSafeReplacement } from '../diagnostics.js';
-import { declareAuthoredRules, runAuthoredRules } from './authored-rules.js';
-import { packageStrings, type PackageStrings } from '../localization.js';
-import { MAX_REVIEW_RESPONSES } from '../review/contract.js';
-import {
-  RESPONSE_CONTRACT_VERSION,
-  MAX_RESPONSE_FORMS,
-  MAX_RESPONSE_ITEMS,
-  MAX_RESPONSE_OPTIONS,
-  MAX_RESPONSE_QUESTIONS,
-  parseResponseFormManifest,
-  type ResponseItemDefinition,
-  type ResponseQuestionDefinition,
-  type ResponseQuestionKind,
-} from '../response/contract.js';
+import { type AuthoredRule, declareAuthoredRules, runAuthoredRules } from './authored-rules.js';
+import { packageStrings } from '../localization.js';
 import { resolveSourceLocation, resolveSourceRange } from '../source/source-map.js';
-import { decorativeIcon } from './icons.js';
+import {
+  claimSectionIdentity,
+  collectAuthoredSectionIds,
+  GENERATED_SECTION_ID_PREFIX,
+  SECTION_DIRECTIVE,
+  suffixedIdentity,
+} from './section-identity.js';
 import { resolveDocumentNavigation, type NavigationItem } from './navigation.js';
-import { enhanceVisualization, type PreparedFlow, prepareVisualization } from './visualizations.js';
-
-interface SourcePosition {
-  readonly start: {
-    readonly line: number;
-    readonly column: number;
-    readonly offset?: number | undefined;
-  };
-  readonly end: {
-    readonly line: number;
-    readonly column: number;
-    readonly offset?: number | undefined;
-  };
-}
-
-interface DirectiveNode {
-  readonly type: string;
-  readonly name: string;
-  readonly attributes?: Readonly<Record<string, string | null>>;
-  readonly children?: readonly unknown[];
-  data?: {
-    hName?: string;
-    hProperties?: Readonly<Record<string, string | string[]>>;
-  };
-  readonly position?: SourcePosition | undefined;
-}
+import { expansionDetails } from '../extensions/origin.js';
 
 interface DirectivePluginOptions {
   readonly sourceMap: readonly SourceMapSegment[];
@@ -67,21 +63,53 @@ interface DirectivePluginOptions {
   readonly observedDirectives?: Set<string>;
   /** Sink for authored warnings; a run without one keeps them silent rather than failing. */
   readonly warnings?: Diagnostic[];
+  /** The page's directives and blocks; the built-ins when the page declares no extensions. */
+  readonly vocabulary?: DirectiveVocabulary;
+  /** Violations an earlier phase of the same run found, reported together with this phase's. */
+  readonly priorViolations?: readonly AgenticReportError[];
+  /** Page settings from the frontmatter that block checks read. */
+  readonly page?: BlockPageSettings;
 }
 
 interface DirectiveEnhancementOptions {
   readonly sourceMap: readonly SourceMapSegment[];
   readonly language?: string;
+  readonly layout?: string;
   readonly share?: boolean;
   readonly shareTransform?: { neutralizedSourceLinks: number };
   readonly navigationTransform?: { items: NavigationItem[] };
+  readonly vocabulary?: DirectiveVocabulary;
 }
 
 const directiveByName: ReadonlyMap<string, DirectiveDefinition> = new Map(
   authoringRegistry.directives.map((directive) => [directive.name, directive]),
 );
-const SOURCE_LINK_LABEL_MAX_LENGTH = sourceLinkLabelMaximumLength();
-const GENERATED_SECTION_ID_PREFIX = 'generated:';
+
+/**
+ * The directives and blocks one page is built with. A page without extensions uses the built-ins; a
+ * page that declares extensions gets the built-ins together with what its extensions add (effect
+ * target attributes, the island block), assembled in `src/extensions/vocabulary.ts`.
+ */
+export interface DirectiveVocabulary {
+  readonly directives: ReadonlyMap<string, DirectiveDefinition>;
+  readonly blocks: ReadonlyMap<string, Block>;
+}
+
+export const BUILT_IN_VOCABULARY: DirectiveVocabulary = {
+  directives: directiveByName,
+  blocks: blockByName,
+};
+/**
+ * The glossary is document-wide: definitions form the index that term references, annotated code
+ * fences, the first-occurrence check and the appendix read, so the core names the pair.
+ */
+const GLOSSARY_DIRECTIVE = 'glossary';
+const TERM_DIRECTIVE = 'term';
+const LOCALIZED_DEFAULT_ATTRIBUTES = new Set(
+  [...blockByName.values()].flatMap((block) =>
+    [...block.localizedDefaults].map((attribute) => `${block.name}.${attribute}`),
+  ),
+);
 const CODE_TERM_FIELD = 'terms' as const;
 const CODE_TERM_METADATA = authoringRegistry.source.codeFenceMetadata.terms;
 const CODE_TERM_KEY_PATTERN = new RegExp(CODE_TERM_METADATA.itemConstraint.pattern, 'u');
@@ -168,9 +196,10 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
       object,
       Readonly<Record<string, string | number | boolean>>
     >();
+    const vocabulary = options.vocabulary ?? BUILT_IN_VOCABULARY;
     const sectionIds = collectAuthoredSectionIds(tree);
     const claimedAuthoredSectionIds = new Set<string>();
-    const violations: AgenticReportError[] = [];
+    const violations: AgenticReportError[] = [...(options.priorViolations ?? [])];
     // Keys whose own glossary definition was refused: a later annotation pointing at such a key —
     // a term reference or an annotated code fence — repeats that refusal instead of reporting an
     // independent fact.
@@ -195,7 +224,7 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
         }
         if (metadata.kind === 'valid') {
           codeTermBlocks.push({ node, keys: metadata.keys });
-          options.observedDirectives?.add('term');
+          options.observedDirectives?.add(TERM_DIRECTIVE);
         }
         return;
       }
@@ -215,6 +244,7 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
           glossaryByKey,
           glossaryTerms,
           parsed,
+          directives: vocabulary.directives,
         },
         found,
       );
@@ -222,25 +252,30 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
         // Names are claimed only now: every rule of the set accepted this node, so it is a section
         // the document really has.
         const values =
-          node.name === 'section' && parsed.values !== undefined
+          node.name === SECTION_DIRECTIVE && parsed.values !== undefined
             ? claimSectionIdentity(parsed.values, sectionIds, claimedAuthoredSectionIds)
             : (parsed.values ?? {});
         attributesByNode.set(node, values);
-        const directive = directiveByName.get(node.name);
+        const directive = vocabulary.directives.get(node.name);
         if (directive !== undefined) {
-          if (directive.name === 'glossary') registerGlossaryDefinition(node, values);
-          if (directive.name === 'term') termReferences.push({ key: String(values.key), node });
+          if (directive.name === GLOSSARY_DIRECTIVE) registerGlossaryDefinition(node, values);
+          if (directive.name === TERM_DIRECTIVE)
+            termReferences.push({ key: String(values.key), node });
           options.observedDirectives?.add(directive.name);
+          // Метка элемента составного блока со стилями (`expand.ts`) переживает отрисовку директивы.
+          const block = node.data?.hProperties?.[BLOCK_STYLE_PROPERTY];
           node.data = renderDirective(
             directive,
             values,
             new Set(Object.keys(node.attributes ?? {})),
           );
+          if (typeof block === 'string' && node.data.hProperties !== undefined)
+            node.data.hProperties[BLOCK_STYLE_PROPERTY] = block;
         }
         return undefined;
       }
 
-      if (node.name === 'glossary') {
+      if (node.name === GLOSSARY_DIRECTIVE) {
         const refusedKey = node.attributes?.key;
         if (typeof refusedKey === 'string') refusedGlossaryKeys.add(refusedKey);
       }
@@ -285,16 +320,60 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
     // Every check answers for its own subjects and returns; none of them ends the phase, so the run
     // reports what the whole source says rather than what its first refused subject said.
     validateCodeTermBlocks(codeTermBlocks, glossaryByKey, refusedGlossaryKeys, options, violations);
-    validateVisualizationData(tree, attributesByNode, options, violations);
-    validateActionGroups(tree, options, violations);
-    validateLinkedCards(tree, attributesByNode, options, violations);
-    validateCopyableProse(tree, options, violations);
-    validateLeadParagraphs(tree, options, violations);
-    validateTypedReviewComponents(tree, attributesByNode, options, violations);
-    validateResponseForms(tree, attributesByNode, options, violations);
+    validateBlocks(tree, attributesByNode, vocabulary.blocks, options, violations);
     validateUnmarkedGlossaryTerms(tree, [...glossaryByKey.values()], options, violations);
     if (violations.length > 0) throw aggregateViolations(violations);
   };
+
+/**
+ * Runs every block's own check on each of its nodes, in document order, after the directive pass.
+ * A check that refuses its node is not run again below it; blocks sharing one check function share
+ * that skip, so a refused visualization hides every visualization nested in it. Every other check
+ * still reads the subtree, because a refusal of one block says nothing about another.
+ */
+function validateBlocks(
+  tree: MdastRoot,
+  attributesByNode: WeakMap<object, BlockAttributeValues>,
+  blocks: ReadonlyMap<string, Block>,
+  options: DirectivePluginOptions,
+  violations: AgenticReportError[],
+): void {
+  const services = {
+    document: tree,
+    page: options.page ?? {},
+    attributes: (node: DirectiveNode) => attributesByNode.get(node),
+    violation: (node: LocatedNode, code: string, message: string, remediation: string) =>
+      attachNodeSource(
+        new AgenticReportError({ level: 'error', code, message, remediation }),
+        node,
+        options,
+      ),
+    report: (found: AgenticReportError | readonly AgenticReportError[]) => {
+      if (found instanceof AgenticReportError) violations.push(found);
+      else violations.push(...found);
+    },
+    warn: (node: LocatedNode, code: string, message: string, remediation: string) => {
+      const located = attachNodeSource(
+        new AgenticReportError({ level: 'warning', code, message, remediation }),
+        node,
+        options,
+      );
+      options.warnings?.push(located.diagnostic);
+    },
+  } as const;
+  walk(tree, undefined, new Set());
+
+  function walk(node: unknown, parent: unknown, skipped: ReadonlySet<BlockValidator>): void {
+    let below = skipped;
+    const check = isDirectiveNode(node) ? blocks.get(node.name)?.validate : undefined;
+    if (isDirectiveNode(node) && check !== undefined && !skipped.has(check)) {
+      const context: BlockValidationContext = { ...services, parent };
+      if (check(node, context) === 'refused') below = new Set([...skipped, check]);
+    }
+    if (!isTraversableNode(node)) return;
+    for (const child of node.children ?? []) walk(child, node, below);
+  }
+}
 
 /**
  * Reports the earliest authored violation and carries the rest with it, so one run answers for the
@@ -326,194 +405,14 @@ function aggregateViolations(violations: readonly AgenticReportError[]): Agentic
   );
 }
 
-function validateLinkedCards(
-  tree: MdastRoot,
-  attributesByNode: WeakMap<object, Readonly<Record<string, string | number | boolean>>>,
-  options: DirectivePluginOptions,
-  violations: AgenticReportError[],
-): void {
-  visit(tree, (candidate) => {
-    if (!isDirectiveNode(candidate) || candidate.name !== 'card') return;
-    const href = attributesByNode.get(candidate)?.href;
-    if (typeof href !== 'string') return;
-    const pending = [...(candidate.children ?? [])];
-    while (pending.length > 0) {
-      const child = pending.pop();
-      if (
-        typeof child === 'object' &&
-        child !== null &&
-        'type' in child &&
-        (child.type === 'link' || child.type === 'linkReference')
-      ) {
-        violations.push(
-          attachDirectiveSource(
-            directiveError(
-              candidate,
-              'INVALID_DIRECTIVE_PLACEMENT',
-              'A linked card cannot contain another link.',
-              'Remove the nested Markdown link or remove the card href.',
-            ),
-            candidate,
-            options,
-          ),
-        );
-        return SKIP;
-      }
-      if (isTraversableNode(child)) pending.push(...(child.children ?? []));
-    }
-    return undefined;
-  });
-}
-
-interface CopyableSubject {
-  readonly node: DirectiveNode;
-  readonly placement: (node: DirectiveNode) => AgenticReportError;
-}
-
-/** The single rule of a copyable block, declared as data like every other rule of this phase. */
-const copyableRules = declareAuthoredRules<CopyableSubject>({
-  subject: 'copyable',
-  rules: [
-    {
-      id: 'prose-and-terms-only',
-      check: ({ node, placement }) => {
-        // Foreign children of one copyable block are independent of each other: a code fence says
-        // nothing about the directive beside it, so the block answers for all of them. Nothing below
-        // a refused child is read, because it lives inside the node just refused.
-        const pending = [...(node.children ?? [])];
-        const found: AgenticReportError[] = [];
-        while (pending.length > 0) {
-          const child = pending.pop();
-          if (isCodeNode(child) || (isDirectiveNode(child) && child.name !== 'term')) {
-            found.push(placement(child as DirectiveNode));
-            continue;
-          }
-          if (isTraversableNode(child)) pending.push(...(child.children ?? []));
-        }
-        return found;
-      },
-    },
-  ],
-});
-
-function validateCopyableProse(
-  tree: MdastRoot,
-  options: DirectivePluginOptions,
-  violations: AgenticReportError[],
-): void {
-  visit(tree, (candidate) => {
-    if (!isDirectiveNode(candidate) || candidate.name !== 'copyable') return;
-    const outcome = runAuthoredRules(
-      copyableRules,
-      {
-        node: candidate,
-        placement: (node) =>
-          attachDirectiveSource(
-            directiveError(
-              node,
-              'INVALID_DIRECTIVE_PLACEMENT',
-              'copyable accepts prose Markdown and term references, not code blocks or other directives.',
-              'Move the code or interactive/data directive outside copyable.',
-            ),
-            node,
-            options,
-          ),
-      },
-      violations,
-    );
-    return outcome === 'refused' ? SKIP : undefined;
-  });
-}
-
-interface LeadSubject {
-  readonly lead: DirectiveNode;
-  readonly index: number;
-  readonly siblings: NonNullable<DirectiveNode['children']>;
-  readonly fail: (lead: DirectiveNode, message: string, remediation: string) => AgenticReportError;
-}
-
-/**
- * The rules of one lead paragraph. Shape and placement are independent questions — a lead holding
- * two blocks is still in the wrong place or the right one — so both answer for the same lead.
- */
-const leadRules = declareAuthoredRules<LeadSubject>({
-  subject: 'section/lead',
-  rules: [
-    {
-      id: 'single-paragraph',
-      check: ({ lead, fail }) => {
-        const blocks = lead.children ?? [];
-        const single =
-          blocks.length === 1 &&
-          typeof blocks[0] === 'object' &&
-          blocks[0] !== null &&
-          'type' in blocks[0] &&
-          blocks[0].type === 'paragraph';
-        return single
-          ? undefined
-          : fail(
-              lead,
-              'lead must contain exactly one Markdown paragraph.',
-              'Keep one prose paragraph inside lead and move every other block outside it.',
-            );
-      },
-    },
-    {
-      id: 'first-authored-block',
-      check: ({ lead, index, siblings, fail }) =>
-        index > 0 || siblings[0] !== lead
-          ? fail(
-              lead,
-              'A section accepts one lead as its first authored block.',
-              'Keep one lead first in the section and use ordinary paragraphs for the remaining prose.',
-            )
-          : undefined,
-    },
-  ],
-});
-
-function validateLeadParagraphs(
-  tree: MdastRoot,
-  options: DirectivePluginOptions,
-  violations: AgenticReportError[],
-): void {
-  visit(tree, (candidate) => {
-    if (!isDirectiveNode(candidate) || candidate.name !== 'section') return;
-    return inspectSection(candidate) === 'refused' ? SKIP : undefined;
-  });
-
-  function inspectSection(candidate: DirectiveNode): 'accepted' | 'refused' {
-    const children = candidate.children ?? [];
-    const leads = children.filter(
-      (child): child is DirectiveNode => isDirectiveNode(child) && child.name === 'lead',
-    );
-    const found: AgenticReportError[] = [];
-    // Each lead is its own subject: a malformed one says nothing about the next, so the section
-    // answers for every lead it holds.
-    for (const [index, lead] of leads.entries()) {
-      runAuthoredRules(leadRules, { lead, index, siblings: children, fail }, found);
-    }
-    violations.push(...found);
-    return found.length === 0 ? 'accepted' : 'refused';
-  }
-
-  function fail(lead: DirectiveNode, message: string, remediation: string): AgenticReportError {
-    return attachDirectiveSource(
-      directiveError(lead, 'INVALID_DIRECTIVE_PLACEMENT', message, remediation),
-      lead,
-      options,
-    );
-  }
-}
-
 function isAppendixGlossaryParent(parent: unknown): boolean {
   return (
     (isTraversableNode(parent) && parent.type === 'root') ||
-    (isDirectiveNode(parent) && parent.name === 'section')
+    (isDirectiveNode(parent) && parent.name === SECTION_DIRECTIVE)
   );
 }
 
-function restoreLiteralColonText(tree: MdastRoot, markdown: string): void {
+export function restoreLiteralColonText(tree: MdastRoot, markdown: string): void {
   visit(tree, (node, index, parent) => {
     if (
       !isDirectiveNode(node) ||
@@ -584,420 +483,6 @@ function isMutableChildrenParent(value: unknown): value is { children: Traversab
   );
 }
 
-interface ResponseQuestionSubject {
-  readonly node: DirectiveNode;
-  readonly values: Readonly<Record<string, string | number | boolean>>;
-  readonly kind: ResponseQuestionKind;
-  readonly buckets: readonly DirectiveNode[];
-  readonly choices: readonly DirectiveNode[];
-  readonly items: readonly DirectiveNode[];
-  readonly seenIds: Set<string>;
-  readonly fail: (node: DirectiveNode, message: string) => AgenticReportError;
-}
-
-/**
- * The rules of one response question, declared as data. Independence is the point: a question whose
- * option count is wrong is still judged on its numeric bounds, because neither answer needs the
- * other. Where an answer does need another, the need is written in `dependsOn` instead of being
- * implied by the order of statements.
- */
-const responseQuestionRules = declareAuthoredRules<ResponseQuestionSubject>({
-  subject: 'response/question',
-  rules: [
-    {
-      id: 'unique-id',
-      check: ({ node, values, seenIds, fail }) => {
-        const id = String(values.id);
-        if (seenIds.has(id)) return fail(node, `Question id is duplicated: ${id}.`);
-        seenIds.add(id);
-        return undefined;
-      },
-    },
-    {
-      id: 'unique-child-ids',
-      check: ({ node, buckets, choices, items, fail }) => {
-        const duplicated = (children: readonly DirectiveNode[], label: string) => {
-          const ids = children.map((child) => String(responseAttributes(child)?.id));
-          return new Set(ids).size === ids.length
-            ? undefined
-            : fail(node, `${label} ids must be unique within the question.`);
-        };
-        return [
-          duplicated(buckets, 'bucket'),
-          duplicated(choices, 'option'),
-          duplicated(items, 'item'),
-        ].filter((violation): violation is AgenticReportError => violation !== undefined);
-      },
-    },
-    {
-      id: 'items-match-kind',
-      check: ({ node, kind, items, fail }) => {
-        const itemKind = ['bucket', 'item-single', 'item-multi', 'order', 'number'].includes(kind);
-        if (itemKind === items.length > 0) return undefined;
-        return fail(
-          node,
-          itemKind ? `${kind} requires response items.` : `${kind} does not accept items.`,
-        );
-      },
-    },
-    {
-      id: 'buckets-match-kind',
-      check: ({ node, kind, buckets, fail }) => {
-        if (kind === 'bucket') {
-          return buckets.length < 2 || buckets.length > 5
-            ? fail(node, 'Bucket questions require 2 to 5 buckets.')
-            : undefined;
-        }
-        return buckets.length > 0
-          ? fail(node, `${kind} does not accept bucket definitions.`)
-          : undefined;
-      },
-    },
-    {
-      // Items are read against accepted buckets: with the bucket set refused, an unknown reference
-      // would be a fact about buckets nobody accepted.
-      id: 'item-bucket-references',
-      dependsOn: ['buckets-match-kind'],
-      check: ({ kind, buckets, items, fail }) => {
-        if (kind !== 'bucket') return undefined;
-        const bucketIds = new Set(buckets.map((child) => String(responseAttributes(child)?.id)));
-        return items
-          .map((item) => {
-            const initial = responseAttributes(item)?.bucket;
-            return initial !== undefined && !bucketIds.has(String(initial))
-              ? fail(item, `Response item references an unknown bucket: ${String(initial)}.`)
-              : undefined;
-          })
-          .filter((violation): violation is AgenticReportError => violation !== undefined);
-      },
-    },
-    {
-      id: 'options-match-kind',
-      check: ({ node, kind, choices, fail }) => {
-        if (['item-single', 'item-multi', 'single'].includes(kind)) {
-          return choices.length < 2 || choices.length > MAX_RESPONSE_OPTIONS
-            ? fail(node, `${kind} requires 2 to ${MAX_RESPONSE_OPTIONS} options.`)
-            : undefined;
-        }
-        return choices.length > 0
-          ? fail(node, `${kind} does not accept option definitions.`)
-          : undefined;
-      },
-    },
-    {
-      id: 'numeric-domain',
-      check: ({ node, values, kind, fail }) => {
-        if (kind === 'number') {
-          const minimum = values.min;
-          const maximum = values.max;
-          const step = values.step;
-          if (typeof minimum !== 'number' || typeof maximum !== 'number')
-            return fail(node, 'Number questions require min and max.');
-          if (minimum > maximum) return fail(node, 'Number question min must not exceed max.');
-          return typeof step === 'number' && step <= 0
-            ? fail(node, 'Number question step must be positive.')
-            : undefined;
-        }
-        return values.min !== undefined || values.max !== undefined || values.step !== undefined
-          ? fail(node, `Numeric bounds are supported only by number questions, not ${kind}.`)
-          : undefined;
-      },
-    },
-  ],
-});
-
-let responseAttributeSource: WeakMap<
-  object,
-  Readonly<Record<string, string | number | boolean>>
-> = new WeakMap();
-
-/**
- * The interpreted attributes of a node, or nothing when the node never reached interpretation. That
- * happens only for a directive whose own form or attributes were already refused, and everything
- * these checks would read comes from that unmade interpretation — so the subject is skipped rather
- * than judged on values nobody accepted.
- */
-function responseAttributes(
-  node: DirectiveNode,
-): Readonly<Record<string, string | number | boolean>> | undefined {
-  return responseAttributeSource.get(node);
-}
-
-function validateResponseForms(
-  tree: MdastRoot,
-  attributesByNode: WeakMap<object, Readonly<Record<string, string | number | boolean>>>,
-  options: DirectivePluginOptions,
-  violations: AgenticReportError[],
-): void {
-  responseAttributeSource = attributesByNode;
-  const formIds = new Set<string>();
-  let formCount = 0;
-  visit(tree, (candidate) => {
-    if (!isDirectiveNode(candidate) || candidate.name !== 'response') return;
-    return inspectForm(candidate) === 'refused' ? SKIP : undefined;
-  });
-
-  function inspectForm(candidate: DirectiveNode): 'accepted' | 'refused' {
-    const form = attributes(candidate);
-    if (form === undefined) return 'refused';
-    const formViolations: AgenticReportError[] = [];
-    // Question ids and the item budget are properties of one form, not of the document: two forms
-    // may reuse an id, and each carries its own items.
-    const questionIds = new Set<string>();
-    let itemTotal = 0;
-    formCount += 1;
-    if (formCount > MAX_RESPONSE_FORMS)
-      formViolations.push(
-        fail(candidate, `A document supports at most ${MAX_RESPONSE_FORMS} response forms.`),
-      );
-    const formId = String(form.id);
-    if (formIds.has(formId))
-      formViolations.push(fail(candidate, `Response id is duplicated: ${formId}.`));
-    formIds.add(formId);
-
-    const questions = directChildren(candidate, ['question'], formViolations);
-    if (questions !== undefined) {
-      if (questions.length < 1 || questions.length > MAX_RESPONSE_QUESTIONS) {
-        formViolations.push(
-          fail(candidate, `Response requires 1 to ${MAX_RESPONSE_QUESTIONS} questions.`),
-        );
-      } else {
-        // Each question is its own subject: a refused one says nothing about the next, so the form
-        // answers for every question it holds.
-        for (const question of questions) {
-          itemTotal += inspectQuestion(question, formViolations, questionIds);
-        }
-        if (itemTotal > MAX_RESPONSE_ITEMS)
-          formViolations.push(
-            fail(candidate, `Response supports at most ${MAX_RESPONSE_ITEMS} items in total.`),
-          );
-      }
-    }
-
-    violations.push(...formViolations);
-    return formViolations.length === 0 ? 'accepted' : 'refused';
-  }
-
-  function inspectQuestion(
-    question: DirectiveNode,
-    formViolations: AgenticReportError[],
-    questionIds: Set<string>,
-  ): number {
-    const values = attributes(question);
-    if (values === undefined) return 0;
-    const children = directChildren(question, ['bucket', 'option', 'item'], formViolations);
-    if (children === undefined) return 0;
-    const items = children.filter((child) => child.name === 'item');
-    runAuthoredRules(
-      responseQuestionRules,
-      {
-        node: question,
-        values,
-        kind: String(values.kind) as ResponseQuestionKind,
-        buckets: children.filter((child) => child.name === 'bucket'),
-        choices: children.filter((child) => child.name === 'option'),
-        items,
-        seenIds: questionIds,
-        fail,
-      },
-      formViolations,
-    );
-    return items.length;
-  }
-
-  function attributes(
-    node: DirectiveNode,
-  ): Readonly<Record<string, string | number | boolean>> | undefined {
-    return responseAttributes(node);
-  }
-  function directChildren(
-    parent: DirectiveNode,
-    allowed: readonly string[],
-    collected: AgenticReportError[],
-  ): readonly DirectiveNode[] | undefined {
-    const children = parent.children ?? [];
-    const directives = children.filter(isDirectiveNode);
-    if (
-      directives.length !== children.length ||
-      directives.some((child) => !allowed.includes(child.name))
-    ) {
-      collected.push(
-        fail(
-          parent,
-          `${parent.name} accepts only ${allowed.join(', ')} directives as direct children.`,
-        ),
-      );
-      return undefined;
-    }
-    return directives;
-  }
-  function fail(node: DirectiveNode, message: string): AgenticReportError {
-    return attachDirectiveSource(
-      directiveError(
-        node,
-        'INVALID_RESPONSE_DATA',
-        message,
-        'Correct the response/question child types, stable ids, defaults, or kind-specific domain.',
-      ),
-      node,
-      options,
-    );
-  }
-}
-
-interface ReviewComponentSubject {
-  readonly node: DirectiveNode;
-  readonly childName: string;
-  readonly children: readonly DirectiveNode[];
-  readonly values: Readonly<Record<string, string | number | boolean>>;
-  readonly childValues: (
-    child: DirectiveNode,
-  ) => Readonly<Record<string, string | number | boolean>>;
-  readonly placement: (
-    node: DirectiveNode,
-    message: string,
-    remediation: string,
-  ) => AgenticReportError;
-  readonly attribute: (
-    node: DirectiveNode,
-    message: string,
-    remediation: string,
-  ) => AgenticReportError;
-}
-
-/**
- * The rules of one typed review component. Child composition, size, identity and child uniqueness
- * are separate questions about the same component; only the ones that read an accepted child list
- * say so through `dependsOn`.
- */
-const reviewComponentRules = declareAuthoredRules<ReviewComponentSubject>({
-  subject: 'decision|checklist',
-  rules: [
-    {
-      id: 'children-not-mixed',
-      check: ({ node, childName, children, placement }) =>
-        (node.children ?? []).length === children.length
-          ? undefined
-          : placement(
-              node,
-              `${node.name} cannot mix Markdown content with ${childName} children.`,
-              node.name === 'decision'
-                ? 'Use Markdown-only legacy decision content or direct decision-option children, not both.'
-                : 'Use only direct check-item children inside checklist.',
-            ),
-    },
-    {
-      id: 'child-limit',
-      check: ({ node, children, placement }) =>
-        children.length > MAX_REVIEW_RESPONSES
-          ? placement(
-              node,
-              `${node.name} exceeds the ${MAX_REVIEW_RESPONSES}-child review limit.`,
-              `Split this ${node.name} into smaller components.`,
-            )
-          : undefined,
-    },
-    {
-      id: 'stable-decision-id',
-      check: ({ node, values, attribute }) =>
-        node.name === 'decision' && typeof values.id !== 'string'
-          ? attribute(
-              node,
-              'A typed decision requires a stable id.',
-              'Add id="..." to the decision or remove its decision-option children.',
-            )
-          : undefined,
-    },
-    {
-      id: 'child-present',
-      check: ({ node, childName, children, placement }) =>
-        children.length === 0
-          ? placement(
-              node,
-              `${node.name} must contain at least one ${childName}.`,
-              `Add a ${childName} text directive directly inside ${node.name}.`,
-            )
-          : undefined,
-    },
-    {
-      // Child ids are read against an accepted child list: with the composition refused, the list is
-      // not the author's own and duplicate ids inside it say nothing.
-      id: 'unique-child-ids',
-      dependsOn: ['children-not-mixed', 'child-present'],
-      check: ({ node, children, childValues, attribute }) => {
-        const seen = new Set<string>();
-        const found: AgenticReportError[] = [];
-        for (const child of children) {
-          const id = String(childValues(child).id ?? '');
-          if (seen.has(id)) {
-            found.push(
-              attribute(
-                child,
-                `${node.name} child id is duplicated: ${id}.`,
-                `Use a unique id inside this ${node.name}.`,
-              ),
-            );
-            continue;
-          }
-          seen.add(id);
-        }
-        return found;
-      },
-    },
-  ],
-});
-
-function validateTypedReviewComponents(
-  tree: MdastRoot,
-  attributesByNode: WeakMap<object, Readonly<Record<string, string | number | boolean>>>,
-  options: DirectivePluginOptions,
-  violations: AgenticReportError[],
-): void {
-  visit(tree, (candidate) => {
-    if (
-      !isDirectiveNode(candidate) ||
-      (candidate.name !== 'decision' && candidate.name !== 'checklist')
-    )
-      return;
-    return inspectComponent(candidate) === 'refused' ? SKIP : undefined;
-  });
-
-  function inspectComponent(candidate: DirectiveNode): 'accepted' | 'refused' {
-    const childName = candidate.name === 'decision' ? 'decision-option' : 'check-item';
-    const children = (candidate.children ?? []).filter(
-      (child): child is DirectiveNode => isDirectiveNode(child) && child.name === childName,
-    );
-    // A decision without typed children is ordinary Markdown content and none of these rules apply.
-    if (candidate.name === 'decision' && children.length === 0) return 'accepted';
-    const found: AgenticReportError[] = [];
-    runAuthoredRules(
-      reviewComponentRules,
-      {
-        node: candidate,
-        childName,
-        children,
-        values: attributesByNode.get(candidate) ?? {},
-        childValues: (child) => attributesByNode.get(child) ?? {},
-        placement: (node, message, remediation) =>
-          attachDirectiveSource(
-            directiveError(node, 'INVALID_DIRECTIVE_PLACEMENT', message, remediation),
-            node,
-            options,
-          ),
-        attribute: (node, message, remediation) =>
-          attachDirectiveSource(
-            directiveError(node, 'INVALID_DIRECTIVE_ATTRIBUTE', message, remediation),
-            node,
-            options,
-          ),
-      },
-      found,
-    );
-    violations.push(...found);
-    return found.length === 0 ? 'accepted' : 'refused';
-  }
-}
-
 /**
  * Whether this section's authored id is already taken. Judging and claiming are separate because a
  * node the set refuses must not claim anything: the name it would take belongs to whichever section
@@ -1019,76 +504,6 @@ function duplicateSectionIdViolation(
     : undefined;
 }
 
-/** Claims the identity of an accepted section, generating a collision-free one when none is authored. */
-function claimSectionIdentity(
-  values: Readonly<Record<string, string | number | boolean>>,
-  used: Set<string>,
-  claimedAuthored: Set<string>,
-): Readonly<Record<string, string | number | boolean>> {
-  const authoredId = values.id;
-  if (typeof authoredId === 'string') {
-    claimedAuthored.add(authoredId);
-    return values;
-  }
-  const base = sectionSlug(String(values.title));
-  let id = base;
-  let suffix = 2;
-  while (used.has(id)) {
-    id = suffixedIdentity(base, suffix);
-    suffix += 1;
-  }
-  used.add(id);
-  return { ...values, id: `${GENERATED_SECTION_ID_PREFIX}${id}` };
-}
-
-function collectAuthoredSectionIds(tree: MdastRoot): Set<string> {
-  const ids = new Set<string>();
-  visit(tree, (node) => {
-    if (!isDirectiveNode(node) || node.name !== 'section') return;
-    const id = node.attributes?.id;
-    if (typeof id === 'string') ids.add(id.trim());
-  });
-  return ids;
-}
-
-function sectionSlug(title: string): string {
-  const slug = title
-    .normalize('NFKD')
-    .replace(/\p{M}+/gu, '')
-    .toLocaleLowerCase('und')
-    .replace(/[^a-z0-9]+/gu, '-')
-    .replace(/^-+|-+$/gu, '')
-    .slice(0, 56)
-    .replace(/-+$/gu, '');
-  if (slug.length === 0) return 'section';
-  return /^[a-z]/u.test(slug) ? slug : `section-${slug}`;
-}
-
-function suffixedIdentity(base: string, suffix: number): string {
-  const suffixText = `-${suffix}`;
-  return `${base.slice(0, 64 - suffixText.length).replace(/-+$/gu, '')}${suffixText}`;
-}
-
-function actionLabelViolation(node: DirectiveNode): AgenticReportError | undefined {
-  const label = (node.children ?? [])
-    .map((child) =>
-      typeof child === 'object' && child !== null && 'value' in child
-        ? String((child as { readonly value?: unknown }).value ?? '')
-        : '',
-    )
-    .join('')
-    .trim();
-  if (label.length === 0) {
-    return directiveError(
-      node,
-      'DIRECTIVE_LABEL_REQUIRED',
-      'action requires a visible label.',
-      'Use ::action[Visible label]{href="..."}.',
-    );
-  }
-  return undefined;
-}
-
 interface DirectiveNodeSubject {
   readonly node: DirectiveNode;
   readonly parent: unknown;
@@ -1099,6 +514,8 @@ interface DirectiveNodeSubject {
   readonly glossaryTerms: ReadonlyMap<string, GlossaryDefinition>;
   /** Where the attribute rule leaves its interpretation for the rules that read it. */
   readonly parsed: { values?: Readonly<Record<string, string | number | boolean>> };
+  /** The directives of the page's vocabulary. */
+  readonly directives: ReadonlyMap<string, DirectiveDefinition>;
 }
 
 /**
@@ -1112,61 +529,60 @@ const directiveNodeRules = declareAuthoredRules<DirectiveNodeSubject>({
   rules: [
     {
       id: 'registered-name',
-      check: ({ node }) =>
-        directiveByName.has(node.name) ? undefined : unsupportedDirectiveError(node),
+      check: ({ node, directives }) =>
+        directives.has(node.name) ? undefined : unsupportedDirectiveError(node, directives),
     },
     {
       id: 'no-prototype-like-attributes',
-      check: ({ node, markdown }) => prototypeLikeAttributeViolation(node, markdown),
+      check: ({ node, markdown, directives }) =>
+        prototypeLikeAttributeViolation(node, markdown, directives),
     },
     {
       id: 'declared-form',
       dependsOn: ['registered-name'],
-      check: ({ node }) => {
-        const directive = directiveByName.get(node.name);
+      check: ({ node, directives }) => {
+        const directive = directives.get(node.name);
         return directive === undefined ? undefined : directiveFormViolation(node, directive);
       },
     },
     {
       id: 'declared-placement',
       dependsOn: ['registered-name'],
-      check: ({ node, parent }) => {
-        const directive = directiveByName.get(node.name);
+      check: ({ node, parent, directives }) => {
+        const directive = directives.get(node.name);
         return directive === undefined
           ? undefined
-          : directivePlacementViolation(node, directive, parent);
+          : directivePlacementViolation(node, directive, parent, directives);
       },
     },
     {
       id: 'declared-children',
       dependsOn: ['registered-name'],
-      check: ({ node }) => {
-        const directive = directiveByName.get(node.name);
+      check: ({ node, directives }) => {
+        const directive = directives.get(node.name);
         return directive === undefined ? undefined : directiveChildrenViolation(node, directive);
       },
     },
     {
       id: 'interpreted-attributes',
       dependsOn: ['registered-name', 'no-prototype-like-attributes'],
-      check: ({ node, parsed }) => {
-        const directive = directiveByName.get(node.name);
+      check: ({ node, parsed, directives }) => {
+        const directive = directives.get(node.name);
         if (directive === undefined) return undefined;
         const interpretation = interpretDirectiveAttributes(directive, node.attributes ?? {});
-        if (!interpretation.ok) return directiveAttributeError(node, interpretation);
+        if (!interpretation.ok) return directiveAttributeError(node, interpretation, directives);
         parsed.values = interpretation.values;
         return undefined;
       },
     },
-    {
-      id: 'action-label',
-      dependsOn: ['registered-name'],
-      check: ({ node }) => (node.name === 'action' ? actionLabelViolation(node) : undefined),
-    },
+    // A block's own node rules follow the reading of the node and precede the combination and
+    // identity checks; each applies to the nodes of its own block only.
+    ...[...blockByName.values()].flatMap(blockNodeRules),
     {
       id: 'compatible-attribute-combination',
       dependsOn: ['interpreted-attributes'],
-      check: ({ node, parsed }) => {
-        const directive = directiveByName.get(node.name);
+      check: ({ node, parsed, directives }) => {
+        const directive = directives.get(node.name);
         if (directive === undefined || parsed.values === undefined) return undefined;
         const violations = (directive.incompatibleCombinations ?? [])
           .filter((combination) =>
@@ -1193,7 +609,7 @@ const directiveNodeRules = declareAuthoredRules<DirectiveNodeSubject>({
       id: 'section-identity',
       dependsOn: ['interpreted-attributes'],
       check: ({ node, parsed, claimedAuthoredSectionIds }) =>
-        node.name === 'section' && parsed.values !== undefined
+        node.name === SECTION_DIRECTIVE && parsed.values !== undefined
           ? duplicateSectionIdViolation(node, parsed.values, claimedAuthoredSectionIds)
           : undefined,
     },
@@ -1201,7 +617,7 @@ const directiveNodeRules = declareAuthoredRules<DirectiveNodeSubject>({
       id: 'appendix-glossary-placement',
       dependsOn: ['interpreted-attributes'],
       check: ({ node, parent, parsed }) =>
-        node.name === 'glossary' &&
+        node.name === GLOSSARY_DIRECTIVE &&
         parsed.values?.placement === 'appendix' &&
         !isAppendixGlossaryParent(parent)
           ? directiveError(
@@ -1216,7 +632,7 @@ const directiveNodeRules = declareAuthoredRules<DirectiveNodeSubject>({
       id: 'unique-glossary-identity',
       dependsOn: ['interpreted-attributes'],
       check: ({ node, parsed, glossaryByKey, glossaryTerms }) => {
-        if (node.name !== 'glossary' || parsed.values === undefined) return undefined;
+        if (node.name !== GLOSSARY_DIRECTIVE || parsed.values === undefined) return undefined;
         const key = String(parsed.values.key);
         const term = String(parsed.values.term);
         return glossaryByKey.has(key) || glossaryTerms.has(term.toLocaleLowerCase('und'))
@@ -1235,7 +651,7 @@ const directiveNodeRules = declareAuthoredRules<DirectiveNodeSubject>({
       id: 'declared-glossary-forms',
       dependsOn: ['interpreted-attributes', 'unique-glossary-identity'],
       check: ({ node, parsed, glossaryTerms }) => {
-        if (node.name !== 'glossary' || parsed.values === undefined) return undefined;
+        if (node.name !== GLOSSARY_DIRECTIVE || parsed.values === undefined) return undefined;
         const forms = declaredGlossaryForms(parsed.values.forms, node);
         if (forms instanceof AgenticReportError) return forms;
         const claimed = new Set<string>();
@@ -1259,6 +675,18 @@ const directiveNodeRules = declareAuthoredRules<DirectiveNodeSubject>({
   ],
 });
 
+function blockNodeRules(block: Block): readonly AuthoredRule<DirectiveNodeSubject>[] {
+  return block.nodeRules.map((rule) => ({
+    id: rule.id,
+    ...(rule.dependsOn === undefined ? {} : { dependsOn: rule.dependsOn }),
+    check: ({ node, parent, parsed }) => {
+      if (node.name !== block.name) return undefined;
+      const subject: BlockNodeSubject = { node, parent, values: parsed.values };
+      return rule.check(subject);
+    },
+  }));
+}
+
 /**
  * Re-anchors a node violation onto the node's own authored range and carries a referenced target
  * path into details, as the phase has always reported it.
@@ -1278,6 +706,7 @@ function locatedNodeViolation(
     ...(violation.diagnostic.source?.file === undefined
       ? {}
       : { target: violation.diagnostic.source.file }),
+    ...expansionDetails(node),
   };
   return new AgenticReportError(
     {
@@ -1287,769 +716,6 @@ function locatedNodeViolation(
     },
     { cause: violation },
   );
-}
-
-interface ActionGroupSubject {
-  readonly node: DirectiveNode;
-  readonly placement: (
-    node: DirectiveNode,
-    message: string,
-    remediation: string,
-  ) => AgenticReportError;
-}
-
-/** The single rule of an action group, declared as data like every other rule of this phase. */
-const actionGroupRules = declareAuthoredRules<ActionGroupSubject>({
-  subject: 'actions',
-  rules: [
-    {
-      id: 'action-children-only',
-      check: ({ node, placement }) => {
-        const children = node.children ?? [];
-        const onlyActions =
-          children.length > 0 &&
-          children.every((child) => isDirectiveNode(child) && child.name === 'action');
-        return onlyActions
-          ? undefined
-          : placement(
-              node,
-              'actions accepts one or more action directives as direct children.',
-              'Move prose outside actions and add links with ::action[Label]{href="..."}.',
-            );
-      },
-    },
-  ],
-});
-
-function validateActionGroups(
-  tree: MdastRoot,
-  options: DirectivePluginOptions,
-  violations: AgenticReportError[],
-): void {
-  visit(tree, (candidate) => {
-    if (!isDirectiveNode(candidate) || candidate.name !== 'actions') return;
-    const found: AgenticReportError[] = [];
-    runAuthoredRules(
-      actionGroupRules,
-      {
-        node: candidate,
-        placement: (node, message, remediation) =>
-          attachDirectiveSource(
-            directiveError(node, 'INVALID_DIRECTIVE_PLACEMENT', message, remediation),
-            node,
-            options,
-          ),
-      },
-      found,
-    );
-    violations.push(...found);
-    return found.length === 0 ? undefined : SKIP;
-  });
-}
-
-interface VisualizationContext {
-  readonly attributes: (node: DirectiveNode) => Readonly<Record<string, string | number | boolean>>;
-  readonly fail: (node: DirectiveNode, message: string, remediation: string) => AgenticReportError;
-  readonly warn: (node: DirectiveNode, code: string, message: string, remediation: string) => void;
-}
-
-interface ChartSubject extends VisualizationContext {
-  readonly chart: DirectiveNode;
-  readonly series: readonly DirectiveNode[];
-  readonly chartType: string;
-}
-
-interface ChartSeriesSubject extends VisualizationContext {
-  readonly seriesNode: DirectiveNode;
-  readonly points: readonly DirectiveNode[];
-  readonly chartType: string;
-  readonly canonicalLabels: () => readonly string[] | undefined;
-  readonly rememberLabels: (labels: readonly string[]) => void;
-}
-
-interface DiagramEdgeSubject extends VisualizationContext {
-  readonly edge: DirectiveNode;
-  readonly known: ReadonlySet<string>;
-  readonly type: string;
-}
-
-interface FlowDiagramSubject extends VisualizationContext {
-  readonly diagram: DirectiveNode;
-  readonly groups: readonly DirectiveNode[];
-  readonly nodes: readonly DirectiveNode[];
-  readonly edges: readonly DirectiveNode[];
-}
-
-interface FlowNodeSubject extends VisualizationContext {
-  readonly node: DirectiveNode;
-  readonly groups: readonly DirectiveNode[];
-  readonly knownGroups: ReadonlySet<string>;
-}
-
-interface FlowGroupSubject extends VisualizationContext {
-  readonly group: DirectiveNode;
-  readonly nodes: readonly DirectiveNode[];
-}
-
-interface DiagramLegendSubject extends VisualizationContext {
-  readonly diagram: DirectiveNode;
-  readonly legends: readonly DirectiveNode[];
-  readonly items: readonly DirectiveNode[];
-}
-
-interface LegendItemSubject extends VisualizationContext {
-  readonly item: DirectiveNode;
-  readonly earlier: readonly DirectiveNode[];
-}
-
-interface SequenceDiagramSubject extends VisualizationContext {
-  readonly diagram: DirectiveNode;
-  readonly groups: readonly DirectiveNode[];
-  readonly participants: readonly DirectiveNode[];
-  readonly messages: readonly DirectiveNode[];
-}
-
-interface SequenceParticipantSubject extends VisualizationContext {
-  readonly participant: DirectiveNode;
-}
-
-interface SequenceMessageSubject extends VisualizationContext {
-  readonly message: DirectiveNode;
-}
-
-/** Series count and pie arity are separate questions about the same chart. */
-const chartRules = declareAuthoredRules<ChartSubject>({
-  subject: 'chart',
-  rules: [
-    {
-      id: 'pie-single-series',
-      check: ({ chart, series, chartType, fail }) =>
-        chartType === 'pie' && series.length !== 1
-          ? fail(
-              chart,
-              'Pie charts require exactly one series.',
-              'Keep one series or use a bar chart.',
-            )
-          : undefined,
-    },
-  ],
-});
-
-/**
- * The rules of one chart series. Label uniqueness, pie values and alignment with the first series
- * are independent readings of the same series; only alignment needs the labels this series declares,
- * which is why it names that dependency instead of relying on statement order.
- */
-const chartSeriesRules = declareAuthoredRules<ChartSeriesSubject>({
-  subject: 'chart/series',
-  rules: [
-    {
-      id: 'unique-point-labels',
-      check: ({ seriesNode, points, attributes, fail }) => {
-        const labels = points.map((point) => String(attributes(point).label));
-        return new Set(labels).size === labels.length
-          ? undefined
-          : fail(
-              seriesNode,
-              'Chart point labels must be unique within each series.',
-              'Use each category label once per series.',
-            );
-      },
-    },
-    {
-      id: 'pie-values',
-      check: ({ seriesNode, points, chartType, attributes, fail }) => {
-        if (chartType !== 'pie') return undefined;
-        const values = points.map((point) => Number(attributes(point).value));
-        return values.some((value) => value < 0) || values.every((value) => value === 0)
-          ? fail(
-              seriesNode,
-              'Pie chart values must be non-negative and include at least one positive value.',
-              'Use zero or positive values, or select a bar or line chart.',
-            )
-          : undefined;
-      },
-    },
-    {
-      id: 'aligned-categories',
-      dependsOn: ['unique-point-labels'],
-      check: ({ seriesNode, points, attributes, canonicalLabels, rememberLabels, fail }) => {
-        const labels = points.map((point) => String(attributes(point).label));
-        const canonical = canonicalLabels();
-        if (canonical === undefined) {
-          rememberLabels(labels);
-          return undefined;
-        }
-        return labels.length !== canonical.length ||
-          labels.some((label, index) => label !== canonical[index])
-          ? fail(
-              seriesNode,
-              'Every chart series must use the same point labels in the same order.',
-              'Align this series with the first series category list.',
-            )
-          : undefined;
-      },
-    },
-  ],
-});
-
-/**
- * Reference validity and self-connection are separate readings of the same edge. A sequence accepts a
- * message to its own participant as a step inside it; a flow has no geometry for a self-edge.
- */
-const diagramEdgeRules = declareAuthoredRules<DiagramEdgeSubject>({
-  subject: 'diagram/edge',
-  rules: [
-    {
-      id: 'known-endpoints',
-      check: ({ edge, known, attributes, fail }) => {
-        const from = String(attributes(edge).from);
-        const to = String(attributes(edge).to);
-        return known.has(from) && known.has(to)
-          ? undefined
-          : fail(
-              edge,
-              `Diagram edge references an unknown node: ${!known.has(from) ? from : to}.`,
-              'Use ids declared by node directives in this diagram.',
-            );
-      },
-    },
-    {
-      id: 'self-connection',
-      check: ({ edge, type, attributes, fail }) => {
-        const from = String(attributes(edge).from);
-        const to = String(attributes(edge).to);
-        const selfConnectionAllowed =
-          type === 'sequence'
-            ? DIAGRAM_CONTRACT.sequence.selfMessages
-            : DIAGRAM_CONTRACT.flow.selfEdges;
-        return from === to && !selfConnectionAllowed
-          ? fail(
-              edge,
-              'Flow diagram self-edges are not supported.',
-              'Connect two distinct nodes, or use type="sequence" to show a step inside one participant.',
-            )
-          : undefined;
-      },
-    },
-  ],
-});
-
-/** Size, grouping arity and the default view are independent questions about one flow diagram. */
-const flowDiagramRules = declareAuthoredRules<FlowDiagramSubject>({
-  subject: 'diagram/flow',
-  rules: [
-    {
-      id: 'layout-or-direction',
-      check: ({ diagram, fail }) =>
-        diagram.attributes?.layout !== undefined &&
-        diagram.attributes?.layout !== null &&
-        diagram.attributes?.direction !== undefined &&
-        diagram.attributes?.direction !== null
-          ? fail(
-              diagram,
-              'A flow diagram names its default view once: layout and direction cannot both be set.',
-              'Keep layout="…"; direction is its older spelling.',
-            )
-          : undefined,
-    },
-    {
-      id: 'node-count',
-      check: ({ diagram, nodes, fail }) => {
-        const contract = DIAGRAM_CONTRACT.flow;
-        return nodes.length < contract.nodes.minimum || nodes.length > contract.nodes.maximum
-          ? fail(
-              diagram,
-              `Flow diagrams require ${contract.nodes.minimum} to ${contract.nodes.maximum} nodes.`,
-              'Add nodes or split a larger flow.',
-            )
-          : undefined;
-      },
-    },
-    {
-      id: 'edge-count',
-      check: ({ diagram, edges, fail }) => {
-        const contract = DIAGRAM_CONTRACT.flow;
-        return edges.length > contract.edges.maximum
-          ? fail(
-              diagram,
-              `Flow diagrams support at most ${contract.edges.maximum} edges.`,
-              'Split the flow or remove non-essential connections.',
-            )
-          : undefined;
-      },
-    },
-    {
-      id: 'group-count',
-      check: ({ diagram, groups, fail }) => {
-        const contract = DIAGRAM_CONTRACT.flow;
-        return groups.length > contract.groups.maximum
-          ? fail(
-              diagram,
-              `Flow diagrams support at most ${contract.groups.maximum} groups.`,
-              'Merge related groups or split the flow into two diagrams.',
-            )
-          : undefined;
-      },
-    },
-  ],
-});
-
-/** One node's group assignment, read against the groups the diagram declares. */
-const flowNodeRules = declareAuthoredRules<FlowNodeSubject>({
-  subject: 'diagram/flow/node',
-  rules: [
-    {
-      id: 'group-assignment',
-      check: ({ node, knownGroups, attributes, fail }) => {
-        const group = attributes(node).group;
-        // A node may stand outside every group; a named group must be one the diagram declares.
-        return group === undefined || knownGroups.has(String(group))
-          ? undefined
-          : fail(
-              node,
-              `Diagram node references an undeclared group: ${String(group)}.`,
-              'Declare the group or remove the group attribute.',
-            );
-      },
-    },
-  ],
-});
-
-/** Whether a group holds nodes, read from the node assignments the diagram accepted. */
-const flowGroupRules = declareAuthoredRules<FlowGroupSubject>({
-  subject: 'diagram/flow/group',
-  rules: [
-    {
-      id: 'group-membership',
-      check: ({ group, nodes, attributes, fail }) => {
-        const id = String(attributes(group).id);
-        return nodes.some((node) => attributes(node).group === id)
-          ? undefined
-          : fail(
-              group,
-              `Diagram group has no nodes: ${id}.`,
-              'Assign at least one node to this group.',
-            );
-      },
-    },
-  ],
-});
-
-/** How many legends and entries one diagram declares; each entry is read on its own below. */
-const diagramLegendRules = declareAuthoredRules<DiagramLegendSubject>({
-  subject: 'diagram/legend',
-  rules: [
-    {
-      id: 'legend-count',
-      check: ({ diagram, legends, fail }) =>
-        legends.length > DIAGRAM_CONTRACT.legend.maximumPerDiagram
-          ? fail(
-              legends[1] ?? diagram,
-              'A diagram accepts at most one legend directive.',
-              'Keep one legend and move its title and policy there.',
-            )
-          : undefined,
-    },
-    {
-      id: 'item-count',
-      check: ({ diagram, items, fail }) =>
-        items.length > DIAGRAM_CONTRACT.legend.maximumItems
-          ? fail(
-              items[DIAGRAM_CONTRACT.legend.maximumItems] ?? diagram,
-              `A diagram legend accepts at most ${DIAGRAM_CONTRACT.legend.maximumItems} items.`,
-              'Name only the kinds a reader needs to tell apart.',
-            )
-          : undefined,
-    },
-  ],
-});
-
-/** One legend entry names exactly one kind, once, and a node emphasis always needs words. */
-const legendItemRules = declareAuthoredRules<LegendItemSubject>({
-  subject: 'diagram/legend-item',
-  rules: [
-    {
-      id: 'one-subject',
-      check: ({ item, attributes, fail }) => {
-        const values = attributes(item);
-        return (values.edge === undefined) === (values.node === undefined)
-          ? fail(
-              item,
-              'A legend item names exactly one connection kind (edge) or one node emphasis (node).',
-              'Set either edge="…" or node="…" on this legend item.',
-            )
-          : undefined;
-      },
-    },
-    {
-      id: 'node-label',
-      dependsOn: ['one-subject'],
-      check: ({ item, attributes, fail }) => {
-        const values = attributes(item);
-        return values.node !== undefined && values.label === undefined
-          ? fail(
-              item,
-              'A node emphasis has no package meaning, so its legend item needs a label.',
-              'Add label="…" saying what this emphasis marks.',
-            )
-          : undefined;
-      },
-    },
-    {
-      id: 'hidden-edge-only',
-      dependsOn: ['one-subject'],
-      check: ({ item, attributes, fail }) => {
-        const values = attributes(item);
-        if (values.hidden !== true) return undefined;
-        return values.node !== undefined || values.label !== undefined
-          ? fail(
-              item,
-              'Only a connection kind without a label can be hidden from the legend.',
-              'Remove hidden="true", or remove the node or label attribute.',
-            )
-          : undefined;
-      },
-    },
-    {
-      id: 'unique-subject',
-      dependsOn: ['one-subject'],
-      check: ({ item, earlier, attributes, fail }) => {
-        const values = attributes(item);
-        const same = earlier.some(
-          (other) =>
-            attributes(other).edge === values.edge && attributes(other).node === values.node,
-        );
-        return same
-          ? fail(
-              item,
-              `The legend already has an item for ${String(values.edge ?? values.node)}.`,
-              'Keep one item per connection kind or node emphasis.',
-            )
-          : undefined;
-      },
-    },
-  ],
-});
-
-/** Group support, direction and the two arities are independent readings of one sequence diagram. */
-const sequenceDiagramRules = declareAuthoredRules<SequenceDiagramSubject>({
-  subject: 'diagram/sequence',
-  rules: [
-    {
-      id: 'no-groups',
-      check: ({ diagram, groups, fail }) =>
-        !DIAGRAM_CONTRACT.sequence.groups && groups.length > 0
-          ? fail(
-              groups[0] ?? diagram,
-              'Sequence diagrams do not support subsystem groups.',
-              'Remove group directives and node group attributes.',
-            )
-          : undefined,
-    },
-    {
-      id: 'no-direction',
-      check: ({ diagram, fail }) =>
-        DIAGRAM_CONTRACT.sequence.direction === 'forbidden' &&
-        diagram.attributes?.direction !== undefined
-          ? fail(
-              diagram,
-              'Sequence diagrams do not accept a flow direction.',
-              'Remove the direction attribute from this sequence diagram.',
-            )
-          : undefined,
-    },
-    {
-      id: 'no-layout',
-      check: ({ diagram, fail }) =>
-        diagram.attributes?.layout !== undefined && diagram.attributes?.layout !== null
-          ? fail(
-              diagram,
-              'Sequence diagrams do not accept a flow layout.',
-              'Remove the layout attribute from this sequence diagram.',
-            )
-          : undefined,
-    },
-    {
-      id: 'participant-count',
-      check: ({ diagram, participants, fail }) => {
-        const contract = DIAGRAM_CONTRACT.sequence;
-        return participants.length < contract.participants.minimum ||
-          participants.length > contract.participants.maximum
-          ? fail(
-              diagram,
-              `Sequence diagrams require ${contract.participants.minimum} to ${contract.participants.maximum} participants.`,
-              'Adjust the number of node participants.',
-            )
-          : undefined;
-      },
-    },
-    {
-      id: 'message-count',
-      check: ({ diagram, messages, fail }) => {
-        const contract = DIAGRAM_CONTRACT.sequence;
-        return messages.length < contract.messages.minimum ||
-          messages.length > contract.messages.maximum
-          ? fail(
-              diagram,
-              `Sequence diagrams require ${contract.messages.minimum} to ${contract.messages.maximum} messages.`,
-              'Adjust the number of edge messages.',
-            )
-          : undefined;
-      },
-    },
-  ],
-});
-
-const sequenceParticipantRules = declareAuthoredRules<SequenceParticipantSubject>({
-  subject: 'diagram/sequence/participant',
-  rules: [
-    {
-      id: 'no-participant-group',
-      check: ({ participant, attributes, fail }) =>
-        !DIAGRAM_CONTRACT.sequence.participantGroups && attributes(participant).group !== undefined
-          ? fail(
-              participant,
-              'Sequence participants do not accept a group.',
-              'Remove the group attribute.',
-            )
-          : undefined,
-    },
-  ],
-});
-
-const sequenceMessageRules = declareAuthoredRules<SequenceMessageSubject>({
-  subject: 'diagram/sequence/message',
-  rules: [
-    {
-      id: 'label-required',
-      check: ({ message, attributes, fail }) =>
-        DIAGRAM_CONTRACT.sequence.messages.labelRequired && attributes(message).label === undefined
-          ? fail(message, 'Sequence messages require a label.', 'Add a label to this edge message.')
-          : undefined,
-    },
-  ],
-});
-
-function validateVisualizationData(
-  tree: MdastRoot,
-  attributesByNode: WeakMap<object, Readonly<Record<string, string | number | boolean>>>,
-  options: DirectivePluginOptions,
-  violations: AgenticReportError[],
-): void {
-  const context: VisualizationContext = { attributes, fail, warn };
-  visit(tree, (candidate) => {
-    if (!isDirectiveNode(candidate)) return;
-    if (candidate.name !== 'chart' && candidate.name !== 'diagram' && candidate.name !== 'timeline')
-      return;
-    if (!fullyInterpreted(candidate)) return SKIP;
-    const found: AgenticReportError[] = [];
-    if (candidate.name === 'chart') validateChart(candidate, found);
-    if (candidate.name === 'diagram') validateDiagram(candidate, found);
-    if (candidate.name === 'timeline') requireBoundedChildren(candidate, 'event', 1, 20, found);
-    violations.push(...found);
-    return found.length === 0 ? undefined : SKIP;
-  });
-
-  function validateChart(chart: DirectiveNode, found: AgenticReportError[]): void {
-    const series = requireBoundedChildren(chart, 'series', 1, 6, found);
-    if (series === undefined) return;
-    const chartType = String(attributes(chart).type);
-    // Series are read against an accepted chart shape: with the arity of a pie chart refused, the
-    // second series is not a series the author meant to align, and judging it would only restate
-    // the refusal.
-    if (runAuthoredRules(chartRules, { ...context, chart, series, chartType }, found) === 'refused')
-      return;
-    let canonicalLabels: readonly string[] | undefined;
-    // Series are read against the labels of the first accepted series, so a refused series says
-    // nothing about the next one: the chart answers for each of them.
-    for (const seriesNode of series) {
-      const points = requireBoundedChildren(seriesNode, 'point', 1, 12, found);
-      if (points === undefined) continue;
-      runAuthoredRules(
-        chartSeriesRules,
-        {
-          ...context,
-          seriesNode,
-          points,
-          chartType,
-          canonicalLabels: () => canonicalLabels,
-          rememberLabels: (labels) => {
-            canonicalLabels = labels;
-          },
-        },
-        found,
-      );
-    }
-  }
-
-  function validateDiagram(diagram: DirectiveNode, found: AgenticReportError[]): void {
-    const children = requireOnlyDirectiveChildren(
-      diagram,
-      ['group', 'node', 'edge', 'legend', 'legend-item'],
-      found,
-    );
-    if (children === undefined) return;
-    const type = String(attributes(diagram).type);
-    const groups = children.filter((child) => child.name === 'group');
-    const nodes = children.filter((child) => child.name === 'node');
-    const edges = children.filter((child) => child.name === 'edge');
-    const ids = nodes.map((node) => String(attributes(node).id));
-    if (new Set(ids).size !== ids.length) {
-      found.push(
-        fail(diagram, 'Diagram node ids must be unique.', 'Give every node a distinct id.'),
-      );
-    }
-    const groupIds = groups.map((group) => String(attributes(group).id));
-    if (new Set(groupIds).size !== groupIds.length) {
-      found.push(
-        fail(diagram, 'Diagram group ids must be unique.', 'Give every group a distinct id.'),
-      );
-    }
-    if (type === 'flow') validateFlowDiagram(diagram, groups, nodes, edges, groupIds, found);
-    else validateSequenceDiagram(diagram, groups, nodes, edges, found);
-    const legends = children.filter((child) => child.name === 'legend');
-    const legendItems = children.filter((child) => child.name === 'legend-item');
-    runAuthoredRules(
-      diagramLegendRules,
-      { ...context, diagram, legends, items: legendItems },
-      found,
-    );
-    for (const [index, item] of legendItems.entries()) {
-      runAuthoredRules(
-        legendItemRules,
-        { ...context, item, earlier: legendItems.slice(0, index) },
-        found,
-      );
-    }
-    const known = new Set(ids);
-    // Edges are read against the declared nodes, not against each other, so every edge answers for
-    // itself and a refused one does not hide the next.
-    for (const edge of edges) {
-      runAuthoredRules(diagramEdgeRules, { ...context, edge, known, type }, found);
-    }
-  }
-
-  function validateFlowDiagram(
-    diagram: DirectiveNode,
-    groups: readonly DirectiveNode[],
-    nodes: readonly DirectiveNode[],
-    edges: readonly DirectiveNode[],
-    groupIds: readonly string[],
-    found: AgenticReportError[],
-  ): void {
-    runAuthoredRules(flowDiagramRules, { ...context, diagram, groups, nodes, edges }, found);
-    const knownGroups = new Set(groupIds);
-    // Nodes are read against the declared groups, not against each other.
-    const beforeNodes = found.length;
-    for (const node of nodes) {
-      runAuthoredRules(flowNodeRules, { ...context, node, groups, knownGroups }, found);
-    }
-    // Whether a group holds nodes is read from the very assignments just refused, so an empty group
-    // beside a node without its group only repeats that refusal.
-    if (found.length !== beforeNodes) return;
-    for (const group of groups) {
-      runAuthoredRules(flowGroupRules, { ...context, group, nodes }, found);
-    }
-  }
-
-  function validateSequenceDiagram(
-    diagram: DirectiveNode,
-    groups: readonly DirectiveNode[],
-    participants: readonly DirectiveNode[],
-    messages: readonly DirectiveNode[],
-    found: AgenticReportError[],
-  ): void {
-    runAuthoredRules(
-      sequenceDiagramRules,
-      { ...context, diagram, groups, participants, messages },
-      found,
-    );
-    // Participants and messages are read against the diagram contract, not against each other, so
-    // every one of them answers for itself.
-    for (const participant of participants) {
-      runAuthoredRules(sequenceParticipantRules, { ...context, participant }, found);
-    }
-    for (const message of messages) {
-      runAuthoredRules(sequenceMessageRules, { ...context, message }, found);
-    }
-  }
-
-  function requireBoundedChildren(
-    parent: DirectiveNode,
-    childName: string,
-    minimum: number,
-    maximum: number,
-    found: AgenticReportError[],
-  ): readonly DirectiveNode[] | undefined {
-    const children = requireOnlyDirectiveChildren(parent, [childName], found);
-    if (children === undefined) return undefined;
-    if (children.length < minimum || children.length > maximum) {
-      found.push(
-        fail(
-          parent,
-          `${parent.name} requires ${minimum} to ${maximum} ${childName} directives.`,
-          `Adjust the number of direct ${childName} children.`,
-        ),
-      );
-      return undefined;
-    }
-    return children;
-  }
-
-  function requireOnlyDirectiveChildren(
-    parent: DirectiveNode,
-    allowed: readonly string[],
-    found: AgenticReportError[],
-  ): readonly DirectiveNode[] | undefined {
-    const children = parent.children ?? [];
-    const directives = children.filter(isDirectiveNode);
-    if (directives.length !== children.length) {
-      found.push(
-        fail(
-          parent,
-          `${parent.name} accepts only ${allowed.join(' or ')} directives as direct children.`,
-          'Move prose into an event body or outside this data container.',
-        ),
-      );
-      return undefined;
-    }
-    return directives;
-  }
-
-  function attributes(node: DirectiveNode): Readonly<Record<string, string | number | boolean>> {
-    return attributesByNode.get(node) ?? {};
-  }
-
-  /**
-   * Whether every node of this visualization reached interpretation. One that did not had its own
-   * form or attributes refused already, and every reading below — node identity, edge endpoints,
-   * group membership — is derived from that unmade interpretation, so the visualization is skipped
-   * instead of answering about values nobody accepted.
-   */
-  function fullyInterpreted(root: DirectiveNode): boolean {
-    if (attributesByNode.get(root) === undefined) return false;
-    return (root.children ?? []).every(
-      (child) => !isDirectiveNode(child) || attributesByNode.get(child) !== undefined,
-    );
-  }
-
-  function fail(node: DirectiveNode, message: string, remediation: string): AgenticReportError {
-    return attachDirectiveSource(
-      directiveError(node, 'INVALID_VISUALIZATION_DATA', message, remediation),
-      node,
-      options,
-    );
-  }
-
-  function warn(node: DirectiveNode, code: string, message: string, remediation: string): void {
-    const located = attachDirectiveSource(
-      new AgenticReportError({ level: 'warning', code, message, remediation }),
-      node,
-      options,
-    );
-    options.warnings?.push(located.diagnostic);
-  }
 }
 
 interface GlossaryDefinition {
@@ -2253,14 +919,6 @@ function firstCodeTermIndex(
   }
 }
 
-interface TraversableNode {
-  readonly type?: string;
-  readonly name?: string;
-  readonly value?: string;
-  readonly children?: readonly TraversableNode[];
-  readonly position?: DirectiveNode['position'];
-}
-
 interface InlineWrapper {
   readonly type: string;
   readonly sourceStart: number;
@@ -2309,8 +967,11 @@ function validateUnmarkedGlossaryTerms(
 
   function walk(node: TraversableNode, introduced: Set<string>): void {
     if (node.type === 'code' || node.type === 'inlineCode') return;
-    if (isDirectiveNode(node) && (node.name === 'glossary' || node.name === 'term')) {
-      if (node.name === 'term') introduced.add(String(node.attributes?.key ?? ''));
+    if (
+      isDirectiveNode(node) &&
+      (node.name === GLOSSARY_DIRECTIVE || node.name === TERM_DIRECTIVE)
+    ) {
+      if (node.name === TERM_DIRECTIVE) introduced.add(String(node.attributes?.key ?? ''));
       return;
     }
     if (node.type !== undefined && PROSE_CONTAINERS.has(node.type)) {
@@ -2325,7 +986,8 @@ function validateUnmarkedGlossaryTerms(
     }
     // Each section carries its own introductions, so a reader entering mid-document still meets the
     // term explained where they are reading.
-    const scope = isDirectiveNode(node) && node.name === 'section' ? new Set<string>() : introduced;
+    const scope =
+      isDirectiveNode(node) && node.name === SECTION_DIRECTIVE ? new Set<string>() : introduced;
     for (const child of node.children ?? []) walk(child, scope);
   }
 }
@@ -2386,13 +1048,13 @@ function validateProseContainer(
   const collect = (node: TraversableNode, ancestors: readonly InlineWrapper[]): void => {
     if (
       (node.type?.endsWith('Directive') === true &&
-        (node.name === 'glossary' || node.name === 'term')) ||
+        (node.name === GLOSSARY_DIRECTIVE || node.name === TERM_DIRECTIVE)) ||
       node.type === 'code' ||
       node.type === 'inlineCode'
     ) {
       // Text before an explicit reference is still unintroduced; the reference counts only after it.
       flush();
-      if (isDirectiveNode(node) && node.name === 'term')
+      if (isDirectiveNode(node) && node.name === TERM_DIRECTIVE)
         introduced.add(String(node.attributes?.key ?? ''));
       return;
     }
@@ -2785,9 +1447,18 @@ function attachNodeSource(
   const end = node.position?.end.offset;
   if (start === undefined || end === undefined) return error;
   const source = resolveSourceLocation(options.sourceMap, start, end);
-  return source === undefined
-    ? error
-    : new AgenticReportError({ ...error.diagnostic, source }, { cause: error });
+  if (source === undefined) return error;
+  const expansion = expansionDetails(node);
+  return new AgenticReportError(
+    {
+      ...error.diagnostic,
+      source,
+      ...(expansion === undefined
+        ? {}
+        : { details: { ...error.diagnostic.details, ...expansion } }),
+    },
+    { cause: error },
+  );
 }
 
 const PROTOTYPE_LIKE_ATTRIBUTES = new Set(['__proto__', 'prototype', 'constructor']);
@@ -2795,6 +1466,7 @@ const PROTOTYPE_LIKE_ATTRIBUTES = new Set(['__proto__', 'prototype', 'constructo
 function prototypeLikeAttributeViolation(
   node: DirectiveNode,
   markdown: string,
+  directives: ReadonlyMap<string, DirectiveDefinition>,
 ): AgenticReportError | undefined {
   const start = node.position?.start.offset;
   const end = node.position?.end.offset;
@@ -2809,7 +1481,7 @@ function prototypeLikeAttributeViolation(
     'UNKNOWN_DIRECTIVE_ATTRIBUTE',
     `${node.name} does not support: ${attributes.join(', ')}.`,
     `Use only these attributes: ${
-      directiveByName
+      directives
         .get(node.name)
         ?.attributes.map((attribute) => attribute.name)
         .join(', ') || 'none'
@@ -2926,23 +1598,14 @@ function skipQuotedValue(value: string, start: number, quote: '"' | "'"): number
 export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], HastRoot> =
   (options) => async (tree) => {
     const strings = packageStrings(options.language);
-    // Флоу раскладывается заранее: вид «прямые углы» считает ELK, а его вызов асинхронный.
-    const diagrams: Element[] = [];
-    visit(tree, 'element', (node: Element) => {
-      if (node.properties.dataSemantic === 'diagram') diagrams.push(node);
-    });
-    const prepared = new Map<Element, PreparedFlow | undefined>(
-      await Promise.all(
-        diagrams.map(async (node) => [node, await prepareVisualization(node, strings)] as const),
-      ),
-    );
+    const blocks = options.vocabulary?.blocks ?? blockByName;
     const allocateId = createDocumentIdAllocator(tree, options);
     const glossary = new Map<
       string,
       { readonly term: string; readonly explanation: string; readonly id: string }
     >();
     visit(tree, 'element', (node: Element) => {
-      if (node.properties.dataSemantic !== 'glossary') return;
+      if (node.properties.dataSemantic !== GLOSSARY_DIRECTIVE) return;
       const key = stringProperty(node, 'dataKey');
       const term = stringProperty(node, 'dataTerm');
       if (key !== undefined && term !== undefined) {
@@ -2954,7 +1617,31 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
       }
     });
 
+    // Blocks settle their own content and compute what their enhancement needs before any element
+    // is enhanced; asynchronous preparation, such as the orthogonal flow layout, is awaited together.
+    const preparations: Promise<void>[] = [];
+    visit(tree, 'element', (node: Element) => {
+      const prepare = blockForElement(node, blocks)?.prepare;
+      if (prepare !== undefined) preparations.push(prepare(node, { strings }));
+    });
+    await Promise.all(preparations);
+
     let instance = 0;
+    const services: BlockEnhancementServices = {
+      strings,
+      language: options.language,
+      layout: options.layout,
+      share: options.share === true,
+      allocateId,
+      nextInstance: () => {
+        instance += 1;
+        return instance;
+      },
+      noteNeutralizedSourceLink: () => {
+        if (options.shareTransform !== undefined)
+          options.shareTransform.neutralizedSourceLinks += 1;
+      },
+    };
     let glossaryReferenceInstance = 0;
     const createGlossaryReference = (
       key: string,
@@ -3030,59 +1717,12 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
       };
     };
     visit(tree, 'element', (node: Element) => {
-      if (
-        node.tagName === 'a' &&
-        typeof node.properties.dataLocalAsset === 'string' &&
-        node.children.length === 0
-      ) {
-        node.children.push({
-          type: 'text',
-          value: strings.download(assetLabel(node.properties.dataLocalAsset)),
-        });
-      }
       const codeTermKeys = takeStringProperty(node, 'dataCodeTerms');
       if (node.tagName === 'pre' && codeTermKeys !== undefined) {
         enhanceCodeTerms(node, codeTermKeys.split(','), glossary, createGlossaryReference);
       }
       const semantic = stringProperty(node, 'dataSemantic');
-      if (semantic === 'lead') {
-        enhanceLead(node);
-        return;
-      }
-      if (semantic === 'copyable') {
-        enhanceCopyableProse(node);
-        return;
-      }
-      if (semantic === 'response') {
-        enhanceResponse(node, allocateId);
-        return;
-      }
-      if (semantic === 'section') {
-        enhanceSection(node, allocateId);
-        return;
-      }
-      if (semantic === 'contents') return;
-      if (semantic === 'action') {
-        enhanceAction(node);
-        return;
-      }
-      if (semantic === 'card') {
-        enhanceCard(node);
-        return;
-      }
-      if (semantic === 'source-link') {
-        enhanceSourceLink(node, options.share === true);
-        if (options.share === true && options.shareTransform !== undefined) {
-          options.shareTransform.neutralizedSourceLinks += 1;
-        }
-        return;
-      }
-      if (semantic !== undefined && ['chart', 'diagram', 'timeline'].includes(semantic)) {
-        instance += 1;
-        enhanceVisualization(node, semantic, instance, allocateId, strings, prepared.get(node));
-        return;
-      }
-      if (semantic === 'term') {
+      if (semantic === TERM_DIRECTIVE) {
         const key = stringProperty(node, 'dataKey');
         const definition = key === undefined ? undefined : glossary.get(key);
         if (key !== undefined && definition !== undefined) {
@@ -3094,7 +1734,7 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
         }
         return;
       }
-      if (semantic === 'glossary') {
+      if (semantic === GLOSSARY_DIRECTIVE) {
         const key = stringProperty(node, 'dataKey');
         const term = stringProperty(node, 'dataTerm');
         const placement = takeStringProperty(node, 'dataPlacement') ?? 'inline';
@@ -3107,39 +1747,16 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
         delete node.properties.dataTerm;
         return;
       }
-      if (semantic === 'disclosure') {
-        enhanceDisclosure(node, strings);
+      const enhance = blockForElement(node, blocks)?.enhance;
+      if (enhance === undefined) {
+        prependDirectiveTitle(node);
         return;
       }
-      if (semantic === 'tabs') {
-        instance += 1;
-        enhanceTabs(node, instance, allocateId, strings);
-        return;
-      }
-      if (semantic === 'modal') {
-        instance += 1;
-        enhanceModal(node, instance, allocateId, strings);
-        return;
-      }
-      if (semantic === 'popover') {
-        instance += 1;
-        enhancePopover(node, instance, allocateId, strings);
-        return;
-      }
-      if (semantic === 'filter') {
-        instance += 1;
-        enhanceFilter(node, instance, allocateId, strings);
-        return;
-      }
-      if (semantic === 'toggle') {
-        instance += 1;
-        enhanceToggle(node, instance, allocateId, strings);
-        return;
-      }
-      prependDirectiveTitle(node);
-      if ('dataDemoCounter' in node.properties) enhanceCounter(node, strings);
+      enhance(node, services);
     });
-    enhanceGalleryRails(tree);
+    // Each block's pass over the whole enhanced page, in block order, before navigation reads it.
+    for (const block of blocks.values())
+      block.finalize?.(tree, { strings, layout: options.layout });
     const appendixDefinitions = extractAppendixGlossaries(tree);
     if (appendixDefinitions.length > 0) {
       const appendixId = allocateId('glossary-appendix');
@@ -3313,24 +1930,6 @@ function hastContentLength(node: ElementContent): number {
   return 0;
 }
 
-function hastRawText(node: Element): string {
-  const values: string[] = [];
-  const pending = [...node.children].reverse();
-  while (pending.length > 0) {
-    const child = pending.pop();
-    if (child?.type === 'text') values.push(child.value);
-    else if (child?.type === 'element') pending.push(...[...child.children].reverse());
-  }
-  return values.join('');
-}
-
-function hasClassName(node: Element, className: string): boolean {
-  const value = node.properties.className ?? node.properties.class;
-  return Array.isArray(value)
-    ? value.some((candidate) => candidate === className)
-    : typeof value === 'string' && value.split(/\s+/u).includes(className);
-}
-
 function extractAppendixGlossaries<Parent extends HastRoot | Element>(parent: Parent): Element[] {
   const appendix: Element[] = [];
   const retained: Array<Parent['children'][number]> = [];
@@ -3347,59 +1946,19 @@ function extractAppendixGlossaries<Parent extends HastRoot | Element>(parent: Pa
   return appendix;
 }
 
-function enhanceLead(node: Element): void {
-  const paragraphs = node.children.filter(
-    (child): child is Element => child.type === 'element' && child.tagName === 'p',
-  );
-  const paragraph = paragraphs[0];
-  if (paragraph === undefined || paragraphs.length !== 1) {
-    throw new Error('Validated lead is missing its single paragraph.');
-  }
-  node.tagName = 'p';
-  node.properties = { ...paragraph.properties, ...node.properties };
-  node.children = paragraph.children;
+/**
+ * The block an enhanced element belongs to. A block rendered as a semantic container carries its
+ * name; the resource blocks (downloads, fonts, videos) are recognised by their package class.
+ */
+function blockForElement(node: Element, blocks: ReadonlyMap<string, Block>): Block | undefined {
+  const semantic = stringProperty(node, 'dataSemantic');
+  if (semantic !== undefined) return blocks.get(semantic);
+  return RESOURCE_BLOCKS.find((block) => hasClassName(node, block.definition.sanitizer.className));
 }
 
-function enhanceSection(node: Element, allocateId: (base: string) => string): void {
-  const title = takeStringProperty(node, 'dataDirectiveTitle');
-  const transportedId = takeStringProperty(node, 'dataId');
-  if (title === undefined || transportedId === undefined) {
-    throw new Error('Validated section is missing its title or id.');
-  }
-  const generated = transportedId.startsWith(GENERATED_SECTION_ID_PREFIX);
-  const desiredId = generated
-    ? transportedId.slice(GENERATED_SECTION_ID_PREFIX.length)
-    : transportedId;
-  const sectionId = generated ? allocateId(desiredId) : desiredId;
-  const titleId = allocateId(`${sectionId}-title`);
-  node.properties.id = sectionId;
-  node.properties.ariaLabelledBy = [titleId];
-  node.children.unshift({
-    type: 'element',
-    tagName: 'h2',
-    properties: { id: titleId, className: ['semantic-section-title'] },
-    children: [{ type: 'text', value: title }],
-  });
-}
-
-function enhanceGalleryRails(tree: HastRoot): void {
-  visit(tree, 'element', (section: Element) => {
-    if (
-      section.properties.dataSemantic !== 'section' ||
-      stringProperty(section, 'dataMedia') !== 'gallery'
-    ) {
-      return;
-    }
-    for (const rail of section.children.filter(
-      (child): child is Element =>
-        child.type === 'element' && hasClassName(child, 'semantic-cards'),
-    )) {
-      const trackItems = rail.children.filter((child) => child.type === 'element');
-      if (trackItems.length < 2) continue;
-      rail.properties.dataGalleryRail = '';
-    }
-  });
-}
+const RESOURCE_BLOCKS: readonly Block[] = [...blockByName.values()].filter(
+  (block) => block.definition.behavior.renderer !== 'semantic-container',
+);
 
 function createDocumentIdAllocator(
   tree: HastRoot,
@@ -3411,7 +1970,7 @@ function createDocumentIdAllocator(
     if (id !== undefined) usedIds.add(id);
   });
   visit(tree, 'element', (node: Element) => {
-    if (node.properties.dataSemantic !== 'section') return;
+    if (node.properties.dataSemantic !== SECTION_DIRECTIVE) return;
     const transportedId = stringProperty(node, 'dataId');
     if (transportedId === undefined || transportedId.startsWith(GENERATED_SECTION_ID_PREFIX)) {
       return;
@@ -3446,580 +2005,6 @@ function createDocumentIdAllocator(
   };
 }
 
-function enhanceAction(node: Element): void {
-  const href = takeStringProperty(node, 'dataHref');
-  if (href === undefined) throw new Error('Validated action is missing its href.');
-  node.properties.href = href;
-  node.children.unshift(decorativeIcon('arrow-right'));
-}
-
-function enhanceCard(node: Element): void {
-  const href = stringProperty(node, 'dataHref');
-  if (href === undefined) {
-    prependDirectiveTitle(node);
-    return;
-  }
-  node.tagName = 'a';
-  node.properties.href = href;
-  node.properties.dataLinkedCard = '';
-  prependDirectiveTitle(node);
-  node.children.push({
-    type: 'element',
-    tagName: 'span',
-    properties: { className: ['semantic-card-link-signifier'], ariaHidden: 'true' },
-    children: [decorativeIcon('arrow-right')],
-  });
-}
-
-function enhanceSourceLink(node: Element, share: boolean): void {
-  const label = takeStringProperty(node, 'dataLabel');
-  const href = takeStringProperty(node, 'dataHref');
-  if (label === undefined || href === undefined) {
-    throw new Error('Validated source-link is missing its label or href.');
-  }
-  if (share) {
-    node.tagName = 'span';
-    delete node.properties.href;
-    delete node.properties.target;
-    delete node.properties.rel;
-    delete node.properties.dataSourceLink;
-    node.properties.dataSourceLinkNeutralized = '';
-    node.children = [{ type: 'text', value: shareSafeSourceLabel(href) }];
-    return;
-  }
-  node.properties.href = href;
-  node.properties.target = '_blank';
-  node.properties.rel = ['noopener', 'noreferrer'];
-  node.properties.dataSourceLink = '';
-  node.children = [decorativeIcon('arrow-right'), { type: 'text', value: label }];
-}
-
-type ShareLabelSafety =
-  { readonly safe: true; readonly fixedPoint: string } | { readonly safe: false };
-
-function shareSafeSourceLabel(href: string): string {
-  const helper = new URL(href);
-  const helperPath = helper.searchParams.get('path');
-  const line = helper.searchParams.get('line');
-  if (helperPath === null || line === null) {
-    throw new Error('Validated source-link helper is missing its path or line.');
-  }
-  const generic = `source:${line}`;
-  if (/[\\/]$/u.test(helperPath)) return generic;
-  const candidate = helperPath.split(/[\\/]/u).at(-1);
-  if (candidate === undefined) return generic;
-  const safety = classifyShareLabel(candidate);
-  if (!safety.safe) return generic;
-  const derived = `${safety.fixedPoint}:${line}`;
-  return derived.length <= SOURCE_LINK_LABEL_MAX_LENGTH ? derived : generic;
-}
-
-function classifyShareLabel(value: string): ShareLabelSafety {
-  let current = value;
-  for (let inspection = 0; inspection <= value.length; inspection += 1) {
-    if (!shareLabelRepresentationIsSafe(current)) return { safe: false };
-    let decoded: string;
-    try {
-      decoded = decodeURIComponent(current);
-    } catch {
-      return { safe: false };
-    }
-    if (decoded === current) return { safe: true, fixedPoint: current };
-    current = decoded;
-  }
-  return { safe: false };
-}
-
-function shareLabelRepresentationIsSafe(value: string): boolean {
-  return (
-    value.length > 0 &&
-    value !== '.' &&
-    value !== '..' &&
-    !value.startsWith('~') &&
-    !hasShareLabelControl(value) &&
-    !/[\\/:]/u.test(value)
-  );
-}
-
-function hasShareLabelControl(value: string): boolean {
-  for (const character of value) {
-    const codePoint = character.codePointAt(0);
-    if (
-      codePoint !== undefined &&
-      (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f))
-    ) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function sourceLinkLabelMaximumLength(): number {
-  const sourceLink = directiveByName.get('source-link');
-  const label = sourceLink?.attributes.find((attribute) => attribute.name === 'label');
-  if (label?.constraint.kind !== 'string' || label.constraint.maxLength === undefined) {
-    throw new Error('Source-link label constraint is missing its maximum length.');
-  }
-  return label.constraint.maxLength;
-}
-
-function enhanceCopyableProse(node: Element): void {
-  const authoredChildren = node.children;
-  node.properties.dataCopyableProse = '';
-  node.children = [
-    {
-      type: 'element',
-      tagName: 'div',
-      properties: { dataCopyableContent: '' },
-      children: authoredChildren,
-    },
-  ];
-}
-
-function enhanceResponse(node: Element, allocateId: (base: string) => string): void {
-  const id = stringProperty(node, 'dataId');
-  const title = stringProperty(node, 'dataDirectiveTitle');
-  if (!id || !title) throw new Error('Validated response is missing its id or title.');
-  const authoredChildren = node.children;
-  const questions = authoredChildren.filter(
-    (child): child is Element =>
-      child.type === 'element' && child.properties.dataSemantic === 'question',
-  );
-  const projection = {
-    contractVersion: RESPONSE_CONTRACT_VERSION,
-    id,
-    title,
-    questions: questions.map(responseQuestionDefinition),
-  };
-  const revision = `sha256:${createHash('sha256').update(JSON.stringify(projection)).digest('hex')}`;
-  const manifest = parseResponseFormManifest({ ...projection, revision });
-  const titleId = allocateId(`response-${id}-title`);
-  node.properties.id = allocateId(`response-${id}`);
-  node.properties.ariaLabelledBy = [titleId];
-  node.properties.dataResponseWorkspace = '';
-  node.properties.dataResponseId = id;
-  node.children = [
-    semanticTitle(title, titleId),
-    {
-      type: 'element',
-      tagName: 'div',
-      properties: { dataResponseSource: '', hidden: '' },
-      children: authoredChildren,
-    },
-    {
-      type: 'element',
-      tagName: 'div',
-      properties: { dataResponseManifest: '', hidden: '' },
-      children: [{ type: 'text', value: JSON.stringify(manifest) }],
-    },
-    {
-      type: 'element',
-      tagName: 'div',
-      properties: { dataResponseMount: '' },
-      children: [],
-    },
-  ];
-}
-
-function responseQuestionDefinition(node: Element): ResponseQuestionDefinition {
-  const id = stringProperty(node, 'dataId');
-  const kind = stringProperty(node, 'dataKind') as ResponseQuestionKind | undefined;
-  const title = stringProperty(node, 'dataDirectiveTitle');
-  if (!id || !kind || !title) throw new Error('Validated response question is incomplete.');
-  const prompt = stringProperty(node, 'dataPrompt');
-  const minimum = numericProperty(node, 'dataMin');
-  const maximum = numericProperty(node, 'dataMax');
-  const step = numericProperty(node, 'dataStep');
-  const buckets = responseDefinitions(node, 'bucket');
-  const options = responseDefinitions(node, 'option');
-  const items = node.children
-    .filter(
-      (child): child is Element =>
-        child.type === 'element' && child.properties.dataSemantic === 'item',
-    )
-    .map(responseItemDefinition);
-  return {
-    id,
-    kind,
-    title,
-    ...(prompt === undefined ? {} : { prompt }),
-    ...(minimum === undefined ? {} : { minimum }),
-    ...(maximum === undefined ? {} : { maximum }),
-    ...(step === undefined ? {} : { step }),
-    buckets,
-    options,
-    items,
-  };
-}
-
-function responseDefinitions(
-  node: Element,
-  kind: 'bucket' | 'option',
-): readonly { readonly id: string; readonly label: string }[] {
-  return node.children
-    .filter(
-      (child): child is Element =>
-        child.type === 'element' && child.properties.dataSemantic === kind,
-    )
-    .map((child) => {
-      const id = stringProperty(child, 'dataId');
-      const label = stringProperty(child, 'dataLabel');
-      if (!id || !label) throw new Error(`Validated response ${kind} is incomplete.`);
-      return { id, label };
-    });
-}
-
-function responseItemDefinition(node: Element): ResponseItemDefinition {
-  const id = stringProperty(node, 'dataId');
-  const label = stringProperty(node, 'dataLabel');
-  if (!id || !label) throw new Error('Validated response item is incomplete.');
-  const note = stringProperty(node, 'dataNote');
-  const meta = stringProperty(node, 'dataMeta');
-  const href = stringProperty(node, 'dataHref');
-  const bucket = stringProperty(node, 'dataBucket');
-  const comment = stringProperty(node, 'dataComment') === 'true';
-  if (!note || !meta || !href) throw new Error('Validated response item detail is incomplete.');
-  return {
-    id,
-    label,
-    note,
-    meta,
-    href,
-    ...(bucket === undefined ? {} : { bucket }),
-    comment,
-  };
-}
-
-function numericProperty(node: Element, name: string): number | undefined {
-  const value = stringProperty(node, name);
-  return value === undefined ? undefined : Number(value);
-}
-
-function hastText(node: Element): string {
-  const values: string[] = [];
-  const pending = [...node.children].reverse();
-  while (pending.length > 0) {
-    const child = pending.pop();
-    if (child?.type === 'text') values.push(child.value);
-    else if (child?.type === 'element') pending.push(...[...child.children].reverse());
-  }
-  return values.join(' ').replace(/\s+/gu, ' ').trim();
-}
-
-function enhanceDisclosure(node: Element, strings: PackageStrings): void {
-  const title = takeStringProperty(node, 'dataDirectiveTitle') ?? strings.details;
-  const open = takeStringProperty(node, 'dataOpen') === 'true';
-  node.tagName = 'details';
-  node.properties.dataDisclosure = '';
-  if (open) node.properties.open = true;
-  node.children.unshift({
-    type: 'element',
-    tagName: 'summary',
-    properties: { className: ['semantic-disclosure-summary'] },
-    children: [decorativeIcon('arrow-down'), { type: 'text', value: title }],
-  });
-}
-
-function enhanceTabs(
-  node: Element,
-  instance: number,
-  allocateId: (base: string) => string,
-  strings: PackageStrings,
-): void {
-  const title = takeStringProperty(node, 'dataDirectiveTitle');
-  const titleId = title === undefined ? undefined : allocateId(`tabs-${instance}-title`);
-  const panels = node.children.filter(
-    (child): child is Element =>
-      child.type === 'element' && child.properties.dataSemantic === 'tab',
-  );
-  const buttons: Element[] = [];
-  panels.forEach((panel, index) => {
-    const label = takeStringProperty(panel, 'dataLabel') ?? strings.tab(index + 1);
-    const tabId = allocateId(`tabs-${instance}-tab-${index + 1}`);
-    const panelId = allocateId(`tabs-${instance}-panel-${index + 1}`);
-    panel.properties.id = panelId;
-    panel.properties.role = 'tabpanel';
-    panel.properties.ariaLabelledBy = [tabId];
-    panel.properties.tabIndex = 0;
-    panel.properties.dataTabPanel = '';
-    if (index !== 0) panel.properties.hidden = '';
-    buttons.push({
-      type: 'element',
-      tagName: 'button',
-      properties: {
-        type: 'button',
-        id: tabId,
-        role: 'tab',
-        ariaControls: [panelId],
-        ariaSelected: index === 0 ? 'true' : 'false',
-        tabIndex: index === 0 ? 0 : -1,
-        dataTab: '',
-      },
-      children: [{ type: 'text', value: label }],
-    });
-  });
-  node.properties.dataTabs = '';
-  node.children = [
-    ...(title === undefined || titleId === undefined ? [] : [semanticTitle(title, titleId)]),
-    {
-      type: 'element',
-      tagName: 'div',
-      properties: {
-        role: 'tablist',
-        ...(titleId === undefined
-          ? { ariaLabel: strings.contentSections }
-          : { ariaLabelledBy: [titleId] }),
-        className: ['semantic-tab-list'],
-      },
-      children: buttons,
-    },
-    ...node.children,
-  ];
-}
-
-function enhanceModal(
-  node: Element,
-  instance: number,
-  allocateId: (base: string) => string,
-  strings: PackageStrings,
-): void {
-  const title = takeStringProperty(node, 'dataDirectiveTitle') ?? strings.dialog;
-  const trigger = takeStringProperty(node, 'dataTrigger') ?? strings.openDialog;
-  const dialogId = allocateId(`modal-${instance}`);
-  const titleId = allocateId(`${dialogId}-title`);
-  const content = node.children;
-  node.properties.dataModal = '';
-  node.children = [
-    actionButton(trigger, { dataModalOpen: dialogId, ariaHasPopup: 'dialog' }, 'window'),
-    {
-      type: 'element',
-      tagName: 'dialog',
-      properties: { id: dialogId, ariaLabelledBy: [titleId], dataModalDialog: '' },
-      children: [
-        semanticTitle(title, titleId),
-        ...content,
-        actionButton(strings.close, { dataModalClose: '' }, 'x'),
-      ],
-    },
-  ];
-}
-
-function enhancePopover(
-  node: Element,
-  instance: number,
-  allocateId: (base: string) => string,
-  strings: PackageStrings,
-): void {
-  const title = takeStringProperty(node, 'dataDirectiveTitle') ?? strings.details;
-  const trigger = takeStringProperty(node, 'dataTrigger') ?? strings.showDetails;
-  const panelId = allocateId(`popover-${instance}`);
-  const titleId = allocateId(`${panelId}-title`);
-  const content = node.children;
-  node.properties.dataPopover = '';
-  node.children = [
-    actionButton(
-      trigger,
-      {
-        dataPopoverTrigger: '',
-        ariaControls: [panelId],
-        ariaExpanded: 'false',
-        ariaHasPopup: 'dialog',
-      },
-      'info',
-    ),
-    {
-      type: 'element',
-      tagName: 'div',
-      properties: {
-        id: panelId,
-        role: 'dialog',
-        ariaLabelledBy: [titleId],
-        hidden: '',
-        dataPopoverPanel: '',
-      },
-      children: [semanticTitle(title, titleId), ...content],
-    },
-  ];
-}
-
-function enhanceFilter(
-  node: Element,
-  instance: number,
-  allocateId: (base: string) => string,
-  strings: PackageStrings,
-): void {
-  const title = takeStringProperty(node, 'dataDirectiveTitle');
-  const placeholder = takeStringProperty(node, 'dataPlaceholder') ?? strings.filterItems;
-  const inputId = allocateId(`filter-${instance}`);
-  node.properties.dataFilter = '';
-  node.children = [
-    ...(title === undefined ? [] : [semanticTitle(title)]),
-    {
-      type: 'element',
-      tagName: 'div',
-      properties: { className: ['semantic-filter-controls'] },
-      children: [
-        {
-          type: 'element',
-          tagName: 'label',
-          properties: { htmlFor: [inputId] },
-          children: [decorativeIcon('search'), { type: 'text', value: strings.filter }],
-        },
-        {
-          type: 'element',
-          tagName: 'input',
-          properties: { id: inputId, type: 'search', placeholder, dataFilterInput: '' },
-          children: [],
-        },
-        {
-          type: 'element',
-          tagName: 'output',
-          properties: { ariaLive: 'polite', dataFilterCount: '' },
-          children: [],
-        },
-      ],
-    },
-    ...node.children,
-  ];
-}
-
-function enhanceToggle(
-  node: Element,
-  instance: number,
-  allocateId: (base: string) => string,
-  strings: PackageStrings,
-): void {
-  const title = takeStringProperty(node, 'dataDirectiveTitle');
-  const label = takeStringProperty(node, 'dataLabel') ?? strings.toggleContent;
-  const active = takeStringProperty(node, 'dataDefault') === 'on';
-  const panelId = allocateId(`toggle-${instance}`);
-  const content = node.children;
-  node.properties.dataToggle = '';
-  node.children = [
-    ...(title === undefined ? [] : [semanticTitle(title)]),
-    actionButton(
-      label,
-      {
-        role: 'switch',
-        ariaChecked: active ? 'true' : 'false',
-        ariaControls: [panelId],
-        dataToggleControl: '',
-      },
-      'eye',
-    ),
-    {
-      type: 'element',
-      tagName: 'div',
-      properties: { id: panelId, dataTogglePanel: '', ...(active ? {} : { hidden: '' }) },
-      children: content,
-    },
-  ];
-}
-
-function enhanceCounter(node: Element, strings: PackageStrings): void {
-  const start = String(node.properties.dataStart ?? '0');
-  node.children.push({
-    type: 'element',
-    tagName: 'div',
-    properties: { className: ['semantic-demo-controls'] },
-    children: [
-      actionButton(strings.increment, { dataDemoIncrement: '' }, 'plus'),
-      { type: 'text', value: ' ' },
-      {
-        type: 'element',
-        tagName: 'output',
-        properties: { dataDemoOutput: '', ariaLive: 'polite' },
-        children: [{ type: 'text', value: start }],
-      },
-    ],
-  });
-}
-
-function prependDirectiveTitle(node: Element): void {
-  const title = takeStringProperty(node, 'dataDirectiveTitle');
-  if (title === undefined) return;
-  node.children.unshift(
-    node.properties.dataSemantic === 'callout'
-      ? {
-          type: 'element',
-          tagName: 'p',
-          properties: { className: ['semantic-title'] },
-          children: [{ type: 'text', value: title }],
-        }
-      : semanticTitle(title),
-  );
-}
-
-function semanticTitle(value: string, id?: string): Element {
-  return {
-    type: 'element',
-    tagName: 'h3',
-    properties: { className: ['semantic-title'], ...(id === undefined ? {} : { id }) },
-    children: [{ type: 'text', value }],
-  };
-}
-
-function actionButton(
-  label: string,
-  properties: Element['properties'],
-  icon?: Parameters<typeof decorativeIcon>[0],
-): Element {
-  return {
-    type: 'element',
-    tagName: 'button',
-    properties: {
-      type: 'button',
-      ...(icon === undefined ? {} : { ariaLabel: label, title: label, dataPackageOperation: '' }),
-      ...properties,
-    },
-    children: [
-      ...(icon === undefined ? [] : [decorativeIcon(icon)]),
-      {
-        type: 'element',
-        tagName: 'span',
-        properties: { className: ['package-control-label'] },
-        children: [{ type: 'text', value: label }],
-      },
-    ],
-  };
-}
-
-function stringProperty(node: Element, name: string): string | undefined {
-  const value = node.properties[name];
-  return typeof value === 'string' ? value : undefined;
-}
-
-function takeStringProperty(node: Element, name: string): string | undefined {
-  const value = stringProperty(node, name);
-  delete node.properties[name];
-  return value;
-}
-
-function assetLabel(reference: string): string {
-  const basename = reference.split(/[\\/]/).at(-1) ?? reference;
-  try {
-    return decodeURIComponent(basename);
-  } catch {
-    return basename;
-  }
-}
-
-function isDirectiveNode(node: unknown): node is DirectiveNode {
-  if (typeof node !== 'object' || node === null || !('type' in node) || !('name' in node)) {
-    return false;
-  }
-  const candidate = node as { readonly type?: unknown; readonly name?: unknown };
-  return (
-    typeof candidate.type === 'string' &&
-    candidate.type.endsWith('Directive') &&
-    typeof candidate.name === 'string'
-  );
-}
-
-function isCodeNode(node: unknown): node is Code {
-  return typeof node === 'object' && node !== null && 'type' in node && node.type === 'code';
-}
-
 function directiveFormViolation(
   node: DirectiveNode,
   directive: DirectiveDefinition,
@@ -4040,8 +2025,9 @@ function directivePlacementViolation(
   node: DirectiveNode,
   directive: DirectiveDefinition,
   parent: unknown,
+  directives: ReadonlyMap<string, DirectiveDefinition>,
 ): AgenticReportError | undefined {
-  const parentDirective = isDirectiveNode(parent) ? directiveByName.get(parent.name) : undefined;
+  const parentDirective = isDirectiveNode(parent) ? directives.get(parent.name) : undefined;
   const requiredParent = directive.placement.requiredParent;
   if (
     directive.placement.topLevelOnly === true &&
@@ -4054,12 +2040,14 @@ function directivePlacementViolation(
       `Move this ${directive.name} directive outside blockquotes, lists, and other directives.`,
     );
   }
-  if (requiredParent !== undefined && parentDirective?.name !== requiredParent) {
+  const parents = requiredParent === undefined ? [] : [requiredParent].flat();
+  if (parents.length > 0 && !parents.includes(parentDirective?.name ?? '')) {
+    const named = parents.join(' or ');
     return directiveError(
       node,
       'INVALID_DIRECTIVE_PLACEMENT',
-      `${directive.name} must be nested directly inside ${requiredParent}.`,
-      `Move this ${directive.name} directive inside a ${requiredParent} directive.`,
+      `${directive.name} must be nested directly inside ${named}.`,
+      `Move this ${directive.name} directive inside a ${named} directive.`,
     );
   }
   const allowedChildren = allowedDirectiveChildren(parentDirective?.children);
@@ -4086,52 +2074,6 @@ function directiveChildrenViolation(
     `${directive.name} accepts no label or child content.`,
     `Remove the label or child content from this ${directive.name} directive.`,
   );
-}
-
-function allowedDirectiveChildren(
-  children: DirectiveDefinition['children'] | undefined,
-): readonly string[] | undefined {
-  switch (children) {
-    case 'markdown-and-card-directives':
-      return ['card'];
-    case 'markdown-and-tab-directives':
-      return ['tab'];
-    case 'markdown-and-term-directives':
-      return ['term'];
-    case 'action-directives':
-      return ['action'];
-    case 'decision-option-directives':
-      return ['decision-option'];
-    case 'check-item-directives':
-      return ['check-item'];
-    case 'series-directives':
-      return ['series'];
-    case 'point-directives':
-      return ['point'];
-    case 'node-and-edge-directives':
-      return ['node', 'edge'];
-    case 'diagram-part-directives':
-      return ['group', 'node', 'edge', 'legend', 'legend-item'];
-    case 'event-directives':
-      return ['event'];
-    case 'response-question-directives':
-      return ['question'];
-    case 'response-field-directives':
-      return ['bucket', 'option', 'item'];
-    case 'markdown':
-    case 'label-or-generated-label':
-    case 'none':
-    case undefined:
-      return undefined;
-    default: {
-      const exhaustive: never = children;
-      return exhaustive;
-    }
-  }
-}
-
-function isTraversableNode(value: unknown): value is TraversableNode {
-  return typeof value === 'object' && value !== null && 'type' in value;
 }
 
 function renderDirective(
@@ -4175,19 +2117,13 @@ function renderDirective(
   return { hName: directive.sanitizer.tagName, hProperties: properties };
 }
 
-const LOCALIZED_DEFAULT_ATTRIBUTES = new Set([
-  'modal.trigger',
-  'popover.trigger',
-  'filter.placeholder',
-]);
-
 function directiveAttributeError(
   node: DirectiveNode,
   interpretation: Exclude<ReturnType<typeof interpretDirectiveAttributes>, { readonly ok: true }>,
+  directives: ReadonlyMap<string, DirectiveDefinition>,
 ): AgenticReportError {
   if (interpretation.reason === 'unknown') {
-    const allowed =
-      directiveByName.get(node.name)?.attributes.map((attribute) => attribute.name) ?? [];
+    const allowed = directives.get(node.name)?.attributes.map((attribute) => attribute.name) ?? [];
     return directiveError(
       node,
       'UNKNOWN_DIRECTIVE_ATTRIBUTE',
@@ -4261,7 +2197,7 @@ function invalidAttributeRemediation(attribute: DirectiveAttributeDefinition): s
     return 'Use http://127.0.0.1:PORT/open?path=%2Fabsolute%2Fpath&line=LINE.';
   }
   if (attribute.invalidDiagnostic === 'INVALID_DIRECTIVE_LINK') {
-    return 'Use #anchor, a relative path, https:// or http:// URL, or mailto: address.';
+    return 'Use #anchor, a relative path, https:// or http:// URL, mailto: address, tel: number, or sms: number.';
   }
   if (attribute.constraint.kind === 'integer') {
     return `Use an integer ${attribute.name} value.`;
@@ -4269,12 +2205,15 @@ function invalidAttributeRemediation(attribute: DirectiveAttributeDefinition): s
   return `Provide a valid ${attribute.name} value described by the authoring schema.`;
 }
 
-function unsupportedDirectiveError(node: DirectiveNode): AgenticReportError {
+function unsupportedDirectiveError(
+  node: DirectiveNode,
+  directives: ReadonlyMap<string, DirectiveDefinition>,
+): AgenticReportError {
   return directiveError(
     node,
     'UNSUPPORTED_DIRECTIVE',
     `Unsupported semantic directive: ${node.name}`,
-    `Use ${authoringRegistry.directives.map((directive) => directive.name).join(', ')}. Escape the colon as \\: when this text is ordinary prose.`,
+    `Use ${[...directives.keys()].join(', ')}. Escape the colon as \\: when this text is ordinary prose.`,
   );
 }
 

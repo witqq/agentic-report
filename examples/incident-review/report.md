@@ -5,11 +5,11 @@ description: A fictional service incident command review with impact, causal evi
 language: en
 localizations:
   ru: report.ru.md
-theme: dark
 layout: mixed
-preset: signal
-tokens:
-  accent: coral
+theme:
+  name: incident-signal
+  extends: ember
+scheme: dark
 ---
 
 # OrbitDesk P1 incident review
@@ -20,7 +20,7 @@ This demonstration follows a realistic incident at OrbitDesk, an invented subscr
 organization, event, metric, and decision on this page is sample data created to show the report engine;
 none describes a real company or production system.
 
-::::::section{title="Impact signal" id="impact" nav="Impact" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
+::::::section{title="Impact signal" id="impact" nav="Impact" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 :::callout{kind="warning" title="Executive readout"}
 A retry storm in the billing adapter exhausted the checkout connection pool for 47 minutes. Customer
 records remained intact, but **18.4% of checkout attempts failed** at peak and **3,240 renewals were
@@ -75,6 +75,8 @@ Two prevention items, one detection improvement, and one preparedness drill are 
 ::edge{from="timeout" to="retry" label="replayed calls"}
 ::edge{from="retry" to="pool" label="12× traffic"}
 ::edge{from="pool" to="checkout" label="no connections"}
+::legend-item{node="warning" label="Cause"}
+::legend-item{node="accent" label="Point of failure"}
 :::
 
 ::::tabs{title="Evidence and limits"}
@@ -123,10 +125,13 @@ Checkout success held above 99% for ten minutes and the incident moved to monito
 :::event{date="13:00 UTC" title="Integrity verified" kind="success"}
 Payment, order, and ledger totals reconciled with no loss or duplicate acceptance.
 :::
+::legend-item{event="warning" label="Detection"}
+::legend-item{event="accent" label="Response"}
+::legend-item{event="success" label="Recovery"}
 ::::
 :::::
 
-:::::section{title="Corrective action register" id="actions" nav="Actions" width="wide" align="start" tone="accent" composition="mosaic" viewport="bounded" section-density="editorial" type="editorial" surface="glow" transition="stagger" choreography="cascade"}
+:::::section{title="Corrective action register" id="actions" nav="Actions" width="wide" align="start" tone="accent" composition="mosaic" viewport="bounded" section-density="editorial" type="editorial" surface="plain" transition="stagger" choreography="cascade"}
 
 {{include: partials/actions.md}}
 

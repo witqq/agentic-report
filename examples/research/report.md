@@ -5,9 +5,9 @@ description: A research brief that connects method, evidence, comparison, and re
 language: en
 localizations:
   ru: report.ru.md
-theme: system
 layout: mixed
-preset: material
+theme: aurora
+scheme: system
 ---
 
 # Assisted authoring research synthesis

@@ -1,0 +1,10 @@
+body {
+  margin: 0;
+  padding: 1rem;
+  font-family: var(--font-body, sans-serif);
+  color: var(--color-text, black);
+  background: var(--color-surface, white);
+}
+button {
+  color: var(--color-accent, blue);
+}

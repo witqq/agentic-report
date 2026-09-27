@@ -1,3 +1,37 @@
+/**
+ * Проверка выпускного кандидата npm (`pnpm pack:check`, после `pnpm build`). Скрипт собирает тарбол через
+ * `npm pack`, ставит его в чистого потребителя с изолированным поиском исполняемых файлов и доказывает, что
+ * опубликованные байты работают у человека без этого репозитория: тесты репозитория ходят в `src/` и `dist/`
+ * напрямую и не видят ни забытого в `files` каталога, ни шима, ни ресурса, который читается из рабочего
+ * каталога. Каждая проверка бросает исключение на своём контрпримере; принятый кандидат описывается в
+ * `candidate-evidence.json` рядом с тарболом и в `test-results/package/` (его читает docs/RELEASE.md).
+ *
+ * Классы проверок в порядке выполнения:
+ * - опись тарбола равна белому списку выпуска, который выводится из исходников, скилла, расширений и
+ *   манифеста примеров; в тарболе нет приватных и временных путей и шаблонов секретов;
+ * - запись `npm pack --json` совпадает с байтами распакованного тарбола; у CLI есть шебанг Node;
+ * - изоляция потребителя: поиск исполняемых файлов не выходит за каталог прогона и системные утилиты,
+ *   и установленного где-то ещё продукта в нём нет;
+ * - метаданные, лицензия, скилл и манифест примеров установленного пакета совпадают с договором выпуска;
+ * - `npx --no-install` находит именно установленный шим, и версия CLI равна версии выпуска;
+ * - договоры обнаружения `describe`, `schema`, ESM API и `examples`: модель страницы, темы, стартеры;
+ * - каждый пример из манифеста собирается из установленного пакета в обоих форматах со своей раскладкой
+ *   и подписью; каждое эталонное расширение собирает свои примеры;
+ * - скопированные и правленные примеры Terminal и Cinematic пересобираются с правкой и своей темой;
+ * - первое использование: init → правка → build; build отвергает битый источник без порчи вывода и без
+ *   утечки учётных данных, validate и inspect не трогают вывод, CLI и ESM описывают проект одинаково;
+ * - ревью: манифест целей, привязка `review.json`, прошлое ревью в validate, inspect и build;
+ * - детерминизм: два независимых процесса дают одни байты single-file и одно дерево directory;
+ * - Chromium: собранные кандидаты открываются через `file://` без ошибок, переключают схему и открывают
+ *   рабочее место ревью;
+ * - ресурсы браузера берутся из пакета, а не из рабочего каталога потребителя;
+ * - договоры результата сборки, ссылки на исходники (сохраняются по умолчанию, `--share` их обезвреживает),
+ *   directory-вывод с адресуемыми по содержимому ресурсами, ESM `buildReport`;
+ * - отказы: неверный формат ESM без порчи соседних файлов, публичные типы под `tsc`, удалённая опция
+ *   `--scripts`, диагностика отсутствующего входа;
+ * - путь скилла вне репозитория: проверка оформления скриптом из пакета и снимки командой из SKILL.md.
+ */
+
 import { execFile, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
@@ -8,15 +42,18 @@ import {
   readdir,
   readFile,
   realpath,
+  rm,
   symlink,
   writeFile,
 } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
 import { chromium } from '@playwright/test';
 
+import { EXTENSION_KINDS } from '../src/extensions/types.ts';
 import { inspectExecutableSearch } from './package-provenance.ts';
 
 const execFileAsync = promisify(execFile);
@@ -39,6 +76,28 @@ if (typeof sourcePackage.version !== 'string') {
   throw new Error('Source package metadata does not declare a version.');
 }
 const releaseVersion = sourcePackage.version;
+// Ожидания по составу берутся из реестров репозитория, а не из чисел в этом файле: тарбол, где нет
+// примера, стартера или темы из реестра, должен провалить проверку, а новый пример — попасть под неё сам.
+const sourceExampleManifest = requireRecord(
+  JSON.parse(await readFile(path.resolve('examples/manifest.json'), 'utf8')) as unknown,
+  'source example manifest',
+);
+if (!Array.isArray(sourceExampleManifest.examples)) {
+  throw new Error('Source example manifest must contain an examples array.');
+}
+const sourceExamples = sourceExampleManifest.examples.map((value) =>
+  requireRecord(value, 'source example manifest entry'),
+);
+const sourceContract = requireRecord(
+  JSON.parse(
+    await readFile(path.resolve('docs/generated/source-contract.json'), 'utf8'),
+  ) as unknown,
+  'generated source contract',
+);
+const sourceThemeNames = requireArray(
+  requireRecord(sourceContract.page, 'generated page contract').themes,
+  'generated theme list',
+).map((theme) => requireRecord(theme, 'generated theme').name);
 const packageDirectory = path.resolve('test-results/package');
 await mkdir(packageDirectory, { recursive: true });
 const packageRunDirectory = await mkdtemp(path.join(packageDirectory, 'candidate-'));
@@ -62,6 +121,7 @@ const npmPackOutcome = await execFileAsync(npmExecutable, npmPackArgv, {
   env: npmPackEnvironment,
 });
 const npmPackRecords: unknown = JSON.parse(npmPackOutcome.stdout);
+// Ловит несколько тарболов или пустой ответ `npm pack`: дальше проверяется ровно один кандидат.
 if (!Array.isArray(npmPackRecords) || npmPackRecords.length !== 1) {
   throw new Error('npm pack --json did not return exactly one package record.');
 }
@@ -70,6 +130,7 @@ const tarballFilename = requireString(npmPackRecord.filename, 'npm pack filename
 const tarballPath = path.join(packageRunDirectory, tarballFilename);
 const { stdout: listing } = await execFileAsync('tar', ['-tf', tarballPath]);
 const packedFiles = listing.trim().split('\n').sort();
+// Ловит файл, забытый в `files` или в сборке (его нет у потребителя), и лишний файл, попавший в выпуск.
 const expectedPackedFiles = await expectedTarballFiles();
 const missingPackedFiles = expectedPackedFiles.filter((file) => !packedFiles.includes(file));
 const unexpectedPackedFiles = packedFiles.filter((file) => !expectedPackedFiles.includes(file));
@@ -110,6 +171,7 @@ assertNpmPackRecord(npmPackRecord, {
   tarballSize,
   packedInventory,
 });
+// Ловит CLI без шебанга: у потребителя шим `bin` запустил бы его не через Node.
 const cli = await readFile(path.resolve('dist/node/cli.js'), 'utf8');
 if (!cli.startsWith('#!/usr/bin/env node')) {
   throw new Error('CLI build is missing its Node shebang.');
@@ -201,6 +263,9 @@ const candidateNpxEnvironment: NodeJS.ProcessEnv = {
   ...candidateInstallEnvironment,
   npm_config_offline: 'true',
 };
+// Ловит исполняемый файл продукта, достижимый в окружении прогона: тогда потребителя обслужил бы он, а не
+// тарбол. Проверки `node_modules` и кэша здесь не могут сработать: оба пути лежат в только что созданном
+// mkdtemp-каталоге.
 if (
   (await pathExists(path.join(consumerDirectory, 'node_modules'))) ||
   !globalExecutableAbsent ||
@@ -253,6 +318,8 @@ const installedEngines = requireRecord(installedPackage.engines, 'installed pack
 const installedBin = requireRecord(installedPackage.bin, 'installed package bin');
 const installedExports = requireRecord(installedPackage.exports, 'installed package exports');
 const installedRootExport = requireRecord(installedExports['.'], 'installed root export');
+// Ловит расхождение опубликованного package.json с договором выпуска: чужую версию, потерянные типы,
+// экспорт, bin, движок Node или ссылки на репозиторий.
 if (
   installedPackage.name !== 'agentic-report' ||
   installedPackage.version !== releaseVersion ||
@@ -273,6 +340,7 @@ if (
 ) {
   throw new Error('Installed package metadata differs from the release contract.');
 }
+// Ловит устаревшую или отсутствующую лицензию в тарболе.
 if (
   (await readFile(
     path.join(consumerDirectory, 'node_modules', 'agentic-report', 'LICENSE'),
@@ -281,6 +349,7 @@ if (
 ) {
   throw new Error('Installed package license differs from the repository license.');
 }
+// Ловит скилл в пакете, отставший от репозитория: агент потребителя учился бы по старой редакции.
 if (
   !(
     await readFile(
@@ -297,6 +366,7 @@ if (
 ) {
   throw new Error('Installed canonical skill bytes differ from the repository skill.');
 }
+// Ловит выпуск с манифестом примеров, который сам признаёт непокрытые классы витрины.
 if (
   installedExampleManifest.status !== 'complete' ||
   JSON.stringify(installedExampleManifest.missingShowcaseClasses) !== JSON.stringify([])
@@ -323,6 +393,7 @@ const binaryIdentity = {
   localShimRealpath: await realpath(binary),
   packageBinTarget: installedBinaryTarget,
 };
+// Ловит шим `node_modules/.bin`, ведущий не в объявленный `bin` пакета (или объявленный файл без шима).
 if (
   !(await pathExists(installedBinaryTarget)) ||
   (process.platform !== 'win32' && binaryIdentity.localShimRealpath !== installedBinaryTarget)
@@ -339,6 +410,7 @@ const resolutionOutcome = await runCommand(
   candidateNpxEnvironment,
 );
 const resolvedExecutableCandidates = resolutionOutcome.stdout.trim().split(/\r?\n/u);
+// Ловит `npx`, который первым находит не установленный шим потребителя, а другой `agentic-report`.
 if (
   resolutionOutcome.exitCode !== 0 ||
   resolutionOutcome.stderr !== '' ||
@@ -368,6 +440,8 @@ const runCandidateNpx = async (
   return outcome;
 };
 const candidateNpxVersionOutcome = await runCandidateNpx(['--version'], consumerDirectory);
+// Ловит кандидата, который через `npx --no-install` не запускается, печатает предупреждения в stderr или
+// сообщает чужую версию; следующий блок ловит то же для прямого вызова шима.
 if (
   candidateNpxVersionOutcome.exitCode !== 0 ||
   candidateNpxVersionOutcome.stderr !== '' ||
@@ -387,6 +461,7 @@ const { stdout: descriptionOutput } = await execFileAsync(binary, ['describe', '
   cwd: consumerDirectory,
 });
 const description: unknown = JSON.parse(descriptionOutput);
+// Ловит `describe --json`, который не отдаёт машинно-читаемый каталог директив.
 if (
   typeof description !== 'object' ||
   description === null ||
@@ -404,6 +479,7 @@ const installedCommands = requireRecord(
   installedDescription.commands,
   'installed command discovery contract',
 );
+// Ловит потерю формата вывода, смену формата по умолчанию или размещения рантайма.
 assertExactKeys(installedOutputs, ['default', 'formats', 'runtimePlacement'], 'output contract');
 if (
   installedOutputs.default !== 'single-file' ||
@@ -413,18 +489,34 @@ if (
 ) {
   throw new Error('Installed discovery contract does not expose the two format-derived runtimes.');
 }
+// Ловит неполную модель страницы у потребителя: потерянную раскладку, категорию, схему, умолчание или
+// тему. Темы сверяются по именам с реестром репозитория (docs/generated/source-contract.json), так что
+// тарбол без встроенной темы падает, а новая тема не требует править этот файл.
 if (
   installedPage.defaultLayout !== 'document' ||
   JSON.stringify(installedPage.layouts) !==
-    JSON.stringify(['document', 'dashboard', 'landing', 'mixed']) ||
-  installedPage.defaultTheme !== 'system' ||
-  JSON.stringify(installedPage.themes) !== JSON.stringify(['system', 'light', 'dark']) ||
+    JSON.stringify(['document', 'dashboard', 'landing', 'mixed', 'slides', 'screens']) ||
+  !Array.isArray(installedPage.categories) ||
+  JSON.stringify(
+    (installedPage.categories as readonly { readonly id?: unknown }[]).map(
+      (category) => category.id,
+    ),
+  ) !== JSON.stringify(['landing', 'document', 'dashboard', 'presentation', 'answer']) ||
+  installedPage.defaultScheme !== 'system' ||
+  JSON.stringify(installedPage.schemes) !== JSON.stringify(['system', 'light', 'dark']) ||
+  installedPage.defaultTheme !== 'neutral' ||
+  !Array.isArray(installedPage.themes) ||
+  JSON.stringify(
+    (installedPage.themes as readonly { readonly name?: unknown }[]).map((theme) => theme.name),
+  ) !== JSON.stringify(sourceThemeNames) ||
   installedPage.defaultAttribution !== true ||
-  !Array.isArray(installedPage.tokens) ||
-  installedPage.tokens.length !== 5
+  typeof installedPage.theme !== 'object' ||
+  installedPage.theme === null ||
+  !Array.isArray((installedPage.theme as { readonly fields?: unknown }).fields)
 ) {
   throw new Error('Installed discovery contract does not expose the complete page model.');
 }
+// Ловит каталог команд, в котором агент не найдёт основной путь init → validate → inspect → build.
 for (const command of ['init', 'validate', 'inspect', 'build']) {
   if (typeof installedCommands[command] !== 'string') {
     throw new Error(`Installed discovery contract is missing the ${command} command.`);
@@ -435,6 +527,7 @@ const { stdout: schemaOutput } = await execFileAsync(binary, ['schema', '--scope
   cwd: consumerDirectory,
 });
 const sourceSchema: unknown = JSON.parse(schemaOutput);
+// Ловит `schema`, который отдаёт не схему источника или схему без свойств.
 if (
   typeof sourceSchema !== 'object' ||
   sourceSchema === null ||
@@ -446,6 +539,7 @@ if (
 ) {
   throw new Error('Installed CLI did not return the truthful complete source schema contract.');
 }
+// Ловит возврат удалённой политики скриптов в опубликованную схему.
 if (JSON.stringify(sourceSchema).includes('"scripts"')) {
   throw new Error('Installed source schema still exposes the retired script-policy surface.');
 }
@@ -461,6 +555,7 @@ const outputProperties = requireRecord(
   requireRecord(manifestProperties.output, 'installed output schema').properties,
   'installed output schema properties',
 );
+// Ловит лишнее или потерянное поле `output` в схеме манифеста и смену умолчания подписи страницы.
 assertExactKeys(outputProperties, ['format', 'maxInlineBytes'], 'manifest output schema');
 if (
   requireRecord(manifestProperties.attribution, 'installed attribution schema').default !== true
@@ -477,6 +572,7 @@ const { stdout: apiContractOutput } = await execFileAsync(
   { cwd: consumerDirectory },
 );
 const apiContract: unknown = JSON.parse(apiContractOutput);
+// Ловит ESM-экспорт, который не отдаёт схему, директивы и примеры или описывает страницу иначе, чем CLI.
 if (
   typeof apiContract !== 'object' ||
   apiContract === null ||
@@ -500,6 +596,7 @@ const { stdout: examplesOutput } = await execFileAsync(binary, ['examples', '--j
   cwd: consumerDirectory,
 });
 const examplesContract: unknown = JSON.parse(examplesOutput);
+// Ловит `examples --json` без списка примеров или без путей к их источникам.
 if (
   typeof examplesContract !== 'object' ||
   examplesContract === null ||
@@ -512,52 +609,83 @@ if (
 ) {
   throw new Error('Installed CLI did not return its machine-readable examples contract.');
 }
-const expectedLayoutExamples = [
-  { id: 'basic', layout: 'document' },
-  { id: 'research', layout: 'mixed' },
-  { id: 'architecture', layout: 'document' },
-  { id: 'tutorial', layout: 'document' },
-  { id: 'dashboard', layout: 'dashboard' },
-  { id: 'landing', layout: 'landing' },
-  { id: 'layout-document', layout: 'document' },
-  { id: 'layout-dashboard', layout: 'dashboard' },
-  { id: 'layout-landing', layout: 'landing' },
-  { id: 'layout-mixed', layout: 'mixed' },
-  { id: 'interactive-catalog', layout: 'mixed' },
-  { id: 'response-workspace', layout: 'document' },
-  { id: 'visualization-catalog', layout: 'dashboard' },
-  { id: 'incident-review', layout: 'mixed' },
-  { id: 'vendor-decision', layout: 'document' },
-  { id: 'launch-readiness', layout: 'landing' },
-  { id: 'terminal-portfolio', layout: 'landing' },
-  { id: 'cinematic-story', layout: 'landing' },
-] as const;
 const installedExamples = examplesContract.examples.map((example) =>
   requireRecord(example, 'installed example'),
 );
+// Ловит каталог примеров у потребителя, разошедшийся с манифестом репозитория: потерянный, лишний или
+// переставленный пример.
+if (
+  JSON.stringify(installedExamples.map((example) => example.id)) !==
+  JSON.stringify(sourceExamples.map((example) => example.id))
+) {
+  throw new Error('Installed examples contract differs from the source example manifest.');
+}
+// Ловит стартер, выпавший из каталога или потерявший пометку `starter`, и смену стартера по умолчанию.
+// Ожидание — стартеры манифеста репозитория в его порядке; по умолчанию — `document`.
 const installedStarters = installedExamples.filter((example) => example.starter !== undefined);
 if (
   JSON.stringify(installedStarters.map((example) => example.id)) !==
-  JSON.stringify(['basic', 'research', 'architecture', 'tutorial', 'dashboard', 'landing'])
+  JSON.stringify(
+    sourceExamples.filter((example) => example.starter !== undefined).map((example) => example.id),
+  )
 ) {
-  throw new Error('Installed examples contract does not expose the six starter identities.');
+  throw new Error('Installed examples contract does not expose the category starters.');
 }
 const defaultStarter = installedStarters.find(
   (example) => requireRecord(example.starter, 'installed starter metadata').default,
 );
-if (
-  defaultStarter?.id !== 'basic' ||
-  JSON.stringify(requireRecord(defaultStarter.starter, 'default starter metadata').aliases) !==
-    JSON.stringify(['report'])
-) {
-  throw new Error('Installed starter catalog lost its default or report compatibility alias.');
+if (defaultStarter?.id !== 'document') {
+  throw new Error('Installed starter catalog lost its document default.');
 }
-for (const expected of expectedLayoutExamples) {
-  const installedExample = installedExamples.find((example) => example.id === expected.id);
-  if (installedExample === undefined || typeof installedExample.entry !== 'string') {
-    throw new Error(`Installed examples contract is missing ${expected.id}.`);
+// Ловит эталонные расширения, выпавшие из тарбола или из `examples`: агент находит их только там, и каждое
+// должно собираться из установленной папки — поставщик запускается из неё, остров читается из неё. Уровни
+// берутся из договора расширений (`EXTENSION_KINDS`), так что новый уровень без эталона провалит проверку.
+if (!('extensions' in examplesContract) || !Array.isArray(examplesContract.extensions)) {
+  throw new Error('Installed examples contract does not list the reference extensions.');
+}
+const installedExtensions = examplesContract.extensions.map((extension) =>
+  requireRecord(extension, 'installed reference extension'),
+);
+if (
+  !EXTENSION_KINDS.every((kind) => installedExtensions.some((extension) => extension.kind === kind))
+) {
+  throw new Error('Installed reference extensions do not cover every level of the extension API.');
+}
+// Ловит эталон без README, без двух примеров или с примером, который не собирается у потребителя.
+const builtExtensionExamples = new Set<string>();
+for (const extension of installedExtensions) {
+  await readFile(requireString(extension.readme, 'reference extension README'), 'utf8');
+  if (!Array.isArray(extension.examples) || extension.examples.length < 2) {
+    throw new Error(`Installed reference extension ${String(extension.name)} lacks two examples.`);
   }
-  await readFile(installedExample.entry, 'utf8');
+  for (const example of extension.examples) {
+    const entry = requireString(example, 'reference extension example');
+    if (builtExtensionExamples.has(entry)) continue;
+    builtExtensionExamples.add(entry);
+    const output = path.join(
+      consumerDirectory,
+      `extension-${String(extension.name)}-${builtExtensionExamples.size}.html`,
+    );
+    await execFileAsync(binary, ['build', entry, '--output', output], { cwd: consumerDirectory });
+    await readFile(output, 'utf8');
+  }
+}
+// Ловит пример, который не собирается из установленного пакета в одном из форматов, теряет раскладку,
+// объявленную в его frontmatter (без объявления — раскладку по умолчанию), или подпись страницы. Список
+// примеров — весь манифест репозитория, поэтому новый пример попадает под проверку без правки этого файла.
+if (typeof installedPage.defaultLayout !== 'string') {
+  throw new Error('Installed page contract does not declare a default layout.');
+}
+const defaultLayout = installedPage.defaultLayout;
+for (const sourceExample of sourceExamples) {
+  const installedExample = installedExamples.find((example) => example.id === sourceExample.id);
+  if (installedExample === undefined || typeof installedExample.entry !== 'string') {
+    throw new Error(`Installed examples contract is missing ${String(sourceExample.id)}.`);
+  }
+  const expected = {
+    id: String(sourceExample.id),
+    layout: declaredLayout(await readFile(installedExample.entry, 'utf8')) ?? defaultLayout,
+  };
   for (const format of ['single-file', 'directory'] as const) {
     const output = path.join(consumerDirectory, `${expected.id}-${format}`);
     const arguments_ = ['build', installedExample.entry, '--output', output];
@@ -578,6 +706,8 @@ for (const expected of expectedLayoutExamples) {
     ) {
       throw new Error(`Installed ${expected.id} ${format} artifact lost default attribution.`);
     }
+    // Ловит лендинг, у которого оглавление в потоке собрано не из заголовков разделов, а лид и
+    // приложение-глоссарий раздела потеряли своё место.
     if (expected.id === 'landing') {
       const inFlowContents = /<nav class="semantic-contents"[\s\S]*?<\/nav>/u.exec(html)?.[0];
       const workflowStart = /<section[^>]*id="workflow"/u.exec(html)?.index;
@@ -613,15 +743,19 @@ for (const expected of expectedLayoutExamples) {
   }
 }
 
+// Ловит пример, который нельзя скопировать из пакета и править как свой проект: копия не собирается, не
+// несёт правку автора или теряет тему примера.
 for (const editable of [
   {
     id: 'terminal-portfolio',
     format: 'single-file',
+    theme: 'terminal',
     marker: 'Installed Terminal source edit.',
   },
   {
     id: 'cinematic-story',
     format: 'directory',
+    theme: 'noir',
     marker: 'Installed Cinematic source edit.',
   },
 ] as const) {
@@ -640,12 +774,7 @@ for (const editable of [
   const htmlPath =
     editable.format === 'directory' ? path.join(editedOutput, 'index.html') : editedOutput;
   const html = await readFile(htmlPath, 'utf8');
-  if (
-    !html.includes(editable.marker) ||
-    !html.includes(
-      `data-preset="${editable.id === 'terminal-portfolio' ? 'terminal' : 'cinematic'}"`,
-    )
-  ) {
+  if (!html.includes(editable.marker) || !html.includes(`data-theme="${editable.theme}"`)) {
     throw new Error(
       `Installed edited ${editable.id} source did not produce its expected artifact.`,
     );
@@ -655,15 +784,17 @@ for (const editable of [
 const firstUseProject = path.join(consumerDirectory, 'token=path-sentinel');
 const transportedFirstUseProject = redactCredentialPath(firstUseProject);
 const initialized = await runCandidateNpx(
-  ['init', firstUseProject, '--starter', 'report', '--json'],
+  ['init', firstUseProject, '--starter', 'document', '--json'],
   consumerDirectory,
 );
 const initializedRecord = requireSingleNdjsonRecord(initialized, 'installed init result');
+// Ловит init, который не создаёт стартер, пишет в stderr или печатает путь с учётными данными
+// (`token=…` в имени каталога) без редактирования.
 if (
   initialized.exitCode !== 0 ||
   initialized.stderr !== '' ||
   initializedRecord.type !== 'result' ||
-  initializedRecord.starterId !== 'basic' ||
+  initializedRecord.starterId !== 'document' ||
   initializedRecord.projectPath !== transportedFirstUseProject ||
   initializedRecord.entryPath !== path.join(transportedFirstUseProject, 'report.md') ||
   initialized.stdout.includes('path-sentinel')
@@ -680,6 +811,10 @@ const starterSource = (await readFile(firstUseEntry, 'utf8')).replace(
 const editedSource = `${starterSource}\nAgent-authored edit.\n`;
 const credentialBearingSource = `${editedSource}\n![Broken](https://alice:secret@local.test/image.png?token=private&X-Amz-Credential=credential-sentinel&X-Amz-Signature=signature-sentinel&X-Amz-Security-Token=security-token-sentinel)\n`;
 await writeFile(firstUseEntry, credentialBearingSource);
+// Любое из этих слов в выводе CLI означает, что учётные данные из источника или пути ушли наружу без
+// редактирования.
+const credentialSentinels =
+  /alice|secret|private|path-sentinel|credential-sentinel|signature-sentinel|security-token-sentinel/u;
 
 const firstUseOutput = path.join(firstUseProject, 'built.html');
 await writeFile(firstUseOutput, 'preserve first-use output sentinel');
@@ -691,14 +826,14 @@ const rejectedFirstUseDiagnostic = requireSingleNdjsonRecord(
   rejectedFirstUseBuild,
   'installed direct first-use build diagnostic',
 );
+// Ловит build, который публикует битый источник (удалённый ресурс) поверх готового вывода, не
+// диагностирует его как REMOTE_ASSET_BLOCKED или печатает учётные данные из URL и пути.
 if (
   rejectedFirstUseBuild.exitCode !== 1 ||
   rejectedFirstUseBuild.stderr !== '' ||
   rejectedFirstUseDiagnostic.type !== 'diagnostic' ||
   rejectedFirstUseDiagnostic.code !== 'REMOTE_ASSET_BLOCKED' ||
-  /alice|secret|private|path-sentinel|credential-sentinel|signature-sentinel|security-token-sentinel/u.test(
-    rejectedFirstUseBuild.stdout,
-  ) ||
+  credentialSentinels.test(rejectedFirstUseBuild.stdout) ||
   !rejectedFirstUseBuild.stdout.includes('[REDACTED]') ||
   (await readFile(firstUseOutput, 'utf8')) !== 'preserve first-use output sentinel'
 ) {
@@ -716,6 +851,8 @@ const firstUseBuildRecord = requireSingleNdjsonRecord(
   firstUseBuild,
   'installed first-use build result',
 );
+// Ловит build, который после исправления источника не публикует страницу с правкой автора прямым
+// вызовом, без validate и inspect перед ним.
 if (
   firstUseBuild.exitCode !== 0 ||
   firstUseBuild.stderr !== '' ||
@@ -735,6 +872,8 @@ await mkdir(path.dirname(analysisDirectorySentinel));
 await writeFile(analysisDirectorySentinel, 'preserve directory analysis sentinel');
 await writeFile(firstUseEntry, credentialBearingSource);
 
+// Ловит validate и inspect, которые на битом источнике не отказывают с отредактированной диагностикой;
+// следующий блок ловит их запись в вывод автора (свои report.html, report-artifact/ и прошлую сборку).
 for (const command of ['validate', 'inspect']) {
   const broken = await runCommand(binary, [command, firstUseProject, '--json'], consumerDirectory);
   const diagnostic = requireSingleNdjsonRecord(broken, `installed broken ${command} diagnostic`);
@@ -743,9 +882,7 @@ for (const command of ['validate', 'inspect']) {
     broken.stderr !== '' ||
     diagnostic.type !== 'diagnostic' ||
     diagnostic.code !== 'REMOTE_ASSET_BLOCKED' ||
-    /alice|secret|private|path-sentinel|credential-sentinel|signature-sentinel|security-token-sentinel/u.test(
-      broken.stdout,
-    ) ||
+    credentialSentinels.test(broken.stdout) ||
     !broken.stdout.includes('[REDACTED]')
   ) {
     throw new Error(
@@ -764,6 +901,8 @@ if (
 await writeFile(firstUseEntry, editedSource);
 const validated = await runCandidateNpx(['validate', firstUseProject, '--json'], consumerDirectory);
 const validatedRecord = requireSingleNdjsonRecord(validated, 'installed validate result');
+// Ловит validate, который отвергает исправленный проект, меняет форму записи результата, печатает путь с
+// учётными данными или выбирает не single-file по умолчанию.
 assertExactKeys(
   validatedRecord,
   [
@@ -796,6 +935,8 @@ const inspected = await runCandidateNpx(
   consumerDirectory,
 );
 const inspectedRecord = requireSingleNdjsonRecord(inspected, 'installed inspect result');
+// Ловит inspect, который меняет форму записи, не учитывает `--format directory`, теряет файлы источника
+// или каталог команд.
 assertExactKeys(
   inspectedRecord,
   [
@@ -806,6 +947,7 @@ assertExactKeys(
     'entryPath',
     'output',
     'sourceFiles',
+    'structure',
     'observed',
     'catalog',
     'warnings',
@@ -857,6 +999,7 @@ const installedEsmInspect = requireRecord(
   installedAnalysis.inspect,
   'installed ESM inspect result',
 );
+// Ловит расхождение ESM `validateReport`/`inspectReport` с CLI на одном и том же проекте.
 if (
   installedEsmValidate.entryPath !== validatedRecord.entryPath ||
   JSON.stringify(installedEsmInspect.output) !== JSON.stringify(inspectedRecord.output) ||
@@ -865,6 +1008,7 @@ if (
   throw new Error('Installed ESM and CLI analysis routes do not describe the same project.');
 }
 
+// Ловит сборку с `review: true`, в которую не встроен манифест целей ревью или в нём нет цели-абзаца.
 const firstUseHtml = firstUseBytes.toString('utf8');
 const encodedReviewManifest = /<template data-review-manifest="true">([\s\S]*?)<\/template>/u.exec(
   firstUseHtml,
@@ -924,6 +1068,8 @@ await writeFile(
     ],
   })}\n`,
 );
+// Ловит `review`, который не привязывает ответ к точной редакции страницы, теряет нить или печатает
+// значение `token=` из сообщения без редактирования.
 const installedReview = await runCommand(
   binary,
   ['review', 'review.json', firstUseProject, '--json'],
@@ -945,6 +1091,8 @@ if (
 ) {
   throw new Error('Installed CLI did not resolve and sanitize the review artifact.');
 }
+// Ловит validate, inspect (CLI и ESM) и build, которые не принимают прошлое ревью `--review`; сборка
+// обязана встроить его состояние `exact` в оба формата.
 for (const command of ['validate', 'inspect'] as const) {
   const result = await runCandidateNpx(
     [command, firstUseProject, '--review', 'review.json', '--json'],
@@ -1002,6 +1150,7 @@ for (const output of [installedPriorSingle, path.join(installedPriorDirectory, '
     throw new Error('Installed package build did not embed exact prior-review state.');
   }
 }
+// Ловит недетерминированную сборку: второй независимый процесс даёт другие байты single-file.
 const repeatedFirstUseOutput = path.join(firstUseProject, 'built-again.html');
 await execFileAsync(binary, ['build', firstUseProject, '--output', repeatedFirstUseOutput], {
   cwd: consumerDirectory,
@@ -1010,10 +1159,12 @@ if (!(await readFile(repeatedFirstUseOutput)).equals(await readFile(firstUseOutp
   throw new Error('Independent installed CLI processes produced different single-file bytes.');
 }
 
+// Второй путь первого использования — через directory. Ловит init, build в каталог, validate и inspect с
+// `--format directory`, которые не проходят у потребителя, и недетерминированное дерево каталога.
 const directoryJourneyProject = path.join(consumerDirectory, 'directory-first-use');
 const directoryInit = await runCommand(
   binary,
-  ['init', directoryJourneyProject, '--starter', 'tutorial', '--json'],
+  ['init', directoryJourneyProject, '--starter', 'answer', '--json'],
   consumerDirectory,
 );
 const directoryInitRecord = requireSingleNdjsonRecord(
@@ -1023,7 +1174,7 @@ const directoryInitRecord = requireSingleNdjsonRecord(
 if (
   directoryInit.exitCode !== 0 ||
   directoryInitRecord.type !== 'result' ||
-  directoryInitRecord.starterId !== 'tutorial'
+  directoryInitRecord.starterId !== 'answer'
 ) {
   throw new Error('Installed CLI did not initialize the directory first-use journey.');
 }
@@ -1092,6 +1243,8 @@ if (
 ) {
   throw new Error('Independent installed CLI processes produced different directory trees.');
 }
+// Ловит собранные у потребителя страницы, которые в Chromium падают, переполняются или теряют
+// переключатель схемы и рабочее место ревью (подробности — у inspectCandidateArtifacts).
 const candidateBrowserEvidence = await inspectCandidateArtifacts([
   { format: 'single-file', path: firstUseOutput },
   { format: 'directory', path: path.join(directoryJourneyOutput, 'index.html') },
@@ -1103,6 +1256,8 @@ const candidateBrowserEvidence = await inspectCandidateArtifacts([
   },
 ]);
 
+// Ловит CLI, который читает рантайм и стили из `dist/browser` рабочего каталога, а не из своего пакета:
+// подложенные туда файлы не должны попасть в страницу.
 const shadowDirectory = path.join(consumerDirectory, 'cwd-shadow');
 await mkdir(path.join(shadowDirectory, 'dist', 'browser'), { recursive: true });
 await writeFile(path.join(shadowDirectory, 'report.md'), '# Package-owned assets\n');
@@ -1125,6 +1280,23 @@ if (
   throw new Error('Installed CLI loaded browser assets from the consumer working directory.');
 }
 
+// Договор результата сборки: CLI добавляет к результату ESM `buildReport` поля записи NDJSON `type` и
+// `runId`. Ловит лишнее или потерянное поле результата.
+const cliBuildResultKeys = [
+  'type',
+  'runId',
+  'outputPath',
+  'format',
+  'bytes',
+  'embeddedAssets',
+  'externalAssets',
+  'contentHash',
+  'share',
+  'neutralizedSourceLinks',
+  'warnings',
+] as const;
+// Ловит сборку по умолчанию, которая выбирает не single-file, не строит страницу из источника или
+// обезвреживает ссылки на исходники без `--share`.
 const reportPath = path.join(consumerDirectory, 'report.md');
 const outputPath = path.join(consumerDirectory, 'report.html');
 const installedSourcePath = '/tmp/%2FUsers%2Fpacked-consumer%2Fprivate%2Fsource.ts';
@@ -1154,23 +1326,7 @@ const cliResult = requireRecord(
   records.find((record) => record.type === 'result'),
   'installed CLI result',
 );
-assertExactKeys(
-  cliResult,
-  [
-    'type',
-    'runId',
-    'outputPath',
-    'format',
-    'bytes',
-    'embeddedAssets',
-    'externalAssets',
-    'contentHash',
-    'share',
-    'neutralizedSourceLinks',
-    'warnings',
-  ],
-  'installed CLI result',
-);
+assertExactKeys(cliResult, cliBuildResultKeys, 'installed CLI result');
 if (cliResult.format !== 'single-file') {
   throw new Error('Installed CLI default build did not select single-file output.');
 }
@@ -1186,6 +1342,7 @@ if (
   throw new Error('Installed CLI default build did not preserve workstation source links.');
 }
 
+// Ловит `--share`, который оставляет путь рабочей станции в ссылке на исходник или в её подписи.
 const shareOutputPath = path.join(consumerDirectory, 'report-share.html');
 const { stdout: shareBuildOutput } = await execFileAsync(
   binary,
@@ -1212,6 +1369,8 @@ if (
   throw new Error('Installed CLI share build did not neutralize the exact source-link path.');
 }
 
+// Ловит directory-сборку, которая встраивает рантайм вместо внешних ресурсов с хэшем в имени, меняет
+// договор результата или без `--share` теряет ссылки на исходники.
 const directoryOutput = path.join(consumerDirectory, 'directory-artifact');
 const { stdout: directoryBuildOutput } = await execFileAsync(
   binary,
@@ -1232,23 +1391,7 @@ if (
 ) {
   throw new Error('Installed CLI did not return the expected directory result contract.');
 }
-assertExactKeys(
-  directoryRecord,
-  [
-    'type',
-    'runId',
-    'outputPath',
-    'format',
-    'bytes',
-    'embeddedAssets',
-    'externalAssets',
-    'contentHash',
-    'share',
-    'neutralizedSourceLinks',
-    'warnings',
-  ],
-  'installed directory CLI result',
-);
+assertExactKeys(directoryRecord, cliBuildResultKeys, 'installed directory CLI result');
 const directoryHtml = await readFile(path.join(directoryOutput, 'index.html'), 'utf8');
 if (
   !/<script src="assets\/runtime\.[a-f0-9]{12}\.js" defer=""><\/script>/u.test(directoryHtml) ||
@@ -1262,6 +1405,8 @@ if (!directoryHtml.includes(installedSourcePathEncoded)) {
   throw new Error('Installed CLI default directory build did not preserve source links.');
 }
 
+// Ловит ESM `buildReport`, который в directory с `share: true` меняет договор результата или оставляет
+// путь рабочей станции.
 const esmOutput = path.join(consumerDirectory, 'esm-directory');
 const { stdout: esmBuildOutput } = await execFileAsync(
   process.execPath,
@@ -1277,17 +1422,7 @@ const { stdout: esmBuildOutput } = await execFileAsync(
 const esmResult = requireRecord(JSON.parse(esmBuildOutput), 'installed ESM build result');
 assertExactKeys(
   esmResult,
-  [
-    'outputPath',
-    'format',
-    'bytes',
-    'embeddedAssets',
-    'externalAssets',
-    'contentHash',
-    'share',
-    'neutralizedSourceLinks',
-    'warnings',
-  ],
+  cliBuildResultKeys.filter((key) => key !== 'type' && key !== 'runId'),
   'installed ESM build result',
 );
 if (
@@ -1307,6 +1442,8 @@ if (
   throw new Error('Installed ESM share-safe directory output retained its source-link path.');
 }
 
+// Ловит ESM `buildReport`, который принимает неизвестный формат или, отказывая, создаёт вывод либо
+// трогает соседний каталог `assets`.
 const invalidEsmParent = path.join(consumerDirectory, 'invalid-esm-format');
 const invalidEsmAssets = path.join(invalidEsmParent, 'assets');
 const invalidEsmSentinel = path.join(invalidEsmAssets, 'sentinel.txt');
@@ -1343,6 +1480,9 @@ if (
   throw new Error('Installed ESM invalid-format rejection mutated its output or adjacent assets.');
 }
 
+// Ловит опубликованные типы, которые не компилируются у потребителя под strict NodeNext, потеряли
+// экспортируемый тип или снова допускают удалённое поле `scripts` (тогда `@ts-expect-error` не нужен и
+// `tsc` падает).
 await writeFile(
   path.join(consumerDirectory, 'contract.ts'),
   [
@@ -1395,6 +1535,7 @@ await execFileAsync(process.execPath, [path.resolve('node_modules/typescript/bin
   cwd: consumerDirectory,
 });
 
+// Ловит CLI, который принимает удалённую опцию `--scripts` или отвергает её не как ошибку аргумента.
 const retiredOption = await runCommand(
   binary,
   ['build', reportPath, '--scripts', 'none', '--json'],
@@ -1413,6 +1554,7 @@ if (
   throw new Error('Installed CLI accepted or misclassified the retired --scripts option.');
 }
 
+// Ловит отказ без кода выхода 1, с выводом в stderr или без диагностики INPUT_NOT_FOUND с подсказкой.
 const failedBuild = await runCommand(binary, ['build', 'missing.md', '--json'], consumerDirectory);
 if (failedBuild.exitCode !== 1 || failedBuild.stderr !== '') {
   throw new Error(
@@ -1433,6 +1575,97 @@ if (
   throw new Error('Installed CLI did not emit the expected actionable validation diagnostic.');
 }
 
+// Путь скилла от установленного тарбола во временном каталоге вне репозитория: стартер, проверка
+// оформления скриптом из пакета и снимки ровно той командой, что описана в SKILL.md, — с Playwright,
+// поставленным рядом через `npx -p`, потому что пакет браузера не везёт.
+const skillJourneyRoot = await mkdtemp(path.join(os.tmpdir(), 'agentic-report-skill-journey-'));
+// Ловит прогон внутри репозитория, где скилл мог бы опереться на его файлы, а не на пакет.
+if (skillJourneyRoot.startsWith(`${path.resolve('.')}${path.sep}`)) {
+  throw new Error(`Skill journey must run outside the repository: ${skillJourneyRoot}`);
+}
+const skillJourneyEnvironment: NodeJS.ProcessEnv = {
+  ...candidateInstallEnvironment,
+  ...(process.env.HOME === undefined ? {} : { HOME: process.env.HOME }),
+  ...(process.env.PLAYWRIGHT_BROWSERS_PATH === undefined
+    ? {}
+    : { PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH }),
+};
+const playwrightVersion = requireString(
+  requireRecord(sourcePackage.devDependencies, 'source devDependencies')['@playwright/test'],
+  '@playwright/test version',
+);
+// Ловит SKILL.md, где команда снимков не закрепляет Playwright или закрепляет не ту версию, что у проекта.
+const skillSourceText = await readFile(path.resolve('skills/agentic-report/SKILL.md'), 'utf8');
+const pinnedPlaywright = [...skillSourceText.matchAll(/\bplaywright@(\S+)/gu)].map(
+  (match) => match[1],
+);
+if (
+  pinnedPlaywright.length === 0 ||
+  pinnedPlaywright.some((version) => version !== playwrightVersion)
+) {
+  throw new Error(
+    `SKILL.md must pin playwright@${playwrightVersion} for snapshots; found ${pinnedPlaywright.join(', ')}.`,
+  );
+}
+const journeyPage = path.join(skillJourneyRoot, 'page');
+await execFileAsync(binary, ['init', journeyPage, '--starter', 'landing'], {
+  cwd: skillJourneyRoot,
+  env: skillJourneyEnvironment,
+});
+const installedSkill = path.join(
+  consumerDirectory,
+  'node_modules',
+  'agentic-report',
+  'skills',
+  'agentic-report',
+);
+// Ловит скрипт проверки оформления, который не запускается из установленного скилла против установленного
+// CLI или не отдаёт список советов.
+const designCheckOutcome = await execFileAsync(
+  process.execPath,
+  [path.join(installedSkill, 'scripts', 'design-check.mjs'), journeyPage, '--cli', binary],
+  { cwd: skillJourneyRoot, env: skillJourneyEnvironment },
+);
+const designCheck = requireRecord(JSON.parse(designCheckOutcome.stdout), 'design check result');
+if (!Array.isArray(designCheck.advice)) throw new Error('Design check returned no advice list.');
+// Ловит команду снимков из SKILL.md, которая с тарболом и закреплённым Playwright не снимает все сочетания
+// ширин, схем и движения (2 × 2 × 2) или не собирает PNG-лист.
+const snapshotArgv = [
+  '--yes',
+  '-p',
+  tarballPath,
+  '-p',
+  `playwright@${playwrightVersion}`,
+  'agentic-report',
+  'snapshot',
+  journeyPage,
+  '--out',
+  path.join(skillJourneyRoot, 'snapshots'),
+  '--widths',
+  '390,1440',
+] as const;
+const snapshotOutcome = await execFileAsync(npxExecutable, snapshotArgv, {
+  cwd: skillJourneyRoot,
+  env: skillJourneyEnvironment,
+  timeout: 300_000,
+  maxBuffer: 16 * 1024 * 1024,
+});
+const snapshotResult = requireSingleNdjsonRecord(snapshotOutcome, 'snapshot');
+const snapshotShots = snapshotResult.shots;
+if (!Array.isArray(snapshotShots) || snapshotShots.length !== 8) {
+  throw new Error(
+    'Snapshot from the installed tarball did not take 2 widths × 2 schemes × 2 motions.',
+  );
+}
+const contactSheet = requireRecord(snapshotResult.contactSheet, 'snapshot contact sheet');
+const contactSheetBytes = await readFile(requireString(contactSheet.image, 'contact sheet image'));
+if (contactSheetBytes.subarray(1, 4).toString('latin1') !== 'PNG') {
+  throw new Error('Snapshot contact sheet is not a PNG image.');
+}
+await rm(skillJourneyRoot, { recursive: true, force: true });
+
+// Запись о кандидате пишется только после всех проверок: на стабильном пути
+// test-results/package/candidate-evidence.json не должен остаться принятым кандидат, проваливший путь скилла.
 const candidateEvidenceBytes = `${JSON.stringify(
   {
     evidenceKind: 'local-packed-candidate',
@@ -1510,6 +1743,11 @@ console.log(
   `Package and clean npm consumer verified: ${tarballPath} (sha256 ${tarballSha256}, integrity ${tarballIntegrity}, shasum ${tarballShasum}, ${tarballSize} bytes, ${packedFiles.length} files)`,
 );
 
+/**
+ * Ловит запись `npm pack --json`, разошедшуюся с тарболом, который реально лёг на диск: чужое имя или
+ * версию, другие суммы и размер, другую опись файлов. Релиз публикует именно эти байты, а суммы из записи
+ * попадают в свидетельство кандидата.
+ */
 function assertNpmPackRecord(
   record: Readonly<Record<string, unknown>>,
   expected: {
@@ -1572,6 +1810,11 @@ function compareInventoryPaths(
   return left.path < right.path ? -1 : left.path > right.path ? 1 : 0;
 }
 
+/**
+ * Белый список выпуска. Он выводится из того, что обязано лежать в пакете: исходники `src/` дают
+ * `dist/node` с картами и типами, скилл, эталонные расширения и гарнитуры едут целиком, примеры — по
+ * своему манифесту. Документы из `docs/` перечислены явно: в пакет идёт только их отобранная часть.
+ */
 async function expectedTarballFiles(): Promise<string[]> {
   const expected = new Set([
     'package/package.json',
@@ -1580,6 +1823,8 @@ async function expectedTarballFiles(): Promise<string[]> {
     'package/THIRD_PARTY_NOTICES.md',
     'package/dist/browser/document.css',
     'package/dist/browser/runtime.js',
+    'package/dist/browser/effects.js',
+    'package/dist/browser/islands.js',
     ...[
       'AGENT-REFERENCE.md',
       'ARCHITECTURE.md',
@@ -1589,6 +1834,7 @@ async function expectedTarballFiles(): Promise<string[]> {
       'generated/manifest.schema.json',
       'generated/source-contract.json',
       'generated/source.schema.json',
+      'generated/theme.schema.json',
       'product/code-glossary-extension.json',
       'product/copyable-prose-extension.json',
       'product/diagram-extension.json',
@@ -1603,14 +1849,25 @@ async function expectedTarballFiles(): Promise<string[]> {
       'product/source-contract.md',
     ].map((file) => `package/docs/${file}`),
   ]);
-  expected.add('package/skills/agentic-report/SKILL.md');
-  expected.add('package/skills/agentic-report/references/catalog.md');
-  expected.add('package/skills/agentic-report/references/prose-en.md');
-  expected.add('package/skills/agentic-report/references/prose-ru.md');
+  // Скилл едет целиком: SKILL.md, справочники базы знаний и скрипт проверки оформления.
+  for (const file of await recursiveRelativeFiles(path.resolve('skills/agentic-report'))) {
+    expected.add(`package/skills/agentic-report/${file}`);
+  }
+
+  // Эталонные расширения едут целиком: манифесты, исходники, README и примеры страниц.
+  for (const file of await recursiveRelativeFiles(path.resolve('extensions'))) {
+    expected.add(`package/extensions/${file}`);
+  }
+
+  // Встроенные гарнитуры едут в пакет целиком: файлы подмножеств, лицензия OFL и происхождение.
+  for (const font of await recursiveRelativeFiles(path.resolve('src/fonts'))) {
+    expected.add(`package/dist/browser/fonts/${font}`);
+  }
 
   for (const source of await recursiveRelativeFiles(path.resolve('src'))) {
     if (
       source.startsWith('browser/') ||
+      source.startsWith('fonts/') ||
       source.endsWith('.d.ts') ||
       (!source.endsWith('.ts') && !source.endsWith('.tsx'))
     ) {
@@ -1622,17 +1879,9 @@ async function expectedTarballFiles(): Promise<string[]> {
     }
   }
 
-  const exampleManifest = requireRecord(
-    JSON.parse(await readFile(path.resolve('examples/manifest.json'), 'utf8')),
-    'source example manifest',
-  );
-  if (!Array.isArray(exampleManifest.examples)) {
-    throw new Error('Source example manifest must contain an examples array.');
-  }
   expected.add('package/examples/manifest.json');
   expected.add('package/examples/showcase-contract.json');
-  for (const value of exampleManifest.examples) {
-    const example = requireRecord(value, 'source example manifest entry');
+  for (const example of sourceExamples) {
     if (typeof example.path !== 'string' || !Array.isArray(example.files)) {
       throw new Error('Source example manifest entry has an invalid path or files value.');
     }
@@ -1647,6 +1896,11 @@ async function expectedTarballFiles(): Promise<string[]> {
   return [...expected].sort();
 }
 
+/**
+ * Ловит выпуск, который унёс бы приватное: файлы окружения, ключи, логи и временные каталоги агента по
+ * пути, а по содержимому — приватные ключи, распространённые токены и абсолютные домашние пути машины
+ * сборки.
+ */
 async function assertPackedContentIsPublishSafe(
   tarballPath: string,
   packedFiles: readonly string[],
@@ -1741,6 +1995,13 @@ async function pathExists(candidate: string): Promise<boolean> {
   }
 }
 
+/**
+ * Открывает собранные у потребителя страницы в Chromium через `file://` и ловит: ошибки страницы и консоли,
+ * пустой заголовок, горизонтальное переполнение, переключатель схемы, который не меняет схему, отсутствие
+ * рабочего места ревью или его диалога, элементы `[data-review-target-control]` на блоках, выделение
+ * текста без действия и всплывающего окна, сдвиг макета при открытии ревью, потерю встроенных нитей
+ * прошлого ревью и модальность диалога не по формату (модальный — только в directory).
+ */
 async function inspectCandidateArtifacts(
   artifacts: readonly {
     readonly format: 'single-file' | 'directory';
@@ -1765,13 +2026,13 @@ async function inspectCandidateArtifacts(
         if (message.type() === 'error') errors.push(`console: ${message.text()}`);
       });
       await page.goto(pathToFileURL(artifact.path).href);
-      const themeToggle = page.locator('[data-theme-toggle]');
-      const themeBefore = await page.locator('html').getAttribute('data-theme');
+      const themeToggle = page.locator('[data-scheme-toggle]');
+      const themeBefore = await page.locator('html').getAttribute('data-scheme');
       if ((await themeToggle.count()) !== 1) {
-        throw new Error(`Installed ${artifact.format} candidate is missing its theme control.`);
+        throw new Error(`Installed ${artifact.format} candidate is missing its scheme control.`);
       }
       await themeToggle.click();
-      const themeAfter = await page.locator('html').getAttribute('data-theme');
+      const themeAfter = await page.locator('html').getAttribute('data-scheme');
       const reviewToggle = page.locator('[data-review-toggle]');
       if ((await reviewToggle.count()) !== 1) {
         throw new Error(`Installed ${artifact.format} candidate is missing Review Workspace.`);
@@ -1858,6 +2119,17 @@ async function inspectCandidateArtifacts(
   }
 }
 
+/**
+ * Раскладка, которую объявляет frontmatter источника примера, или `undefined`, если он её не объявляет
+ * (тогда действует раскладка по умолчанию).
+ */
+function declaredLayout(source: string): string | undefined {
+  const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/u.exec(source)?.[1];
+  if (frontmatter === undefined) return undefined;
+  return /^layout:\s*['"]?([a-z-]+)['"]?\s*$/mu.exec(frontmatter)?.[1];
+}
+
+/** Состояние исходников для свидетельства: коммит или хэш незакоммиченных изменений поверх него. */
 async function readSourceState(): Promise<Readonly<Record<string, unknown>>> {
   const [{ stdout: revisionOutput }, { stdout: statusOutput }] = await Promise.all([
     execFileAsync('git', ['rev-parse', 'HEAD']),
@@ -1888,6 +2160,7 @@ async function readSourceState(): Promise<Readonly<Record<string, unknown>>> {
   };
 }
 
+/** Ловит команду `--json`, которая печатает больше или меньше одной записи NDJSON. */
 function requireSingleNdjsonRecord(
   outcome: { readonly stdout: string },
   label: string,
@@ -1906,6 +2179,11 @@ function requireRecord(value: unknown, label: string): Readonly<Record<string, u
   return value as Readonly<Record<string, unknown>>;
 }
 
+function requireArray(value: unknown, label: string): readonly unknown[] {
+  if (!Array.isArray(value)) throw new Error(`${label} must be an array.`);
+  return value;
+}
+
 function requireString(value: unknown, label: string): string {
   if (typeof value !== 'string') throw new Error(`${label} must be a string.`);
   return value;
@@ -1918,10 +2196,12 @@ function requireNumber(value: unknown, label: string): number {
   return value;
 }
 
+/** Путь, каким CLI обязан его напечатать: значение `token=` в имени каталога заменено на `[REDACTED]`. */
 function redactCredentialPath(value: string): string {
   return value.replace('token=path-sentinel', 'token=[REDACTED]');
 }
 
+/** Ловит лишнее или потерянное поле в записи машинного договора. */
 function assertExactKeys(
   value: Readonly<Record<string, unknown>>,
   expected: readonly string[],

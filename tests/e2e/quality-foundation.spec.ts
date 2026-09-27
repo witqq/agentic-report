@@ -2,8 +2,9 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { authoringRegistry, PAGE_PRESETS } from '../../src/authoring/registry.js';
+import { authoringRegistry } from '../../src/authoring/registry.js';
 import { expect, test } from './fixtures.js';
+import { addBuiltInThemes, BUILT_IN_THEME_ATTRIBUTES } from './themes.js';
 
 const artifactUrl = (name: string): string =>
   pathToFileURL(path.resolve('test-results/e2e-generated', `${name}.html`)).href;
@@ -18,9 +19,16 @@ const publicRoutes = (
   }
 ).routes.filter((route) => route.kind === 'page');
 const layoutDirectiveNames = new Set(['section', 'actions', 'cards']);
+/** Директивы, которые сборка разворачивает до страницы: на опубликованной странице их нет по замыслу. */
+const BUILD_TIME_DIRECTIVES: ReadonlySet<string> = new Set(['each', 'expect']);
+for (const name of BUILD_TIME_DIRECTIVES)
+  if (!authoringRegistry.directives.some((directive) => directive.name === name))
+    throw new Error(`Stale build-time exception: ${name}`);
+
 const publicComponentNames = authoringRegistry.directives
   .filter(
     (directive) =>
+      !BUILD_TIME_DIRECTIVES.has(directive.name) &&
       directive.forms.some((form: string) => form === 'container') &&
       directive.behavior.renderer === 'semantic-container' &&
       !('requiredParent' in directive.placement) &&
@@ -41,14 +49,14 @@ test('compact shell exposes a quiet localized icon toolbar without synthetic pag
   await expect(page.locator('[data-nav-toggle] [data-package-icon="three-bars"]')).toBeVisible();
   await expect(page.locator('[data-review-toggle] [data-package-icon="comment"]')).toBeVisible();
   await expect(page.locator('.language-select [data-package-icon="language"]')).toBeVisible();
-  await expect(page.locator('[data-theme-toggle] [data-package-icon="sun"]')).toBeVisible();
+  await expect(page.locator('[data-scheme-toggle] [data-package-icon="sun"]')).toBeVisible();
 
   const toolbar = await page.locator('.topbar').evaluate((topbar) => {
     const controls = [
       topbar.querySelector<HTMLElement>('[data-nav-toggle]'),
       topbar.querySelector<HTMLElement>('[data-review-toggle]'),
       topbar.querySelector<HTMLElement>('.language-select'),
-      topbar.querySelector<HTMLElement>('[data-theme-toggle]'),
+      topbar.querySelector<HTMLElement>('[data-scheme-toggle]'),
     ];
     return {
       heightShare: topbar.getBoundingClientRect().height / innerHeight,
@@ -60,7 +68,10 @@ test('compact shell exposes a quiet localized icon toolbar without synthetic pag
         return {
           width: box.width,
           height: box.height,
-          borderStyle: style.borderTopStyle,
+          border:
+            style.borderTopStyle === 'none' || style.borderTopColor === 'rgba(0, 0, 0, 0)'
+              ? 'none'
+              : `${style.borderTopStyle} ${style.borderTopColor}`,
           background: style.backgroundColor,
         };
       }),
@@ -77,7 +88,8 @@ test('compact shell exposes a quiet localized icon toolbar without synthetic pag
     expect(control.height).toBeGreaterThanOrEqual(minimumTarget);
     expect(control.width).toBeLessThanOrEqual(48);
     expect(control.height).toBeLessThanOrEqual(48);
-    expect(control.borderStyle).toBe('none');
+    // Кнопки панели тихие: рамки не видно, заливки нет.
+    expect(control.border).toBe('none');
     expect(control.background).toBe('rgba(0, 0, 0, 0)');
   }
 
@@ -99,10 +111,9 @@ test('compact shell exposes a quiet localized icon toolbar without synthetic pag
     'Открыть содержание',
   );
   await expect(page.getByRole('button', { name: 'Ревью' })).toHaveAttribute('title', 'Ревью');
-  await expect(page.getByRole('button', { name: 'Переключить цветовую тему' })).toHaveAttribute(
-    'title',
-    'Переключить цветовую тему',
-  );
+  await expect(
+    page.getByRole('button', { name: 'Переключить светлую и тёмную схему' }),
+  ).toHaveAttribute('title', 'Переключить светлую и тёмную схему');
 });
 
 test('localized landing keeps its heading and primary action in the compact opening composition', async ({
@@ -159,6 +170,15 @@ test('package-owned operations expose coherent icons without replacing their lab
 
   await page.setViewportSize({ width: 390, height: 844 });
   const compactOperation = page.locator('[data-modal-open]').first();
+  // Высота кнопки — из шкалы темы, под палец она растёт до 44 px; ширина окна её не меняет.
+  const operationHeight = await page.evaluate(() => {
+    const probe = document.createElement('div');
+    probe.style.height = 'var(--control-height-md)';
+    document.body.append(probe);
+    const height = probe.getBoundingClientRect().height;
+    probe.remove();
+    return { height, coarse: matchMedia('(pointer: coarse)').matches };
+  });
   const compactOperationState = await compactOperation.evaluate((control) => {
     const label = control.querySelector<HTMLElement>('.package-control-label');
     const box = control.getBoundingClientRect();
@@ -173,9 +193,9 @@ test('package-owned operations expose coherent icons without replacing their lab
     };
   });
   expect(compactOperationState.width).toBeLessThanOrEqual(390);
-  expect(compactOperationState.width).toBeGreaterThanOrEqual(44);
-  expect(compactOperationState.height).toBeLessThanOrEqual(48);
-  expect(compactOperationState.height).toBeGreaterThanOrEqual(44);
+  expect(compactOperationState.width).toBeGreaterThanOrEqual(operationHeight.height);
+  expect(compactOperationState.height).toBe(operationHeight.height);
+  if (operationHeight.coarse) expect(compactOperationState.height).toBeGreaterThanOrEqual(44);
   expect(compactOperationState.labelWidth).toBeGreaterThan(1);
   expect(compactOperationState.labelHeight).toBeGreaterThan(1);
   expect(compactOperationState.accessibleName).not.toBe('');
@@ -427,7 +447,7 @@ test('the shared shell uses desktop space while prose keeps a readable measure',
 
   for (const width of [304, 390]) {
     await page.setViewportSize({ width, height: 844 });
-    await page.goto(artifactUrl('starter-basic'));
+    await page.goto(artifactUrl('starter-document'));
     const compact = await page.evaluate(() => ({
       overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
       headingShare:
@@ -445,11 +465,12 @@ test('the shared shell uses desktop space while prose keeps a readable measure',
   }
 });
 
-test('semantic component roles remain readable across every preset and theme identity', async ({
+test('semantic component roles remain readable across every theme and scheme', async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium');
   await page.goto(artifactUrl('review-workspace'));
+  await addBuiltInThemes(page);
   const samples = await page.evaluate((presets) => {
     const themes = ['light', 'dark', 'system'];
     const root = document.documentElement;
@@ -517,12 +538,30 @@ test('semantic component roles remain readable across every preset and theme ide
     }> = [];
     for (const preset of presets) {
       for (const theme of themes) {
-        root.dataset.preset = preset.name;
-        Object.assign(root.dataset, preset.tokens);
-        root.dataset.theme = theme;
-        const surface = getComputedStyle(fixture);
-        const controlStyle = getComputedStyle(control);
-        const currentStyle = getComputedStyle(current);
+        for (const [name, value] of Object.entries(preset.attributes))
+          root.setAttribute(name, value);
+        root.dataset.scheme = theme;
+        // Компоненты и кнопки прозрачны: читаются на той поверхности, что под ними.
+        const effective = (element: HTMLElement): string => {
+          let owner: HTMLElement | null = element;
+          while (owner !== null) {
+            const background = getComputedStyle(owner).backgroundColor;
+            if (!/rgba\([^)]*,\s*0\)$/u.test(background) && background !== 'transparent') {
+              return background;
+            }
+            owner = owner.parentElement;
+          }
+          return getComputedStyle(document.body).backgroundColor;
+        };
+        const surface = { backgroundColor: effective(fixture) };
+        const controlStyle = {
+          color: getComputedStyle(control).color,
+          backgroundColor: effective(control),
+        };
+        const currentStyle = {
+          color: getComputedStyle(current).color,
+          backgroundColor: effective(current),
+        };
         const pageStyle = getComputedStyle(document.body);
         const sectionStyle = getComputedStyle(section);
         const mutedStyle = getComputedStyle(muted);
@@ -543,7 +582,7 @@ test('semantic component roles remain readable across every preset and theme ide
     inverse.remove();
     fixture.remove();
     return results;
-  }, PAGE_PRESETS);
+  }, BUILT_IN_THEME_ATTRIBUTES);
   for (const sample of samples) {
     expect(sample.page, `${sample.id} page`).toBeGreaterThanOrEqual(4.5);
     expect(sample.section, `${sample.id} section`).toBeGreaterThanOrEqual(4.5);
@@ -566,6 +605,24 @@ test('every registered public component stays contained and readable in real gen
 
   for (const route of publicRoutes) {
     await page.goto(pathToFileURL(path.join(publicSiteRoot, route.href)).href);
+    await addBuiltInThemes(page);
+    // Контраст меряется в конечном состоянии анимаций: текст посреди появления прозрачен не по замыслу.
+    await page.evaluate(async () => {
+      const frame = (): Promise<void> =>
+        new Promise((resolve) => requestAnimationFrame(() => resolve()));
+      await frame();
+      await frame();
+      await Promise.all(
+        document
+          .getAnimations()
+          .filter(
+            (animation) =>
+              animation.timeline instanceof DocumentTimeline &&
+              animation.effect?.getComputedTiming().endTime !== Infinity,
+          )
+          .map((animation) => animation.finished.catch(() => undefined)),
+      );
+    });
     const observations = await page.evaluate(
       ({ componentNames, presets }) => {
         const parseColor = (value: string): [number, number, number, number] => {
@@ -595,6 +652,24 @@ test('every registered public component stays contained and readable in real gen
           const second = luminance(parseColor(background));
           return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
         };
+        // Итоговая непрозрачность текста: `opacity` элемента и всех предков. Текст, приглушённый
+        // прозрачностью («призрак» при 0,18), читается хуже, чем говорит его цвет.
+        const opacityOf = (element: HTMLElement): number => {
+          let opacity = 1;
+          for (
+            let current: Element | null = element;
+            current !== null;
+            current = current.parentElement
+          )
+            opacity *= Number.parseFloat(getComputedStyle(current).opacity);
+          return opacity;
+        };
+        const faded = (foreground: string, background: string, opacity: number): string => {
+          const [r, g, b, a] = parseColor(foreground);
+          const [br, bg, bb] = parseColor(background);
+          const alpha = a * opacity;
+          return `rgb(${r * alpha + br * (1 - alpha)}, ${g * alpha + bg * (1 - alpha)}, ${b * alpha + bb * (1 - alpha)})`;
+        };
         const effectiveBackground = (element: HTMLElement): string => {
           let current: HTMLElement | null = element;
           while (current !== null) {
@@ -620,9 +695,9 @@ test('every registered public component stays contained and readable in real gen
         }> = [];
         for (const preset of presets) {
           for (const theme of ['light', 'dark']) {
-            document.documentElement.dataset.preset = preset.name;
-            Object.assign(document.documentElement.dataset, preset.tokens);
-            document.documentElement.dataset.theme = theme;
+            for (const [name, value] of Object.entries(preset.attributes))
+              document.documentElement.setAttribute(name, value);
+            document.documentElement.dataset.scheme = theme;
             for (const root of roots) {
               const name = root.dataset.semantic ?? '';
               const rootBox = root.getBoundingClientRect();
@@ -637,12 +712,15 @@ test('every registered public component stays contained and readable in real gen
               ].filter(
                 (element) =>
                   isVisible(element) &&
+                  // Совсем прозрачный текст скрыт намеренно (неактивный слайд), а не приглушён.
+                  opacityOf(element) > 0.01 &&
                   (element.matches('input, select, textarea') ||
                     (element.textContent?.trim().length ?? 0) > 0),
               );
               const ratios = textOwners.map((element) => {
                 const style = getComputedStyle(element);
-                return contrast(style.color, effectiveBackground(element));
+                const background = effectiveBackground(element);
+                return contrast(faded(style.color, background, opacityOf(element)), background);
               });
               results.push({
                 component: name,
@@ -659,7 +737,7 @@ test('every registered public component stays contained and readable in real gen
         }
         return results;
       },
-      { componentNames: publicComponentNames, presets: PAGE_PRESETS },
+      { componentNames: publicComponentNames, presets: BUILT_IN_THEME_ATTRIBUTES },
     );
 
     for (const observation of observations) {
@@ -684,6 +762,7 @@ test('visualization kinds retain distinct visible signals inside contextual surf
   await page.goto(
     pathToFileURL(path.join(publicSiteRoot, 'examples/visualization-catalog/index.html')).href,
   );
+  await addBuiltInThemes(page);
   const states = await page.evaluate((presets) => {
     const diagram = document.querySelector<HTMLElement>('.semantic-diagram');
     const timeline = document.querySelector<HTMLElement>('.semantic-timeline');
@@ -693,9 +772,9 @@ test('visualization kinds retain distinct visible signals inside contextual surf
     const observations = [];
     for (const preset of presets) {
       for (const theme of ['light', 'dark']) {
-        document.documentElement.dataset.preset = preset.name;
-        Object.assign(document.documentElement.dataset, preset.tokens);
-        document.documentElement.dataset.theme = theme;
+        for (const [name, value] of Object.entries(preset.attributes))
+          document.documentElement.setAttribute(name, value);
+        document.documentElement.dataset.scheme = theme;
         for (const tone of ['plain', 'accent', 'contrast']) {
           for (const visualization of [diagram, timeline]) {
             const section = visualization.closest<HTMLElement>('.semantic-section');
@@ -732,7 +811,7 @@ test('visualization kinds retain distinct visible signals inside contextual surf
       }
     }
     return observations;
-  }, PAGE_PRESETS);
+  }, BUILT_IN_THEME_ATTRIBUTES);
   for (const state of states) {
     expect(state.nodeKinds, state.identity).toBeGreaterThan(1);
     expect(state.nodesDistinctFromNeutral, state.identity).toBe(true);
@@ -745,7 +824,7 @@ test('linked and informational cards are distinct before hover and linked cards 
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium');
-  await page.goto(artifactUrl('starter-basic'));
+  await page.goto(artifactUrl('starter-document'));
   const linked = page.locator('.semantic-card[data-linked-card]');
   const plain = page.locator('.semantic-card:not([data-linked-card])').first();
   await expect(linked).toHaveCount(1);
@@ -760,33 +839,48 @@ test('linked and informational cards are distinct before hover and linked cards 
   expect(affordance[0]).not.toBe(affordance[1]);
 });
 
-test('Terminal and Cinematic identities add structural treatment beyond a palette', async ({
+test('terminal and noir identities add structural treatment beyond a palette', async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium');
-  await page.goto(artifactUrl('starter-basic'));
-  const effects = await page.evaluate(() => {
+  await page.goto(artifactUrl('starter-document'));
+  await addBuiltInThemes(page);
+  const effects = await page.evaluate((themes) => {
     const root = document.documentElement;
+    const pageHeading = document.querySelector<HTMLElement>('.report-content article > h1');
+    if (pageHeading === null) throw new Error('Expected the page heading.');
+    const apply = (name: string): void => {
+      const theme = themes.find((candidate) => candidate.name === name);
+      if (theme === undefined) throw new Error(`Missing theme ${name}`);
+      for (const [attribute, value] of Object.entries(theme.attributes))
+        root.setAttribute(attribute, value);
+    };
     const heading = document.querySelector<HTMLElement>('.semantic-section-title');
     const hero = document.querySelector<HTMLElement>('.semantic-section[data-recipe="hero"]');
     if (heading === null || hero === null)
       throw new Error('Expected recipe-backed starter section.');
-    root.dataset.preset = 'terminal';
+    apply('terminal');
     const terminal = {
-      prompt: getComputedStyle(heading, '::before').content,
-      cursorAnimation: getComputedStyle(heading, '::after').animationName,
-      background: getComputedStyle(document.body).backgroundImage,
+      prompt: getComputedStyle(pageHeading, '::before').content,
+      cursorAnimation: getComputedStyle(pageHeading, '::after').animationName,
+      sectionPrompt: getComputedStyle(heading, '::before').content,
+      font: getComputedStyle(document.body).fontFamily,
     };
-    root.dataset.preset = 'cinematic';
-    const cinematic = {
+    apply('noir');
+    const noir = {
       shadow: getComputedStyle(hero).boxShadow,
-      background: getComputedStyle(document.body).backgroundImage,
+      mediaFilter: [...document.querySelectorAll<HTMLElement>('[data-media] img')].map(
+        (image) => getComputedStyle(image).filter,
+      ),
     };
-    return { terminal, cinematic };
-  });
+    return { terminal, noir };
+  }, BUILT_IN_THEME_ATTRIBUTES);
+  // Терминал — моноширинный голос и одна подсказка у заголовка страницы, а не у каждого раздела.
   expect(effects.terminal.prompt).toContain('>');
   expect(effects.terminal.cursorAnimation).toBe('agentic-cursor');
-  expect(effects.terminal.background).toContain('repeating-linear-gradient');
-  expect(effects.cinematic.shadow).not.toBe('none');
-  expect(effects.cinematic.background).toContain('radial-gradient');
+  // У заголовка главы — номер главы в скобках, а не второй промпт: промпт стоит только у страницы.
+  expect(effects.terminal.sectionPrompt).toMatch(/^"\[\d{2}\]"/u);
+  expect(effects.terminal.font).toContain('JetBrains Mono');
+  // Noir — глубина первого экрана, а не прожекторы за страницей.
+  expect(effects.noir.shadow).not.toBe('none');
 });

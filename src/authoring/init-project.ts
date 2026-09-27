@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import type { InitProjectOptions, InitProjectResult } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
+import { BRIEF_FILE, renderBriefTemplate } from './brief.js';
 import { authoringRegistry, type ExampleDefinition } from './registry.js';
 import { isRegistryIdentity } from './registry-identity.js';
 import { packageStarterError, resolveConfinedStarterRoot } from './starter-path.js';
@@ -26,7 +27,13 @@ export async function initProject(options: InitProjectOptions): Promise<InitProj
   await requireAbsentDestination(projectPath);
 
   const starterRoot = await resolveConfinedStarterRoot(resolvePackageExamplesRoot(), starter.path);
-  const preparedFiles = await readStarterTree(starterRoot);
+  // В каталоге стартера лежит заполненный бриф его образца — пример того, как бриф выглядит готовым.
+  // Новый проект получает чистую заготовку брифа категории: заполнять её автору, а не наследовать
+  // ответы образца.
+  const preparedFiles = [
+    ...(await readStarterTree(starterRoot)).filter((file) => file.relativePath !== BRIEF_FILE),
+    { relativePath: BRIEF_FILE, bytes: Buffer.from(renderBriefTemplate(starter.category)) },
+  ].sort((left, right) => (left.relativePath < right.relativePath ? -1 : 1));
   const files = preparedFiles.map((file) => file.relativePath);
   if (!files.includes(starter.entry)) {
     throw packageStarterError(
@@ -97,11 +104,7 @@ function selectStarter(requested: string | undefined): ExampleDefinition {
   const starter =
     requested === undefined
       ? examples.find((example) => 'starter' in example && example.starter.default === true)
-      : examples.find(
-          (example) =>
-            'starter' in example &&
-            (example.id === requested || example.starter.aliases?.includes(requested) === true),
-        );
+      : examples.find((example) => 'starter' in example && example.id === requested);
   if (starter !== undefined) return starter;
   throw new AgenticReportError({
     level: 'error',
@@ -114,9 +117,7 @@ function selectStarter(requested: string | undefined): ExampleDefinition {
 
 function starterIds(): string[] {
   const examples: readonly ExampleDefinition[] = authoringRegistry.examples;
-  return examples.flatMap((example) =>
-    'starter' in example ? [example.id, ...(example.starter.aliases ?? [])] : [],
-  );
+  return examples.flatMap((example) => ('starter' in example ? [example.id] : []));
 }
 
 function resolvePackageExamplesRoot(): string {

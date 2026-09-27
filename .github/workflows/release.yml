@@ -1,0 +1,103 @@
+name: GitHub Release
+
+on:
+  push:
+    tags:
+      - v*.*.*
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing annotated tag, for example v0.18.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Verify and create an immutable release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    steps:
+      - name: Check out the release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.18.0
+
+      - name: Enable the pinned pnpm
+        run: |
+          corepack enable
+          corepack install
+
+      - name: Install dependencies and Chromium
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+
+      - name: Verify tag and package version
+        run: |
+          set -euo pipefail
+          if [[ ! "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "tag must match vMAJOR.MINOR.PATCH" >&2
+            exit 1
+          fi
+          version="$(node -p "require('./package.json').version")"
+          test "${RELEASE_TAG}" = "v${version}"
+          git cat-file -e "${RELEASE_TAG}^{tag}"
+
+      - name: Refuse personal paths and secrets in tracked files
+        run: pnpm check:history
+
+      - name: Run the complete gate
+        run: pnpm verify
+
+      - name: Refuse to replace an existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "release ${RELEASE_TAG} already exists; immutable releases are never replaced" >&2
+            exit 1
+          fi
+
+      - name: Generate release notes with closing attribution
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          notes="${RUNNER_TEMP}/release-notes.md"
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+            -f tag_name="${RELEASE_TAG}" --jq '.body' > "${notes}"
+          printf '\n[Made with Moira](https://moira-mcp.com/)' >> "${notes}"
+
+      - name: Create the GitHub Release from the accepted candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          record="test-results/package/candidate-evidence.json"
+          asset="$(node -e 'const fs=require("node:fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(r.tarball.path)' "${record}")"
+          version="$(node -p "require('./package.json').version")"
+          gh release create "${RELEASE_TAG}" "${asset}" \
+            --verify-tag \
+            --notes-file "${RUNNER_TEMP}/release-notes.md" \
+            --title "agentic-report ${version}"
+
+      - name: Report the accepted asset identity
+        run: node -e 'const r=require("./test-results/package/candidate-evidence.json");console.log(JSON.stringify(r.tarball))'

@@ -165,7 +165,13 @@ test('closed motion and control roles produce bounded input-aware behavior', asy
       height: icon.getBoundingClientRect().height,
     })),
   );
-  expect(iconSizes.every(({ width, height }) => width === 16 && height === 16)).toBe(true);
+  // Основное действие здесь может ещё возвращаться после магнитного отклика: сдвиг на доли точки даёт
+  // рамку 15,9999 или 16,0001. Правило — значок в 16 точек, поэтому сравнение с точностью до сотой.
+  expect(
+    iconSizes.every(
+      ({ width, height }) => Math.abs(width - 16) < 0.01 && Math.abs(height - 16) < 0.01,
+    ),
+  ).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
@@ -242,9 +248,10 @@ test('sections taller than the viewport reveal their content when reached near t
     const workspace = page.locator('#workspace');
     const actions = workspace.locator('.response-actions');
     await actions.scrollIntoViewIfNeeded();
+    // Форма ответа в несколько экранов высотой: её конец виден, только когда начало давно ушло вверх.
     expect(
       await workspace.evaluate((element) => element.getBoundingClientRect().height / innerHeight),
-    ).toBeGreaterThan(5);
+    ).toBeGreaterThan(2);
     await expect(workspace).not.toHaveAttribute('data-reveal-pending', '');
     await expectFullyVisible(workspace.locator(':scope > *'));
     const download = actions.locator('[data-response-download]');

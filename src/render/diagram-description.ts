@@ -7,6 +7,8 @@ export interface DescribedNode {
   readonly detail?: string;
   /** Смысл выделения узла из легенды, если автор его назвал. */
   readonly meaning?: string;
+  /** Статус шага процесса словами легенды. */
+  readonly status?: string;
   readonly group?: string;
   readonly layer?: number;
 }
@@ -19,6 +21,8 @@ export interface DescribedEdge {
   readonly kind?: string;
   /** Связь идёт против потока: раскладка развернула её, чтобы разложить слои. */
   readonly backward?: boolean;
+  /** Кратность связи так, как она написана на схеме: «×3». */
+  readonly count?: string;
 }
 
 export interface DescriptionSection {
@@ -50,14 +54,21 @@ function namer(nodes: readonly DescribedNode[]): (id: string) => string {
 
 function nodeText(node: DescribedNode, name: (id: string) => string): string {
   const meaning = node.meaning === undefined ? '' : ` [${node.meaning}]`;
+  const status = node.status === undefined ? '' : ` [${node.status}]`;
   const detail = node.detail === undefined ? '' : ` — ${node.detail}`;
-  return `${name(node.id)}${detail}${meaning}`;
+  return `${name(node.id)}${detail}${status}${meaning}`;
 }
 
-function edgeText(edge: DescribedEdge, name: (id: string) => string): string {
+/** Связь словами; петля узла — «узел, внутри себя», как шаг участника последовательности. */
+function edgeText(edge: DescribedEdge, name: (id: string) => string, insideItself: string): string {
   const label = edge.label === undefined ? '' : `: ${edge.label}`;
+  const count = edge.count === undefined ? '' : ` ${edge.count}`;
   const kind = edge.kind === undefined ? '' : ` (${edge.kind})`;
-  return `${name(edge.from)} → ${name(edge.to)}${label}${kind}`;
+  const ends =
+    edge.from === edge.to
+      ? `${name(edge.from)}, ${insideItself}`
+      : `${name(edge.from)} → ${name(edge.to)}`;
+  return `${ends}${label}${count}${kind}`;
 }
 
 /** Флоу словами: группы с составом, слои по порядку потока, прямые связи и обратные отдельно. */
@@ -97,13 +108,16 @@ export function describeFlow(
   sections.push({
     heading: strings.diagramText.forward,
     ordered: false,
-    items: forward.length === 0 ? [strings.none] : forward.map((edge) => edgeText(edge, name)),
+    items:
+      forward.length === 0
+        ? [strings.none]
+        : forward.map((edge) => edgeText(edge, name, strings.diagramText.insideItself)),
   });
   if (backward.length > 0) {
     sections.push({
       heading: strings.diagramText.backward,
       ordered: false,
-      items: backward.map((edge) => edgeText(edge, name)),
+      items: backward.map((edge) => edgeText(edge, name, strings.diagramText.insideItself)),
     });
   }
   return { lead: strings.diagramText.flowLead(nodes.length, layerCount), sections };
@@ -130,7 +144,7 @@ export function describeSequence(
         items: messages.map((message) =>
           message.from === message.to
             ? `${name(message.from)}, ${strings.diagramText.insideItself}${message.label === undefined ? '' : `: ${message.label}`}${message.kind === undefined ? '' : ` (${message.kind})`}`
-            : edgeText(message, name),
+            : edgeText(message, name, strings.diagramText.insideItself),
         ),
       },
     ],

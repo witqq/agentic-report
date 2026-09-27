@@ -7,15 +7,18 @@ import {
   getDirectiveSchema,
   getManifestSchema,
   getSourceSchema,
+  getThemeSchema,
   type JsonSchema,
 } from './authoring/schemas.js';
+import { THEME_CONTRAST_PAIRS } from './authoring/theme-contrast.js';
+import { THEME_ACCENTS, THEME_FIELDS, THEME_FONT_FAMILIES } from './authoring/themes.js';
 import { describeAuthoredRules } from './render/authored-rules.js';
 import type { AuthoredRuleDescription } from './render/authored-rule-contract.js';
 // The rule sets register themselves when the phase module is loaded, and discovery must not depend
 // on a run having happened first.
 import './render/directives.js';
 
-export type SchemaScope = 'manifest' | 'directives' | 'source';
+export type SchemaScope = 'manifest' | 'directives' | 'source' | 'theme';
 
 export interface ExampleContract {
   readonly id: string;
@@ -24,10 +27,9 @@ export interface ExampleContract {
   readonly title: string;
   readonly description: string;
   readonly classes: readonly string[];
-  readonly starter?: {
-    readonly default: boolean;
-    readonly aliases?: readonly string[];
-  };
+  readonly category: string;
+  readonly subvariant?: string;
+  readonly starter?: { readonly default: boolean };
 }
 
 export interface SourceContract {
@@ -53,15 +55,17 @@ export interface SourceContract {
   readonly commands: Readonly<Record<string, string>>;
 }
 
-type PublicPageToken = (typeof authoringRegistry.page.tokens)[number] & {
-  readonly defaultVisibility: 'normalization-only';
-};
-
-type PublicPageContract = Omit<typeof authoringRegistry.page, 'tokens'> & {
-  readonly tokens: readonly PublicPageToken[];
-  readonly tokenResolution: {
-    readonly defaultsFrom: 'selected-preset';
-    readonly precedence: readonly ['selected-preset', 'explicit-tokens'];
+type PublicPageContract = typeof authoringRegistry.page & {
+  /**
+   * Договор темы: поля файла темы и темы во frontmatter, именованные акценты и гарнитуры. Агент
+   * читает его, чтобы написать свою тему, не открывая исходников пакета.
+   */
+  readonly theme: {
+    readonly fields: typeof THEME_FIELDS;
+    readonly accents: typeof THEME_ACCENTS;
+    readonly fontFamilies: typeof THEME_FONT_FAMILIES;
+    readonly resolution: readonly ['default theme', 'extends chain', 'accent', 'explicit fields'];
+    readonly contrast: typeof THEME_CONTRAST_PAIRS;
   };
 };
 
@@ -99,6 +103,8 @@ export function getAuthoringSchema(scope: SchemaScope): JsonSchema {
       return getDirectiveSchema();
     case 'source':
       return getSourceSchema();
+    case 'theme':
+      return getThemeSchema();
   }
 }
 
@@ -142,13 +148,12 @@ function createSourceContract(): SourceContract {
     outputs: authoringRegistry.output,
     page: {
       ...authoringRegistry.page,
-      tokens: authoringRegistry.page.tokens.map((token) => ({
-        ...token,
-        defaultVisibility: 'normalization-only',
-      })),
-      tokenResolution: {
-        defaultsFrom: 'selected-preset',
-        precedence: ['selected-preset', 'explicit-tokens'],
+      theme: {
+        fields: THEME_FIELDS,
+        accents: THEME_ACCENTS,
+        fontFamilies: THEME_FONT_FAMILIES,
+        resolution: ['default theme', 'extends chain', 'accent', 'explicit fields'],
+        contrast: THEME_CONTRAST_PAIRS,
       },
     },
     visualizations: authoringRegistry.visualizations,

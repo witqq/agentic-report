@@ -1,0 +1,10 @@
+kind: effect
+name: glow
+description: A soft glow behind marked sections.
+staticEquivalent: The sections as they are, without the glow.
+module: effect.mjs
+targets:
+  - directive: section
+    attribute: glow
+    values: [soft, strong]
+examples: [example-one.md, example-two.md]

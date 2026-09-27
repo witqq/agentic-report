@@ -2,7 +2,7 @@
 title: Tutorial registry corpus
 description: Bounded tutorial contract coverage.
 language: en
-theme: system
+scheme: system
 ---
 
 # Tutorial registry corpus

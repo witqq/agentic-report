@@ -36,7 +36,19 @@ import {
   type PreparedResourceFile,
 } from '../render/markdown.js';
 import { openGraphLocale, type PublicPageMetadata } from '../render/public-page.js';
+import { shareRepeatedImages } from '../render/shared-images.js';
+import { themeFontFaces, themeFontFiles, themeStylesheet } from '../render/theme-css.js';
+import {
+  BUILT_IN_THEME_NAMES,
+  isBuiltInThemeName,
+  resolveBuiltInTheme,
+} from '../authoring/themes.js';
 import { loadSource, resolveLocalPath } from '../source/load-source.js';
+import { assembleExtensions } from '../extensions/assembly.js';
+import { ISLAND_STYLES } from '../extensions/island.js';
+import { createProviderCache, type ProviderCache } from '../extensions/provider.js';
+import type { ExtensionBuildReport, PageExtension } from '../extensions/types.js';
+import type { DocumentRuntime } from '../render/document.js';
 
 export interface PrepareReportOptions {
   readonly input: string;
@@ -82,6 +94,8 @@ export interface PreparedReport {
     readonly artifact: ReviewArtifact;
     readonly resolved: ResolvedReviewArtifact;
   };
+  /** Отчёт о расширениях страницы; нет, когда страница их не объявила. */
+  readonly extensions?: readonly ExtensionBuildReport[];
 }
 
 export async function prepareReport(options: PrepareReportOptions): Promise<PreparedReport> {
@@ -112,6 +126,8 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
       source: localized,
     })),
   ];
+  const declaredExtensions = source.extensions?.extensions ?? [];
+  const providerCache = createProviderCache();
   const preparedVariants: readonly PreparedPageVariant[] = await Promise.all(
     sourceVariants.map(async (variant) => ({
       ...variant,
@@ -121,6 +137,8 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
         options.share === true,
         outputFilePath,
         sourceVariants.length > 1 ? variant.locale : undefined,
+        declaredExtensions,
+        providerCache,
       )),
     })),
   );
@@ -157,17 +175,56 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
       ...(priorReviewFile === undefined ? [] : [priorReviewFile]),
     ]);
 
-  const [runtime, styles] = await Promise.all([
+  const extensionAssembly =
+    source.extensions === undefined
+      ? undefined
+      : await assembleExtensions(
+          declaredExtensions,
+          routedVariants.map((variant) => variant.markdown.extensions),
+        );
+  // Движок эффектов едет только на страницу, где эффект есть — встроенный WebGL-приём или эффект
+  // расширения, — а контроллер островов — только туда, где стоит живой остров.
+  const usesWebgl = routedVariants.some((variant) => variant.markdown.html.includes('data-webgl='));
+  const usesEffects = usesWebgl || (extensionAssembly?.effects.length ?? 0) > 0;
+  const usesIslands = extensionAssembly?.usesIslands === true;
+  const [baseRuntime, styles, effectsEngine, islandsController] = await Promise.all([
     readBrowserAsset('runtime.js'),
     readBrowserAsset('document.css'),
+    usesEffects ? readBrowserAsset('effects.js') : Promise.resolve(''),
+    usesIslands ? readBrowserAsset('islands.js') : Promise.resolve(''),
   ]);
+  const runtime = [baseRuntime, effectsEngine, islandsController]
+    .filter((part) => part !== '')
+    .join('\n');
   const inlineRuntime = escapeInlineScript(runtime);
+  const effectScripts = prepareEffectScripts(
+    extensionAssembly?.effects ?? [],
+    runtimePlacementForFormat(format),
+  );
   const fontCss = unique(routedVariants.map((variant) => variant.markdown.fontCss).filter(Boolean));
-  const documentStyles = fontCss.length === 0 ? styles : `${styles}\n${fontCss.join('\n')}`;
+  const switchableThemes = source.manifest.themeSwitcher
+    ? [
+        ...BUILT_IN_THEME_NAMES.map(resolveBuiltInTheme),
+        ...(isBuiltInThemeName(source.theme.name) ? [] : [source.theme]),
+      ]
+    : [];
+  const pageThemes = switchableThemes.length > 0 ? switchableThemes : [source.theme];
+  const themeFonts = await prepareThemeFonts(pageThemes, format);
+  const themeCss = themeStylesheet(pageThemes);
+  const documentStyles = [
+    styles,
+    themeFonts.css,
+    themeCss,
+    ...fontCss,
+    ...(usesIslands ? [ISLAND_STYLES] : []),
+    ...(extensionAssembly === undefined || extensionAssembly.blockStyles === ''
+      ? []
+      : [extensionAssembly.blockStyles]),
+  ].join('\n');
   const external =
     runtimePlacement === 'inline'
       ? { styleHref: undefined, scriptSrc: undefined, files: [] as PreparedResourceFile[] }
-      : prepareBrowserAssets(runtime, documentStyles);
+      : prepareBrowserAssets(runtime, documentStyles, themeFonts.files);
   const publicUrl = options.url ?? source.manifest.url;
   const publishedImage =
     socialImage !== undefined && publicUrl !== undefined && socialImage.file !== undefined
@@ -184,22 +241,26 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
   const documentVariants = routedVariants.map(toDocumentVariant);
   const [primaryDocument, ...localizedDocuments] = documentVariants;
   if (primaryDocument === undefined) throw new Error('Prepared report has no primary locale.');
-  const html = renderDocument({
+  const renderedHtml = renderDocument({
     ...primaryDocument,
     page: {
-      preset: source.manifest.preset,
-      theme: source.manifest.theme,
+      theme: source.theme,
+      switchableThemes,
+      scheme: source.manifest.scheme,
       layout: source.manifest.layout,
-      tokens: source.manifest.tokens,
-      scrollProgress: source.manifest.scrollProgress,
+      progress: source.manifest.progress,
+      motion: source.manifest.motion,
+      opening: source.manifest.opening,
       attribution: source.manifest.attribution,
       // Приложенный артефакт прошлого ревью включает рабочее место сам: иначе флаг принимался бы
       // молча и не давал ничего.
       review: source.manifest.review || routedPrior !== undefined,
-      themeToggle: source.manifest.themeToggle,
-      presetSwitcher: source.manifest.presetSwitcher,
+      schemeToggle: source.manifest.schemeToggle,
     },
-    contentSecurityPolicy: createContentSecurityPolicy(runtimePlacement, inlineRuntime),
+    contentSecurityPolicy: createContentSecurityPolicy(runtimePlacement, inlineRuntime, [
+      ...effectScripts.hashes,
+      ...(extensionAssembly?.islandScriptHashes ?? []),
+    ]),
     styles:
       format === 'single-file'
         ? { inline: documentStyles }
@@ -208,23 +269,37 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
       runtimePlacement === 'inline'
         ? { inline: inlineRuntime }
         : { src: requireAssetReference(external.scriptSrc, 'runtime script') },
+    ...(effectScripts.scripts.length === 0 ? {} : { extensionScripts: effectScripts.scripts }),
     ...(localizedDocuments.length === 0 ? {} : { localizations: localizedDocuments }),
     ...(publicPage === undefined ? {} : { publicPage }),
   });
 
-  const warnings: Diagnostic[] = routedVariants.flatMap((variant) => variant.markdown.warnings);
+  const shared =
+    format === 'single-file'
+      ? shareRepeatedImages(renderedHtml)
+      : { html: renderedHtml, savedBytes: 0 };
+  const html = shared.html;
+
+  const warnings: Diagnostic[] = [
+    ...(source.extensions?.warnings ?? []),
+    ...routedVariants.flatMap((variant) => variant.markdown.warnings),
+  ];
   const bundledBytes =
+    -shared.savedBytes +
     routedVariants.reduce((sum, variant) => sum + variant.markdown.embeddedBytes, 0) +
     Buffer.byteLength(documentStyles) +
-    (format === 'single-file' ? Buffer.byteLength(inlineRuntime) : 0);
+    (format === 'single-file' ? Buffer.byteLength(inlineRuntime) : 0) +
+    effectScripts.inlineBytes;
+  // Бюджет веса одного файла — отказ, а не совет: предупреждение о многомегабайтной странице агент
+  // пропускал, и читатель получал файл, который долго открывается и не пересылается.
   if (format === 'single-file' && bundledBytes > source.manifest.output.maxInlineBytes)
-    warnings.push({
-      level: 'warning',
-      code: 'INLINE_SIZE_THRESHOLD_EXCEEDED',
-      message: `Embedded resources total ${bundledBytes} bytes, above the configured ${source.manifest.output.maxInlineBytes}-byte threshold.`,
+    throw new AgenticReportError({
+      level: 'error',
+      code: 'INLINE_SIZE_BUDGET_EXCEEDED',
+      message: `Embedded resources total ${bundledBytes} bytes, above the ${source.manifest.output.maxInlineBytes}-byte budget of one file.`,
       remediation:
-        'Use directory output or raise output.maxInlineBytes after reviewing portability needs.',
-      details: { bundledBytes, threshold: source.manifest.output.maxInlineBytes },
+        'Build with --format directory, shorten or compress the embedded media, or raise output.maxInlineBytes deliberately.',
+      details: { bundledBytes, budget: source.manifest.output.maxInlineBytes },
     });
 
   const htmlBytes = Buffer.byteLength(html);
@@ -280,7 +355,7 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
     externalAssets:
       format === 'directory' ? markdownResourceFiles.length + external.files.length : 0,
     warnings,
-    resourceFiles: [...markdownResourceFiles, ...external.files],
+    resourceFiles: [...markdownResourceFiles, ...external.files, ...effectScripts.files],
     observedDirectives: unique(
       routedVariants.flatMap((variant) => variant.markdown.observedDirectives),
     ),
@@ -299,6 +374,7 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
         : unique([...allResourceSourceFiles, socialImage.sourcePath]),
     reviewManifest: primary.reviewManifest,
     ...(routedPrior === undefined ? {} : { priorReview: routedPrior }),
+    ...(extensionAssembly === undefined ? {} : { extensions: extensionAssembly.report }),
   };
 }
 
@@ -308,18 +384,24 @@ async function preparePageVariant(
   share: boolean,
   outputFilePath: string | undefined,
   localeScope: PageLocaleChoice | undefined,
+  extensions: readonly PageExtension[],
+  providerCache: ProviderCache,
 ): Promise<{
   readonly markdown: MarkdownRenderResult;
   readonly reviewManifest: ReviewTargetManifest;
 }> {
   const markdown = await renderMarkdown(source.markdown, {
     language: source.manifest.language,
+    layout: source.manifest.layout,
+    motion: source.manifest.motion,
     sourceRoot: source.sourceRoot,
     sourceMap: source.sourceMap,
     format,
     share,
     ...(outputFilePath === undefined ? {} : { outputFilePath }),
     ...(localeScope === undefined ? {} : { localeScope }),
+    ...(extensions.length === 0 ? {} : { extensions: { declared: extensions, providerCache } }),
+    ...(source.data === undefined ? {} : { data: source.data }),
   });
   return {
     markdown,
@@ -406,6 +488,8 @@ function publicPageMetadata(
     ...(image === undefined ? {} : { image }),
     ...(locale === undefined ? {} : { locale }),
     alternateLocales,
+    languages:
+      languages.length > 1 ? unique(languages.filter((language) => language !== 'und')) : [],
   };
 }
 
@@ -602,9 +686,56 @@ async function readBrowserAsset(fileName: string): Promise<string> {
   }
 }
 
+/**
+ * Встроенные гарнитуры тем страницы. В одном файле они едут data URL внутри стилей, в каталоге —
+ * отдельными файлами с хешем в имени рядом с таблицей стилей.
+ */
+async function prepareThemeFonts(
+  themes: Parameters<typeof themeFontFiles>[0],
+  format: OutputFormat,
+): Promise<{ readonly css: string; readonly files: readonly PreparedResourceFile[] }> {
+  const fonts = themeFontFiles(themes);
+  const bytes = new Map<string, Buffer>();
+  for (const font of fonts) {
+    bytes.set(font.file, await readBrowserBinary(`fonts/${font.directory}/${font.file}`));
+  }
+  const files: PreparedResourceFile[] = [];
+  const css = themeFontFaces(fonts, ({ file }) => {
+    const content = bytes.get(file);
+    if (content === undefined) throw new Error(`Missing bundled font ${file}`);
+    if (format === 'single-file') return `data:font/woff2;base64,${content.toString('base64')}`;
+    const name = `${file.replace(/\.woff2$/u, '')}.${createHash('sha256').update(content).digest('hex').slice(0, 12)}.woff2`;
+    files.push({ relativePath: `assets/${name}`, bytes: content });
+    return `./${name}`;
+  });
+  return { css, files };
+}
+
+async function readBrowserBinary(fileName: string): Promise<Buffer> {
+  const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
+  const assetPath =
+    path.basename(path.dirname(moduleDirectory)) === 'node'
+      ? path.resolve(moduleDirectory, '../../browser', fileName)
+      : path.resolve(moduleDirectory, '../../dist/browser', fileName);
+  try {
+    return await readFile(assetPath);
+  } catch (error) {
+    throw new AgenticReportError(
+      {
+        level: 'error',
+        code: 'PACKAGE_ASSET_MISSING',
+        message: `Bundled browser asset is missing: ${assetPath}`,
+        remediation: 'Reinstall agentic-report or rebuild the package before running the CLI.',
+      },
+      { cause: error },
+    );
+  }
+}
+
 function prepareBrowserAssets(
   runtime: string,
   styles: string,
+  fontFiles: readonly PreparedResourceFile[],
 ): {
   readonly styleHref: string;
   readonly scriptSrc: string;
@@ -618,6 +749,7 @@ function prepareBrowserAssets(
     files: [
       { relativePath: `assets/${styleName}`, bytes: Buffer.from(styles) },
       { relativePath: `assets/${runtimeName}`, bytes: Buffer.from(runtime) },
+      ...fontFiles,
     ],
   };
 }
@@ -631,11 +763,49 @@ function escapeInlineScript(runtime: string): string {
   return runtime.replace(/<(\/script|!--)/giu, '\\x3C$1');
 }
 
-function createContentSecurityPolicy(placement: RuntimePlacement, runtime: string): string {
-  const scriptSource =
+/**
+ * Скрипты эффектов расширений, каждый своим элементом после рантайма: в одном файле — встроенным, с
+ * хешем в CSP, в каталоге — файлом с хешем в имени (его разрешает `'self'`).
+ */
+function prepareEffectScripts(
+  effects: readonly { readonly name: string; readonly code: string }[],
+  placement: RuntimePlacement,
+): {
+  readonly scripts: readonly DocumentRuntime[];
+  readonly hashes: readonly string[];
+  readonly files: readonly PreparedResourceFile[];
+  readonly inlineBytes: number;
+} {
+  const scripts: DocumentRuntime[] = [];
+  const hashes: string[] = [];
+  const files: PreparedResourceFile[] = [];
+  let inlineBytes = 0;
+  for (const effect of effects) {
+    if (placement === 'inline') {
+      const inline = escapeInlineScript(effect.code);
+      scripts.push({ inline });
+      hashes.push(`sha256-${createHash('sha256').update(inline).digest('base64')}`);
+      inlineBytes += Buffer.byteLength(inline);
+      continue;
+    }
+    const relativePath = `assets/${hashedName(`effect-${effect.name}`, 'js', effect.code)}`;
+    files.push({ relativePath, bytes: Buffer.from(effect.code) });
+    scripts.push({ src: relativePath });
+  }
+  return { scripts, hashes, files, inlineBytes };
+}
+
+function createContentSecurityPolicy(
+  placement: RuntimePlacement,
+  runtime: string,
+  extraScriptHashes: readonly string[] = [],
+): string {
+  const scriptSource = [
     placement === 'external'
       ? "'self'"
-      : `'sha256-${createHash('sha256').update(runtime).digest('base64')}'`;
+      : `'sha256-${createHash('sha256').update(runtime).digest('base64')}'`,
+    ...extraScriptHashes.map((hash) => `'${hash}'`),
+  ].join(' ');
   const localSource = placement === 'external' ? " 'self'" : '';
   return [
     "default-src 'none'",

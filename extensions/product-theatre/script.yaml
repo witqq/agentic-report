@@ -1,0 +1,19 @@
+kind: provider
+name: theatre-script
+description: Writes the diagram and the steps of a product run, or its table, from a scenario in the page's data at build time.
+staticEquivalent: Built-in directives only; the diagram, the steps and the table are what print and readers without scripts see.
+forms: [leaf]
+attributes:
+  scenario:
+    type: string
+    required: true
+    maxLength: 64
+    description: The name of the page data file that holds the scenario, without .json (the page declares the file in its data field).
+  part:
+    type: enum
+    values: [scene, script]
+    default: scene
+    description: scene writes the diagram and the beats; script writes the table of the whole run.
+command: [node, script.mjs]
+timeoutMs: 10000
+examples: [example-cli.md, example-dashboard.md]

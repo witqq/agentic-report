@@ -1,0 +1,10 @@
+kind: provider
+name: price-table
+description: A price table generated from the plan catalogue at build time.
+staticEquivalent: A Markdown table of the plan and its seats.
+forms: [leaf]
+attributes:
+  plan: { type: enum, values: [team, enterprise], required: true }
+command: [node, provider.mjs]
+timeoutMs: 5000
+examples: [example-one.md, example-two.md]

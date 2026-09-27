@@ -155,7 +155,9 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
     'incident-review',
     'vendor-decision',
     'launch-readiness',
-    'basic',
+    'document',
+    'answer',
+    'code-review',
     'research',
     'architecture',
     'tutorial',
@@ -169,7 +171,12 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
   ]) {
     await page.goto(fileUrl(`examples/${example}/index.html`));
     await expect(page.locator('main')).not.toBeEmpty();
+    // Лендинг открывает оглавление из верхней панели, остальные страницы держат его сбоку.
+    if ((await page.locator('html').getAttribute('data-nav-mode')) === 'dialog') {
+      await page.locator('[data-nav-toggle]').click();
+    }
     await expect(page.locator('[data-navigation]')).toBeVisible();
+    await page.keyboard.press('Escape');
   }
 });
 

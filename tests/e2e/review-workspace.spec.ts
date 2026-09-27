@@ -892,7 +892,10 @@ test('the same review popover stays inside desktop and mobile visual viewports w
   if (!mobile) {
     const popoverRect = await popover.boundingBox();
     if (popoverRect === null) throw new Error('Missing desktop popover geometry.');
-    expect(popoverRect.x + popoverRect.width).toBeLessThan(selectionRect.left);
+    // Окно стоит сбоку от выделения — слева или справа, где хватает места, — и не закрывает его.
+    const clearOfSelection =
+      popoverRect.x + popoverRect.width < selectionRect.left || popoverRect.x > selectionRect.right;
+    expect(clearOfSelection).toBe(true);
   }
   await popover.evaluate((node) => {
     (node as HTMLElement).style.top = '9999px';
@@ -914,6 +917,7 @@ test('the same review popover stays inside desktop and mobile visual viewports w
   ).toEqual(before);
   const iconSizes = await popover
     .locator('.package-icon')
+    .filter({ visible: true })
     .evaluateAll((icons) => icons.map((icon) => icon.getBoundingClientRect().width));
   expect(iconSizes.every((size) => size === 16)).toBe(true);
   expect(

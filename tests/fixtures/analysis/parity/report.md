@@ -1,6 +1,6 @@
 ---
 title: Prepared report
-theme: dark
+scheme: dark
 ---
 
 # Prepared report

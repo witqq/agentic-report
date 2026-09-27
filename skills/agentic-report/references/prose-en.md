@@ -2,7 +2,8 @@
 
 Adapted from [blader/humanizer](https://github.com/blader/humanizer) (MIT, Siqi Chen), whose patterns come
 from Wikipedia's "Signs of AI writing" maintained by WikiProject AI Cleanup. Use this file when the page
-language is English. Its Russian counterpart is `prose-ru.md`.
+language is English. Its Russian counterpart is `prose-ru.md`; the rules both share — when the audit
+happens, its scope, and what to fix on sight — are in [`prose.md`](prose.md).
 
 ## What this file is for
 

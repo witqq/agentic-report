@@ -6,6 +6,12 @@ export interface PublicPageMetadata {
   readonly image?: string;
   readonly locale?: string;
   readonly alternateLocales: readonly string[];
+  /**
+   * Language tags of the variants the page carries, primary first, for `hreflang` alternates. The
+   * variants share one address and the page picks one from the reader's languages, so every alternate
+   * and `x-default` point at that address; a page with one language gets none.
+   */
+  readonly languages: readonly string[];
 }
 
 /**

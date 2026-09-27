@@ -63,6 +63,14 @@ export const remarkReviewTargets: Plugin<[ReviewTargetPluginOptions], Root> =
       const node = candidate as unknown as PositionedNode;
       const kind = reviewableKind(node);
       if (kind === 'markdown:paragraph' && parent?.type === 'listItem') return;
+      // Картинки сравнения пакет переносит в свою сцену, а абзац, в котором их написал автор, исчезает:
+      // его цель не нашлась бы на странице, и Review Workspace выключился бы целиком. Цель — сам `compare`.
+      if (
+        kind === 'markdown:paragraph' &&
+        parent?.type === 'containerDirective' &&
+        (parent as unknown as { readonly name?: unknown }).name === 'compare'
+      )
+        return;
       const start = node.position?.start.offset;
       const end = node.position?.end.offset;
       if (kind === undefined || start === undefined || end === undefined || end <= start) return;

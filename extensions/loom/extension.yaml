@@ -1,0 +1,11 @@
+kind: effect
+name: loom
+description: A strip of cloth woven beside a section while the reader goes through it — warp strung in the margin from the start, weft rows added as the section passes, finished when it has been read.
+staticEquivalent: The sections as they are; the cloth is decoration beside them, so print and readers without scripts get the same text without it.
+module: effect.mjs
+targets:
+  - directive: section
+    attribute: loom
+    values: [selvedge, band]
+budgetBytes: 12000
+examples: [example-craft.md, example-release.md]

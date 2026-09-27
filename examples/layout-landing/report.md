@@ -4,14 +4,14 @@ description: A focused landing page assembled without JSX, custom CSS, or author
 language: en
 localizations:
   ru: report.ru.md
-theme: light
 layout: landing
-tokens:
-  density: spacious
-  font: sans
-  accent: coral
-  width: wide
+theme:
+  name: launch-coral
+  extends: ember
+  spacing:
+    density: spacious
   radius: round
+scheme: light
 ---
 
 # Pages agents can finish
@@ -22,7 +22,7 @@ demonstrate the report engine; replace it with verified project evidence before 
 Write Markdown, choose a page shape, and build a polished offline artifact without hand-building another
 frontend application.
 
-::::::section{title="One declarative path" id="value" nav="Value" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="immersive" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="One declarative path" id="value" nav="Value" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="immersive" type="display" surface="tint" transition="stagger" choreography="cascade"}
 
 ::::cards
 :::card{title="Start with meaning"}
@@ -45,7 +45,7 @@ source error needs more detail.
 :::
 ::::::
 
-::::::section{title="Make the first page" id="start" nav="Start" width="wide" align="center" tone="accent" composition="stage" viewport="bounded" section-density="immersive" type="display" surface="glow" transition="stagger"}
+::::::section{title="Make the first page" id="start" nav="Start" width="wide" align="center" tone="accent" composition="stage" viewport="bounded" section-density="immersive" type="display" surface="tint" transition="stagger"}
 
 ```sh
 agentic-report init ./my-page

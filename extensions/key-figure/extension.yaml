@@ -1,0 +1,34 @@
+kind: block
+name: key-figure
+description: One figure the page rests on, always with the date of its slice and where it was read.
+staticEquivalent: A card with the figure in large type, the date and the source under it, and the explanation if there is one; it has no motion and prints as it is.
+forms: [leaf, container]
+attributes:
+  label:
+    type: string
+    required: true
+    maxLength: 80
+    description: What the figure measures, in the reader's words.
+  value:
+    type: string
+    required: true
+    maxLength: 40
+    description: The figure with its unit, as the source writes it.
+  date:
+    type: string
+    required: true
+    maxLength: 60
+    description: The date or the period of the slice.
+  source:
+    type: string
+    required: true
+    maxLength: 160
+    description: Where the figure was read, so that the reader can check it.
+  status:
+    type: enum
+    values: [none, good, watch, risk]
+    default: none
+    description: The state the figure puts the reader in.
+template: template.md
+styles: block.css
+examples: [example-quarterly.md, example-benchmark.md]

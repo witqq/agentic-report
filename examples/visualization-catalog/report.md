@@ -5,14 +5,12 @@ description: Declarative visualizations compiled into offline, accessible page p
 language: en
 localizations:
   ru: report.ru.md
-theme: system
 layout: dashboard
-tokens:
-  density: comfortable
-  font: sans
-  accent: teal
-  width: wide
+theme:
+  name: data-teal
+  extends: daylight
   radius: soft
+scheme: system
 output:
   format: single-file
   maxInlineBytes: 5000000
@@ -26,7 +24,7 @@ demonstrate the report engine; replace it with verified project evidence before 
 Every visual below is authored as bounded Markdown directives. The compiler validates the data and emits
 deterministic SVG or semantic HTML; the page performs no visualization-time network request.
 
-::::::section{title="Adoption signal" id="adoption" nav="Adoption" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
+::::::section{title="Adoption signal" id="adoption" nav="Adoption" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 
 :::::chart{type="bar" title="Weekly active agents" description="Active agents increased across four weekly releases, with the assisted cohort leading after week two." x-label="Release week" y-label="Active agents"}
 ::::series{label="Assisted"}
@@ -68,7 +66,7 @@ deterministic SVG or semantic HTML; the page performs no visualization-time netw
 ::::
 ::::::
 
-::::::section{title="Compilation flow" id="flow" nav="Flow" width="wide" tone="accent" composition="story" viewport="bounded" section-density="immersive" type="display" surface="glow" transition="reveal" interaction="depth"}
+::::::section{title="Compilation flow" id="flow" nav="Flow" width="wide" tone="accent" composition="story" viewport="bounded" section-density="immersive" type="display" surface="tint" transition="reveal" interaction="depth"}
 
 :::diagram{title="Offline compilation flow" description="Fifteen participants across authoring, compilation, and artifact subsystems." type="flow"}
 ::group{id="authoring" label="Authoring graph"}
@@ -106,6 +104,8 @@ deterministic SVG or semantic HTML; the page performs no visualization-time netw
 ::edge{from="styles" to="portable" label="package"}
 ::edge{from="runtime" to="portable" label="interact"}
 ::edge{from="targets" to="portable" label="review"}
+::legend-item{node="accent" label="Input and output"}
+::legend-item{node="success" label="Rendering step"}
 :::
 
 ## Compile request sequence
@@ -122,7 +122,7 @@ deterministic SVG or semantic HTML; the page performs no visualization-time netw
 :::
 ::::::
 
-::::::section{title="Delivery path" id="delivery" nav="Delivery" width="wide" tone="contrast" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Delivery path" id="delivery" nav="Delivery" width="wide" tone="contrast" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="tint" transition="stagger" choreography="cascade"}
 
 ::::timeline{title="Release journey" description="Four milestones move the product from evidence to a locally verified release candidate."}
 :::event{date="Discover" title="Inspect the catalog" kind="neutral"}
@@ -137,5 +137,8 @@ The same validated model produces single-file or directory output.
 :::event{date="Verify" title="Open through file://" kind="warning"}
 Desktop and mobile checks inspect the real generated artifact without a server.
 :::
+::legend-item{event="accent" label="Authoring"}
+::legend-item{event="success" label="Automatic build"}
+::legend-item{event="warning" label="Needs checking"}
 ::::
 ::::::

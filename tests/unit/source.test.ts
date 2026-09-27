@@ -102,7 +102,7 @@ describe('loadSource', () => {
     const manifestPath = path.join(manifestWorkspace, 'agentic-report.yaml');
     const frontmatterPath = path.join(frontmatterWorkspace, 'report.md');
     await writeFile(path.join(manifestWorkspace, 'report.md'), '# Report\n');
-    await writeFile(manifestPath, 'theme: ultraviolet\n');
+    await writeFile(manifestPath, 'scheme: ultraviolet\n');
     await writeFile(frontmatterPath, '---\nlanguage: invalid_tag\n---\n# Report\n');
 
     await expect(loadSource(manifestWorkspace)).rejects.toMatchObject({
@@ -258,7 +258,7 @@ describe('loadSource', () => {
         '---',
         'title: English report',
         'language: en-GB',
-        'preset: signal',
+        'theme: blueprint',
         'localizations:',
         '  ru: report.ru.md',
         '---',
@@ -283,11 +283,12 @@ describe('loadSource', () => {
     const source = await loadSource(workspace);
 
     expect(source.locale).toBe('en');
+    expect(source.theme.name).toBe('blueprint');
     expect(source.localizations).toHaveLength(1);
     expect(source.localizations[0]).toMatchObject({
       locale: 'ru',
       markdown: expect.stringContaining('Русская часть.'),
-      manifest: { title: 'Русский отчёт', language: 'ru-RU', preset: 'signal' },
+      manifest: { title: 'Русский отчёт', language: 'ru-RU', theme: 'blueprint' },
     });
     expect(source.sourceFiles).toEqual(
       expect.arrayContaining([

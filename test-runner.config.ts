@@ -48,8 +48,11 @@ const config: Config = {
       type: 'playwright',
       command: 'pnpm exec playwright test --config=playwright.config.ts',
       resultFile: 'e2e.json',
-      timeout: 300_000,
-      workers: 2,
+      // CPU-throttled effect checks need the browser worker to own the CPU while measuring frame
+      // tasks. A second worker can push an otherwise passing task over the 50 ms budget. The suite
+      // deadline allows the expanded browser corpus to run sequentially; individual test limits stay.
+      timeout: 1_500_000,
+      workers: 1,
     },
   ],
 };

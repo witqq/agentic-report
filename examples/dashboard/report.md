@@ -5,9 +5,9 @@ description: A current operational view of release throughput, quality, and acco
 language: en
 localizations:
   ru: report.ru.md
-theme: dark
 layout: dashboard
-preset: signal
+theme: blueprint
+scheme: dark
 ---
 
 # Delivery control room
@@ -15,26 +15,26 @@ preset: signal
 **Fictional sample.** Every metric, status, organization, and decision on this page exists only to
 demonstrate the report engine; replace it with verified project evidence before use.
 
-This starter keeps current signals scan-friendly while preserving the evidence and owner behind each state.
+This starter keeps current signals scan-friendly — each card states its status in words — while preserving the evidence and owner behind each state.
 
 ::::::section{title="Current delivery signal" id="signal" nav="Now" recipe="metrics"}
 ::::cards
-:::card{title="Build health"}
-**Green**
+:::card{title="Build health" status="good"}
+**137 of 137**
 
 137 focused checks passed in the current environment.
 :::
-:::card{title="Browser routes"}
+:::card{title="Browser routes" status="good"}
 **Covered**
 
 Desktop and mobile artifacts open through `file://`.
 :::
-:::card{title="Package journey"}
-**Verified**
+:::card{title="Package journey" status="watch"}
+**Verified locally**
 
-The immutable tarball succeeds in a clean consumer.
+The immutable tarball succeeds in a clean consumer; publication is still pending.
 :::
-:::card{title="Open blockers"}
+:::card{title="Open blockers" status="good"}
 **0**
 
 No blocking finding remains in the accepted slice.

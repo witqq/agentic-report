@@ -9,11 +9,11 @@ language: ru
 
 **Вымышленный пример · 6 августа 2026 года · решение готово**
 
-Демонстрация описывает вымышленную закупку для придуманной компании клиентских операций Lantern & Field.
+Демонстрация описывает вымышленную закупку для придуманной компании по обслуживанию клиентов Lantern & Field.
 Все поставщики, оценки, средства контроля, цены и записи доказательств созданы для движка отчётов; они не
 описывают реальную организацию или коммерческое утверждение.
 
-:::::section{title="Сигнал решения" id="decision-signal" nav="Решение" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+:::::section{title="Сигнал решения" id="decision-signal" nav="Решение" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" surface="tint" transition="stagger" choreography="cascade"}
 :::callout{kind="info" title="Решение за минуту"}
 Выберите **Cedar Assist** для обратимого 90-дневного пилота. Meridian Reply набрал больше всего взвешенных
 баллов, но не проходит :term[обязательное условие]{key="hard-gate"} региональной обработки. Quill Support проходит все условия,
@@ -63,7 +63,7 @@ language: ru
 :::
 :::::
 
-::::::section{title="Взвешенное сравнение" id="evidence" nav="Данные" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="grid" transition="stagger" scene="progress" choreography="cascade"}
+::::::section{title="Взвешенное сравнение" id="evidence" nav="Данные" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="plain" transition="stagger" scene="progress" choreography="cascade"}
 
 :::::chart{type="bar" title="Взвешенная оценка после проверки данных" description="Демонстрационные оценки: Meridian Reply — 89, Cedar Assist — 84, Quill Support — 77; Meridian остаётся недопустимым из-за отдельного обязательного ограничения." x-label="Вымышленный кандидат" y-label="Взвешенная оценка из 100"}
 ::::series{label="Взвешенная оценка"}
@@ -89,11 +89,12 @@ language: ru
 :::
 :::tab{label="Качество доказательств"}
 Cedar предоставил актуальные выдержки аудита и проверенный экспорт. Meridian — сильные данные о процессах,
-но нерешённое утверждение о региональном потоке данных. Quill — полные политики, но только настольную проверку экспорта.
+но нерешённое утверждение о региональном потоке данных. Quill предоставил полные политики, но проверил экспорт
+только на учебном сценарии.
 :::
 :::tab{label="Остаточные риски"}
-Cedar должен подтвердить распространение удаления и качество ответов на пиковом объёме. Покупатель сохраняет
-еженедельные снимки экспорта и репетицию прекращения как защиту переносимости.
+Cedar должен подтвердить распространение удаления и качество ответов на пиковом объёме. Покупатель еженедельно
+сохраняет копии выгрузок и заранее проверяет порядок выхода из сервиса, чтобы сохранить переносимость данных.
 :::
 ::::
 
@@ -108,12 +109,12 @@ Cedar должен подтвердить распространение уда�
 - Подтвердите актуального владельца и дату данных для каждого условия.
 - Пересчитайте итог, не меняя заранее объявленные веса.
 - Проверьте наличие у выбранного поставщика испытанного экспорта и маршрута удаления.
-- Запишите для каждого условия пилота владельца, срок и последствие выхода.
+- Запишите для каждого условия пилота ответственного, срок и действие при невыполнении.
   :::
 
 ::::::
 
-:::::section{title="Решение и условия" id="conditions" nav="Условия пилота" width="wide" align="start" tone="accent" composition="stack" viewport="adaptive" section-density="compact" type="editorial" surface="glow" transition="reveal" choreography="cascade"}
+:::::section{title="Решение и условия" id="conditions" nav="Условия пилота" width="wide" align="start" tone="accent" composition="stack" viewport="adaptive" section-density="compact" type="editorial" surface="plain" transition="reveal" choreography="cascade"}
 
 :::decision{title="Одобрить Cedar Assist для обратимого пилота"}
 Продолжать только для очереди поддержки ЕС без платёжных данных. Безопасность отвечает за проверку удаления
@@ -135,6 +136,9 @@ Cedar должен подтвердить распространение уда�
 :::event{date="4 сент." title="Внедрить или выйти" kind="success"}
 Одобрить широкое использование, только если все условия проходят, а оба условия пилота закрыты данными.
 :::
+::legend-item{event="accent" label="Проверка данных"}
+::legend-item{event="warning" label="Ограниченный доступ"}
+::legend-item{event="success" label="Итоговое решение"}
 ::::
 
 :::steps{title="Закрыть решение о закупке"}

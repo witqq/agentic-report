@@ -19,6 +19,9 @@ importers:
       elkjs:
         specifier: 0.12.0
         version: 0.12.0
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       gray-matter:
         specifier: 4.0.3
         version: 4.0.3
@@ -2937,7 +2940,6 @@ snapshots:
       '@esbuild/win32-arm64': 0.28.2
       '@esbuild/win32-ia32': 0.28.2
       '@esbuild/win32-x64': 0.28.2
-    optional: true
 
   escape-string-regexp@5.0.0: {}
 

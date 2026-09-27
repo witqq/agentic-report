@@ -84,8 +84,11 @@ test('landing composes the public visual vocabulary identically in both output f
       page.getByRole('heading', { name: 'A page worth handing over. From Markdown.', level: 1 }),
     ).toBeInViewport();
     await expect(page.getByRole('link', { name: 'Build the first page' }).first()).toBeInViewport();
-    await expect(page.getByRole('img', { name: /monumental local report scene/iu })).toBeVisible();
+    // Первый экран — демо: исходник Markdown рядом с тем, что из него собрано.
+    await expect(page.locator('#demo pre')).toBeInViewport();
+    await expect(page.locator('#demo .semantic-card')).toHaveCount(2);
     const expected = [
+      ['demo', 'demo'],
       ['styles', 'rail'],
       ['workflow', 'story'],
       ['examples', 'evidence'],
@@ -121,10 +124,6 @@ test('landing composes the public visual vocabulary identically in both output f
       'data-placement-resolved',
       'bottom',
     );
-    await expect(page.locator('#boundaries .semantic-action[data-kind="primary"]')).toHaveAttribute(
-      'data-effect',
-      'magnetic',
-    );
     await expectLoadedImages(page);
     await expectNoOverflow(page);
     rendered.push(await page.locator('main').innerText());
@@ -147,7 +146,8 @@ test('the staged public gallery opens every bilingual artifact and canonical sou
     const englishHeading = await page.locator('h1').innerText();
     expect(
       await page
-        .locator('section.semantic-section')
+        // Титульный слайд презентации — секция без своего заголовка: берётся первая с заголовком.
+        .locator('section.semantic-section:has(> .semantic-section-title)')
         .first()
         .evaluate((section) => {
           const title = section.querySelector<HTMLElement>('.semantic-section-title');
@@ -172,8 +172,18 @@ test('the staged public gallery opens every bilingual artifact and canonical sou
             const [red, green, blue] = parse(value);
             return 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue);
           };
+          // Полоса без собственного фона стоит на фоне страницы: берётся первый непрозрачный предок.
+          let owner: Element | null = section;
+          let backgroundColor = getComputedStyle(section).backgroundColor;
+          while (owner !== null && /rgba\([^)]*,\s*0\)$|transparent/u.test(backgroundColor)) {
+            owner = owner.parentElement;
+            backgroundColor =
+              owner === null
+                ? getComputedStyle(document.documentElement).backgroundColor
+                : getComputedStyle(owner).backgroundColor;
+          }
           const foreground = luminance(getComputedStyle(title).color);
-          const background = luminance(getComputedStyle(section).backgroundColor);
+          const background = luminance(backgroundColor);
           return (
             (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
           );
@@ -191,12 +201,15 @@ test('the staged public gallery opens every bilingual artifact and canonical sou
     }
     expect(
       await page.locator('.topbar > *').evaluateAll((items) =>
-        items.every((item) => {
-          const box = item.getBoundingClientRect();
-          return box.left >= 0 && box.right <= document.documentElement.clientWidth;
-        }),
+        items
+          .filter((item) => {
+            const box = item.getBoundingClientRect();
+            return box.left < 0 || box.right > document.documentElement.clientWidth;
+          })
+          .map((item) => `${item.className}: ${item.getBoundingClientRect().right}`),
       ),
-    ).toBe(true);
+      proof.page,
+    ).toEqual([]);
 
     for (const source of proof.sources) {
       const route = siteRoutes.routes.find((candidate) => candidate.href === source);
@@ -307,7 +320,7 @@ test('landing and a non-landing demo execute reusable scroll, pointer, and chore
   await expect(activation.locator('.semantic-point').first()).toHaveCSS('opacity', '1');
   await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
   await expect(page.locator('#activation')).toHaveAttribute('data-composition', 'split');
-  await expect(page.locator('#launch-signal')).toHaveAttribute('data-surface', 'mesh');
+  await expect(page.locator('#launch-signal')).toHaveAttribute('data-surface', 'tint');
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(landingArtifacts[0].url);
@@ -330,24 +343,42 @@ test('Terminal and Cinematic gallery pages expose different structural experienc
   await page.setViewportSize({ width: 1440, height: 1000 });
 
   await page.goto(stagedUrl('examples/terminal-portfolio/index.html'));
-  await expect(page.locator('html')).toHaveAttribute('data-preset', 'terminal');
-  await expect(page.locator('.semantic-card[data-linked-card]')).toHaveCount(5);
-  const terminalTreatment = await page
-    .locator('#profile > .semantic-section-title')
-    .evaluate((heading) => ({
-      prompt: getComputedStyle(heading, '::before').content,
-      cursor: getComputedStyle(heading, '::after').animationName,
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'terminal');
+  await expect(page.locator('.semantic-card[data-linked-card]')).toHaveCount(3);
+  // Подпись терминала — одна подсказка и один курсор у заголовка страницы, без сканлайнов и свечения.
+  const terminalTreatment = await page.evaluate(() => {
+    const pageHeading = document.querySelector<HTMLElement>('.report-content article h1');
+    const sectionTitle = document.querySelector<HTMLElement>('#profile > .semantic-section-title');
+    if (pageHeading === null || sectionTitle === null)
+      throw new Error('Missing terminal headings.');
+    return {
+      prompt: getComputedStyle(pageHeading, '::before').content,
+      cursor: getComputedStyle(pageHeading, '::after').animationName,
+      sectionPrompt: getComputedStyle(sectionTitle, '::before').content,
+      bodyFont: getComputedStyle(document.body).fontFamily,
       background: getComputedStyle(document.body).backgroundImage,
-    }));
+      // Развёртку рисует слой `body::after`, свечение — `text-shadow` заголовка: смотрим туда, где они живут.
+      scanlines: getComputedStyle(document.body, '::after').backgroundImage,
+      glow: getComputedStyle(pageHeading).textShadow,
+      cursorRuns: getComputedStyle(pageHeading, '::after').animationIterationCount,
+    };
+  });
   expect(terminalTreatment.prompt).toContain('>');
   expect(terminalTreatment.cursor).toBe('agentic-cursor');
-  expect(terminalTreatment.background).toContain('repeating-linear-gradient');
+  // У главы — её номер в скобках, а не второй промпт: промпт стоит только у заголовка страницы.
+  expect(terminalTreatment.sectionPrompt).toMatch(/^"\[\d{2}\]"/u);
+  expect(terminalTreatment.bodyFont).toContain('JetBrains Mono');
+  expect(terminalTreatment.background).not.toMatch(/gradient/u);
+  expect(terminalTreatment.scanlines).not.toMatch(/gradient/u);
+  expect(terminalTreatment.glow).toBe('none');
+  // Курсор мигает шесть раз и дальше горит ровно: бесконечное мигание нарушает WCAG 2.2.2.
+  expect(terminalTreatment.cursorRuns).toBe('6');
   await expectNoOverflow(page);
 
   await page.goto(stagedUrl('examples/cinematic-story/index.html'));
-  await expect(page.locator('html')).toHaveAttribute('data-preset', 'cinematic');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'noir');
   await expect(page.locator('#field-roll')).toHaveAttribute('data-media', 'gallery');
-  await expect(page.locator('img')).toHaveCount(4);
+  await expect(page.locator('img')).toHaveCount(5);
   await expectLoadedImages(page);
   const story = page.locator('#story');
   const initial = Number(
@@ -368,11 +399,11 @@ test('executive and motion showcases exercise package-owned composition and fall
   await page.setViewportSize({ width: 1440, height: 1000 });
 
   await page.goto(stagedUrl('examples/executive-brief/index.html'));
-  await expect(page.locator('html')).toHaveAttribute('data-preset', 'monument');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'daylight');
   await expect(page.locator('#opening')).toHaveAttribute('data-recipe', 'hero');
   await expect(page.locator('#evidence')).toHaveAttribute('data-recipe', 'metrics');
   await expect(page.locator('#path')).toHaveAttribute('data-recipe', 'story');
-  await expect(page.locator('#handoff')).toHaveAttribute('data-interaction', 'tilt');
+  await expect(page.locator('#handoff')).toHaveAttribute('data-recipe', 'evidence');
   await expect(page.locator('.visualization-timeline-event')).toHaveCount(4);
   await page.locator('#evidence').scrollIntoViewIfNeeded();
   await expectSettledSection(page.locator('#evidence'));
@@ -390,7 +421,7 @@ test('executive and motion showcases exercise package-owned composition and fall
   await expectNoOverflow(page);
 
   await page.goto(stagedUrl('examples/motion-showcase/index.html'));
-  await expect(page.locator('html')).toHaveAttribute('data-preset', 'cinematic');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'aurora');
   await expect(page.locator('#opening')).toHaveAttribute('data-interaction', 'depth');
   await expect(page.locator('#rail')).toHaveAttribute('data-scene', 'progress');
   await expect(page.locator('#rail .semantic-card')).toHaveCount(3);

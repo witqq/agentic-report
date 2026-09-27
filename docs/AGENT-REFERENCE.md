@@ -9,9 +9,9 @@ Use Node.js 24.18.0 or newer. Initialize a suitable packaged starter, replace it
 once, and open the result:
 
 ```bash
-npx --yes agentic-report@0.17.0 init ./my-report --starter report --json
+npx --yes agentic-report@0.18.0 init ./my-report --starter document --json
 # Edit ./my-report/report.md and its local assets.
-npx --yes agentic-report@0.17.0 build ./my-report --output ./my-report.html --json
+npx --yes agentic-report@0.18.0 build ./my-report --output ./my-report.html --json
 ```
 
 Open `my-report.html` through `file://`. Build runs the complete source and render preparation before
@@ -32,7 +32,7 @@ pnpm pack --pack-destination "$PACK_DIR"
 cd "$CONSUMER_DIR"
 npm init --yes
 npm install "$PACK_DIR"/agentic-report-*.tgz
-npx agentic-report init ./my-report --starter report
+npx agentic-report init ./my-report --starter document
 printf '\nAgent-authored edit.\n' >> ./my-report/report.md
 printf '\n![Remote asset used to test diagnostics](https://local.invalid/image.png)\n' >> ./my-report/report.md
 printf 'preserve me\n' > ./report.html
@@ -79,14 +79,30 @@ installed paths. The complete checked JSON projection is
 [`../examples/manifest.json`](../examples/manifest.json). Agents should inspect these contracts instead of
 inferring unsupported fields.
 
-## Initialize the packaged starter
+## Choose a page category and initialize its starter
+
+A page belongs to one of five standard categories. The category names the reader's job, the starter
+`init` copies, and the dimensions of the brief the agent answers before writing. It is a recommendation,
+not a limit: every directive, mode, and effect works on a page of any category, and Review Workspace is a
+mode of any category rather than a category of its own.
+
+| Category       | Reader's job                                                      | Subvariants                                                              |
+| -------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `landing`      | Try, adopt, or remember something and take one next step          | `product`, `portfolio`, `showcase`, `launch`                             |
+| `document`     | Check and act on a finding, a system, or a procedure (default)    | `report`, `research`, `architecture`, `code-review`, `incident`, `guide` |
+| `dashboard`    | See the current state at a glance, detail one step away           | `metrics`, `charts`, `filters`, `statuses`                               |
+| `answer`       | Answer a question, pick an option, or fill in a form              | `choice`, `questions`, `survey`, `brief`                                 |
+| `presentation` | Watch something shown one slide at a time, live, alone or on film | `demo`, `pitch`, `update`, `lesson`                                      |
+
+`describe` publishes the categories under `page.categories`, each with its purpose, recommended layout,
+subvariants, and brief dimensions.
 
 Initialize through the CLI or the equivalent ESM API:
 
 ```bash
 agentic-report init ./my-report
-agentic-report init ./my-report --starter report --json
-agentic-report init ./research-brief --starter research
+agentic-report init ./my-page --starter landing --json
+agentic-report init ./triage --starter answer
 ```
 
 ```js
@@ -102,21 +118,26 @@ parent may be a symbolic link — on macOS `/tmp` is one — and the destination
 file, directory (including empty), or symlink at the destination itself is rejected unchanged, and that
 refusal, not a rule about the parent, is what protects an existing tree. The three parent refusals name
 which check failed: the parent does not exist, is not a directory, or cannot be inspected.
-Initialization selects the single registry-owned default unless `starter` names any other initializable
-packaged example or alias. Six starter trees are packaged:
+Initialization selects the `document` starter unless `starter` names another category. Each of the five
+starters is named after its category and contains `report.md`, its Russian alternate, and `brief.md`:
 
-| Selector       | Purpose                                                      |
-| -------------- | ------------------------------------------------------------ |
-| `report`       | Decision-ready report; alias of stable canonical ID `basic`  |
-| `research`     | Method, evidence, comparison, and recommendation             |
-| `architecture` | System boundary, alternatives, consequences, and rollout     |
-| `tutorial`     | Step-by-step first-use lesson with code and bounded practice |
-| `dashboard`    | Operational cards, charts, filtering, and optional detail    |
-| `landing`      | Focused narrative, benefits, proof, and delivery milestones  |
+| Starter        | Contents                                                                                           |
+| -------------- | -------------------------------------------------------------------------------------------------- |
+| `document`     | Decision-ready report with findings, evidence, a local asset, and a timeline                       |
+| `landing`      | Focused product narrative with benefits, proof, and delivery milestones                            |
+| `dashboard`    | Operational cards with statuses, charts, filtering, and optional detail                            |
+| `answer`       | A question with options and trade-offs, then a response form that exports an answer                |
+| `presentation` | A short demo as slides: title slide, click steps, diagram, figure, code, a question, speaker notes |
 
-The report starter is the default. `examples --json` and `listExamples()` expose the canonical ID,
-`starter.default`, and `starter.aliases`; `init --starter report` returns canonical `starterId: "basic"`.
-Eligibility, aliases, and default selection are registry facts shared by discovery and initialization. The operation validates
+`brief.md` holds one table row per dimension of the category — subvariant, audience, reader task,
+material, languages, art direction, motion, delivery, and the category's own dimensions — with columns for
+the answer and its source (`request`, `asked`, or `inferred`). The agent fills it before writing the page
+and records there, with a reason, any design check it deliberately switches off. The build ignores it.
+
+`examples --json` and `listExamples()` expose each example's `category`, `subvariant`, and, for each
+starter, `starter.default`. Other examples — research, architecture, tutorial, code review, incident,
+and the rest — are copied from the examples inventory rather than initialized. Eligibility and default
+selection are registry facts shared by discovery and initialization. The operation validates
 and fully reads the packaged tree before exclusively creating the destination; ordinary files use
 no-overwrite creation. It never overwrites, merges, deletes, or rolls back destination content. A later
 failure may leave the newly created destination incomplete; inspect it and remove it explicitly before
@@ -124,20 +145,24 @@ retrying. The result contains starter, project and entry identity plus a sorted 
 inventory, including each starter's maintained Russian alternate and localized partial/assets; it does not
 contain source file contents.
 
-Every command answers an agent without a flag, accepts `--json` as the name of that default, and offers
+Human success is `Created <projectPath> from starter <starterId> (<count> files)`. By default, stdout
+contains one NDJSON result record with `type`, `runId`, `starterId`, `starterTitle`, `projectPath`,
+`entryPath`, and `files`. Expected failures use the common diagnostic record and exit code `1`.
+
+## Command output
+
+The CLI has thirteen commands; `describe` lists them under `commands`, and the generated
+[authoring catalog](../skills/agentic-report/references/catalog.md#commands) prints the same list. Every
+command answers an agent without a flag, accepts `--json` as the name of that default, and offers
 `--human` for a person. The agent shape follows what the command returns: `init`, `build`, `validate`,
-`inspect`, `fix`, `review` and `sitemap` report a run and write NDJSON records; `schema`, `describe` and `examples`
+`inspect`, `fix`, `review`, `sitemap`, `snapshot`, `effect-check` and `theme` report a run and write NDJSON records; `schema`, `describe` and `examples`
 return one reference document and write it as a single compact JSON line. The human projection is prose
-wherever prose exists — `init`, `build`, `validate`, `fix`, `review`, `sitemap` and `examples` — and the same
+wherever prose exists — `init`, `build`, `validate`, `fix`, `review`, `sitemap`, `snapshot`, `effect-check`, `theme` and `examples` — and the same
 document indented for `inspect`, `schema` and `describe`, whose answer is a catalog or a schema that no
 summary line can carry.
 Both projections of a run carry the same facts — every
 independent violation, each with its `file:line:column` place — so choosing prose never hides a
 violation.
-
-Human success is `Created <projectPath> from starter <starterId> (<count> files)`. By default, stdout
-contains one NDJSON result record with `type`, `runId`, `starterId`, `starterTitle`, `projectPath`,
-`entryPath`, and `files`. Expected failures use the common diagnostic record and exit code `1`.
 
 ## Validate and inspect without writing output
 
@@ -163,6 +188,17 @@ plus:
 - sorted source-root-relative `sourceFiles`, including read partials and local resources; resolve them
   against the returned `projectPath`, or against the caller's input root when that identity contains a
   `[REDACTED]` path segment;
+- `structure`: the page's structure without its words — `layout`; `motion`, the page's motion level with
+  the default applied; `beforeFirstSection`, the images,
+  videos, diagrams, charts, timelines and code blocks shown before the first `section`; `sections`, one entry per
+  authored section in source order with its nesting `depth`, resolved `recipe`, `place`, `surface`,
+  `transition`, `scene`, `interaction`, `choreography`, `mediaEffect`, and the same media counts;
+  `magneticActions`; `movingElements`, the elements that move by themselves outside those section roles
+  (`:count`, a `count-up` chart, a diagram with `draw="scroll"`, `pulse` or `zoom`, a `demo` with `play`,
+  `:swap`, `:typing`, `:mark`, `spotlight`, a `video` with `seam="fade"`); and `cardGroups`, one entry per `cards` group with its number of `cards`, of distinct
+  card forms (`shapes`: status, media, block count, list or table), of `plain` cards (a title and at most
+  one paragraph) and of `linked` cards. It carries no titles, text, or identifiers, so advice built on it cannot judge the
+  author's words; the skill's design check reads it;
 - sorted distinct `observed.directives` and image/download/font occurrence counts;
 - the registry-derived command, format, page, starter, and capability `catalog`;
 - sanitized `warnings`.
@@ -188,6 +224,9 @@ diagnostics a run produced — the replaced range and its replacement, both comp
 no other byte. Diagnostics without that field are left alone and reported as `remaining`: their repair
 needs an author decision, and guessing it would be a different product. Running it twice changes nothing
 the first run already repaired.
+
+Today one check computes such a repair: the first unmarked occurrence of a registered glossary term in a
+section, which `fix` replaces with its `:term[…]{key="…"}` reference.
 
 The result carries `applied` — file, line, column, diagnostic code and the written replacement for each
 repair — and `remaining`. With `--human` each repair prints as `file:line:column  CODE → replacement`.
@@ -259,7 +298,7 @@ browser chrome or the on-screen keyboard changes the visible area. The contextua
 are clamped by their measured size to a visible rectangle from the live range and hide when that range is
 wholly offscreen. A focus marker prefers to sit completely above the range, then below it, before edge
 clamping, so tapping the highlighted text remains a separate **View thread** route.
-Navigation, Review, language, and theme use distinct package-owned topbar icons with localized names and
+Navigation, Review, language, theme, and scheme controls use distinct package-owned topbar icons with localized names and
 title tooltips. The native language selector remains the locale input and receives visible focus after a
 switch. At constrained widths the shell omits visible labels and secondary page identity instead of clipping
 or inventing an abbreviation; coarse pointers receive larger targets. Visible contextual/action controls
@@ -376,12 +415,12 @@ language: en
 localizations:
   ru: report.ru.md
 layout: mixed
-theme: system
-preset: signal
-scrollProgress: true
-attribution: true
-tokens:
+theme:
+  extends: blueprint
   radius: round
+scheme: system
+progress: chapters
+attribution: true
 ---
 
 # Architecture analysis
@@ -403,7 +442,7 @@ uses another locale.
 
 To ship both languages in one artifact, set the primary entry to `language: en` or `language: ru` and map
 only the other locale under `localizations`. The alternate file must declare the matching language and may
-set only `contractVersion`, `title`, `description`, and `language`; keep layout, theme, preset, tokens,
+set only `contractVersion`, `title`, `description`, and `language`; keep layout, theme, scheme,
 attribution, output, `url`, `image`, and `localizations` in the primary. Translate its Markdown, partials, visible SVG text,
 and authored directive labels explicitly—the compiler does not machine-translate them. At startup the
 browser uses ordered system preferences to select an available variant, falls back to the primary, and
@@ -412,53 +451,93 @@ keeps review/response/component state isolated by locale in the current tab.
 
 ## Choose the page shape
 
-The package owns the page shell and design system. Metadata selects one closed layout, coordinated preset,
-theme, and optional token values:
+The package owns the page shell and design system. Metadata selects one closed layout, a theme, and a
+colour scheme. The complete field list with every accepted value is in the
+[source contract](product/source-contract.md#metadata); the closed lists of layouts and built-in themes
+are in the generated [authoring catalog](../skills/agentic-report/references/catalog.md#page-metadata).
 
-- `layout`: `document` (default), `dashboard`, `landing`, or `mixed`;
+- `layout`: `document` (default) or another catalog layout; each is described below the theme section,
+  and `slides` under «Presentations»;
 - `language`: selects reader chrome for one source variant; unsupported single-language tags use English;
 - `localizations.en` / `localizations.ru`: optional confined alternate Markdown entry for the other
   package-supported locale; a multilingual primary must itself be English or Russian;
-- `preset`: `material` (default), `monument`, `signal`, `terminal`, or `cinematic`; compatibility identities
-  `studio` and `editorial` remain accepted;
-- `theme`: `system` (default), `light`, or `dark`;
-- `themeToggle`: boolean, default `true`; shows the reader's light/dark button. Set `false` for a page that
+- `theme`: the look of the page. A built-in theme name (`neutral` by default; each theme's intent is in
+  the catalog and in the paragraph after the theme example below), a relative path to a `.yaml`, `.yml` or
+  `.json` theme file inside the source directory, or a theme object written in the frontmatter;
+- `scheme`: `system` (default), `light`, or `dark`;
+- `schemeToggle`: boolean, default `true`; shows the reader's light/dark button. Set `false` for a page that
   must stay in the scheme it was built with;
-- `presetSwitcher`: boolean, default `false`; adds a reader style selector that swaps the preset together
-  with all five of its tokens live, without touching the scheme the reader chose;
+- `themeSwitcher`: boolean, default `false`; adds a reader theme selector that swaps between the built-in
+  themes and the page's own live, without touching the scheme the reader chose;
 - `review`: boolean, default `false`; ships Review Workspace. A build given a prior sidecar through
   `--review` enables it automatically;
-- `scrollProgress`: boolean, default `false`; decorative normal-motion reading progress;
+- `progress`: `none` (default), `page`, or `chapters`. `page` is one decorative line at the bottom of the
+  top bar, shown only in normal motion. `chapters` is the page's throughline: one segment per chapter
+  along the top bar that fills as the reader moves through it, marks the current chapter, and jumps to it
+  on click; it stays with reduced motion because it is navigation, not decoration;
+- `opening`: `center` (default) or `start`; aligns a landing page's title, introduction, and actions;
 - `attribution`: boolean, default `true`; shows **Made with Agentic Report** linked to
-  `https://agentic-report.witqq.dev/` at the bottom. Set `false` to omit only that package footer;
-- `tokens.density`: `compact`, `comfortable`, or `spacious`;
-- `tokens.font`: `sans`, `serif`, or `mono`;
-- `tokens.accent`: `indigo`, `teal`, or `coral`;
-- `tokens.width`: `narrow`, `standard`, or `wide`;
-- `tokens.radius`: `sharp`, `soft`, or `round`.
+  `https://agentic-report.witqq.dev/` at the bottom. Set `false` to omit only that package footer.
 
-Preset token defaults are `monument = spacious/sans/indigo/wide/soft`, `material =
-comfortable/serif/indigo/wide/sharp`, `signal = compact/sans/teal/wide/sharp`, `terminal =
-compact/mono/teal/wide/sharp`, and `cinematic = spacious/sans/coral/wide/round`, in the token order above.
-`studio` maps to Monument's tokens and `editorial` maps to Material's tokens.
-The preset applies first, theme controls only light/dark/system color resolution, and every explicitly
-authored token field overrides its preset value. Do not repeat all five token fields when the preset
-already expresses the intended family.
+### Make a theme of your own
 
-The public discovery contract represents this rule as `page.tokenResolution`: defaults come from the
-selected preset, then explicit token fields apply. For source-contract-major compatibility, each
-`page.tokens` entry retains the generic internal normalization `default` and marks it
-`defaultVisibility: normalization-only`; a discovery consumer must not materialize such values as authored
-tokens. Use the complete maps in `page.presets` when constructing an editor or agent prompt, and apply only
-defaults whose visibility is `published`.
+A theme is data, not CSS. It names colour roles for the light and dark schemes (`background`, `surface`,
+`heading`, `text`, `textMuted`, `accent`, `accentStrong`, `accent2`, `focus`, six chart colours, the code
+colours `codeBackground`…`codeComment`, and a few more), a package font family for headings, body and code,
+typography (display weight, tracking and letter case), density and rhythm, width, corner radius, a package-drawn
+backdrop, and a few named treatments of the shell (`chrome.topbar`, `chrome.navigation`,
+`chrome.sectionTitle`, `chrome.cards`, `chrome.components`, `chrome.landing`) and small signature details
+(`ornaments.headingPrefix`, `ornaments.titleCursor`, `ornaments.heroEmphasis`, `ornaments.mediaTreatment`,
+`ornaments.linkedCard`, `ornaments.console`). Every field is optional: a theme starts from the theme named in `extends` (the
+default theme when it is absent) and changes only what it names. What it leaves out — including the
+signature details of the theme it extends — is inherited, so a theme extending `terminal` keeps its prompt
+and cursor until it turns them off.
 
-Monument is the recommended large-scale default; Material is the warm editorial family; Signal is the
-dense data family; Terminal adds console texture, prompts and scan rhythm; Cinematic stages image-first
-stories. `document`
+Write a small theme in the frontmatter, or a theme file when several pages share it:
+
+```yaml
+theme:
+  extends: blueprint
+  name: field-report
+  accent: coral
+  colors:
+    light:
+      background: '#f7f5f0'
+      surface: '#ffffff'
+```
+
+`accent` picks a named accent family for both schemes: prefer a restrained family and take a brighter one
+only when the subject calls for it; explicit accent colours in `colors` override it. To use a product's own colours,
+`agentic-report theme --colors "#0b5fff,#ff7a00"` (ESM `createBrandTheme({ colors })`) writes a theme file
+whose accent roles are those colours with their lightness shifted until every contrast pair passes; it cannot
+read a logo, because the package carries no image decoder. How the colours map to roles and when not to use
+it is in [`themes.md`](../skills/agentic-report/references/themes.md#a-theme-from-brand-colours). `fonts.pair` takes the
+type trio of any built-in theme or `system`. The accent families, the trio of each theme and the embedded
+families are listed under «Themes» in the [source contract](product/source-contract.md#themes). The
+package embeds the Latin and Cyrillic subsets of every
+family the theme uses, so the page looks the same on every machine. A local font of your own goes in with
+`::font{src="…" family="…" role="heading"}`: the role (`body`, `heading`, `mono`) says which text it sets. A theme file may itself extend a built-in theme or another theme file; the chain
+stays inside the source directory. The build checks every field and refuses a theme whose headings, text,
+captions, links, eyebrows, primary action label, code colours, accent marks or focus ring fall below WCAG AA
+contrast in a scheme it draws; the diagnostic
+names the failing pair, its ratio, and the line of the field in the theme. `agentic-report schema --scope
+theme` returns the complete theme schema, and `describe --json` lists the fields, accents, font families
+and contrast pairs under `page.theme`.
+
+Neutral is the default: grey paper, a Literata display over Onest and one ochre accent, warm graphite in the
+dark; frost is stone and graphite with colour left to statuses; calm-paper is warm paper for long reading; daylight is bright product documentation;
+midnight is the engineering story at night; noir sets image-first stories under a spaced capital title;
+aurora is calm research; blueprint is dense technical evidence with a ledger top bar and landing; ember is for
+launches and incidents; synthwave is for games and music only; terminal is a developer console on graphite with
+a prompt, a finite cursor and bracketed labels (scanlines and glow are opt-in ornaments, off by default).
+Eight of the eleven built-in themes come from the themes of agentic-screencast; neutral and frost were added
+as themes without the fashionable clichés, and terminal is this package's own. `document`
 emphasizes long-form reading with persistent desktop contents. `dashboard` uses a wide dense
 surface and horizontal desktop navigation. `landing` provides a centered desktop opening, compact
 left-aligned mobile heading, and wide content
-sections. `mixed` combines a reading column with wide evidence, cards, tables, and media. Every layout
+sections. `mixed` combines a reading column with wide evidence, cards, tables, and media. `slides` shows
+one section at a time as a presentation (see «Presentations»). `screens` keeps the scrolling page but moves
+one whole screen per gesture (see «Page navigation and bounded motion»). Every scrolling layout
 collapses to one mobile column with a package-owned contents drawer. Wide tables and code remain locally
 scrollable rather than breaking the page.
 Composition tracks use large screens without widening paragraphs beyond their reading measure. Package
@@ -471,7 +550,7 @@ Run `agentic-report examples --json` to locate the installed `layout-document`, 
 source builds through either output format; authors never provide JSX, CSS, browser code, runtime
 placement, or a layout-specific template.
 
-The same inventory also contains the six initializable starters. Starters are buildable examples with
+The same inventory also contains the five category starters. Starters are buildable examples with
 `starter` metadata, not a second template or generator system.
 
 ### Rebuild the public showcases
@@ -483,10 +562,10 @@ or a separate showcase system:
 | ---------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `layout-mixed`                                                         | `mixed`     | Complete visual grammar and component range; public source route: [`visual-catalog`](../examples/visual-catalog/report.md) |
 | [`interactive-catalog`](../examples/interactive-catalog/report.md)     | `mixed`     | Package-owned interactive primitives                                                                                       |
-| [`visualization-catalog`](../examples/visualization-catalog/report.md) | `dashboard` | Charts, diagrams, timelines, and data controls                                                                             |
+| [`visualization-catalog`](../examples/visualization-catalog/report.md) | `dashboard` | Charts, a 15-node grouped subsystem flow, a compile-request sequence, timelines, and data controls                         |
 | [`terminal-portfolio`](../examples/terminal-portfolio/report.md)       | `mixed`     | Console-led systems portfolio with prompt rhythm and linked evidence                                                       |
 | [`cinematic-story`](../examples/cinematic-story/report.md)             | `landing`   | Image-first scroll story with staged media and gallery rail                                                                |
-| [`executive-brief`](../examples/executive-brief/report.md)             | `mixed`     | Monument decision narrative with evidence cards, timeline, local media and handoff                                         |
+| [`executive-brief`](../examples/executive-brief/report.md)             | `mixed`     | Daylight decision narrative with evidence cards, timeline, local media and handoff                                         |
 | [`motion-showcase`](../examples/motion-showcase/report.md)             | `landing`   | Pointer depth, scrolling media, gallery, cascade and reduced-motion behavior                                               |
 | [`incident-review`](../examples/incident-review/report.md)             | `mixed`     | Service impact, causal evidence, recovery, and owned follow-up                                                             |
 | [`vendor-decision`](../examples/vendor-decision/report.md)             | `document`  | Mandatory procurement gates, weighted evidence, and conditional adoption                                                   |
@@ -536,7 +615,7 @@ runtime exits with code `1` and `NODE_VERSION_UNSUPPORTED`; an ESM import throws
 the same diagnostic. Neither path continues after npm's engine warning.
 
 The repository's canonical product proof is [`../website/landing/report.md`](../website/landing/report.md).
-Its gallery links to independently publishable starters, catalogs, Terminal/Cinematic showcases, decision
+Its gallery links to independently publishable starters, catalogs, Terminal and noir showcases, decision
 showcases, and Review/Response workspaces plus direct public Markdown source routes.
 [`../website/routes.json`](../website/routes.json) owns those relative route identities for deterministic
 static staging; an image alone is never treated as the live example.
@@ -547,7 +626,7 @@ Directives are declarative and allowlisted. Unknown names and invalid attributes
 diagnostics.
 
 ````markdown
-::::section{title="Decision" id="decision" nav="Decision" width="wide" align="start" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="display" media="mask" media-fit="cover" media-aspect="landscape" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
+::::section{title="Decision" id="decision" nav="Decision" width="wide" align="start" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="display" media="mask" media-fit="cover" media-aspect="landscape" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 :::callout{title="Finding" kind="warning"}
 Content may contain ordinary Markdown.
 :::
@@ -635,6 +714,54 @@ The package-owned runtime increments a number. Author JavaScript is never execut
 ::font{src="assets/report.woff2" family="Report Sans"}
 ````
 
+### Page data, numbers, dates and messages
+
+A page whose figures come from an export lists the JSON files in `data` and reads them when it builds;
+the syntax and the refusals are in the [source contract](product/source-contract.md#page-data), and the
+shipped `run-report` example is a complete page built this way.
+
+```markdown
+---
+title: Nightly review run
+language: en
+data:
+  - data/run.json
+---
+
+# Nightly review run {{run.id}}
+
+::expect{data="run.stages" count="5"}
+
+::eyebrow[Flow {{run.flow}}]
+
+**Run {{run.id}} finished.** :muted[It took :plural[{{run.returns}}]{forms="return|returns"}; export
+:meta[{{run.flow}} #{{run.id}}] was taken :time[{{run.exportedAt}}]{zone="Europe/Moscow"}.]
+
+:::each{in="run.stages" as="stage"}
+
+- **{{stage.title.en}}**: :plural[{{stage.items}}]{forms="item|items"}
+  :::
+
+::source-line[Moira export of run {{run.id}}, {{run.records}} records]{date="{{run.exportedAt}}" zone="Europe/Moscow"}
+
+::::conversation{title="Notifications" illustrative="true"}
+:::message{from="Moira" time="01:17" status="delivered"}
+Run {{run.id}} finished with {{run.findings}} findings.
+:::
+::::
+```
+
+- `{{…}}` values are inserted as text into the parsed page, never parsed as Markdown; `each` repeats a
+  body per list item (one list or one table stays whole), and `expect` fails the build at its line when the
+  data diverge. Derived values are precomputed in the JSON or produced by a provider: there is no
+  expression language.
+- `plural` and `time` are settled at build time in the page language (`Intl.PluralRules`,
+  `Intl.DateTimeFormat` with `timeZone`), so the text is final and copies as shown; a time requires `zone`.
+- `source-line` goes directly under the block it describes; `conversation`/`message` mock a notification or
+  a dialog, and `illustrative="true"` marks a mock whose names, times and numbers are examples.
+- `eyebrow`, `muted` and `meta` mark typographic roles; the theme field `typography.captions: italic` sets
+  captions and source lines in the heading face in italics.
+
 ### Data visualizations
 
 Visuals use nested data directives, not JSX, JavaScript, JSON-in-an-attribute, or a graph language:
@@ -682,13 +809,16 @@ Open the result directly through `file://`.
 ```
 
 `chart.type` is `bar`, `line`, or `pie`. Charts accept 1–6 series with 1–12 points each; series share the
-same unique ordered labels. Pie charts accept exactly one non-negative series with a positive total.
+same unique ordered labels. Pie charts accept exactly one non-negative series with a positive total. Every
+chart is compiled twice: the page view, and a narrower view that a phone shows instead, so the chart fits
+the column without sideways scrolling; category labels wrap onto two lines instead of being cut.
 `diagram.type` is `flow` by default or `sequence`. A flow accepts 1–20 unique nodes and up to 40 validated
 edges, and up to 5 non-empty groups. A group surrounds only the nodes that name it with `group`; a node
 without a group stands beside the groups, and a named group must be declared. A sequence accepts 2–6 node
 participants and 1–40 labelled edge messages; participant and message order is source order, while groups and
 direction are rejected. A message whose `from` equals `to` is a step inside that participant and is drawn as a
-loop on its lifeline with the label beside it; a flow still rejects a self-edge.
+loop on its lifeline with the label beside it; in a flow the same edge is a step that repeats, drawn as a
+loop on the node's corner.
 
 A flow is laid out by layers along the flow, the way Mermaid's flowcharts are. A connection that returns
 along an already started path is drawn backward and described separately. Nodes inside a layer are ordered to
@@ -699,7 +829,17 @@ switcher above the diagram (a keyboard-operable tab list labelled in the page la
 `down` (layers top to bottom), `right` (layers left to right), and `orthogonal` (right-angle connections in
 their own lanes, groups as nested frames). `layout="auto|down|right|orthogonal"` names the view shown first
 and printed; `auto` picks the view with the fewest crossings that fits the page best. A diagram wider than the
-page column shrinks to at most three quarters of its size and scrolls inside its frame.
+page column shrinks only as far as its smallest text, a 13-pixel connection label, stays at 12 pixels, and
+scrolls inside its frame beyond that; on a narrow screen the reader first sees a view that fits, and the
+view switcher wraps rather than hiding a view.
+
+Every view of every diagram — flow, orthogonal, and sequence — is drawn in one visual language taken from
+the page theme: the theme's body typeface for node, group, and connection text; one connection-label size
+and weight in every view; one line weight for connections, a lighter one for dependencies and lifelines;
+and colours only from the theme's palette, so a diagram follows the theme and its light or dark scheme
+without any author styling. A legend reads like page text: the main text colour at a small-text size, with
+line samples drawn larger than the lines on the diagram so dashes, dots, and hollow arrowheads are easy to
+tell apart, and it wraps item by item on a narrow screen.
 `direction="right|down"` is the older spelling of the same choice and cannot be combined with `layout`; any
 `layout` on a sequence fails.
 
@@ -711,6 +851,13 @@ Four attributes say what the picture means without styling it:
 | `detail="…"`                                | `node`    | A smaller second line under the label: what the node holds or does.                             |
 | `::legend{title="…" auto="true\|false"}`    | `diagram` | At most one. Titles the legend; `auto="false"` leaves out kinds without a legend item.          |
 | `::legend-item{edge=… \| node=… label="…"}` | `diagram` | Names a connection kind or a node emphasis in the author's words; `hidden="true"` hides a kind. |
+| `status="done\|review\|returned\|pending"`  | `node`    | Where a step of a process stands: status colour, a glyph, a legend entry in package words.      |
+| `count="N"`                                 | `edge`    | «×N» after the label: how many times a return or retry happened.                                |
+| `id="…"`                                    | `edge`    | Lets a `beat{focus}` light this connection by name; differs from every node id.                 |
+
+A process in a line of text or on a card is `:process[Plan > Build > Review]{current="Review" returns="Review>Build×2"}`:
+the steps as dots coloured by where the work stands, the returns as arcs with «×N», and the same said in
+words for assistive technology.
 
 A diagram mixing two or more connection kinds gets a legend of the kinds present, in package words. Legend
 items come first in authored order, then the kinds the diagram mixes that no item names. Node emphasis
@@ -740,48 +887,221 @@ and labels retain their meaning.
 `callout.kind` is a lowercase presentation token. `demo.start` and `demo.step` are bounded integers.
 `section` is top-level only and requires `title`. Its optional `id` is a lowercase letter-led identity;
 omission derives a deterministic collision-free ID from the title. `nav` supplies a short primary label.
-Its closed visual attributes are:
-
-| Attribute         | Values                                                    | Default     |
-| ----------------- | --------------------------------------------------------- | ----------- |
-| `recipe`          | `none`, `hero`, `evidence`, `story`, `rail`, `metrics`    | `none`      |
-| `width`           | `reading`, `standard`, `wide`                             | `standard`  |
-| `align`           | `start`, `center`                                         | `start`     |
-| `tone`            | `plain`, `soft`, `accent`, `contrast`                     | `plain`     |
-| `composition`     | `flow`, `stage`, `split`, `mosaic`, `story`, `stack`      | `flow`      |
-| `viewport`        | `adaptive`, `full`, `bounded`                             | `adaptive`  |
-| `section-density` | `compact`, `editorial`, `immersive`                       | `editorial` |
-| `type`            | `body`, `display`, `editorial`                            | `body`      |
-| `media`           | `natural`, `mask`, `layers`, `gallery`, `bleed`           | `natural`   |
-| `media-fit`       | `natural`, `contain`, `cover`                             | `natural`   |
-| `media-aspect`    | `natural`, `landscape`, `cinematic`, `portrait`, `square` | `natural`   |
-| `focal`           | `center`, `top`, `right`, `bottom`, `left`                | `center`    |
-| `surface`         | `plain`, `mesh`, `glow`, `grain`, `grid`                  | `plain`     |
-| `transition`      | `none`, `reveal`, `stagger`                               | `none`      |
-| `scene`           | `none`, `progress`, `sticky`                              | `none`      |
-| `interaction`     | `none`, `depth`, `tilt`                                   | `none`      |
-| `choreography`    | `none`, `cascade`                                         | `none`      |
-| `reveal`          | boolean                                                   | `false`     |
-
-Compatibility boundaries prevent two roles from owning the same layout or transform:
-`composition="mosaic|stack"` cannot pair with `media="layers|gallery"`; `media="layers"` and
-`scene="progress"` cannot pair with `interaction="depth|tilt"`; and `composition="story|stack"` cannot pair
-with `scene="sticky"`. A secondary or quiet action cannot use `effect="magnetic"`. These combinations fail
-before rendering and are declared in discovery and JSON Schema.
+Its closed visual attributes, their values and defaults, and the combinations that fail before rendering
+because two roles would own the same layout or transform are listed in the
+[source contract's section table](product/source-contract.md#semantic-primitives); discovery and the JSON
+Schema declare the same records.
 
 A recipe is the short path: it supplies a coordinated subset of detailed roles before explicit attributes
-apply. Use `recipe="hero"`, `recipe="evidence"`, `recipe="story"`, `recipe="rail"`, or
-`recipe="metrics"`; omit it only when composing the detailed roles directly. A `card` may carry one safe
+apply. Pick one of the nine recipes from that table, and omit `recipe` only when composing the detailed
+roles directly. A `card` may carry one safe
 `href`; linked cards render as one focusable anchor with a persistent icon, and nested Markdown links fail.
+A card's `status` (`good`, `watch`, `risk`) puts the state on the card as a localized word with a
+coloured marker, so a dashboard reads without relying on colour.
 
-Recipes also supply motion: hero uses stagger and a progress scene, evidence uses reveal, story uses reveal
-and a progress scene, rail uses stagger, and metrics uses stagger with cascade. For a pointer-depth hero,
+A code review uses two directives. `diff` holds exactly one fenced block of a unified diff — file
+headers, then `@@ -old,count +new,count @@` hunks — and draws each line with its old and new line
+numbers; a hunk whose lines do not add up to its header fails the build with `INVALID_DIFF` at the
+directive's line. Copying the block yields the diff itself, without the numbers. `file` names the changed
+path above the block. `findings` groups `finding` children in authored order and prints a count per
+severity above them; each `finding` requires `severity` (`blocking`, `major`, `minor`, `note`) and
+`title`, and may name a `location` such as `path:line`. Severity is shown as a word, not only a colour.
+
+Recipes also supply motion and, for two of them, a decorative surface; the source contract lists
+[which recipe brings which](product/source-contract.md#semantic-primitives). For a pointer-depth hero,
 write `recipe="hero" scene="none" interaction="depth"` and add a local image. For a scrolling gallery,
 write `recipe="rail" scene="progress"` with image cards. The complete
 [`motion-showcase`](../examples/motion-showcase/report.md) demonstrates both without custom runtime code.
 
+### Directed motion and WebGL
+
+Motion is part of the closed vocabulary and always has a still end state: under reduced motion every
+technique below shows its final state, nothing is pinned, and nothing moves.
+
+| Technique                      | How to write it                                                                                               |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Pinned scene switched by steps | `scene="steps"` on a section: its first images, video, diagram or code block, then 2–8 `:::beat` containers   |
+| Diagram lit by the story       | `beat{focus="node-a, edge-id"}` lights those nodes and connections, and connections between lit nodes         |
+| Code lit line by line          | `beat{lines="2-4"}` in a steps or scrub scene with a code block: those lines light, the others dim            |
+| Scene played by the scroll     | `scene="scrub"` with 2–4 beats: one screen per beat, caption at a third of its step, the last step holds all  |
+| Chapter opened by a mask       | `transition="clip"` on a section: the chapter opens from its lower edge, nothing slides                       |
+| Staged first screen            | `transition="staged"` with `place="opening"`: title by lines, eyebrow, subtitle, actions, then the scene      |
+| Thesis filled while read       | `recipe="thesis"`: the heading colour fills its lead from the top while the reader passes it                  |
+| Page state from progress       | `state="name"` on a section or beat, `when="name"` on a `card` or `:count`: lit while the state is set        |
+| Diagram drawn while scrolling  | `draw="scroll"` on a `diagram`: connections draw in flow order, backward ones later, a marker rides along     |
+| Pulses along a route           | `pulse="a,b,c"` on a flow `diagram`: a pulse runs the route three times; the route is marked still            |
+| Flight into a node             | `:::zoom{node="api" title="…"}` inside a flow `diagram`: the camera flies into the node, its inside grows     |
+| Chart growing to its values    | `count-up="true"` on a `chart`: bars, lines and slices grow from zero, slice percentages count up             |
+| Title line by line             | `transition="lines"` on a section: its title opens one line at a time, without touching the text              |
+| Number that counts up          | `:count[1,284]` in running text: counts from zero to the written value, which is what the page holds          |
+| Image unweaving into threads   | `media-effect="threads"` on a section: WebGL pulls its first image apart into threads as it leaves the screen |
+
+A steps scene pins its media beside the beats only on a screen at least 57rem wide with normal motion; each
+beat takes up to two thirds of the screen and the pinned part stays within four screens. On a narrow screen
+with normal motion the media stays under the top bar above the current beat; under reduced motion the media
+and the beats simply follow each other. A scrub scene holds two to four beats — a fifth is refused — because
+each beat is a whole screen of scrolling. The nth beat shows the nth image; a beat's `focus`
+names node ids of the diagram in the same section, and a missing id fails at the beat's line.
+
+`media-effect="threads"` is off by default and needs no author code. The WebGL module ships only on a
+page that uses the effect; its image is embedded as data even in directory output, because a sibling file
+opened from `file://` cannot become a WebGL texture. Without WebGL, on a weak GPU (the browser refuses a
+context with a major performance caveat), or under reduced motion the image stays whole and still, and
+the first frame of the effect is that same whole image.
+
+The pace and the curve of all package motion come from the theme: `motion.easing` is `standard`, `gentle`,
+or `decisive`, and `motion.pace` is `brisk`, `calm` (the package timing), or `slow`.
+
+### Played scenes, marks and frames
+
+These techniques reconstruct and point at the product instead of decorating the page. Each has a still final
+frame: under reduced motion, with `motion: none`, and in print a scene shows every beat beside its stage, a
+swap its written word, a typed line and a log their whole text, a mark its complete line, and a spotlight its
+loupe in place. The build refuses each one outside its conditions.
+
+| Technique                     | How to write it                                                                                                  |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Product played by time        | `:::demo{play="time" seconds="2"}`: the stage (code, a diagram, cards, a picture), then 2–8 `:::beat` containers |
+| Product played by scroll      | `:::demo{play="scroll"}`: the same scene, pinned while the reader scrolls through its beats                      |
+| Scenario chosen by tabs       | One playable `demo` in each `tab`; the scene in a tab starts from its beginning when the tab opens               |
+| Word swapped on a beat        | `:swap[faster]{words="calmer, exact"}`: one to three other words, back to the written one within 5 s             |
+| Line typed in place           | `:typing[agentic-report build page]`: at most 80 characters, the whole line in the page from the start           |
+| Hand-drawn mark               | `:mark[three times]{shape="circle"}`: `underline`, `circle` or `strike`, jitter from `seed`; two per section     |
+| Loupe over a screenshot       | `:::spotlight{x="72" y="38" zoom="2.5"}`: one image first, then its explanation                                  |
+| Log printed line by line      | `transition="log"` on a section: each code block prints line by line, keeping its height                         |
+| Screenshot in a browser       | `frame="browser"` with the page's real `address`, or `illustration="true"` for a mock-up                         |
+| Vertical tabs                 | `orientation="vertical"` on `tabs`: the tab list beside the panels on a wide screen                              |
+| Numbered chapters at the edge | `::contents{sticky="true"}` on a landing: numbered chapters held at the edge, the current one marked             |
+| Monospace edge captions       | `chrome: { edges: mono }` in the theme: page title and current chapter along the screen edges                    |
+
+````markdown
+---
+title: A deploy, played
+layout: landing
+---
+
+# A deploy, played
+
+::contents{sticky="true"}
+
+::::::::section{title="The run" id="run"}
+::::::demo{title="One deploy" play="time" seconds="2"}
+
+```text
+$ agentic-report build page
+```
+
+:::beat{title="Build"}
+The bundle is written in 4 seconds; the run was :mark[green]{shape="underline"}.
+:::
+
+:::beat{title="Ship"}
+The page is live.
+:::
+::::::
+::::::::
+
+::::section{title="Install" id="install" transition="log"}
+Run :typing[npm install agentic-report] and read the log:
+
+```text
+$ npm install agentic-report
+added 12 packages
+found 0 vulnerabilities
+```
+
+::::
+````
+
+### Video and agentic-screencast
+
+`::video{src=… }` embeds a local clip. `mode` is `clip` (default: muted, looping, playing while visible,
+with controls), `background` (muted and looping without controls, with a pause button; `poster` is
+required, and a missing one fails with `VIDEO_POSTER_REQUIRED`), or `manual` (controls and sound, playing
+only when the reader presses play). `sources` lists further encodings of the same clip in order of
+preference; directory output offers all of them before `src`, each with a codec read from the file, so the
+browser plays the first one it can decode. One file embeds only the most compatible encoding and warns
+with `VIDEO_SOURCES_SINGLE_FILE`, so give H.264 MP4 as `src`. `chapters` points at a WebVTT file; its
+chapters appear as buttons under the clip that jump to each one. Under reduced motion nothing plays by
+itself. A looping clip or background takes `start` (the second where the loop begins and returns) and
+`seam="fade"` (the end of the loop dims and its start brightens); `expand="true"` on a clip adds an Expand
+button that opens it large with full controls and sound.
+
+When a page needs a clip of a product, a finding, or the page itself, film it with the agentic-screencast
+CLI as a finished tool, from a working directory of your own and never inside the tool's checkout:
+
+```bash
+mkdir -p ./media/demo && cd ./media/demo            # your directory, not the tool's
+export AGENTIC_SCREENCAST_HOME="$PWD/.screencast"    # cache and build data stay here
+agentic-screencast build --source story.md --out demo.mp4 \
+  --voice-json '{"engine":"stub","name":"silent","cps":15}'
+agentic-screencast web demo.mp4 --out web --formats av1,vp9,h264 --width 1280
+```
+
+`web` writes `demo.av1.mp4`, `demo.vp9.webm`, `demo.h264.mp4`, `demo.poster.jpg`, and, when the film has
+them, `demo.chapters.vtt`. Copy them into the page source and embed them without re-encoding:
+
+```markdown
+::video{src="media/demo.h264.mp4" sources="media/demo.av1.mp4, media/demo.vp9.webm" poster="media/demo.poster.jpg" chapters="media/demo.chapters.vtt" caption="What the clip shows."}
+```
+
+### Presentations
+
+`layout: slides` shows the page one slide at a time on the whole screen, between a screencast and a slide
+deck, for showing work to other people. Every top-level `section` is a slide; everything before the first
+section — the `#` title and its introduction — is the title slide. Each `:::appear{effect="rise|fade|wipe|pop"}`
+block inside a slide is one step, shown on the next click; `:::notes` holds speaker notes that the audience
+never sees. A section's `slide-transition` (`fade` by default, `push`, `wipe`, `zoom`, or `none`) says how it
+arrives. Every directive works on a slide; a `scene="steps"` section is not pinned on a slide — its beats
+simply follow each other — because a slide has no page scroll to drive it.
+
+The reader turns slides with the arrow keys, Space, Page Up/Down, Home and End, a click on the slide, a
+horizontal swipe, or the buttons at the bottom corner. Without the runtime, in print, and under reduced
+motion every step is shown: printing puts each slide on its own page, and reduced motion turns without
+transitions.
+
+A presentation is made to be filmed. The address `#/<slide>/<step>` (slide from 1, step from 0) opens any
+slide and step directly, and `?view=film` removes the top bar and the controls; `?view=presenter` shows the
+notes under each slide. `window.agenticSlides` offers `goto(slide, step)`, `next()`, `previous()`,
+`state()` — slide, step, steps, the duration of the running transition and whether it has finished —
+`durationOf(slide)` and `settled()`, a promise for the end of the running transition. Every transition has
+a fixed duration (fade 420 ms, push and wipe 520 ms, zoom 460 ms, a step 320 ms, each multiplied by the
+theme's `motion.pace`), published as `data-slide-duration` on the root; while it runs the root carries
+`data-slide-state="moving"`, then `settled`, and the document receives `agentic-slides:settled`. A recorder
+therefore opens an address or calls `next()`, waits for `settled()`, and takes the frame.
+
+### First screen and dramaturgy
+
+On a landing page no navigation frame stands above the first screen: the contents open from the top bar
+at every width (a theme whose landing keeps a side column, such as `blueprint`, keeps it beside the
+content). The shell order is unchanged — top bar and navigation come before `main`, and Skip to content
+still leads there. `opening: center|start` chooses where the title, introduction, and actions sit.
+
+A section with `place="opening"` — the `demo` recipe sets it — is the product as the first screen: the page
+title, introduction, and actions stand on one side and the section on the other, framed as a result, code
+beside a result, a diagram, or a clip. Only the first section may take that place, and only on a page that
+starts with a `#` title; anything else fails at the section's line. On a narrow screen the section follows
+the introduction. In that column the section always flows as one column in body type with full-width
+media, whatever composition, viewport, type, or media its recipe brings, so a `hero` can open the page
+beside its title.
+
+Six forms of a strong page are part of the vocabulary; five are recipes, which can be overridden
+attribute by attribute, and one is the `compare` directive:
+
+| Form                               | How to write it                                                                               |
+| ---------------------------------- | --------------------------------------------------------------------------------------------- |
+| One large claim                    | `recipe="thesis"` with a `lead`                                                               |
+| The product as the demo            | `recipe="demo"` on the first section                                                          |
+| A sticky step-by-step story        | `recipe="story"`: the image stays while its steps scroll past                                 |
+| Before and after                   | a `compare` holding exactly two images; the reader moves the divider by pointer or arrow keys |
+| Technical-drawing language         | `recipe="blueprint"`: a drafting grid behind a hairline panel, annotations in mono capitals   |
+| One quote or one figure per screen | `recipe="statement"`: a blockquote with its attribution, or the figure as the section title   |
+
+`compare` takes `before` and `after` labels (localized `Before`/`After` by default); both images keep their
+alternative text, and without the runtime the divider stays in the middle.
+
 Compose these roles instead of writing a bespoke layout. `media` owns the treatment, while fit, aspect, and
-focal point frame local images independently. Section `tone` owns its background/foreground relationship;
+focal point frame local images and videos independently. Section `tone` owns its background/foreground relationship;
 `surface` stays behind authored content, and nested package components keep their own readable surface text.
 For `layers`, prefer
 image-only cards when the overlap is the point: the package transforms image descendants and leaves the
@@ -793,9 +1113,15 @@ compact widths. It exposes a localized focusable scroll group only while it actu
 focus stop and label disappear when a wider owner fits every track. Repeated rails, cards titles, sibling
 Markdown and multiple cards follow the same rule. A true one-item rail has no continuation gap or false
 scroll announcement. Every section contains its floats and local
-layer order. A media stage gives its title the full first row and composes supporting content with media
-below; a gallery stage keeps its separate title and rail, while split returns to normal flow before a desktop
-sidebar can make its tracks unreadable. Explicit sections own real labelled
+layer order. Split and stage arrange only the opening: the blocks right after the title that read well in
+half the track, with at most one picture. Split sets that run (lead, paragraphs, lists, quotes, callouts,
+decisions, glossary entries, copyable prose, assets, modal and popover triggers, actions) beside its title;
+a stage sets its lead, paragraphs, and actions beside its opening picture under a full-width title, and a
+gallery stage keeps its title beside the rail. Every later block, including code, tables, cards,
+visualizations, and further pictures, spans the whole section track, so put the short opening first and the
+detail after it. `align="center"` centers only the full-width heading, lead, and actions while the body keeps the
+start edge, and split returns to normal flow before a desktop sidebar can make its
+tracks unreadable. Explicit sections own real labelled
 section/H2 markup and primary navigation, while heading-only sources use H2 primary links. H3 and component
 anchors remain owned targets without becoming primary links. The packaged English/Russian `layout-mixed`
 source is the complete grammar catalog; locate it with `agentic-report examples --json`. The bilingual
@@ -816,9 +1142,15 @@ section child. Direct-section authorship keeps the definition beside its explana
 moves the complete already-targeted definition into the single appendix without leaving a placeholder.
 
 `actions` accepts only direct labelled `::action[...]` children. Its `placement` is `auto`, `edge`, `inline`,
-or `bottom`; `auto` resolves to edge alignment on desktop and a compact bottom group on mobile. Bottom
+or `bottom`; `auto` resolves to edge alignment on desktop and a compact bottom group on mobile. On a
+`landing` page, an `auto` or `inline` group written directly under the page heading or its first paragraph
+shares the opening's axis: it is centred while the heading is centred and starts where the heading starts on
+narrow screens. A theme with `chrome.landing: ledger` (such as `blueprint`) keeps its opening at the start,
+so its groups keep the ordinary placement. An explicit `edge` under a centred opening ends the group at the end of the opening's reading
+measure, level with its lead paragraph, rather than at the far edge of the column. Bottom
 placement remains at the authored position in normal flow and never becomes a sticky/fixed overlay. Every action requires `href`; valid targets
-are same-page anchors, relative paths, HTTP(S), and `mailto:`. `javascript:`, `data:`, `file:`, absolute
+are same-page anchors, relative paths, HTTP(S), `mailto:`, `tel:` (a phone number such as
+`tel:+1-201-555-0123`), and `sms:` (a number with an optional `?body=`). `javascript:`, `data:`, `file:`, absolute
 local paths, and protocol-relative URLs fail validation. `kind` is `primary`, `secondary`, or `quiet` and
 changes package styling only. `effect` is `none` or `magnetic`; magnetic is primary-only and moves by at most
 9 pixels for a fine pointer in normal motion. The output remains an ordinary anchor with a 16-pixel package
@@ -837,7 +1169,8 @@ scan arbitrary prose or replace ordinary links.
 `asset.src`, `video.src`, `video.poster`, and `font.src` must resolve to existing files under the canonical
 source root. A video is a `.webm`, `.mp4`, `.m4v`, or `.ogv` file (Playwright `recordVideo` writes WebM) and is
 drawn as a muted, looping `<video>` with controls; `![Alt](recording.webm)` gives the same player in place of the
-image. The player starts while on screen and waits for the reader under reduced motion; embedded video counts
+image. The player starts while on screen and waits for the reader under reduced motion. A section's `media-fit`,
+`media-aspect`, and `focal` frame the player as they frame an image. Embedded video counts
 toward `output.maxInlineBytes`, so long recordings belong in `--format directory`. The first font
 directive becomes the document font; later directives register additional faces. The text form uses its
 authored label; the leaf asset form receives `Download <filename>` so it remains visible and accessible.
@@ -856,26 +1189,17 @@ directive nesting fails rather than leaving an empty authored container. A code 
 case-sensitive canonical text. Keys are bounded and unique; every requested term must occur within one line,
 and first ranges cannot overlap. Only the first occurrence per key becomes a glossary control. Shiki colors,
 literal code bytes, keyboard/touch behavior, full-definition links and copied code text are preserved; the
-compiler never executes the block. Initial states are declarative, and all interaction code belongs to the
-package.
+compiler never executes the block. Every code block carries a localized **Copy** button in its own band
+above the first line, so no line of code sits under the button, and wide code scrolls inside its block.
+Initial states are declarative, and all interaction code belongs to the package.
 
 ### Interaction behavior and limits
 
-| Primitive           | Semantics and initial state                                                                                                                                                                                                                                                                              | Reader routes                                                                                                                                                                                                                                                                                                                          |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `term` / `glossary` | A prose or first code term button controls a closed canonical-title dialog; the full definition remains visible inline or in the reference appendix. Every open explanation is portalled outside its section or local scroller, anchored beside the trigger, and clamped within the visual viewport.     | Hover, focus, click, or tap opens; `Escape` closes, restores the panel to its semantic source position, and returns focus; click **View full definition** to navigate to the complete Markdown entry. Clicking outside closes.                                                                                                         |
-| `disclosure`        | Native `details`/`summary`; `open="false"` is the default.                                                                                                                                                                                                                                               | Activate the summary with click/tap or native `Enter`/`Space`.                                                                                                                                                                                                                                                                         |
-| `tabs` / `tab`      | ARIA `tablist`/`tab`/`tabpanel`; first direct tab selected. A tab requires `label`; other directive children are rejected.                                                                                                                                                                               | Click/tap selects. `ArrowLeft`/`ArrowRight` wrap, while `Home`/`End` select the first/last tab.                                                                                                                                                                                                                                        |
-| `modal`             | Closed native `dialog` with a labelled trigger.                                                                                                                                                                                                                                                          | Trigger opens; `Escape` or Close closes and returns focus to the opener. Backdrop click is not a supported dismissal route.                                                                                                                                                                                                            |
-| `popover`           | Closed non-modal labelled dialog. Its open panel is portalled outside clipping sections, follows its trigger during document or nested scrolling, and flips/clamps within the visual viewport.                                                                                                           | Click/tap or native button activation toggles; `Escape` closes, restores the panel to its source position, and returns trigger focus; outside click closes.                                                                                                                                                                            |
-| `filter`            | Labelled search input and polite live count; empty initially.                                                                                                                                                                                                                                            | Typing filters case-insensitively. Only list items in a direct authored `ul`/`ol` are targets.                                                                                                                                                                                                                                         |
-| `toggle`            | ARIA switch; `default="off"` hides its panel.                                                                                                                                                                                                                                                            | Click/tap or native `Enter`/`Space` toggles checked state and visibility.                                                                                                                                                                                                                                                              |
-| `demo`              | Numeric output starts at `start="0"`.                                                                                                                                                                                                                                                                    | Increment button adds `step="1"` by default; author code is never executed.                                                                                                                                                                                                                                                            |
-| Review Workspace    | With `review: true`, valid text selection exposes **Create note** and an anchored full-thread popover. Desktop flips/shifts/clamps the surface; mobile uses a bounded visual-viewport bottom surface. Saved ranges remain highlighted; **Review** opens only a non-reflowing list/import/export overlay. | `Shift` release focuses **Create note**; focusable range markers reopen a saved thread and prefer a fully separate above/below position so text tap remains independent. Pointer/touch selects text, while hover/tap exposes **View thread**. Window and visual-viewport changes keep controls visible; invalid ranges create no note. |
-| `response`          | Native typed controls plus deterministic copy/file export and validated local import. Authored defaults remain explicitly unanswered until reader input.                                                                                                                                                 | Native fields cover all values; bucket select and order buttons provide complete keyboard routes, with bucket drag-and-drop as an additional pointer route.                                                                                                                                                                            |
-
-Each instance owns its state. Tabs, overlays, filters, switches, demos, Review Workspace, and response forms
-do not change another instance.
+Every interactive primitive — term and glossary, disclosure, tabs, modal, popover, filter, toggle, demo,
+copyable, Review Workspace, and response — has its initial state, keyboard route and pointer route in the
+[interactive reader contract](product/source-contract.md#interactive-reader-contract). Initial states are
+declarative; authors never write interaction code. Each instance owns its state, so two tabs, overlays,
+filters, switches, demos, Review Workspaces, or response forms never change each other.
 
 ### Page navigation and bounded motion
 
@@ -886,20 +1210,73 @@ and collapse per document session. Mobile contents use a native modal dialog: Cl
 focus, Tab stays contained, Escape/backdrop/Close return to the trigger, and a chosen link closes the dialog
 and focuses its section heading. Do not add `menu` keyboard behavior or persist collapse state.
 
-Set root metadata `scrollProgress: true` only when decorative reading progress is useful. On a section,
-choose `transition="reveal|stagger"`, `scene="progress|sticky"`, `interaction="depth|tilt"`, or
-`choreography="cascade"`; each defaults to `none` unless a recipe supplies it. Legacy `reveal="true"` remains supported.
-Reveal is a 420-millisecond, 24-pixel maximum entrance applied to section contents so anchor geometry remains
-stable. Reveal starts on viewport intersection even for a section taller than the screen. Stagger affects at
-most 12 direct children in 90-millisecond steps. Progress drives normalized media movement and bounded
-mesh/glow surface movement; sticky media returns to normal flow at 48rem and below. Cascade orders at most 12 semantic
-cards, chart points, or timeline items in 75-millisecond
-steps. Fine-pointer depth is bounded to 24 pixels, tilt to 4.5 degrees, and primary-action magnetic movement
-to 9 pixels; updates are visibility-bound and animation-frame-coalesced. Reduced motion leaves all content
-visible and untransformed, coarse pointers receive no pointer effects, and an unavailable or non-callable
-`IntersectionObserver` leaves observer-dependent motion/pointer behavior inert, entrance/choreography content
-visible, and navigation on its bounded geometry fallback. Authors cannot supply timing,
-coordinates, easing, JavaScript, or custom runtime code.
+Set root metadata `progress: chapters` for a long page whose chapters the reader should see passing,
+`progress: nodes` for the same chapters as a row of nodes (passed, current, ahead), or `progress: page` when
+decorative reading progress is useful. Set `motion: none | restrained | expressive` from the brief: the build
+refuses a technique above the level where it is written (`MOTION_LEVEL_EXCEEDED`), `none` stills the page
+like reduced motion, and below `expressive` extension effects draw still. `layout: screens` moves one screen
+per wheel, trackpad or touch gesture and per key, with a screen switcher at the edge, the current screen in
+the address and `window.agenticScreens.check()` naming a screen cut at the fold; `snapshot` photographs
+every screen and every scrub step and warns `SNAPSHOT_STOP_CUT`. Continuous motion gets a **Pause motion**
+button in the flow, remembered between visits and pressed from the start under reduced motion. Tabs and
+diagram views switch through a View Transition where the browser has one. On a section, choose a `transition`, `scene`,
+`interaction`, or `choreography` role; each defaults to `none` unless a recipe supplies it, and legacy
+`reveal="true"` remains supported. The package owns every duration, distance and item cap of these roles,
+their reduced-motion and coarse-pointer behavior, and the fallback without `IntersectionObserver`; the
+numbers are in the [source contract](product/source-contract.md#page-navigation-and-motion). Authors cannot
+supply timing, coordinates, easing, JavaScript, or custom runtime code.
+
+## Extend the vocabulary for one page
+
+When a design needs something the built-in directives do not give, declare an extension instead of
+changing the core. List its manifest in the page metadata:
+
+```yaml
+extensions:
+  - extensions/metric-card/extension.yaml
+```
+
+- `kind: block` — a Markdown template of existing directives with `{{attribute}}` and `{{content}}`;
+  values are escaped, the expansion is checked like authored Markdown. Optional `styles` — a `.css` file
+  from theme tokens only, nested inside the block's element and emitted only where the block is used;
+  literals are refused with `EXTENSION_STYLES_INVALID`.
+- `kind: provider` — a local program (`command`) that receives the directive as JSON on stdin — with
+  `data`, the page's declared data files parsed by name — and writes Markdown to stdout at build time.
+- `kind: island` — `:::island{name="…"}` with a Markdown static equivalent; the application runs in a
+  sandboxed frame without network and receives theme tokens, scheme, language and the page clock.
+- `kind: effect` — a bundled script that decorates built-in directives through its target attributes.
+
+Give each extension two unlike example pages; without them the build warns `EXTENSION_EXAMPLES_MISSING`.
+
+An effect module is `export default defineEffect({ mount(ctx) { … return { at(t, progress) {} } } })` with
+`defineEffect` and its types imported from `agentic-report/effect`; the build bundles it with its imports
+into one script (refused above `budgetBytes` with `EXTENSION_EFFECT_OVER_BUDGET`). Check an effect with
+`agentic-report effect-check <extension.yaml> --out <directory>` — or the package's own with
+`--built-in threads` — which builds both examples, opens them in Chromium (Playwright beside the package,
+as for `snapshot`) and prints `N of M checks passed`: the declaration, the reduced-motion final state, the
+page clock, a 50 ms budget per effect call at 4× CPU slowdown, colours from theme tokens, no decoration on
+text, four widths, content edits, states in every render mode, print and two unlike examples. By default it
+writes one `check` NDJSON record per check and a result record; a failed check exits with code `1`. The
+context the effect receives is described in [the architecture](ARCHITECTURE.md#level-2--effects-and-the-effect-engine).
+`inspect` lists the extensions a page uses and `build` reports their uses and bundled bytes. The manifest
+format is in the source contract, [Extensions](product/source-contract.md#extensions); how each level
+is built and isolated is in [the architecture](ARCHITECTURE.md#extensions).
+
+Start from a reference extension rather than a blank folder. The package ships them in `extensions/`, and
+`agentic-report examples` lists each one after the example pages with its `name`, `kind`, `description` and
+the installed paths of its `manifest`, `readme` and `examples`. Copy the folder beside your page and declare
+its manifest:
+
+| Extension                                                    | Level                                 | What it shows                                                    |
+| ------------------------------------------------------------ | ------------------------------------- | ---------------------------------------------------------------- |
+| [`key-figure`](../extensions/key-figure/README.md)           | block                                 | a figure that cannot lose its date and source                    |
+| [`product-theatre`](../extensions/product-theatre/README.md) | block and provider (`theatre-script`) | a product run from a JSON scenario, replayed as a steps scene    |
+| [`wall-thread`](../extensions/wall-thread/README.md)         | effect                                | a thread drawn from section to section in all three render modes |
+| [`loom`](../extensions/loom/README.md)                       | effect                                | cloth woven beside a section as the reader goes through it       |
+| [`slo-budget`](../extensions/slo-budget/README.md)           | island                                | an error-budget calculator with a static body for print          |
+
+When to extend at all and how to choose the level is in the skill's
+[extensions reference](../skills/agentic-report/references/extensions.md).
 
 ## Build for an agent
 
@@ -961,6 +1338,32 @@ Exit code `3` means an unexpected internal failure occurred.
   trailing `/` (`SITEMAP_PATH_MISMATCH`) — an agentic-report page has no URL
   (`SITEMAP_PAGE_WITHOUT_URL`), the tree has no agentic-report page (`SITEMAP_NO_PAGES`), contains a symbolic
   link or special file (`SITEMAP_SPECIAL_FILE`), or the path is not a directory (`SITEMAP_DIRECTORY_INVALID`).
+- Look at the page before handing it over: `agentic-report snapshot <input> --out <directory>` builds it
+  and photographs it at 390, 768 and 1440 pixels, in the light and dark schemes, with normal and reduced
+  motion — the first screen and the full page of each — and writes `contact-sheet.html` and
+  `contact-sheet.png`. Every shot is taken on the page clock stopped after all motion has finished, so
+  repeated runs on an unchanged page give identical frames. `--widths`, `--schemes` and `--motion` take
+  comma-separated subsets. The destination
+  must be absent or empty (`SNAPSHOT_DESTINATION_EXISTS`). The package ships no browser: run the command
+  with Playwright beside it, `npx --yes -p agentic-report -p playwright@<version> agentic-report snapshot …`,
+  after `npx --yes playwright@<version> install chromium` once; without it the command fails with
+  `SNAPSHOT_BROWSER_MISSING` and those commands. A page that pins `scheme` shows that scheme in every shot.
+- `agentic-report snapshot <input> --out <directory> --measure` measures instead of photographing, at 320,
+  360, 390, 768, 1024 and 1440 pixels unless `--widths` says otherwise, on the same stopped page clock. It
+  writes only `page.html` and prints one NDJSON record `{"type":"measure", width, scheme, motion, …}` per
+  combination, then the result with every `measurements` entry (`--human` prints a table): the pixels the
+  page scrolls sideways (`horizontalOverflow`) and the outermost elements beyond the window
+  (`overflowing`); `smallText`, text under 11 px on screen, SVG text at its on-screen size; `lowContrast`,
+  text below 4.5:1 (3:1 for large text) against its composited background with the `opacity` of its
+  ancestors applied, and `unmeasuredContrast`, text over an image or gradient; `coveredText`, text lines
+  under a fixed or sticky element at some scroll position (a full-width top bar excepted); `emptyBands`
+  at least half a window high (not for `screens` and `slides`); `clippedHeadings`; `firstScreen` — the
+  title and a primary action in the first window, `actionOnPage` (whether the page has a primary action at
+  all) and `mainSceneShare`, the share of that window taken by
+  its largest picture, clip, figure, code or scene; `stops` with `fits`; `pageErrors`, `placeholders`
+  (lorem ipsum, TODO, TBD, FIXME outside code) and `failedFonts`; and `defects`, their total, which also
+  counts a title outside the first window and a primary action the page has but not in it. Findings name
+  elements by tag, id and classes, never by their text.
 - Add `--share` when the artifact leaves the source workstation. Source-link labels remain readable
   non-links derived as path-free filename/line from the validated helper, with `source:line` for an unsafe
   terminal. An already matching short label remains exact; directory-bearing and free-form labels are
@@ -968,9 +1371,10 @@ Exit code `3` means an unexpected internal failure occurred.
   exact neutralized count. The default build preserves every authored label and working editor link.
 
 All source assets must be local and below the source directory after symlinks are resolved. Remote URLs,
-escaping paths, executable templates, author scripts, and raw HTML are outside the current contract.
+escaping paths, executable templates and raw HTML are outside the contract; author code enters only
+through the page's [extensions](#extend-the-vocabulary-for-one-page).
 
-The package has no plugin API. A proposed new primitive or authoring surface must first satisfy the closed
+A proposed new primitive of the core itself must first satisfy the closed
 [`generated extension gate`](generated/extension-proposal.schema.json); the copyable
 [`proposal template`](generated/extension-proposal.template.json) fixes the non-negotiable trust boundary
 to no author code, callbacks, evaluation, dynamic imports or network access, source-root confinement,
@@ -982,13 +1386,10 @@ through `getExtensionProposalTemplate()`.
 On narrow screens the package runtime controls the responsive table of contents. The stylesheet provides
 one visible-focus system and shared typography, spacing, color, width, density, and surface tokens for
 headings, navigation, callouts, decisions, cards, steps, charts, diagrams, timelines, GFM tables, code,
-images, and attachments. Output paths that resolve to, or share a filesystem identity with, an entry,
-manifest, partial, or local asset fail with `OUTPUT_COLLIDES_WITH_SOURCE`. Both output formats publish from
-private sibling staging paths. Injected partial-write and rename failures preserve the previous output,
-remove compiler-owned staging, and permit an immediate retry. The proportionate filesystem contract does
-not attempt to defeat a hostile concurrent path swap or process/OS crash.
-`output.maxInlineBytes` emits a warning from the exact serialized inline CSS, package runtime, and
-image/download data-URL occurrence total. Font data URLs are counted once through the stylesheet.
+images, and attachments. An output path that resolves to, or shares a filesystem identity with, an entry,
+manifest, partial, or local asset fails with `OUTPUT_COLLIDES_WITH_SOURCE`. How both formats publish, and
+how `output.maxInlineBytes` refuses a single file that is too large, is described under «Output behavior» in
+the [source contract](product/source-contract.md#output-behavior).
 
 Use standard CommonMark angle brackets around an asset destination containing spaces, for example
 `![Architecture](<assets/схема системы.png>)`.

@@ -1,3 +1,4 @@
+import { cp } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -6,6 +7,21 @@ import { defineConfig } from 'vite';
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  plugins: [
+    {
+      // Встроенные шрифты лежат в пакете рядом со стилями: сборка страницы берёт их отсюда.
+      name: 'agentic-report-fonts',
+      async closeBundle() {
+        await cp(
+          path.resolve(projectRoot, 'src/fonts'),
+          path.resolve(projectRoot, 'dist/browser/fonts'),
+          {
+            recursive: true,
+          },
+        );
+      },
+    },
+  ],
   build: {
     lib: {
       entry: path.resolve(projectRoot, 'src/browser/runtime.ts'),

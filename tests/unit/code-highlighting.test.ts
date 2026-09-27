@@ -17,7 +17,7 @@ describe('code highlighting', () => {
   it('renders every fence exactly as the full grammar set did while loading only what the fences need', async () => {
     const workspace = await createTestWorkspace('code-highlighting');
     workspaces.push(workspace);
-    // Эталон снят опубликованной сборкой 0.16.0, которая грузила все встроенные грамматики Shiki.
+    // Эталон снят сборкой, которая грузила все встроенные грамматики Shiki (темой css-variables).
     // Подсветка по требованию обязана дать те же байты: `typescript` с `terms`, `js` (псевдоним),
     // `bash`; `markdown` с frontmatter и вложенным блоком — ему нужны лениво встроенные языки;
     // `typescript` с теговыми шаблонами — ему нужны инъекции `es-tag-*`; `jinja-html`, имя

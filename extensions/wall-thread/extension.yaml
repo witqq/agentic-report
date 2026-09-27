@@ -1,0 +1,14 @@
+kind: effect
+name: wall-thread
+description: A braided thread that runs down the page from marked section to marked section, hangs on nails beside their headings, sags between them and winds into balls in the empty places, drawn as far as the reader has read.
+staticEquivalent: The sections and cards as they are, in order; the thread only joins them, so print and readers without scripts get the same text without it.
+module: effect.mjs
+targets:
+  - directive: section
+    attribute: thread
+    values: [start, pass, tangle, end]
+  - directive: card
+    attribute: thread
+    values: [start, pass, tangle, end]
+budgetBytes: 20000
+examples: [example-shipment.md, example-studio.md]

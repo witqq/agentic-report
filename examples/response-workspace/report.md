@@ -5,9 +5,9 @@ description: A fictional local response form covering every structured answer ki
 language: en
 localizations:
   ru: report.ru.md
-theme: system
 layout: document
-preset: material
+theme: calm-paper
+scheme: system
 ---
 
 # Release decision response workspace

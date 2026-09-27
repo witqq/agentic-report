@@ -5,10 +5,10 @@ description: A console-led portfolio for systems work, decisions, and verified o
 language: en
 localizations:
   ru: report.ru.md
-theme: dark
 layout: landing
-preset: terminal
-scrollProgress: true
+theme: terminal
+scheme: dark
+progress: chapters
 ---
 
 # Ship signal, not ceremony
@@ -24,25 +24,15 @@ with verified project facts before publishing.
 ::action[Open the handoff]{href="#handoff" kind="quiet"}
 ::::
 
-::::::section{title="Operator profile" id="profile" nav="Profile" recipe="hero"}
+::::::section{title="Operator profile" id="profile" place="opening" nav="Profile" recipe="hero"}
 :::lead
 I turn ambiguous infrastructure work into small, observable changes. Each entry below exposes the command,
 the boundary, and the result a reviewer can reproduce.
 :::
 
-![A green constellation of connected system nodes on a black field](assets/constellation.jpg)
+![A code review built with agentic-report: the diff of src/webhooks/handler.ts, 7 lines added and 2 removed](assets/review-diff.jpg)
 
-::::cards
-:::card{title="Runtime repair" href="#log"}
-Recovered a stalled worker pool while preserving queued jobs and the public protocol.
-:::
-:::card{title="Release boundary" href="#handoff"}
-Separated local verification from credentialed publication and deployment.
-:::
-:::card{title="Plain status"}
-Available for focused systems investigations and implementation handoffs.
-:::
-::::
+_A review page I hand over: the diff view of agentic-report's `code-review` example, built and photographed from disk._
 ::::::
 
 ::::::section{title="Selected work" id="work" nav="Work" recipe="rail"}
@@ -79,6 +69,9 @@ Verified normal completion, cancellation, and process shutdown through the publi
 :::event{date="10:31" title="Hand off" kind="warning"}
 Recorded the remaining external release action without claiming it happened.
 :::
+::legend-item{event="accent" label="Code change"}
+::legend-item{event="success" label="Verified"}
+::legend-item{event="warning" label="Pending action"}
 ::::
 ::::::
 

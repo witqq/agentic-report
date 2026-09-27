@@ -1,0 +1,8 @@
+{
+  "id": 96,
+  "status": "done",
+  "blocks": [
+    { "title": "План", "items": 3 },
+    { "title": "Ревью", "items": 21 }
+  ]
+}

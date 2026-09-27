@@ -29,7 +29,8 @@ describe('localized output', () => {
     });
 
     expect(single.embeddedAssets).toBe(4);
-    expect(firstResult.externalAssets).toBe(3);
+    // Картинка, стили, runtime и шесть файлов шрифтов пары темы по умолчанию (латиница и кириллица).
+    expect(firstResult.externalAssets).toBe(9);
     expect({ ...secondResult, outputPath: '<output>' }).toEqual({
       ...firstResult,
       outputPath: '<output>',
@@ -73,13 +74,13 @@ describe('localized output', () => {
     const localized = await readFile(localizedOutput, 'utf8');
     expect(localized).toContain('font-family:"Reader--agentic-en"');
     expect(localized).toContain(
-      '[data-localized-page-variant="en"]{--agentic-font:"Reader--agentic-en"}',
+      '[data-localized-page-variant="en"]{--font-author-body:"Reader--agentic-en"}',
     );
     expect(localized).toContain('font-family:"Reader--agentic-ru"');
     expect(localized).toContain(
-      '[data-localized-page-variant="ru"]{--agentic-font:"Reader--agentic-ru"}',
+      '[data-localized-page-variant="ru"]{--font-author-body:"Reader--agentic-ru"}',
     );
-    expect(localized).not.toContain(':root{--agentic-font:"Reader"}');
+    expect(localized).not.toContain(':root{--font-author-body:"Reader"}');
 
     await writeFile(
       path.join(workspace, 'report.md'),
@@ -88,7 +89,7 @@ describe('localized output', () => {
     const singleOutput = path.join(workspace, 'single.html');
     await buildReport({ input: workspace, output: singleOutput });
     await expect(readFile(singleOutput, 'utf8')).resolves.toContain(
-      ':root{--agentic-font:"Reader"}',
+      ':root{--font-author-body:"Reader"}',
     );
   });
 });

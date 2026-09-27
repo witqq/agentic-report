@@ -1,7 +1,19 @@
 import type { Element, ElementContent } from 'hast';
 
-import { DIAGRAM_CONTRACT, type DiagramEdgeKindChoice } from '../authoring/registry.js';
+import { DIAGRAM_CONTRACT, type DiagramEdgeKindChoice } from '../authoring/directive-contract.js';
 import type { PackageStrings } from '../localization.js';
+import {
+  countText,
+  DIAGRAM_MESSAGES,
+  type DiagramMessages,
+  NODE_STATUSES,
+  type NodeStatus,
+  nodeStatusOf,
+  SELF_LOOP_REACH,
+  selfLoop,
+  statusBadge,
+} from './diagram-process.js';
+import { renderZoomScene } from './diagram-zoom.js';
 import {
   type DescribedEdge,
   type DescribedNode,
@@ -24,6 +36,7 @@ import {
   edgeLabel,
   element,
   GROUP_FONT_SIZE,
+  GROUP_FONT_WEIGHT,
   GROUP_TITLE_LINE_HEIGHT,
   layoutEdgeLabel,
   layoutNodeBox,
@@ -34,7 +47,6 @@ import {
   wrapMeasured,
 } from './diagram-svg.js';
 import {
-  type FlowLayout,
   type FlowViewKind,
   type FlowViews,
   type LayoutPoint,
@@ -44,6 +56,48 @@ import {
 const CHART_WIDTH = 720;
 const CHART_HEIGHT = 360;
 const PLOT = { left: 72, top: 34, width: 600, height: 242 } as const;
+
+/**
+ * Геометрия декартова графика. Широкая — для страницы; узкая — для телефона: её показывают вместо
+ * широкой на узком экране, чтобы график помещался в колонку, а подписи оставались читаемыми, а не
+ * уезжали за край и не мельчали до нечитаемого.
+ */
+interface ChartFrame {
+  readonly width: number;
+  readonly height: number;
+  readonly plot: {
+    readonly left: number;
+    readonly top: number;
+    readonly width: number;
+    readonly height: number;
+  };
+  readonly axisTitleY: number;
+  readonly labelLength: number;
+  /** Точки узкого варианта не несут `semantic-point`: их число и порядок принадлежат широкому. */
+  readonly semanticPoints: boolean;
+}
+const WIDE_CHART: ChartFrame = {
+  width: CHART_WIDTH,
+  height: CHART_HEIGHT,
+  plot: PLOT,
+  axisTitleY: 348,
+  labelLength: 14,
+  semanticPoints: true,
+};
+const NARROW_CHART: ChartFrame = {
+  width: 400,
+  height: 340,
+  plot: { left: 58, top: 24, width: 326, height: 222 },
+  axisTitleY: 330,
+  labelLength: 10,
+  semanticPoints: false,
+};
+/** Узкий вариант круговой диаграммы — та же картинка, обрезанная по кругу. */
+const NARROW_PIE_VIEWBOX = '146 44 268 268';
+/** Центр круга: доли растут из него, когда график досчитывает до значений. */
+const PIE_CENTRE_X = 280;
+const PIE_CENTRE_Y = 178;
+const PIE_CENTRE = `${PIE_CENTRE_X} ${PIE_CENTRE_Y}`;
 const PALETTE_SIZE = 6;
 const SEQUENCE_MESSAGE_STEP = 62;
 const SEQUENCE_SELF_LOOP_WIDTH = 34;
@@ -94,7 +148,7 @@ interface FlowView {
   readonly width: number;
   readonly height: number;
   readonly groups: readonly DiagramGroup[];
-  readonly nodes: readonly DiagramNode[];
+  readonly nodes: readonly (DiagramNode & { readonly status?: NodeStatus })[];
   readonly edges: readonly Element[];
   readonly labels: readonly Element[];
 }
@@ -121,6 +175,7 @@ interface FlowBox {
   readonly id: string;
   readonly label: string;
   readonly kind: string;
+  readonly status?: NodeStatus;
   readonly lines: readonly string[];
   readonly detailLines: readonly string[];
   readonly width: number;
@@ -132,6 +187,14 @@ interface FlowBox {
 
 interface FlowEdgeRecord extends DiagramEdge {
   readonly route: string;
+  readonly id?: string;
+  /** Сколько раз связь пройдена: «×N» на схеме. */
+  readonly count?: number;
+  /**
+   * Номер связи в раскладке. У петли (связь узла с самим собой) его нет: раскладка по слоям петель не
+   * знает, петля рисуется на углу своего узла.
+   */
+  readonly layoutIndex?: number;
 }
 
 /**
@@ -143,6 +206,23 @@ export interface PreparedFlow {
   readonly boxes: readonly FlowBox[];
   readonly edges: readonly FlowEdgeRecord[];
   readonly views: FlowViews;
+  /** Вложенный поток одного узла, в который летит камера. */
+  readonly zoom?: {
+    readonly node: string;
+    readonly title: string;
+    readonly flow: PreparedFlow;
+  };
+}
+
+/** Подпись связи на схеме: слова автора и кратность «×N». */
+function shownEdgeLabel(edge: {
+  readonly label?: string;
+  readonly count?: number;
+}): string | undefined {
+  if (edge.count === undefined) return edge.label;
+  return edge.label === undefined
+    ? countText(edge.count)
+    : `${edge.label} ${countText(edge.count)}`;
 }
 
 /** Читает свойство, не забирая его: подготовка идёт до обогащения, которое заберёт его само. */
@@ -162,12 +242,41 @@ export async function prepareVisualization(
   if (node.properties.dataSemantic !== 'diagram' || peek(node, 'dataType') === 'sequence') {
     return undefined;
   }
-  const scale = SPACING_SCALE[peek(node, 'dataSpacing') ?? 'comfortable'] ?? 1;
-  const layout = peek(node, 'dataLayout') ?? 'auto';
-  const direction = peek(node, 'dataDirection') ?? 'auto';
+  const flow = await prepareFlow(node, node, strings);
+  const zoom = semanticChildren(node, 'zoom')[0];
+  if (zoom === undefined) return flow;
+  return {
+    ...flow,
+    zoom: {
+      node: peek(zoom, 'dataNode') ?? '',
+      title: peek(zoom, 'dataDirectiveTitle') ?? '',
+      flow: await prepareFlow(zoom, node, strings),
+    },
+  };
+}
+
+/**
+ * Измеряет и раскладывает поток из прямых потомков `parts`: самой схемы или её пролёта. Отступы и
+ * вид по умолчанию берутся у схемы `settings`.
+ */
+async function prepareFlow(
+  parts: Element,
+  settings: Element,
+  strings: PackageStrings,
+): Promise<PreparedFlow> {
+  const node = parts;
+  const scale = SPACING_SCALE[peek(settings, 'dataSpacing') ?? 'comfortable'] ?? 1;
+  const layout = parts === settings ? (peek(settings, 'dataLayout') ?? 'auto') : 'right';
+  const direction = parts === settings ? (peek(settings, 'dataDirection') ?? 'auto') : 'auto';
   const groups = semanticChildren(node, 'group').map((child): FlowGroupRecord => {
     const label = peek(child, 'dataLabel') ?? '';
-    const wrapped = wrapMeasured(label, GROUP_TITLE_MAX_WIDTH, 2, GROUP_FONT_SIZE, 780);
+    const wrapped = wrapMeasured(
+      label,
+      GROUP_TITLE_MAX_WIDTH,
+      2,
+      GROUP_FONT_SIZE,
+      GROUP_FONT_WEIGHT,
+    );
     return {
       id: peek(child, 'dataId') ?? '',
       label,
@@ -181,24 +290,34 @@ export async function prepareVisualization(
     const detail = peek(child, 'dataDetail');
     const group = peek(child, 'dataGroup');
     const row = peek(child, 'dataRow');
+    const status = nodeStatusOf(peek(child, 'dataStatus'));
     return {
       id: peek(child, 'dataId') ?? `node-${index + 1}`,
       label,
       kind: peek(child, 'dataKind') ?? 'neutral',
+      ...(status === undefined ? {} : { status }),
       ...layoutNodeBox(label, detail, FLOW_NODE_MAX_WIDTH),
       ...(detail === undefined ? {} : { detail }),
       ...(group === undefined ? {} : { group }),
       ...(row === undefined ? {} : { row: Number.parseInt(row, 10) }),
     };
   });
+  let laidOut = 0;
   const edges = semanticChildren(node, 'edge').map((edge): FlowEdgeRecord => {
     const label = peek(edge, 'dataLabel');
+    const id = peek(edge, 'dataId');
+    const count = peek(edge, 'dataCount');
+    const from = peek(edge, 'dataFrom') ?? '';
+    const to = peek(edge, 'dataTo') ?? '';
     return {
-      from: peek(edge, 'dataFrom') ?? '',
-      to: peek(edge, 'dataTo') ?? '',
+      from,
+      to,
       route: peek(edge, 'dataRoute') ?? 'auto',
       kind: edgeKindOf(peek(edge, 'dataKind')),
       ...(label === undefined ? {} : { label }),
+      ...(id === undefined ? {} : { id }),
+      ...(count === undefined ? {} : { count: Number.parseInt(count, 10) }),
+      ...(from === to ? {} : { layoutIndex: laidOut++ }),
     };
   });
   const layered =
@@ -220,9 +339,10 @@ export async function prepareVisualization(
       titleWidth: group.titleWidth,
       titleHeight: group.titleHeight,
     })),
-    edges: edges.map((edge) => {
-      const label =
-        edge.label === undefined ? undefined : layoutEdgeLabel(edge.label, FLOW_LABEL_WIDTH);
+    edges: edges.flatMap((edge) => {
+      if (edge.layoutIndex === undefined) return [];
+      const shown = shownEdgeLabel(edge);
+      const label = shown === undefined ? undefined : layoutEdgeLabel(shown, FLOW_LABEL_WIDTH);
       return {
         from: edge.from,
         to: edge.to,
@@ -249,13 +369,14 @@ export function enhanceVisualization(
   allocateId: (base: string) => string,
   strings: PackageStrings,
   prepared?: PreparedFlow,
+  messages: DiagramMessages = DIAGRAM_MESSAGES.en,
 ): boolean {
   if (semantic === 'chart') {
     enhanceChart(node, instance, allocateId, strings);
     return true;
   }
   if (semantic === 'diagram') {
-    enhanceDiagram(node, instance, allocateId, strings, prepared);
+    enhanceDiagram(node, instance, allocateId, strings, prepared, messages);
     return true;
   }
   if (semantic === 'timeline') {
@@ -291,11 +412,18 @@ function enhanceChart(
     element('desc', { id: descriptionId }, [text(accessibleDescription)]),
     ...(type === 'pie'
       ? renderPie(series[0]?.points ?? [], strings.formatNumber)
-      : renderCartesian(type, series, xLabel, yLabel, strings.formatNumber)),
+      : renderCartesian(type, series, xLabel, yLabel, strings.formatNumber, WIDE_CHART)),
   ];
+  const narrowChildren: readonly ElementContent[] =
+    type === 'pie'
+      ? renderPie(series[0]?.points ?? [], strings.formatNumber, false)
+      : renderCartesian(type, series, xLabel, yLabel, strings.formatNumber, NARROW_CHART);
+  // Рост от нуля ведёт сценарий по часам страницы; разметка держит конечные значения.
+  const countUp = take(node, 'dataCountUp') === 'true';
   node.tagName = 'figure';
   node.properties.dataVisualization = 'chart';
   node.properties.dataChartType = type;
+  if (countUp) node.properties.dataCountUp = '';
   node.children = [
     caption(title, description),
     element('div', { className: ['visualization-frame'] }, [
@@ -306,9 +434,29 @@ function enhanceChart(
           role: 'img',
           ariaLabelledBy: [titleId],
           ariaDescribedBy: [descriptionId],
-          className: ['visualization-svg', `visualization-chart-${type}`],
+          className: ['visualization-svg', 'visualization-svg-wide', `visualization-chart-${type}`],
+          ...(type === 'pie' ? { dataPieCentre: PIE_CENTRE } : {}),
         },
         svgChildren,
+      ),
+      element(
+        'svg',
+        {
+          viewBox:
+            type === 'pie'
+              ? NARROW_PIE_VIEWBOX
+              : `0 0 ${NARROW_CHART.width} ${NARROW_CHART.height}`,
+          role: 'img',
+          ariaLabelledBy: [titleId],
+          ariaDescribedBy: [descriptionId],
+          className: [
+            'visualization-svg',
+            'visualization-svg-narrow',
+            `visualization-chart-${type}`,
+          ],
+          ...(type === 'pie' ? { dataPieCentre: PIE_CENTRE } : {}),
+        },
+        [...narrowChildren],
       ),
     ]),
     renderLegend(series, type, strings),
@@ -334,7 +482,9 @@ function renderCartesian(
   xLabel: string | undefined,
   yLabel: string | undefined,
   formatNumber: (value: number) => string,
+  frame: ChartFrame,
 ): readonly ElementContent[] {
+  const PLOT = frame.plot;
   const values = series.flatMap((item) => item.points.map((point) => point.value));
   const step = niceStep((Math.max(0, ...values) - Math.min(0, ...values)) / AXIS_TICKS);
   const minimum = Math.floor(Math.min(0, ...values) / step) * step;
@@ -391,7 +541,9 @@ function renderCartesian(
           textAnchor: 'middle',
           className: ['visualization-axis-label'],
         },
-        [text(shortLabel(label, 14))],
+        labelLines(label, frame.labelLength).map((line, lineIndex) =>
+          element('tspan', { x, dy: lineIndex === 0 ? 0 : '1.15em' }, [text(line)]),
+        ),
       ),
     );
   });
@@ -417,7 +569,7 @@ function renderCartesian(
             cy: plotted.y,
             r: 5,
             className: [
-              'semantic-point',
+              ...(frame.semanticPoints ? ['semantic-point'] : []),
               'visualization-point',
               `visualization-color-${seriesIndex % PALETTE_SIZE}`,
             ],
@@ -443,7 +595,7 @@ function renderCartesian(
             height: Math.max(1, Math.abs(zeroY - valueY)),
             rx: 3,
             className: [
-              'semantic-point',
+              ...(frame.semanticPoints ? ['semantic-point'] : []),
               'visualization-bar',
               `visualization-color-${seriesIndex % PALETTE_SIZE}`,
             ],
@@ -459,7 +611,7 @@ function renderCartesian(
         'text',
         {
           x: PLOT.left + PLOT.width / 2,
-          y: 348,
+          y: frame.axisTitleY,
           textAnchor: 'middle',
           className: ['visualization-axis-title'],
         },
@@ -485,9 +637,32 @@ function renderCartesian(
   return children;
 }
 
+/**
+ * Подпись категории: на узком графике — до двух строк по словам вместо обрезки многоточием, чтобы
+ * «Ticket search» не становилось «Ticket s…».
+ */
+function labelLines(label: string, length: number): readonly string[] {
+  if (label.length <= length) return [label];
+  const words = label.split(/\s+/u);
+  const lines: string[] = [];
+  let current = '';
+  for (const word of words) {
+    const next = current === '' ? word : `${current} ${word}`;
+    if (next.length <= length + 3 || current === '') current = next;
+    else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  lines.push(current);
+  if (lines.length <= 2) return lines.map((line) => shortLabel(line, length + 4));
+  return [lines[0] ?? '', shortLabel(lines.slice(1).join(' '), length + 4)];
+}
+
 function renderPie(
   points: readonly ChartPoint[],
   formatNumber: (value: number) => string,
+  semanticPoints = true,
 ): readonly ElementContent[] {
   const total = points.reduce((sum, point) => sum + point.value, 0);
   let angle = -Math.PI / 2;
@@ -496,9 +671,9 @@ function renderPie(
     const next = angle + (point.value / total) * Math.PI * 2;
     children.push(
       element('path', {
-        d: arcPath(280, 178, 126, angle, next),
+        d: arcPath(PIE_CENTRE_X, PIE_CENTRE_Y, 126, angle, next),
         className: [
-          'semantic-point',
+          ...(semanticPoints ? ['semantic-point'] : []),
           'visualization-slice',
           `visualization-color-${index % PALETTE_SIZE}`,
         ],
@@ -569,6 +744,7 @@ function enhanceDiagram(
   allocateId: (base: string) => string,
   strings: PackageStrings,
   prepared: PreparedFlow | undefined,
+  messages: DiagramMessages,
 ): void {
   const title = take(node, 'dataDirectiveTitle') ?? strings.diagram;
   const description = take(node, 'dataDescription') ?? title;
@@ -594,6 +770,7 @@ function enhanceDiagram(
     spacing,
     strings,
     prepared,
+    messages,
   );
 }
 
@@ -605,7 +782,8 @@ function edgeKindOf(value: string | undefined): DiagramEdgeKindChoice {
 
 type LegendEntry =
   | { readonly subject: 'edge'; readonly kind: DiagramEdgeKindChoice; readonly label: string }
-  | { readonly subject: 'node'; readonly kind: string; readonly label: string };
+  | { readonly subject: 'node'; readonly kind: string; readonly label: string }
+  | { readonly subject: 'status'; readonly kind: NodeStatus; readonly label: string };
 
 interface DiagramLegend {
   readonly title?: string;
@@ -616,6 +794,8 @@ interface DiagramLegend {
   readonly nodeWords: (kind: string) => string | undefined;
   /** Показывать ли вид связи в описании: только если легенда его различает. */
   readonly namesEdgeKinds: boolean;
+  /** Слово статуса: авторское из легенды или пакетное. */
+  readonly statusWords: (status: NodeStatus) => string;
 }
 
 /**
@@ -626,6 +806,8 @@ function readLegend(
   node: Element,
   edges: readonly DiagramEdge[],
   strings: PackageStrings,
+  messages: DiagramMessages = DIAGRAM_MESSAGES.en,
+  statuses: readonly NodeStatus[] = [],
 ): DiagramLegend {
   const settings = semanticChildren(node, 'legend')[0];
   const title = settings === undefined ? undefined : take(settings, 'dataTitle');
@@ -636,10 +818,14 @@ function readLegend(
     return {
       edge: DIAGRAM_CONTRACT.edgeKinds.find((kind) => kind === edge),
       node: take(item, 'dataNode'),
+      status: nodeStatusOf(take(item, 'dataStatus')),
       label: take(item, 'dataLabel'),
       hidden: take(item, 'dataHidden') === 'true',
     };
   });
+  const statusWords = (status: NodeStatus): string =>
+    items.find((item) => item.status === status && item.label !== undefined)?.label ??
+    messages.statuses[status];
   const edgeWords = (kind: DiagramEdgeKindChoice): string =>
     items.find((item) => item.edge === kind && item.label !== undefined)?.label ??
     strings.edgeKinds[kind];
@@ -647,6 +833,11 @@ function readLegend(
     if (item.hidden) return [];
     if (item.edge !== undefined) {
       return [{ subject: 'edge', kind: item.edge, label: edgeWords(item.edge) }];
+    }
+    if (item.status !== undefined) {
+      return statuses.includes(item.status)
+        ? [{ subject: 'status', kind: item.status, label: statusWords(item.status) }]
+        : [];
     }
     return item.node === undefined || item.label === undefined
       ? []
@@ -661,12 +852,20 @@ function readLegend(
       entries.push({ subject: 'edge', kind, label: edgeWords(kind) });
     }
   }
+  // Статус имеет смысл пакета: его пункт появляется сам, в порядке статусов, если автор его не назвал.
+  if (automatic) {
+    for (const status of NODE_STATUSES) {
+      if (!statuses.includes(status) || items.some((item) => item.status === status)) continue;
+      entries.push({ subject: 'status', kind: status, label: statusWords(status) });
+    }
+  }
   return {
     ...(title === undefined ? {} : { title }),
     entries,
     edgeWords,
     nodeWords: (kind) => items.find((item) => item.node === kind)?.label,
     namesEdgeKinds: entries.some((entry) => entry.subject === 'edge'),
+    statusWords,
   };
 }
 
@@ -681,65 +880,104 @@ function enhanceFlowDiagram(
   spacing: string,
   strings: PackageStrings,
   prepared: PreparedFlow,
+  messages: DiagramMessages,
 ): void {
-  const { groups: groupRecords, boxes, edges: edgeRecords, views: placedViews } = prepared;
-  const view = (mode: FlowViewKind, placed: FlowLayout): FlowView => ({
-    mode,
-    width: placed.width,
-    height: placed.height,
-    nodes: boxes.map((box) => ({
-      ...box,
-      ...(placed.nodes.get(box.id) ?? { x: 0, y: 0 }),
-      layer: placed.layers.get(box.id) ?? 0,
-    })),
-    groups: groupRecords.map((group) => {
-      const box = placed.groups.get(group.id);
-      return {
-        id: group.id,
-        label: group.label,
-        lines: group.lines,
-        x: box?.x ?? 0,
-        y: box?.y ?? 0,
-        width: box?.width ?? 0,
-        height: box?.height ?? 0,
-        title: box?.title ?? { x: 0, y: 0 },
-        titleAlign: box?.titleAlign ?? 'middle',
-      };
-    }),
-    edges: edgeRecords.flatMap((edge, index) =>
-      flowEdge(
-        edge,
-        index,
-        placed.edges[index]?.points ?? [],
-        placed.edges[index]?.label,
-        mode === 'orthogonal' ? ORTHOGONAL_CORNER_RADIUS : EDGE_CORNER_RADIUS,
-      ),
-    ),
-    labels: edgeRecords.flatMap((edge, index) => {
-      const point = placed.edges[index]?.label;
-      return edge.label === undefined || point === undefined
-        ? []
-        : [edgeLabel(edge.label, point.x, point.y + 4, 'middle', FLOW_LABEL_WIDTH, 'center')];
-    }),
-  });
+  const { boxes, edges: edgeRecords, views: placedViews } = prepared;
+  const pulse = (peek(node, 'dataPulse') ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean);
   const views: readonly FlowView[] = [
-    view('down', placedViews.down),
-    view('right', placedViews.right),
-    view('orthogonal', placedViews.orthogonal),
+    drawFlow(prepared, 'down', pulse),
+    drawFlow(prepared, 'right', pulse),
+    drawFlow(prepared, 'orthogonal', pulse),
   ];
   const defaultView = resolveDefaultView(layout, direction, placedViews.preferred);
-  const described = views[0] ?? view('down', placedViews.down);
-  const legend = readLegend(node, edgeRecords, strings);
+  const described = views[0] ?? drawFlow(prepared, 'down', pulse);
+  const legend = readLegend(node, edgeRecords, strings, messages, statusesOf(boxes));
   const words = describeFlow(
     described.nodes.map((item) => describedNode(item, legend)),
     described.groups,
-    edgeRecords.map((edge, index) => ({
+    edgeRecords.map((edge) => ({
       ...describedEdge(edge, legend),
-      backward: placedViews.down.edges[index]?.backward ?? false,
+      backward:
+        edge.layoutIndex === undefined ||
+        (placedViews.down.edges[edge.layoutIndex]?.backward ?? false),
     })),
     strings,
   );
-  const summary = descriptionSentence(description, words);
+  const sections = [...words.sections];
+  if (pulse.length > 0) {
+    const labels = new Map(boxes.map((box) => [box.id, box.label]));
+    sections.push({
+      heading: messages.pulseRoute,
+      ordered: true,
+      items: pulse.map((id) => labels.get(id) ?? id),
+    });
+  }
+  const zoom = prepared.zoom;
+  const zoomTarget = zoom === undefined ? undefined : boxes.find((box) => box.id === zoom.node);
+  if (zoom !== undefined && zoomTarget !== undefined) {
+    const inner = drawFlow(zoom.flow, 'down', []);
+    const innerWords = describeFlow(
+      inner.nodes.map((item) => describedNode(item, legend)),
+      inner.groups,
+      zoom.flow.edges.map((edge) => ({
+        ...describedEdge(edge, legend),
+        backward:
+          edge.layoutIndex === undefined ||
+          (zoom.flow.views.down.edges[edge.layoutIndex]?.backward ?? false),
+      })),
+      strings,
+    );
+    sections.push({
+      heading: messages.zoomSection(zoomTarget.label),
+      ordered: false,
+      items: [
+        ...(zoom.title === '' ? [] : [zoom.title]),
+        innerWords.lead,
+        ...innerWords.sections.map((section) => `${section.heading}: ${section.items.join('; ')}`),
+      ],
+    });
+  }
+  const allWords = { lead: words.lead, sections };
+  const summary = descriptionSentence(description, allWords);
+  node.tagName = 'figure';
+  node.properties.dataVisualization = 'diagram';
+  node.properties.dataDiagramType = 'flow';
+  node.properties.dataDiagramDirection = direction;
+  node.properties.dataDiagramLayout = layout;
+  // Вид, который автор получает по умолчанию и который уходит в печать.
+  node.properties.dataDiagramDefaultView = defaultView;
+  node.properties.dataDiagramSpacing = spacing;
+
+  if (zoom !== undefined && zoomTarget !== undefined) {
+    const outer = views.find((view) => view.mode === defaultView) ?? described;
+    node.properties.dataZoom = zoom.node;
+    node.children = [
+      caption(title, description),
+      ...renderZoomScene({
+        outer,
+        inner: closestAspect(
+          zoom.flow,
+          outer.nodes.find((item) => item.id === zoom.node),
+        ),
+        target: zoom.node,
+        title,
+        summary,
+        innerTitle: zoom.title === '' ? messages.zoomInside(zoomTarget.label) : zoom.title,
+        outsideCaption: messages.zoomOutside,
+        allocateId,
+        instance,
+        // Каждая картинка получает свои копии слоёв: одна и та же связь не живёт в двух местах дерева.
+        body: (view) => structuredClone(flowBody(view)),
+      }),
+      ...diagramLegend(legend, strings),
+      diagramTranscript(allWords, strings),
+    ];
+    return;
+  }
+
   const panels = views.map((view) => {
     const selected = view.mode === defaultView;
     const titleId = allocateId(`visual-${instance}-${view.mode}-title`);
@@ -761,11 +999,19 @@ function enhanceFlowDiagram(
       [
         element('title', { id: titleId }, [text(title)]),
         element('desc', { id: descriptionId }, [text(summary)]),
-        ...view.groups.map((item) => diagramGroup(item)),
-        ...view.edges,
-        ...view.nodes.map((item) => diagramNode(item)),
-        // Подписи идут последним слоем: иначе линия соседней связи перечёркивает чужую подпись.
-        ...view.labels,
+        ...flowBody(view),
+        ...(pulse.length > 0
+          ? [
+              element('circle', {
+                r: 5,
+                cx: -20,
+                cy: -20,
+                className: ['visualization-pulse-dot'],
+                dataPulseDot: '',
+                ariaHidden: 'true',
+              }),
+            ]
+          : []),
       ],
     );
     return {
@@ -800,14 +1046,6 @@ function enhanceFlowDiagram(
     };
   });
 
-  node.tagName = 'figure';
-  node.properties.dataVisualization = 'diagram';
-  node.properties.dataDiagramType = 'flow';
-  node.properties.dataDiagramDirection = direction;
-  node.properties.dataDiagramLayout = layout;
-  // Вид, который автор получает по умолчанию и который уходит в печать.
-  node.properties.dataDiagramDefaultView = defaultView;
-  node.properties.dataDiagramSpacing = spacing;
   node.children = [
     caption(title, description),
     // Переключатель — те же вкладки пакета: клавиатура и выбор уже живут в их среде выполнения.
@@ -824,8 +1062,157 @@ function enhanceFlowDiagram(
       ...panels.map((item) => item.panel),
     ]),
     ...diagramLegend(legend, strings),
-    diagramTranscript(words, strings),
+    diagramTranscript(allWords, strings),
   ];
+}
+
+/** Статусы, которые несут узлы схемы, в порядке пакета. */
+function statusesOf(boxes: readonly FlowBox[]): readonly NodeStatus[] {
+  return NODE_STATUSES.filter((status) => boxes.some((box) => box.status === status));
+}
+
+/** Слои SVG одного вида по порядку рисования: группы, связи, узлы, подписи поверх всего. */
+function flowBody(view: FlowView): readonly Element[] {
+  return [
+    ...view.groups.map((item) => diagramGroup(item)),
+    ...view.edges,
+    ...view.nodes.map((item) => flowNode(item)),
+    // Подписи идут последним слоем: иначе линия соседней связи перечёркивает чужую подпись.
+    ...view.labels,
+  ];
+}
+
+/** Узел потока; узел со статусом получает рамку цвета статуса и значок на кромке. */
+function flowNode(node: DiagramNode & { readonly status?: NodeStatus }): Element {
+  const drawn = diagramNode(node);
+  if (node.status === undefined) return drawn;
+  drawn.properties.dataStatus = node.status;
+  const [frame] = drawn.children;
+  if (frame?.type === 'element') {
+    const classes = Array.isArray(frame.properties.className) ? frame.properties.className : [];
+    frame.properties.className = [...classes, `visualization-node-status-${node.status}`];
+  }
+  drawn.children.push(statusBadge(node.status, node.x, node.y));
+  return drawn;
+}
+
+/**
+ * Вид вложенного потока, чьи пропорции ближе всего к коробке узла: камера вписывает его в узел, и
+ * вытянутый поперёк узла вид вышел бы мельче.
+ */
+function closestAspect(flow: PreparedFlow, box: DiagramNode | undefined): FlowView {
+  const aspect = (box?.width ?? NODE_DEFAULT_WIDTH) / (box?.height ?? NODE_DEFAULT_HEIGHT);
+  const candidates = (['right', 'down'] as const).map((mode) => drawFlow(flow, mode, []));
+  return candidates.reduce((best, next) =>
+    Math.abs(Math.log(next.width / next.height / aspect)) <
+    Math.abs(Math.log(best.width / best.height / aspect))
+      ? next
+      : best,
+  );
+}
+
+/** Связи маршрута импульсов: номер шага у первой связи, ведущей от узла маршрута к следующему. */
+function pulseSteps(
+  edges: readonly FlowEdgeRecord[],
+  route: readonly string[],
+): ReadonlyMap<number, number> {
+  const steps = new Map<number, number>();
+  for (let step = 1; step < route.length; step += 1) {
+    const index = edges.findIndex(
+      (edge) => edge.from === route[step - 1] && edge.to === route[step],
+    );
+    if (index !== -1 && !steps.has(index)) steps.set(index, step);
+  }
+  return steps;
+}
+
+/** Ширина, до которой переносится подпись петли: она стоит сбоку от узла, в зазоре между узлами. */
+const SELF_LOOP_LABEL_WIDTH = 96;
+
+/**
+ * Один вид потока, готовый к рисованию. Петли раскладка не видит: они рисуются на углу своего узла, и
+ * вид расширяется, если петля с подписью выходит за его край.
+ */
+function drawFlow(prepared: PreparedFlow, mode: FlowViewKind, pulse: readonly string[]): FlowView {
+  const placed = prepared.views[mode];
+  const nodes = prepared.boxes.map((box) => ({
+    ...box,
+    ...(placed.nodes.get(box.id) ?? { x: 0, y: 0 }),
+    layer: placed.layers.get(box.id) ?? 0,
+  }));
+  const byId = new Map(nodes.map((item) => [item.id, item]));
+  const steps = pulseSteps(prepared.edges, pulse);
+  const radius = mode === 'orthogonal' ? ORTHOGONAL_CORNER_RADIUS : EDGE_CORNER_RADIUS;
+  let width = placed.width;
+  let height = placed.height;
+  const edges = prepared.edges.flatMap((edge, index): Element[] => {
+    const laid = edge.layoutIndex === undefined ? undefined : placed.edges[edge.layoutIndex];
+    const extra: Record<string, string> = {
+      ...(edge.id === undefined ? {} : { dataEdgeId: edge.id }),
+      ...(edge.count === undefined ? {} : { dataCount: String(edge.count) }),
+      ...(steps.has(index) ? { dataPulseStep: String(steps.get(index)) } : {}),
+      ...(edge.layoutIndex === undefined ? { dataSelf: '' } : {}),
+      ...(laid?.backward === true ? { dataBackward: '' } : {}),
+    };
+    if (edge.layoutIndex !== undefined) {
+      return [...flowEdge(edge, index, laid?.points ?? [], laid?.label, radius, extra)];
+    }
+    const box = byId.get(edge.from);
+    if (box === undefined) return [];
+    const loop = selfLoop(
+      { x: box.x, y: box.y, width: box.width },
+      index,
+      {
+        dataFrom: edge.from,
+        dataTo: edge.to,
+        dataRoute: edge.route,
+        dataEdgeKind: edge.kind,
+        ...extra,
+      },
+      ['semantic-edge', 'visualization-edge', `visualization-edge-kind-${edge.kind}`],
+    );
+    width = Math.max(width, box.x + box.width + SELF_LOOP_REACH.right + DIAGRAM_MARGIN / 2);
+    return [loop.path, edgeArrow(edge.kind, loop.tip.x, loop.tip.y, -1, 0)];
+  });
+  const labels = prepared.edges.flatMap((edge): Element[] => {
+    const shown = shownEdgeLabel(edge);
+    if (shown === undefined) return [];
+    if (edge.layoutIndex === undefined) {
+      const box = byId.get(edge.from);
+      if (box === undefined) return [];
+      const x = box.x + box.width + SELF_LOOP_REACH.right - 4;
+      const plate = layoutEdgeLabel(shown, SELF_LOOP_LABEL_WIDTH);
+      width = Math.max(width, x + plate.width + DIAGRAM_MARGIN / 2);
+      height = Math.max(height, box.y + plate.height + DIAGRAM_MARGIN / 2);
+      return [edgeLabel(shown, x, box.y - 6, 'start', SELF_LOOP_LABEL_WIDTH, 'center')];
+    }
+    const point = placed.edges[edge.layoutIndex]?.label;
+    return point === undefined
+      ? []
+      : [edgeLabel(shown, point.x, point.y + 4, 'middle', FLOW_LABEL_WIDTH, 'center')];
+  });
+  return {
+    mode,
+    width,
+    height,
+    nodes,
+    groups: prepared.groups.map((group) => {
+      const box = placed.groups.get(group.id);
+      return {
+        id: group.id,
+        label: group.label,
+        lines: group.lines,
+        x: box?.x ?? 0,
+        y: box?.y ?? 0,
+        width: box?.width ?? 0,
+        height: box?.height ?? 0,
+        title: box?.title ?? { x: 0, y: 0 },
+        titleAlign: box?.titleAlign ?? 'middle',
+      };
+    }),
+    edges,
+    labels,
+  };
 }
 
 /**
@@ -992,6 +1379,7 @@ function flowEdge(
   points: readonly LayoutPoint[],
   label: LayoutPoint | undefined,
   radius: number,
+  extra: Readonly<Record<string, string>> = {},
 ): readonly Element[] {
   const end = points.at(-1);
   const before = points.at(-2);
@@ -1016,6 +1404,7 @@ function flowEdge(
       dataTo: edge.to,
       dataRoute: edge.route,
       dataEdgeKind: edge.kind,
+      ...extra,
     }),
     edgeArrow(edge.kind, tip.x, tip.y, unitX, unitY),
   ];
@@ -1023,6 +1412,27 @@ function flowEdge(
 
 /** Образец пункта легенды рисуется тем же начертанием, что и связь или узел на схеме. */
 function legendSample(entry: LegendEntry): Element {
+  if (entry.subject === 'status') {
+    return element(
+      'svg',
+      {
+        viewBox: '0 -9 40 26',
+        className: ['visualization-legend-sample'],
+        ariaHidden: 'true',
+      },
+      [
+        element('rect', {
+          x: 1,
+          y: 0,
+          width: 38,
+          height: 16,
+          rx: 5,
+          className: ['visualization-node', `visualization-node-status-${entry.kind}`],
+        }),
+        statusBadge(entry.kind, 1, 0),
+      ],
+    );
+  }
   return entry.subject === 'edge'
     ? element(
         'svg',
@@ -1072,7 +1482,9 @@ function diagramLegend(legend: DiagramLegend, strings: PackageStrings): Element[
               className: ['semantic-legend-item'],
               ...(entry.subject === 'edge'
                 ? { dataEdgeKind: entry.kind }
-                : { dataNodeKind: entry.kind }),
+                : entry.subject === 'status'
+                  ? { dataNodeStatus: entry.kind }
+                  : { dataNodeKind: entry.kind }),
             },
             [legendSample(entry), text(entry.label)],
           ),
@@ -1082,11 +1494,15 @@ function diagramLegend(legend: DiagramLegend, strings: PackageStrings): Element[
   ];
 }
 
-function describedNode(node: DiagramNode, legend: DiagramLegend): DescribedNode {
+function describedNode(
+  node: DiagramNode & { readonly status?: NodeStatus },
+  legend: DiagramLegend,
+): DescribedNode {
   const meaning = legend.nodeWords(node.kind);
   return {
     id: node.id,
     label: node.label,
+    ...(node.status === undefined ? {} : { status: legend.statusWords(node.status) }),
     ...(node.detail === undefined ? {} : { detail: node.detail }),
     ...(meaning === undefined ? {} : { meaning }),
     ...(node.group === undefined ? {} : { group: node.group }),
@@ -1094,10 +1510,14 @@ function describedNode(node: DiagramNode, legend: DiagramLegend): DescribedNode 
   };
 }
 
-function describedEdge(edge: DiagramEdge, legend: DiagramLegend): DescribedEdge {
+function describedEdge(
+  edge: DiagramEdge & { readonly count?: number },
+  legend: DiagramLegend,
+): DescribedEdge {
   return {
     from: edge.from,
     to: edge.to,
+    ...(edge.count === undefined ? {} : { count: countText(edge.count) }),
     ...(edge.label === undefined ? {} : { label: edge.label }),
     ...(legend.namesEdgeKinds ? { kind: legend.edgeWords(edge.kind) } : {}),
   };
@@ -1165,7 +1585,7 @@ function sequenceGaps(
       const from = position.get(message.from);
       const to = position.get(message.to);
       if (from === undefined || to === undefined) return [];
-      const natural = layoutEdgeLabel(message.label, Number.POSITIVE_INFINITY, 700).width;
+      const natural = layoutEdgeLabel(message.label, Number.POSITIVE_INFINITY).width;
       if (from === to) {
         const loopSide = from === participants.length - 1 ? from - 1 : from;
         return loopSide === index
@@ -1217,7 +1637,7 @@ function placeSequenceMessages(
     const labelWidth = self
       ? Math.max(EDGE_LABEL_MIN_WIDTH, room - SEQUENCE_SELF_LOOP_WIDTH - 36)
       : Math.max(EDGE_LABEL_MIN_WIDTH, Math.abs(lifelineX(to) - lifelineX(from)) - 24);
-    const layout = layoutEdgeLabel(message.label, labelWidth, 700);
+    const layout = layoutEdgeLabel(message.label, labelWidth);
     const above = self
       ? Math.max(SEQUENCE_SELF_LOOP_HEIGHT / 2, layout.height / 2 + 4)
       : EDGE_LABEL_RISE + layout.height - 17;
@@ -1275,7 +1695,7 @@ function sequenceMessage(message: PlacedSequenceMessage, index: number): readonl
       dataEdgeKind: kind,
     }),
     edgeArrow(kind, endX, y, direction, 0),
-    edgeLabel(label, (fromX + toX) / 2, y - 9, 'middle', labelWidth, 'up', true),
+    edgeLabel(label, (fromX + toX) / 2, y - 9, 'middle', labelWidth, 'up'),
   ];
 }
 
@@ -1306,15 +1726,7 @@ function sequenceSelfMessage(message: PlacedSequenceMessage, index: number): rea
       dataEdgeKind: kind,
     }),
     edgeArrow(kind, tip, bottom, -side, 0),
-    edgeLabel(
-      label,
-      outer + side * 10,
-      y + 4,
-      mirrored ? 'end' : 'start',
-      labelWidth,
-      'center',
-      true,
-    ),
+    edgeLabel(label, outer + side * 10, y + 4, mirrored ? 'end' : 'start', labelWidth, 'center'),
   ];
 }
 
@@ -1322,6 +1734,14 @@ function enhanceTimeline(node: Element, _instance: number, strings: PackageStrin
   const title = take(node, 'dataDirectiveTitle') ?? strings.timeline;
   const description = take(node, 'dataDescription') ?? title;
   const events = semanticChildren(node, 'event');
+  // Легенда ленты: слова автора для выделения события. Цвет точки сам смысла не несёт, поэтому смысл
+  // выделения ещё и произносится у самого события.
+  const meanings = new Map<string, string>();
+  for (const item of semanticChildren(node, 'legend-item')) {
+    const kind = take(item, 'dataEvent');
+    const label = take(item, 'dataLabel');
+    if (kind !== undefined && label !== undefined) meanings.set(kind, label);
+  }
   node.tagName = 'section';
   node.properties.dataVisualization = 'timeline';
   node.children = [
@@ -1340,14 +1760,44 @@ function enhanceTimeline(node: Element, _instance: number, strings: PackageStrin
           `visualization-event-${kind}`,
         ];
         delete event.properties.dataSemantic;
+        const meaning = meanings.get(kind);
         event.children = [
           element('time', { className: ['visualization-timeline-date'] }, [text(date)]),
           element('h4', { className: ['visualization-timeline-title'] }, [text(eventTitle)]),
+          ...(meaning === undefined
+            ? []
+            : [element('p', { className: ['visually-hidden'] }, [text(meaning)])]),
           ...event.children,
         ];
         return event;
       }),
     ),
+    ...(meanings.size === 0
+      ? []
+      : [
+          element('div', { className: ['semantic-legend', 'visualization-timeline-legend'] }, [
+            element(
+              'ul',
+              { className: ['visualization-legend'], ariaLabel: strings.legend },
+              [...meanings].map(([kind, label]) =>
+                element('li', { className: ['semantic-legend-item'], dataEventKind: kind }, [
+                  element(
+                    'span',
+                    {
+                      className: [
+                        'visualization-timeline-legend-dot',
+                        `visualization-event-${kind}`,
+                      ],
+                      ariaHidden: 'true',
+                    },
+                    [],
+                  ),
+                  text(label),
+                ]),
+              ),
+            ),
+          ]),
+        ]),
   ];
 }
 

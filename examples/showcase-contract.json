@@ -1,7 +1,7 @@
 {
   "contractId": "SHOWCASES-V1",
   "contractVersion": 1,
-  "starterExampleId": "basic",
+  "starterExampleId": "document",
   "requiredShowcaseClasses": [
     "report",
     "research-report",
@@ -14,6 +14,6 @@
     "The typed authoring registry is the sole example and starter inventory; the package-owned manifest is its hash-bound projection.",
     "Every packaged example ID is unique, allowlisted, path-relative, readable, and buildable from the exact tarball.",
     "Every required showcase class is covered by at least one packaged example ID.",
-    "The basic starter remains the default report identity and the report alias preserves the clearer first-use selector."
+    "Each page category has one starter named after it; the document starter is the default."
   ]
 }

@@ -82,6 +82,10 @@ for (const format of formats) {
     await expect(scope.locator('article[data-response-item="copy"]')).toBeAttached();
     const loginSelect = scope.locator('[data-response-item="login"] [data-response-bucket-select]');
     if (info.project.name === 'desktop-chromium') {
+      // Страница прокручивается плавно: пока идёт прокрутка к карточке, её измеренная точка уезжает, и
+      // нажатие попадает мимо. Перетаскивание проверяется без плавной прокрутки, как у читателя с
+      // уменьшенным движением.
+      await page.emulateMedia({ reducedMotion: 'reduce' });
       const card = scope.locator('article[data-response-item="login"]');
       // Start on the card, then cross the drag threshold before scrolling to the destination.
       await card.hover({ position: { x: 8, y: 8 } });
@@ -97,9 +101,11 @@ for (const format of formats) {
       await loginSelect.selectOption('skip');
     }
     await expect(loginSelect).toHaveValue('skip');
-    await scope
-      .locator('[data-response-item="login"] [data-response-comment]')
-      .fill('Keep the rollback owner visible.');
+    // Комментарий свёрнут, пока читатель его не откроет.
+    const loginComment = scope.locator('[data-response-item="login"] [data-response-comment]');
+    await expect(loginComment).toBeHidden();
+    await scope.locator('[data-response-item="login"] [data-response-comment-toggle]').click();
+    await loginComment.fill('Keep the rollback owner visible.');
 
     const triage = question(page, 'triage');
     await triage.locator('[data-response-item="finding-a"] input[value="accept"]').check();
@@ -557,3 +563,59 @@ async function dispatchDrag(page: Page, source: Locator, target: Locator): Promi
     { sourceElement, targetElement },
   );
 }
+
+test('choosing an answer never moves the form under the pointer', async ({ page }, info) => {
+  await page.goto(formats[0].url);
+  const choices = page.locator(
+    '[data-response-workspace] :is(input[type="radio"], input[type="checkbox"])',
+  );
+  const count = await choices.count();
+  expect(count).toBeGreaterThan(5);
+  for (let index = 0; index < count; index += 1) {
+    const choice = choices.nth(index);
+    await choice.scrollIntoViewIfNeeded();
+    const place = (): Promise<{ readonly top: number; readonly scroll: number }> =>
+      choice.evaluate((element) => ({
+        top: element.getBoundingClientRect().top,
+        scroll: window.scrollY,
+      }));
+    const before = await place();
+    if (info.project.name.startsWith('mobile')) await choice.tap();
+    else await choice.click();
+    await expect(choice).toBeChecked();
+    const after = await place();
+    // Вопрос получил ответ, но выбранный вариант остался там, куда указывал читатель.
+    expect(Math.abs(after.top - before.top), `choice ${index}`).toBeLessThanOrEqual(1);
+    expect(after.scroll, `choice ${index}`).toBe(before.scroll);
+  }
+  // Кнопка комментария, поле оценки и текстовые поля тоже не уходят из-под указателя.
+  const controls = page.locator(
+    '[data-response-workspace] :is([data-response-comment-toggle], [data-response-number], textarea:not([hidden]))',
+  );
+  const total = await controls.count();
+  expect(total).toBeGreaterThan(5);
+  for (let index = 0; index < total; index += 1) {
+    const control = controls.nth(index);
+    if (!(await control.isVisible())) continue;
+    await control.scrollIntoViewIfNeeded();
+    const place = (): Promise<{
+      readonly top: number;
+      readonly left: number;
+      readonly scroll: number;
+    }> =>
+      control.evaluate((element) => ({
+        top: element.getBoundingClientRect().top,
+        left: element.getBoundingClientRect().left,
+        scroll: window.scrollY,
+      }));
+    const before = await place();
+    if (info.project.name.startsWith('mobile')) await control.tap();
+    else await control.click();
+    if (await control.evaluate((element) => element.matches('input, textarea')))
+      await page.keyboard.type('4');
+    const after = await place();
+    expect(Math.abs(after.top - before.top), `control ${index}`).toBeLessThanOrEqual(1);
+    expect(Math.abs(after.left - before.left), `control ${index}`).toBeLessThanOrEqual(1);
+    expect(after.scroll, `control ${index}`).toBe(before.scroll);
+  }
+});

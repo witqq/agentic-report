@@ -5,9 +5,20 @@ import type { LayoutPoint } from './flow-layout.js';
 
 export const NODE_FONT_SIZE = 14;
 
-export const GROUP_FONT_SIZE = 16;
+/**
+ * Все виды схем — поток, прямые углы и последовательность — набирают текст одной гарнитурой основного
+ * текста темы и одним набором размеров и начертаний: так виды одной схемы читаются одним семейством.
+ * Таблица стилей повторяет эти числа в правилах `.visualization-*`.
+ */
+export const GROUP_FONT_SIZE = 15;
+
+export const GROUP_FONT_WEIGHT = 720;
+
+export const NODE_FONT_WEIGHT = 720;
 
 export const EDGE_FONT_SIZE = 13;
+
+export const EDGE_FONT_WEIGHT = 560;
 
 export const EDGE_LINE_HEIGHT = 15;
 
@@ -254,13 +265,13 @@ export function layoutNodeBox(
   // до NODE_MAX_WIDTH, иначе `ShowSession` превращается в `ShowSessi…`.
   const widestWord = Math.max(
     0,
-    ...label.split(/\s+/u).map((word) => measureText(word, NODE_FONT_SIZE, 720)),
+    ...label.split(/\s+/u).map((word) => measureText(word, NODE_FONT_SIZE, NODE_FONT_WEIGHT)),
   );
   const inner = Math.min(
     NODE_MAX_WIDTH - NODE_PADDING_X * 2,
     Math.max(maximumWidth - NODE_PADDING_X * 2, Math.ceil(widestWord)),
   );
-  const wrapped = wrapMeasured(label, inner, NODE_MAX_LINES, NODE_FONT_SIZE, 720);
+  const wrapped = wrapMeasured(label, inner, NODE_MAX_LINES, NODE_FONT_SIZE, NODE_FONT_WEIGHT);
   const explained =
     detail === undefined
       ? { lines: [], width: 0 }
@@ -304,11 +315,8 @@ export interface EdgeLabelLayout {
  * расширяет строку, но не теряет букв. Раскладка резервирует место по этой же функции, поэтому
  * высота, под которую раздвинуты ряды, совпадает с нарисованной.
  */
-export function layoutEdgeLabel(
-  value: string,
-  maximumWidth: number,
-  weight = 400,
-): EdgeLabelLayout {
+export function layoutEdgeLabel(value: string, maximumWidth: number): EdgeLabelLayout {
+  const weight = EDGE_FONT_WEIGHT;
   const widestWord = Math.max(
     0,
     ...value.split(/\s+/u).map((word) => measureText(word, EDGE_FONT_SIZE, weight)),
@@ -338,9 +346,8 @@ export function edgeLabel(
   anchor: 'start' | 'middle' | 'end',
   maximumWidth: number,
   growth: 'up' | 'center' = 'up',
-  emphasis = false,
 ): Element {
-  const layout = layoutEdgeLabel(value, maximumWidth, emphasis ? 700 : 400);
+  const layout = layoutEdgeLabel(value, maximumWidth);
   const left =
     anchor === 'start' ? x - 4 : anchor === 'end' ? x - layout.width + 4 : x - layout.width / 2;
   const plateTop =
@@ -363,10 +370,7 @@ export function edgeLabel(
         x: round(x),
         y: round(firstBaseline),
         textAnchor: anchor,
-        className: [
-          'visualization-edge-label-text',
-          ...(emphasis ? ['visualization-sequence-label'] : []),
-        ],
+        className: ['visualization-edge-label-text'],
       },
       layout.lines.map((line, lineIndex) =>
         element('tspan', { x: round(x), y: round(firstBaseline + lineIndex * EDGE_LINE_HEIGHT) }, [

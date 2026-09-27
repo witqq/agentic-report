@@ -1,0 +1,9 @@
+{
+  "family": "IBM Plex Sans",
+  "package": "@fontsource-variable/ibm-plex-sans",
+  "version": "5.3.0",
+  "fontVersion": "v23",
+  "license": "OFL-1.1",
+  "attribution": "Copyright 2019 IBM Corp. All rights reserved. IBMPlexSans-Italic[wdth,wght].ttf: Copyright 2019 IBM Corp. All rights reserved.",
+  "source": "https://github.com/google/fonts"
+}

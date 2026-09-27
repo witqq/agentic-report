@@ -11,10 +11,15 @@ interface PrimarySection {
   readonly id: string;
   readonly title: string;
   readonly navigationLabel?: string;
+  readonly heading: Element;
 }
 
 export function resolveDocumentNavigation(tree: Root, contentsLabel: string): NavigationItem[] {
   const sections = collectPrimarySections(tree);
+  // Номер главы — её место в том же списке, из которого строятся оглавление и навигация: один источник
+  // для всех трёх. Счётчик CSS пропускал главу, которую перестановка первого экрана выносила из статьи.
+  for (const [index, section] of sections.entries())
+    section.heading.properties.dataChapterNumber = String(index + 1).padStart(2, '0');
   visit(tree, 'element', (node: Element) => {
     if (node.properties.dataSemantic !== 'contents') return;
     enhanceInFlowContents(node, sections, contentsLabel);
@@ -38,6 +43,7 @@ function collectPrimarySections(tree: Root): PrimarySection[] {
     const navigationLabel = stringProperty(node, 'dataNav');
     explicit.push({
       id,
+      heading,
       title: visibleText(heading),
       ...(navigationLabel === undefined ? {} : { navigationLabel }),
     });
@@ -48,7 +54,7 @@ function collectPrimarySections(tree: Root): PrimarySection[] {
   visit(tree, 'element', (node: Element) => {
     if (node.tagName !== 'h2' || node.properties.dataNavigationExclude !== undefined) return;
     const id = stringProperty(node, 'id');
-    if (id !== undefined) legacy.push({ id, title: visibleText(node) });
+    if (id !== undefined) legacy.push({ id, heading: node, title: visibleText(node) });
   });
   return legacy;
 }

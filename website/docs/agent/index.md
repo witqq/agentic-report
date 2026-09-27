@@ -14,9 +14,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the result:
 
 ```sh
-npx --yes agentic-report@0.17.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.18.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.17.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.18.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. Build validates the complete source before writing, so
@@ -67,7 +67,7 @@ When the user does not trust the published package, do not silently fall back to
 release tag, let the user inspect the repository, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.17.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.18.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -77,7 +77,7 @@ pnpm install --frozen-lockfile
 pnpm verify
 pnpm build
 
-node dist/node/cli.js init ../my-page --starter report --json
+node dist/node/cli.js init ../my-page --starter document --json
 node dist/node/cli.js build ../my-page --output ../my-page.html --json
 ```
 
@@ -92,17 +92,19 @@ Edit only the declarative source created by the first route: Markdown, YAML fron
 YAML/JSON manifest, confined Markdown partials, and local assets. Authors do not need React, JSX, browser
 JavaScript, CSS, or a frontend project.
 
-Choose `material` by default or select `monument`, `signal`, `terminal`, or `cinematic`; `studio` and
-`editorial` remain compatibility identities. Start a section with
-`recipe="hero|evidence|story|rail|metrics"` when that reader job fits, then override only the detailed roles
-you need. Compose distinctive sections through package-owned roles rather than custom layout code. `composition`
+Keep the default `neutral` theme, pick another built-in theme, or write your own theme as data that
+extends one of them; the built-in themes with their intent, the page layouts, and the section recipes are
+listed in the generated [authoring catalog](../../skills/agentic-report/references/catalog.md). Start a
+section with the `recipe` whose reader job fits, then override only the detailed roles you need. Compose distinctive sections through package-owned roles rather than custom layout code. `composition`
 offers `flow`, `stage`, `split`, `mosaic`, `story`, and `stack`; pair it as needed with closed viewport,
-density, typography, media treatment, image fit/aspect/focal point, and surface attributes. On narrow
+density, typography, media treatment, image and video fit/aspect/focal point, and surface attributes. On narrow
 screens, multi-column and layered arrangements return to source order and galleries keep their own scroll.
 A gallery's localized focus and arrow-key scroll route appears only while its rail actually overflows; do
-not add a parallel authored control. Every section contains its floats and local layer order. A media stage
-gives its title the full first row and composes supporting content with media below; gallery stages retain
-their separate rail. Do not pair
+not add a parallel authored control. Every section contains its floats and local layer order. Split and stage
+arrange only the opening, the blocks right after the title that read well in half the track, with at most
+one picture: split sets it beside the title, a stage sets its lead, paragraphs, and actions beside its
+opening picture, and a gallery stage keeps its title beside the rail. Every later block spans the whole
+section track, so put the short opening first. Do not pair
 mosaic/stack composition with layers/gallery media: those roles would own the same card layout, so the
 compiler rejects the four combinations before rendering.
 
@@ -110,27 +112,29 @@ A card with one destination may declare `href`; it becomes one safe keyboard tar
 icon. Do not put another Markdown link inside it.
 
 ```markdown
-::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
+::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 The content remains ordinary Markdown and semantic directives.
 ::::
 ```
 
 Use the installed `layout-mixed` example for the complete grammar, the landing starter for a smaller
 copyable narrative, `terminal-portfolio` for console-led composition, `cinematic-story` for image-first
-scroll storytelling, `executive-brief` for a Monument decision narrative, and `motion-showcase` for a complete
+scroll storytelling, `executive-brief` for a Daylight decision narrative, and `motion-showcase` for a complete
 combination of depth, scrolling media, gallery, cascade and reduced motion. Use
 `schema --scope directives` for the exact closed domains and defaults.
 
-Motion remains declarative: sections accept `transition="none|reveal|stagger"`,
-`scene="none|progress|sticky"`, `interaction="none|depth|tilt"`, and
-`choreography="none|cascade"`. Each defaults to `none` unless a recipe supplies it; reduced motion leaves all content visible and coarse
-pointers receive no pointer effects. Layers/progress cannot combine with depth/tilt, and story/stack cannot
-combine with sticky. An `actions` group accepts `placement="auto|edge|inline|bottom"`; bottom stays at its
+Motion remains declarative: a section takes closed `transition`, `scene`, `interaction`, `choreography`,
+and WebGL `media-effect` roles, and a flow diagram accepts `draw="scroll"`. Each role defaults to `none`
+unless a recipe supplies it; reduced motion leaves all content visible and coarse pointers receive no
+pointer effects. The frontmatter `motion: none | restrained | expressive` writes the brief's level, and
+the build refuses a technique above it; `layout: screens` moves one screen per gesture and
+`progress: nodes` draws the chapters as a row of nodes. The values, and the pairs that fail because two
+roles would move the same thing, are in
+the [source contract](../product/source-contract.md#semantic-primitives). An `actions` group accepts `placement="auto|edge|inline|bottom"`; bottom stays at its
 authored position in normal flow. Only a primary action may use `effect="magnetic"`. The package owns the
 bounded timing, movement, responsive placement, and icons.
 
-Recipes already supply coordinated motion: hero uses stagger and a progress scene, evidence uses reveal,
-story uses reveal and a progress scene, rail uses stagger, and metrics uses stagger with cascade. For a
+Recipes already supply coordinated motion; the source contract says which recipe moves and how. For a
 pointer-depth hero, use `recipe="hero" scene="none" interaction="depth"` and a local image. For a scrolling
 gallery, use `recipe="rail" scene="progress"` and image cards. Open the
 [Motion showcase](../../examples/motion-showcase/index.html) or its
@@ -195,16 +199,8 @@ the anchored popover to add the first message, reply, edit, resolve, or reopen w
 mode; a selection can cross inline markup or adjacent report targets. Saved open and resolved ranges stay
 visibly distinct, and their **View thread** action reopens the same popover. **Review** opens only an overlay
 list with prior evidence, import, and one **Export review.json** action; it never divides or shifts the page.
-Desktop flips, shifts, and clamps the thread surface within the visual viewport; mobile uses a bounded bottom
-surface that follows browser-chrome and on-screen-keyboard viewport changes. The measured contextual action
-and focus markers follow a visible rectangle from their live range and hide when that range is wholly
-offscreen. A focus marker prefers a fully separate position above or below the saved text before edge
-clamping, so direct text tap remains an independent **View thread** route. The topbar Review entry has a
-localized title tooltip around its 20-pixel icon. Navigation, Review, language, and theme use distinct
-package icons with localized names and tooltips; the native language selector receives visible focus after
-switching. At constrained widths visible labels and secondary page identity are omitted without widening the
-page, and coarse pointers receive larger targets. Visible contextual/action controls retain localized labels
-and use 16-pixel icons; Create note shows a pencil and View thread shows a comment.
+How the thread surface is placed on desktop and mobile, and how its markers and topbar icons behave, is in
+the [Review Workspace reader interface](../product/source-contract.md#review-workspace-reader-interface).
 Valid version-2 whole-block threads remain list-accessible, but new threads begin with selected text. After
 the reader downloads `review.json`, map it back to the authored files with:
 
@@ -250,26 +246,40 @@ complete conversation remains in one file without rewriting old target identitie
 Use the pinned form for repeatable agent work. Use the unpinned form only when intentionally accepting the
 registry's current `latest` release.
 
-## Choose a starter
+## Choose a page category
 
-- `report` for a general report or work summary.
-- `research` for evidence, findings, and limits.
-- `architecture` for constraints, alternatives, and decisions.
-- `tutorial` for ordered teaching material.
-- `dashboard` for dense status and metrics.
-- `landing` for a product or project page.
+Each of the five categories — `document` (the default), `landing`, `dashboard`, `answer`, and
+`presentation` — has a starter of the same name with a `brief.md` to fill in before writing. A category is
+a recommendation: any directive works on a page of any category. The subvariants of each category and the
+contents of each starter are in the
+[agent reference](../AGENT-REFERENCE.md#choose-a-page-category-and-initialize-its-starter).
 
 `npx --yes agentic-report examples --json` lists the installed starters, catalogs, workspaces, and showcase
 sources.
+
+## Check and look before handing over
+
+The skill carries the craft: design rules, a playbook per category, and a design check that reads the page
+structure from `inspect` and the brief beside the source. Run it after a successful build, then photograph
+the page and look at the result:
+
+```sh
+node skills/agentic-report/scripts/design-check.mjs ./my-page
+npx --yes playwright@1.62.1 install chromium
+npx --yes -p agentic-report@0.18.0 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
+```
+
+The design check is advice on the skill's side; `build` and `validate` never run it. A rule that is wrong
+for one page is switched off by a line with its reason in that page's `brief.md`.
 
 ## Inspect the contract
 
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.17.0 describe --json
-npx --yes agentic-report@0.17.0 schema --scope source
-npx --yes agentic-report@0.17.0 examples --json
+npx --yes agentic-report@0.18.0 describe --json
+npx --yes agentic-report@0.18.0 schema --scope source
+npx --yes agentic-report@0.18.0 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),

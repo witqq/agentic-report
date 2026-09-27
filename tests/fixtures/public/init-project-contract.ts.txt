@@ -25,10 +25,10 @@ type ResultKeys = Assert<
 >;
 
 const defaultStarter: InitProjectOptions = { destination: './project' };
-const namedStarter: InitProjectOptions = { destination: './project', starter: 'basic' };
+const namedStarter: InitProjectOptions = { destination: './project', starter: 'document' };
 const completeResult: InitProjectResult = {
-  starterId: 'basic',
-  starterTitle: 'Basic starter',
+  starterId: 'document',
+  starterTitle: 'Document starter',
   projectPath: '/tmp/project',
   entryPath: '/tmp/project/report.md',
   files: ['report.md'],

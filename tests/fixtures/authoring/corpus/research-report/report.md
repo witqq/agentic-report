@@ -3,14 +3,12 @@ contractVersion: 1
 title: Research registry corpus
 description: Bounded research-report contract coverage.
 language: en
-theme: light
 layout: mixed
-tokens:
-  density: comfortable
-  font: sans
+theme:
+  extends: calm-paper
   accent: teal
-  width: wide
   radius: soft
+scheme: light
 output:
   format: single-file
   maxInlineBytes: 5000000
@@ -68,7 +66,7 @@ The sample is intentionally bounded.
 Additional evidence is visible initially.
 :::
 
-::::chart{title="Evidence trend" description="Validated evidence rises over three iterations." type="line" x-label="Iteration" y-label="Items"}
+::::chart{title="Evidence trend" description="Validated evidence rises over three iterations." type="line" x-label="Iteration" y-label="Items" count-up="true"}
 :::series{label="Validated"}
 ::point{label="One" value="2.5"}
 ::point{label="Two" value="4"}
@@ -98,6 +96,31 @@ Additional evidence is visible initially.
 ::edge{from="notes" to="finding" label="supports"}
 :::
 
+The review stands at :process[Collect > Check > Publish]{current="Check" returns="Check>Collect×2"}.
+
+:::diagram{title="Review run" description="Evidence is checked, returned twice, and rechecked." layout="right" pulse="gather,check"}
+::node{id="gather" label="Gather" status="done"}
+::node{id="check" label="Check" status="returned"}
+::node{id="publish" label="Publish" status="pending"}
+::edge{from="gather" to="check" id="submit"}
+::edge{from="check" to="gather" label="gaps" count="2"}
+::edge{from="check" to="check" label="recheck" count="3"}
+::edge{from="check" to="publish"}
+::legend-item{status="returned" label="sent back"}
+:::
+
+::::diagram{title="Evidence service" description="The checker is a small flow of its own."}
+::node{id="source" label="Source"}
+::node{id="checker" label="Checker"}
+::edge{from="source" to="checker"}
+:::zoom{node="checker" title="Inside the checker"}
+::group{id="rules" label="Rules"}
+::node{id="parse" label="Parse" group="rules"}
+::node{id="compare" label="Compare"}
+::edge{from="parse" to="compare"}
+:::
+::::
+
 ::::timeline{title="Research path" description="A short path from question to verified finding."}
 :::event{date="Question" title="Bound the inquiry" kind="neutral"}
 Define the decision that evidence must support.
@@ -108,4 +131,6 @@ Collect the smallest sufficient factual set.
 :::event{date="Decision" title="Record the result" kind="success"}
 Publish the supported conclusion in the report.
 :::
+::legend-item{event="accent" label="Evidence step"}
+::legend-item{event="success" label="Decision"}
 ::::

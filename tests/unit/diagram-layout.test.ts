@@ -897,7 +897,9 @@ describe('diagram kinds, legend and description', () => {
     const transcript = /<details class="visualization-transcript">[\s\S]*?<\/details>/u.exec(
       html,
     )?.[0];
-    expect(transcript).toContain('<summary>Diagram in words</summary>');
+    expect(transcript).toContain(
+      '<summary class="ui-row" data-ui-size="sm">Diagram in words</summary>',
+    );
     expect(transcript).toContain('<li>Alpha → Beta: next</li>');
   });
 });
@@ -960,9 +962,18 @@ describe('chart value axis', () => {
         ':::',
         '::::',
       ]);
-      return [
-        ...html.matchAll(/text-anchor="end" class="visualization-axis-label">([^<]*)</gu),
-      ].map((match) => match[1] ?? '');
+      // Ось читается по широкому варианту; узкий для телефона повторяет те же деления.
+      const wide = html.slice(
+        html.indexOf('visualization-svg-wide'),
+        html.indexOf('visualization-svg-narrow'),
+      );
+      const narrow = html.slice(html.indexOf('visualization-svg-narrow'));
+      const ticks = (part: string): string[] =>
+        [...part.matchAll(/text-anchor="end" class="visualization-axis-label">([^<]*)</gu)].map(
+          (match) => match[1] ?? '',
+        );
+      expect(ticks(narrow)).toEqual(ticks(wide));
+      return ticks(wide);
     };
     expect(await axis(['61.5', '70', '82.5', '91'])).toEqual(['0', '25', '50', '75', '100']);
     expect(await axis(['-12', '7', '30'])).toEqual(['-20', '0', '20', '40']);
@@ -1162,7 +1173,7 @@ describe('right-angle view and group frames', () => {
       expect(svg[3]).toBe(svg[1]);
     }
     const css = await readFile(path.resolve('src/browser/document.css'), 'utf8');
-    expect(css).toContain('min-width: calc(var(--diagram-width, 0px) * 0.75);');
+    expect(css).toContain('min-width: calc(var(--diagram-width, 0px) * 12 / 13);');
   });
 });
 
@@ -1180,7 +1191,7 @@ describe('diagram layout switcher', () => {
   const tabs = (html: string): string[] =>
     [
       ...html.matchAll(
-        /<button type="button"[^>]*role="tab"[^>]*aria-selected="(true|false)"[^>]*data-layout-mode="([a-z]+)">([^<]*)<\/button>/gu,
+        /<button type="button"[^>]*role="tab"[^>]*aria-selected="(true|false)"[^>]*data-layout-mode="([a-z]+)"[^>]*>([^<]*)<\/button>/gu,
       ),
     ].map((match) => `${match[2]}:${match[1]}:${match[3]}`);
   const panels = (html: string): string[] =>
@@ -1198,7 +1209,7 @@ describe('diagram layout switcher', () => {
     ]);
     expect(panels(html)).toEqual(['down:hidden', 'right:hidden', 'orthogonal:default']);
     expect(html).toContain(
-      '<div role="tablist" aria-label="Diagram layout" class="semantic-tab-list visualization-layout-switch">',
+      '<div role="tablist" aria-label="Diagram layout" class="semantic-tab-list visualization-layout-switch ui-tabs">',
     );
     expect(html).toContain(
       'data-diagram-layout="orthogonal" data-diagram-default-view="orthogonal"',

@@ -116,6 +116,7 @@ describe('report analysis', () => {
     expect(Object.keys(inspected.catalog.commands).sort()).toStrictEqual([
       'build',
       'describe',
+      'effect-check',
       'examples',
       'fix',
       'init',
@@ -123,13 +124,14 @@ describe('report analysis', () => {
       'review',
       'schema',
       'sitemap',
+      'snapshot',
+      'theme',
       'validate',
     ]);
     expect(inspected.catalog.starters.map(({ id }) => id)).toStrictEqual([
-      'basic',
-      'research',
-      'architecture',
-      'tutorial',
+      'document',
+      'answer',
+      'presentation',
       'dashboard',
       'landing',
     ]);
@@ -722,25 +724,19 @@ describe('report analysis', () => {
     workspaces.push(workspace);
     const source = path.join(workspace, 'source');
     await cp(paritySource, source, { recursive: true });
+    // Социальная картинка без публичного адреса — настоящее предупреждение подготовки, не отказ.
+    await cp(path.resolve('tests/fixtures/video/poster.png'), path.join(source, 'preview.png'));
     await writeFile(
       path.join(source, 'agentic-report.yaml'),
-      'title: Warning fixture\noutput:\n  maxInlineBytes: 1\n',
+      'title: Warning fixture\nimage: preview.png\n',
     );
 
     const validated = await validateReport({ input: source });
     const inspected = await inspectReport({ input: source });
     for (const warnings of [validated.warnings, inspected.warnings]) {
       expect(warnings).toEqual([
-        {
-          level: 'warning',
-          code: 'INLINE_SIZE_THRESHOLD_EXCEEDED',
-          message: expect.stringContaining('above the configured 1-byte threshold'),
-          remediation:
-            'Use directory output or raise output.maxInlineBytes after reviewing portability needs.',
-          details: { bundledBytes: expect.any(Number), threshold: 1 },
-        },
+        expect.objectContaining({ level: 'warning', code: 'SOCIAL_IMAGE_NOT_PUBLISHED' }),
       ]);
-      expect((warnings[0]?.details?.bundledBytes as number) > 1).toBe(true);
     }
   });
 

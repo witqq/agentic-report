@@ -21,7 +21,7 @@ describe('code highlighting under a prefix injection target', () => {
     const workspace = await createTestWorkspace('code-highlighting-injection');
     workspaces.push(workspace);
     // Shiki применяет к `source.js.jsx` инъекции в `source.js`, а к `text.html.derivative.ng` —
-    // инъекции в `text.html.derivative`. Эталон снят сборкой 0.16.0 с полным набором грамматик;
+    // инъекции в `text.html.derivative`. Эталон снят сборкой с полным набором грамматик;
     // замыкание по точной области оставляет HTML в шаблоне `jsx` одной строкой и расходится с ним.
     const expected = JSON.parse(
       await readFile(path.join(fixture, 'expected-prefix-injection-blocks.json'), 'utf8'),

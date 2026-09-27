@@ -16,6 +16,7 @@ import { promisify } from 'node:util';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { initProject } from '../../../src/index.js';
+import { BRIEF_FILE, renderBriefTemplate } from '../../../src/authoring/brief.js';
 import { authoringRegistry, type ExampleDefinition } from '../../../src/authoring/registry.js';
 import { resolveConfinedStarterRoot } from '../../../src/authoring/starter-path.js';
 import { createTestWorkspace, removeTestWorkspace } from '../../helpers/workspace.js';
@@ -73,7 +74,9 @@ vi.mock('node:fs/promises', async (importOriginal) => {
       ) {
         return entries;
       }
-      const isStarterRoot = String(arguments_[0]).endsWith(`${path.sep}examples${path.sep}basic`);
+      const isStarterRoot = String(arguments_[0]).endsWith(
+        `${path.sep}examples${path.sep}document`,
+      );
       const filtered =
         isStarterRoot && fsControl.omitStarterEntry
           ? entries.filter(
@@ -161,42 +164,46 @@ describe('starter initialization', () => {
     const result = await initProject({ destination });
 
     expect(result).toEqual({
-      starterId: 'basic',
-      starterTitle: 'Report starter',
+      starterId: 'document',
+      starterTitle: 'Document starter',
       projectPath: destination,
       entryPath: path.join(destination, 'report.md'),
       files: [
         'assets/architecture.ru.svg',
         'assets/architecture.svg',
+        'brief.md',
         'partials/findings.md',
         'partials/findings.ru.md',
         'report.md',
         'report.ru.md',
       ],
     });
-    expect(await fileBytes(destination)).toEqual(await fileBytes(path.resolve('examples/basic')));
+    expect(await fileBytes(destination)).toEqual(
+      await starterBytes(path.resolve('examples/document'), 'document'),
+    );
 
     const mutable = result.files as string[];
     mutable.push('poison');
     await expect(
-      initProject({ destination: path.join(workspace, 'second'), starter: 'basic' }),
+      initProject({ destination: path.join(workspace, 'second'), starter: 'document' }),
     ).resolves.toMatchObject({
-      starterId: 'basic',
+      starterId: 'document',
       files: [
         'assets/architecture.ru.svg',
         'assets/architecture.svg',
+        'brief.md',
         'partials/findings.md',
         'partials/findings.ru.md',
         'report.md',
         'report.ru.md',
       ],
     });
-    await expect(
-      initProject({ destination: path.join(workspace, 'alias'), starter: 'report' }),
-    ).resolves.toMatchObject({
-      starterId: 'basic',
-      starterTitle: 'Report starter',
-    });
+    // Стартеры называются категориями; прежних имён и алиасов нет.
+    for (const retired of ['report', 'basic', 'research', 'tutorial']) {
+      await expect(
+        initProject({ destination: path.join(workspace, retired), starter: retired }),
+      ).rejects.toMatchObject({ diagnostic: { code: 'STARTER_UNKNOWN' } });
+    }
   });
 
   it('materializes every registry-owned starter as its complete deterministic tree', async () => {
@@ -204,10 +211,9 @@ describe('starter initialization', () => {
     const starters = authoringRegistry.examples.filter((example) => 'starter' in example);
 
     expect(starters.map((starter) => starter.id)).toEqual([
-      'basic',
-      'research',
-      'architecture',
-      'tutorial',
+      'document',
+      'answer',
+      'presentation',
       'dashboard',
       'landing',
     ]);
@@ -224,7 +230,7 @@ describe('starter initialization', () => {
         Object.keys(await fileBytes(path.resolve('examples', starter.path))),
       );
       expect(await fileBytes(destination)).toEqual(
-        await fileBytes(path.resolve('examples', starter.path)),
+        await starterBytes(path.resolve('examples', starter.path), starter.category),
       );
     }
   });
@@ -247,16 +253,16 @@ describe('starter initialization', () => {
       { destination: 'bad\0path' },
       { destination, starter: 1 },
       { destination, starter: '../unsafe' },
-      { destination, starter: 'basic/escape' },
-      { destination, starter: 'basic\0suffix' },
+      { destination, starter: 'document/escape' },
+      { destination, starter: 'document\0suffix' },
       { destination, starter: 'a'.repeat(65) },
       { destination, starter: '' },
-      { destination, starter: 'Basic' },
+      { destination, starter: 'Document' },
       { destination, unexpected: true },
       Object.create({ destination }) as unknown,
       Object.defineProperty({}, 'destination', { get: () => destination }),
       Object.defineProperty({ destination }, 'starter', {
-        get: () => 'basic',
+        get: () => 'document',
         enumerable: true,
       }),
       { destination, [Symbol('unknown')]: true },
@@ -279,7 +285,7 @@ describe('starter initialization', () => {
     const second: ExampleDefinition = {
       ...authoringRegistry.examples[0],
       id: longestStarterId,
-      path: 'basic/partials',
+      path: 'document/partials',
       entry: 'findings.md',
       title: 'Second starter',
       starter: { default: false },
@@ -288,7 +294,7 @@ describe('starter initialization', () => {
     try {
       await expect(
         initProject({ destination: path.join(workspace, 'default-project') }),
-      ).resolves.toMatchObject({ starterId: 'basic' });
+      ).resolves.toMatchObject({ starterId: 'document' });
       await expect(
         initProject({
           destination: path.join(workspace, 'named-project'),
@@ -299,11 +305,13 @@ describe('starter initialization', () => {
         starterTitle: 'Second starter',
         projectPath: path.join(workspace, 'named-project'),
         entryPath: path.join(workspace, 'named-project/findings.md'),
-        files: ['findings.md', 'findings.ru.md'],
+        files: ['brief.md', 'findings.md', 'findings.ru.md'],
       });
       await expect(
         readFile(path.join(workspace, 'named-project/findings.md'), 'utf8'),
-      ).resolves.toBe(await readFile(path.resolve('examples/basic/partials/findings.md'), 'utf8'));
+      ).resolves.toBe(
+        await readFile(path.resolve('examples/document/partials/findings.md'), 'utf8'),
+      );
       fsControl.calls = [];
       await expect(
         initProject({ destination: path.join(workspace, 'unknown'), starter: 'missing' }),
@@ -445,6 +453,7 @@ describe('starter initialization', () => {
     expect(await recursiveFilePaths(destination)).toEqual([
       'assets/architecture.ru.svg',
       'assets/architecture.svg',
+      'brief.md',
     ]);
     expect((await readdir(workspace)).sort()).toEqual(['project']);
   });
@@ -470,8 +479,8 @@ describe('starter initialization', () => {
   });
 
   it.each([
-    ['starter-root symlink', `${path.sep}examples${path.sep}basic`, undefined],
-    ['starter-root special node', undefined, `${path.sep}examples${path.sep}basic`],
+    ['starter-root symlink', `${path.sep}examples${path.sep}document`, undefined],
+    ['starter-root special node', undefined, `${path.sep}examples${path.sep}document`],
     ['tree symlink', `${path.sep}report.md`, undefined],
     ['tree special node', undefined, `${path.sep}report.md`],
   ] as const)(
@@ -495,21 +504,23 @@ describe('starter initialization', () => {
     const examplesRoot = path.join(workspace, 'examples');
     const outsideRoot = path.join(workspace, 'outside');
     await mkdir(examplesRoot);
-    await mkdir(path.join(outsideRoot, 'basic'), { recursive: true });
-    await writeFile(path.join(outsideRoot, 'basic/report.md'), '# outside\n');
+    await mkdir(path.join(outsideRoot, 'document'), { recursive: true });
+    await writeFile(path.join(outsideRoot, 'document/report.md'), '# outside\n');
     await symlink(outsideRoot, path.join(examplesRoot, 'nested'), 'dir');
 
-    await expect(resolveConfinedStarterRoot(examplesRoot, 'nested/basic')).rejects.toMatchObject({
-      diagnostic: { code: 'PACKAGE_STARTER_INVALID' },
-    });
-    await expect(readFile(path.join(outsideRoot, 'basic/report.md'), 'utf8')).resolves.toBe(
+    await expect(resolveConfinedStarterRoot(examplesRoot, 'nested/document')).rejects.toMatchObject(
+      {
+        diagnostic: { code: 'PACKAGE_STARTER_INVALID' },
+      },
+    );
+    await expect(readFile(path.join(outsideRoot, 'document/report.md'), 'utf8')).resolves.toBe(
       '# outside\n',
     );
   });
 
   it('resolves starter bytes beside the package module instead of consumer CWD shadows', async () => {
     const workspace = await createWorkspace('init-package-root');
-    const shadow = path.join(workspace, 'examples/basic');
+    const shadow = path.join(workspace, 'examples/document');
     const destination = path.join(workspace, 'project');
     await mkdir(shadow, { recursive: true });
     await writeFile(path.join(shadow, 'report.md'), '# hostile CWD shadow\n');
@@ -523,7 +534,7 @@ describe('starter initialization', () => {
 
   it('executes the built-layout package-root branch with a hostile consumer CWD shadow', async () => {
     const workspace = await createWorkspace('init-built-package-root');
-    const shadow = path.join(workspace, 'examples/basic');
+    const shadow = path.join(workspace, 'examples/document');
     const destination = path.join(workspace, 'project');
     await mkdir(shadow, { recursive: true });
     await writeFile(path.join(shadow, 'report.md'), '# hostile built CWD shadow\n');
@@ -544,13 +555,14 @@ describe('starter initialization', () => {
     expect(result.files).toEqual([
       'assets/architecture.ru.svg',
       'assets/architecture.svg',
+      'brief.md',
       'partials/findings.md',
       'partials/findings.ru.md',
       'report.md',
       'report.ru.md',
     ]);
     expect(await fileBytes(destination)).toEqual(
-      await fileBytes(path.resolve(originalCwd, 'examples/basic')),
+      await starterBytes(path.resolve(originalCwd, 'examples/document'), 'document'),
     );
   });
 
@@ -591,6 +603,20 @@ async function createWorkspace(prefix: string): Promise<string> {
   const value = await createTestWorkspace(prefix);
   workspaces.push(value);
   return value;
+}
+
+/**
+ * Что init кладёт в проект: дерево стартера, где заполненный бриф образца заменён чистой заготовкой
+ * брифа категории.
+ */
+async function starterBytes(
+  root: string,
+  category: ExampleDefinition['category'],
+): Promise<Readonly<Record<string, string>>> {
+  return {
+    ...(await fileBytes(root)),
+    [BRIEF_FILE]: Buffer.from(renderBriefTemplate(category)).toString('base64'),
+  };
 }
 
 async function fileBytes(root: string): Promise<Readonly<Record<string, string>>> {

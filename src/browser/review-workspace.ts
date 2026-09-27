@@ -1,3 +1,4 @@
+import { asUi, asUiButton } from './ui.js';
 import {
   MAX_REVIEW_FILE_BYTES,
   MAX_REVIEW_TEXT_LENGTH,
@@ -18,6 +19,7 @@ import {
 } from '../review/contract.js';
 import type { ResolvedReviewArtifact } from '../review/binding.js';
 import { packageStrings } from '../localization.js';
+import { pageClock } from './clock.js';
 import { browserIcon } from './icon.js';
 import { placeSurface, visualViewportBounds, type ViewportBounds } from './overlay-position.js';
 
@@ -551,6 +553,7 @@ function createController(
         if (segment.reportRevision === manifest.reportRevision) {
           const edit = document.createElement('button');
           edit.type = 'button';
+          asUiButton(edit, 'quiet', 'sm');
           edit.append(browserIcon('pencil'), document.createTextNode(strings.edit));
           edit.dataset.reviewMessageEdit = message.id;
           li.append(edit);
@@ -579,6 +582,7 @@ function createController(
       const button = document.createElement('button');
       button.type = 'button';
       button.dataset.reviewThreadOpen = entry.thread.id;
+      asUi(button, 'ui-row', 'sm');
       const state = entry.segment.resolved ? `○ ${strings.resolved}` : `● ${strings.unresolved}`;
       button.textContent = `${state} · ${
         subject.selection ? strings.openNote(subject.label) : strings.openDiscussion(subject.label)
@@ -607,6 +611,7 @@ function createController(
         const button = document.createElement('button');
         button.type = 'button';
         button.dataset.reviewPriorOpen = entry.thread.id;
+        asUi(button, 'ui-row', 'sm');
         button.setAttribute('aria-label', strings.openDiscussion(target.label));
         button.textContent = summary;
         li.append(button);
@@ -854,7 +859,7 @@ function createController(
   function scheduleReposition(): void {
     if (el.popover.hidden && pendingAction === undefined && renderedSelections.length === 0) return;
     if (repositionFrame !== undefined) return;
-    repositionFrame = window.requestAnimationFrame(() => {
+    repositionFrame = pageClock().frame(() => {
       repositionFrame = undefined;
       repositionOverlays();
     });
@@ -898,7 +903,7 @@ function createController(
       if (el.dialog.open) el.dialog.close();
       el.popover.hidden = true;
       abort.abort();
-      if (repositionFrame !== undefined) window.cancelAnimationFrame(repositionFrame);
+      if (repositionFrame !== undefined) pageClock().cancelFrame(repositionFrame);
       highlightRegistry()?.delete(OPEN_HIGHLIGHT);
       highlightRegistry()?.delete(RESOLVED_HIGHLIGHT);
       markerHost.remove();

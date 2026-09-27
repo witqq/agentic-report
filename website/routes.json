@@ -70,6 +70,24 @@
       "kind": "copy"
     },
     {
+      "id": "example-question-review",
+      "href": "examples/question-review/index.html",
+      "source": "../examples/question-review",
+      "kind": "page"
+    },
+    {
+      "id": "source-question-review",
+      "href": "examples/question-review/report.md",
+      "source": "../examples/question-review/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-question-review-ru",
+      "href": "examples/question-review/report.ru.md",
+      "source": "../examples/question-review/report.ru.md",
+      "kind": "copy"
+    },
+    {
       "id": "example-vendor",
       "href": "examples/vendor-decision/index.html",
       "source": "../examples/vendor-decision",
@@ -103,6 +121,24 @@
       "id": "source-launch-ru",
       "href": "examples/launch-readiness/report.ru.md",
       "source": "../examples/launch-readiness/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-run-report",
+      "href": "examples/run-report/index.html",
+      "source": "../examples/run-report",
+      "kind": "page"
+    },
+    {
+      "id": "source-run-report",
+      "href": "examples/run-report/report.md",
+      "source": "../examples/run-report/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-run-report-ru",
+      "href": "examples/run-report/report.ru.md",
+      "source": "../examples/run-report/report.ru.md",
       "kind": "copy"
     },
     {
@@ -160,6 +196,138 @@
       "kind": "copy"
     },
     {
+      "id": "skill-reference-art-direction",
+      "href": "skills/agentic-report/references/art-direction.md",
+      "source": "../skills/agentic-report/references/art-direction.md",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-reference-assets",
+      "href": "skills/agentic-report/references/assets.md",
+      "source": "../skills/agentic-report/references/assets.md",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-reference-catalog",
+      "href": "skills/agentic-report/references/catalog.md",
+      "source": "../skills/agentic-report/references/catalog.md",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-reference-compose",
+      "href": "skills/agentic-report/references/compose.md",
+      "source": "../skills/agentic-report/references/compose.md",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-reference-design-rules",
+      "href": "skills/agentic-report/references/design-rules.md",
+      "source": "../skills/agentic-report/references/design-rules.md",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-reference-extensions",
+      "href": "skills/agentic-report/references/extensions.md",
+      "source": "../skills/agentic-report/references/extensions.md",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-reference-playbook",
+      "href": "skills/agentic-report/references/playbook.md",
+      "source": "../skills/agentic-report/references/playbook.md",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-reference-process",
+      "href": "skills/agentic-report/references/process.md",
+      "source": "../skills/agentic-report/references/process.md",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-reference-prose",
+      "href": "skills/agentic-report/references/prose.md",
+      "source": "../skills/agentic-report/references/prose.md",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-reference-prose-en",
+      "href": "skills/agentic-report/references/prose-en.md",
+      "source": "../skills/agentic-report/references/prose-en.md",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-reference-prose-ru",
+      "href": "skills/agentic-report/references/prose-ru.md",
+      "source": "../skills/agentic-report/references/prose-ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-reference-themes",
+      "href": "skills/agentic-report/references/themes.md",
+      "source": "../skills/agentic-report/references/themes.md",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-reference-typography-ru",
+      "href": "skills/agentic-report/references/typography-ru.md",
+      "source": "../skills/agentic-report/references/typography-ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-reference-vocabulary-use",
+      "href": "skills/agentic-report/references/vocabulary-use.md",
+      "source": "../skills/agentic-report/references/vocabulary-use.md",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-script-design-check",
+      "href": "skills/agentic-report/scripts/design-check.mjs",
+      "source": "../skills/agentic-report/scripts/design-check.mjs",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-script-design-rules",
+      "href": "skills/agentic-report/scripts/design-rules.mjs",
+      "source": "../skills/agentic-report/scripts/design-rules.mjs",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-script-checklist",
+      "href": "skills/agentic-report/scripts/checklist.mjs",
+      "source": "../skills/agentic-report/scripts/checklist.mjs",
+      "kind": "copy"
+    },
+    {
+      "id": "extension-key-figure",
+      "href": "extensions/key-figure/README.md",
+      "source": "../extensions/key-figure/README.md",
+      "kind": "copy"
+    },
+    {
+      "id": "extension-product-theatre",
+      "href": "extensions/product-theatre/README.md",
+      "source": "../extensions/product-theatre/README.md",
+      "kind": "copy"
+    },
+    {
+      "id": "extension-wall-thread",
+      "href": "extensions/wall-thread/README.md",
+      "source": "../extensions/wall-thread/README.md",
+      "kind": "copy"
+    },
+    {
+      "id": "extension-loom",
+      "href": "extensions/loom/README.md",
+      "source": "../extensions/loom/README.md",
+      "kind": "copy"
+    },
+    {
+      "id": "extension-slo-budget",
+      "href": "extensions/slo-budget/README.md",
+      "source": "../extensions/slo-budget/README.md",
+      "kind": "copy"
+    },
+    {
       "id": "llms",
       "href": "llms.txt",
       "source": "llms.txt",
@@ -208,21 +376,75 @@
       "kind": "copy"
     },
     {
-      "id": "example-basic",
-      "href": "examples/basic/index.html",
-      "source": "../examples/basic",
+      "id": "example-document",
+      "href": "examples/document/index.html",
+      "source": "../examples/document",
       "kind": "page"
     },
     {
-      "id": "source-basic",
-      "href": "examples/basic/report.md",
-      "source": "../examples/basic/report.md",
+      "id": "source-document",
+      "href": "examples/document/report.md",
+      "source": "../examples/document/report.md",
       "kind": "copy"
     },
     {
-      "id": "source-basic-ru",
-      "href": "examples/basic/report.ru.md",
-      "source": "../examples/basic/report.ru.md",
+      "id": "source-document-ru",
+      "href": "examples/document/report.ru.md",
+      "source": "../examples/document/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-answer",
+      "href": "examples/answer/index.html",
+      "source": "../examples/answer",
+      "kind": "page"
+    },
+    {
+      "id": "source-answer",
+      "href": "examples/answer/report.md",
+      "source": "../examples/answer/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-answer-ru",
+      "href": "examples/answer/report.ru.md",
+      "source": "../examples/answer/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-code-review",
+      "href": "examples/code-review/index.html",
+      "source": "../examples/code-review",
+      "kind": "page"
+    },
+    {
+      "id": "source-code-review",
+      "href": "examples/code-review/report.md",
+      "source": "../examples/code-review/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-code-review-ru",
+      "href": "examples/code-review/report.ru.md",
+      "source": "../examples/code-review/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-presentation",
+      "href": "examples/presentation/index.html",
+      "source": "../examples/presentation",
+      "kind": "page"
+    },
+    {
+      "id": "source-presentation",
+      "href": "examples/presentation/report.md",
+      "source": "../examples/presentation/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-presentation-ru",
+      "href": "examples/presentation/report.ru.md",
+      "source": "../examples/presentation/report.ru.md",
       "kind": "copy"
     },
     {

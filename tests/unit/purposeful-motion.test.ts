@@ -12,12 +12,12 @@ describe('purposeful motion and controls', () => {
     expect(contract.section?.attributes.transition).toMatchObject({
       kind: 'enum',
       default: 'none',
-      values: ['none', 'reveal', 'stagger'],
+      values: ['none', 'reveal', 'stagger', 'lines', 'log', 'clip', 'staged'],
     });
     expect(contract.section?.attributes.scene).toMatchObject({
       kind: 'enum',
       default: 'none',
-      values: ['none', 'progress', 'sticky'],
+      values: ['none', 'progress', 'sticky', 'steps', 'scrub'],
     });
     expect(contract.section?.attributes.interaction).toMatchObject({
       kind: 'enum',
@@ -48,7 +48,7 @@ describe('purposeful motion and controls', () => {
 
   it('projects the same motion and placement semantics through both output formats', async () => {
     const source = [
-      '::::section{title="Motion" transition="stagger" scene="progress" interaction="none" choreography="cascade"}',
+      '::::section{title="Motion" id="next" transition="stagger" scene="progress" interaction="none" choreography="cascade"}',
       ':::actions{placement="bottom"}',
       '::action[Continue]{href="#next" kind="primary" effect="magnetic"}',
       ':::',

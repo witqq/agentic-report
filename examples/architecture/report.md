@@ -5,9 +5,9 @@ description: An architecture decision packet with boundaries, alternatives, and 
 language: en
 localizations:
   ru: report.ru.md
-theme: dark
 layout: document
-preset: terminal
+theme: blueprint
+scheme: dark
 ---
 
 # Portable page architecture
@@ -34,6 +34,8 @@ the trust boundary visible instead of hiding it in framework code.
 ::edge{from="source" to="model" label="parse"}
 ::edge{from="model" to="render" label="typed data"}
 ::edge{from="render" to="artifact" label="HTML + assets"}
+::legend-item{node="accent" label="Input and output"}
+::legend-item{node="success" label="Build-time rendering"}
 :::
 ::::::
 

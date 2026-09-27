@@ -4,14 +4,13 @@ description: A dense operational summary built from the shared page primitives.
 language: en
 localizations:
   ru: report.ru.md
-theme: dark
 layout: dashboard
-tokens:
-  density: compact
-  font: sans
-  accent: teal
-  width: wide
-  radius: sharp
+theme:
+  name: delivery-console
+  extends: blueprint
+  spacing:
+    density: compact
+scheme: dark
 ---
 
 # Delivery health dashboard
@@ -22,7 +21,7 @@ demonstrate the report engine; replace it with verified project evidence before 
 Current signals for a release candidate, arranged for scanning without introducing a separate dashboard
 framework.
 
-::::::section{title="Release signal" id="signal" nav="Signal" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Release signal" id="signal" nav="Signal" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="tint" transition="stagger" choreography="cascade"}
 ::::cards
 :::card{title="Build"}
 **Passing**
@@ -63,7 +62,7 @@ Paths and signed URLs must remain credential-safe in every human and machine-rea
 :::
 ::::::
 
-::::::section{title="Next sequence" id="next" nav="Next" width="wide" tone="accent" composition="stack" viewport="adaptive" section-density="compact" type="display" surface="glow" transition="stagger" choreography="cascade"}
+::::::section{title="Next sequence" id="next" nav="Next" width="wide" tone="accent" composition="stack" viewport="adaptive" section-density="compact" type="display" surface="tint" transition="stagger" choreography="cascade"}
 
 :::steps{title="Move to the next checkpoint"}
 

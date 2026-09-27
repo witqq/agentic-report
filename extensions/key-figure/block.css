@@ -1,0 +1,29 @@
+/*
+ * key-figure: the figure is the largest type in its card. The rules nest inside the block's element
+ * (the card the template writes), so `&` is the card and nothing outside the block is touched. Sizes come
+ * from the fluid type scale and colours, faces and weights from theme tokens.
+ */
+
+/* The figure: the paragraph right after the card's title, or after its status label. */
+& > :is(.semantic-title, .semantic-status) + p:not(.semantic-status) {
+  margin-block: 0.35rem 0.15rem;
+  color: var(--color-heading);
+  font-family: var(--font-heading);
+  font-size: clamp(1.75rem, 2vw + 1rem, 2.5rem);
+  font-weight: var(--display-weight);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  letter-spacing: var(--heading-tracking);
+  overflow-wrap: anywhere;
+}
+
+& > :is(.semantic-title, .semantic-status) + p:not(.semantic-status) strong {
+  font-weight: inherit;
+}
+
+/* The date and the source under the figure. */
+& > :is(.semantic-title, .semantic-status) + p:not(.semantic-status) + p {
+  margin-block-start: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}

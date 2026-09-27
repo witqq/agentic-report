@@ -17,8 +17,10 @@ const prettierOptions = (await resolveConfig(path.join(projectRoot, 'package.jso
 const check = process.argv.includes('--check');
 const outputRoot = resolveOutputRoot();
 
+const stale: string[] = [];
+
 const projections = new Map<string, string>();
-for (const scope of ['manifest', 'directives', 'source'] as const) {
+for (const scope of ['manifest', 'directives', 'source', 'theme'] as const) {
   projections.set(
     `docs/generated/${scope}.schema.json`,
     await serialize(getAuthoringSchema(scope)),
@@ -40,23 +42,26 @@ projections.set(
     renderSkillCatalog(getSourceContract(), getAuthoringSchema('manifest') as ManifestSchema),
   ),
 );
-const stale: string[] = [];
-for (const [relativePath, content] of projections) {
-  const target = path.join(outputRoot, relativePath);
-  const current = await readFile(target, 'utf8').catch(() => undefined);
-  if (current === content) continue;
-  stale.push(relativePath);
-  if (!check) {
-    await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, content);
-  }
-}
+await writeProjections(projections);
 if (check && stale.length > 0) {
   throw new Error(`Generated authoring projections are stale:\n${stale.join('\n')}`);
 }
 process.stdout.write(
   `${check ? 'Checked' : 'Generated'} ${projections.size} authoring projections.\n`,
 );
+
+async function writeProjections(files: ReadonlyMap<string, string>): Promise<void> {
+  for (const [relativePath, content] of files) {
+    const target = path.join(outputRoot, relativePath);
+    const current = await readFile(target, 'utf8').catch(() => undefined);
+    if (current === content) continue;
+    stale.push(relativePath);
+    if (!check) {
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, content);
+    }
+  }
+}
 
 async function formatMarkdown(markdown: string): Promise<string> {
   return format(markdown, { ...prettierOptions, parser: 'markdown' });
@@ -93,28 +98,55 @@ function renderSkillCatalog(contract: SourceContract, manifest: ManifestSchema):
   lines.push(
     '## Page metadata',
     '',
-    `Default preset \`${contract.page.defaultPreset}\`, default theme \`${contract.page.defaultTheme}\`, default layout \`${contract.page.defaultLayout}\`.`,
+    `Default theme \`${contract.page.defaultTheme}\`, default scheme \`${contract.page.defaultScheme}\`, default layout \`${contract.page.defaultLayout}\`.`,
     '',
-    '| Preset | Tokens | Intent |',
+    '| Built-in theme | Intent | Palette |',
     '| --- | --- | --- |',
   );
-  for (const preset of contract.page.presets) {
-    const tokens = Object.entries(preset.tokens)
-      .map(([token, value]) => `${token}=${String(value)}`)
-      .join(', ');
-    lines.push(`| \`${preset.name}\` | ${tokens} | ${preset.description} |`);
+  for (const theme of contract.page.themes) {
+    lines.push(`| \`${theme.name}\` | ${theme.description} | ${theme.palette} |`);
   }
-  lines.push('', '| Token | Values | Default | Meaning |', '| --- | --- | --- |  --- |');
-  for (const token of contract.page.tokens) {
+  lines.push(
+    '',
+    `Schemes: ${contract.page.schemes.map((scheme: string) => `\`${scheme}\``).join(', ')}. Layouts: ${contract.page.layouts
+      .map((layout: string) => `\`${layout}\``)
+      .join(', ')}.`,
+    '',
+    '## Theme fields',
+    '',
+    '`theme` takes a built-in theme name, a relative path to a theme file (' +
+      contract.page.themeFileExtensions.map((extension: string) => `\`${extension}\``).join(', ') +
+      '), or a theme object in the frontmatter. A theme file and a theme object share these fields; every field is optional and anything left out comes from `extends`, which defaults to the default theme. Resolution order: ' +
+      contract.page.theme.resolution.join(', ') +
+      '.',
+    '',
+    '| Field | Values | Meaning |',
+    '| --- | --- | --- |',
+  );
+  for (const [field, definition] of flattenFields(contract.page.theme.fields, '')) {
     lines.push(
-      `| \`${token.name}\` | ${describeConstraint(token.constraint)} | \`${String(token.default)}\` | ${token.description} |`,
+      `| \`${field}\` | ${describeConstraint(definition.constraint)} | ${definition.description} |`,
     );
   }
   lines.push(
     '',
-    `Themes: ${contract.page.themes.map((theme: string) => `\`${theme}\``).join(', ')}. Layouts: ${contract.page.layouts
-      .map((layout: string) => `\`${layout}\``)
+    `Named accents: ${Object.keys(contract.page.theme.accents)
+      .map((accent) => `\`${accent}\``)
+      .join(', ')}. Font families: ${Object.keys(contract.page.theme.fontFamilies)
+      .map((family) => `\`${family}\``)
       .join(', ')}.`,
+    '',
+    'The build refuses a theme whose colours fail these contrast pairs in any scheme it draws:',
+    '',
+    '| Foreground | Background | Minimum | Used for |',
+    '| --- | --- | --- | --- |',
+  );
+  for (const pair of contract.page.theme.contrast) {
+    lines.push(
+      `| \`${pair.foreground}\` | \`${pair.background}\` | ${pair.minimum}:1 | ${pair.use} |`,
+    );
+  }
+  lines.push(
     '',
     '## Frontmatter and manifest fields',
     '',
@@ -124,7 +156,12 @@ function renderSkillCatalog(contract: SourceContract, manifest: ManifestSchema):
     '| --- | --- | --- | --- |',
   );
   for (const [field, definition] of Object.entries(manifest.properties ?? {})) {
-    const type = typeof definition.type === 'string' ? definition.type : 'object';
+    const type =
+      typeof definition.type === 'string'
+        ? definition.type
+        : Array.isArray(definition.oneOf)
+          ? 'string or object'
+          : 'object';
     const fallback = 'default' in definition ? `\`${JSON.stringify(definition.default)}\`` : '—';
     const meaning = typeof definition.description === 'string' ? definition.description : '';
     lines.push(`| \`${field}\` | ${type} | ${fallback} | ${meaning} |`);
@@ -142,8 +179,15 @@ function renderSkillCatalog(contract: SourceContract, manifest: ManifestSchema):
     lines.push(`### \`${name}\``, '', directive.description, '');
     const facts = [`Forms: ${directive.forms.join(', ')}.`];
     if (directive.children !== undefined) facts.push(`Children: ${String(directive.children)}.`);
-    const parent = (directive.placement as { requiredParent?: string }).requiredParent;
-    if (parent !== undefined) facts.push(`Required parent: \`${parent}\`.`);
+    const parent = (directive.placement as { requiredParent?: string | readonly string[] })
+      .requiredParent;
+    if (parent !== undefined)
+      facts.push(
+        `Required parent: ${[parent]
+          .flat()
+          .map((name) => `\`${name}\``)
+          .join(' or ')}.`,
+      );
     lines.push(facts.join(' '), '');
     const attributes = Object.entries(directive.attributes ?? {});
     if (attributes.length > 0) {
@@ -193,6 +237,37 @@ function renderSkillCatalog(contract: SourceContract, manifest: ManifestSchema):
   return lines.join('\n');
 }
 
+interface ContractField {
+  readonly name: string;
+  readonly description: string;
+  readonly constraint?: unknown;
+  readonly fields?: readonly ContractField[];
+}
+
+/** Вложенные поля темы плоским списком с путём через точку: так их пишет автор. */
+function flattenFields(
+  fields: readonly ContractField[],
+  prefix: string,
+): readonly (readonly [string, ContractField])[] {
+  return fields.flatMap((field) => {
+    const name = `${prefix}${field.name}`;
+    if (field.fields === undefined) return [[name, field] as const];
+    if (name === 'colors.light' || name === 'colors.dark') {
+      return [
+        [
+          `${name}.<role>`,
+          {
+            name: `${name}.<role>`,
+            description: `${field.description} Roles: ${field.fields.map((role) => `\`${role.name}\``).join(', ')}.`,
+            constraint: field.fields[0]?.constraint,
+          },
+        ] as const,
+      ];
+    }
+    return flattenFields(field.fields, `${name}.`);
+  });
+}
+
 function inlineCode(value: string): string {
   return `\`${value.replaceAll('\n', ' ⏎ ').replaceAll('|', '\\|')}\``;
 }
@@ -215,6 +290,12 @@ function describeConstraint(definition: unknown): string {
     if (record.minimum !== undefined) bounds.push(`from ${record.minimum}`);
     if (record.maximum !== undefined) bounds.push(`to ${record.maximum}`);
     return `${record.kind}${bounds.length === 0 ? '' : ` ${bounds.join(' ')}`}`;
+  }
+  if (
+    record.kind === 'string' &&
+    (record as { pattern?: string }).pattern?.includes('#[0-9a-fA-F]')
+  ) {
+    return '`#rgb`, `#rrggbb`, `#rrggbbaa` or `transparent`';
   }
   if (record.kind === 'string') {
     const bounds: string[] = [];

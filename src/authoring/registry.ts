@@ -1,4 +1,34 @@
-import { PAGE_MOTION_POLICY } from '../page-motion.js';
+import { DEFAULT_MOTION_LEVEL, MOTION_LEVELS, PAGE_MOTION_POLICY } from '../page-motion.js';
+import { BUILT_IN_THEMES, DEFAULT_THEME_NAME } from './themes.js';
+import { BLOCK_DIRECTIVES } from '../blocks/index.js';
+import {
+  type ConstraintDefinition,
+  DIAGRAM_CONTRACT,
+  type DirectiveDefinition,
+  REGISTRY_IDENTITY_CONSTRAINT,
+} from './directive-contract.js';
+
+export {
+  CARD_STATUSES,
+  DIAGRAM_CONTRACT,
+  FINDING_SEVERITIES,
+  REGISTRY_IDENTITY_CONSTRAINT,
+  SECTION_RECIPE_NAMES,
+  SECTION_RECIPES,
+  sectionRecipeDefaults,
+} from './directive-contract.js';
+export type {
+  CapabilityHandoff,
+  ConstraintDefinition,
+  DiagramEdgeKindChoice,
+  DiagramTypeChoice,
+  DirectiveAttributeDefinition,
+  DirectiveAttributeDiagnosticCode,
+  DirectiveDefinition,
+  DirectiveForm,
+  DirectiveIncompatibleCombinationDefinition,
+  RendererKey,
+} from './directive-contract.js';
 
 export const SOURCE_CONTRACT_MAJOR = 1 as const;
 
@@ -15,246 +45,155 @@ export function runtimePlacementForFormat(format: OutputFormatChoice): RuntimePl
   return OUTPUT_CONTRACT.runtimePlacement[format];
 }
 
-export const PAGE_TOKEN_FIELDS = [
+/**
+ * Стандартные категории страниц. Категория — рекомендация, а не ограничение: она называет задачу
+ * читателя, стартер `init` и измерения брифа, но ни одна директива, режим или приём не запрещены
+ * на странице другой категории. Review Workspace — режим любой категории (`review: true`).
+ */
+const COMMON_BRIEF_DIMENSIONS = [
+  { id: 'subvariant', question: 'Which kind of page within the category is this?' },
+  { id: 'audience', question: 'Who reads the page, and what do they already know?' },
   {
-    name: 'density',
-    description: 'Controls the shared spacing rhythm and control padding.',
-    required: false,
-    default: 'comfortable',
-    constraint: { kind: 'enum', values: ['compact', 'comfortable', 'spacious'] },
+    id: 'reader-task',
+    question: 'What must the reader be able to decide or do after reading?',
   },
   {
-    name: 'font',
-    description: 'Selects the package-owned typography stack.',
-    required: false,
-    default: 'sans',
-    constraint: { kind: 'enum', values: ['sans', 'serif', 'mono'] },
+    id: 'material',
+    question: 'What real material exists: screenshots, data, code, clips, quotes, documents?',
+  },
+  { id: 'language', question: 'Which languages does the page ship in?' },
+  {
+    id: 'art-direction',
+    question: 'Which visual concept and theme fit the subject and the audience?',
+  },
+  { id: 'motion', question: 'How much motion suits the page: none, restrained or expressive?' },
+  {
+    id: 'interactivity',
+    question:
+      'What does the reader do on the page: only read, filter and switch views, comment (Review Workspace), or answer (Response Workspace)?',
   },
   {
-    name: 'accent',
-    description: 'Selects the accent and visible-focus color family.',
-    required: false,
-    default: 'indigo',
-    constraint: { kind: 'enum', values: ['indigo', 'teal', 'coral'] },
-  },
-  {
-    name: 'width',
-    description: 'Controls the maximum shell and reading width.',
-    required: false,
-    default: 'standard',
-    constraint: { kind: 'enum', values: ['narrow', 'standard', 'wide'] },
-  },
-  {
-    name: 'radius',
-    description: 'Controls the shared corner treatment for surfaces and controls.',
-    required: false,
-    default: 'soft',
-    constraint: { kind: 'enum', values: ['sharp', 'soft', 'round'] },
+    id: 'delivery',
+    question: 'How is the page delivered: one file, a published directory, public or private?',
   },
 ] as const;
 
-export const PAGE_PRESETS = [
+export const PAGE_CATEGORIES = [
   {
-    name: 'monument',
-    description:
-      'Large-scale product storytelling with sculptural type, generous space, and staged depth.',
-    tokens: {
-      density: 'spacious',
-      font: 'sans',
-      accent: 'indigo',
-      width: 'wide',
-      radius: 'soft',
-    },
+    id: 'landing',
+    title: 'Landing',
+    purpose:
+      'Convince a reader to try, adopt or remember something and send them to one next step.',
+    layout: 'landing',
+    subvariants: ['product', 'portfolio', 'showcase', 'launch'],
+    dimensions: [
+      ...COMMON_BRIEF_DIMENSIONS,
+      {
+        id: 'references',
+        question:
+          'Which 5–10 real sites on the same subject were studied before the concepts, and what does each teach?',
+      },
+      {
+        id: 'first-screen',
+        question:
+          'What does the first screen show: the result, code beside the result, a diagram or a clip?',
+      },
+      { id: 'call-to-action', question: 'What is the one action the reader should take?' },
+    ],
   },
   {
-    name: 'material',
-    description:
-      'Editorial reading with serif display type, tactile warm plates, and document navigation.',
-    tokens: {
-      density: 'comfortable',
-      font: 'serif',
-      accent: 'indigo',
-      width: 'wide',
-      radius: 'sharp',
-    },
+    id: 'document',
+    title: 'Document',
+    purpose: 'Explain a finding, a system or a procedure so the reader can check and act on it.',
+    layout: 'document',
+    subvariants: ['report', 'research', 'architecture', 'code-review', 'incident', 'guide'],
+    dimensions: [
+      ...COMMON_BRIEF_DIMENSIONS,
+      {
+        id: 'depth',
+        question: 'Does the reader need the conclusion only, or the full evidence behind it?',
+      },
+      {
+        id: 'review',
+        question: 'Will someone review the page in place and hand notes back?',
+      },
+    ],
   },
   {
-    name: 'signal',
-    description:
-      'Dense operational evidence with compact spacing, broad tracks, and crisp controls.',
-    tokens: {
-      density: 'compact',
-      font: 'sans',
-      accent: 'teal',
-      width: 'wide',
-      radius: 'sharp',
-    },
+    id: 'dashboard',
+    title: 'Dashboard',
+    purpose: 'Show the current state of something at a glance, with the detail one step away.',
+    layout: 'dashboard',
+    subvariants: ['metrics', 'charts', 'filters', 'statuses'],
+    dimensions: [
+      ...COMMON_BRIEF_DIMENSIONS,
+      {
+        id: 'signals',
+        question: 'Which numbers and statuses matter, and what counts as good, watch and risk?',
+      },
+      { id: 'freshness', question: 'When was the data taken, and from which source?' },
+    ],
   },
   {
-    name: 'terminal',
-    description:
-      'Console-oriented storytelling with mono type, luminous signals, scan texture, and explicit prompts.',
-    tokens: {
-      density: 'compact',
-      font: 'mono',
-      accent: 'teal',
-      width: 'wide',
-      radius: 'sharp',
-    },
+    id: 'presentation',
+    title: 'Presentation',
+    purpose:
+      'Show something to people one slide at a time — live, as a file to click through, or filmed — between a screencast and a slide deck.',
+    layout: 'slides',
+    subvariants: ['demo', 'pitch', 'update', 'lesson'],
+    dimensions: [
+      ...COMMON_BRIEF_DIMENSIONS,
+      {
+        id: 'setting',
+        question: 'How is it shown: presented live, sent to click through alone, or filmed?',
+      },
+      { id: 'length', question: 'How many slides and how many minutes does it have?' },
+    ],
   },
   {
-    name: 'cinematic',
-    description:
-      'Image-first narrative with deep staging, broad media, restrained overlays, and scroll-driven scenes.',
-    tokens: {
-      density: 'spacious',
-      font: 'sans',
-      accent: 'coral',
-      width: 'wide',
-      radius: 'round',
-    },
-  },
-  {
-    name: 'studio',
-    description: 'Compatibility identity mapped to the Monument visual system.',
-    tokens: {
-      density: 'spacious',
-      font: 'sans',
-      accent: 'indigo',
-      width: 'wide',
-      radius: 'soft',
-    },
-  },
-  {
-    name: 'editorial',
-    description: 'Compatibility identity mapped to the Material editorial visual system.',
-    tokens: {
-      density: 'comfortable',
-      font: 'serif',
-      accent: 'indigo',
-      width: 'wide',
-      radius: 'sharp',
-    },
-  },
-] as const;
-
-export const PAGE_PRESET_NAMES = PAGE_PRESETS.map((preset) => preset.name) as unknown as readonly [
-  'monument',
-  'material',
-  'signal',
-  'terminal',
-  'cinematic',
-  'studio',
-  'editorial',
-];
-
-export const SECTION_RECIPES = [
-  {
-    name: 'none',
-    description: 'No high-level recipe; use the compatible detailed section defaults.',
-    attributes: {},
-  },
-  {
-    name: 'hero',
-    description: 'Staged opening with display type, broad cinematic media, depth, and one reveal.',
-    attributes: {
-      width: 'wide',
-      composition: 'stage',
-      viewport: 'full',
-      'section-density': 'immersive',
-      type: 'display',
-      media: 'bleed',
-      'media-fit': 'cover',
-      'media-aspect': 'cinematic',
-      surface: 'mesh',
-      transition: 'stagger',
-      scene: 'progress',
-    },
-  },
-  {
-    name: 'evidence',
-    description: 'Readable split evidence with bounded media and a clear illuminated surface.',
-    attributes: {
-      width: 'wide',
-      composition: 'split',
-      viewport: 'bounded',
-      media: 'mask',
-      'media-fit': 'cover',
-      'media-aspect': 'landscape',
-      surface: 'glow',
-      transition: 'reveal',
-    },
-  },
-  {
-    name: 'story',
-    description: 'Long-form scroll story with sticky narrative rhythm and progressive media.',
-    attributes: {
-      width: 'wide',
-      composition: 'story',
-      'section-density': 'immersive',
-      type: 'editorial',
-      media: 'bleed',
-      'media-fit': 'cover',
-      'media-aspect': 'cinematic',
-      surface: 'grain',
-      transition: 'reveal',
-      scene: 'progress',
-    },
-  },
-  {
-    name: 'rail',
-    description: 'Horizontal visual rail with broad gallery media and staged entrance.',
-    attributes: {
-      width: 'wide',
-      composition: 'stage',
-      'section-density': 'immersive',
-      media: 'gallery',
-      'media-fit': 'cover',
-      'media-aspect': 'landscape',
-      surface: 'grain',
-      transition: 'stagger',
-    },
-  },
-  {
-    name: 'metrics',
-    description: 'Compact data field with a responsive mosaic and kinetic numeric emphasis.',
-    attributes: {
-      width: 'wide',
-      composition: 'mosaic',
-      'section-density': 'compact',
-      surface: 'grid',
-      transition: 'stagger',
-      choreography: 'cascade',
-    },
+    id: 'answer',
+    title: 'Answer',
+    purpose:
+      'Put a question, choices or a form in front of the reader and collect a structured answer.',
+    layout: 'document',
+    subvariants: ['choice', 'questions', 'survey', 'brief'],
+    dimensions: [
+      ...COMMON_BRIEF_DIMENSIONS,
+      { id: 'respondent', question: 'Who answers, and how much context do they have?' },
+      {
+        id: 'handoff',
+        question: 'Where do the answers go after export, and who reads them?',
+      },
+    ],
   },
 ] as const;
 
-export const SECTION_RECIPE_NAMES = SECTION_RECIPES.map(
-  (recipe) => recipe.name,
-) as unknown as readonly ['none', 'hero', 'evidence', 'story', 'rail', 'metrics'];
-
-export function sectionRecipeDefaults(
-  recipeName: string | undefined,
-): Readonly<Record<string, string>> {
-  const recipe = SECTION_RECIPES.find((candidate) => candidate.name === (recipeName ?? 'none'));
-  if (recipe === undefined) return {};
-  return recipe.attributes;
-}
+export type PageCategoryId = (typeof PAGE_CATEGORIES)[number]['id'];
 
 export const PAGE_CONTRACT = {
-  defaultPreset: 'material',
-  presets: PAGE_PRESETS,
+  defaultTheme: DEFAULT_THEME_NAME,
+  themes: BUILT_IN_THEMES.map((theme) => ({
+    name: theme.name,
+    description: theme.description,
+    palette: theme.palette,
+  })),
+  themeFileExtensions: ['.yaml', '.yml', '.json'],
   defaultLayout: 'document',
-  layouts: ['document', 'dashboard', 'landing', 'mixed'],
-  defaultTheme: 'system',
-  themes: ['system', 'light', 'dark'],
-  defaultScrollProgress: false,
+  layouts: ['document', 'dashboard', 'landing', 'mixed', 'slides', 'screens'],
+  defaultScheme: 'system',
+  schemes: ['system', 'light', 'dark'],
+  defaultProgress: 'none',
+  progress: ['none', 'page', 'chapters', 'nodes'],
+  defaultMotion: DEFAULT_MOTION_LEVEL,
+  motionLevels: MOTION_LEVELS,
+  defaultOpening: 'center',
+  openings: ['center', 'start'],
   defaultAttribution: true,
   defaultReview: false,
-  defaultThemeToggle: true,
-  defaultPresetSwitcher: false,
+  defaultSchemeToggle: true,
+  defaultThemeSwitcher: false,
   motion: PAGE_MOTION_POLICY,
-  tokens: PAGE_TOKEN_FIELDS,
+  categories: PAGE_CATEGORIES,
 } as const;
 
 /**
@@ -281,91 +220,11 @@ export const PAGE_LOCALES = ['en', 'ru'] as const;
 export type PageLocaleChoice = (typeof PAGE_LOCALES)[number];
 
 export type LayoutChoice = (typeof PAGE_CONTRACT.layouts)[number];
-export type ThemeChoice = (typeof PAGE_CONTRACT.themes)[number];
-export type PresetChoice = (typeof PAGE_PRESET_NAMES)[number];
-
-export const DIAGRAM_CONTRACT = {
-  defaultType: 'flow',
-  types: ['flow', 'sequence'],
-  /**
-   * Closed set of connection meanings. Each one has its own line and arrowhead drawn by the package,
-   * so the author names what a connection means and cannot restyle it.
-   */
-  edgeKinds: ['call', 'data', 'event', 'dependency'],
-  defaultEdgeKind: 'call',
-  /** Node emphasis has no meaning of its own: the author names it with a legend item. */
-  nodeKinds: ['neutral', 'accent', 'success', 'warning'],
-  /**
-   * A legend of the edge kinds present appears as soon as one diagram mixes two or more kinds.
-   * `legend` and `legend-item` rename, add, or hide entries and title the legend.
-   */
-  edgeKindLegend: { minimumKinds: 2 },
-  legend: { maximumPerDiagram: 1, maximumItems: 8 },
-  flow: {
-    nodes: { minimum: 1, maximum: 20 },
-    edges: { maximum: 40 },
-    selfEdges: false,
-    /**
-     * Every flow ships three views: layered top-down, layered left-to-right, and orthogonal
-     * (right-angle routes by ELK); readers switch between them. `layout` names the one shown first
-     * and printed; `auto` picks the view with the fewest crossings that reads largest on the page.
-     */
-    layouts: ['auto', 'down', 'right', 'orthogonal'],
-    directions: ['auto', 'right', 'down'],
-    groups: {
-      maximum: 5,
-      minimumMembers: 1,
-      requireEveryNode: false,
-    },
-  },
-  sequence: {
-    participants: { minimum: 2, maximum: 6 },
-    messages: { minimum: 1, maximum: 40, labelRequired: true },
-    groups: false,
-    participantGroups: false,
-    direction: 'forbidden',
-    selfMessages: true,
-  },
-} as const;
-export type DiagramTypeChoice = (typeof DIAGRAM_CONTRACT.types)[number];
-export type DiagramEdgeKindChoice = (typeof DIAGRAM_CONTRACT.edgeKinds)[number];
+export type SchemeChoice = (typeof PAGE_CONTRACT.schemes)[number];
 
 export const REVIEW_TARGET_OWNERSHIP_CONTRACT = {
   parentOwnedDirectives: ['lead', 'series', 'question', 'bucket', 'option', 'item'],
 } as const;
-
-export type ConstraintDefinition =
-  | {
-      readonly kind: 'string';
-      readonly normalization: 'trim';
-      readonly minLength: number;
-      readonly maxLength?: number;
-      readonly pattern?: string;
-      readonly format?: 'relative-local-path' | 'absolute-http-url';
-    }
-  | {
-      readonly kind: 'integer';
-      readonly minimum?: number;
-      readonly maximum?: number;
-      readonly lexicalPattern?: string;
-    }
-  | {
-      readonly kind: 'number';
-      readonly minimum?: number;
-      readonly maximum?: number;
-      readonly multipleOf?: number;
-      readonly lexicalPattern?: string;
-    }
-  | { readonly kind: 'boolean' }
-  | { readonly kind: 'enum'; readonly values: readonly string[] };
-
-export const REGISTRY_IDENTITY_CONSTRAINT = {
-  kind: 'string',
-  normalization: 'trim',
-  minLength: 1,
-  maxLength: 64,
-  pattern: '^[a-z][a-z0-9-]{0,63}$',
-} as const satisfies ConstraintDefinition;
 
 export interface CodeFenceMetadataDefinition {
   readonly syntax: string;
@@ -407,91 +266,6 @@ export interface ObjectFieldDefinition extends FieldDefinitionBase {
 
 export type FieldDefinition = ScalarFieldDefinition | ObjectFieldDefinition;
 
-export type DirectiveForm = 'container' | 'leaf' | 'text';
-export type DirectiveAttributeDiagnosticCode =
-  | 'INVALID_DIRECTIVE_ATTRIBUTE'
-  | 'INVALID_DIRECTIVE_LINK'
-  | 'INVALID_SOURCE_LINK'
-  | 'INVALID_DIRECTIVE_PATH'
-  | 'INVALID_FONT_FAMILY';
-
-export interface DirectiveAttributeDefinition {
-  readonly name: string;
-  readonly description: string;
-  readonly required: boolean;
-  readonly default?: string | number | boolean;
-  readonly constraint: ConstraintDefinition;
-  readonly renderProperty: string;
-  readonly invalidDiagnostic: DirectiveAttributeDiagnosticCode;
-}
-
-export interface DirectiveIncompatibleCombinationDefinition {
-  readonly attributes: Readonly<Record<string, readonly [string, ...string[]]>>;
-  readonly message: string;
-  readonly remediation: string;
-}
-
-export type RendererKey =
-  'semantic-container' | 'download-asset' | 'font-registration' | 'embedded-video';
-export type CapabilityHandoff = 'semantic-document' | 'resource-graph' | 'reader-runtime';
-
-export interface DirectiveDefinition {
-  readonly name: string;
-  readonly description: string;
-  readonly forms: readonly [DirectiveForm, ...DirectiveForm[]];
-  readonly attributes: readonly DirectiveAttributeDefinition[];
-  readonly incompatibleCombinations?: readonly DirectiveIncompatibleCombinationDefinition[];
-  readonly children:
-    | 'markdown'
-    | 'decision-option-directives'
-    | 'check-item-directives'
-    | 'markdown-and-card-directives'
-    | 'markdown-and-tab-directives'
-    | 'markdown-and-term-directives'
-    | 'action-directives'
-    | 'series-directives'
-    | 'point-directives'
-    | 'node-and-edge-directives'
-    | 'diagram-part-directives'
-    | 'event-directives'
-    | 'response-question-directives'
-    | 'response-field-directives'
-    | 'label-or-generated-label'
-    | 'none';
-  readonly placement: {
-    readonly requiredParent?: string;
-    readonly preferredParent?: string;
-    readonly topLevelOnly?: true;
-  };
-  readonly behavior: {
-    readonly renderer: RendererKey;
-    readonly resource: 'none' | 'download' | 'font' | 'video';
-    readonly runtime:
-      | 'none'
-      | 'native-disclosure'
-      | 'glossary-reference'
-      | 'package-owned-counter'
-      | 'package-owned-tabs'
-      | 'package-owned-modal'
-      | 'package-owned-popover'
-      | 'package-owned-filter'
-      | 'package-owned-toggle'
-      | 'package-owned-response'
-      | 'package-owned-copy';
-  };
-  readonly sanitizer: {
-    readonly tagName: 'a' | 'article' | 'aside' | 'div' | 'figure' | 'nav' | 'section' | 'span';
-    readonly className: string;
-    readonly properties: readonly [string, ...string[]];
-  };
-  readonly security: {
-    readonly authorCode: false;
-    readonly rawHtml: false;
-    readonly localResourceOnly: boolean;
-  };
-  readonly handoffs: readonly [CapabilityHandoff, ...CapabilityHandoff[]];
-}
-
 export interface ExampleDefinition {
   readonly id: string;
   readonly path: string;
@@ -499,10 +273,10 @@ export interface ExampleDefinition {
   readonly title: string;
   readonly description: string;
   readonly classes: readonly [string, ...string[]];
-  readonly starter?: {
-    readonly default: boolean;
-    readonly aliases?: readonly string[];
-  };
+  /** Категория страницы и её подвариант; стартер категории носит её имя. */
+  readonly category: PageCategoryId;
+  readonly subvariant?: string;
+  readonly starter?: { readonly default: boolean };
 }
 
 export interface CapabilityDefinition {
@@ -551,15 +325,6 @@ export interface AuthoringRegistryDefinition {
   readonly commands: readonly [CommandDefinition, ...CommandDefinition[]];
   readonly examples: readonly [ExampleDefinition, ...ExampleDefinition[]];
 }
-
-const titleAttribute = {
-  name: 'title',
-  description: 'Visible title.',
-  required: false,
-  constraint: { kind: 'string', normalization: 'trim', minLength: 1, maxLength: 200 },
-  renderProperty: 'dataDirectiveTitle',
-  invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-} as const satisfies DirectiveAttributeDefinition;
 
 export const authoringRegistry = {
   contract: {
@@ -705,34 +470,51 @@ export const authoringRegistry = {
       },
     },
     {
-      name: 'preset',
-      description:
-        'Coordinated package-owned visual defaults; explicit bounded token values override the preset.',
-      required: false,
-      default: PAGE_CONTRACT.defaultPreset,
-      constraint: { kind: 'enum', values: PAGE_PRESET_NAMES },
-    },
-    {
       name: 'theme',
-      description: 'Initial document color theme.',
+      description:
+        'Visual theme: a built-in theme name, a relative path to a .yaml/.yml/.json theme file, or a theme object with extends and the fields it changes.',
       required: false,
       default: PAGE_CONTRACT.defaultTheme,
-      constraint: { kind: 'enum', values: PAGE_CONTRACT.themes },
+      constraint: { kind: 'theme-reference' },
+    },
+    {
+      name: 'scheme',
+      description: 'Initial colour scheme: follow the reader system, or light, or dark.',
+      required: false,
+      default: PAGE_CONTRACT.defaultScheme,
+      constraint: { kind: 'enum', values: PAGE_CONTRACT.schemes },
     },
     {
       name: 'layout',
-      description: 'Responsive page composition selected from the package-owned layout catalog.',
+      description:
+        'Responsive page composition selected from the package-owned layout catalog; screens moves one whole screen per gesture, with a screen switcher, keys and anchors, and scrolls normally under reduced motion.',
       required: false,
       default: PAGE_CONTRACT.defaultLayout,
       constraint: { kind: 'enum', values: PAGE_CONTRACT.layouts },
     },
     {
-      name: 'scrollProgress',
+      name: 'progress',
       description:
-        'Enables a decorative package-owned scroll indicator only in the normal-motion profile.',
+        'Page-wide progress element at the top edge: none, one bar for the whole page, one segment per chapter that fills as the reader moves through it and jumps to the chapter on click, or a row of nodes, one per chapter, marking the chapters passed and the current one.',
       required: false,
-      default: PAGE_CONTRACT.defaultScrollProgress,
-      constraint: { kind: 'boolean' },
+      default: PAGE_CONTRACT.defaultProgress,
+      constraint: { kind: 'enum', values: PAGE_CONTRACT.progress },
+    },
+    {
+      name: 'motion',
+      description:
+        'How much the page moves, decided by the brief: none — everything is drawn in its final state; restrained — at most one chapter entrance and one pointer effect, no pinned scenes, diagram drawing, WebGL or staged entrance; expressive — the whole motion vocabulary. Reduced motion always stills the page.',
+      required: false,
+      default: PAGE_CONTRACT.defaultMotion,
+      constraint: { kind: 'enum', values: PAGE_CONTRACT.motionLevels },
+    },
+    {
+      name: 'opening',
+      description:
+        'Alignment of the page title, introduction and actions on a landing page: centered, or aligned to the start edge.',
+      required: false,
+      default: PAGE_CONTRACT.defaultOpening,
+      constraint: { kind: 'enum', values: PAGE_CONTRACT.openings },
     },
     {
       name: 'attribution',
@@ -743,19 +525,19 @@ export const authoringRegistry = {
       constraint: { kind: 'boolean' },
     },
     {
-      name: 'themeToggle',
+      name: 'schemeToggle',
       description:
         'Shows the package-owned light and dark control; set false for a page that must stay in the scheme it was built with.',
       required: false,
-      default: PAGE_CONTRACT.defaultThemeToggle,
+      default: PAGE_CONTRACT.defaultSchemeToggle,
       constraint: { kind: 'boolean' },
     },
     {
-      name: 'presetSwitcher',
+      name: 'themeSwitcher',
       description:
-        'Shows a package-owned visual-style selector that swaps preset and its tokens live; the colour scheme stays where the reader put it.',
+        'Shows a package-owned selector that swaps the page between the built-in themes and its own; the colour scheme stays where the reader put it.',
       required: false,
-      default: PAGE_CONTRACT.defaultPresetSwitcher,
+      default: PAGE_CONTRACT.defaultThemeSwitcher,
       constraint: { kind: 'boolean' },
     },
     {
@@ -767,12 +549,18 @@ export const authoringRegistry = {
       constraint: { kind: 'boolean' },
     },
     {
-      name: 'tokens',
-      description: 'Compact package-owned visual token overrides; arbitrary CSS is not accepted.',
+      name: 'extensions',
+      description:
+        'Extension manifests the page declares (blocks, providers, effects, islands), relative to the source root.',
       required: false,
-      defaultVisibility: 'normalization-only',
-      default: Object.fromEntries(PAGE_TOKEN_FIELDS.map((token) => [token.name, token.default])),
-      fields: PAGE_TOKEN_FIELDS,
+      constraint: { kind: 'local-path-list', minItems: 1, maxItems: 32 },
+    },
+    {
+      name: 'data',
+      description:
+        'JSON data files the page reads at build time, relative to the source root; each is addressed by its name without .json, as in {{run.total}}.',
+      required: false,
+      constraint: { kind: 'local-path-list', minItems: 1, maxItems: 16 },
     },
     {
       name: 'output',
@@ -789,7 +577,8 @@ export const authoringRegistry = {
         },
         {
           name: 'maxInlineBytes',
-          description: 'Warning threshold for bytes embedded into single-file output.',
+          description:
+            'Size budget of bytes embedded into single-file output; a build above it fails, use directory output or raise it deliberately.',
           required: false,
           default: 5_000_000,
           constraint: { kind: 'integer', minimum: 1 },
@@ -797,184 +586,7 @@ export const authoringRegistry = {
       ],
     },
   ],
-  directives: [
-    sectionDirective(),
-    contentsDirective(),
-    leadDirective(),
-    actionsDirective(),
-    actionDirective(),
-    sourceLinkDirective(),
-    {
-      name: 'callout',
-      description: 'Emphasized finding or notice containing Markdown.',
-      forms: ['container'],
-      attributes: [
-        titleAttribute,
-        {
-          name: 'kind',
-          description: 'Lowercase presentation token.',
-          required: false,
-          default: 'info',
-          constraint: {
-            kind: 'string',
-            normalization: 'trim',
-            minLength: 1,
-            maxLength: 32,
-            pattern: '^[a-z][a-z0-9-]{0,31}$',
-          },
-          renderProperty: 'dataKind',
-          invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-        },
-      ],
-      children: 'markdown',
-      placement: {},
-      behavior: {
-        renderer: 'semantic-container',
-        resource: 'none',
-        runtime: 'none',
-      },
-      sanitizer: {
-        tagName: 'aside',
-        className: 'semantic-callout',
-        properties: ['dataSemantic', 'dataDirectiveTitle', 'dataKind'],
-      },
-      security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-      handoffs: ['semantic-document'],
-    },
-    ...semanticContainers(),
-    ...responseDirectives(),
-    ...interactiveDirectives(),
-    ...visualizationDirectives(),
-    {
-      name: 'demo',
-      description: 'Package-owned counter interaction; author code is never executed.',
-      forms: ['container'],
-      attributes: [
-        titleAttribute,
-        integerAttribute('start', 'Initial counter value.', 0),
-        integerAttribute('step', 'Amount added per activation.', 1),
-      ],
-      children: 'markdown',
-      placement: {},
-      behavior: {
-        renderer: 'semantic-container',
-        resource: 'none',
-        runtime: 'package-owned-counter',
-      },
-      sanitizer: {
-        tagName: 'section',
-        className: 'semantic-demo',
-        properties: [
-          'dataSemantic',
-          'dataDirectiveTitle',
-          'dataStart',
-          'dataStep',
-          'dataDemoCounter',
-        ],
-      },
-      security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-      handoffs: ['semantic-document', 'reader-runtime'],
-    },
-    {
-      name: 'asset',
-      description: 'Download link to a confined local file.',
-      forms: ['text', 'leaf'],
-      attributes: [pathAttribute('src', 'Relative local resource path.', 'dataLocalAsset')],
-      children: 'label-or-generated-label',
-      placement: {},
-      behavior: {
-        renderer: 'download-asset',
-        resource: 'download',
-        runtime: 'none',
-      },
-      sanitizer: {
-        tagName: 'a',
-        className: 'semantic-asset',
-        properties: ['dataLocalAsset', 'download'],
-      },
-      security: { authorCode: false, rawHtml: false, localResourceOnly: true },
-      handoffs: ['resource-graph'],
-    },
-    {
-      name: 'video',
-      description:
-        'Embedded local video (webm, mp4, m4v, or ogv) with controls, muted and looping; plays when visible unless the reader prefers reduced motion.',
-      forms: ['leaf'],
-      attributes: [
-        pathAttribute(
-          'src',
-          'Relative local video path: .webm, .mp4, .m4v, or .ogv.',
-          'dataVideoSource',
-        ),
-        pathAttribute(
-          'poster',
-          'Relative local image shown before playback and in print: .png, .jpg, .jpeg, .webp, .gif, or .avif.',
-          'dataVideoPoster',
-          false,
-        ),
-        {
-          name: 'caption',
-          description:
-            'Visible caption under the video; it also names the video for assistive technology.',
-          required: false,
-          constraint: { kind: 'string', normalization: 'trim', minLength: 1, maxLength: 300 },
-          renderProperty: 'dataVideoCaption',
-          invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-        },
-      ],
-      children: 'none',
-      placement: {},
-      behavior: {
-        renderer: 'embedded-video',
-        resource: 'video',
-        runtime: 'none',
-      },
-      sanitizer: {
-        tagName: 'figure',
-        className: 'semantic-video',
-        properties: ['dataVideoSource', 'dataVideoPoster', 'dataVideoCaption'],
-      },
-      security: { authorCode: false, rawHtml: false, localResourceOnly: true },
-      handoffs: ['resource-graph'],
-    },
-    {
-      name: 'font',
-      description:
-        'Register a confined local font; the first declaration becomes the document font.',
-      forms: ['leaf'],
-      attributes: [
-        pathAttribute('src', 'Relative local font path.', 'dataFontSource'),
-        {
-          name: 'family',
-          description: 'CSS font family using letters, numbers, spaces, underscores, or hyphens.',
-          required: true,
-          constraint: {
-            kind: 'string',
-            normalization: 'trim',
-            minLength: 1,
-            maxLength: 80,
-            pattern: '^[\\p{L}\\p{N} _-]{1,80}$',
-          },
-          renderProperty: 'dataFontFamily',
-          invalidDiagnostic: 'INVALID_FONT_FAMILY',
-        },
-      ],
-      children: 'none',
-      placement: {},
-      behavior: {
-        renderer: 'font-registration',
-        resource: 'font',
-        runtime: 'none',
-      },
-      sanitizer: {
-        tagName: 'span',
-        className: 'semantic-font',
-        properties: ['dataFontSource', 'dataFontFamily', 'hidden'],
-      },
-      security: { authorCode: false, rawHtml: false, localResourceOnly: true },
-      handoffs: ['resource-graph'],
-    },
-  ],
+  directives: BLOCK_DIRECTIVES,
   capabilities: [
     {
       id: 'init',
@@ -1019,58 +631,117 @@ export const authoringRegistry = {
       id: 'fix',
       description: 'Apply the replacements the product computed exactly, and nothing else.',
     },
+    {
+      id: 'theme',
+      description:
+        'Write an author theme file from one or two brand colours, their lightness shifted until every contrast pair passes in both schemes.',
+    },
     { id: 'describe', description: 'Return the complete source contract.' },
     {
       id: 'schema',
       description: 'Return manifest, directive, or complete source JSON Schema.',
     },
-    { id: 'examples', description: 'List packaged buildable examples.' },
+    {
+      id: 'examples',
+      description:
+        'List packaged buildable examples and the reference extensions shipped beside them.',
+    },
     {
       id: 'sitemap',
       description:
         'Write sitemap.xml and robots.txt for a published tree of pages built with a public URL.',
     },
+    {
+      id: 'snapshot',
+      description:
+        'Build a page and photograph it at several widths, in both schemes, with and without motion, with a contact sheet; with --measure, measure it instead of photographing.',
+    },
+    {
+      id: 'effect-check',
+      description:
+        'Build the examples of an effect extension (or a built-in effect) and run the eleven effect checks in Chromium, reporting N of M checks passed.',
+    },
   ],
   examples: [
     {
-      id: 'basic',
-      path: 'basic',
+      id: 'document',
+      path: 'document',
       entry: 'report.md',
-      title: 'Report starter',
+      title: 'Document starter',
       description:
         'Decision-ready report with findings, evidence, a local asset, a timeline, and bounded interaction.',
       classes: ['report', 'work-report'],
-      starter: { default: true, aliases: ['report'] },
+      category: 'document',
+      subvariant: 'report',
+      starter: { default: true },
+    },
+    {
+      id: 'answer',
+      path: 'answer',
+      entry: 'report.md',
+      title: 'Answer starter',
+      description:
+        'A question with options and their trade-offs, followed by a response form that exports one structured answer.',
+      classes: ['structured-response-handoff'],
+      category: 'answer',
+      subvariant: 'choice',
+      starter: { default: false },
+    },
+    {
+      id: 'presentation',
+      path: 'presentation',
+      entry: 'report.md',
+      title: 'Presentation starter',
+      description:
+        'A short product demo as slides: a title slide, steps that appear on click, a diagram, a figure, code and a question for the room, with speaker notes.',
+      classes: ['landing-page'],
+      category: 'presentation',
+      subvariant: 'demo',
+      starter: { default: false },
     },
     {
       id: 'research',
       path: 'research',
       entry: 'report.md',
-      title: 'Research starter',
+      title: 'Research synthesis example',
       description:
         'Research synthesis with a method partial, evidence map, comparison chart, tabs, and recommendation.',
       classes: ['research-report'],
-      starter: { default: false, aliases: [] },
+      category: 'document',
+      subvariant: 'research',
     },
     {
       id: 'architecture',
       path: 'architecture',
       entry: 'report.md',
-      title: 'Architecture starter',
+      title: 'Architecture decision example',
       description:
         'Architecture decision packet with a local system map, alternatives, flow diagram, and rollout.',
       classes: ['architecture-report'],
-      starter: { default: false, aliases: [] },
+      category: 'document',
+      subvariant: 'architecture',
+    },
+    {
+      id: 'code-review',
+      path: 'code-review',
+      entry: 'report.md',
+      title: 'Code review',
+      description:
+        'Review of one change with a verdict, findings by severity, the unified diff, and the steps to merge.',
+      classes: ['work-report'],
+      category: 'document',
+      subvariant: 'code-review',
     },
     {
       id: 'tutorial',
       path: 'tutorial',
       entry: 'report.md',
-      title: 'Tutorial starter',
+      title: 'Tutorial example',
       description:
         'Step-by-step learning page with tabs, progressive detail, code, and a bounded practice control.',
       classes: ['tutorial-with-code-and-bounded-demo'],
-      starter: { default: false, aliases: [] },
+      category: 'document',
+      subvariant: 'guide',
     },
     {
       id: 'dashboard',
@@ -1080,7 +751,9 @@ export const authoringRegistry = {
       description:
         'Operational dashboard with scan-friendly cards, charts, filtering, and optional detail.',
       classes: ['work-report'],
-      starter: { default: false, aliases: [] },
+      category: 'dashboard',
+      subvariant: 'metrics',
+      starter: { default: false },
     },
     {
       id: 'landing',
@@ -1090,7 +763,9 @@ export const authoringRegistry = {
       description:
         'Focused product narrative with benefits, proof, delivery milestones, and contextual detail.',
       classes: ['landing-page'],
-      starter: { default: false, aliases: [] },
+      category: 'landing',
+      subvariant: 'product',
+      starter: { default: false },
     },
     {
       id: 'layout-document',
@@ -1100,6 +775,8 @@ export const authoringRegistry = {
       description:
         'Long-form report with persistent contents, decisions, table, code, and local media.',
       classes: ['architecture-report'],
+      category: 'document',
+      subvariant: 'architecture',
     },
     {
       id: 'layout-dashboard',
@@ -1109,6 +786,8 @@ export const authoringRegistry = {
       description:
         'Wide operational summary using dense cards, callouts, a table, and compact navigation.',
       classes: ['work-report'],
+      category: 'dashboard',
+      subvariant: 'statuses',
     },
     {
       id: 'layout-landing',
@@ -1118,6 +797,8 @@ export const authoringRegistry = {
       description:
         'Focused product narrative with a spacious hero, benefits, proof, and next steps.',
       classes: ['landing-page'],
+      category: 'landing',
+      subvariant: 'product',
     },
     {
       id: 'layout-mixed',
@@ -1127,6 +808,8 @@ export const authoringRegistry = {
       description:
         'Bilingual catalog covering the complete composition, media, surface, motion, and responsive vocabulary.',
       classes: ['research-report'],
+      category: 'landing',
+      subvariant: 'showcase',
     },
     {
       id: 'interactive-catalog',
@@ -1136,6 +819,8 @@ export const authoringRegistry = {
       description:
         'Declarative glossary, disclosure, tabs, overlays, filtering, toggles, and a bounded demo.',
       classes: ['interactive-component-catalog'],
+      category: 'document',
+      subvariant: 'guide',
     },
     {
       id: 'review-workspace',
@@ -1145,6 +830,8 @@ export const authoringRegistry = {
       description:
         'Offline report with repeated evidence blocks for fragment threads, user/agent messages, resolution, and deterministic review export.',
       classes: ['work-report'],
+      category: 'document',
+      subvariant: 'report',
     },
     {
       id: 'response-workspace',
@@ -1154,6 +841,19 @@ export const authoringRegistry = {
       description:
         'Offline response form covering bucket, per-item choices, ordering, scoring, text, comments, import, and deterministic export.',
       classes: ['work-report', 'structured-response-handoff'],
+      category: 'answer',
+      subvariant: 'survey',
+    },
+    {
+      id: 'question-review',
+      path: 'question-review',
+      entry: 'report.md',
+      title: 'Open questions with context and answers',
+      description:
+        'Three open decisions, each with its context and options, and one form that collects the answers for the team that asked.',
+      classes: ['structured-response-handoff'],
+      category: 'answer',
+      subvariant: 'questions',
     },
     {
       id: 'visualization-catalog',
@@ -1163,6 +863,8 @@ export const authoringRegistry = {
       description:
         'Validated bar, line, and pie charts, a directed flow diagram, and a semantic timeline.',
       classes: ['data-visualization-catalog'],
+      category: 'dashboard',
+      subvariant: 'charts',
     },
     {
       id: 'incident-review',
@@ -1172,6 +874,8 @@ export const authoringRegistry = {
       description:
         'Fictional P1 incident review with impact metrics, causal evidence, recovery timeline, and accountable follow-up.',
       classes: ['work-report', 'incident-response-showcase'],
+      category: 'document',
+      subvariant: 'incident',
     },
     {
       id: 'vendor-decision',
@@ -1181,6 +885,8 @@ export const authoringRegistry = {
       description:
         'Fictional procurement decision separating hard security gates, weighted evidence, and conditional adoption.',
       classes: ['research-report', 'vendor-governance-showcase'],
+      category: 'answer',
+      subvariant: 'choice',
     },
     {
       id: 'launch-readiness',
@@ -1190,6 +896,8 @@ export const authoringRegistry = {
       description:
         'Fictional launch brief combining audience value, funnel evidence, operational gates, and a reversible rollout.',
       classes: ['landing-page', 'launch-readiness-showcase'],
+      category: 'landing',
+      subvariant: 'launch',
     },
     {
       id: 'executive-brief',
@@ -1197,8 +905,10 @@ export const authoringRegistry = {
       entry: 'report.md',
       title: 'Executive decision brief',
       description:
-        'Monument decision narrative with a staged opening, evidence field, operating path, and finished handoff.',
+        'Decision narrative with a staged opening, evidence field, operating path, and finished handoff.',
       classes: ['work-report', 'executive-brief-showcase'],
+      category: 'document',
+      subvariant: 'report',
     },
     {
       id: 'motion-showcase',
@@ -1206,8 +916,10 @@ export const authoringRegistry = {
       entry: 'report.md',
       title: 'Motion and depth showcase',
       description:
-        'Cinematic demonstration of scroll scenes, reveal, choreography, depth, tilt, and reduced-motion fallback.',
+        'Motion demonstration of scroll scenes, reveal, choreography, depth, tilt, and reduced-motion fallback.',
       classes: ['landing-page', 'motion-showcase'],
+      category: 'landing',
+      subvariant: 'showcase',
     },
     {
       id: 'terminal-portfolio',
@@ -1217,6 +929,8 @@ export const authoringRegistry = {
       description:
         'Console-led systems portfolio with prompt rhythm, linked work, an operating log, and a reproducible handoff.',
       classes: ['landing-page', 'terminal-portfolio-showcase'],
+      category: 'landing',
+      subvariant: 'portfolio',
     },
     {
       id: 'cinematic-story',
@@ -1226,1240 +940,22 @@ export const authoringRegistry = {
       description:
         'Local-media visual essay with a staged hero, scroll narrative, image rail, and measured summary.',
       classes: ['landing-page', 'cinematic-story-showcase'],
+      category: 'landing',
+      subvariant: 'showcase',
+    },
+    {
+      id: 'run-report',
+      path: 'run-report',
+      entry: 'report.md',
+      title: 'Run report from a JSON export',
+      description:
+        'Bilingual run report whose numbers, stage cards, chart points and table rows come from one JSON file, with control values, number agreement, a dated source line and an illustrative notification.',
+      classes: ['work-report'],
+      category: 'document',
+      subvariant: 'report',
     },
   ],
 } as const satisfies AuthoringRegistryDefinition;
 
 export type AuthoringRegistry = typeof authoringRegistry;
 export type DirectiveName = AuthoringRegistry['directives'][number]['name'];
-
-function semanticContainers() {
-  return [
-    decisionDirective(),
-    decisionOptionDirective(),
-    checklistDirective(),
-    checkItemDirective(),
-    container('cards', 'Responsive grid, normally containing card directives.', {
-      handoffs: ['semantic-document'],
-    }),
-    cardDirective(),
-    container(
-      'steps',
-      'Process or tutorial sequence containing Markdown, normally an ordered list.',
-      {
-        handoffs: ['semantic-document'],
-      },
-    ),
-  ] as const;
-}
-
-function sectionDirective(): DirectiveDefinition {
-  const attributes = [
-    requiredTitleAttribute(),
-    optionalIdentityAttribute('id', 'Optional stable section anchor.'),
-    textAttribute('nav', 'Optional short primary-navigation label.', false),
-    enumAttribute(
-      'recipe',
-      'High-level package-owned section composition; explicit detailed attributes override its roles.',
-      SECTION_RECIPE_NAMES,
-      'none',
-    ),
-    enumAttribute('width', 'Section content track.', ['reading', 'standard', 'wide'], 'standard'),
-    enumAttribute('align', 'Section content alignment.', ['start', 'center'], 'start'),
-    enumAttribute(
-      'tone',
-      'Package-owned section surface tone.',
-      ['plain', 'soft', 'accent', 'contrast'],
-      'plain',
-    ),
-    enumAttribute(
-      'composition',
-      'Semantic arrangement for the section content; authored reading order is unchanged.',
-      ['flow', 'stage', 'split', 'mosaic', 'story', 'stack'],
-      'flow',
-    ),
-    enumAttribute(
-      'viewport',
-      'Bounded use of the available viewport without changing document order.',
-      ['adaptive', 'full', 'bounded'],
-      'adaptive',
-    ),
-    enumAttribute(
-      'section-density',
-      'Section-local content rhythm independent of the page density token.',
-      ['compact', 'editorial', 'immersive'],
-      'editorial',
-    ),
-    enumAttribute(
-      'type',
-      'Section-local typography role.',
-      ['body', 'display', 'editorial'],
-      'body',
-    ),
-    enumAttribute(
-      'media',
-      'Art direction for confined local images inside the section.',
-      ['natural', 'mask', 'layers', 'gallery', 'bleed'],
-      'natural',
-    ),
-    enumAttribute(
-      'media-fit',
-      'Section-local object fitting for confined images.',
-      ['natural', 'contain', 'cover'],
-      'natural',
-    ),
-    enumAttribute(
-      'media-aspect',
-      'Section-local aspect ratio for confined images.',
-      ['natural', 'landscape', 'cinematic', 'portrait', 'square'],
-      'natural',
-    ),
-    enumAttribute(
-      'focal',
-      'Package-owned object position for cropped local media.',
-      ['center', 'top', 'right', 'bottom', 'left'],
-      'center',
-    ),
-    enumAttribute(
-      'surface',
-      'Package-owned decorative surface that never replaces content.',
-      ['plain', 'mesh', 'glow', 'grain', 'grid'],
-      'plain',
-    ),
-    enumAttribute(
-      'transition',
-      'Bounded package-owned entrance treatment.',
-      ['none', 'reveal', 'stagger'],
-      'none',
-    ),
-    enumAttribute(
-      'scene',
-      'Content-driven scroll scene without changing document order.',
-      ['none', 'progress', 'sticky'],
-      'none',
-    ),
-    enumAttribute(
-      'interaction',
-      'Fine-pointer-only media interaction.',
-      ['none', 'depth', 'tilt'],
-      'none',
-    ),
-    enumAttribute(
-      'choreography',
-      'Semantic ordered emphasis for metrics and visualizations.',
-      ['none', 'cascade'],
-      'none',
-    ),
-    booleanAttribute(
-      'reveal',
-      'Enables one package-owned one-time section reveal in the normal-motion profile.',
-      PAGE_CONTRACT.motion.sectionReveal.default,
-    ),
-  ] as const;
-  return {
-    name: 'section',
-    description: 'Labelled top-level page section containing Markdown.',
-    forms: ['container'],
-    attributes,
-    incompatibleCombinations: [
-      {
-        attributes: {
-          composition: ['mosaic', 'stack'],
-          media: ['layers', 'gallery'],
-        },
-        message:
-          'section composition mosaic or stack cannot be combined with layered or gallery media.',
-        remediation:
-          'Use composition flow, stage, split, or story with layered/gallery media, or use natural, mask, or bleed media with mosaic/stack composition.',
-      },
-      {
-        attributes: {
-          media: ['layers'],
-          interaction: ['depth', 'tilt'],
-        },
-        message: 'Layered media cannot also own a pointer transform.',
-        remediation: 'Use interaction="none" with layered media or another media treatment.',
-      },
-      {
-        attributes: {
-          scene: ['progress'],
-          interaction: ['depth', 'tilt'],
-        },
-        message: 'A progress scene and pointer interaction cannot transform the same media.',
-        remediation: 'Use either scene="progress" or a depth/tilt interaction.',
-      },
-      {
-        attributes: {
-          composition: ['story', 'stack'],
-          scene: ['sticky'],
-        },
-        message: 'Story and stack compositions already own sticky positioning.',
-        remediation: 'Use scene="none|progress" or a flow, stage, split, or mosaic composition.',
-      },
-    ],
-    children: 'markdown',
-    placement: { topLevelOnly: true },
-    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
-    sanitizer: {
-      tagName: 'section',
-      className: 'semantic-section',
-      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
-    },
-    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-    handoffs: ['semantic-document'],
-  };
-}
-
-function contentsDirective(): DirectiveDefinition {
-  return {
-    name: 'contents',
-    description:
-      'Generated in-flow links to final primary sections using their exact visible headings.',
-    forms: ['leaf'],
-    attributes: [],
-    children: 'none',
-    placement: { topLevelOnly: true },
-    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
-    sanitizer: {
-      tagName: 'nav',
-      className: 'semantic-contents',
-      properties: ['dataSemantic'],
-    },
-    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-    handoffs: ['semantic-document'],
-  };
-}
-
-function leadDirective(): DirectiveDefinition {
-  return {
-    name: 'lead',
-    description: 'One emphasized opening thesis paragraph inside a section.',
-    forms: ['container'],
-    attributes: [],
-    children: 'markdown',
-    placement: { requiredParent: 'section' },
-    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
-    sanitizer: {
-      tagName: 'div',
-      className: 'semantic-lead',
-      properties: ['dataSemantic'],
-    },
-    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-    handoffs: ['semantic-document'],
-  };
-}
-
-function actionsDirective(): DirectiveDefinition {
-  const attributes = [
-    enumAttribute(
-      'placement',
-      'Responsive placement for one action inventory.',
-      ['auto', 'edge', 'inline', 'bottom'],
-      'auto',
-    ),
-  ] as const;
-  return {
-    name: 'actions',
-    description: 'Responsive group containing ordinary action links.',
-    forms: ['container'],
-    attributes,
-    children: 'action-directives',
-    placement: {},
-    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
-    sanitizer: {
-      tagName: 'div',
-      className: 'semantic-actions',
-      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
-    },
-    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-    handoffs: ['semantic-document'],
-  };
-}
-
-function actionDirective(): DirectiveDefinition {
-  const attributes = [
-    linkAttribute(),
-    enumAttribute(
-      'kind',
-      'Package-owned action emphasis.',
-      ['primary', 'secondary', 'quiet'],
-      'primary',
-    ),
-    enumAttribute('effect', 'Rare package-owned action interaction.', ['none', 'magnetic'], 'none'),
-  ] as const;
-  return {
-    name: 'action',
-    description: 'Ordinary safe link inside an actions group.',
-    forms: ['leaf'],
-    attributes,
-    incompatibleCombinations: [
-      {
-        attributes: { kind: ['secondary', 'quiet'], effect: ['magnetic'] },
-        message: 'Magnetic action treatment is available only for a primary action.',
-        remediation: 'Use kind="primary" or effect="none".',
-      },
-    ],
-    children: 'label-or-generated-label',
-    placement: { requiredParent: 'actions' },
-    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
-    sanitizer: {
-      tagName: 'a',
-      className: 'semantic-action',
-      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
-    },
-    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-    handoffs: ['semantic-document'],
-  };
-}
-
-function sourceLinkDirective(): DirectiveDefinition {
-  const attributes = [
-    textAttribute('label', 'Short visible source path and line.', true),
-    sourceLinkAttribute(),
-  ] as const;
-  return {
-    name: 'source-link',
-    description:
-      'Source location opened through an explicit IPv4 loopback editor helper without replacing the report page.',
-    forms: ['text'],
-    attributes,
-    children: 'none',
-    placement: {},
-    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
-    sanitizer: {
-      tagName: 'a',
-      className: 'semantic-source-link',
-      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
-    },
-    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-    handoffs: ['semantic-document'],
-  };
-}
-
-function responseDirectives(): readonly DirectiveDefinition[] {
-  const responseAttributes = [
-    requiredTitleAttribute(),
-    identityAttribute('id', 'Stable response form identity.'),
-  ] as const;
-  const questionAttributes = [
-    identityAttribute('id', 'Stable question identity within the response form.'),
-    requiredEnumAttribute('kind', 'Structured answer kind.', [
-      'bucket',
-      'item-single',
-      'item-multi',
-      'single',
-      'order',
-      'number',
-      'text',
-    ]),
-    requiredTitleAttribute(),
-    responseTextAttribute('prompt', 'Optional reader instruction.', false, 500),
-    responseNumberAttribute('min', 'Required minimum for number questions.'),
-    responseNumberAttribute('max', 'Required maximum for number questions.'),
-    responseNumberAttribute('step', 'Optional positive increment for number questions.'),
-  ] as const;
-  const bucketAttributes = [
-    identityAttribute('id', 'Stable bucket identity within the question.'),
-    responseTextAttribute('label', 'Visible bucket label.', true, 200),
-  ] as const;
-  const optionAttributes = [
-    identityAttribute('id', 'Stable option identity within the question.'),
-    responseTextAttribute('label', 'Visible option label.', true, 200),
-  ] as const;
-  const itemAttributes = [
-    identityAttribute('id', 'Stable item identity within the question.'),
-    responseTextAttribute('label', 'Visible item title.', true, 500),
-    responseTextAttribute('note', 'Required explanatory line.', true, 1_000),
-    responseTextAttribute('meta', 'Required metadata line.', true, 500),
-    linkAttribute(),
-    optionalIdentityAttribute('bucket', 'Optional authored initial bucket.'),
-    booleanAttribute('comment', 'Enables one optional comment for this item.', false),
-  ] as const;
-  return [
-    {
-      name: 'response',
-      description: 'Local structured reader-response workspace with deterministic export.',
-      forms: ['container'],
-      attributes: responseAttributes,
-      children: 'response-question-directives',
-      placement: {},
-      behavior: {
-        renderer: 'semantic-container',
-        resource: 'none',
-        runtime: 'package-owned-response',
-      },
-      sanitizer: {
-        tagName: 'section',
-        className: 'semantic-response',
-        properties: [
-          'dataSemantic',
-          ...responseAttributes.map((attribute) => attribute.renderProperty),
-        ],
-      },
-      security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-      handoffs: ['semantic-document', 'reader-runtime'],
-    },
-    {
-      name: 'question',
-      description: 'One typed question inside a response workspace.',
-      forms: ['container'],
-      attributes: questionAttributes,
-      children: 'response-field-directives',
-      placement: { requiredParent: 'response' },
-      behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
-      sanitizer: {
-        tagName: 'section',
-        className: 'semantic-question',
-        properties: [
-          'dataSemantic',
-          ...questionAttributes.map((attribute) => attribute.renderProperty),
-        ],
-      },
-      security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-      handoffs: ['semantic-document', 'reader-runtime'],
-    },
-    responseLeaf('bucket', 'One named assignment bucket.', bucketAttributes),
-    responseLeaf('option', 'One selectable answer option.', optionAttributes),
-    responseLeaf('item', 'One readable response item.', itemAttributes),
-  ];
-}
-
-function responseLeaf(
-  name: 'bucket' | 'option' | 'item',
-  description: string,
-  attributes: readonly DirectiveAttributeDefinition[],
-): DirectiveDefinition {
-  return {
-    name,
-    description,
-    forms: ['leaf'],
-    attributes,
-    children: 'none',
-    placement: { requiredParent: 'question' },
-    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
-    sanitizer: {
-      tagName: 'span',
-      className: `semantic-${name}`,
-      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
-    },
-    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-    handoffs: ['semantic-document', 'reader-runtime'],
-  };
-}
-
-function interactiveDirectives(): readonly DirectiveDefinition[] {
-  return [
-    interactiveContainer('copyable', 'Ordinary Markdown prose with a localized copy control.', {
-      attributes: [],
-      children: 'markdown-and-term-directives',
-      runtime: 'package-owned-copy',
-    }),
-    interactiveContainer(
-      'glossary',
-      'Reusable glossary definition containing Markdown, optionally moved from the document root or a direct section child into the appendix.',
-      {
-        attributes: [
-          keyAttribute('Stable glossary definition key.'),
-          textAttribute('term', 'Canonical glossary identity and explanation title.', true),
-          glossaryFormsAttribute(),
-          enumAttribute(
-            'placement',
-            'Definition location in the authored flow or, from the document root or a direct section child, one package-owned reference appendix.',
-            ['inline', 'appendix'],
-            'inline',
-          ),
-        ],
-        runtime: 'none',
-      },
-    ),
-    {
-      name: 'term',
-      description:
-        'Inline or standalone reference that opens a registered glossary explanation. Prose must carry one for the first occurrence of a registered term in each section; later occurrences of that term in the same section stay ordinary prose.',
-      forms: ['leaf', 'text'],
-      attributes: [keyAttribute('Key of the glossary definition to reference.')],
-      children: 'label-or-generated-label',
-      placement: {},
-      behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'glossary-reference' },
-      sanitizer: {
-        tagName: 'span',
-        className: 'semantic-term',
-        properties: ['dataSemantic', 'dataKey'],
-      },
-      security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-      handoffs: ['semantic-document', 'reader-runtime'],
-    },
-    interactiveContainer('disclosure', 'Native disclosure with a visible summary.', {
-      attributes: [
-        requiredTitleAttribute(),
-        enumAttribute('open', 'Initial disclosure state.', ['false', 'true'], 'false'),
-      ],
-      runtime: 'native-disclosure',
-    }),
-    interactiveContainer('tabs', 'Keyboard-operable group of tab panels.', {
-      attributes: [titleAttribute],
-      children: 'markdown-and-tab-directives',
-      runtime: 'package-owned-tabs',
-    }),
-    interactiveContainer('tab', 'One labelled panel inside tabs.', {
-      attributes: [textAttribute('label', 'Visible tab label.', true)],
-      requiredParent: 'tabs',
-      runtime: 'package-owned-tabs',
-    }),
-    interactiveContainer('modal', 'Modal dialog opened by a package-owned control.', {
-      attributes: [
-        requiredTitleAttribute(),
-        textAttribute('trigger', 'Visible dialog trigger label.', false, 'Open dialog'),
-      ],
-      runtime: 'package-owned-modal',
-    }),
-    interactiveContainer(
-      'popover',
-      'Non-modal contextual panel opened by a package-owned control.',
-      {
-        attributes: [
-          requiredTitleAttribute(),
-          textAttribute('trigger', 'Visible popover trigger label.', false, 'Show details'),
-        ],
-        runtime: 'package-owned-popover',
-      },
-    ),
-    interactiveContainer('filter', 'Client-side text filter for authored list items.', {
-      attributes: [
-        titleAttribute,
-        textAttribute('placeholder', 'Search-field placeholder.', false, 'Filter items'),
-      ],
-      runtime: 'package-owned-filter',
-    }),
-    interactiveContainer('toggle', 'Switch controlling visibility of declarative content.', {
-      attributes: [
-        titleAttribute,
-        textAttribute('label', 'Visible switch label.', true),
-        enumAttribute('default', 'Initial switch state.', ['off', 'on'], 'off'),
-      ],
-      runtime: 'package-owned-toggle',
-    }),
-  ];
-}
-
-function visualizationDirectives(): readonly DirectiveDefinition[] {
-  return [
-    visualizationContainer(
-      'chart',
-      'Responsive bar, line, or pie chart rendered at compile time.',
-      {
-        attributes: [
-          requiredTitleAttribute(),
-          descriptionAttribute(),
-          enumAttribute('type', 'Chart form.', ['bar', 'line', 'pie'], 'bar'),
-          textAttribute('x-label', 'Horizontal-axis label.', false),
-          textAttribute('y-label', 'Vertical-axis label.', false),
-        ],
-        children: 'series-directives',
-      },
-    ),
-    visualizationContainer('series', 'One named chart series containing data points.', {
-      attributes: [textAttribute('label', 'Legend label.', true)],
-      children: 'point-directives',
-      requiredParent: 'chart',
-      tagName: 'section',
-    }),
-    visualizationContainer('point', 'One labelled numeric value in a chart series.', {
-      attributes: [
-        textAttribute('label', 'Category label.', true),
-        numberAttribute('value', 'Finite numeric value between -999999999 and 999999999.'),
-      ],
-      children: 'none',
-      requiredParent: 'series',
-      tagName: 'span',
-      forms: ['leaf'],
-    }),
-    visualizationContainer('diagram', 'Directed flow diagram rendered as deterministic SVG.', {
-      attributes: [
-        requiredTitleAttribute(),
-        descriptionAttribute(),
-        enumAttribute(
-          'type',
-          'Diagram form.',
-          DIAGRAM_CONTRACT.types,
-          DIAGRAM_CONTRACT.defaultType,
-        ),
-        enumAttribute(
-          'direction',
-          'Direction in which flow layers follow each other; auto lets the layout pick the one that reads larger on the page.',
-          DIAGRAM_CONTRACT.flow.directions,
-          'auto',
-        ),
-        enumAttribute(
-          'layout',
-          'Flow view shown first and printed: auto picks the clearest; down and right are layered, orthogonal routes at right angles; readers can switch.',
-          DIAGRAM_CONTRACT.flow.layouts,
-          'auto',
-        ),
-        enumAttribute(
-          'spacing',
-          'Layout breathing room; the package keeps a readable result at every value.',
-          ['compact', 'comfortable', 'spacious'],
-          'comfortable',
-        ),
-      ],
-      children: 'diagram-part-directives',
-    }),
-    visualizationContainer(
-      'group',
-      'One labelled subsystem group around some nodes of a flow diagram.',
-      {
-        attributes: [
-          identityAttribute('id', 'Unique group identity within the diagram.'),
-          textAttribute('label', 'Visible group label.', true),
-        ],
-        children: 'none',
-        requiredParent: 'diagram',
-        tagName: 'span',
-        forms: ['leaf'],
-      },
-    ),
-    visualizationContainer('node', 'One labelled node in a flow diagram.', {
-      attributes: [
-        identityAttribute('id', 'Unique node identity within the diagram.'),
-        textAttribute('label', 'Visible node label.', true),
-        textAttribute(
-          'detail',
-          'Optional second line under the label, set smaller: what the node holds or does.',
-          false,
-        ),
-        optionalIdentityAttribute(
-          'group',
-          'Optional subsystem group identity; nodes without one stand beside the groups.',
-        ),
-        enumAttribute(
-          'kind',
-          'Package-owned node emphasis; a legend item names what it means.',
-          DIAGRAM_CONTRACT.nodeKinds,
-          'neutral',
-        ),
-        {
-          name: 'row',
-          description:
-            'Optional one-based flow layer; nodes sharing a row share a layer when their connections allow it.',
-          required: false,
-          constraint: { kind: 'integer', minimum: 1, maximum: 20 },
-          renderProperty: 'dataRow',
-          invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-        },
-      ],
-      children: 'none',
-      requiredParent: 'diagram',
-      tagName: 'span',
-      forms: ['leaf'],
-    }),
-    visualizationContainer(
-      'edge',
-      'One directed connection between diagram nodes; in a sequence, from equal to to is a step inside one participant drawn as a loop.',
-      {
-        attributes: [
-          identityAttribute('from', 'Source node identity.'),
-          identityAttribute('to', 'Target node identity; a flow requires a different node.'),
-          textAttribute(
-            'label',
-            'Optional connection label, required in a sequence; a long label wraps onto several lines and is never cut.',
-            false,
-          ),
-          enumAttribute(
-            'kind',
-            'What the connection means; each kind has its own package-drawn line and arrowhead.',
-            DIAGRAM_CONTRACT.edgeKinds,
-            DIAGRAM_CONTRACT.defaultEdgeKind,
-          ),
-          enumAttribute(
-            'route',
-            'Optional layout pull; direct keeps the connection short and straight, around lets it stretch.',
-            ['auto', 'direct', 'around'],
-            'auto',
-          ),
-        ],
-        children: 'none',
-        requiredParent: 'diagram',
-        tagName: 'span',
-        forms: ['leaf'],
-      },
-    ),
-    visualizationContainer(
-      'legend',
-      'Optional title and policy for the diagram legend; at most one per diagram.',
-      {
-        attributes: [
-          textAttribute('title', 'Visible legend title.', false),
-          booleanAttribute(
-            'auto',
-            'Add the connection kinds the diagram mixes without a legend item of their own.',
-            true,
-          ),
-        ],
-        children: 'none',
-        requiredParent: 'diagram',
-        tagName: 'span',
-        forms: ['leaf'],
-      },
-    ),
-    visualizationContainer(
-      'legend-item',
-      "One legend entry: names a connection kind or a node emphasis in the author's words, or hides a connection kind.",
-      {
-        attributes: [
-          {
-            name: 'edge',
-            description: 'Connection kind this entry names; exclusive with node.',
-            required: false,
-            constraint: { kind: 'enum', values: DIAGRAM_CONTRACT.edgeKinds },
-            renderProperty: 'dataEdge',
-            invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-          },
-          {
-            name: 'node',
-            description:
-              'Node emphasis this entry names; exclusive with edge and requires a label.',
-            required: false,
-            constraint: { kind: 'enum', values: DIAGRAM_CONTRACT.nodeKinds },
-            renderProperty: 'dataNode',
-            invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-          },
-          textAttribute(
-            'label',
-            'Entry text; a connection kind without one keeps its package name.',
-            false,
-          ),
-          booleanAttribute('hidden', 'Leave this connection kind out of the legend.', false),
-        ],
-        children: 'none',
-        requiredParent: 'diagram',
-        tagName: 'span',
-        forms: ['leaf'],
-      },
-    ),
-    visualizationContainer('timeline', 'Semantic chronological sequence with bounded events.', {
-      attributes: [requiredTitleAttribute(), descriptionAttribute()],
-      children: 'event-directives',
-    }),
-    visualizationContainer('event', 'One dated timeline event with optional Markdown detail.', {
-      attributes: [
-        textAttribute('date', 'Visible date or phase label.', true),
-        requiredTitleAttribute(),
-        enumAttribute(
-          'kind',
-          'Package-owned event emphasis.',
-          ['neutral', 'accent', 'success', 'warning'],
-          'neutral',
-        ),
-      ],
-      children: 'markdown',
-      requiredParent: 'timeline',
-    }),
-  ];
-}
-
-function visualizationContainer(
-  name:
-    | 'chart'
-    | 'series'
-    | 'point'
-    | 'diagram'
-    | 'group'
-    | 'node'
-    | 'edge'
-    | 'legend'
-    | 'legend-item'
-    | 'timeline'
-    | 'event',
-  description: string,
-  options: {
-    readonly attributes: readonly DirectiveAttributeDefinition[];
-    readonly children: DirectiveDefinition['children'];
-    readonly requiredParent?: string;
-    readonly tagName?: 'section' | 'span';
-    readonly forms?: readonly [DirectiveForm, ...DirectiveForm[]];
-  },
-): DirectiveDefinition {
-  return {
-    name,
-    description,
-    forms: options.forms ?? ['container'],
-    attributes: options.attributes,
-    children: options.children,
-    placement:
-      options.requiredParent === undefined ? {} : { requiredParent: options.requiredParent },
-    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
-    sanitizer: {
-      tagName: options.tagName ?? 'section',
-      className: `semantic-${name}`,
-      properties: [
-        'dataSemantic',
-        ...options.attributes.map((attribute) => attribute.renderProperty),
-      ],
-    },
-    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-    handoffs: ['semantic-document'],
-  };
-}
-
-function interactiveContainer(
-  name:
-    | 'copyable'
-    | 'glossary'
-    | 'disclosure'
-    | 'tabs'
-    | 'tab'
-    | 'modal'
-    | 'popover'
-    | 'filter'
-    | 'toggle',
-  description: string,
-  options: {
-    readonly attributes: readonly DirectiveAttributeDefinition[];
-    readonly children?: DirectiveDefinition['children'];
-    readonly requiredParent?: string;
-    readonly runtime: DirectiveDefinition['behavior']['runtime'];
-  },
-): DirectiveDefinition {
-  return {
-    name,
-    description,
-    forms: ['container'],
-    attributes: options.attributes,
-    children: options.children ?? 'markdown',
-    placement:
-      options.requiredParent === undefined ? {} : { requiredParent: options.requiredParent },
-    behavior: { renderer: 'semantic-container', resource: 'none', runtime: options.runtime },
-    sanitizer: {
-      tagName: 'section',
-      className: `semantic-${name}`,
-      properties: [
-        'dataSemantic',
-        ...options.attributes.map((attribute) => attribute.renderProperty),
-      ],
-    },
-    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-    handoffs: ['semantic-document', 'reader-runtime'],
-  };
-}
-
-function requiredTitleAttribute(): DirectiveAttributeDefinition {
-  return { ...titleAttribute, required: true };
-}
-
-function keyAttribute(description: string): DirectiveAttributeDefinition {
-  return identityAttribute('key', description);
-}
-
-function identityAttribute(
-  name: 'key' | 'id' | 'group' | 'from' | 'to' | 'bucket',
-  description: string,
-): DirectiveAttributeDefinition {
-  return {
-    name,
-    description,
-    required: true,
-    constraint: REGISTRY_IDENTITY_CONSTRAINT,
-    renderProperty: attributeRenderProperty(name),
-    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-  };
-}
-
-function optionalIdentityAttribute(
-  name: 'id' | 'group' | 'bucket',
-  description: string,
-): DirectiveAttributeDefinition {
-  return { ...identityAttribute(name, description), required: false };
-}
-
-function linkAttribute(): DirectiveAttributeDefinition {
-  return {
-    name: 'href',
-    description:
-      'Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected.',
-    required: true,
-    constraint: {
-      kind: 'string',
-      normalization: 'trim',
-      minLength: 1,
-      maxLength: 500,
-      pattern:
-        '^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*)$',
-    },
-    renderProperty: 'dataHref',
-    invalidDiagnostic: 'INVALID_DIRECTIVE_LINK',
-  };
-}
-
-function optionalLinkAttribute(): DirectiveAttributeDefinition {
-  return { ...linkAttribute(), required: false };
-}
-
-function sourceLinkAttribute(): DirectiveAttributeDefinition {
-  return {
-    name: 'href',
-    description: 'IPv4 loopback editor-helper URL with an absolute path and positive source line.',
-    required: true,
-    constraint: {
-      kind: 'string',
-      normalization: 'trim',
-      minLength: 1,
-      maxLength: 1000,
-      pattern:
-        '^http://127\\.0\\.0\\.1:(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])/open\\?path=(?:%2[Ff]|/)[^\\s<>&#]+&line=[1-9][0-9]{0,8}$',
-    },
-    renderProperty: 'dataHref',
-    invalidDiagnostic: 'INVALID_SOURCE_LINK',
-  };
-}
-
-function descriptionAttribute(): DirectiveAttributeDefinition {
-  return {
-    name: 'description',
-    description: 'Meaningful plain-text description for the visual.',
-    required: true,
-    constraint: { kind: 'string', normalization: 'trim', minLength: 1, maxLength: 300 },
-    renderProperty: 'dataDescription',
-    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-  };
-}
-
-function numberAttribute(name: 'value', description: string): DirectiveAttributeDefinition {
-  return {
-    name,
-    description,
-    required: true,
-    constraint: {
-      kind: 'number',
-      minimum: -999_999_999,
-      maximum: 999_999_999,
-      multipleOf: 0.0001,
-      lexicalPattern: '^-?(?:0|[1-9]\\d{0,8})(?:\\.\\d{1,4})?$',
-    },
-    renderProperty: 'dataValue',
-    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-  };
-}
-
-function responseNumberAttribute(
-  name: 'min' | 'max' | 'step',
-  description: string,
-): DirectiveAttributeDefinition {
-  return {
-    name,
-    description,
-    required: false,
-    constraint: {
-      kind: 'number',
-      minimum: -999_999_999,
-      maximum: 999_999_999,
-      multipleOf: 0.0001,
-      lexicalPattern: '^-?(?:0|[1-9]\\d{0,8})(?:\\.\\d{1,4})?$',
-    },
-    renderProperty: attributeRenderProperty(name),
-    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-  };
-}
-
-function textAttribute(
-  name: string,
-  description: string,
-  required: boolean,
-  defaultValue?: string,
-): DirectiveAttributeDefinition {
-  return {
-    name,
-    description,
-    required,
-    ...(defaultValue === undefined ? {} : { default: defaultValue }),
-    constraint: { kind: 'string', normalization: 'trim', minLength: 1, maxLength: 160 },
-    renderProperty: attributeRenderProperty(name),
-    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-  };
-}
-
-/**
- * Inflected spellings the author declares for one glossary term, comma separated. The package does
- * not inflect words itself: a morphology library would put language data and someone else's
- * dictionary quality inside a product whose every other rule is declared in the source and checked
- * offline. Declared forms cannot produce a false match, because the author names exactly what counts
- * as a form.
- */
-function glossaryFormsAttribute(): DirectiveAttributeDefinition {
-  return {
-    name: 'forms',
-    description:
-      'Additional declared spellings of the canonical term, comma separated. An occurrence of any declared form counts as an occurrence of the term.',
-    required: false,
-    constraint: { kind: 'string', normalization: 'trim', minLength: 1, maxLength: 640 },
-    renderProperty: attributeRenderProperty('forms'),
-    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-  };
-}
-
-function responseTextAttribute(
-  name: string,
-  description: string,
-  required: boolean,
-  maxLength: number,
-): DirectiveAttributeDefinition {
-  return {
-    name,
-    description,
-    required,
-    constraint: { kind: 'string', normalization: 'trim', minLength: 1, maxLength },
-    renderProperty: attributeRenderProperty(name),
-    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-  };
-}
-
-function attributeRenderProperty(name: string): string {
-  return `data${name
-    .split('-')
-    .map((part) => `${part[0]?.toUpperCase() ?? ''}${part.slice(1)}`)
-    .join('')}`;
-}
-
-function enumAttribute(
-  name: string,
-  description: string,
-  values: readonly [string, ...string[]],
-  defaultValue: string,
-): DirectiveAttributeDefinition {
-  return {
-    name,
-    description,
-    required: false,
-    default: defaultValue,
-    constraint: { kind: 'enum', values },
-    renderProperty: attributeRenderProperty(name),
-    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-  };
-}
-
-function requiredEnumAttribute(
-  name: string,
-  description: string,
-  values: readonly [string, ...string[]],
-): DirectiveAttributeDefinition {
-  return {
-    name,
-    description,
-    required: true,
-    constraint: { kind: 'enum', values },
-    renderProperty: attributeRenderProperty(name),
-    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-  };
-}
-
-function booleanAttribute(
-  name: string,
-  description: string,
-  defaultValue: boolean,
-): DirectiveAttributeDefinition {
-  return {
-    name,
-    description,
-    required: false,
-    default: defaultValue,
-    constraint: { kind: 'boolean' },
-    renderProperty: attributeRenderProperty(name),
-    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-  };
-}
-
-function container<const Name extends 'cards' | 'card' | 'steps'>(
-  name: Name,
-  description: string,
-  options: {
-    readonly tagName?: 'article' | 'section';
-    readonly requiredParent?: string;
-    readonly preferredParent?: string;
-    readonly handoffs?: readonly ['semantic-document', ...'semantic-document'[]];
-  } = {},
-): DirectiveDefinition & { readonly name: Name } {
-  return {
-    name,
-    description,
-    forms: ['container'],
-    attributes: [titleAttribute],
-    children: name === 'cards' ? 'markdown-and-card-directives' : 'markdown',
-    placement: {
-      ...(options.requiredParent === undefined ? {} : { requiredParent: options.requiredParent }),
-      ...(options.preferredParent === undefined
-        ? {}
-        : { preferredParent: options.preferredParent }),
-    },
-    behavior: {
-      renderer: 'semantic-container',
-      resource: 'none',
-      runtime: 'none',
-    },
-    sanitizer: {
-      tagName: options.tagName ?? 'section',
-      className: `semantic-${name}`,
-      properties: ['dataSemantic', 'dataDirectiveTitle'],
-    },
-    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-    handoffs: options.handoffs ?? ['semantic-document'],
-  };
-}
-
-function cardDirective(): DirectiveDefinition & { readonly name: 'card' } {
-  const attributes = [titleAttribute, optionalLinkAttribute()] as const;
-  return {
-    name: 'card',
-    description:
-      'One semantic card containing Markdown, optionally promoted to one safe whole-card link.',
-    forms: ['container'],
-    attributes,
-    children: 'markdown',
-    placement: { requiredParent: 'cards', preferredParent: 'cards' },
-    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
-    sanitizer: {
-      tagName: 'article',
-      className: 'semantic-card',
-      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
-    },
-    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-    handoffs: ['semantic-document'],
-  };
-}
-
-function decisionDirective(): DirectiveDefinition & { readonly name: 'decision' } {
-  const attributes = [
-    titleAttribute,
-    optionalIdentityAttribute('id', 'Stable identity required when decision options are authored.'),
-    booleanAttribute('required', 'Marks this decision as required in the static document.', false),
-  ] as const;
-  return {
-    name: 'decision',
-    description:
-      'Static Markdown decision or typed decision containing decision-option directives.',
-    forms: ['container'],
-    attributes,
-    children: 'decision-option-directives',
-    placement: {},
-    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
-    sanitizer: {
-      tagName: 'section',
-      className: 'semantic-decision',
-      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
-    },
-    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-    handoffs: ['semantic-document', 'reader-runtime'],
-  };
-}
-
-function decisionOptionDirective(): DirectiveDefinition & { readonly name: 'decision-option' } {
-  const attributes = [
-    identityAttribute('id', 'Stable option identity.'),
-    textAttribute('label', 'Visible option label.', true),
-  ] as const;
-  return {
-    name: 'decision-option',
-    description: 'One labelled option inside a typed decision.',
-    forms: ['leaf'],
-    attributes,
-    children: 'label-or-generated-label',
-    placement: { requiredParent: 'decision' },
-    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
-    sanitizer: {
-      tagName: 'span',
-      className: 'semantic-decision-option',
-      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
-    },
-    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-    handoffs: ['semantic-document', 'reader-runtime'],
-  };
-}
-
-function checklistDirective(): DirectiveDefinition & { readonly name: 'checklist' } {
-  const attributes = [
-    requiredTitleAttribute(),
-    identityAttribute('id', 'Stable checklist identity.'),
-  ] as const;
-  return {
-    name: 'checklist',
-    description: 'Static structured checklist containing stable check-item directives.',
-    forms: ['container'],
-    attributes,
-    children: 'check-item-directives',
-    placement: {},
-    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
-    sanitizer: {
-      tagName: 'section',
-      className: 'semantic-checklist',
-      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
-    },
-    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-    handoffs: ['semantic-document', 'reader-runtime'],
-  };
-}
-
-function checkItemDirective(): DirectiveDefinition & { readonly name: 'check-item' } {
-  const attributes = [
-    identityAttribute('id', 'Stable checklist item identity.'),
-    textAttribute('label', 'Visible checklist item label.', true),
-    booleanAttribute('required', 'Marks this item as required in the static document.', false),
-  ] as const;
-  return {
-    name: 'check-item',
-    description: 'One labelled required or optional checklist item.',
-    forms: ['leaf'],
-    attributes,
-    children: 'label-or-generated-label',
-    placement: { requiredParent: 'checklist' },
-    behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'none' },
-    sanitizer: {
-      tagName: 'span',
-      className: 'semantic-check-item',
-      properties: ['dataSemantic', ...attributes.map((attribute) => attribute.renderProperty)],
-    },
-    security: { authorCode: false, rawHtml: false, localResourceOnly: false },
-    handoffs: ['semantic-document', 'reader-runtime'],
-  };
-}
-
-function integerAttribute(
-  name: 'start' | 'step',
-  description: string,
-  defaultValue: number,
-): DirectiveAttributeDefinition {
-  return {
-    name,
-    description,
-    required: false,
-    default: defaultValue,
-    constraint: {
-      kind: 'integer',
-      minimum: -999_999,
-      maximum: 999_999,
-      lexicalPattern: '^-?\\d{1,6}$',
-    },
-    renderProperty: name === 'start' ? 'dataStart' : 'dataStep',
-    invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
-  };
-}
-
-function pathAttribute(
-  name: 'src' | 'poster',
-  description: string,
-  renderProperty: 'dataLocalAsset' | 'dataFontSource' | 'dataVideoSource' | 'dataVideoPoster',
-  required = true,
-): DirectiveAttributeDefinition {
-  return {
-    name,
-    description,
-    required,
-    constraint: {
-      kind: 'string',
-      normalization: 'trim',
-      minLength: 1,
-      maxLength: 200,
-      format: 'relative-local-path',
-    },
-    renderProperty,
-    invalidDiagnostic: 'INVALID_DIRECTIVE_PATH',
-  };
-}

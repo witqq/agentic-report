@@ -4,16 +4,14 @@ description: A bilingual catalog of package-owned composition, media, surface, a
 language: en
 localizations:
   ru: report.ru.md
-theme: system
 layout: mixed
-preset: monument
-presetSwitcher: true
-tokens:
-  density: comfortable
-  font: sans
-  accent: teal
-  width: wide
-  radius: soft
+theme:
+  name: catalog
+  extends: midnight
+  spacing:
+    density: comfortable
+scheme: system
+themeSwitcher: true
 ---
 
 # Complete visual language catalog
@@ -21,7 +19,11 @@ tokens:
 **Fictional sample.** Every observation exists only to demonstrate the authoring system. Replace it with
 verified evidence before use.
 
-:::::section{title="Evidence becomes a spatial argument" id="stage" nav="Stage" width="wide" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
+::::section{title="The whole system on one map" id="demo" nav="Map" recipe="demo"}
+![Four page layouts sharing one foundation](layout-map.svg)
+::::
+
+:::::section{title="Evidence becomes a spatial argument" id="stage" nav="Stage" width="wide" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 :::lead
 One semantic section combines display type, confined media, a bounded full viewport, and a package-owned
 surface without author CSS or a custom page renderer.
@@ -59,7 +61,7 @@ The same section vocabulary works in document, dashboard, landing, and mixed pag
 ::::
 :::::
 
-::::section{title="Long evidence keeps its context" id="story" nav="Story" width="wide" composition="story" viewport="bounded" section-density="immersive" type="display" media="natural" media-fit="cover" media-aspect="landscape" focal="left" surface="glow"}
+::::section{title="Long evidence keeps its context" id="story" nav="Story" width="wide" composition="story" viewport="bounded" section-density="immersive" type="display" media="natural" media-fit="cover" media-aspect="landscape" focal="left" surface="tint"}
 ![A stable visual reference beside the narrative](layout-map.svg)
 
 The media remains visible beside a longer desktop explanation without changing document order. On narrow
@@ -87,7 +89,7 @@ The last card closes the sequence with a concrete next step.
 ::::
 :::::
 
-::::section{title="Media can meet the section edge" id="bleed" nav="Bleed" width="wide" composition="flow" viewport="bounded" section-density="immersive" type="display" media="bleed" media-fit="cover" media-aspect="cinematic" focal="center" surface="mesh" interaction="depth"}
+::::section{title="Media can meet the section edge" id="bleed" nav="Bleed" width="wide" composition="flow" viewport="bounded" section-density="immersive" type="display" media="bleed" media-fit="cover" media-aspect="cinematic" focal="center" surface="tint" interaction="depth"}
 The source remains an ordinary confined Markdown image; the package lets it reach the visual surface edge
 without accepting author CSS or a remote URL.
 
@@ -121,6 +123,82 @@ without accepting author CSS or a remote URL.
 :::
 ::::
 :::::
+
+::::section{title="A detail worth a closer look" id="spotlight" nav="Spotlight"}
+:::spotlight{x="30" y="40" zoom="2" title="The shared foundation"}
+![Four page layouts sharing one foundation](layout-map.svg)
+
+Every layout stands on the same foundation: one source contract, one theme, one runtime.
+:::
+::::
+
+::::section{title="One claim before the evidence" id="thesis" nav="Thesis" recipe="thesis"}
+:::lead
+A page earns attention with one sentence the reader can repeat, and only then with the proof.
+:::
+
+The thesis recipe sets that sentence in display type at reading width, with no picture competing for it.
+::::
+
+::::section{title="The same page before and after" id="compare" nav="Compare" width="wide"}
+:::compare{before="Wireframe" after="Built page"}
+![A wireframe of the page with dashed empty blocks](compare-before.svg)
+![The built page with a header, a chart and cards](compare-after.svg)
+:::
+
+Drag the divider or move the slider with the arrow keys; both images keep their alternative text.
+::::
+
+::::section{title="Drawn like a specification" id="blueprint" nav="Blueprint" recipe="blueprint"}
+The blueprint recipe puts a drafting grid behind a hairline panel and sets captions like drawing
+annotations, so a system diagram reads as a specification rather than a decoration.
+
+:::diagram{title="Source to page" description="Markdown becomes a checked page through three stages." layout="right"}
+::node{id="source" label="Markdown"}
+::node{id="check" label="Checks" kind="accent"}
+::node{id="page" label="Page"}
+::edge{from="source" to="check" label="parse"}
+::edge{from="check" to="page" label="build" kind="data"}
+::legend-item{node="accent" label="Validation step"}
+:::
+::::
+
+::::section{title="What readers said" id="quote" nav="Quote" recipe="statement"}
+
+> The first page I did not have to explain before sending it.
+
+— Fictional reviewer, support team lead
+::::
+
+::::section{title="74%" id="figure" nav="Figure" recipe="statement"}
+of fictional pilot readers found the answer with the first search.
+::::
+
+::::section{title="Motion follows the argument" id="motion" nav="Motion" scene="steps" transition="lines"}
+:::diagram{title="Grammar to page" description="Roles become one page through the compiler and the reader runtime." layout="right" draw="scroll"}
+::node{id="roles" label="Roles"}
+::node{id="compiler" label="Compiler" kind="accent"}
+::node{id="page" label="Page"}
+::edge{from="roles" to="compiler" label="validate"}
+::edge{from="compiler" to="page" label="render" kind="data"}
+::legend-item{node="accent" label="Validation step"}
+:::
+
+:::beat{title="Declare" focus="roles, compiler"}
+Authors name roles; the diagram draws its connections as it scrolls into view.
+:::
+
+:::beat{title="Render" focus="compiler, page"}
+:count[44] directives compile to one page; each beat lights its part of the diagram.
+:::
+::::
+
+::::section{title="An image that unweaves" id="threads" nav="Threads" media-effect="threads"}
+![Four page layouts sharing one foundation](layout-map.svg)
+
+With WebGL the map unweaves into threads as it leaves the screen; without it, and under reduced motion,
+it stays whole.
+::::
 
 :::decision{title="Use one declarative visual language"}
 Compose semantic roles instead of generating a bespoke application for each handoff.

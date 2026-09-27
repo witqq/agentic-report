@@ -1,0 +1,63 @@
+{
+  "title": "What one run of agentic-report touches",
+  "description": "The terminal starts the CLI; the CLI reads and writes the source folder, writes one page, and opens it in Chromium to take snapshots.",
+  "origin": "Timed on 27 September 2026 on an Apple M4 Pro with Node.js 24.20 and the CLI of version 0.17.0 already installed: init, validate, build and snapshot ran one after another in an empty folder. Seconds count from the start of the run; a first npx run adds the download.",
+  "panels": [
+    { "id": "terminal", "label": "Terminal" },
+    { "id": "source", "label": "Source folder", "detail": "report.md, report.ru.md, brief.md" },
+    {
+      "id": "cli",
+      "label": "agentic-report",
+      "kind": "accent",
+      "meaning": "the tool this page is about"
+    },
+    { "id": "page", "label": "launch.html", "detail": "one file, 633 476 bytes" },
+    { "id": "browser", "label": "Chromium", "detail": "12 snapshots and a contact sheet" }
+  ],
+  "links": [
+    { "from": "terminal", "to": "cli", "label": "command" },
+    { "from": "cli", "to": "source", "label": "writes, then reads", "kind": "data" },
+    { "from": "cli", "to": "page", "label": "writes", "kind": "data" },
+    { "from": "page", "to": "browser", "label": "opens" }
+  ],
+  "events": [
+    {
+      "at": 0,
+      "title": "init",
+      "panels": ["terminal", "cli", "source"],
+      "code": "npx agentic-report init ./launch --starter landing",
+      "language": "sh",
+      "text": "The landing starter is written into `./launch`: the page in English and Russian and the brief to fill in first."
+    },
+    {
+      "at": 0.6,
+      "title": "validate",
+      "panels": ["cli", "source"],
+      "code": "npx agentic-report validate ./launch",
+      "language": "sh",
+      "text": "The source is checked without writing anything: every directive, every attribute, every link. It passes in 2.3 seconds."
+    },
+    {
+      "at": 2.9,
+      "title": "build",
+      "panels": ["cli", "page"],
+      "code": "npx agentic-report build ./launch --output launch.html",
+      "language": "sh",
+      "text": "**One file of 633 476 bytes.** Fonts, the runtime and both languages are inside it; it opens from disk without a server."
+    },
+    {
+      "at": 6.2,
+      "title": "snapshot",
+      "panels": ["page", "browser"],
+      "code": "npx agentic-report snapshot ./launch --out ./shots",
+      "language": "sh",
+      "text": "Chromium opens the page at 390, 768 and 1440 pixels, light and dark, with motion and without it."
+    },
+    {
+      "at": 18.2,
+      "title": "contact sheet",
+      "panels": ["browser"],
+      "text": "Twelve snapshots land on one contact sheet. This is the moment to look at the page before handing it over."
+    }
+  ]
+}

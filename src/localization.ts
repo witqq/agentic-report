@@ -16,10 +16,10 @@ export interface PackageStrings {
   readonly languageName: (locale: PackageLocale) => string;
   readonly reportAttribution: string;
   readonly review: string;
+  readonly scheme: string;
   readonly theme: string;
-  readonly style: string;
-  readonly chooseStyle: string;
-  readonly toggleTheme: string;
+  readonly chooseTheme: string;
+  readonly toggleScheme: string;
   readonly documentContents: string;
   readonly onThisPage: string;
   readonly close: string;
@@ -36,6 +36,28 @@ export interface PackageStrings {
   readonly openDialog: string;
   readonly showDetails: string;
   readonly scrollableGallery: string;
+  readonly compareBefore: string;
+  readonly pauseVideo: string;
+  readonly playVideo: string;
+  readonly expandVideo: string;
+  readonly videoChapters: string;
+  readonly titleSlide: string;
+  readonly slideCounter: (slide: number, total: number) => string;
+  readonly previousSlide: string;
+  readonly nextSlide: string;
+  readonly slides: string;
+  /** Режим экранов, сцена со скрабом и кнопка паузы движения (раскладка и рантайм страницы). */
+  readonly titleScreen: string;
+  readonly screens: string;
+  readonly screenLabel: (screen: number, total: number, title: string) => string;
+  readonly sceneStep: (step: number, total: number) => string;
+  readonly pauseMotion: string;
+  readonly compareAfter: string;
+  readonly comparePosition: (before: string, after: string) => string;
+  readonly severity: Readonly<Record<'blocking' | 'major' | 'minor' | 'note', string>>;
+  readonly findingsSummary: string;
+  readonly cardStatus: Readonly<Record<'good' | 'watch' | 'risk', string>>;
+  readonly diffSummary: (added: number, removed: number) => string;
   readonly filterItems: string;
   readonly filter: string;
   readonly toggleContent: string;
@@ -122,6 +144,7 @@ export interface PackageStrings {
   readonly unknownCurrentTarget: string;
   readonly invalidSelectionAnchor: string;
   readonly unanswered: string;
+  readonly answered: string;
   readonly copyResponse: string;
   readonly downloadResponse: string;
   readonly importResponse: string;
@@ -155,10 +178,10 @@ const en: PackageStrings = {
   languageName: (locale) => (locale === 'ru' ? 'Russian' : 'English'),
   reportAttribution: 'Made with Agentic Report',
   review: 'Review',
+  scheme: 'Light or dark',
   theme: 'Theme',
-  style: 'Style',
-  chooseStyle: 'Choose visual style',
-  toggleTheme: 'Toggle color theme',
+  chooseTheme: 'Choose theme',
+  toggleScheme: 'Switch light and dark scheme',
   documentContents: 'Document contents',
   onThisPage: 'On this page',
   close: 'Close',
@@ -175,6 +198,28 @@ const en: PackageStrings = {
   openDialog: 'Open dialog',
   showDetails: 'Show details',
   scrollableGallery: 'Scrollable gallery',
+  compareBefore: 'Before',
+  pauseVideo: 'Pause video',
+  playVideo: 'Play video',
+  expandVideo: 'Expand',
+  videoChapters: 'Chapters',
+  titleSlide: 'Title slide',
+  slideCounter: (slide, total) => `Slide ${slide} of ${total}`,
+  previousSlide: 'Previous slide',
+  nextSlide: 'Next slide',
+  slides: 'Slides',
+  titleScreen: 'Title screen',
+  screens: 'Screens',
+  screenLabel: (screen, total, title) => `Screen ${screen} of ${total}: ${title}`,
+  sceneStep: (step, total) => `Step ${step} of ${total}`,
+  pauseMotion: 'Pause motion',
+  compareAfter: 'After',
+  comparePosition: (before, after) => `Divider between ${before} and ${after}`,
+  severity: { blocking: 'Blocking', major: 'Major', minor: 'Minor', note: 'Note' },
+  findingsSummary: 'Findings by severity',
+  cardStatus: { good: 'Good', watch: 'Watch', risk: 'At risk' },
+  diffSummary: (added, removed) =>
+    `${added} ${added === 1 ? 'line' : 'lines'} added, ${removed} removed`,
   filterItems: 'Filter items',
   filter: 'Filter',
   toggleContent: 'Toggle content',
@@ -267,6 +312,7 @@ const en: PackageStrings = {
   invalidSelectionAnchor:
     'Imported review contains a selected-text anchor that does not match this report revision.',
   unanswered: 'Not answered',
+  answered: 'Answered',
   copyResponse: 'Copy response',
   downloadResponse: 'Download response.json',
   importResponse: 'Import response',
@@ -300,10 +346,10 @@ const ru: PackageStrings = {
   languageName: (locale) => (locale === 'ru' ? 'Русский' : 'Английский'),
   reportAttribution: 'Создано с Agentic Report',
   review: 'Ревью',
-  theme: 'Схема',
-  style: 'Стиль',
-  chooseStyle: 'Выбрать визуальный стиль',
-  toggleTheme: 'Переключить цветовую тему',
+  scheme: 'Схема',
+  theme: 'Тема',
+  chooseTheme: 'Выбрать тему',
+  toggleScheme: 'Переключить светлую и тёмную схему',
   documentContents: 'Содержание документа',
   onThisPage: 'На этой странице',
   close: 'Закрыть',
@@ -320,6 +366,27 @@ const ru: PackageStrings = {
   openDialog: 'Открыть диалог',
   showDetails: 'Показать подробности',
   scrollableGallery: 'Прокручиваемая галерея',
+  compareBefore: 'До',
+  pauseVideo: 'Остановить видео',
+  playVideo: 'Запустить видео',
+  expandVideo: 'Развернуть',
+  videoChapters: 'Главы',
+  titleSlide: 'Титульный слайд',
+  slideCounter: (slide, total) => `Слайд ${slide} из ${total}`,
+  previousSlide: 'Предыдущий слайд',
+  nextSlide: 'Следующий слайд',
+  slides: 'Слайды',
+  titleScreen: 'Первый экран',
+  screens: 'Экраны',
+  screenLabel: (screen, total, title) => `Экран ${screen} из ${total}: ${title}`,
+  sceneStep: (step, total) => `Шаг ${step} из ${total}`,
+  pauseMotion: 'Остановить движение',
+  compareAfter: 'После',
+  comparePosition: (before, after) => `Граница между «${before}» и «${after}»`,
+  severity: { blocking: 'Блокирует', major: 'Существенно', minor: 'Мелочь', note: 'Заметка' },
+  findingsSummary: 'Находки по серьёзности',
+  cardStatus: { good: 'В норме', watch: 'Под наблюдением', risk: 'Под угрозой' },
+  diffSummary: (added, removed) => `Добавлено строк: ${added}, удалено: ${removed}`,
   filterItems: 'Фильтровать элементы',
   filter: 'Фильтр',
   toggleContent: 'Переключить содержимое',
@@ -416,6 +483,7 @@ const ru: PackageStrings = {
   invalidSelectionAnchor:
     'Импортированное ревью содержит привязку к выделенному тексту, которой нет в этой редакции отчёта.',
   unanswered: 'Нет ответа',
+  answered: 'Есть ответ',
   copyResponse: 'Копировать ответ',
   downloadResponse: 'Скачать response.json',
   importResponse: 'Импортировать ответ',

@@ -13,7 +13,7 @@ language: ru
 Каждая визуализация ниже описана ограниченными директивами Markdown. Компилятор проверяет данные и создаёт
 детерминированный SVG или семантический HTML; при визуализации страница не обращается к сети.
 
-::::::section{title="Сигнал внедрения" id="adoption" nav="Внедрение" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
+::::::section{title="Сигнал внедрения" id="adoption" nav="Внедрение" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 
 :::::chart{type="bar" title="Еженедельно активные агенты" description="Число активных агентов росло четыре еженедельных релиза, а после второй недели лидировала группа с поддержкой." x-label="Неделя релиза" y-label="Активные агенты"}
 ::::series{label="С поддержкой"}
@@ -55,9 +55,9 @@ language: ru
 ::::
 ::::::
 
-::::::section{title="Поток компиляции" id="flow" nav="Поток" width="wide" tone="accent" composition="story" viewport="bounded" section-density="immersive" type="display" surface="glow" transition="reveal" interaction="depth"}
+::::::section{title="Поток компиляции" id="flow" nav="Поток" width="wide" tone="accent" composition="story" viewport="bounded" section-density="immersive" type="display" surface="tint" transition="reveal" interaction="depth"}
 
-:::diagram{title="Поток офлайн-компиляции" description="Пятнадцать участников в подсистемах авторинга, компиляции и артефакта." type="flow"}
+:::diagram{title="Поток офлайн-компиляции" description="Схема из 15 узлов охватывает подготовку исходника, компиляцию и готовый артефакт." type="flow"}
 ::group{id="authoring" label="Граф авторинга"}
 ::group{id="compiler" label="Конвейер компилятора"}
 ::group{id="artifact" label="Переносимый артефакт"}
@@ -93,6 +93,8 @@ language: ru
 ::edge{from="styles" to="portable" label="упаковать"}
 ::edge{from="runtime" to="portable" label="взаимодействовать"}
 ::edge{from="targets" to="portable" label="ревью"}
+::legend-item{node="accent" label="Вход и выход"}
+::legend-item{node="success" label="Отрисовка графики"}
 :::
 
 ## Последовательность запроса компиляции
@@ -109,7 +111,7 @@ language: ru
 :::
 ::::::
 
-::::::section{title="Путь поставки" id="delivery" nav="Поставка" width="wide" tone="contrast" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Путь поставки" id="delivery" nav="Поставка" width="wide" tone="contrast" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="tint" transition="stagger" choreography="cascade"}
 
 ::::timeline{title="Путь релиза" description="Четыре этапа переводят продукт от данных к локально проверенному кандидату на релиз."}
 :::event{date="Исследование" title="Изучить каталог" kind="neutral"}
@@ -124,5 +126,8 @@ language: ru
 :::event{date="Проверка" title="Открыть через file://" kind="warning"}
 Проверки на компьютере и телефоне изучают настоящий созданный артефакт без сервера.
 :::
+::legend-item{event="accent" label="Авторская работа"}
+::legend-item{event="success" label="Автоматическая сборка"}
+::legend-item{event="warning" label="Требует проверки"}
 ::::
 ::::::

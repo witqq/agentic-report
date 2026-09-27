@@ -8,13 +8,18 @@ import { formatInstalledExamples } from './cli-examples.js';
 import {
   OutputFormatSchema,
   type BuildReportResult,
+  type CreateBrandThemeResult,
   type Diagnostic,
   type InitProjectResult,
   type FixReportResult,
   type GenerateSitemapResult,
   type InspectReportResult,
   type InspectReviewResult,
+  type MeasureReportResult,
   type OutputFormat,
+  type SnapshotMotion,
+  type SnapshotReportResult,
+  type SnapshotScheme,
   type ValidateReportResult,
 } from './contracts.js';
 import { inspectReport, validateReport } from './core/analyze-report.js';
@@ -22,6 +27,18 @@ import { buildReport } from './core/compiler.js';
 import { inspectReview } from './core/inspect-review.js';
 import { fixReport } from './core/fix-report.js';
 import { generateSitemap } from './core/site-index.js';
+import {
+  measureReport,
+  SNAPSHOT_MOTIONS,
+  SNAPSHOT_SCHEMES,
+  snapshotReport,
+} from './core/snapshot.js';
+import {
+  EFFECT_CHECK_BUILT_INS,
+  effectCheck,
+  type EffectCheckBuiltIn,
+  type EffectCheckResult,
+} from './core/effect-check.js';
 import {
   emitDiagnostic,
   emitResultRecord,
@@ -35,7 +52,9 @@ import {
   sanitizeTransportValue,
   toDiagnostic,
 } from './diagnostics.js';
+import { createBrandTheme } from './authoring/brand-theme.js';
 import { initProject } from './authoring/init-project.js';
+import { listReferenceExtensions } from './authoring/reference-extensions.js';
 import {
   getAuthoringSchema,
   getSourceContract,
@@ -59,6 +78,20 @@ interface InitCommandOptions {
   readonly json?: boolean;
 }
 
+interface ThemeCommandOptions {
+  readonly colors: string;
+  readonly extends?: string;
+  readonly output?: string;
+}
+
+interface SnapshotCommandOptions {
+  readonly out: string;
+  readonly widths?: readonly number[];
+  readonly schemes?: readonly SnapshotScheme[];
+  readonly motion?: readonly SnapshotMotion[];
+  readonly measure?: boolean;
+}
+
 interface AnalysisCommandOptions {
   readonly format?: OutputFormat;
   readonly json?: boolean;
@@ -67,7 +100,7 @@ interface AnalysisCommandOptions {
 }
 
 const program = new Command();
-const schemaScopes: readonly SchemaScope[] = ['manifest', 'directives', 'source'];
+const schemaScopes: readonly SchemaScope[] = ['manifest', 'directives', 'source', 'theme'];
 const invocationRunId = randomUUID();
 const outputMode: OutputMode = resolveOutputMode(process.argv.slice(2));
 const packageMetadata = readInstalledPackageMetadata();
@@ -98,6 +131,34 @@ program
         ...(commandOptions.starter === undefined ? {} : { starter: commandOptions.starter }),
       });
       writeInitSuccess(result, invocationRunId, outputMode);
+    } catch (error) {
+      const diagnostic = toDiagnostic(error);
+      emitDiagnostic(diagnostic, invocationRunId, outputMode);
+      process.exitCode = exitCodeForDiagnostic(diagnostic);
+    }
+  });
+
+program
+  .command('theme')
+  .description(
+    'Write a theme file from brand colours, their lightness shifted until every contrast pair passes. A logo cannot be read: the package carries no image decoder, so pass its colours.',
+  )
+  .requiredOption(
+    '--colors <list>',
+    'One or two brand colours, #rgb or #rrggbb, comma-separated: the accent, then the eyebrow accent',
+  )
+  .option('--extends <theme>', 'Built-in theme the new theme extends; the default theme if absent')
+  .option('-o, --output <path>', 'Absent .yaml, .yml or .json file to write', 'brand-theme.yaml')
+  .option('--json', 'Accepted; agent NDJSON is the default output')
+  .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
+  .action(async (commandOptions: ThemeCommandOptions) => {
+    try {
+      const result = await createBrandTheme({
+        colors: commandOptions.colors,
+        ...(commandOptions.extends === undefined ? {} : { extends: commandOptions.extends }),
+        ...(commandOptions.output === undefined ? {} : { output: commandOptions.output }),
+      });
+      writeThemeSuccess(result, invocationRunId, outputMode);
     } catch (error) {
       const diagnostic = toDiagnostic(error);
       emitDiagnostic(diagnostic, invocationRunId, outputMode);
@@ -225,6 +286,86 @@ program
   });
 
 program
+  .command('snapshot')
+  .description(
+    'Build a page and photograph it at several widths, in both schemes, with and without motion.',
+  )
+  .argument('[input]', 'Markdown file or directory containing report.md/index.md', '.')
+  .requiredOption('--out <directory>', 'Absent or empty directory for the page and its snapshots')
+  .option('--widths <list>', 'Comma-separated viewport widths in pixels', parseWidths)
+  .option('--schemes <list>', 'Comma-separated colour schemes: light, dark', (value: string) =>
+    parseChoices(value, SNAPSHOT_SCHEMES, '--schemes'),
+  )
+  .option('--motion <list>', 'Comma-separated motion settings: normal, reduce', (value: string) =>
+    parseChoices(value, SNAPSHOT_MOTIONS, '--motion'),
+  )
+  .option(
+    '--measure',
+    'Measure instead of photographing: sideways overflow, small text, contrast, covered text, empty bands, clipped headings, first screen and stops, one record per width, scheme and motion',
+  )
+  .option('--json', 'Accepted; agent NDJSON is the default output')
+  .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
+  .action(async (input: string, commandOptions: SnapshotCommandOptions) => {
+    try {
+      const options = {
+        input,
+        output: commandOptions.out,
+        ...(commandOptions.widths === undefined ? {} : { widths: commandOptions.widths }),
+        ...(commandOptions.schemes === undefined ? {} : { schemes: commandOptions.schemes }),
+        ...(commandOptions.motion === undefined ? {} : { motions: commandOptions.motion }),
+      };
+      if (commandOptions.measure === true) {
+        writeMeasureSuccess(await measureReport(options), invocationRunId, outputMode);
+        return;
+      }
+      const result = await snapshotReport(options);
+      writeSnapshotSuccess(result, invocationRunId, outputMode);
+    } catch (error) {
+      const diagnostic = toDiagnostic(error);
+      emitDiagnostic(diagnostic, invocationRunId, outputMode);
+      process.exitCode = exitCodeForDiagnostic(diagnostic);
+    }
+  });
+
+program
+  .command('effect-check')
+  .description(
+    'Build the examples of an effect extension and run the eleven effect checks in Chromium; prints N of M checks passed.',
+  )
+  .argument('[manifest]', 'Extension manifest with kind: effect')
+  .option(
+    '--built-in <effect>',
+    'Check a built-in effect instead of an extension: threads',
+    (value: string) => parseBuiltInEffect(value),
+  )
+  .requiredOption(
+    '--out <directory>',
+    'Absent or empty directory for the built examples and frames',
+  )
+  .option('--json', 'Accepted; agent NDJSON is the default output')
+  .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
+  .action(
+    async (
+      manifest: string | undefined,
+      commandOptions: { readonly out: string; readonly builtIn?: EffectCheckBuiltIn },
+    ) => {
+      try {
+        const result = await effectCheck({
+          output: commandOptions.out,
+          ...(manifest === undefined ? {} : { manifest }),
+          ...(commandOptions.builtIn === undefined ? {} : { builtIn: commandOptions.builtIn }),
+        });
+        writeEffectCheckSuccess(result, invocationRunId, outputMode);
+        if (result.passed < result.total) process.exitCode = 1;
+      } catch (error) {
+        const diagnostic = toDiagnostic(error);
+        emitDiagnostic(diagnostic, invocationRunId, outputMode);
+        process.exitCode = exitCodeForDiagnostic(diagnostic);
+      }
+    },
+  );
+
+program
   .command('review')
   .description('Resolve a versioned review artifact against its current Markdown source.')
   .argument('<review>', 'Confined relative review JSON path')
@@ -244,8 +385,8 @@ program
 
 program
   .command('schema')
-  .description('Print manifest, directive, or complete source schema data.')
-  .option('--scope <scope>', 'manifest, directives, or source', parseSchemaScope, 'manifest')
+  .description('Print manifest, directive, complete source, or theme schema data.')
+  .option('--scope <scope>', 'manifest, directives, source, or theme', parseSchemaScope, 'manifest')
   .option('--json', 'Accepted; compact agent JSON is the default output')
   .option('--human', 'Emit indented JSON for a human reader instead of compact agent JSON')
   .action((options: { readonly scope: SchemaScope }) => {
@@ -273,19 +414,28 @@ program
 
 program
   .command('examples')
-  .description('List source examples shipped with the installed package.')
+  .description('List source examples and reference extensions shipped with the installed package.')
   .option('--json', 'Accepted; compact agent JSON is the default output')
   .option('--human', 'Emit prose for a human reader instead of compact agent JSON')
-  .action(() => {
+  .action(async () => {
     const examplesRoot = sanitizeTransportPath(
       fileURLToPath(new URL('../../examples/', import.meta.url)),
     );
+    const extensions = (
+      await listReferenceExtensions(fileURLToPath(new URL('../../extensions/', import.meta.url)))
+    ).map((extension) => ({
+      ...extension,
+      manifest: sanitizeTransportPath(extension.manifest),
+      readme: sanitizeTransportPath(extension.readme),
+      examples: extension.examples.map(sanitizeTransportPath),
+    }));
     process.stdout.write(
       formatInstalledExamples(
         examplesRoot,
         getSourceContract().contractVersion,
         listExamples(),
         outputMode === 'agent',
+        extensions,
       ),
     );
   });
@@ -327,7 +477,7 @@ function parseFormat(value: string): OutputFormat {
 
 function parseSchemaScope(value: string): SchemaScope {
   if (!schemaScopes.includes(value as SchemaScope)) {
-    throw new InvalidArgumentError('Expected manifest, directives, or source.');
+    throw new InvalidArgumentError('Expected manifest, directives, source, or theme.');
   }
   return value as SchemaScope;
 }
@@ -354,6 +504,21 @@ function writeInitSuccess(result: InitProjectResult, runId: string, mode: Output
   }
   process.stdout.write(
     `Created ${sanitized.projectPath} from starter ${sanitized.starterId} (${sanitized.files.length} files)\n`,
+  );
+}
+
+function writeThemeSuccess(result: CreateBrandThemeResult, runId: string, mode: OutputMode): void {
+  const sanitized = sanitizeTransportValue(result);
+  if (mode === 'agent') {
+    emitResultRecord(sanitized, runId);
+    return;
+  }
+  const lines = sanitized.roles.map(
+    (role) =>
+      `  ${role.scheme} ${role.role} ${role.value} from ${role.from} (lightness ${role.lightnessShift > 0 ? '+' : ''}${role.lightnessShift}, hue ${role.hueShift}°)\n`,
+  );
+  process.stdout.write(
+    `Created ${sanitized.themePath} (theme ${sanitized.name}, extends ${sanitized.extends})\n${lines.join('')}`,
   );
 }
 
@@ -404,6 +569,125 @@ function writeInspectSuccess(result: InspectReportResult, runId: string, mode: O
     return;
   }
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+}
+
+function writeSnapshotSuccess(result: SnapshotReportResult, runId: string, mode: OutputMode): void {
+  const sanitized = sanitizeTransportValue(result);
+  emitWarnings(sanitized.warnings, runId, mode);
+  if (mode === 'agent') {
+    emitResultRecord(sanitized, runId);
+    return;
+  }
+  process.stdout.write(
+    `Took ${sanitized.shots.length} snapshot${sanitized.shots.length === 1 ? '' : 's'} of ${sanitized.page}; contact sheet ${sanitized.contactSheet.image}\n`,
+  );
+}
+
+/** Агенту — запись `measure` на каждое сочетание и итоговая; человеку — таблица, строка на сочетание. */
+function writeMeasureSuccess(result: MeasureReportResult, runId: string, mode: OutputMode): void {
+  const sanitized = sanitizeTransportValue(result);
+  emitWarnings(sanitized.warnings, runId, mode);
+  if (mode === 'agent') {
+    for (const measurement of sanitized.measurements)
+      process.stdout.write(`${JSON.stringify({ type: 'measure', runId, ...measurement })}\n`);
+    emitResultRecord(sanitized, runId);
+    return;
+  }
+  const header = [
+    'width',
+    'scheme',
+    'motion',
+    'sideways',
+    'small',
+    'contrast',
+    'covered',
+    'bands',
+    'clipped',
+    'title',
+    'action',
+    'scene',
+    'cut',
+    'errors',
+    'defects',
+  ];
+  const rows = sanitized.measurements.map((measurement) => [
+    String(measurement.width),
+    measurement.scheme,
+    measurement.motion,
+    `${measurement.horizontalOverflow}px`,
+    String(measurement.smallText.count),
+    String(measurement.lowContrast.count),
+    String(measurement.coveredText.count),
+    String(measurement.emptyBands.length),
+    String(measurement.clippedHeadings.count),
+    measurement.firstScreen.heading ? 'yes' : 'no',
+    measurement.firstScreen.action ? 'yes' : 'no',
+    `${Math.round(measurement.firstScreen.mainSceneShare * 100)}%`,
+    String(measurement.stops.filter((stop) => !stop.fits).length),
+    String(measurement.pageErrors.length + measurement.failedFonts.length),
+    String(measurement.defects),
+  ]);
+  const widths = header.map((title, column) =>
+    Math.max(title.length, ...rows.map((row) => (row[column] ?? '').length)),
+  );
+  const line = (cells: readonly string[]): string =>
+    `${cells.map((cell, column) => cell.padEnd(widths[column] ?? 0)).join('  ')}\n`;
+  process.stdout.write(`Measured ${sanitized.page}\n${line(header)}${rows.map(line).join('')}`);
+}
+
+function parseBuiltInEffect(value: string): EffectCheckBuiltIn {
+  if (!(EFFECT_CHECK_BUILT_INS as readonly string[]).includes(value))
+    throw new InvalidArgumentError(`Built-in effects: ${EFFECT_CHECK_BUILT_INS.join(', ')}.`);
+  return value as EffectCheckBuiltIn;
+}
+
+/** Агенту — одна запись на проверку и итоговая; человеку — строка на проверку и «N of M». */
+function writeEffectCheckSuccess(result: EffectCheckResult, runId: string, mode: OutputMode): void {
+  const sanitized = sanitizeTransportValue(result);
+  emitWarnings(sanitized.warnings, runId, mode);
+  if (mode === 'agent') {
+    for (const check of sanitized.checks)
+      process.stdout.write(
+        `${JSON.stringify({ type: 'check', runId, effect: sanitized.effect, ...check })}\n`,
+      );
+    emitResultRecord(sanitized, runId);
+    return;
+  }
+  const lines = sanitized.checks.map(
+    (check) =>
+      `${check.passed ? '  ok    ' : '  FAILED'}  ${check.title}${check.details.length === 0 ? '' : `\n            ${check.details.join('\n            ')}`}\n`,
+  );
+  process.stdout.write(
+    `Effect ${sanitized.effect}\n${lines.join('')}\n${sanitized.summary}; frames in ${sanitized.outputDirectory}\n`,
+  );
+}
+
+function parseWidths(value: string): readonly number[] {
+  const widths = value.split(',').map((item) => Number(item.trim()));
+  if (
+    widths.length === 0 ||
+    widths.some((width) => !Number.isInteger(width) || width < 240 || width > 3840)
+  ) {
+    throw new InvalidArgumentError(
+      'Widths are whole pixel values from 240 to 3840, separated by commas.',
+    );
+  }
+  return [...new Set(widths)];
+}
+
+function parseChoices<const Choice extends string>(
+  value: string,
+  choices: readonly Choice[],
+  option: string,
+): readonly Choice[] {
+  const items = value.split(',').map((item) => item.trim());
+  const accepted = items.filter((item): item is Choice =>
+    (choices as readonly string[]).includes(item),
+  );
+  if (accepted.length === 0 || accepted.length !== items.length) {
+    throw new InvalidArgumentError(`${option} accepts ${choices.join(', ')}, separated by commas.`);
+  }
+  return [...new Set(accepted)];
 }
 
 function writeReviewSuccess(result: InspectReviewResult, runId: string, mode: OutputMode): void {
