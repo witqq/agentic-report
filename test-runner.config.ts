@@ -52,8 +52,9 @@ const config: Config = {
       resultFile: 'e2e.json',
       // CPU-throttled effect checks need the browser worker to own the CPU while measuring frame
       // tasks. A second worker can push an otherwise passing task over the 50 ms budget. The suite
-      // deadline allows the expanded browser corpus to run sequentially; individual test limits stay.
-      timeout: 1_500_000,
+      // hosted Ubuntu browser corpus needs about 27 minutes; leave room for the last tests and JSON
+      // reporter to finish. Individual test deadlines and the 50 ms frame budget stay unchanged.
+      timeout: 1_900_000,
       workers: 1,
     },
   ],

@@ -7,9 +7,33 @@
  */
 
 const TAU = Math.PI * 2;
-/** Length of a vector; `Math.hypot` is several times slower in hot loops. */
-const length2d = (dx, dy) => Math.sqrt(dx * dx + dy * dy);
+/** Keep distant obstacles out of the square-root work done for each braid sample. */
+const distanceSquared = (dx, dy) => dx * dx + dy * dy;
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
+
+/** Soften the space available around a line with a centred minimum, then a centred running mean. */
+export function smoothSpread(room, maxSpread, reach) {
+  const count = room.length;
+  const spread = new Float32Array(count);
+  const low = new Float32Array(count);
+  for (let index = 0; index < count; index += 1) {
+    let value = maxSpread;
+    for (let k = Math.max(0, index - reach); k <= Math.min(count - 1, index + reach); k += 1)
+      value = Math.min(value, room[k]);
+    low[index] = value;
+  }
+  let sum = 0;
+  for (let k = 0; k <= Math.min(count - 1, reach); k += 1) sum += low[k];
+  for (let index = 0; index < count; index += 1) {
+    if (index > 0) {
+      if (index - reach - 1 >= 0) sum -= low[index - reach - 1];
+      if (index + reach < count) sum += low[index + reach];
+    }
+    const size = Math.min(count - 1, index + reach) - Math.max(0, index - reach) + 1;
+    spread[index] = Math.max(maxSpread * 0.3, sum / size);
+  }
+  return spread;
+}
 
 /**
  * @param {ReturnType<typeof import('./route.mjs').sampleLine>} samples
@@ -25,34 +49,17 @@ export function buildBraid(samples, field, balls, nails, options, random) {
   for (let index = 0; index < count; index += 1) {
     let value = clamp((field.at(x[index], y[index]) - options.clear) * 0.4, 0, options.spread);
     for (const nail of nails) {
-      const d = length2d(nail.x - x[index], nail.y - y[index]);
-      if (d < 22) value *= 0.35 + (0.65 * d) / 22;
+      const d2 = distanceSquared(nail.x - x[index], nail.y - y[index]);
+      if (d2 < 22 * 22) value *= 0.35 + (0.65 * Math.sqrt(d2)) / 22;
     }
     for (const ball of balls) {
-      const d = length2d(ball.x - x[index], ball.y - y[index]);
-      if (d < ball.r * 1.2) value *= 0.4;
+      const radius = ball.r * 1.2;
+      if (distanceSquared(ball.x - x[index], ball.y - y[index]) < radius * radius) value *= 0.4;
     }
     room[index] = value;
   }
   // The strands part and close slowly: a running minimum, then a running mean.
-  const spread = new Float32Array(count);
-  const reach = 10;
-  const low = new Float32Array(count);
-  for (let index = 0; index < count; index += 1) {
-    let value = options.spread;
-    for (let k = Math.max(0, index - reach); k <= Math.min(count - 1, index + reach); k += 1)
-      value = Math.min(value, room[k]);
-    low[index] = value;
-  }
-  for (let index = 0; index < count; index += 1) {
-    let sum = 0;
-    let n = 0;
-    for (let k = Math.max(0, index - reach); k <= Math.min(count - 1, index + reach); k += 1) {
-      sum += low[k];
-      n += 1;
-    }
-    spread[index] = Math.max(options.spread * 0.3, sum / n);
-  }
+  const spread = smoothSpread(room, options.spread, 10);
 
   // Positions are filled per range of samples when the drawing first needs them: a build does not pay
   // for the parts of a long page that are never on screen.

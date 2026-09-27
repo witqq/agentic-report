@@ -4,6 +4,18 @@ import { pathToFileURL } from 'node:url';
 
 import { expect, test } from './fixtures.js';
 
+interface LongFrameSample {
+  readonly start: number;
+  readonly duration: number;
+  readonly blockingMs: number;
+  readonly preRenderMs: number | null;
+  readonly renderTailMs: number | null;
+  readonly styleLayoutTailMs: number | null;
+  readonly scriptCount: number;
+  readonly scriptMs: number;
+  readonly forcedStyleLayoutMs: number;
+}
+
 /**
  * Замер витрины движения при четырёхкратном замедлении процессора: во время прокрутки нет длинных
  * задач дольше 50 мс, а кадровая частота остаётся близкой к частоте экрана. Числа прогона пишутся в
@@ -54,6 +66,9 @@ test('the motion showcase scrolls without long tasks under a 4x slower CPU', asy
   await page.evaluate(() => {
     const store = {
       longTasks: [] as { start: number; duration: number }[],
+      longFrames: [] as LongFrameSample[],
+      longFrameSupported: PerformanceObserver.supportedEntryTypes.includes('long-animation-frame'),
+      longFrameObserver: null as PerformanceObserver | null,
       frames: [] as { at: number; interval: number; scrollY: number }[],
       last: 0,
       running: true,
@@ -66,6 +81,42 @@ test('the motion showcase scrolls without long tasks under a 4x slower CPU', asy
           duration: entry.duration,
         });
     }).observe({ type: 'longtask', buffered: false });
+    const recordLongFrame = (raw: PerformanceEntry): void => {
+      const entry = raw as PerformanceEntry & {
+        readonly blockingDuration: number;
+        readonly renderStart: number;
+        readonly styleAndLayoutStart: number;
+        readonly scripts: readonly {
+          readonly duration: number;
+          readonly forcedStyleAndLayoutDuration: number;
+        }[];
+      };
+      const end = entry.startTime + entry.duration;
+      store.longFrames.push({
+        start: entry.startTime,
+        duration: entry.duration,
+        blockingMs: entry.blockingDuration,
+        preRenderMs:
+          entry.renderStart > 0 ? Math.max(0, entry.renderStart - entry.startTime) : null,
+        renderTailMs: entry.renderStart > 0 ? Math.max(0, end - entry.renderStart) : null,
+        styleLayoutTailMs:
+          entry.styleAndLayoutStart > 0 ? Math.max(0, end - entry.styleAndLayoutStart) : null,
+        scriptCount: entry.scripts.length,
+        scriptMs: entry.scripts.reduce((sum, script) => sum + script.duration, 0),
+        forcedStyleLayoutMs: entry.scripts.reduce(
+          (sum, script) => sum + script.forcedStyleAndLayoutDuration,
+          0,
+        ),
+      });
+    };
+    if (store.longFrameSupported) {
+      const observer = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) recordLongFrame(entry);
+      });
+      observer.observe({ type: 'long-animation-frame', buffered: false });
+      store.longFrameObserver = observer;
+    }
+    Reflect.set(globalThis, '__recordLongFrame', recordLongFrame);
     const tick = (now: number): void => {
       if (store.last !== 0)
         store.frames.push({ at: now, interval: now - store.last, scrollY: window.scrollY });
@@ -83,10 +134,18 @@ test('the motion showcase scrolls without long tasks under a 4x slower CPU', asy
   const result = await page.evaluate(() => {
     const store = Reflect.get(globalThis, '__perf') as {
       longTasks: { start: number; duration: number }[];
+      longFrames: LongFrameSample[];
+      longFrameSupported: boolean;
+      longFrameObserver: PerformanceObserver | null;
       frames: { at: number; interval: number; scrollY: number }[];
       running: boolean;
     };
     store.running = false;
+    const recordLongFrame = Reflect.get(globalThis, '__recordLongFrame') as (
+      entry: PerformanceEntry,
+    ) => void;
+    for (const entry of store.longFrameObserver?.takeRecords() ?? []) recordLongFrame(entry);
+    store.longFrameObserver?.disconnect();
     const frames = [...store.frames].sort((a, b) => a.interval - b.interval);
     const locate = (at: number): number => {
       const frame = store.frames.find((sample) => sample.at >= at);
@@ -111,6 +170,17 @@ test('the motion showcase scrolls without long tasks under a 4x slower CPU', asy
         scrollY: locate(task.start),
         sectionIndex: sectionIndexAt(locate(task.start)),
       })),
+      longFrameSupported: store.longFrameSupported,
+      longFrames: store.longFrames.length,
+      // These frame-end tails exclude presentation time.
+      longFrameDetails: [...store.longFrames]
+        .sort((left, right) => right.duration - left.duration)
+        .slice(0, 12)
+        .map((frame) => ({
+          ...frame,
+          scrollY: locate(frame.start),
+          sectionIndex: sectionIndexAt(locate(frame.start)),
+        })),
       slowFrameDetails: frames.slice(-10).map((frame) => ({
         ...frame,
         sectionIndex: sectionIndexAt(frame.scrollY),
