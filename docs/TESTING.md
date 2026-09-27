@@ -379,7 +379,13 @@ machine would otherwise fail an effect that did nothing wrong, and the compariso
 effect leaves to the browser outside its own calls. A timing failure is confirmed with a second independent
 effect-on/effect-off pair; both pairs must show the same over-budget condition, so an isolated runner stall
 does not reject an effect. The frames `frame-390.png` … `frame-1920.png` are written to the output
-directory.
+directory. The same directory also contains `performance-diagnostics.json`, updated after each completed
+effect-on or effect-off pass so a CI timeout does not erase earlier measurements. Only tasks whose start
+falls inside a measured scroll or resize phase affect the result; tasks outside those phases are recorded
+separately as `unassignedLongTasks` and `unassignedLongFrames`. Each phase records effect-call duration,
+long tasks, and long animation frame script time, forced style time, and the time remaining after rendering
+and style/layout begin (`renderTailMs` and `layoutAndPaintTailMs`). The file contains numeric measurements
+and fixed labels only; it contains no authored text or paths.
 
 ## Writing tests
 

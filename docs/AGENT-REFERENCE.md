@@ -1257,7 +1257,10 @@ as for `snapshot`) and prints `N of M checks passed`: the declaration, the reduc
 page clock, a 50 ms budget per effect call at 4× CPU slowdown, colours from theme tokens, no decoration on
 text, four widths, content edits, states in every render mode, print and two unlike examples. By default it
 writes one `check` NDJSON record per check and a result record; a failed check exits with code `1`. The
-context the effect receives is described in [the architecture](ARCHITECTURE.md#level-2--effects-and-the-effect-engine).
+output directory contains `performance-diagnostics.json` with numeric timings and fixed scroll/resize
+phase labels; tasks outside those measured phases are recorded separately and do not affect the result.
+The file contains no authored text or paths; inspect it when the 50 ms check fails. The context the effect
+receives is described in [the architecture](ARCHITECTURE.md#level-2--effects-and-the-effect-engine).
 `inspect` lists the extensions a page uses and `build` reports their uses and bundled bytes. The manifest
 format is in the source contract, [Extensions](product/source-contract.md#extensions); how each level
 is built and isolated is in [the architecture](ARCHITECTURE.md#extensions).

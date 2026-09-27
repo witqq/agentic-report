@@ -243,6 +243,54 @@ interface StatusSnapshot {
   readonly longestMs: number;
 }
 
+interface BrowserTask {
+  readonly startMs: number;
+  readonly durationMs: number;
+}
+
+interface BrowserFrame extends BrowserTask {
+  readonly scriptMs: number;
+  readonly forcedStyleMs: number;
+  readonly renderTailMs: number;
+  readonly layoutAndPaintTailMs: number;
+}
+
+/** Browser work belongs to the phase in which it started; setup work stays outside the verdict. */
+export function partitionMeasuredEntries<Entry extends BrowserTask>(
+  entries: readonly Entry[],
+  windows: readonly { readonly startMs: number; readonly endMs: number }[],
+): { readonly byPhase: readonly (readonly Entry[])[]; readonly unassigned: readonly Entry[] } {
+  const byPhase: Entry[][] = windows.map(() => []);
+  const unassigned: Entry[] = [];
+  for (const entry of entries) {
+    const index = windows.findIndex(
+      (window) => entry.startMs >= window.startMs && entry.startMs < window.endMs,
+    );
+    if (index < 0) unassigned.push(entry);
+    else byPhase[index]?.push(entry);
+  }
+  return { byPhase, unassigned };
+}
+
+interface PerformancePhase {
+  readonly name: 'scroll-wide' | 'resize-narrow' | 'scroll-narrow' | 'resize-wide';
+  readonly startMs: number;
+  readonly endMs: number;
+  readonly effectCallMs: number;
+  readonly longTasks: readonly BrowserTask[];
+  readonly longFrames: readonly BrowserFrame[];
+}
+
+interface PerformancePass {
+  readonly longTasks: number[];
+  readonly unassignedLongTasks: readonly BrowserTask[];
+  readonly unassignedLongFrames: readonly BrowserFrame[];
+  readonly status: StatusSnapshot | undefined;
+  readonly errors: string[];
+  readonly phases: readonly PerformancePhase[];
+  readonly longAnimationFramesSupported: boolean;
+}
+
 // ---------------------------------------------------------------------------------------------------
 
 export async function effectCheck(options: EffectCheckOptions): Promise<EffectCheckResult> {
@@ -306,7 +354,7 @@ export async function effectCheck(options: EffectCheckOptions): Promise<EffectCh
       const session = new Session(browser, subject.name, subject.selector);
       add('still', ...(await checkStill(session, url)));
       add('clock', ...(await checkClock(session, url)));
-      add('performance', ...(await checkPerformance(session, url)));
+      add('performance', ...(await checkPerformance(session, url, outputDirectory)));
       add('tokens', ...(await checkTokens(session, url)));
       add('text', ...(await checkText(session, url)));
       const widths = await checkWidths(session, url, outputDirectory);
@@ -684,7 +732,7 @@ async function throttledPass(
   session: Session,
   url: string,
   effectsOff: boolean,
-): Promise<{ longTasks: number[]; status: StatusSnapshot | undefined; errors: string[] }> {
+): Promise<PerformancePass> {
   const { page, context, errors } = await session.open(url, 'live', {
     manual: false,
     effectsOff,
@@ -693,15 +741,74 @@ async function throttledPass(
     const cdp = await context.newCDPSession(page);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
     await page.evaluate(() => {
-      const holder = window as unknown as { __longTasks: number[] };
-      holder.__longTasks = [];
+      const holder = window as unknown as {
+        __performanceTasks: BrowserTask[];
+        __performanceFrames: BrowserFrame[];
+      };
+      holder.__performanceTasks = [];
+      holder.__performanceFrames = [];
       new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) holder.__longTasks.push(entry.duration);
+        for (const entry of list.getEntries())
+          holder.__performanceTasks.push({ startMs: entry.startTime, durationMs: entry.duration });
       }).observe({ type: 'longtask' });
-      (
-        window as unknown as { __agenticReportEffectEngine?: { resetTimings(): void } }
-      ).__agenticReportEffectEngine?.resetTimings();
+      if (PerformanceObserver.supportedEntryTypes.includes('long-animation-frame'))
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            const frame = entry as PerformanceEntry & {
+              readonly renderStart?: number;
+              readonly styleAndLayoutStart?: number;
+              readonly scripts?: readonly {
+                readonly duration?: number;
+                readonly forcedStyleAndLayoutDuration?: number;
+              }[];
+            };
+            holder.__performanceFrames.push({
+              startMs: frame.startTime,
+              durationMs: frame.duration,
+              scriptMs: (frame.scripts ?? []).reduce(
+                (sum, script) => sum + (script.duration ?? 0),
+                0,
+              ),
+              forcedStyleMs: (frame.scripts ?? []).reduce(
+                (sum, script) => sum + (script.forcedStyleAndLayoutDuration ?? 0),
+                0,
+              ),
+              renderTailMs:
+                frame.renderStart === undefined || frame.renderStart === 0
+                  ? 0
+                  : Math.max(0, frame.startTime + frame.duration - frame.renderStart),
+              layoutAndPaintTailMs:
+                frame.styleAndLayoutStart === undefined || frame.styleAndLayoutStart === 0
+                  ? 0
+                  : Math.max(0, frame.startTime + frame.duration - frame.styleAndLayoutStart),
+            });
+          }
+        }).observe({ type: 'long-animation-frame' });
     }, undefined);
+    const phases: Array<Omit<PerformancePhase, 'longTasks' | 'longFrames'>> = [];
+    const phase = async (
+      name: PerformancePhase['name'],
+      action: () => Promise<void>,
+    ): Promise<void> => {
+      await page.evaluate(
+        () =>
+          (
+            window as unknown as {
+              __agenticReportEffectEngine?: { resetTimings(): void };
+            }
+          ).__agenticReportEffectEngine?.resetTimings(),
+        undefined,
+      );
+      const startMs = await page.evaluate(() => performance.now(), undefined);
+      await action();
+      const endMs = await page.evaluate(() => performance.now(), undefined);
+      phases.push({
+        name,
+        startMs,
+        endMs,
+        effectCallMs: (await session.status(page))?.longestMs ?? 0,
+      });
+    };
     const scrollThrough = async (): Promise<void> => {
       await page.evaluate(async () => {
         const frame = (): Promise<void> =>
@@ -716,18 +823,49 @@ async function throttledPass(
         await frame();
       }, undefined);
     };
-    await scrollThrough();
-    await page.setViewportSize({ width: 768, height: HEIGHT });
-    await page.waitForTimeout(200);
-    await scrollThrough();
-    await page.setViewportSize({ width: 1280, height: HEIGHT });
-    await page.waitForTimeout(200);
+    await phase('scroll-wide', scrollThrough);
+    await phase('resize-narrow', async () => {
+      await page.setViewportSize({ width: 768, height: HEIGHT });
+      await page.waitForTimeout(200);
+    });
+    await phase('scroll-narrow', scrollThrough);
+    await phase('resize-wide', async () => {
+      await page.setViewportSize({ width: 1280, height: HEIGHT });
+      await page.waitForTimeout(200);
+    });
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
-    const longTasks = await page.evaluate(
-      () => (window as unknown as { __longTasks: number[] }).__longTasks,
-      undefined,
-    );
-    return { longTasks, status: await session.status(page), errors };
+    const measurements = await page.evaluate(() => {
+      const holder = window as unknown as {
+        __performanceTasks: BrowserTask[];
+        __performanceFrames: BrowserFrame[];
+      };
+      return {
+        tasks: holder.__performanceTasks,
+        frames: holder.__performanceFrames,
+        longAnimationFramesSupported:
+          PerformanceObserver.supportedEntryTypes.includes('long-animation-frame'),
+      };
+    }, undefined);
+    const status = await session.status(page);
+    const tasks = partitionMeasuredEntries(measurements.tasks, phases);
+    const frames = partitionMeasuredEntries(measurements.frames, phases);
+    const measuredPhases: PerformancePhase[] = phases.map((item, index) => ({
+      ...item,
+      longTasks: tasks.byPhase[index] ?? [],
+      longFrames: frames.byPhase[index] ?? [],
+    }));
+    return {
+      longTasks: measuredPhases.flatMap((item) => item.longTasks.map((task) => task.durationMs)),
+      unassignedLongTasks: tasks.unassigned,
+      unassignedLongFrames: frames.unassigned,
+      status:
+        status === undefined
+          ? undefined
+          : { ...status, longestMs: Math.max(0, ...phases.map((item) => item.effectCallMs)) },
+      errors,
+      phases: measuredPhases,
+      longAnimationFramesSupported: measurements.longAnimationFramesSupported,
+    };
   } finally {
     await context.close();
   }
@@ -742,9 +880,40 @@ async function throttledPass(
  * загрузка текстуры в видеокарту на прокрутке). Если длинная задача есть и без эффектов, её не на кого
  * отнести — машина перегружена, — и она идёт в заметку, а не в провал.
  */
-async function checkPerformance(session: Session, url: string): Promise<Outcome> {
-  const withEffect = await throttledPass(session, url, false);
-  const baseline = await throttledPass(session, url, true);
+async function checkPerformance(session: Session, url: string, output: string): Promise<Outcome> {
+  const passes: Array<{
+    readonly role: 'effect' | 'baseline' | 'effect-confirmation' | 'baseline-confirmation';
+    readonly longestEffectCallMs: number;
+    readonly longTaskDurationsMs: readonly number[];
+    readonly unassignedLongTasks: readonly BrowserTask[];
+    readonly unassignedLongFrames: readonly BrowserFrame[];
+    readonly longAnimationFramesSupported: boolean;
+    readonly phases: readonly PerformancePhase[];
+  }> = [];
+  const pass = async (
+    role: (typeof passes)[number]['role'],
+    effectsOff: boolean,
+  ): Promise<PerformancePass> => {
+    const result = await throttledPass(session, url, effectsOff);
+    passes.push({
+      role,
+      longestEffectCallMs: result.status?.longestMs ?? 0,
+      longTaskDurationsMs: result.longTasks,
+      unassignedLongTasks: result.unassignedLongTasks,
+      unassignedLongFrames: result.unassignedLongFrames,
+      longAnimationFramesSupported: result.longAnimationFramesSupported,
+      phases: result.phases,
+    });
+    // The E2E suite may reach its aggregate deadline before the next test starts. Save each
+    // completed pass now, so its browser evidence remains in the uploaded CI artifact.
+    await writeFile(
+      path.join(output, 'performance-diagnostics.json'),
+      `${JSON.stringify({ version: 1, passes }, null, 2)}\n`,
+    );
+    return result;
+  };
+  const withEffect = await pass('effect', false);
+  const baseline = await pass('baseline', true);
   const longest = withEffect.status?.longestMs ?? 0;
   const pageLongest = Math.max(0, ...withEffect.longTasks);
   const baselineLongest = Math.max(0, ...baseline.longTasks);
@@ -755,8 +924,8 @@ async function checkPerformance(session: Session, url: string): Promise<Outcome>
   const confirmation =
     callExceeded || pageExceeded
       ? {
-          withEffect: await throttledPass(session, url, false),
-          baseline: await throttledPass(session, url, true),
+          withEffect: await pass('effect-confirmation', false),
+          baseline: await pass('baseline-confirmation', true),
         }
       : undefined;
   const confirmedCall = confirmation?.withEffect.status?.longestMs ?? 0;

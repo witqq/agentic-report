@@ -324,17 +324,25 @@ function installDiagramMotion(): void {
     installCountUp(figure);
   if (drawn.length === 0 && zooms.length === 0) return;
   let frame = 0;
-  const paint = (): void => {
+  const visibleOrOverridden = (figure: HTMLElement): boolean => {
+    if (progressOverride(figure) !== undefined) return true;
+    const box = figure.getBoundingClientRect();
+    return box.bottom > 0 && box.top < innerHeight;
+  };
+  const paint = (visibleOnly: boolean): void => {
     frame = 0;
-    for (const figure of drawn) paintDrawing(figure);
-    for (const figure of zooms) paintZoom(figure);
+    for (const figure of drawn)
+      if (!visibleOnly || visibleOrOverridden(figure)) paintDrawing(figure);
+    for (const figure of zooms) if (!visibleOnly || visibleOrOverridden(figure)) paintZoom(figure);
   };
   const schedule = (): void => {
-    if (frame === 0) frame = clock.frame(paint);
+    // The initial pass and a clock seek still set every figure. Real scrolling updates only what can
+    // be seen; offscreen SVG path measurements and writes cannot affect the current frame.
+    if (frame === 0) frame = clock.frame(() => paint(true));
   };
-  paint();
+  paint(false);
   // Перемотка часов ставит прорисовку и камеру сразу: по положению на экране или по прогрессу записи.
-  clock.register({ at: paint });
+  clock.register({ at: () => paint(false) });
   document.addEventListener('scroll', schedule, { passive: true });
   window.addEventListener('resize', schedule);
 }

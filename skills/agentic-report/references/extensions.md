@@ -181,7 +181,10 @@ and in print — its two `examples` and the `licenses` of any third-party code i
   Chromium and checks the declaration, the reduced-motion final state, the page clock, 50 ms per effect
   call at 4× CPU slowdown, theme colours, no decoration on text, four widths, content edits, states in every
   render mode, print and the two examples. The same checks run over the built-in `threads`
-  (`--built-in threads`). Hand over only at `11 of 11 checks passed`.
+  (`--built-in threads`). When performance fails, read `performance-diagnostics.json` in the output
+  directory for numeric timings by scroll and resize phase. Tasks outside those phases are listed
+  separately and do not affect the result; the file contains no authored text or paths. Hand
+  over only at `11 of 11 checks passed`.
 - **Licences.** Effect and island code is your own or under MIT, Apache 2.0 or the Unlicense, with its
   notice kept and listed in `licenses`; take ideas from demos, not their code
   ([`assets.md`](assets.md#licences-of-code-and-effects)). GSAP, Rive, Lottie, Spline and Theatre.js are not
