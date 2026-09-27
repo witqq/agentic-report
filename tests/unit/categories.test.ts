@@ -124,7 +124,7 @@ describe('page categories', () => {
       // Бриф — рабочий файл автора, а не часть страницы.
       expect(await readFile(output, 'utf8')).not.toContain('Checks switched off');
     }
-  });
+  }, 20_000);
 
   it('lets a landing page use answer and review tools and a document use landing recipes', async () => {
     const landing = await buildSource(

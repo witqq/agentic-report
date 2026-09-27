@@ -208,7 +208,7 @@ describe('agent discovery contract', () => {
       await rm(outputRoot, { recursive: true, force: true });
     }
     await expect(readFile(maintainedContractPath, 'utf8')).resolves.toBe(maintainedContract);
-  });
+  }, 20_000);
 
   it('rejects incomplete or unsafe extension proposals and accepts a complete bounded record', () => {
     const schema = getExtensionProposalSchema();

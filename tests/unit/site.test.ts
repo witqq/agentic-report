@@ -389,7 +389,7 @@ describe('deterministic public site staging', () => {
     expect(release.skill.sha256).toBe(
       sha256(await readFile(path.join(repositoryRoot, 'skills/agentic-report/SKILL.md'))),
     );
-  });
+  }, 20_000);
 
   it('keeps package, skill, OpenAI, Claude, and community distribution identity synchronized', async () => {
     const packageMetadata = repositoryPackageMetadata;

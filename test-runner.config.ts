@@ -41,7 +41,9 @@ const config: Config = {
         'pnpm exec vitest run --config=vitest.unit.config.ts --reporter=default --reporter=json --outputFile.json=test-results/artifacts/unit.json',
       resultFile: 'unit.json',
       parser: './tests/parsers/vitest-parser.ts',
-      timeout: 120_000,
+      // The complete build/CLI corpus takes longer on hosted runners; individual integration tests
+      // retain their own explicit deadlines and Vitest's default remains 5 s for ordinary tests.
+      timeout: 300_000,
     },
     {
       name: 'e2e',

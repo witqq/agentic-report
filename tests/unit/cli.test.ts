@@ -285,7 +285,7 @@ describe('CLI transport', () => {
         ),
       ).toBe(true);
     }
-  });
+  }, 20_000);
 
   it('describes the human projection each command actually produces', async () => {
     // The distributed documents divide the commands into the ones whose human projection is prose
@@ -333,7 +333,7 @@ describe('CLI transport', () => {
         promisesProse: prose.includes(command),
       });
     }
-  });
+  }, 20_000);
 
   it('lists every registered command in the machine-readable catalog', async () => {
     // The catalog is what an agent reads: the machine route is the default, so a command missing

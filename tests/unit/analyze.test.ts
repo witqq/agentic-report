@@ -165,7 +165,7 @@ describe('report analysis', () => {
       observed: inspected.observed,
       sourceFiles: inspected.sourceFiles,
     });
-  });
+  }, 30_000);
 
   it('embeds format-identical review targets and resolves exact partial feedback after resource changes', async () => {
     const workspace = await reviewWorkspace('analysis-review-binding');

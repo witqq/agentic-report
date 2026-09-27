@@ -548,14 +548,18 @@ function requestRebuild(record: EffectRecord, reason: string): void {
   if (!pendingRebuild.has(record)) pendingRebuild.set(record, reason);
   if (rebuildQueued) return;
   rebuildQueued = true;
-  queueMicrotask(flushRebuilds);
+  // Geometry watchers already run in an animation frame. In real time, another frame keeps their
+  // layout work and the effect's rebuild out of one long browser task. Recorded clocks rebuild
+  // immediately so a seek still produces the complete frame synchronously.
+  if (clock.mode === 'real') clock.frame(flushRebuilds);
+  else queueMicrotask(flushRebuilds);
 }
 
 /**
- * Пересборка идёт в задаче, которая её вызвала (изменение ширины, шрифты, конец входа), а отрисовка —
- * в следующем кадре: замеры и построение геометрии и штрихи кадра не складываются в одну долгую задачу.
- * Под часами записи (`manual`, `external`) кадр приходит только с перемоткой, поэтому там пересобранный
- * эффект рисуется сразу: снимок после перемотки должен показывать уже пересобранную картину.
+ * В реальном времени запрос пересборки выполняется в следующем кадре после повода (изменение ширины,
+ * шрифты, конец входа); рисунок после неё назначается на очередной кадр. Уже запланированный кадр
+ * непрерывного эффекта может выполниться до пересборки. Под часами записи (`manual`, `external`)
+ * пересборка и рисунок выполняются сразу: снимок после перемотки показывает готовую картину.
  */
 const DRAW_AFTER_REBUILD: 'now' | 'next-frame' = clock.mode === 'real' ? 'next-frame' : 'now';
 

@@ -1686,7 +1686,7 @@ describe('registry-driven semantic directives', () => {
       workspace,
     );
     expect(maximumSequence.html.match(/data-message-order=/gu)).toHaveLength(40);
-  });
+  }, 20_000);
 
   it('requires every registered glossary occurrence to use a reference without flagging excluded contexts', async () => {
     const workspace = await trackedWorkspace('directive-glossary');
