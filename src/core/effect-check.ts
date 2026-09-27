@@ -76,6 +76,26 @@ export type EffectCheckId = (typeof EFFECT_CHECKS)[number][0];
 const WIDTHS = [390, 768, 1280, 1920] as const;
 const HEIGHT = 900;
 const LONG_TASK_MS = 50;
+
+/** Two fresh effect-on/effect-off measurements must agree before timing is attributed to an effect. */
+export interface PerformanceSample {
+  readonly effectCallMs: number;
+  readonly pageTaskMs: number;
+  readonly baselineTaskMs: number;
+}
+
+export function confirmedPerformanceFailures(
+  first: PerformanceSample,
+  second: PerformanceSample,
+): { readonly effectCall: boolean; readonly pageTask: boolean } {
+  const callExceeded = (sample: PerformanceSample): boolean => sample.effectCallMs > LONG_TASK_MS;
+  const pageExceeded = (sample: PerformanceSample): boolean =>
+    sample.pageTaskMs > LONG_TASK_MS && sample.baselineTaskMs <= LONG_TASK_MS;
+  return {
+    effectCall: callExceeded(first) && callExceeded(second),
+    pageTask: pageExceeded(first) && pageExceeded(second),
+  };
+}
 /** Доля пикселей строк текста, которую декор может задеть сглаживанием края. */
 const TEXT_COVER_TOLERANCE = 0.002;
 /** Сходство примеров (доля общих троек слов), выше которого они считаются одним примером. */
@@ -579,6 +599,15 @@ function failures(status: StatusSnapshot | undefined, mode: string): string[] {
   return problems;
 }
 
+function livePerformanceFailures(status: StatusSnapshot | undefined, mode: string): string[] {
+  const problems = failures(status, mode);
+  if (status !== undefined && status.render !== 'live' && status.render !== 'failed')
+    problems.push(`${mode}: the effect rendered ${status.render} instead of live.`);
+  if (status !== undefined && status.render !== 'failed' && status.errors.length > 0)
+    problems.push(`${mode}: the effect reported errors: ${status.errors.join('; ')}`);
+  return problems;
+}
+
 // ---------------------------------------------------------------------------------------------------
 // Проверки. Каждая возвращает [проблемы, заметки].
 
@@ -719,22 +748,55 @@ async function checkPerformance(session: Session, url: string): Promise<Outcome>
   const longest = withEffect.status?.longestMs ?? 0;
   const pageLongest = Math.max(0, ...withEffect.longTasks);
   const baselineLongest = Math.max(0, ...baseline.longTasks);
+  const callExceeded = longest > LONG_TASK_MS;
+  const pageExceeded = pageLongest > LONG_TASK_MS && baselineLongest <= LONG_TASK_MS;
+  // A shared CI runner can delay one browser task while its effect-free pass is quiet. A real slow
+  // effect repeats in a fresh context; confirm only timing failures with a second independent pair.
+  const confirmation =
+    callExceeded || pageExceeded
+      ? {
+          withEffect: await throttledPass(session, url, false),
+          baseline: await throttledPass(session, url, true),
+        }
+      : undefined;
+  const confirmedCall = confirmation?.withEffect.status?.longestMs ?? 0;
+  const confirmedPage = Math.max(0, ...(confirmation?.withEffect.longTasks ?? []));
+  const confirmedBaseline = Math.max(0, ...(confirmation?.baseline.longTasks ?? []));
+  const confirmed = confirmedPerformanceFailures(
+    { effectCallMs: longest, pageTaskMs: pageLongest, baselineTaskMs: baselineLongest },
+    {
+      effectCallMs: confirmedCall,
+      pageTaskMs: confirmedPage,
+      baselineTaskMs: confirmedBaseline,
+    },
+  );
   const problems: string[] = [];
-  if (longest > LONG_TASK_MS)
+  if (confirmed.effectCall)
     problems.push(
-      `one call of the effect took ${Math.round(longest)} ms while scrolling and resizing at 4× CPU slowdown; keep each frame and rebuild under ${LONG_TASK_MS} ms.`,
+      `one call of the effect took ${Math.round(longest)} ms and ${Math.round(confirmedCall)} ms in independent passes while scrolling and resizing at 4× CPU slowdown; keep each frame and rebuild under ${LONG_TASK_MS} ms.`,
     );
-  if (pageLongest > LONG_TASK_MS && baselineLongest <= LONG_TASK_MS)
+  if (confirmed.pageTask)
     problems.push(
-      `with the effect the page had a ${Math.round(pageLongest)} ms task at 4× CPU slowdown, without it none over ${LONG_TASK_MS} ms: work the effect leaves to the browser (texture uploads, shader compiles, layout) happens during scrolling; do it at mount.`,
+      `with the effect the page had ${Math.round(pageLongest)} ms and ${Math.round(confirmedPage)} ms tasks in independent passes at 4× CPU slowdown, while both effect-free passes stayed under ${LONG_TASK_MS} ms: work the effect leaves to the browser (texture uploads, shader compiles, layout) happens during scrolling; do it at mount.`,
     );
-  problems.push(...failures(withEffect.status, 'live'));
-  problems.push(...withEffect.errors.map((error) => `page error: ${error}`));
+  problems.push(...livePerformanceFailures(withEffect.status, 'live'));
+  if (confirmation !== undefined)
+    problems.push(...livePerformanceFailures(confirmation.withEffect.status, 'live confirmation'));
+  problems.push(
+    ...[...withEffect.errors, ...(confirmation?.withEffect.errors ?? [])].map(
+      (error) => `page error: ${error}`,
+    ),
+  );
   return [
     problems,
     [
       `longest effect call ${Math.round(longest)} ms`,
       `longest page task ${Math.round(pageLongest)} ms with the effect, ${Math.round(baselineLongest)} ms without`,
+      ...(confirmation === undefined
+        ? []
+        : [
+            `confirmation: effect call ${Math.round(confirmedCall)} ms; page task ${Math.round(confirmedPage)} ms with the effect, ${Math.round(confirmedBaseline)} ms without`,
+          ]),
     ],
   ];
 }

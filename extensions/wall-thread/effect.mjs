@@ -96,6 +96,7 @@ export default defineEffect({
     ctx.tokens.onChange(readColours);
 
     let built;
+    let measuredGeometry;
     let measuredHeight = 0;
     /** What the canvas shows now: the build, colours, head, scroll and canvas size it was drawn with. */
     let drawn;
@@ -139,8 +140,6 @@ export default defineEffect({
         if (box.width < 1 || box.height < 1) continue;
         rects.push({ ...ctx.measure.rect(element), pad: options.pad * 0.6 });
       }
-      const field = buildField({ width, height, cell: options.cell, edge: options.edge, rects });
-      const random = ctx.random(`wall-thread:${width}`);
       const hosts = ctx.hosts.map((host) => {
         const heading = host.querySelector('h2, h3, h4, [data-card-title], strong') ?? host;
         return {
@@ -149,6 +148,21 @@ export default defineEffect({
           heading: ctx.measure.rect(heading),
         };
       });
+      // Font and resize notifications can arrive in consecutive frames for the same layout. Keep the
+      // measured geometry and element identities: a replacement host or pinned element needs fresh
+      // state targets and clipping even when its rectangle is unchanged.
+      const geometry = JSON.stringify([width, height, svh, options.narrow, rects, hosts]);
+      if (
+        built !== undefined &&
+        geometry === measuredGeometry &&
+        chrome.length === built.chrome.length &&
+        chrome.every((element, index) => element === built.chrome[index]) &&
+        ctx.hosts.length === built.hostElements.length &&
+        ctx.hosts.every((element, index) => element === built.hostElements[index])
+      )
+        return;
+      const field = buildField({ width, height, cell: options.cell, edge: options.edge, rects });
+      const random = ctx.random(`wall-thread:${width}`);
       const route = buildRoute({ field, hosts, svh, options, random });
       const samples = sampleLine(route.line, options.step);
       const braid = buildBraid(samples, field, route.balls, route.nails, options, random);
@@ -211,8 +225,10 @@ export default defineEffect({
         stations,
         chunks,
         chrome,
+        hostElements: [...ctx.hosts],
         notes: route.notes,
       };
+      measuredGeometry = geometry;
     };
     build();
 

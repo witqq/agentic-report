@@ -224,8 +224,10 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   keeps licence texts, refuses a package import and explains a missing esbuild, and compiles a sample
   effect against the published `agentic-report/effect` types while a misuse of them fails `tsc`;
   `motion-performance.spec.ts` scrolls the motion showcase with a 4x slower CPU, video and trace recording
-  off because they create long tasks themselves, and requires no long task over 50 ms and a 95th-percentile
-  frame interval of at most 20 ms. `presentation.spec.ts` turns a fixture deck by keyboard, click and
+  off because they create long tasks themselves, and requires no long task over 50 ms. It measures the
+  display refresh interval before CPU throttling, then requires the 95th-percentile frame interval to stay
+  within 2.2 refreshes and the mean within 1.25 refreshes; this distinguishes a single missed refresh from
+  sustained half-rate rendering on both 60 Hz and 120 Hz displays. `presentation.spec.ts` turns a fixture deck by keyboard, click and
   address, reveals and hides steps, keeps notes from the audience and shows them to the presenter, runs a
   diagram, a clip, a response form and an unpinned steps scene on slides, turns without transitions under
   reduced motion, prints one slide per page, keeps every slide within 400 pixels, and films the deck: frames
@@ -374,7 +376,9 @@ given to a 2D context (`fillStyle`, `strokeStyle`, `shadowColor`, gradient stops
 A page task over 50 ms counts against the effect only when the same pass with effects off
 (`window.__agenticReportEffectsOff = true`) has none: garbage collection or another process on a loaded
 machine would otherwise fail an effect that did nothing wrong, and the comparison still catches work the
-effect leaves to the browser outside its own calls. The frames `frame-390.png` … `frame-1920.png` are written to the output
+effect leaves to the browser outside its own calls. A timing failure is confirmed with a second independent
+effect-on/effect-off pair; both pairs must show the same over-budget condition, so an isolated runner stall
+does not reject an effect. The frames `frame-390.png` … `frame-1920.png` are written to the output
 directory.
 
 ## Writing tests

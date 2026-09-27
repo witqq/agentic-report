@@ -687,6 +687,17 @@ test('every registered public component stays contained and readable in real gen
         const roots = [...document.querySelectorAll<HTMLElement>('[data-semantic]')].filter(
           (element) => componentNames.includes(element.dataset.semantic ?? ''),
         );
+        // Only inputs that render editable text have a meaningful computed text color. Native
+        // colors of range, choice and file controls vary by platform and describe their graphics.
+        const textInputTypes = new Set([
+          'text',
+          'search',
+          'email',
+          'url',
+          'tel',
+          'password',
+          'number',
+        ]);
         const results: Array<{
           component: string;
           identity: string;
@@ -714,7 +725,8 @@ test('every registered public component stays contained and readable in real gen
                   isVisible(element) &&
                   // Совсем прозрачный текст скрыт намеренно (неактивный слайд), а не приглушён.
                   opacityOf(element) > 0.01 &&
-                  (element.matches('input, select, textarea') ||
+                  ((element instanceof HTMLInputElement && textInputTypes.has(element.type)) ||
+                    element.matches('select, textarea') ||
                     (element.textContent?.trim().length ?? 0) > 0),
               );
               const ratios = textOwners.map((element) => {
