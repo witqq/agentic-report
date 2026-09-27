@@ -128,6 +128,8 @@ interface EffectRecord {
   rebuilds: number;
   loopGuard: number;
   longestMs: number;
+  /** Последняя ширина окна, для которой контроллер получил mount/rebuild. */
+  geometryGeneration: number;
   windowStart: number;
   windowCount: number;
 }
@@ -135,6 +137,7 @@ interface EffectRecord {
 const records = new Map<string, EffectRecord>();
 let current: string | undefined;
 let frameRequest = 0;
+let widthGeneration = 0;
 let pendingRebuild = new Map<EffectRecord, string>();
 let rebuildQueued = false;
 let pageRender = choosePageRender();
@@ -464,6 +467,7 @@ function mount(
   mounted.cleanups.add(() => visibility.disconnect());
   const context = createContext(record, mounted);
   mounted.controller = run(record, () => record.registration.definition.mount(context));
+  if (mounted.controller !== undefined) record.geometryGeneration = widthGeneration;
   // Живой эффект, объявивший движение дольше пяти секунд, получает кнопку паузы; короткому — не нужна.
   if (
     mounted.controller !== undefined &&
@@ -525,6 +529,13 @@ function draw(record: EffectRecord, seconds: number): void {
 
 function onFrame(): void {
   frameRequest = 0;
+  // An earlier unrelated rebuild can finish between the resize event and watchGeometry's rebuild.
+  // Wait until every mounted controller has seen the new width, including continuous effects that
+  // already queued a frame before the resize.
+  if (clock.mode === 'real')
+    for (const record of records.values())
+      if (record.mounted?.controller !== undefined && record.geometryGeneration !== widthGeneration)
+        return;
   const seconds = clock.now() / 1000;
   let again = false;
   for (const record of records.values()) {
@@ -572,8 +583,9 @@ function flushRebuilds(): void {
   for (const [record, reason] of batch) {
     const mounted = record.mounted;
     if (mounted === undefined || mounted.controller === undefined) continue;
-    // Защита от цикла: пересборка, вызывающая пересборку, останавливается на пределе за секунду часов.
-    if (now - record.windowStart > 1000) {
+    // A new viewport width needs one rebuild even if unrelated effect requests consumed this
+    // second's loop budget. Once that geometry is current, the usual guard still stops loops.
+    if (record.geometryGeneration !== widthGeneration || now - record.windowStart > 1000) {
       record.windowStart = now;
       record.windowCount = 0;
     }
@@ -590,7 +602,10 @@ function flushRebuilds(): void {
     record.rebuilds += 1;
     const controller = mounted.controller;
     if (controller.rebuild !== undefined) {
+      const errorsBefore = record.errors.length;
       run(record, () => controller.rebuild?.());
+      if (record.mounted === mounted && record.errors.length === errorsBefore)
+        record.geometryGeneration = widthGeneration;
       if (DRAW_AFTER_REBUILD === 'now') draw(record, currentTime(mounted));
       else schedule();
     } else {
@@ -637,6 +652,7 @@ function register(registration: EffectRegistration): void {
     rebuilds: 0,
     loopGuard: 0,
     longestMs: 0,
+    geometryGeneration: widthGeneration,
     windowStart: clock.now(),
     windowCount: 0,
   };
@@ -726,7 +742,15 @@ export function startEffectEngine(builtIns: readonly EffectRegistration[]): void
     },
   });
   window.addEventListener('scroll', schedule, { passive: true });
-  window.addEventListener('resize', schedule);
+  let viewportWidth = root.clientWidth;
+  window.addEventListener('resize', () => {
+    const nextWidth = root.clientWidth;
+    // Width changes need new geometry. watchGeometry rebuilds it and schedules the resulting
+    // drawing; an immediate frame here would paint stale geometry and resize the canvas twice.
+    if (nextWidth === viewportWidth) schedule();
+    else widthGeneration += 1;
+    viewportWidth = nextWidth;
+  });
   // Поводы пересборки — общий помощник геометрии: смена ширины (не одной высоты), шрифты, конец входа
   // первого экрана и глав, возвращение на вкладку; поводы одного кадра сливаются.
   watchGeometry((reason) => rebuildAll(reason), { name: 'effects' });

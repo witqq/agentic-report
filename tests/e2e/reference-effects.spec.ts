@@ -22,10 +22,14 @@ const EFFECTS = [
 ] as const;
 
 /** A copy of the extension folder whose manifest checks the examples in the given order. */
-async function copyWithOrder(name: string, reversed: boolean): Promise<string> {
+async function copyWithOrder(
+  name: string,
+  reversed: boolean,
+  purpose: 'check' | 'drawing' = 'check',
+): Promise<string> {
   const root = path.resolve(
     'test-results/e2e-reference-effects',
-    `${name}-${reversed ? 'b' : 'a'}`,
+    `${name}-${reversed ? 'b' : 'a'}${purpose === 'drawing' ? '-drawing' : ''}`,
   );
   await rm(root, { recursive: true, force: true });
   await mkdir(root, { recursive: true });
@@ -117,7 +121,7 @@ for (const effect of EFFECTS)
     browserName,
   }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chromium' || browserName !== 'chromium');
-    const root = await copyWithOrder(effect.name, false);
+    const root = await copyWithOrder(effect.name, false, 'drawing');
     const manifest = await readFile(path.join(root, 'source', 'extension.yaml'), 'utf8');
     const first = /examples: \[([^,\]]+),/u.exec(manifest)?.[1];
     expect(first).toBeDefined();

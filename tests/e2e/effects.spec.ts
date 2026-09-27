@@ -237,6 +237,327 @@ test('a theme switch recolours the canvas through the tokens', async ({ browser 
   await page.context().close();
 });
 
+test('width resize rebuilds before drawing and resets only the changed canvas dimension', async ({
+  browser,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(await buildMark('resize-order'));
+  await page.evaluate(() => document.fonts.ready.then(() => true));
+  await expect
+    .poll(() => page.evaluate(() => document.querySelectorAll('.mark-badge').length))
+    .toBe(2);
+  await page.waitForTimeout(250);
+  const before = await page.evaluate(() => {
+    const canvas = document.querySelector<HTMLCanvasElement>('canvas[data-effect="margin-mark"]');
+    if (canvas === null) throw new Error('The mark canvas is missing.');
+    const counts = { width: 0, height: 0 };
+    const draws: Array<{ rebuilds: number; width: number; height: number }> = [];
+    const context = canvas.getContext('2d');
+    if (context === null) throw new Error('The mark canvas has no 2D context.');
+    for (const dimension of ['width', 'height'] as const) {
+      const descriptor = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, dimension);
+      if (descriptor?.get === undefined || descriptor.set === undefined)
+        throw new Error(`Cannot observe canvas ${dimension}.`);
+      Object.defineProperty(canvas, dimension, {
+        configurable: true,
+        get: () => descriptor.get?.call(canvas),
+        set: (value: number) => {
+          counts[dimension] += 1;
+          descriptor.set?.call(canvas, value);
+        },
+      });
+    }
+    const clear = context.clearRect.bind(context);
+    context.clearRect = (...args) => {
+      draws.push({
+        rebuilds:
+          window.__agenticReportEffectEngine?.status().find((item) => item.name === 'margin-mark')
+            ?.rebuilds ?? -1,
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+      clear(...args);
+    };
+    (
+      window as unknown as {
+        __canvasResizeProbe: { counts: typeof counts; draws: typeof draws };
+      }
+    ).__canvasResizeProbe = { counts, draws };
+    return (
+      window.__agenticReportEffectEngine?.status().find((item) => item.name === 'margin-mark')
+        ?.rebuilds ?? -1
+    );
+  });
+  await page.setViewportSize({ width: 768, height: 900 });
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          window.__agenticReportEffectEngine?.status().find((item) => item.name === 'margin-mark')
+            ?.rebuilds,
+      ),
+    )
+    .toBeGreaterThan(before);
+  const widthChange = await page.evaluate(() => {
+    const probe = (
+      window as unknown as {
+        __canvasResizeProbe: {
+          counts: { width: number; height: number };
+          draws: Array<{ rebuilds: number; width: number; height: number }>;
+        };
+      }
+    ).__canvasResizeProbe;
+    return { ...probe.counts, draws: [...probe.draws] };
+  });
+  expect(widthChange.width).toBeGreaterThan(0);
+  expect(widthChange.height).toBe(0);
+  const resizedDraws = widthChange.draws.filter((draw) => draw.width === 768);
+  expect(resizedDraws.length).toBeGreaterThan(0);
+  expect(
+    resizedDraws.every((draw) => draw.rebuilds > before),
+    JSON.stringify(widthChange),
+  ).toBe(true);
+
+  await page.evaluate(() => {
+    const probe = (
+      window as unknown as {
+        __canvasResizeProbe: {
+          counts: { width: number; height: number };
+          draws: Array<{ rebuilds: number; width: number; height: number }>;
+        };
+      }
+    ).__canvasResizeProbe;
+    probe.counts.width = 0;
+    probe.counts.height = 0;
+    probe.draws.length = 0;
+  });
+  await page.setViewportSize({ width: 768, height: 850 });
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as unknown as {
+              __canvasResizeProbe: {
+                draws: Array<{ rebuilds: number; width: number; height: number }>;
+              };
+            }
+          ).__canvasResizeProbe.draws.filter((draw) => draw.width === 768 && draw.height === 850)
+            .length,
+      ),
+    )
+    .toBeGreaterThan(0);
+  const heightChange = await page.evaluate(() => {
+    const probe = (
+      window as unknown as { __canvasResizeProbe: { counts: { width: number; height: number } } }
+    ).__canvasResizeProbe;
+    const canvas = document.querySelector<HTMLCanvasElement>('canvas[data-effect="margin-mark"]');
+    return { ...probe.counts, canvasHeight: canvas?.height };
+  });
+  expect(heightChange.width).toBe(0);
+  expect(heightChange.height).toBeGreaterThan(0);
+  expect(heightChange.canvasHeight).toBe(850);
+  await page.close();
+});
+
+test('a queued rebuild of one effect cannot resume another at stale width', async ({
+  browser,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(await buildMark('resize-interleaved'));
+  await page.evaluate(() => document.fonts.ready.then(() => true));
+  await page.evaluate(() => {
+    const observations: Array<{ viewport: number; geometry: number }> = [];
+    let requestHeightRebuild = (): void => {
+      throw new Error('The first effect has not mounted.');
+    };
+    const queue = window.__agenticReportEffects;
+    if (queue === undefined || Array.isArray(queue))
+      throw new Error('Effect engine is unavailable.');
+    queue.push({
+      name: 'height-probe',
+      selector: 'body',
+      ownsScroll: false,
+      definition: {
+        continuous: false,
+        mount(ctx) {
+          requestHeightRebuild = () => ctx.rebuild('height');
+          return { at() {}, rebuild() {} };
+        },
+      },
+    });
+    queue.push({
+      name: 'width-probe',
+      selector: 'body',
+      ownsScroll: false,
+      definition: {
+        mount(ctx) {
+          let geometry = ctx.layout.width;
+          return {
+            at() {
+              observations.push({ viewport: window.innerWidth, geometry });
+            },
+            rebuild() {
+              geometry = ctx.layout.width;
+            },
+          };
+        },
+      },
+    });
+    (
+      window as unknown as {
+        __resizeRaceProbe: {
+          observations: typeof observations;
+          requestHeightRebuild: () => void;
+        };
+      }
+    ).__resizeRaceProbe = { observations, requestHeightRebuild: () => requestHeightRebuild() };
+  });
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          window.__agenticReportEffectEngine?.status().find((item) => item.name === 'width-probe')
+            ?.hosts,
+      ),
+    )
+    .toBe(1);
+  await page.evaluate(() => window.__agenticReportEffectEngine?.pause('resize-race-test'));
+  await page.waitForTimeout(80);
+  await page.evaluate(() => {
+    const probe = (
+      window as unknown as {
+        __resizeRaceProbe: {
+          observations: Array<{ viewport: number; geometry: number }>;
+          requestHeightRebuild: () => void;
+          frames?: Array<{ handle: number; callback: FrameRequestCallback }>;
+          resizeWidths?: number[];
+        };
+      }
+    ).__resizeRaceProbe;
+    const nativeCancel = window.cancelAnimationFrame.bind(window);
+    let nextHandle = -1;
+    const frames: Array<{ handle: number; callback: FrameRequestCallback }> = [];
+    probe.frames = frames;
+    probe.resizeWidths = [];
+    window.requestAnimationFrame = (callback) => {
+      const handle = nextHandle--;
+      frames.push({ handle, callback });
+      return handle;
+    };
+    window.cancelAnimationFrame = (handle) => {
+      if (handle < 0) {
+        const index = frames.findIndex((frame) => frame.handle === handle);
+        if (index >= 0) frames.splice(index, 1);
+      } else nativeCancel(handle);
+    };
+    window.addEventListener('resize', () => {
+      probe.resizeWidths?.push(window.innerWidth);
+    });
+    probe.observations.length = 0;
+    probe.requestHeightRebuild();
+    window.dispatchEvent(new Event('scroll'));
+  });
+  await page.setViewportSize({ width: 768, height: 900 });
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (
+          window as unknown as { __resizeRaceProbe: { resizeWidths?: number[] } }
+        ).__resizeRaceProbe.resizeWidths?.includes(768),
+      ),
+    )
+    .toBe(true);
+  const outcome = await page.evaluate(() => {
+    const probe = (
+      window as unknown as {
+        __resizeRaceProbe: {
+          frames: Array<{ handle: number; callback: FrameRequestCallback }>;
+          observations: Array<{ viewport: number; geometry: number }>;
+        };
+      }
+    ).__resizeRaceProbe;
+    const initialFrames = probe.frames.length;
+    let flushed = 0;
+    while (probe.frames.length > 0 && flushed < 40) {
+      probe.frames.shift()?.callback(performance.now());
+      flushed += 1;
+      const rebuilt = window.__agenticReportEffectEngine
+        ?.status()
+        .find((item) => item.name === 'width-probe')?.rebuilds;
+      if (
+        rebuilt !== undefined &&
+        rebuilt > 0 &&
+        probe.observations.some((item) => item.viewport === 768)
+      )
+        break;
+    }
+    return { initialFrames, flushed, observations: probe.observations };
+  });
+  const resized = outcome.observations.filter((item) => item.viewport === 768);
+  expect(outcome.initialFrames).toBeGreaterThanOrEqual(3);
+  expect(resized.length).toBeGreaterThan(0);
+  expect(
+    resized.every((item) => item.geometry === 768),
+    JSON.stringify(resized),
+  ).toBe(true);
+
+  const beforeSecond = await page.evaluate(() => {
+    const probe = (
+      window as unknown as {
+        __resizeRaceProbe: { observations: Array<{ viewport: number; geometry: number }> };
+      }
+    ).__resizeRaceProbe;
+    probe.observations.length = 0;
+    return (
+      window.__agenticReportEffectEngine?.status().find((item) => item.name === 'width-probe')
+        ?.rebuilds ?? 0
+    );
+  });
+  await page.setViewportSize({ width: 900, height: 900 });
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (
+          window as unknown as { __resizeRaceProbe: { resizeWidths?: number[] } }
+        ).__resizeRaceProbe.resizeWidths?.includes(1024),
+      ),
+    )
+    .toBe(true);
+  const final = await page.evaluate((previous) => {
+    const probe = (
+      window as unknown as {
+        __resizeRaceProbe: {
+          frames: Array<{ handle: number; callback: FrameRequestCallback }>;
+          observations: Array<{ viewport: number; geometry: number }>;
+        };
+      }
+    ).__resizeRaceProbe;
+    for (let step = 0; probe.frames.length > 0 && step < 40; step += 1) {
+      probe.frames.shift()?.callback(performance.now());
+      const rebuilt = window.__agenticReportEffectEngine
+        ?.status()
+        .find((item) => item.name === 'width-probe')?.rebuilds;
+      if (
+        rebuilt !== undefined &&
+        rebuilt > previous &&
+        probe.observations.some((item) => item.viewport === 1024)
+      )
+        break;
+    }
+    return probe.observations.filter((item) => item.viewport === 1024);
+  }, beforeSecond);
+  expect(final.length).toBeGreaterThan(0);
+  expect(
+    final.every((item) => item.geometry === 1024),
+    JSON.stringify(final),
+  ).toBe(true);
+  await page.close();
+});
+
 test('pinned elements are their own obstacle layer, so the page layers do not depend on the scroll', async ({
   browser,
 }, testInfo) => {

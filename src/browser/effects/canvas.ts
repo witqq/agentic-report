@@ -91,10 +91,10 @@ export function createCanvas<Kind extends EffectCanvasKind>(
       current = next;
       const width = Math.max(1, Math.round(document.documentElement.clientWidth * next));
       const height = Math.max(1, Math.round(document.documentElement.clientHeight * next));
-      if (element.width !== width || element.height !== height) {
-        element.width = width;
-        element.height = height;
-      }
+      // Setting either dimension resets the bitmap and context, even when that dimension keeps
+      // its value. A width-only resize should not reset the unchanged height a second time.
+      if (element.width !== width) element.width = width;
+      if (element.height !== height) element.height = height;
     },
     remove() {
       if (options.kind === 'webgl')
