@@ -22,8 +22,15 @@ writes its summary to `test-results/summary.json` and failure reports under
 The Testfold configuration rejects suites that produce zero test results. This guard prevents setup or
 discovery failures from being reported as successful empty runs.
 
-`pnpm verify` runs the unit and E2E entry points sequentially. Both suites own files under `test-results/`, so
-the required pre-commit gate must not run their workspace setup and cleanup concurrently.
+`pnpm verify` is the required local, pull-request and release gate. It checks generated authoring projections,
+types, lint, formatting, the complete unit suite and the installed npm package through `pnpm pack:check`.
+The package check opens its installed output in Chromium; it does not run the full E2E suite.
+
+The full `pnpm test:e2e` suite runs in `.github/workflows/e2e.yml` every day at 03:00 UTC
+and can be started manually with `workflow_dispatch`. It does not block a pull request or release. Run it
+locally when changing browser behavior or diagnosing a nightly failure. `pnpm test` also runs unit and E2E
+through Testfold. Run these suites sequentially: both own files under `test-results/`, so concurrent workspace
+setup and cleanup would invalidate their results.
 
 ## Tiers
 

@@ -15,9 +15,11 @@ pnpm exec playwright install chromium
 pnpm verify
 ```
 
-`pnpm verify` is the complete gate: generated authoring projections, strict types, lint, formatting, unit tests,
-browser tests over `file://`, and the npm package consumer check. `pnpm check:history` refuses personal paths and
-credentials in tracked files.
+`pnpm verify` is the required pull-request and release gate: generated authoring projections, strict types,
+lint, formatting, unit tests, and the npm package consumer check. Chromium is needed for the installed-package
+`file://` smoke in that check. The full Playwright suite runs separately with `pnpm test:e2e`, nightly at
+03:00 UTC and by manual dispatch; it does not block a pull request or release. `pnpm check:history` refuses
+personal paths and credentials in tracked files.
 
 ## Changes
 

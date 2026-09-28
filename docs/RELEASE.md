@@ -1,8 +1,8 @@
 # Release runbook
 
-The release cycle has one comprehensive local gate. Publication and deployment then validate their own
-effects. Do not repeat package installation, browser suites, public downloads, route crawls, or registry
-journeys after the same evidence has already passed.
+The release cycle has one required local gate. Publication and deployment then validate their own effects.
+Do not repeat package installation, browser suites, public downloads, route crawls, or registry journeys
+after the same evidence has already passed.
 
 ## Prepare once
 
@@ -15,9 +15,11 @@ pnpm verify
 git status --short
 ```
 
-`pnpm verify` is the complete pre-release gate. It checks generated authoring projections, strict types,
-lint, formatting, unit tests, interactive `file://` browser tests, the npm inventory, sensitive-byte scans,
-and a clean installed-package consumer. It writes the accepted tarball identity to
+`pnpm verify` is the required pre-release gate. It checks generated authoring projections, strict types,
+lint, formatting, unit tests, the npm inventory, sensitive-byte scans, and a clean installed-package consumer
+whose output is opened through `file://` in Chromium. The full Testfold E2E suite runs in the separate
+nightly workflow `.github/workflows/e2e.yml` or by manual dispatch; it does not block this release.
+The required gate writes the accepted tarball identity to
 `test-results/package/candidate-evidence.json`.
 
 If `verify` passes and the release commit does not change afterward, do not run its constituent checks again.
@@ -92,8 +94,8 @@ curl --fail --silent --show-error --output /dev/null https://agentic-report.witq
 Confirm `release.json` reports package `0.18.1` and the accepted merge commit, the landing returns HTML over
 trusted TLS, `robots.txt` names the absolute sitemap and `sitemap.xml` is served, and then record the
 deployment in the operator's deployment inventory, which lives outside this repository. This single smoke checks
-the public route and deployed identity; deterministic route and browser behavior were already covered by
-`pnpm verify`.
+the public route and deployed identity; route construction and the installed-package browser smoke were
+already covered by `pnpm verify`, while the full browser suite runs nightly or by manual dispatch.
 
 ## Failure handling
 
