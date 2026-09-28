@@ -1,3 +1,4 @@
+import { asUi, asUiButton, type UiButtonVariant, type UiSize } from './ui.js';
 import {
   MAX_RESPONSE_FILE_BYTES,
   MAX_RESPONSE_TEXT_LENGTH,
@@ -67,7 +68,7 @@ function createController(
   const answered = new Set<string>();
   let draggedItem: HTMLElement | undefined;
   const status = document.createElement('output');
-  status.className = 'response-status';
+  status.className = 'response-status ui-meta';
   status.dataset.responseStatus = '';
   status.setAttribute('aria-live', 'polite');
   const questions = document.createElement('div');
@@ -77,10 +78,16 @@ function createController(
     questions.append(renderQuestion(manifest.id, question, strings));
   const actions = document.createElement('div');
   actions.className = 'response-actions';
-  const copy = button(strings.copyResponse, 'responseCopy', 'copy');
-  const download = button(strings.downloadResponse, 'responseDownload', 'download');
-  const importLabel = document.createElement('label');
-  importLabel.className = 'response-file-action';
+  const copy = button(strings.copyResponse, 'responseCopy', 'copy', 'secondary', 'md');
+  const download = button(
+    strings.downloadResponse,
+    'responseDownload',
+    'download',
+    'primary',
+    'md',
+  );
+  const importLabel = asUiButton(document.createElement('label'), 'secondary', 'md');
+  importLabel.classList.add('response-file-action');
   importLabel.append(browserIcon('upload'), document.createTextNode(strings.importResponse));
   const importInput = document.createElement('input');
   importInput.type = 'file';
@@ -122,6 +129,16 @@ function createController(
     (event) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
+      const toggle = target.closest<HTMLButtonElement>('[data-response-comment-toggle]');
+      if (toggle) {
+        const card = toggle.closest<HTMLElement>('[data-response-item]');
+        const field = card?.querySelector<HTMLTextAreaElement>(':scope > [data-response-comment]');
+        if (field) {
+          showComment(toggle, field, field.hidden !== false);
+          if (!field.hidden) field.focus({ preventScroll: true });
+        }
+        return;
+      }
       const move = target.closest<HTMLButtonElement>('[data-response-order-move]');
       if (move) {
         const item = move.closest<HTMLLIElement>('[data-response-order-item]');
@@ -134,6 +151,7 @@ function createController(
             direction === 'up'
               ? list.insertBefore(item, sibling)
               : list.insertBefore(sibling, item);
+            syncOrderEdges(list);
             markAnswered(move);
             move.focus();
           }
@@ -222,8 +240,7 @@ function createController(
     if (!id) return;
     answered.add(id);
     question.dataset.responseAnswered = 'true';
-    const state = question.querySelector<HTMLElement>('[data-response-answer-state]');
-    if (state) state.hidden = true;
+    showAnswerState(question, true);
   }
 
   function currentArtifact(): ResponseArtifact {
@@ -341,11 +358,14 @@ function renderQuestion(
   fieldset.dataset.responseKind = question.kind;
   fieldset.dataset.responseAnswered = 'false';
   const legend = document.createElement('legend');
+  legend.className = 'ui-item-title';
   legend.textContent = question.title;
   fieldset.append(legend);
   if (question.prompt) fieldset.append(textElement('p', 'response-prompt', question.prompt));
-  const state = textElement('span', 'response-answer-state', strings.unanswered);
+  const state = textElement('span', 'response-answer-state ui-label', strings.unanswered);
   state.dataset.responseAnswerState = '';
+  state.dataset.unansweredLabel = strings.unanswered;
+  state.dataset.answeredLabel = strings.answered;
   fieldset.append(state);
   if (question.kind === 'bucket') fieldset.append(renderBucketQuestion(question, strings));
   else if (question.kind === 'single') fieldset.append(renderGlobalSingle(formId, question));
@@ -366,7 +386,7 @@ function renderBucketQuestion(
     const column = document.createElement('section');
     column.className = 'response-bucket-column';
     column.dataset.responseBucketColumn = bucket.id;
-    column.append(textElement('h4', 'response-bucket-title', bucket.label));
+    column.append(textElement('h4', 'response-bucket-title ui-label', bucket.label));
     const list = document.createElement('div');
     list.className = 'response-bucket-items';
     list.dataset.responseBucketItems = '';
@@ -376,7 +396,7 @@ function renderBucketQuestion(
   for (const item of question.items) {
     const card = renderItemCard(question, item, strings);
     card.draggable = true;
-    const select = document.createElement('select');
+    const select = asUi(document.createElement('select'), 'ui-field');
     select.dataset.responseBucketSelect = '';
     select.setAttribute('aria-label', strings.assignTo(item.label));
     for (const bucket of [{ id: '', label: strings.unassigned }, ...question.buckets]) {
@@ -387,6 +407,7 @@ function renderBucketQuestion(
       select.append(option);
     }
     card.append(select);
+    footerLast(card);
     const column = board.querySelector<HTMLElement>(
       `[data-response-bucket-column="${CSS.escape(item.bucket ?? '')}"] [data-response-bucket-items]`,
     );
@@ -420,7 +441,7 @@ function renderGlobalSingle(formId: string, question: ResponseQuestionDefinition
 }
 
 function renderGlobalText(question: ResponseQuestionDefinition): HTMLElement {
-  const input = document.createElement('textarea');
+  const input = asUi(document.createElement('textarea'), 'ui-field');
   input.maxLength = MAX_RESPONSE_TEXT_LENGTH;
   input.dataset.responseGlobalText = '';
   input.setAttribute('aria-label', question.title);
@@ -437,18 +458,38 @@ function renderOrderQuestion(
   for (const item of question.items) {
     const row = document.createElement('li');
     row.dataset.responseOrderItem = item.id;
-    row.append(renderItemCard(question, item, strings));
-    const actions = document.createElement('div');
-    actions.className = 'response-item-actions';
-    const up = button(strings.moveUp, 'responseOrderMove', 'arrow-up');
+    const card = renderItemCard(question, item, strings);
+    // Перемещение — такое же действие карточки, как ссылка и комментарий: малые кнопки в её подвале,
+    // значок рядом со словом, как у всех операций пакета.
+    const move = document.createElement('div');
+    move.className = 'response-item-move';
+    const up = button(strings.moveUp, 'responseOrderMove', 'arrow-up', 'quiet', 'sm');
     up.dataset.responseOrderMove = 'up';
-    const down = button(strings.moveDown, 'responseOrderMove', 'arrow-down');
+    const down = button(strings.moveDown, 'responseOrderMove', 'arrow-down', 'quiet', 'sm');
     down.dataset.responseOrderMove = 'down';
-    actions.append(up, down);
-    row.append(actions);
+    move.append(up, down);
+    card.querySelector(':scope > .response-item-footer')?.append(move);
+    row.append(card);
     list.append(row);
   }
+  syncOrderEdges(list);
   return list;
+}
+
+/**
+ * Крайний пункт не двигается дальше края: его кнопка помечена недоступной. Пометка — `aria-disabled`, а
+ * не `disabled`, чтобы кнопка, которая только что довела пункт до края, не теряла фокус клавиатуры.
+ */
+function syncOrderEdges(list: HTMLElement): void {
+  const rows = [...list.children];
+  rows.forEach((row, index) => {
+    for (const move of row.querySelectorAll<HTMLButtonElement>('[data-response-order-move]')) {
+      const edge =
+        move.dataset.responseOrderMove === 'up' ? index === 0 : index === rows.length - 1;
+      if (edge) move.setAttribute('aria-disabled', 'true');
+      else move.removeAttribute('aria-disabled');
+    }
+  });
 }
 
 function renderItemQuestion(
@@ -461,11 +502,14 @@ function renderItemQuestion(
   for (const item of question.items) {
     const card = renderItemCard(question, item, strings);
     if (question.kind === 'number') {
-      const input = document.createElement('input');
+      const input = asUi(document.createElement('input'), 'ui-field');
       input.type = 'number';
       input.min = String(question.minimum);
       input.max = String(question.maximum);
       if (question.step !== undefined) input.step = String(question.step);
+      // Подсказка называет допустимый диапазон: пустое поле без неё не говорит, какую оценку ждут.
+      input.placeholder = `${question.minimum}–${question.maximum}`;
+      input.classList.add('response-number');
       input.dataset.responseNumber = '';
       input.setAttribute('aria-label', item.label);
       card.append(input);
@@ -482,9 +526,39 @@ function renderItemQuestion(
       }
       card.append(choices);
     }
+    footerLast(card);
     list.append(card);
   }
   return list;
+}
+
+/**
+ * Состояние вопроса меняет подпись, а не исчезает: строка остаётся на месте, и выбор варианта не
+ * сдвигает форму под указателем.
+ */
+function showAnswerState(question: HTMLElement, answered: boolean): void {
+  const state = question.querySelector<HTMLElement>('[data-response-answer-state]');
+  if (!state) return;
+  state.textContent =
+    (answered ? state.dataset.answeredLabel : state.dataset.unansweredLabel) ?? '';
+  state.dataset.responseAnswerState = answered ? 'answered' : '';
+}
+
+/**
+ * Ответ идёт раньше действий карточки: подвал — после ответа, а поле комментария — под подвалом, чтобы
+ * открывающая его кнопка оставалась на месте.
+ */
+function footerLast(card: HTMLElement): void {
+  const footer = card.querySelector(':scope > .response-item-footer');
+  if (footer) card.append(footer);
+  const comment = card.querySelector(':scope > [data-response-comment]');
+  if (comment) card.append(comment);
+}
+
+/** Кнопка комментария открывает и закрывает поле под подвалом; сама она не двигается. */
+function showComment(toggle: HTMLElement, field: HTMLTextAreaElement, open: boolean): void {
+  field.hidden = !open;
+  toggle.setAttribute('aria-expanded', String(open));
 }
 
 function renderItemCard(
@@ -495,24 +569,36 @@ function renderItemCard(
   const card = document.createElement('article');
   card.className = 'response-item';
   card.dataset.responseItem = item.id;
-  card.append(textElement('h4', 'response-item-label', item.label));
+  card.append(textElement('h4', 'response-item-label ui-item-title', item.label));
   card.append(textElement('p', 'response-item-note', item.note));
-  card.append(textElement('p', 'response-item-meta', item.meta));
-  const link = document.createElement('a');
+  card.append(textElement('p', 'response-item-meta ui-meta', item.meta));
+  // Действия карточки — в одном подвале и одного малого размера: ссылка на оригинал, комментарий и, у
+  // вопроса на порядок, перемещение.
+  const footer = document.createElement('div');
+  footer.className = 'response-item-footer';
+  const link = asUiButton(document.createElement('a'), 'quiet', 'sm');
   link.href = item.href;
   link.target = '_blank';
   link.rel = 'noopener noreferrer';
-  link.textContent = strings.openOriginal;
+  // Значок окна говорит, что оригинал откроется отдельно, как у остальных действий подвала — значок и слово.
+  link.append(browserIcon('window'), document.createTextNode(strings.openOriginal));
   link.dataset.responseOriginal = '';
-  card.append(link);
+  footer.append(link);
+  card.append(footer);
   if (item.comment) {
-    const input = document.createElement('textarea');
+    const input = asUi(document.createElement('textarea'), 'ui-field');
     input.maxLength = MAX_RESPONSE_TEXT_LENGTH;
     input.dataset.responseComment = '';
     input.dataset.responseQuestion = question.id;
     input.dataset.responseItem = item.id;
     input.setAttribute('aria-label', `${strings.itemComment}: ${item.label}`);
-    card.append(labelledControl(input, strings.itemComment));
+    // Комментарий нужен не к каждому пункту: поле скрыто за малой кнопкой в подвале и не растит форму.
+    input.classList.add('response-comment');
+    input.hidden = true;
+    const toggle = button(strings.itemComment, 'responseCommentToggle', 'plus', 'quiet', 'sm');
+    toggle.setAttribute('aria-expanded', 'false');
+    footer.append(toggle);
+    card.append(input);
   }
   return card;
 }
@@ -592,8 +678,7 @@ function applyArtifact(
     if (!question || !element) continue;
     if (answer.answered) answered.add(answer.id);
     element.dataset.responseAnswered = String(answer.answered);
-    const state = element.querySelector<HTMLElement>('[data-response-answer-state]');
-    if (state) state.hidden = answer.answered;
+    showAnswerState(element, answer.answered);
     if (question.kind === 'bucket' && Array.isArray(answer.value)) {
       for (const entry of answer.value as readonly { itemId: string; bucketId: string | null }[]) {
         const item = element.querySelector<HTMLElement>(
@@ -624,6 +709,7 @@ function applyArtifact(
         );
         if (list && item) list.append(item);
       }
+      if (list) syncOrderEdges(list);
     } else if (question.kind === 'number' && Array.isArray(answer.value)) {
       for (const entry of answer.value as readonly { itemId: string; value: number | null }[]) {
         const input = element.querySelector<HTMLInputElement>(
@@ -651,22 +737,46 @@ function applyArtifact(
     const input = root.querySelector<HTMLTextAreaElement>(
       `[data-response-comment][data-response-question="${CSS.escape(comment.questionId)}"][data-response-item="${CSS.escape(comment.itemId)}"]`,
     );
-    if (input) input.value = comment.text;
+    const toggle = input
+      ?.closest('[data-response-item]')
+      ?.querySelector<HTMLElement>('[data-response-comment-toggle]');
+    if (input) {
+      input.value = comment.text;
+      if (toggle) showComment(toggle, input, true);
+    }
   }
 }
 
+/**
+ * Подпись и её элемент. Вариант выбора (radio, checkbox) — `ui-choice`: отметка, затем текст. Поле —
+ * `ui-field-group`: сначала подпись-метка, затем поле.
+ */
 function labelledControl<T extends HTMLElement>(control: T, label: string): HTMLLabelElement {
   const owner = document.createElement('label');
-  owner.append(control, document.createTextNode(label));
+  const text = document.createElement('span');
+  text.textContent = label;
+  if (
+    control instanceof HTMLInputElement &&
+    (control.type === 'radio' || control.type === 'checkbox')
+  ) {
+    owner.className = 'ui-choice';
+    owner.append(control, text);
+  } else {
+    owner.className = 'ui-field-group';
+    text.className = 'ui-label';
+    owner.append(text, control);
+  }
   return owner;
 }
 
 function button(
   label: string,
   dataName: string,
-  icon?: Parameters<typeof browserIcon>[0],
+  icon: Parameters<typeof browserIcon>[0] | undefined,
+  variant: UiButtonVariant,
+  size: UiSize,
 ): HTMLButtonElement {
-  const control = document.createElement('button');
+  const control = asUiButton(document.createElement('button'), variant, size);
   control.type = 'button';
   if (icon !== undefined) control.append(browserIcon(icon));
   control.append(document.createTextNode(label));

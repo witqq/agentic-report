@@ -12,13 +12,13 @@ language: ru
 Пишите Markdown, выбирайте форму страницы и собирайте качественный офлайн-артефакт, не создавая ещё одно
 фронтенд-приложение вручную.
 
-::::::section{title="Единый декларативный путь" id="value" nav="Ценность" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="immersive" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Единый декларативный путь" id="value" nav="Ценность" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="immersive" type="display" surface="tint" transition="stagger" choreography="cascade"}
 
 ::::cards
 :::card{title="Начните со смысла"}
 Используйте заголовки, решения, карточки, шаги, таблицы, код, изображения и вложения.
 :::
-:::card{title="Сохраняйте малую границу"}
+:::card{title="Управляйте страницей через данные"}
 Темы, компоновки и компактные токены — проверяемые данные, а не CSS или функции обратного вызова.
 :::
 :::card{title="Поделитесь результатом"}
@@ -35,7 +35,7 @@ language: ru
 :::
 ::::::
 
-::::::section{title="Создайте первую страницу" id="start" nav="Начать" width="wide" align="center" tone="accent" composition="stage" viewport="bounded" section-density="immersive" type="display" surface="glow" transition="stagger"}
+::::::section{title="Создайте первую страницу" id="start" nav="Начать" width="wide" align="center" tone="accent" composition="stage" viewport="bounded" section-density="immersive" type="display" surface="tint" transition="stagger"}
 
 ```sh
 agentic-report init ./my-page

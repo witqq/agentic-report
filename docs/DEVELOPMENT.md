@@ -22,7 +22,7 @@ database, or environment file. Build output is written to `dist/node/` and `dist
 ```bash
 node dist/node/cli.js describe --json
 node dist/node/cli.js schema
-node dist/node/cli.js build examples/basic --output report.html
+node dist/node/cli.js build examples/document --output report.html
 ```
 
 The executable can also be tested as an npm package with `pnpm pack:check`. The run isolates itself: it
@@ -60,3 +60,12 @@ files.
 
 The product currently requires no environment variables. If runtime environment behavior is added, read
 variables only in `src/config/environment.ts` and expose typed values to the rest of the code.
+
+## Continuous integration
+
+Every pull request and every push to `main` runs two workflows. `CI` (`.github/workflows/ci.yml`) installs the
+pinned toolchain, refuses personal paths and credentials in tracked files (`pnpm check:history`) and runs
+`pnpm verify`. `Security` (`.github/workflows/security.yml`) scans the whole history with a checksum-pinned
+gitleaks, reviews dependency changes, validates workflows with actionlint, and refuses any action that is not
+pinned to a full commit SHA. Dependabot proposes weekly updates for npm packages and actions. Release and npm
+publication workflows are described in [`RELEASE.md`](RELEASE.md).

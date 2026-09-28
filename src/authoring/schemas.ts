@@ -17,6 +17,8 @@ import {
 } from './local-reference.js';
 import { normalizePublicUrl, publicUrlProblem } from './public-url.js';
 import { authoringRegistryIntegrityIssues } from './registry-integrity.js';
+import { THEME_TOKEN_GROUPS, THEME_TOKENS, THEME_TOKENS_KEYWORD } from './theme-tokens.js';
+import { THEME_FIELDS } from './themes.js';
 
 export type JsonSchema = Readonly<Record<string, unknown>>;
 
@@ -31,7 +33,11 @@ type ConstraintValue<Constraint extends ConstraintDefinition> = Constraint exten
           readonly values: readonly (infer Value extends string)[];
         }
       ? Value
-      : string;
+      : Constraint extends { readonly kind: 'theme-reference' }
+        ? string | Readonly<Record<string, unknown>>
+        : Constraint extends { readonly kind: 'local-path-list' }
+          ? readonly string[]
+          : string;
 
 type FieldValue<Field extends FieldDefinition, Normalized extends boolean> = Field extends {
   readonly fields: infer Fields extends readonly FieldDefinition[];
@@ -137,6 +143,7 @@ export interface AuthoringSchemaProjection {
   readonly manifest: JsonSchema;
   readonly directives: JsonSchema;
   readonly source: JsonSchema;
+  readonly theme: JsonSchema;
 }
 
 export const SCHEMA_CONTRACT_KEYWORD = 'x-agentic-report-contract' as const;
@@ -236,6 +243,25 @@ export function projectAuthoringSchemas(
     manifest,
     directives,
     source: createSourceJsonSchema(registry, manifest, directives),
+    theme: {
+      ...objectSchemaFromFields(
+        registry,
+        THEME_FIELDS,
+        'urn:agentic-report:schema:theme:1',
+        'Agentic Report theme',
+        false,
+      ),
+      // Словарь токенов — то, что тема объявляет на странице: расширения и стили читают только его.
+      [THEME_TOKENS_KEYWORD]: Object.fromEntries(
+        THEME_TOKEN_GROUPS.map((group) => [
+          group,
+          THEME_TOKENS.filter((token) => token.group === group).map(({ name, field }) => ({
+            name,
+            field,
+          })),
+        ]),
+      ),
+    },
   };
 }
 
@@ -243,21 +269,27 @@ function normalizeManifest<const Registry extends AuthoringRegistryDefinition>(
   input: ManifestInputFromRegistry<Registry>,
   registry: Registry,
 ): ManifestFromRegistry<Registry> {
-  const normalized = normalizeFieldValues(registry.manifestFields, input);
-  const presetName = normalized.preset;
-  const preset = registry.page.presets.find((candidate) => candidate.name === presetName);
-  if (preset === undefined) {
-    throw new Error(`Cannot normalize unknown page preset: ${String(presetName)}`);
-  }
-  const inputRecord = input as Readonly<Record<string, unknown>>;
-  const authoredTokens = isRecord(inputRecord.tokens) ? inputRecord.tokens : {};
-  return bindRegistryValue<ManifestFromRegistry<Registry>>({
-    ...normalized,
-    tokens: {
-      ...preset.tokens,
-      ...authoredTokens,
-    },
-  });
+  return bindRegistryValue<ManifestFromRegistry<Registry>>(
+    normalizeFieldValues(registry.manifestFields, input),
+  );
+}
+
+/**
+ * Строгая схема объекта из полей договора — та же, что у манифеста. Ею проверяются поля темы:
+ * у файла темы, темы во frontmatter и встроенных тем один договор.
+ */
+export function zodObjectFromFields(
+  fields: readonly FieldDefinition[],
+): z.ZodType<Readonly<Record<string, unknown>>> {
+  return z.strictObject(
+    Object.fromEntries(fields.map((field) => [field.name, zodField(field, false)])),
+  ) as unknown as z.ZodType<Readonly<Record<string, unknown>>>;
+}
+
+export const themeInputSchema = zodObjectFromFields(THEME_FIELDS);
+
+export function getThemeSchema(): JsonSchema {
+  return structuredClone(projectedSchemas.theme);
 }
 
 function normalizeFieldValues(
@@ -365,6 +397,19 @@ function zodConstraint(constraint: ConstraintDefinition): z.ZodType {
       return z.boolean();
     case 'enum':
       return z.enum(asNonEmptyTuple(constraint.values));
+    case 'theme-reference':
+      return z.union([
+        z.string().trim().min(1),
+        z.record(z.string(), z.unknown()) as z.ZodType<Readonly<Record<string, unknown>>>,
+      ]);
+    case 'local-path-list':
+      return z
+        .array(zodNormalizedLocalReference(z.string().trim().min(1)))
+        .min(constraint.minItems)
+        .max(constraint.maxItems)
+        .refine((values) => new Set(values).size === values.length, {
+          message: 'List items must be unique.',
+        });
     default:
       return assertNever(constraint);
   }
@@ -523,6 +568,30 @@ function jsonConstraint(field: ScalarFieldDefinition): JsonSchema {
       return { type: 'boolean' };
     case 'enum':
       return { type: 'string', enum: [...constraint.values] };
+    case 'theme-reference':
+      return {
+        oneOf: [
+          {
+            type: 'string',
+            minLength: 1,
+            description:
+              'Built-in theme name, or a relative path to a .yaml, .yml or .json theme file.',
+          },
+          {
+            type: 'object',
+            description:
+              'Theme object with extends and the fields it changes; its fields are the theme schema (`agentic-report schema --scope theme`), checked field by field when the page builds.',
+          },
+        ],
+      };
+    case 'local-path-list':
+      return {
+        type: 'array',
+        items: { type: 'string', minLength: 1, format: 'relative-local-path' },
+        minItems: constraint.minItems,
+        maxItems: constraint.maxItems,
+        uniqueItems: true,
+      };
     default:
       return assertNever(constraint);
   }

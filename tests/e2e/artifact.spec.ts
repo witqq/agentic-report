@@ -4,10 +4,11 @@ import { pathToFileURL } from 'node:url';
 
 import type { Locator, Page } from '@playwright/test';
 
-import { PAGE_CONTRACT } from '../../src/authoring/registry.js';
+import { resolveBuiltInTheme, type ThemeColors } from '../../src/authoring/themes.js';
 import { listExamples } from '../../src/discovery.js';
 import { PAGE_MOTION_POLICY } from '../../src/page-motion.js';
 import { test, expect } from './fixtures.js';
+import { addBuiltInThemes, BUILT_IN_THEME_ATTRIBUTES } from './themes.js';
 
 const artifactUrl = pathToFileURL(path.resolve('test-results/e2e-artifact/report.html')).href;
 const directoryArtifactUrl = pathToFileURL(
@@ -145,7 +146,7 @@ for (const artifact of fallbackChromeArtifacts) {
     await expect(page.locator('html')).toHaveAttribute('lang', 'und');
     await expect(page.locator('html')).toHaveAttribute('data-package-locale', 'en');
     await expect(page.getByRole('link', { name: 'Skip to content' })).toBeAttached();
-    await expect(page.getByRole('button', { name: 'Toggle color theme' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Switch light and dark scheme' })).toBeVisible();
     await expect(page.locator('[data-copy-code]').first()).toContainText('Copy');
     expect(await page.evaluate(() => navigator.language)).toBe('ru-RU');
     expect(await page.locator('body').innerText()).not.toContain('Перейти к содержимому');
@@ -173,7 +174,9 @@ for (const artifact of russianChromeArtifacts) {
     await expect(page.locator('html')).toHaveAttribute('lang', 'ru-RU');
     await expect(page.locator('html')).toHaveAttribute('data-package-locale', 'ru');
     await expect(page.getByRole('link', { name: 'Перейти к содержимому' })).toBeAttached();
-    await expect(page.getByRole('button', { name: 'Переключить цветовую тему' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Переключить светлую и тёмную схему' }),
+    ).toBeVisible();
 
     const navigation = page.locator('[data-nav-toggle]');
     await expect(navigation).toHaveAccessibleName(/Скрыть содержание|Открыть содержание/);
@@ -326,7 +329,7 @@ for (const artifact of defaultMotionArtifacts) {
     await expect(link).toHaveAttribute('target', '_blank');
     await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(await link.evaluate((element) => getComputedStyle(element).fontFamily)).toContain(
-      'SFMono-Regular',
+      'Martian Mono',
     );
 
     const capturePath = path.resolve(
@@ -375,7 +378,7 @@ for (const artifact of glossaryCodeArtifacts) {
     await page.goto(artifact.url);
     if (artifact.format === 'directory') {
       await page.locator('html').evaluate((element) => {
-        element.dataset.theme = 'dark';
+        element.dataset.scheme = 'dark';
       });
     }
 
@@ -507,7 +510,7 @@ for (const artifact of diagramTourArtifacts) {
     await page.goto(artifact.url);
     if (artifact.format === 'directory') {
       await page.locator('html').evaluate((element) => {
-        element.dataset.theme = 'dark';
+        element.dataset.scheme = 'dark';
       });
     }
 
@@ -642,10 +645,10 @@ for (const artifact of diagramTourArtifacts) {
 
     const groupFill = page.locator('.visualization-group').first();
     const before = await groupFill.evaluate((element) => getComputedStyle(element).fill);
-    await page.getByRole('button', { name: 'Toggle color theme' }).click();
+    await page.getByRole('button', { name: 'Switch light and dark scheme' }).click();
     const after = await groupFill.evaluate((element) => getComputedStyle(element).fill);
     expect(after).not.toBe(before);
-    await page.getByRole('button', { name: 'Toggle color theme' }).click();
+    await page.getByRole('button', { name: 'Switch light and dark scheme' }).click();
 
     const capturePath = path.resolve(
       'test-results/captures/diagram-tour',
@@ -659,25 +662,25 @@ for (const artifact of diagramTourArtifacts) {
 const presetShowcases = [
   {
     name: 'landing',
-    preset: 'cinematic',
+    theme: 'neutral',
     heading: 'From Markdown to a page worth sharing',
     artifacts: landingSectionArtifacts,
   },
   {
     name: 'launch-readiness',
-    preset: 'studio',
+    theme: 'beta-launch',
     heading: 'Regional beta launch readiness',
     artifacts: launchReadinessArtifacts,
   },
   {
     name: 'vendor-decision',
-    preset: 'editorial',
+    theme: 'calm-paper',
     heading: 'AI support vendor decision packet',
     artifacts: vendorDecisionArtifacts,
   },
   {
     name: 'incident-review',
-    preset: 'signal',
+    theme: 'incident-signal',
     heading: 'OrbitDesk P1 incident review',
     artifacts: incidentReviewArtifacts,
   },
@@ -686,66 +689,42 @@ const presetShowcases = [
 const presetRepresentatives = [presetShowcases[0], presetShowcases[2], presetShowcases[3]] as const;
 
 const presetFixtureExpectations = [
-  {
-    preset: 'studio',
-    density: 'spacious',
-    font: 'sans',
-    accent: 'indigo',
-    width: 'wide',
-    radius: 'soft',
-    fontFamily: 'Inter',
-  },
-  {
-    preset: 'editorial',
-    density: 'comfortable',
-    font: 'serif',
-    accent: 'indigo',
-    width: 'wide',
-    radius: 'sharp',
-    fontFamily: 'Inter',
-  },
-  {
-    preset: 'signal',
-    density: 'compact',
-    font: 'sans',
-    accent: 'teal',
-    width: 'wide',
-    radius: 'sharp',
-    fontFamily: 'Inter',
-  },
+  { preset: 'midnight', fontFamily: 'IBM Plex Sans' },
+  { preset: 'calm-paper', fontFamily: 'Literata' },
+  { preset: 'blueprint', fontFamily: 'Fira Sans' },
 ] as const;
 
 const expectedPresetCapturePaths = [
-  'cinematic/directory/dark/desktop.png',
-  'cinematic/directory/dark/mobile.png',
-  'cinematic/directory/light/desktop.png',
-  'cinematic/directory/light/mobile.png',
-  'cinematic/single-file/dark/desktop.png',
-  'cinematic/single-file/dark/mobile.png',
-  'cinematic/single-file/light/desktop.png',
-  'cinematic/single-file/light/mobile.png',
-  'editorial/directory/dark/desktop.png',
-  'editorial/directory/dark/mobile.png',
-  'editorial/directory/light/desktop.png',
-  'editorial/directory/light/mobile.png',
-  'editorial/single-file/dark/desktop.png',
-  'editorial/single-file/dark/mobile.png',
-  'editorial/single-file/light/desktop.png',
-  'editorial/single-file/light/mobile.png',
-  'signal/directory/dark/desktop.png',
-  'signal/directory/dark/mobile.png',
-  'signal/directory/light/desktop.png',
-  'signal/directory/light/mobile.png',
-  'signal/single-file/dark/desktop.png',
-  'signal/single-file/dark/mobile.png',
-  'signal/single-file/light/desktop.png',
-  'signal/single-file/light/mobile.png',
+  'calm-paper/directory/dark/desktop.png',
+  'calm-paper/directory/dark/mobile.png',
+  'calm-paper/directory/light/desktop.png',
+  'calm-paper/directory/light/mobile.png',
+  'calm-paper/single-file/dark/desktop.png',
+  'calm-paper/single-file/dark/mobile.png',
+  'calm-paper/single-file/light/desktop.png',
+  'calm-paper/single-file/light/mobile.png',
+  'incident-signal/directory/dark/desktop.png',
+  'incident-signal/directory/dark/mobile.png',
+  'incident-signal/directory/light/desktop.png',
+  'incident-signal/directory/light/mobile.png',
+  'incident-signal/single-file/dark/desktop.png',
+  'incident-signal/single-file/dark/mobile.png',
+  'incident-signal/single-file/light/desktop.png',
+  'incident-signal/single-file/light/mobile.png',
+  'neutral/directory/dark/desktop.png',
+  'neutral/directory/dark/mobile.png',
+  'neutral/directory/light/desktop.png',
+  'neutral/directory/light/mobile.png',
+  'neutral/single-file/dark/desktop.png',
+  'neutral/single-file/dark/mobile.png',
+  'neutral/single-file/light/desktop.png',
+  'neutral/single-file/light/mobile.png',
 ] as const;
 
 const starters = [
   {
-    id: 'basic',
-    preset: PAGE_CONTRACT.defaultPreset,
+    id: 'document',
+    preset: 'release-report',
     heading: 'Release decision report',
     layout: 'document',
     component: '.semantic-timeline',
@@ -753,7 +732,7 @@ const starters = [
   },
   {
     id: 'research',
-    preset: 'material',
+    preset: 'aurora',
     heading: 'Assisted authoring research synthesis',
     layout: 'mixed',
     component: '.semantic-chart',
@@ -761,7 +740,7 @@ const starters = [
   },
   {
     id: 'architecture',
-    preset: 'terminal',
+    preset: 'blueprint',
     heading: 'Portable page architecture',
     layout: 'document',
     component: '.semantic-diagram',
@@ -769,26 +748,50 @@ const starters = [
   },
   {
     id: 'tutorial',
-    preset: 'material',
+    preset: 'daylight',
     heading: 'Build your first portable page',
     layout: 'document',
     component: '.semantic-demo',
   },
   {
     id: 'dashboard',
-    preset: 'signal',
+    preset: 'blueprint',
     heading: 'Delivery control room',
     layout: 'dashboard',
     component: '.semantic-filter',
   },
   {
     id: 'landing',
-    preset: 'cinematic',
+    preset: 'neutral',
     heading: 'From Markdown to a page worth sharing',
     layout: 'landing',
     component: '.semantic-timeline',
   },
+  {
+    id: 'answer',
+    preset: 'calm-paper',
+    heading: 'Which search should the help centre use?',
+    layout: 'document',
+    component: '.semantic-response',
+  },
+  {
+    id: 'code-review',
+    preset: 'midnight',
+    heading: 'Review: idempotent webhook retries',
+    layout: 'document',
+    component: '.semantic-findings',
+  },
 ] as const;
+
+/** Стартеры категорий собираются под своим именем с префиксом, остальные примеры — под своим. */
+const CATEGORY_STARTERS: ReadonlySet<string> = new Set([
+  'document',
+  'landing',
+  'dashboard',
+  'answer',
+]);
+const pageArtifactUrl = (id: string): string =>
+  CATEGORY_STARTERS.has(id) ? starterArtifactUrl(id) : layoutArtifactUrl(id);
 
 async function expectCurrentNavigation(page: Page, targetId: string): Promise<void> {
   const current = page.locator('[data-navigation] a[aria-current="location"]');
@@ -823,16 +826,16 @@ for (const starter of starters) {
   test(`starter ${starter.id} is useful, responsive, and interactive from file URL`, async ({
     page,
   }, testInfo) => {
-    await page.goto(starterArtifactUrl(starter.id));
+    await page.goto(pageArtifactUrl(starter.id));
     await expect(page.locator('html')).toHaveAttribute('data-layout', starter.layout);
-    await expect(page.locator('html')).toHaveAttribute('data-preset', starter.preset);
+    await expect(page.locator('html')).toHaveAttribute('data-theme', starter.preset);
     await expect(page.getByRole('heading', { name: starter.heading, level: 1 })).toBeVisible();
     await expect(page.locator(starter.component).first()).toBeVisible();
     await expect(page.locator('body')).not.toContainText(/lorem ipsum|todo|placeholder/iu);
     if ('image' in starter) await expectLoadedImage(page.getByRole('img', { name: starter.image }));
 
     switch (starter.id) {
-      case 'basic': {
+      case 'document': {
         const disclosure = page.locator('[data-disclosure]');
         await disclosure.getByText('Open the residual-risk register', { exact: true }).click();
         await expect(disclosure).toHaveAttribute('open', '');
@@ -876,6 +879,21 @@ for (const starter of starters) {
         await expect(page.getByRole('dialog', { name: 'Portability details' })).toBeVisible();
         await page.keyboard.press('Escape');
         await expect(trigger).toBeFocused();
+        break;
+      }
+      case 'answer': {
+        const choice = page.getByRole('radio', { name: 'Hybrid ranking' });
+        await choice.check();
+        await expect(choice).toBeChecked();
+        break;
+      }
+      case 'code-review': {
+        await expect(page.locator('.semantic-findings-summary li')).toHaveText([
+          'Blocking 1',
+          'Major 1',
+          'Minor 1',
+        ]);
+        await expect(page.locator('.semantic-diff .line[data-diff="add"]')).toHaveCount(7);
         break;
       }
     }
@@ -922,9 +940,14 @@ test('every shipped example stays substantial, localized, and contained on large
       expect(geometry.headingHeight, `${artifact.id} at ${viewport.width}px`).toBeLessThan(
         viewport.height * 0.45,
       );
-      expect(geometry.documentHeight, `${artifact.id} at ${viewport.width}px`).toBeGreaterThan(
-        viewport.height * 1.2,
-      );
+      // Презентация не прокручивается: её объём — слайды, а не высота документа.
+      if ((await page.locator('html').getAttribute('data-layout')) === 'slides') {
+        expect(await page.locator('section[data-slide]').count()).toBeGreaterThanOrEqual(4);
+      } else {
+        expect(geometry.documentHeight, `${artifact.id} at ${viewport.width}px`).toBeGreaterThan(
+          viewport.height * 1.2,
+        );
+      }
 
       const language = page.locator('[data-language-select]');
       await expect(language).toHaveValue('en');
@@ -946,7 +969,8 @@ for (const artifact of landingSectionArtifacts) {
   }, testInfo) => {
     await page.goto(artifact.url);
     const sections = page.locator('section.semantic-section');
-    await expect(sections).toHaveCount(4);
+    await expect(sections).toHaveCount(5);
+    await expect(page.locator('#demo')).toHaveAttribute('data-place', 'opening');
     await expect(page.locator('#workflow')).toHaveAttribute('aria-labelledby', 'workflow-title');
     await expect(
       page.getByRole('heading', { name: 'Start with the work, not the framework', level: 2 }),
@@ -957,7 +981,7 @@ for (const artifact of landingSectionArtifacts) {
     await expect(page.locator('#boundaries')).toHaveAttribute('data-recipe', 'hero');
 
     const navigation = page.locator('[data-navigation]');
-    await expect(navigation.locator('a')).toHaveCount(4);
+    await expect(navigation.locator('a')).toHaveCount(5);
     await expect(navigation.locator('a', { hasText: 'Workflow' })).toHaveAttribute(
       'href',
       '#workflow',
@@ -986,15 +1010,18 @@ for (const artifact of landingSectionArtifacts) {
       { theme: 'system', colorScheme: 'light' },
       { theme: 'system', colorScheme: 'dark' },
     ] as const;
+    await addBuiltInThemes(page);
     for (const variant of themeVariants) {
       await page.emulateMedia({ colorScheme: variant.colorScheme });
-      for (const accent of ['indigo', 'teal', 'coral'] as const) {
+      // Каждая встроенная тема приносит свой акцент: индиго, бирюзу, коралл, фосфор.
+      for (const { name: accent, attributes } of BUILT_IN_THEME_ATTRIBUTES) {
         await page.locator('html').evaluate(
           (root, state) => {
-            root.dataset.theme = state.theme;
-            root.dataset.accent = state.accent;
+            for (const [name, value] of Object.entries(state.attributes))
+              root.setAttribute(name, value);
+            root.dataset.scheme = state.theme;
           },
-          { theme: variant.theme, accent },
+          { theme: variant.theme, attributes },
         );
         for (const tone of ['plain', 'soft', 'accent', 'contrast'] as const) {
           await page.locator('#boundaries').evaluate((section, value) => {
@@ -1065,10 +1092,13 @@ for (const artifact of landingSectionArtifacts) {
     }
 
     await page.emulateMedia({ colorScheme: 'light' });
-    await page.locator('html').evaluate((root) => {
-      root.dataset.theme = 'light';
-      root.dataset.accent = 'coral';
-    });
+    await page.locator('html').evaluate(
+      (root, attributes) => {
+        for (const [name, value] of Object.entries(attributes)) root.setAttribute(name, value);
+        root.dataset.scheme = 'light';
+      },
+      BUILT_IN_THEME_ATTRIBUTES.find((theme) => theme.name === 'synthwave')?.attributes ?? {},
+    );
     await page.locator('#boundaries').evaluate((section) => {
       section.dataset.tone = 'contrast';
     });
@@ -1113,9 +1143,9 @@ test('generated artifact is navigable and interactive from file URL', async ({ p
   await expect(demoOutput).toHaveText('3');
 
   const theme = page.locator('html');
-  const before = await theme.getAttribute('data-theme');
-  await page.getByRole('button', { name: 'Toggle color theme' }).click();
-  await expect(theme).not.toHaveAttribute('data-theme', before ?? '');
+  const before = await theme.getAttribute('data-scheme');
+  await page.getByRole('button', { name: 'Switch light and dark scheme' }).click();
+  await expect(theme).not.toHaveAttribute('data-scheme', before ?? '');
 });
 
 test('code copy control handles file URL clipboard behavior without runtime errors', async ({
@@ -1139,15 +1169,15 @@ test('directory artifact loads external assets directly from file URL', async ({
   );
   await expectLoadedImage(externalImage);
 
-  const before = await page.locator('html').getAttribute('data-theme');
-  await page.getByRole('button', { name: 'Toggle color theme' }).click();
-  await expect(page.locator('html')).not.toHaveAttribute('data-theme', before ?? '');
+  const before = await page.locator('html').getAttribute('data-scheme');
+  await page.getByRole('button', { name: 'Switch light and dark scheme' }).click();
+  await expect(page.locator('html')).not.toHaveAttribute('data-scheme', before ?? '');
   await page.getByRole('button', { name: 'Increment' }).click();
   await expect(page.locator('[data-demo-output]')).toHaveText('3');
 });
 
 for (const fixture of [
-  { file: 'tutorial.html', heading: 'Code tutorial', selector: '[data-demo-counter]' },
+  { file: 'code-tutorial.html', heading: 'Code tutorial', selector: '[data-demo-counter]' },
   { file: 'work-report.html', heading: 'Weekly work report', selector: '.semantic-callout' },
   { file: 'landing.html', heading: 'Portable reports for agents', selector: '.semantic-cards' },
 ] as const) {
@@ -1233,8 +1263,8 @@ test('section lead stays prose and nearby definitions retain their appendix rout
     await page.goto(artifact.url);
     for (const theme of ['light', 'dark'] as const) {
       if (theme === 'dark') {
-        await page.locator('[data-theme-toggle]').click();
-        await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+        await page.locator('[data-scheme-toggle]').click();
+        await expect(page.locator('html')).toHaveAttribute('data-scheme', 'dark');
       }
       for (const viewport of [
         { name: 'desktop', width: 1200, height: 900 },
@@ -1478,9 +1508,16 @@ test('navigation fallback keeps hash ownership deterministic without Intersectio
       ['', 'alpha'],
     ] as const;
     for (const [hash, expectedOwner] of initialHashes) {
+      // Каждый якорь — начальный, то есть новая загрузка. Переход на тот же адрес с другим якорем —
+      // переход внутри документа: плавная прокрутка (`scroll-behavior: smooth`) идёт от места прошлого
+      // якоря по настоящему времени, и глава, выбранная по геометрии для отсутствующего якоря, зависела
+      // от того, сколько этой прокрутки успело пройти; под нагрузкой машины — другая глава.
+      await page.goto('about:blank');
       await page.goto(`${artifact.url}${hash}`);
       await expectCurrentNavigation(page, expectedOwner);
       await expect(page.locator('[data-reveal-pending]')).toHaveCount(0);
+      // Её `scrollend`, пришедший позже, выбирает главу поверх следующего шага: шаг начинается с покоя.
+      await settleVisualState(page);
     }
     expect(pageErrors).toEqual([]);
     page.off('pageerror', recordPageError);
@@ -1488,7 +1525,11 @@ test('navigation fallback keeps hash ownership deterministic without Intersectio
     await page.goto(`${artifact.url}#beta-detail`);
     expect(await page.evaluate(() => 'onscrollend' in window)).toBe(true);
     await expectCurrentNavigation(page, 'beta');
-    await page.setViewportSize({ width: 1200, height: 900 });
+    await settleVisualState(page);
+    // Меняется только высота окна: так проверяется сам проход геометрии после resize, а не то, как
+    // шрифт страницы переносит текст выше места чтения при другой ширине.
+    const width = page.viewportSize()?.width ?? 1280;
+    await page.setViewportSize({ width, height: 900 });
     await page.evaluate(() => dispatchEvent(new Event('resize')));
     await expectCurrentNavigation(page, 'beta');
     await page.evaluate(() => {
@@ -1778,9 +1819,9 @@ test('navigation visual evidence covers every required state, theme, motion prof
         await page.setViewportSize({ width: 1440, height: 900 });
         await page.goto(`${artifact.url}#beta`);
         await page.locator('html').evaluate((element, value) => {
-          element.dataset.theme = value;
+          element.dataset.scheme = value;
         }, theme);
-        await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+        await expect(page.locator('html')).toHaveAttribute('data-scheme', theme);
         await expectCurrentNavigation(page, 'beta');
         await settleVisualState(page);
         await expectCurrentNavigation(page, 'beta');
@@ -2098,7 +2139,7 @@ test('reduced-motion preference disables smooth scrolling and transitions', asyn
     await page.locator('html').evaluate((element) => getComputedStyle(element).scrollBehavior),
   ).toBe('auto');
   const transitionDuration = await page
-    .getByRole('button', { name: 'Toggle color theme' })
+    .getByRole('button', { name: 'Switch light and dark scheme' })
     .evaluate((element) => getComputedStyle(element).transitionDuration);
   expect(Number.parseFloat(transitionDuration)).toBeLessThanOrEqual(0.00001);
 });
@@ -2118,9 +2159,13 @@ test('declarative interactions preserve scoped state, focus, and responsive file
   page,
 }, testInfo) => {
   await page.goto(interactiveArtifactUrl);
-  await page.locator('html').evaluate((element) => {
-    element.dataset.preset = 'editorial';
-  });
+  await addBuiltInThemes(page);
+  await page.locator('html').evaluate(
+    (element, attributes) => {
+      for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, value);
+    },
+    BUILT_IN_THEME_ATTRIBUTES.find((theme) => theme.name === 'calm-paper')?.attributes ?? {},
+  );
   const activate = async (locator: Locator): Promise<void> => {
     if (testInfo.project.name.startsWith('mobile')) await locator.tap();
     else await locator.click();
@@ -2337,7 +2382,7 @@ for (const artifact of visualizationArtifacts) {
 
     const firstBar = page.locator('.visualization-bar').first();
     const before = await firstBar.evaluate((element) => getComputedStyle(element).fill);
-    await page.getByRole('button', { name: 'Toggle color theme' }).click();
+    await page.getByRole('button', { name: 'Switch light and dark scheme' }).click();
     const after = await firstBar.evaluate((element) => getComputedStyle(element).fill);
     expect(after).not.toBe(before);
 
@@ -2359,7 +2404,7 @@ for (const artifact of incidentReviewArtifacts) {
   }, testInfo) => {
     await page.goto(artifact.url);
     await expect(page.locator('html')).toHaveAttribute('data-layout', 'mixed');
-    await expect(page.locator('html')).toHaveAttribute('data-preset', 'signal');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'incident-signal');
     await expect(
       page.getByRole('heading', { name: 'OrbitDesk P1 incident review', level: 1 }),
     ).toBeVisible();
@@ -2422,7 +2467,7 @@ for (const artifact of vendorDecisionArtifacts) {
   }, testInfo) => {
     await page.goto(artifact.url);
     await expect(page.locator('html')).toHaveAttribute('data-layout', 'document');
-    await expect(page.locator('html')).toHaveAttribute('data-preset', 'editorial');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'calm-paper');
     await expect(
       page.getByRole('heading', { name: 'AI support vendor decision packet', level: 1 }),
     ).toBeVisible();
@@ -2504,7 +2549,7 @@ for (const artifact of launchReadinessArtifacts) {
   }, testInfo) => {
     await page.goto(artifact.url);
     await expect(page.locator('html')).toHaveAttribute('data-layout', 'landing');
-    await expect(page.locator('html')).toHaveAttribute('data-preset', 'studio');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'beta-launch');
     await expect(
       page.getByRole('heading', { name: 'Regional beta launch readiness', level: 1 }),
     ).toBeVisible();
@@ -2592,7 +2637,7 @@ for (const showcase of presetShowcases) {
         await page.setViewportSize(viewport);
         await page.goto(artifact.url);
         const root = page.locator('html');
-        await expect(root).toHaveAttribute('data-preset', showcase.preset);
+        await expect(root).toHaveAttribute('data-theme', showcase.theme);
         await expect(page.getByRole('heading', { name: showcase.heading, level: 1 })).toBeVisible();
         const containment = await page.evaluate(() => {
           const visibleControls = [
@@ -2668,7 +2713,7 @@ test('same-layout preset families retain their coordinated styles in both format
         await page.emulateMedia({ colorScheme: mode === 'light' ? 'light' : 'dark' });
         await page.goto(artifact.url);
         await page.locator('html').evaluate((element, value) => {
-          element.dataset.theme = value;
+          element.dataset.scheme = value;
         }, mode);
         const state = await page.evaluate(() => {
           const root = document.documentElement;
@@ -2677,12 +2722,7 @@ test('same-layout preset families retain their coordinated styles in both format
           const surface = document.querySelector<HTMLElement>('.semantic-card');
           const section = document.querySelector<HTMLElement>('.semantic-section');
           return {
-            preset: root.dataset.preset,
-            density: root.dataset.density,
-            font: root.dataset.font,
-            accent: root.dataset.accent,
-            width: root.dataset.width,
-            radius: root.dataset.radius,
+            preset: root.dataset.theme,
             fontFamily: bodyStyle.fontFamily,
             lineHeight: Number.parseFloat(bodyStyle.lineHeight),
             headingFamily: heading === null ? undefined : getComputedStyle(heading).fontFamily,
@@ -2695,11 +2735,6 @@ test('same-layout preset families retain their coordinated styles in both format
         });
         expect(state, `${expected.preset}/${artifact.format}/${mode}`).toMatchObject({
           preset: expected.preset,
-          density: expected.density,
-          font: expected.font,
-          accent: expected.accent,
-          width: expected.width,
-          radius: expected.radius,
         });
         expect(state.fontFamily).toContain(expected.fontFamily);
         const visualState = JSON.stringify({
@@ -2762,12 +2797,12 @@ test('captures light and dark preset evidence in both formats and viewport famil
         ] as const) {
           await page.setViewportSize(viewport);
           await page.goto(artifact.url);
-          await expect(page.locator('html')).toHaveAttribute('data-preset', showcase.preset);
+          await expect(page.locator('html')).toHaveAttribute('data-theme', showcase.theme);
           await page.locator('html').evaluate((element, value) => {
-            element.dataset.theme = value;
+            element.dataset.scheme = value;
           }, theme);
           await page.evaluate(() => window.scrollTo(0, 0));
-          const directory = path.join(captureRoot, showcase.preset, artifact.format, theme);
+          const directory = path.join(captureRoot, showcase.theme, artifact.format, theme);
           await mkdir(directory, { recursive: true });
           await page.screenshot({
             path: path.join(directory, `${viewport.name}.png`),
@@ -2790,37 +2825,32 @@ test('captures exactly six 320 by 800 dense preset states', async ({ page }, tes
     for (const theme of ['light', 'dark'] as const) {
       await page.goto(showcase.artifacts[0].url);
       await page.locator('html').evaluate((element, value) => {
-        element.dataset.theme = value;
+        element.dataset.scheme = value;
       }, theme);
       await page.evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({
-        path: path.join(captureRoot, `${showcase.preset}-${theme}.png`),
+        path: path.join(captureRoot, `${showcase.theme}-${theme}.png`),
       });
     }
   }
   expect((await readdir(captureRoot)).sort()).toEqual([
-    'cinematic-dark.png',
-    'cinematic-light.png',
-    'editorial-dark.png',
-    'editorial-light.png',
-    'signal-dark.png',
-    'signal-light.png',
+    'calm-paper-dark.png',
+    'calm-paper-light.png',
+    'incident-signal-dark.png',
+    'incident-signal-light.png',
+    'neutral-dark.png',
+    'neutral-light.png',
   ]);
 });
 
 for (const example of [
   {
     name: 'layout-document',
-    preset: PAGE_CONTRACT.defaultPreset,
+    theme: 'long-read',
     layout: 'document',
-    theme: 'system',
-    density: 'comfortable',
-    font: 'serif',
-    accent: 'indigo',
-    width: 'narrow',
-    fontFamily: 'Inter',
-    headingFontFamily: 'Charter',
-    radius: 'soft',
+    scheme: 'system',
+    fontFamily: 'Literata',
+    headingFontFamily: 'Playfair',
     heading: 'Architecture decision record',
     component: '.semantic-decision',
     image: 'A layered page model',
@@ -2828,72 +2858,52 @@ for (const example of [
   },
   {
     name: 'layout-dashboard',
-    preset: PAGE_CONTRACT.defaultPreset,
+    theme: 'delivery-console',
     layout: 'dashboard',
-    theme: 'dark',
-    density: 'compact',
-    font: 'sans',
-    accent: 'teal',
-    width: 'wide',
-    fontFamily: 'Inter',
-    radius: 'sharp',
+    scheme: 'dark',
+    fontFamily: 'Fira Sans',
     heading: 'Delivery health dashboard',
     component: '.semantic-card',
     table: true,
   },
   {
     name: 'layout-landing',
-    preset: PAGE_CONTRACT.defaultPreset,
+    theme: 'launch-coral',
     layout: 'landing',
-    theme: 'light',
-    density: 'spacious',
-    font: 'sans',
-    accent: 'coral',
-    width: 'wide',
-    fontFamily: 'Inter',
-    radius: 'round',
+    scheme: 'light',
+    fontFamily: 'Rubik',
     heading: 'Pages agents can finish',
     component: '.semantic-card',
   },
   {
     name: 'layout-mixed',
-    preset: 'monument',
+    theme: 'catalog',
     layout: 'mixed',
-    theme: 'system',
-    density: 'comfortable',
-    font: 'sans',
-    accent: 'teal',
-    width: 'wide',
-    fontFamily: 'Inter',
-    radius: 'soft',
+    scheme: 'system',
+    fontFamily: 'IBM Plex Sans',
     heading: 'Complete visual language catalog',
     component: '.semantic-card',
     image: 'Four page layouts sharing one foundation',
     table: true,
   },
 ] as const) {
-  test(`${example.layout} page applies registry-owned layout and tokens without viewport overflow`, async ({
+  test(`${example.layout} page applies registry-owned layout and theme without viewport overflow`, async ({
     page,
   }, testInfo) => {
     await page.goto(layoutArtifactUrl(example.name));
     const root = page.locator('html');
     await expect(root).toHaveAttribute('data-layout', example.layout);
-    await expect(root).toHaveAttribute('data-preset', example.preset);
     await expect(root).toHaveAttribute('data-theme', example.theme);
-    await expect(root).toHaveAttribute('data-density', example.density);
-    await expect(root).toHaveAttribute('data-font', example.font);
-    await expect(root).toHaveAttribute('data-accent', example.accent);
-    await expect(root).toHaveAttribute('data-width', example.width);
-    await expect(root).toHaveAttribute('data-radius', example.radius);
+    await expect(root).toHaveAttribute('data-scheme', example.scheme);
     await expect(page.getByRole('heading', { name: example.heading, level: 1 })).toBeVisible();
     await expect(page.locator(example.component).first()).toBeVisible();
 
-    const themeToggle = page.getByRole('button', { name: 'Toggle color theme' });
+    const themeToggle = page.getByRole('button', { name: 'Switch light and dark scheme' });
     await themeToggle.focus();
     const visualState = await page.evaluate((componentSelector) => {
       const shell = document.querySelector<HTMLElement>('.report-shell');
       const surface = document.querySelector<HTMLElement>(componentSelector);
-      const focused = document.querySelector<HTMLElement>('[data-theme-toggle]');
+      const focused = document.querySelector<HTMLElement>('[data-scheme-toggle]');
       return {
         shell: shell?.getBoundingClientRect().width,
         viewport: window.innerWidth,
@@ -2923,7 +2933,7 @@ for (const example of [
     expect(visualState.surfaceVisible).toBe(true);
 
     if ('image' in example) {
-      await expectLoadedImage(page.getByRole('img', { name: example.image }));
+      await expectLoadedImage(page.getByRole('img', { name: example.image }).first());
     }
 
     expect(
@@ -2937,7 +2947,11 @@ for (const example of [
 
     const navigation = page.locator('[data-navigation]');
     await expect(navigation).toBeAttached();
-    if (testInfo.project.name.startsWith('mobile')) {
+    // На лендинге оглавление открывается из верхней панели при любой ширине: над первым экраном нет
+    // рамки навигации. На узком экране так ведут себя все компоновки.
+    const dialogNavigation =
+      testInfo.project.name.startsWith('mobile') || example.layout === 'landing';
+    if (dialogNavigation) {
       if ('table' in example) {
         const table = page.locator('table').first();
         expect(await table.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
@@ -2952,6 +2966,7 @@ for (const example of [
       }
       const toggle = page.locator('[data-nav-toggle]');
       await expect(toggle).toHaveAccessibleName('Open contents');
+      await expect(navigation).toBeHidden();
       await toggle.click();
       await expect(toggle).toHaveAttribute('aria-expanded', 'true');
       await expect(navigation).toBeVisible();
@@ -2961,67 +2976,68 @@ for (const example of [
   });
 }
 
-test('style selector swaps the preset with its tokens and leaves the colour scheme alone', async ({
+test('theme selector swaps the whole theme and leaves the colour scheme alone', async ({
   page,
 }) => {
   await page.goto(layoutArtifactUrl('layout-mixed'));
   const root = page.locator('html');
-  await expect(root).toHaveAttribute('data-preset', 'monument');
+  await expect(root).toHaveAttribute('data-theme', 'catalog');
 
-  // Схема переводится читателем и обязана пережить смену стиля.
-  await page.getByRole('button', { name: 'Toggle color theme' }).click();
-  const chosenScheme = await root.getAttribute('data-theme');
+  // Схема переводится читателем и обязана пережить смену темы.
+  await page.getByRole('button', { name: 'Switch light and dark scheme' }).click();
+  const chosenScheme = await root.getAttribute('data-scheme');
   expect(chosenScheme).toBe('dark');
 
   const background = async (): Promise<string> =>
     page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   const before = await background();
 
-  await page.locator('[data-preset-select]').selectOption('terminal');
-  await expect(root).toHaveAttribute('data-preset', 'terminal');
-  await expect(root).toHaveAttribute('data-font', 'mono');
-  await expect(root).toHaveAttribute('data-density', 'compact');
-  await expect(root).toHaveAttribute('data-radius', 'sharp');
-  await expect(root).toHaveAttribute('data-theme', chosenScheme ?? 'dark');
+  await page.locator('[data-theme-select]').selectOption('terminal');
+  await expect(root).toHaveAttribute('data-theme', 'terminal');
+  await expect(root).toHaveAttribute('data-theme-heading-prefix', 'on');
+  await expect(root).toHaveAttribute('data-theme-linked-card', 'edge');
+  await expect(root).toHaveAttribute('data-scheme', chosenScheme ?? 'dark');
   expect(await background()).not.toBe(before);
+  expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toContain(
+    'monospace',
+  );
 
-  await page.locator('[data-preset-select]').selectOption('material');
-  await expect(root).toHaveAttribute('data-preset', 'material');
-  await expect(root).toHaveAttribute('data-font', 'serif');
-  await expect(root).toHaveAttribute('data-theme', chosenScheme ?? 'dark');
+  await page.locator('[data-theme-select]').selectOption('calm-paper');
+  await expect(root).toHaveAttribute('data-theme', 'calm-paper');
+  await expect(root).toHaveAttribute('data-theme-heading-prefix', 'none');
+  await expect(root).toHaveAttribute('data-theme-navigation', 'numbered');
+  await expect(root).toHaveAttribute('data-scheme', chosenScheme ?? 'dark');
 });
 
-test('system theme follows dark preference and becomes an explicit theme after activation', async ({
+test('system scheme follows dark preference and becomes an explicit scheme after activation', async ({
   page,
 }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto(layoutArtifactUrl('layout-document'));
   const root = page.locator('html');
-  await expect(root).toHaveAttribute('data-theme', 'system');
+  await expect(root).toHaveAttribute('data-scheme', 'system');
   const before = await page
     .locator('body')
     .evaluate((element) => getComputedStyle(element).backgroundColor);
   const darkCode = await codeThemeState(page.locator('pre.shiki'));
-  expect(darkCode).toEqual({
-    background: 'rgb(36, 41, 46)',
-    tokens: ['rgb(133, 232, 157)', 'rgb(225, 228, 232)', 'rgb(158, 203, 255)'],
-  });
+  // Код красится темой страницы: фон и токены — цвета кода тёмной схемы calm-paper.
+  const palette = resolveBuiltInTheme('calm-paper').colors;
+  expect(darkCode.background).toBe(rgb(palette.dark.codeBackground));
   expect(new Set(darkCode.tokens).size).toBeGreaterThan(1);
-  await page.getByRole('button', { name: 'Toggle color theme' }).click();
-  await expect(root).toHaveAttribute('data-theme', 'light');
+  for (const token of darkCode.tokens) expect(codeColours(palette.dark)).toContain(token);
+  await page.getByRole('button', { name: 'Switch light and dark scheme' }).click();
+  await expect(root).toHaveAttribute('data-scheme', 'light');
   const after = await page
     .locator('body')
     .evaluate((element) => getComputedStyle(element).backgroundColor);
   expect(after).not.toBe(before);
   const lightCode = await codeThemeState(page.locator('pre.shiki'));
-  expect(lightCode).toEqual({
-    background: 'rgb(255, 255, 255)',
-    tokens: ['rgb(34, 134, 58)', 'rgb(36, 41, 46)', 'rgb(3, 47, 98)'],
-  });
+  expect(lightCode.background).toBe(rgb(palette.light.codeBackground));
   expect(new Set(lightCode.tokens).size).toBeGreaterThan(1);
+  for (const token of lightCode.tokens) expect(codeColours(palette.light)).toContain(token);
   expect(lightCode.tokens).not.toEqual(darkCode.tokens);
-  await page.getByRole('button', { name: 'Toggle color theme' }).click();
-  await expect(root).toHaveAttribute('data-theme', 'dark');
+  await page.getByRole('button', { name: 'Switch light and dark scheme' }).click();
+  await expect(root).toHaveAttribute('data-scheme', 'dark');
   expect(await codeThemeState(page.locator('pre.shiki'))).toEqual(darkCode);
 });
 
@@ -3056,6 +3072,25 @@ async function expectDiagramEdgesAvoidNodes(diagram: Locator): Promise<void> {
     });
   });
   expect(intersections).toEqual([]);
+}
+
+/** Цвет темы в записи `getComputedStyle`: `#rrggbb` → `rgb(r, g, b)`. */
+function rgb(hex: string): string {
+  const value = Number.parseInt(hex.slice(1, 7), 16);
+  return `rgb(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255})`;
+}
+
+function codeColours(colors: ThemeColors): readonly string[] {
+  return [
+    colors.codeText,
+    colors.codeKeyword,
+    colors.codeString,
+    colors.codeNumber,
+    colors.codeFunction,
+    colors.codeType,
+    colors.codeComment,
+    colors.codePunctuation,
+  ].map(rgb);
 }
 
 async function codeThemeState(

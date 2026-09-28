@@ -18,13 +18,17 @@ import {
   listExamples,
   sourceContract,
   validateExtensionProposal,
+  validateReport,
 } from '../../src/index.js';
 import { authoringRegistry } from '../../src/authoring/registry.js';
-import { parseReportManifest } from '../../src/authoring/schemas.js';
+import {
+  listReferenceExtensions,
+  REFERENCE_EXTENSION_KINDS,
+} from '../../src/authoring/reference-extensions.js';
 
 const execFileAsync = promisify(execFile);
 type PublicPageKeys = keyof ReturnType<typeof getSourceContract>['page'];
-type ExpectedPublicPageKeys = keyof typeof authoringRegistry.page | 'tokenResolution';
+type ExpectedPublicPageKeys = keyof typeof authoringRegistry.page | 'theme';
 type SameKeys<Left, Right> = [Left] extends [Right]
   ? [Right] extends [Left]
     ? true
@@ -47,35 +51,39 @@ describe('agent discovery contract', () => {
       runtimePlacement: { 'single-file': 'inline', directory: 'external' },
     });
     expect(contract.page).toMatchObject({
-      defaultPreset: authoringRegistry.page.defaultPreset,
-      presets: authoringRegistry.page.presets,
-      defaultLayout: authoringRegistry.page.defaultLayout,
-      layouts: authoringRegistry.page.layouts,
       defaultTheme: authoringRegistry.page.defaultTheme,
       themes: authoringRegistry.page.themes,
-      defaultScrollProgress: authoringRegistry.page.defaultScrollProgress,
+      defaultLayout: authoringRegistry.page.defaultLayout,
+      layouts: authoringRegistry.page.layouts,
+      defaultScheme: authoringRegistry.page.defaultScheme,
+      schemes: authoringRegistry.page.schemes,
+      defaultProgress: authoringRegistry.page.defaultProgress,
+      progress: authoringRegistry.page.progress,
+      defaultOpening: authoringRegistry.page.defaultOpening,
+      openings: authoringRegistry.page.openings,
       defaultAttribution: authoringRegistry.page.defaultAttribution,
       motion: authoringRegistry.page.motion,
-      tokenResolution: {
-        defaultsFrom: 'selected-preset',
-        precedence: ['selected-preset', 'explicit-tokens'],
-      },
     });
     expect(publicPageKeysAreExact).toBe(true);
     expect(Object.keys(contract.page).sort()).toEqual(
-      [...Object.keys(authoringRegistry.page), 'tokenResolution'].sort(),
+      [...Object.keys(authoringRegistry.page), 'theme'].sort(),
     );
-    expect(contract.page.tokens).toEqual(
-      authoringRegistry.page.tokens.map((token) => ({
-        ...token,
-        defaultVisibility: 'normalization-only',
-      })),
+    // Договор темы виден агенту целиком: поля, акценты, гарнитуры и пары контраста.
+    expect(contract.page.theme.fields.map((field) => field.name)).toEqual(
+      expect.arrayContaining(['extends', 'accent', 'fonts', 'colors', 'chrome', 'ornaments']),
     );
-    expect(
-      contract.page.tokens.every(
-        (token) => 'default' in token && token.defaultVisibility === 'normalization-only',
-      ),
-    ).toBe(true);
+    expect(Object.keys(contract.page.theme.accents)).toEqual([
+      'graphite',
+      'cobalt',
+      'rust',
+      'moss',
+      'ochre',
+      'ink',
+      'indigo',
+      'teal',
+      'coral',
+    ]);
+    expect(contract.page.theme.contrast.length).toBeGreaterThan(0);
     expect(contract.capabilities).toEqual(
       Object.fromEntries(
         authoringRegistry.capabilities.map((capability) => [capability.id, capability.description]),
@@ -86,40 +94,16 @@ describe('agent discovery contract', () => {
     expect(demo).not.toHaveProperty('fallback');
   });
 
-  it('keeps discovered token defaults conditional on the selected preset', () => {
-    const contract = getSourceContract();
-    const expectedByPreset = Object.fromEntries(
-      contract.page.presets.map((preset) => [preset.name, preset.tokens]),
-    );
-
-    for (const preset of ['editorial', 'signal'] as const) {
-      const discoveredDefaults = Object.fromEntries(
-        contract.page.tokens.flatMap((token) => {
-          const candidate = token as unknown as Readonly<Record<string, unknown>>;
-          return candidate.defaultVisibility === 'published' && 'default' in candidate
-            ? [[token.name, candidate.default]]
-            : [];
-        }),
-      );
-      const materialized =
-        Object.keys(discoveredDefaults).length === 0
-          ? { preset }
-          : { preset, tokens: discoveredDefaults };
-
-      expect(parseReportManifest(materialized).tokens).toEqual(expectedByPreset[preset]);
-      expect(
-        parseReportManifest({ ...materialized, tokens: { ...discoveredDefaults, radius: 'round' } })
-          .tokens,
-      ).toEqual({ ...expectedByPreset[preset], radius: 'round' });
-    }
-  });
-
   it('returns defensive deterministic schema, contract and example values', () => {
-    for (const scope of ['manifest', 'directives', 'source'] as const) {
+    for (const scope of ['manifest', 'directives', 'source', 'theme'] as const) {
       const first = getAuthoringSchema(scope);
       const second = getAuthoringSchema(scope);
       expect(JSON.stringify(first)).toBe(JSON.stringify(second));
-      expect(first.$id).toBe(authoringRegistry.contract.schemaIds[scope]);
+      expect(first.$id).toBe(
+        scope === 'theme'
+          ? 'urn:agentic-report:schema:theme:1'
+          : authoringRegistry.contract.schemaIds[scope],
+      );
       (first as Record<string, unknown>).mutated = true;
       expect(getAuthoringSchema(scope)).not.toHaveProperty('mutated');
     }
@@ -141,7 +125,7 @@ describe('agent discovery contract', () => {
     expect(Object.isFrozen(sourceContract)).toBe(true);
     expect(Object.isFrozen(sourceContract.commands)).toBe(true);
     expect(Object.isFrozen(sourceContract.capabilities)).toBe(true);
-    expect(Object.isFrozen(sourceContract.page.tokens)).toBe(true);
+    expect(Object.isFrozen(sourceContract.page.theme.fields)).toBe(true);
     expect(Object.isFrozen(sourceContract.directives.demo)).toBe(true);
     expect(() => {
       (sourceContract.commands as Record<string, string>).build = 'poison';
@@ -149,15 +133,16 @@ describe('agent discovery contract', () => {
     expect(getSourceContract().commands.build).toBe(originalBuildDescription);
     expect(listExamples()).toEqual(authoringRegistry.examples);
     expect(listExamples()[0]).toMatchObject({
-      id: 'basic',
-      path: 'basic',
+      id: 'document',
+      path: 'document',
       entry: 'report.md',
-      starter: { default: true, aliases: ['report'] },
+      category: 'document',
+      starter: { default: true },
     });
   });
 
   it('keeps generated projections byte-equal to pure API values', async () => {
-    for (const scope of ['manifest', 'directives', 'source'] as const) {
+    for (const scope of ['manifest', 'directives', 'source', 'theme'] as const) {
       const generated = JSON.parse(
         await readFile(
           new URL(`../../docs/generated/${scope}.schema.json`, import.meta.url),
@@ -223,7 +208,7 @@ describe('agent discovery contract', () => {
       await rm(outputRoot, { recursive: true, force: true });
     }
     await expect(readFile(maintainedContractPath, 'utf8')).resolves.toBe(maintainedContract);
-  });
+  }, 20_000);
 
   it('rejects incomplete or unsafe extension proposals and accepts a complete bounded record', () => {
     const schema = getExtensionProposalSchema();
@@ -377,6 +362,40 @@ describe('agent discovery contract', () => {
     expect(question?.rules.find((rule) => rule.id === 'numeric-domain')?.dependsOn).toEqual([]);
   });
 
+  it('exports exactly the root API and the effect authoring subpath', async () => {
+    // Дефект: подпуть появился или пропал молча. Корень остаётся без исполняемых точек расширения
+    // (проверка ниже), а договор эффекта уровня 2 — `defineEffect` и типы — живёт в своём подпути
+    // `agentic-report/effect`: автор эффекта импортирует его, упаковщик подменяет его тождественной
+    // функцией. Любой новый подпуть — отдельное решение с правкой этого списка.
+    const manifest = JSON.parse(await readFile(path.resolve('package.json'), 'utf8')) as {
+      readonly exports: Readonly<Record<string, unknown>>;
+    };
+    expect(Object.keys(manifest.exports)).toEqual(['.', './effect']);
+    const effectModule = await import('../../src/effect.js');
+    expect(Object.keys(effectModule).sort()).toEqual(['defineEffect']);
+    const declaration = await readFile(path.resolve('dist/node/effect.d.ts'), 'utf8');
+    const exported = [
+      ...declaration.matchAll(/^export (?:declare )?(?:type|interface|function) (\w+)/gmu),
+    ]
+      .map(([, name]) => name)
+      .sort();
+    expect(exported).toEqual([
+      'EffectCanvas',
+      'EffectCanvasKind',
+      'EffectCanvasOptions',
+      'EffectContext',
+      'EffectController',
+      'EffectDefinition',
+      'EffectFallbackReason',
+      'EffectLayout',
+      'EffectObstacles',
+      'EffectPinned',
+      'EffectRect',
+      'EffectRender',
+      'defineEffect',
+    ]);
+  });
+
   it('keeps the root API and product source free of public executable extension surfaces', async () => {
     const indexSource = await readFile(new URL('../../src/index.ts', import.meta.url), 'utf8');
     const productSources = await readTypeScriptSources(path.resolve('src'));
@@ -388,6 +407,7 @@ describe('agent discovery contract', () => {
       'REVIEW_CONTRACT_VERSION',
       'REVIEW_TARGET_MANIFEST_VERSION',
       'buildReport',
+      'createBrandTheme',
       'fixReport',
       'generateSitemap',
       'getAuthoringSchema',
@@ -414,8 +434,11 @@ describe('agent discovery contract', () => {
     const expectedDeclarationInventory = {
       types: [
         'AppliedFix',
+        'BrandThemeRole',
         'BuildReportOptions',
         'BuildReportResult',
+        'CreateBrandThemeOptions',
+        'CreateBrandThemeResult',
         'Diagnostic',
         'DiagnosticFix',
         'DirectiveName',
@@ -653,10 +676,16 @@ const generatedProjectionPaths = [
   'docs/generated/manifest.schema.json',
   'docs/generated/directives.schema.json',
   'docs/generated/source.schema.json',
+  'docs/generated/theme.schema.json',
   'docs/generated/source-contract.json',
   'docs/generated/extension-proposal.schema.json',
   'docs/generated/extension-proposal.template.json',
   'examples/manifest.json',
+  'examples/landing/brief.md',
+  'examples/document/brief.md',
+  'examples/dashboard/brief.md',
+  'examples/answer/brief.md',
+  'examples/presentation/brief.md',
 ] as const;
 
 async function readTypeScriptSources(directory: string): Promise<string[]> {
@@ -672,6 +701,13 @@ async function readTypeScriptSources(directory: string): Promise<string[]> {
   );
   return values.flat();
 }
+
+const SNAPSHOT_BROWSER_PACKAGES = new Set(['playwright', 'playwright-core', '@playwright/test']);
+/**
+ * Упаковщик эффектов: esbuild грузится лениво, только когда страница объявила эффект, чтобы пакет
+ * работал и без двоичного файла платформы. Имя тоже записано буквально.
+ */
+const LAZY_PACKAGES = new Set([...SNAPSHOT_BROWSER_PACKAGES, 'esbuild']);
 
 function publicExportIssues(actual: readonly string[], expected: readonly string[]): string[] {
   const expectedSet = new Set(expected);
@@ -1608,7 +1644,14 @@ function analyzeExecutableNode(node: AstNode, scope: ExecutionScope, issues: str
     return;
   }
   if (node.type === 'ImportExpression') {
-    issues.push('forbidden dynamic import');
+    // Разрешённые динамические импорты — браузер для команд снимков и проверки эффектов и упаковщик
+    // эффектов: фиксированные имена пакетов, а не путь, пришедший из источника или от автора.
+    const written = asAstNode(node.source);
+    const source = written?.type === 'TSAsExpression' ? asAstNode(written.expression) : written;
+    const specifier = source?.type === 'StringLiteral' ? source.value : undefined;
+    if (typeof specifier !== 'string' || !LAZY_PACKAGES.has(specifier)) {
+      issues.push('forbidden dynamic import');
+    }
     return;
   }
   if (node.type === 'CallExpression' && asAstNode(node.callee)?.type === 'Import') {
@@ -1785,3 +1828,81 @@ function entityNameRoot(node: AstNode | undefined): string | undefined {
   if (node.type === 'MemberExpression') return entityNameRoot(asAstNode(node.object));
   return undefined;
 }
+
+/**
+ * Catches a reference extension an agent cannot find or cannot copy: a manifest in `extensions/` that
+ * `examples` does not list, a level of the extension API without a reference, a reference without its
+ * README or two examples, and an example that no longer builds against the current loader.
+ */
+describe('reference extensions', () => {
+  const root = path.resolve('extensions');
+
+  it('lists every manifest shipped in extensions/, one level after another', async () => {
+    const listed = await listReferenceExtensions(root);
+    const onDisk: string[] = [];
+    for (const folder of await readdir(root, { withFileTypes: true })) {
+      if (!folder.isDirectory()) continue;
+      for (const file of await readdir(path.join(root, folder.name)))
+        if (/\.ya?ml$/u.test(file)) onDisk.push(path.join(root, folder.name, file));
+    }
+    expect(listed.map((extension) => extension.manifest).sort()).toEqual(onDisk.sort());
+    expect(new Set(listed.map((extension) => extension.kind))).toEqual(
+      new Set(REFERENCE_EXTENSION_KINDS),
+    );
+    const levels = listed.map((extension) => REFERENCE_EXTENSION_KINDS.indexOf(extension.kind));
+    expect(levels).toEqual([...levels].sort((left, right) => left - right));
+    expect(new Set(listed.map((extension) => extension.name)).size).toBe(listed.length);
+  });
+
+  it('gives every reference a README and two examples that validate', async () => {
+    for (const extension of await listReferenceExtensions(root)) {
+      await expect(readFile(extension.readme, 'utf8'), extension.name).resolves.toMatch(/^# /u);
+      expect(extension.examples.length, extension.name).toBeGreaterThanOrEqual(2);
+      for (const example of extension.examples) {
+        const result = await validateReport({ input: example });
+        expect(
+          result.warnings.map((warning) => warning.code),
+          example,
+        ).not.toContain('EXTENSION_EXAMPLES_MISSING');
+      }
+    }
+  }, 120_000);
+
+  it('is what the examples command reports', async () => {
+    const { stdout } = await execFileAsync(process.execPath, [
+      path.resolve('dist/node/cli.js'),
+      'examples',
+      '--json',
+    ]);
+    const reported = (
+      JSON.parse(stdout) as { extensions: { name: string; kind: string; manifest: string }[] }
+    ).extensions;
+    const listed = await listReferenceExtensions(root);
+    expect(reported.map(({ name, kind }) => ({ name, kind }))).toEqual(
+      listed.map(({ name, kind }) => ({ name, kind })),
+    );
+    for (const [index, extension] of reported.entries())
+      expect(
+        extension.manifest.endsWith(path.relative(process.cwd(), listed[index]?.manifest ?? '')),
+      ).toBe(true);
+  });
+
+  it('skips a folder without a manifest of a known kind and a missing root', async () => {
+    const planted = await mkdtemp(path.join(os.tmpdir(), 'agentic-report-reference-'));
+    try {
+      await mkdir(path.join(planted, 'notes'));
+      await writeFile(path.join(planted, 'notes', 'data.yaml'), 'title: not a manifest\n');
+      await mkdir(path.join(planted, 'card'));
+      await writeFile(
+        path.join(planted, 'card', 'extension.yaml'),
+        'kind: block\nname: card-one\ndescription: One card.\nexamples: [a.md, b.md]\n',
+      );
+      expect((await listReferenceExtensions(planted)).map((extension) => extension.name)).toEqual([
+        'card-one',
+      ]);
+      expect(await listReferenceExtensions(path.join(planted, 'missing'))).toEqual([]);
+    } finally {
+      await rm(planted, { recursive: true, force: true });
+    }
+  });
+});

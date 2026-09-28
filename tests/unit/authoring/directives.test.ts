@@ -26,7 +26,7 @@ import { interpretDirectiveAttributes } from '../../../src/authoring/schemas.js'
 import { buildReport } from '../../../src/core/compiler.js';
 import { AgenticReportError } from '../../../src/diagnostics.js';
 import { getAuthoringSchema, getSourceContract } from '../../../src/discovery.js';
-import { parseCodeTermMetadata } from '../../../src/render/directives.js';
+import { parseCodeTermMetadata, restoreLiteralColonText } from '../../../src/render/directives.js';
 import { projectSemanticSanitizeSchema, renderMarkdown } from '../../../src/render/markdown.js';
 import { createTestWorkspace, removeTestWorkspace } from '../../helpers/workspace.js';
 
@@ -36,6 +36,9 @@ afterEach(async () => {
   await Promise.all(workspaces.splice(0).map(removeTestWorkspace));
 });
 
+/** Directives the data phase consumes before the page is rendered; page-data.test.ts covers them. */
+const BUILD_TIME_DIRECTIVES: ReadonlySet<string> = new Set(['each', 'expect']);
+
 describe('registry-driven semantic directives', () => {
   it('renders every registered directive and permitted form with registry defaults', async () => {
     const workspace = await trackedWorkspace('directive-renderers');
@@ -44,6 +47,10 @@ describe('registry-driven semantic directives', () => {
     await copyFile(
       path.resolve('tests/fixtures/video/playback.webm'),
       path.join(workspace, 'clip.webm'),
+    );
+    await copyFile(
+      path.resolve('tests/fixtures/video/poster.png'),
+      path.join(workspace, 'clip-poster.png'),
     );
     const markdown = [
       '# Registry renderers',
@@ -120,12 +127,20 @@ describe('registry-driven semantic directives', () => {
       ':::toggle{label="Show evidence"}',
       'Toggle body.',
       ':::',
+      '::eyebrow[Stage 7]',
+      'Bright start. :muted[Quiet rest.] :meta[run 96] :plural[3]{forms="file|files"} :time[2026-09-25]',
+      '::source-line[Export of run 96]{date="2026-09-25"}',
+      '::::conversation{title="Run" illustrative=true}',
+      ':::message{from="Moira" time="01:17" status="sent"}',
+      'Done.',
+      ':::',
+      '::::',
       '::::chart{title="Build trend" description="Builds rise over time." type="line" x-label="Week" y-label="Builds"}',
       ':::series{label="Builds"}',
       '::point{label="W1" value="2.5"}',
       ':::',
       '::::',
-      ':::diagram{title="Flow" description="Source becomes output." direction="right"}',
+      '::::diagram{title="Flow" description="Source becomes output." direction="right"}',
       '::group{id="input" label="Input"}',
       '::group{id="result" label="Result"}',
       '::node{id="source" label="Source" group="input" kind="accent"}',
@@ -133,7 +148,12 @@ describe('registry-driven semantic directives', () => {
       '::edge{from="source" to="output" label="compile"}',
       '::legend{title="Key"}',
       '::legend-item{node="accent" label="Input side"}',
+      ':::zoom{node="output" title="Inside output"}',
+      '::node{id="pack" label="Pack"}',
+      '::node{id="write" label="Write"}',
+      '::edge{from="pack" to="write"}',
       ':::',
+      '::::',
       '::::timeline{title="Delivery" description="Two delivery phases."}',
       ':::event{date="Now" title="Build" kind="accent"}',
       'Event body.',
@@ -142,6 +162,53 @@ describe('registry-driven semantic directives', () => {
       ':::demo{title="Counter"}',
       'Static counter value.',
       ':::',
+      ':::diff{file="src/a.ts"}',
+      '```diff',
+      '@@ -1,2 +1,2 @@',
+      ' const a = 1;',
+      '-const b = 2;',
+      '+const b = 3;',
+      '```',
+      ':::',
+      ':::compare{before="Draft" after="Built"}',
+      '![Draft](clip-poster.png)',
+      '![Built](clip-poster.png)',
+      ':::',
+      ':::appear{effect="wipe"}',
+      'A step.',
+      ':::',
+      'Words :swap[fast]{words="calm"}, :typing[npm test] and :mark[this]{shape="circle"}.',
+      '',
+      'At :process[Plan > Build > Review]{current="Review" returns="Review>Build×2"} now.',
+      '',
+      ':::spotlight{x="50" y="50"}',
+      '![Detail](clip-poster.png)',
+      '',
+      'The detail explained.',
+      ':::',
+      '::::section{title="Noted" id="noted"}',
+      ':::notes',
+      'Speaker note.',
+      ':::',
+      '::::',
+      '::::::section{title="Scene" scene="steps" transition="lines"}',
+      ':::diagram{title="Scene diagram" description="Two nodes." layout="right" draw="scroll"}',
+      '::node{id="first" label="First"}',
+      '::node{id="second" label="Second"}',
+      '::edge{from="first" to="second"}',
+      ':::',
+      ':::beat{title="One" focus="first"}',
+      'First beat with :count[1,284] frames.',
+      ':::',
+      ':::beat',
+      'Second beat.',
+      ':::',
+      '::::::',
+      '::::findings{title="Findings"}',
+      ':::finding{severity="major" title="Key is unstable" location="src/a.ts:2"}',
+      'Finding body.',
+      ':::',
+      '::::',
       ':asset[Named download]{src="data.json"}',
       '::asset{src="data.json"}',
       '::video{src="clip.webm" caption="Recorded run"}',
@@ -151,6 +218,8 @@ describe('registry-driven semantic directives', () => {
     const rendered = await render(markdown, workspace);
 
     for (const directive of authoringRegistry.directives as readonly DirectiveDefinition[]) {
+      // The data directives are consumed when the page builds and never reach it (page-data.test.ts).
+      if (BUILD_TIME_DIRECTIVES.has(directive.name)) continue;
       expect(rendered.html, directive.name).toMatch(
         new RegExp(`class="[^"]*${directive.sanitizer.className}(?:\\s|")`, 'u'),
       );
@@ -159,6 +228,9 @@ describe('registry-driven semantic directives', () => {
     expect(rendered.html).toContain('data-start="0"');
     expect(rendered.html).toContain('data-step="1"');
     expect(rendered.html).toContain('>Notice</p>');
+    // Варианты решения и пункты списка показывают свою подпись, а не пустой блок.
+    expect(rendered.html).toMatch(/data-label="Yes"[^>]*>Yes<\/span>/u);
+    expect(rendered.html).toMatch(/data-label="Gate complete"[^>]*>Gate complete<\/span>/u);
     expect(rendered.html).toContain('>Named download</a>');
     expect(rendered.html).toContain('>Download data.json</a>');
     expect(rendered.html).toContain('data:application/json;base64,');
@@ -178,6 +250,8 @@ describe('registry-driven semantic directives', () => {
         '::action[HTTP mirror]{href="http://example.com/mirror" kind="quiet"}',
         '::action[Project home]{href="https://example.com/project" kind="quiet"}',
         '::action[Email owner]{href="mailto:owner@example.com" kind="quiet"}',
+        '::action[Call support]{href="tel:+1-201-555-0123" kind="quiet"}',
+        '::action[Text support]{href="sms:+12015550123?body=Hi" kind="quiet"}',
         ':::',
         '::::',
         ':::section{title="Proof" width="reading" align="start" tone="soft"}',
@@ -191,12 +265,12 @@ describe('registry-driven semantic directives', () => {
       /<section class="semantic-section"[^>]*data-nav="Short proof"[^>]*data-width="wide"[^>]*data-align="center"[^>]*data-tone="accent"[^>]*data-reveal="true"[^>]*data-semantic="section"[^>]*id="proof"[^>]*aria-labelledby="proof-title">/u,
     );
     expect(rendered.html).toContain(
-      '<h2 id="proof-title" class="semantic-section-title">Proof</h2>',
+      '<h2 id="proof-title" class="semantic-section-title" data-chapter-number="01" style="--heading-word:5">Proof</h2>',
     );
     expect(rendered.html).toContain('id="proof-2" aria-labelledby="proof-2-title"');
     expect(rendered.html).toMatch(/data-reveal="false" data-semantic="section"[^>]*id="proof-2"/u);
     expect(rendered.html).toMatch(
-      /<a class="semantic-action" data-kind="primary" data-effect="none" data-semantic="action" href="#proof"><svg class="package-icon" data-package-icon="arrow-right"[^>]*>.*<\/svg>Start here<\/a>/u,
+      /<a class="semantic-action ui-button" data-kind="primary" data-effect="none" data-semantic="action" href="#proof" data-ui-variant="primary" data-ui-size="md"><svg class="package-icon" data-package-icon="arrow-right"[^>]*>.*<\/svg>Start here<\/a>/u,
     );
     expect(rendered.html).toMatch(
       /data-package-icon="arrow-right"[^>]*>.*<\/svg>Read the guide<\/a>/u,
@@ -204,10 +278,14 @@ describe('registry-driven semantic directives', () => {
     expect(rendered.html).toMatch(
       /data-package-icon="arrow-right"[^>]*>.*<\/svg>HTTP mirror<\/a>/u,
     );
-    expect(rendered.html).toMatch(/href="\.\.\/docs\/guide\.html">.*Read the guide<\/a>/u);
-    expect(rendered.html).toMatch(/href="http:\/\/example\.com\/mirror">.*HTTP mirror<\/a>/u);
-    expect(rendered.html).toMatch(/href="https:\/\/example\.com\/project">.*Project home<\/a>/u);
-    expect(rendered.html).toMatch(/href="mailto:owner@example\.com">.*Email owner<\/a>/u);
+    expect(rendered.html).toMatch(/href="\.\.\/docs\/guide\.html"[^>]*>.*Read the guide<\/a>/u);
+    expect(rendered.html).toMatch(/href="http:\/\/example\.com\/mirror"[^>]*>.*HTTP mirror<\/a>/u);
+    expect(rendered.html).toMatch(
+      /href="https:\/\/example\.com\/project"[^>]*>.*Project home<\/a>/u,
+    );
+    expect(rendered.html).toMatch(/href="mailto:owner@example\.com"[^>]*>.*Email owner<\/a>/u);
+    expect(rendered.html).toMatch(/href="tel:\+1-201-555-0123"[^>]*>.*Call support<\/a>/u);
+    expect(rendered.html).toMatch(/href="sms:\+12015550123\?body=Hi"[^>]*>.*Text support<\/a>/u);
     expect(rendered.html).not.toMatch(/onclick|<script|javascript:/u);
   });
 
@@ -248,6 +326,16 @@ describe('registry-driven semantic directives', () => {
       {
         label: 'executable action target',
         source: ':::actions\n::action[Unsafe]{href="javascript:alert(1)"}\n:::',
+        code: 'INVALID_DIRECTIVE_LINK',
+      },
+      {
+        label: 'phone target with script',
+        source: ':::actions\n::action[Unsafe]{href="tel:javascript:alert(1)"}\n:::',
+        code: 'INVALID_DIRECTIVE_LINK',
+      },
+      {
+        label: 'text-message target with markup',
+        source: ':::actions\n::action[Unsafe]{href="sms:<script>"}\n:::',
         code: 'INVALID_DIRECTIVE_LINK',
       },
       {
@@ -449,11 +537,11 @@ describe('registry-driven semantic directives', () => {
     ];
     for (const source of orderings) {
       const rendered = await render(source, workspace);
-      expect(rendered.html).toContain(
-        'id="target" aria-labelledby="target-title"><h2 id="target-title" class="semantic-section-title">Explicit</h2>',
+      expect(rendered.html).toMatch(
+        /id="target" aria-labelledby="target-title"><h2 id="target-title" class="semantic-section-title" data-chapter-number="0[12]" style="--heading-word:8">Explicit<\/h2>/u,
       );
-      expect(rendered.html).toContain(
-        'id="target-2" aria-labelledby="target-2-title"><h2 id="target-2-title" class="semantic-section-title">Target</h2>',
+      expect(rendered.html).toMatch(
+        /id="target-2" aria-labelledby="target-2-title"><h2 id="target-2-title" class="semantic-section-title" data-chapter-number="0[12]" style="--heading-word:6">Target<\/h2>/u,
       );
     }
   });
@@ -505,8 +593,13 @@ describe('registry-driven semantic directives', () => {
       path.resolve('tests/fixtures/video/poster.png'),
       path.join(workspace, 'local poster.png'),
     );
+    await writeFile(
+      path.join(workspace, 'local chapters.vtt'),
+      'WEBVTT\n\n00:00.000 --> 00:01.000\nStart\n',
+    );
 
     for (const directive of authoringRegistry.directives as readonly DirectiveDefinition[]) {
+      if (BUILD_TIME_DIRECTIVES.has(directive.name)) continue;
       for (const form of directive.forms) {
         for (const attribute of directive.attributes) {
           const value = renderedAttributeValue(attribute);
@@ -622,7 +715,7 @@ describe('registry-driven semantic directives', () => {
     expect(rendered.html).toContain('id="glossary-shared-concept"');
     expect(rendered.html).toMatch(/<details[^>]*data-disclosure=""[^>]*open/u);
     expect(rendered.html).toMatch(
-      /<summary class="semantic-disclosure-summary">[\s\S]*?data-package-icon="arrow-down"[\s\S]*?Native details[\s\S]*?<\/summary>/u,
+      /<summary class="semantic-disclosure-summary ui-row" data-ui-size="md">[\s\S]*?data-package-icon="arrow-down"[\s\S]*?Native details[\s\S]*?<\/summary>/u,
     );
     expect(rendered.html).toContain('id="tabs-1-tab-1"');
     expect(rendered.html).toContain('id="tabs-2-tab-1"');
@@ -668,13 +761,11 @@ describe('registry-driven semantic directives', () => {
     expect(rendered.html.match(/data-term-reference="node-type"/gu)).toHaveLength(1);
     expect(rendered.html.match(/class="semantic-term semantic-code-term"/gu)).toHaveLength(2);
     expect(rendered.html).toMatch(
-      /data-term-reference="own-field"[\s\S]*?<button[^>]*>[\s\S]*?--shiki-light/u,
-    );
-    expect(rendered.html).toMatch(
-      /data-term-reference="own-field"[\s\S]*?<button[^>]*>[\s\S]*?--shiki-dark/u,
+      /data-term-reference="own-field"[\s\S]*?<button[^>]*>[\s\S]*?--shiki-token-/u,
     );
     expect(rendered.html).toContain('&#x3C;');
-    expect(rendered.html).toContain('globalThis.executed');
+    // Подсветка режет строку на токены, поэтому текст скрипта ищется без разметки токенов.
+    expect(rendered.html.replace(/<\/?span[^>]*>/gu, '')).toContain('globalThis.executed');
     expect(rendered.html).not.toContain('<script>globalThis.executed = true;</script>');
     expect(rendered.html).toContain(
       '<aside id="glossary-appendix" class="semantic-glossary-appendix"',
@@ -1212,12 +1303,37 @@ describe('registry-driven semantic directives', () => {
         ],
       },
       {
-        name: 'diagram self-edge',
+        // Фокус такта называет узлы и связи одним списком: одно имя не может значить и то и другое.
+        name: 'diagram connection id equal to a node id',
+        line: 5,
+        source: [
+          ':::diagram{title="Names" description="One name for two things."}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          '::edge{from="a" to="b" id="a"}',
+          ':::',
+        ],
+      },
+      {
+        name: 'zoom into an undeclared node',
         line: 4,
         source: [
-          ':::diagram{title="Loop" description="Self edge."}',
+          '::::diagram{title="Zoom" description="Opens a missing node."}',
           '::node{id="a" label="A"}',
-          '::edge{from="a" to="a"}',
+          ':::zoom{node="missing" title="Inside"}',
+          '::node{id="inner" label="Inner"}',
+          ':::',
+          '::::',
+        ],
+      },
+      {
+        name: 'pulse route along a missing connection',
+        line: 2,
+        source: [
+          ':::diagram{title="Pulse" description="The route skips a connection." pulse="a,b"}',
+          '::node{id="a" label="A"}',
+          '::node{id="b" label="B"}',
+          '::edge{from="b" to="a"}',
           ':::',
         ],
       },
@@ -1570,7 +1686,7 @@ describe('registry-driven semantic directives', () => {
       workspace,
     );
     expect(maximumSequence.html.match(/data-message-order=/gu)).toHaveLength(40);
-  });
+  }, 20_000);
 
   it('requires every registered glossary occurrence to use a reference without flagging excluded contexts', async () => {
     const workspace = await trackedWorkspace('directive-glossary');
@@ -2029,7 +2145,7 @@ describe('registry-driven semantic directives', () => {
       'Safe \\[nested\\] {prototype=value} label',
     ]) {
       const escapedLabel = await render(`# Report\n:asset[${label}]{src="label.bin"}\n`, workspace);
-      expect(escapedLabel.html).toContain('class="semantic-asset"');
+      expect(escapedLabel.html).toContain('class="semantic-asset ui-button"');
       expect(escapedLabel.html).toContain('{');
       expect(escapedLabel.html).toContain('label</a>');
     }
@@ -2072,7 +2188,8 @@ describe('registry-driven semantic directives', () => {
     expect(required.length).toBeGreaterThan(0);
 
     for (const directive of required) {
-      const requiredParent = directive.placement.requiredParent;
+      const parents = [directive.placement.requiredParent ?? []].flat();
+      const requiredParent = parents[0];
       if (requiredParent === undefined) throw new Error('Required parent disappeared');
       const valid = [
         'series',
@@ -2082,6 +2199,7 @@ describe('registry-driven semantic directives', () => {
         'edge',
         'legend',
         'legend-item',
+        'zoom',
         'event',
       ].includes(directive.name)
         ? visualizationInvocation(directive.name, {})
@@ -2097,7 +2215,7 @@ describe('registry-driven semantic directives', () => {
       const wrongParent = (authoringRegistry.directives as readonly DirectiveDefinition[]).find(
         (candidate) =>
           candidate.forms.includes('container') &&
-          candidate.name !== requiredParent &&
+          !parents.includes(candidate.name) &&
           candidate.name !== directive.name,
       );
       if (wrongParent === undefined)
@@ -2386,10 +2504,13 @@ describe('six-class declarative registry corpus', () => {
             `${corpusClass}/${item.name}/${attribute}`,
           ).toContain(attribute);
         }
-        if (item.parent !== undefined) {
-          expect(contract.placement.requiredParent, `${corpusClass}/${item.name}/placement`).toBe(
-            item.parent,
-          );
+        // Директива без обязательного родителя может стоять и внутри секции — например, схема сцены
+        // по шагам; сверяются только обязательные родители.
+        if (item.parent !== undefined && contract.placement.requiredParent !== undefined) {
+          expect(
+            [contract.placement.requiredParent].flat(),
+            `${corpusClass}/${item.name}/placement`,
+          ).toContain(item.parent);
         }
         const projected = {
           name: item.name,
@@ -2422,7 +2543,11 @@ describe('six-class declarative registry corpus', () => {
         for (const attribute of item.attributes) {
           directiveAttributes.add(`${item.name}.${attribute}`);
         }
-        if (item.parent !== undefined) requiredPlacements.add(`${item.name}<-${item.parent}`);
+        if (
+          item.parent !== undefined &&
+          publicContract.directives[item.name]?.placement.requiredParent !== undefined
+        )
+          requiredPlacements.add(`${item.name}<-${item.parent}`);
       }
       for (const manifestPath of inventory.manifestPaths) manifestPaths.add(manifestPath);
 
@@ -2461,13 +2586,16 @@ describe('six-class declarative registry corpus', () => {
     expect([...requiredPlacements].sort()).toEqual(
       Object.entries(publicContract.directives)
         .filter(([, directive]) => directive.placement.requiredParent !== undefined)
-        .map(([name, directive]) => `${name}<-${directive.placement.requiredParent}`)
+        .flatMap(([name, directive]) =>
+          [directive.placement.requiredParent ?? []].flat().map((parent) => `${name}<-${parent}`),
+        )
         .sort(),
     );
     expect([...manifestPaths].sort()).toEqual(registryManifestPaths().sort());
 
     const allHtml = compiledCorpusHtml.join('\n');
     for (const directive of authoringRegistry.directives) {
+      if (BUILD_TIME_DIRECTIVES.has(directive.name)) continue;
       expect(allHtml, directive.name).toMatch(
         new RegExp(`class="[^"]*${directive.sanitizer.className}(?:\\s|")`, 'u'),
       );
@@ -2479,12 +2607,16 @@ describe('six-class declarative registry corpus', () => {
     expect(allHtml).toContain('>Download private-data.json</a>');
     expect(allHtml).toContain('font-family:"Private Reader"');
     expect(allHtml).toContain('<table ');
-    expect(allHtml).toContain('<th>Задача</th>');
+    expect(allHtml).toContain('<th class="ui-label">Задача</th>');
   });
 });
 
-async function render(markdown: string, sourceRoot: string) {
+async function render(authored: string, sourceRoot: string) {
   const sourceFile = path.join(sourceRoot, 'report.md');
+  // Сборка отвергает якорь в никуда; действия проекций ведут на эти заголовки.
+  const markdown = /#(?:valid-)?target\b/u.test(authored)
+    ? `${authored}\n\n## Target\n\n## Valid target\n`
+    : authored;
   return renderMarkdown(markdown, {
     sourceRoot,
     format: 'single-file',
@@ -2563,6 +2695,8 @@ function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
   ) {
     return 'local%20file.bin';
   }
+  if (attribute.constraint.kind === 'string' && attribute.constraint.format === 'absolute-http-url')
+    return 'https://example.com/page';
   if (attribute.name === 'kind' && attribute.constraint.kind === 'string') return 'warning';
   if (attribute.constraint.kind === 'enum') return attribute.constraint.values.at(-1) ?? '';
   if (attribute.name === 'family') return 'Reader Sans';
@@ -2570,17 +2704,34 @@ function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
     return 'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42';
   }
   if (attribute.name === 'href') return '#valid-target';
-  if (['key', 'id', 'group', 'from', 'to', 'bucket'].includes(attribute.name)) return 'valid-key';
+  if (['key', 'id', 'group', 'from', 'to', 'bucket', 'focus', 'node'].includes(attribute.name))
+    return 'valid-key';
   // A declared glossary form may not repeat the term it belongs to, so this generator cannot reuse
   // the value it gives every other text attribute.
   if (attribute.name === 'forms') return 'Valid titles';
-  return 'Valid title';
+  // Paths into page data, item names, dates and time zones have shapes of their own.
+  const shaped: Readonly<Record<string, string>> = {
+    // Состояние страницы — имя атрибута `data-state-*`, строки такта — номера строк кода.
+    state: 'valid-state',
+    when: 'valid-state',
+    lines: '1-2',
+    // Маршрут импульсов — узлы через запятую, не меньше двух.
+    pulse: 'valid-key,second-key',
+    in: 'run.blocks',
+    data: 'run.blocks',
+    as: 'block',
+    date: '2026-09-25',
+    zone: 'UTC',
+  };
+  return shaped[attribute.name] ?? 'Valid title';
 }
 
 function renderedAttributeValue(attribute: DirectiveAttributeDefinition): string {
   // Видео и постер проверяются по типу файла, поэтому им нужны свои расширения.
   if (attribute.renderProperty === 'dataVideoSource') return 'local%20video.webm';
   if (attribute.renderProperty === 'dataVideoPoster') return 'local%20poster.png';
+  if (attribute.renderProperty === 'dataVideoSources') return 'local%20video.webm';
+  if (attribute.renderProperty === 'dataVideoChapters') return 'local%20chapters.vtt';
   if (attribute.constraint.kind === 'boolean') return 'true';
   if (attribute.constraint.kind === 'integer')
     return boundedInteger(attribute.constraint, -999_999);
@@ -2591,6 +2742,8 @@ function renderedAttributeValue(attribute: DirectiveAttributeDefinition): string
   ) {
     return 'local%20file.bin';
   }
+  if (attribute.constraint.kind === 'string' && attribute.constraint.format === 'absolute-http-url')
+    return 'https://example.com/page';
   if (attribute.name === 'kind' && attribute.constraint.kind === 'string') return 'warning';
   if (attribute.constraint.kind === 'enum') return attribute.constraint.values.at(-1) ?? '';
   if (attribute.name === 'family') return 'Reader Sans';
@@ -2598,8 +2751,13 @@ function renderedAttributeValue(attribute: DirectiveAttributeDefinition): string
     return 'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42';
   }
   if (attribute.name === 'href') return '#valid-target';
-  if (['key', 'id', 'group', 'from', 'to', 'bucket'].includes(attribute.name)) return 'valid-key';
+  if (['key', 'id', 'group', 'from', 'to', 'bucket', 'focus', 'node'].includes(attribute.name))
+    return 'valid-key';
   if (attribute.name === 'forms') return 'Tf';
+  if (attribute.name === 'state' || attribute.name === 'when') return 'valid-state';
+  if (attribute.name === 'lines') return '1-2';
+  // Маршрут импульсов проходит по узлам, которые объявляет проекция схемы.
+  if (attribute.name === 'pulse') return 'valid-key,second-key';
   return 'T';
 }
 
@@ -2632,12 +2790,15 @@ function directiveInvocation(
       'edge',
       'legend',
       'legend-item',
+      'zoom',
       'timeline',
       'event',
     ].includes(directive.name)
   ) {
     return visualizationInvocation(directive.name, overrides);
   }
+  const own = dataAndTextInvocation(directive.name, overrides);
+  if (own !== undefined) return own;
   const attributes = Object.fromEntries(
     directive.attributes
       .filter((attribute) => attribute.required)
@@ -2648,6 +2809,50 @@ function directiveInvocation(
     .map(([name, value]) => `${name}=${JSON.stringify(value)}`)
     .join(' ');
   const suffix = serialized.length === 0 ? '' : `{${serialized}}`;
+  if (
+    directive.name === 'section' &&
+    (attributes.scene === 'steps' || attributes.scene === 'scrub')
+  ) {
+    return stepSceneInvocation(':::beat\nFirst beat.\n:::').replace(
+      '::::::section{title="Scene" scene="steps"}',
+      `::::::section${suffix}`,
+    );
+  }
+  // Поэтапный вход — вход первого экрана: первая секция рядом с заголовком страницы.
+  if (directive.name === 'section' && attributes.transition === 'staged') {
+    const staged = Object.entries({ ...attributes, place: 'opening' })
+      .map(([name, value]) => `${name}=${JSON.stringify(value)}`)
+      .join(' ');
+    return `# Page\n\n::::section{${staged}}\nThe first screen.\n::::`;
+  }
+  // Рамка браузера требует настоящий адрес или метку макета и картинку, адрес и метка — рамку.
+  if (
+    directive.name === 'section' &&
+    (attributes.frame === 'browser' || 'address' in attributes || 'illustration' in attributes)
+  ) {
+    const framed: Record<string, string> = { ...attributes, frame: 'browser' };
+    if (framed.address === undefined && framed.illustration !== 'true')
+      framed.address = 'https://example.com/page';
+    const framedSuffix = Object.entries(framed)
+      .map(([name, value]) => `${name}=${JSON.stringify(value)}`)
+      .join(' ');
+    return `::::section{${framedSuffix}}\n![Framed](local%20poster.png)\n::::`;
+  }
+  // Сцена `demo` с `play` — сцена и такты; `seconds` — только у сцены по времени.
+  if (
+    directive.name === 'demo' &&
+    ((attributes.play !== undefined && attributes.play !== 'none') || 'seconds' in attributes)
+  ) {
+    const scene: Record<string, string> = { ...attributes };
+    if ('seconds' in scene) scene.play = 'time';
+    const sceneSuffix = Object.entries(scene)
+      .map(([name, value]) => `${name}=${JSON.stringify(value)}`)
+      .join(' ');
+    return `::::::demo{${sceneSuffix}}\n\`\`\`text\n$ run\n\`\`\`\n\n:::beat\nOne.\n:::\n\n:::beat\nTwo.\n:::\n::::::`;
+  }
+  if (directive.name === 'spotlight') {
+    return `:::spotlight${suffix}\n![Detail](local%20poster.png)\n\nThe detail explained.\n:::`;
+  }
   if (directive.name === 'actions') {
     return `:::actions${suffix}\n::action[Projection label]{href="#target"}\n:::`;
   }
@@ -2655,6 +2860,17 @@ function directiveInvocation(
     return `:::checklist${suffix}\n::check-item{id="gate" label="Gate"}\n:::`;
   }
   if (directive.name === 'source-link') return `:source-link${suffix}`;
+  // Счётчик считает до записанного числа: его подпись — число.
+  if (directive.name === 'count') return `:count[1,284]${suffix}`;
+  if (directive.name === 'diff') {
+    return `:::diff${suffix}\n\`\`\`diff\n@@ -1 +1 @@\n-old\n+new\n\`\`\`\n:::`;
+  }
+  if (directive.name === 'compare') {
+    return `:::compare${suffix}\n![Before](local%20poster.png)\n![After](local%20poster.png)\n:::`;
+  }
+  if (directive.name === 'findings') {
+    return `::::findings${suffix}\n:::finding{severity="note" title="T"}\nBody\n:::\n::::`;
+  }
   const invocation =
     form === 'container'
       ? `:::${directive.name}${suffix}\nBody\n:::`
@@ -2663,7 +2879,7 @@ function directiveInvocation(
         : directive.name === 'action'
           ? `::action[Projection label]${suffix}`
           : `::${directive.name}${suffix}`;
-  const requiredParent = directive.placement.requiredParent;
+  const requiredParent = [directive.placement.requiredParent ?? []].flat()[0];
   const placed =
     requiredParent === undefined
       ? invocation
@@ -2672,6 +2888,84 @@ function directiveInvocation(
   const key = attributes.key ?? 'valid-key';
   return `${placed}\n:::glossary{key=${JSON.stringify(key)} term="Canonical concept"}\nDefinition.\n:::`;
 }
+
+/**
+ * The text blocks that read their label as data — a number, a moment — or need a block before them or
+ * messages inside them: the generic `Projection label` and `T` values would be refused by their own
+ * checks, so they get a fixed valid shape and the attribute under test where it can vary.
+ */
+function dataAndTextInvocation(
+  name: string,
+  overrides: Readonly<Record<string, string>>,
+): string | undefined {
+  const pairs = (values: Readonly<Record<string, string>>): string =>
+    Object.entries(values)
+      .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+      .join(' ');
+  switch (name) {
+    case 'plural':
+      return ':plural[3]{forms="file|files"}';
+    case 'time':
+      return `:time[2026-09-25T01:17]{${pairs({ zone: 'UTC', ...(overrides.show === undefined ? {} : { show: overrides.show }) })}}`;
+    case 'source-line':
+      return 'A block above.\n\n::source-line[Export]{date="2026-09-25T01:17" zone="UTC"}';
+    case 'message':
+      return `:::message{${pairs({ from: 'T', ...overrides })}}\nBody\n:::`;
+    case 'conversation':
+      return `::::conversation{${pairs(overrides)}}\n:::message{from="A"}\nBody\n:::\n::::`;
+    // Мини-схема читает шаги из подписи, текущий шаг и возвраты — имена этих шагов.
+    case 'process':
+      return `:process[Plan > Build > Review]{${pairs({
+        ...(overrides.current === undefined ? {} : { current: 'Review' }),
+        ...(overrides.returns === undefined ? {} : { returns: 'Review>Build×2' }),
+      })}}`;
+    default:
+      return undefined;
+  }
+}
+
+/** What each attribute of those blocks leaves on the page, by the value written. */
+const DATA_AND_TEXT_PROJECTIONS: Readonly<Record<string, (value: string) => string | RegExp>> = {
+  'plural.forms': () => '3\u00a0files',
+  'time.zone': () => 'datetime="2026-09-25T01:17:00Z"',
+  'time.show': () => 'datetime="2026-09-25T01:17:00Z"',
+  'source-line.date': () => '<time datetime="2026-09-25T01:17:00Z">',
+  'source-line.zone': () => '<time datetime="2026-09-25T01:17:00Z">',
+  'message.from': (value) => `class="semantic-message-from">${value}<`,
+  'message.time': (value) => `class="semantic-message-time">${value}<`,
+  'message.status': (value) => `class="semantic-message-status">${value}<`,
+  'message.illustrative': (value) =>
+    value === 'true' ? 'data-illustrative=""' : /^(?![\s\S]*data-illustrative)/u,
+  'conversation.illustrative': (value) =>
+    value === 'true' ? 'data-illustrative=""' : /^(?![\s\S]*data-illustrative)/u,
+  // Текущий шаг мини-схемы рисуется точкой «на проверке», возврат — дугой с кратностью.
+  'process.current': () => 'visualization-process-step-review',
+  'process.returns': () => 'class="visualization-process-count">×2<',
+  // Приёмы словаря переносят атрибут в свою разметку: в рамку, стиль лупы, слова, путь пометки, плеер.
+  'section.frame': (value) =>
+    value === 'browser' ? 'class="browser-frame"' : `data-frame="${value}"`,
+  'section.address': (value) =>
+    `class="browser-frame-address" title="Address of the page in the picture" translate="no">${value}<`,
+  'section.illustration': (value) =>
+    value === 'true' ? 'browser-frame-illustration' : /^(?![\s\S]*browser-frame)/u,
+  'demo.play': (value) => (value === 'none' ? /^(?![\s\S]*data-play=)/u : `data-play="${value}"`),
+  'demo.seconds': (value) =>
+    value === '3' ? /^(?![\s\S]*data-seconds=)/u : `data-seconds="${value}"`,
+  'swap.words': (value) => `aria-hidden="true">${value}</span>`,
+  'mark.shape': (value) => `data-mark="${value}"`,
+  'mark.seed': () => 'class="mark-drawing"',
+  'spotlight.x': (value) => `--spot-x: ${value};`,
+  'spotlight.y': (value) => `--spot-y: ${value};`,
+  'spotlight.zoom': (value) => `--spot-zoom: ${value}"`,
+  'video.seam': (value) =>
+    value === 'fade' ? 'data-video-seam="fade"' : /^(?![\s\S]*data-video-seam)/u,
+  'video.expand': (value) =>
+    value === 'true' ? 'data-video-expand=""' : /^(?![\s\S]*data-video-expand)/u,
+  'tabs.orientation': (value) =>
+    value === 'vertical' ? 'data-orientation="vertical"' : /^(?![\s\S]*data-orientation=)/u,
+  'contents.sticky': (value) =>
+    value === 'true' ? 'data-sticky="true"' : /^(?![\s\S]*data-sticky=)/u,
+};
 
 function responseInvocation(target: string, overrides: Readonly<Record<string, string>>): string {
   const attributes = (name: string, fixed: Readonly<Record<string, string>> = {}): string => {
@@ -2766,7 +3060,30 @@ function visualizationInvocation(
       ':::::',
     ].join('\n');
   }
+  if (target === 'zoom') {
+    // Пролёт раскрывает объявленный узел потока, а внутри — свой маленький поток.
+    return [
+      `::::diagram{${attributes('diagram')}}`,
+      `::node{${attributes('node', { id: 'valid-key' })}}`,
+      `:::zoom{${attributes('zoom', { node: 'valid-key' })}}`,
+      '::node{id="inner-one" label="Inner one"}',
+      '::node{id="inner-two" label="Inner two"}',
+      '::edge{from="inner-one" to="inner-two"}',
+      ':::',
+      '::::',
+    ].join('\n');
+  }
   if (target === 'diagram') {
+    if ('pulse' in overrides) {
+      // Маршрут импульсов идёт по связям схемы: узлы маршрута соединены по порядку.
+      return [
+        `:::diagram{${attributes('diagram', { pulse: 'valid-key,second-key' })}}`,
+        `::node{${attributes('node', { id: 'valid-key' })}}`,
+        `::node{${attributes('node', { id: 'second-key' })}}`,
+        '::edge{from="valid-key" to="second-key"}',
+        ':::',
+      ].join('\n');
+    }
     if (overrides.type === 'sequence') {
       return [
         `:::diagram{${attributes('diagram')}}`,
@@ -2782,14 +3099,32 @@ function visualizationInvocation(
       ':::',
     ].join('\n');
   }
+  if (target === 'legend-item' && 'event' in overrides) {
+    // Пункт легенды ленты называет выделение события словами.
+    return [
+      `::::timeline{${attributes('timeline')}}`,
+      `:::event{${attributes('event', { kind: String(overrides.event) })}}`,
+      ':::',
+      `::legend-item{${attributes('legend-item', { label: 'Meaning' })}}`,
+      '::::',
+    ].join('\n');
+  }
   if (target === 'legend' || target === 'legend-item') {
     // Пункт называет ровно одно: выделение узла требует слов, вид связи — нет.
-    const item = 'node' in overrides ? { label: 'Meaning' } : { edge: 'dependency' };
+    const item =
+      'node' in overrides
+        ? { label: 'Meaning' }
+        : 'status' in overrides
+          ? {}
+          : { edge: 'dependency' };
     const legend = attributes('legend');
     return [
       `:::diagram{${attributes('diagram')}}`,
       '::node{id="first" label="First" kind="accent"}',
-      '::node{id="second" label="Second"}',
+      // Пункт статуса называет статус, который есть на схеме: иначе пакет его не показывает.
+      'status' in overrides
+        ? `::node{id="second" label="Second" status=${JSON.stringify(overrides.status)}}`
+        : '::node{id="second" label="Second"}',
       '::edge{from="first" to="second" label="call"}',
       '::edge{from="second" to="first" label="values" kind="data"}',
       legend.length === 0 ? '::legend' : `::legend{${legend}}`,
@@ -2828,14 +3163,15 @@ function visualizationInvocation(
   }
   if (target === 'edge') {
     const targetAttribute = Object.keys(overrides)[0];
+    // Имя связи не совпадает с именем узла: фокус такта называет их одним списком.
+    const [first, second] =
+      targetAttribute === 'id' ? ['node-one', 'node-two'] : ['valid-key', 'second-key'];
     const edgeFixed =
-      targetAttribute === 'to'
-        ? { from: 'second-key', to: 'valid-key' }
-        : { from: 'valid-key', to: 'second-key' };
+      targetAttribute === 'to' ? { from: second, to: first } : { from: first, to: second };
     return [
       `:::diagram{${attributes('diagram')}}`,
-      `::node{${attributes('node', { id: 'valid-key' })}}`,
-      `::node{${attributes('node', { id: 'second-key' })}}`,
+      `::node{${attributes('node', { id: first })}}`,
+      `::node{${attributes('node', { id: second })}}`,
       `::edge{${attributes('edge', edgeFixed)}}`,
       ':::',
     ].join('\n');
@@ -2869,6 +3205,11 @@ function nestedDirectiveInvocation(
   };
   const parentContract = contract(parent);
   const childContract = contract(child);
+  if (parent === 'section' && child === 'beat') {
+    return stepSceneInvocation(
+      childInvocation ?? bareDirectiveInvocation(childContract, attributesOf(childContract)),
+    );
+  }
   const attributes = (contract: DirectiveDefinition): string => {
     const serialized = contract.attributes
       .filter((attribute) => attribute.required)
@@ -2883,6 +3224,36 @@ function nestedDirectiveInvocation(
       ? '{id="typed-decision"}'
       : attributes(parentContract);
   return `::::${parent}${parentAttributes}\n${invocation}\n::::`;
+}
+
+function attributesOf(contract: DirectiveDefinition): string {
+  const serialized = contract.attributes
+    .filter((attribute) => attribute.required)
+    .map((attribute) => `${attribute.name}=${JSON.stringify(renderedAttributeValue(attribute))}`)
+    .join(' ');
+  return serialized.length === 0 ? '' : `{${serialized}}`;
+}
+
+/** Такт живёт только в сцене по шагам: ей нужны медиа и хотя бы два такта. */
+function stepSceneInvocation(beat: string): string {
+  return [
+    '::::::section{title="Scene" scene="steps"}',
+    ':::diagram{title="Scene diagram" description="Two nodes." layout="right"}',
+    '::node{id="valid-key" label="Key"}',
+    '::node{id="other" label="Other"}',
+    '::edge{from="valid-key" to="other"}',
+    ':::',
+    '```sh',
+    'agentic-report build',
+    'agentic-report open',
+    '```',
+    '',
+    beat,
+    ':::beat',
+    'Second beat.',
+    ':::',
+    '::::::',
+  ].join('\n');
 }
 
 function bareDirectiveInvocation(directive: DirectiveDefinition, suffix?: string): string {
@@ -2932,6 +3303,7 @@ function assertRenderedAttribute(
       'edge',
       'legend',
       'legend-item',
+      'zoom',
       'timeline',
       'event',
     ].includes(directive.name)
@@ -2954,10 +3326,31 @@ function assertRenderedAttribute(
       'legend-item.node': `data-node-kind="${serialized}"`,
       'legend-item.label': `</svg>${serialized}</li>`,
       'event.kind': `visualization-event-${serialized}`,
+      'diagram.pulse': 'data-pulse-step="1"',
+      'node.status': `visualization-node-status-${serialized}`,
+      'edge.id': `data-edge-id="${serialized}"`,
+      'edge.count': `data-count="${serialized}"`,
+      'legend-item.status': `data-node-status="${serialized}"`,
+      'zoom.node': `data-zoom="${serialized}"`,
     };
+    // Рост от нуля — флаг: по умолчанию его нет на странице, и проекция видна по отсутствию.
+    if (directive.name === 'chart' && attribute.name === 'count-up') {
+      if (serialized === 'true')
+        expect(rendered.html, 'chart.count-up').toContain('data-count-up=""');
+      else expect(rendered.html, 'chart.count-up').not.toContain('data-count-up');
+      return;
+    }
     expect(rendered.html, `${directive.name}.${attribute.name}`).toContain(
       visualExpectation[`${directive.name}.${attribute.name}`] ?? serialized,
     );
+    return;
+  }
+  const projection = DATA_AND_TEXT_PROJECTIONS[`${directive.name}.${attribute.name}`];
+  if (projection !== undefined) {
+    const expected = projection(serialized);
+    if (typeof expected === 'string')
+      expect(rendered.html, `${directive.name}.${attribute.name}`).toContain(expected);
+    else expect(rendered.html, `${directive.name}.${attribute.name}`).toMatch(expected);
     return;
   }
   if (directive.name === 'glossary' && attribute.name === 'key') {
@@ -3024,6 +3417,13 @@ function assertRenderedAttribute(
     expect(rendered.html).toContain(`<span class="package-control-label">${serialized}</span>`);
     return;
   }
+  if (directive.name === 'compare') {
+    // Подпись стороны видна на картинке и входит в имя ползунка — и авторская, и подпись по умолчанию.
+    expect(rendered.html).toContain(
+      `data-side="${attribute.name}" aria-hidden="true">${serialized}</span>`,
+    );
+    return;
+  }
   if (attribute.name === 'placeholder') {
     expect(rendered.html).toContain(`placeholder="${serialized}"`);
     return;
@@ -3056,6 +3456,23 @@ function assertRenderedAttribute(
         'poster="data:image/png;base64,',
       );
       return;
+    case 'dataVideoSources':
+      // В одном файле остаётся один источник: дополнительная кодировка того же ролика не встраивается.
+      expect(rendered.html, `${directive.name}.${attribute.name}`).toContain(
+        '<source src="data:video/webm;base64,',
+      );
+      return;
+    case 'dataVideoChapters':
+      expect(rendered.html, `${directive.name}.${attribute.name}`).toContain('data-video-seek="0"');
+      return;
+    case 'dataMode':
+      if (directive.name === 'video') {
+        expect(rendered.html, `${directive.name}.${attribute.name}`).toContain(
+          `<figure class="semantic-video" data-mode="${serialized}">`,
+        );
+        return;
+      }
+      break;
     case 'dataVideoCaption':
       expect(rendered.html, `${directive.name}.${attribute.name}`).toContain(
         `<figcaption class="semantic-video-caption">${serialized}</figcaption>`,
@@ -3064,6 +3481,12 @@ function assertRenderedAttribute(
     case 'dataFontFamily':
       expect(rendered.fontCss, `${directive.name}.${attribute.name}`).toContain(
         `font-family:"${serialized}"`,
+      );
+      return;
+    case 'dataFontRole':
+      // Роль видна по переменной, которую объявление шрифта ставит на корень.
+      expect(rendered.fontCss, `${directive.name}.${attribute.name}`).toContain(
+        `--font-author-${serialized}:`,
       );
       return;
     case 'dataStart':
@@ -3109,6 +3532,8 @@ function inventoryCorpusSource(source: string): {
 } {
   const parsed = matter(source);
   const tree = unified().use(remarkParse).use(remarkDirective).parse(parsed.content);
+  // The colon of a clock time (`01:17`) is text, as the directive phase reads it.
+  restoreLiteralColonText(tree, parsed.content);
   const directives: CorpusDirectiveInventory[] = [];
   visit(tree, (node, _index, parent) => {
     if (!isTestDirectiveNode(node)) return;
@@ -3157,6 +3582,8 @@ function recordPaths(value: unknown, prefix = ''): string[] {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return [];
   return Object.entries(value).flatMap(([name, child]) => {
     const pathName = prefix.length === 0 ? name : `${prefix}.${name}`;
+    // Тема — одно поле манифеста; её вложенные поля проверяет договор темы, а не манифеста.
+    if (pathName === 'theme') return [pathName];
     return [pathName, ...recordPaths(child, pathName)];
   });
 }

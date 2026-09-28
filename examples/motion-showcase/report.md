@@ -1,14 +1,14 @@
 ---
 contractVersion: 1
 title: Motion and depth showcase
-description: A Cinematic page demonstrating package-owned scroll scenes, reveal, choreography, depth, tilt, and reduced-motion fallback.
+description: A motion page demonstrating package-owned scroll scenes, reveal, choreography, depth, tilt, and reduced-motion fallback.
 language: en
 localizations:
   ru: report.ru.md
-theme: dark
 layout: landing
-preset: cinematic
-scrollProgress: true
+theme: aurora
+scheme: dark
+progress: chapters
 ---
 
 # Motion that carries the story
@@ -28,7 +28,7 @@ Scroll changes the relationship between image and frame. Fine-pointer depth adds
 the only way to read or navigate the page.
 :::
 
-![An aurora folding over a dark mountain ridge](assets/aurora.jpg)
+![A green aurora above the Earth's limb, seen from the International Space Station](assets/aurora-station.jpg)
 
 :::callout{kind="info" title="Move, scroll, or simply read"}
 The package owns the effect, its bounds, and the fallback. Authored content remains ordinary Markdown.
@@ -38,13 +38,13 @@ The package owns the effect, its bounds, and the fallback. Authored content rema
 :::::section{title="A rail can feel continuous without leaving its container" id="rail" nav="Rail" recipe="rail" scene="progress"}
 ::::cards
 :::card{title="Mineral light"}
-![A red mineral plane cut by black geological lines](assets/gallery-red.jpg)
+![The Richat Structure's concentric rock rings in the Mauritanian desert, photographed from orbit](assets/richat.jpg)
 :::
 :::card{title="Night terrain"}
-![A dark terrain crossed by pale atmospheric light](assets/terrain.jpg)
+![Smoke from a well-head flare drifting across the linear dunes of the Calanscio Sand Sea, seen from orbit](assets/sand-sea.jpg)
 :::
 :::card{title="Distant signal"}
-![A cinematic horizon under a concentrated band of light](assets/cinematic.jpg)
+![Moscow at night from the station, with a green aurora line and the moon above the horizon](assets/night-moscow.jpg)
 :::
 ::::
 :::::
@@ -66,8 +66,60 @@ Fine-pointer response is local and frame-coalesced.
 ::::
 :::::
 
+:::::section{title="One picture, three moments" id="steps" nav="Steps" scene="steps"}
+![A green aurora above the Earth's limb, seen from the International Space Station](assets/aurora-station.jpg)
+![Moscow at night from the station, with a green aurora line and the moon above the horizon](assets/night-moscow.jpg)
+
+::::beat{title="Night falls"}
+The scene stays pinned while this text scrolls; each beat brings its own picture.
+::::
+
+::::beat{title="The city lights up"}
+On a narrow screen or with reduced motion the pictures and beats simply follow each other.
+::::
+
+::::beat{title="Light returns"}
+Nothing here is animated per letter: the picture changes when the next beat reaches the middle of the screen.
+::::
+:::::
+
+:::::section{title="A flow drawn as you read it" id="draw" nav="Drawing" scene="steps" transition="lines"}
+:::diagram{title="Signal path" description="A signal moves from sensor to archive, with a correction fed back." layout="right" draw="scroll"}
+::node{id="sensor" label="Sensor"}
+::node{id="filter" label="Filter" kind="accent"}
+::node{id="model" label="Model"}
+::node{id="archive" label="Archive" kind="success"}
+::edge{from="sensor" to="filter" label="raw"}
+::edge{from="filter" to="model" label="clean" kind="data"}
+::edge{from="model" to="archive" label="store"}
+::edge{from="model" to="filter" label="tune" kind="event"}
+::legend-item{node="accent" label="Receives corrections"}
+::legend-item{node="success" label="Final destination"}
+:::
+
+::::beat{title="Capture" focus="sensor, filter"}
+The connections draw themselves in the order of the flow as the diagram passes through the view.
+::::
+
+::::beat{title="Interpret" focus="filter, model"}
+Each beat lights the part of the diagram it talks about.
+::::
+
+::::beat{title="Keep" focus="model, archive"}
+The correction back to the filter is drawn last, as its own phase.
+::::
+:::::
+
+:::::section{title="Numbers that arrive" id="numbers" nav="Numbers" recipe="statement" media-effect="threads"}
+![The Richat Structure's concentric rock rings in the Mauritanian desert, photographed from orbit](assets/richat.jpg)
+
+:count[1,284] field frames were read, and :count[97.5%] of them kept their horizon.
+
+The picture unweaves into threads as it leaves the screen; without WebGL it stays still.
+:::::
+
 :::::section{title="The effect never owns the meaning" id="fallback" nav="Fallback" recipe="evidence" interaction="tilt"}
-![A broad illuminated landscape retaining a clear horizon](assets/terrain.jpg)
+![Smoke from a well-head flare drifting across the linear dunes of the Calanscio Sand Sea, seen from orbit](assets/sand-sea.jpg)
 
 :::decision{title="Keep content complete without motion"}
 When reduced motion is enabled, every image, card, control, and conclusion remains visible in the same

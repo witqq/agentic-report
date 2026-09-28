@@ -1,0 +1,7 @@
+kind: island
+name: counter
+description: A counter the reader can press, running in a sandboxed frame.
+staticEquivalent: The directive body describing the counter and its starting value.
+entry: index.html
+assets: [app.js, style.css]
+examples: [example-one.md, example-two.md]

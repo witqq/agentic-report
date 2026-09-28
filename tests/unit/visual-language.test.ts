@@ -25,7 +25,18 @@ describe('declarative visual language', () => {
     expect(attributes.recipe).toMatchObject({
       kind: 'enum',
       default: 'none',
-      values: ['none', 'hero', 'evidence', 'story', 'rail', 'metrics'],
+      values: [
+        'none',
+        'hero',
+        'evidence',
+        'story',
+        'rail',
+        'metrics',
+        'thesis',
+        'statement',
+        'blueprint',
+        'demo',
+      ],
     });
 
     expect(attributes.composition).toMatchObject({
@@ -71,7 +82,12 @@ describe('declarative visual language', () => {
     expect(attributes.surface).toMatchObject({
       kind: 'enum',
       default: 'plain',
-      values: ['plain', 'mesh', 'glow', 'grain', 'grid'],
+      values: ['plain', 'tint', 'grain', 'grid', 'blueprint'],
+    });
+    expect(attributes.frame).toMatchObject({
+      kind: 'enum',
+      default: 'none',
+      values: ['none', 'panel', 'browser'],
     });
     expect(section.incompatibleCombinations).toContainEqual({
       attributes: {
@@ -134,7 +150,7 @@ describe('declarative visual language', () => {
   it('renders a linked card as one safe focus target and rejects nested links', async () => {
     const workspace = await visualWorkspace('visual-language-linked-card');
     const linked = await render(
-      '::::cards\n:::card{title="Read evidence" href="#evidence"}\nPlain selectable text.\n:::\n::::',
+      '## Evidence\n\n::::cards\n:::card{title="Read evidence" href="#evidence"}\nPlain selectable text.\n:::\n::::',
       workspace,
       'single-file',
     );
@@ -218,6 +234,77 @@ describe('declarative visual language', () => {
     }
   });
 
+  it('marks only the half-track opening of split and stage sections', async () => {
+    const workspace = await visualWorkspace('visual-language-opening');
+    const rendered = await render(
+      [
+        ':::::section{title="Split opening" id="split" composition="split"}',
+        ':::lead',
+        'The lead sits beside the title.',
+        ':::',
+        'So does the first paragraph.',
+        '```ts',
+        'const code = true;',
+        '```',
+        'A paragraph after code spans the whole track.',
+        ':::::',
+        '',
+        ':::::section{title="Stage opening" id="stage" composition="stage"}',
+        ':::lead',
+        'The lead sits beside the picture.',
+        ':::',
+        '![Opening picture](assets/scene.svg)',
+        '::::actions',
+        '::action[Continue]{href="#split"}',
+        '::::',
+        ':::callout{title="Body"}',
+        'A callout ends the opening of a stage.',
+        ':::',
+        '![Later picture](assets/scene.svg)',
+        ':::::',
+        '',
+        ':::::section{title="Picture first" id="bare" composition="stage"}',
+        '![Only picture](assets/scene.svg)',
+        'Text after the picture.',
+        ':::::',
+        '',
+        ':::::section{title="Table first" id="wide" composition="split"}',
+        '| A | B |',
+        '| - | - |',
+        '| 1 | 2 |',
+        ':::::',
+      ].join('\n'),
+      workspace,
+      'single-file',
+    );
+    const sectionTag = (id: string): string =>
+      rendered.html.match(
+        new RegExp(`<section class="semantic-section"[^>]*id="${id}"[^>]*>`, 'u'),
+      )?.[0] ?? '';
+    const sectionHtml = (id: string): string => {
+      const start = rendered.html.indexOf(sectionTag(id));
+      return rendered.html.slice(start, rendered.html.indexOf('</section>', start));
+    };
+    const openingParts = (id: string): string[] =>
+      [...sectionHtml(id).matchAll(/data-section-opening="(text|media)"/gu)].map(
+        ([, part]) => part ?? '',
+      );
+
+    expect(sectionTag('split')).toContain('data-section-opening-layout="true"');
+    expect(sectionTag('split')).toContain('style="--section-opening-rows: 2"');
+    expect(openingParts('split')).toEqual(['text', 'text']);
+    expect(sectionHtml('split')).toMatch(/<p data-review-target="[^"]+">A paragraph after code/u);
+
+    expect(sectionTag('stage')).toContain('data-section-opening-layout="true"');
+    expect(sectionTag('stage')).toContain('style="--section-opening-rows: 2"');
+    expect(openingParts('stage')).toEqual(['text', 'media', 'text']);
+
+    for (const id of ['bare', 'wide']) {
+      expect(sectionTag(id)).not.toContain('data-section-opening-layout');
+      expect(openingParts(id)).toEqual([]);
+    }
+  });
+
   it('renders the same confined visual declaration into inline and directory artifacts', async () => {
     const workspace = await visualWorkspace('visual-language-render');
     const markdown = visualSource();
@@ -233,7 +320,7 @@ describe('declarative visual language', () => {
       expect(result.html).toContain('data-media-fit="cover"');
       expect(result.html).toContain('data-media-aspect="cinematic"');
       expect(result.html).toContain('data-focal="right"');
-      expect(result.html).toContain('data-surface="mesh"');
+      expect(result.html).toContain('data-surface="tint"');
       expect(result.observedResources.images).toBe(1);
     }
     expect(single.html).toContain('src="data:image/svg+xml;base64,');
@@ -344,7 +431,7 @@ async function visualWorkspace(prefix: string): Promise<string> {
 function visualSource(): string {
   return [
     '# Visual language',
-    ':::section{title="Spatial evidence" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh"}',
+    ':::section{title="Spatial evidence" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint"}',
     'A portable scene keeps its semantic reading order.',
     '![Bounded local scene](assets/scene.svg)',
     ':::',

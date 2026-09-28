@@ -1,0 +1,11 @@
+kind: effect
+name: margin-mark
+description: A ring or a dot drawn in the free margin beside each marked section heading, with its number.
+staticEquivalent: The sections and their headings as they are; the mark is decoration only.
+module: effect.mjs
+targets:
+  - directive: section
+    attribute: mark
+    values: [ring, dot]
+budgetBytes: 20000
+examples: [example-essay.md, example-landing.md]

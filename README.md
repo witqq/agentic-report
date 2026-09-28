@@ -3,7 +3,8 @@
 `agentic-report` is a local interactive page builder for agents, distributed as an npm CLI and ESM API. It
 turns declarative Markdown into responsive browser pages: one
 self-contained HTML file by default, or a directory with content-addressed asset filenames. The public source
-stays free of JSX and author code so an agent can focus on content and structure rather than page layout.
+stays free of JSX so an agent can focus on content and structure rather than page layout; what one design
+needs beyond the built-in vocabulary comes through extensions the page declares.
 
 Choose it for agent-to-human research, architecture, tutorial, dashboard, landing, and work-report pages.
 Choose a notebook or live application for computation and per-user state, a documentation generator for
@@ -18,9 +19,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the resulting file:
 
 ```sh
-npx --yes agentic-report@0.17.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.18.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.17.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.18.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. `build` validates the complete source before publishing the
@@ -57,7 +58,7 @@ If you do not want to execute the published `agentic-report` npm package, clone 
 inspect the repository, run its checks, and invoke the compiled CLI directly:
 
 ```sh
-git clone --branch v0.17.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.18.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -67,7 +68,7 @@ pnpm install --frozen-lockfile
 pnpm verify
 pnpm build
 
-node dist/node/cli.js init ../my-page --starter report --json
+node dist/node/cli.js init ../my-page --starter document --json
 node dist/node/cli.js build ../my-page --output ../my-page.html --json
 ```
 
@@ -83,47 +84,26 @@ for reproducibility.
 
 ## Document map
 
-| Document                                                             | Role                                                       |
-| -------------------------------------------------------------------- | ---------------------------------------------------------- |
-| [`PRODUCT-REQUIREMENTS.md`](PRODUCT-REQUIREMENTS.md)                 | Normative product requirements                             |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)                       | Authoritative description of the runnable current compiler |
-| [`docs/product/source-contract.md`](docs/product/source-contract.md) | Exact current declarative authoring contract               |
-| [`docs/AGENT-REFERENCE.md`](docs/AGENT-REFERENCE.md)                 | Current copyable CLI and source reference for agents       |
-| [`docs/TESTING.md`](docs/TESTING.md)                                 | Current verification entry points and covered guarantees   |
-| [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)                         | Contributor setup and local quality commands               |
-| [`docs/PUBLIC-SITE.md`](docs/PUBLIC-SITE.md)                         | Static-site and skill release contract                     |
-| [`docs/RELEASE.md`](docs/RELEASE.md)                                 | Ordered release and post-publication verification runbook  |
-| [`skills/agentic-report/SKILL.md`](skills/agentic-report/SKILL.md)   | Canonical cross-agent authoring skill                      |
+| Document                                                                                     | Role                                                                   |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [`PRODUCT-REQUIREMENTS.md`](PRODUCT-REQUIREMENTS.md)                                         | Normative product requirements                                         |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)                                               | Authoritative description of the runnable current compiler             |
+| [`docs/product/source-contract.md`](docs/product/source-contract.md)                         | Exact current declarative authoring contract                           |
+| [`docs/AGENT-REFERENCE.md`](docs/AGENT-REFERENCE.md)                                         | Current copyable CLI and source reference for agents                   |
+| [`docs/TESTING.md`](docs/TESTING.md)                                                         | Current verification entry points and covered guarantees               |
+| [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)                                                 | Contributor setup and local quality commands                           |
+| [`docs/PUBLIC-SITE.md`](docs/PUBLIC-SITE.md)                                                 | Static-site and skill release contract                                 |
+| [`docs/RELEASE.md`](docs/RELEASE.md)                                                         | Ordered release and post-publication verification runbook              |
+| [`skills/agentic-report/SKILL.md`](skills/agentic-report/SKILL.md)                           | Canonical cross-agent authoring skill                                  |
+| [`skills/agentic-report/references/catalog.md`](skills/agentic-report/references/catalog.md) | Generated closed lists: themes, layouts, recipes, directives, commands |
 
 ## Source format
 
-A source is either a Markdown file or a directory containing `report.md` or `index.md`. A directory may
-also contain:
-
-- YAML frontmatter in the entry Markdown file;
-- `agentic-report.yaml`, `agentic-report.yml`, or `agentic-report.json`;
-- optional confined English/Russian alternate Markdown entries declared by `localizations`;
-- local images referenced by relative paths;
-- Markdown partials included as `{{include: partials/summary.md}}`;
-- semantic directives for labelled page sections, generated in-flow contents, action and source-location links, authored/code glossary references, content, interactions, compile-time
-  charts/diagrams/timelines, safe built-in demos, downloads, and fonts.
-
-For a single-language page, set `language` to `ru` (including `ru-RU`) for Russian package-owned controls,
-interaction states, accessibility labels, visualization descriptions, and Review Workspace. `en`, the
-default `und`, and unsupported tags use the complete English fallback.
-
-For one artifact with both languages, give the primary entry `language: en` or `language: ru` and declare
-the other confined Markdown entry under `localizations`. The browser selects the first available language
-from `navigator.languages`, falls back to the primary entry, and shows a native language selector only on
-the multilingual page. Switching replaces content, metadata, navigation, package chrome, visualizations,
-and locale-specific review/response state together. Both variants are compiled locally into the same
-artifact; the browser fetches nothing, and the package never machine-translates authored Markdown or CLI
-diagnostics.
-
-Every generated report shows a compact footer link, **Made with Agentic Report**, pointing to
-`https://agentic-report.witqq.dev/`. Omit `attribution` to keep this default. Set `attribution: false` in
-frontmatter or the manifest when the generated artifact must not carry the package attribution; this
-removes only the package-owned footer and never rewrites authored links or prose.
+A source is either a Markdown file or a directory containing `report.md` or `index.md`. Beside the entry it
+may hold YAML frontmatter or an `agentic-report.yaml`, `.yml` or `.json` manifest, Markdown partials
+included as `{{include: partials/summary.md}}`, an English or Russian alternate entry declared by
+`localizations`, a theme file, and local images, clips, downloads and fonts. The page is ordinary Markdown
+plus allowlisted semantic directives; there is no JSX, CSS or author script to write.
 
 Example:
 
@@ -133,14 +113,12 @@ title: Architecture options
 description: Decision report
 language: en
 layout: document
-theme: system
-preset: material
-scrollProgress: true
-attribution: true
-tokens:
-  font: serif
+scheme: system
+theme:
+  extends: calm-paper
   width: narrow
-  accent: indigo
+progress: chapters
+attribution: true
 ---
 
 # Architecture options
@@ -177,223 +155,60 @@ One canonical definition shared by prose forms and selected first code occurrenc
 ::::
 ````
 
-To localize this page, set `localizations.ru` to `report.ru.md` in its frontmatter. The alternate uses the
-same source contract, declares `language: ru`, and contains the maintained Russian content, partial references,
-and localized visible asset text. Presentation and output metadata stay in the primary entry; an alternate
-may set only `contractVersion`, `title`, `description`, and `language`. See the complete paired-file example
-in the [source contract](docs/product/source-contract.md#metadata).
+Each part of the format is described in one place:
 
-See [`docs/product/source-contract.md`](docs/product/source-contract.md) for the complete declarative
-source contract.
-`source-link` is an optional local-workstation integration: its full absolute path remains in a normal
-build even though the page shows a short label. For distribution, run the same build with `--share`; the
-compiler derives non-link `filename:line` text from each validated helper, using `source:line` when the
-terminal filename is unsafe. An already matching short label remains byte-exact; directory-bearing and
-free-form labels are replaced wholesale. Compiler-owned paths are omitted, and the result reports the exact
-neutralized count without changing Markdown.
+| Question                                                                                                | Where                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| What a source may contain: every metadata field, directive, limit and the output behaviour              | [`docs/product/source-contract.md`](docs/product/source-contract.md)                                                                 |
+| How to write a page: categories and starters, themes, sections and recipes, visualizations, workspaces  | [`docs/AGENT-REFERENCE.md`](docs/AGENT-REFERENCE.md)                                                                                 |
+| The closed lists: built-in themes, layouts, recipes, directives with their attributes, and CLI commands | [`skills/agentic-report/references/catalog.md`](skills/agentic-report/references/catalog.md), generated                              |
+| The same contract as JSON                                                                               | `agentic-report describe`, `agentic-report schema --scope manifest\|directives\|source\|theme`, [`docs/generated/`](docs/generated/) |
 
-Agents can retrieve the same closed contract through `getSourceContract()`,
-`getAuthoringSchema('manifest' | 'directives' | 'source')`, and `listExamples()` from the ESM API. Checked
-JSON projections live in [`docs/generated/`](docs/generated/), and
-[`examples/manifest.json`](examples/manifest.json) records packaged example identities and source hashes.
-The ESM `initProject({ destination, starter? })` operation copies the selected registry-owned starter from
-the installed package into an absent destination without overwriting or merging user content.
-The package includes report, research, architecture, tutorial, dashboard, and landing-page starters. The
-report starter is the default; its stable canonical ID is `basic`, and the clearer `report` alias is also
-accepted. The other IDs are `research`, `architecture`, `tutorial`, `dashboard`, and `landing`.
-`listExamples()` and `agentic-report examples --json` return starter eligibility, default selection, and
-aliases from the same registry metadata. The immediate parent must resolve to an ordinary directory. It may
-be a symbolic link, including macOS `/tmp`; `projectPath` reports the resolved destination. The starter is read completely
-before the destination is created exclusively; files use no-overwrite creation. A later failure is reported
-and may leave the new destination incomplete for explicit inspection and removal. The initializer never
-deletes or rolls back destination content.
-The ESM `validateReport({ input, format?, review? })` and `inspectReport({ input, format?, review? })` operations run the
-same production preparation as `buildReport()` without publishing an artifact. Validation returns the
-resolved project, entry, format, runtime placement, and warnings. Inspection additionally returns relative
-source-file inventory, observed directives and local-resource occurrence counts, and the registry-derived
-command/format/starter/capability catalog.
+The catalog and the JSON projections are generated from the package registry; `pnpm check:authoring` fails
+when either drifts from the compiler.
 
-Review Workspace is opt-in. An ordinary page ships as a document without review chrome; set `review: true` in
-frontmatter or the manifest when a reader should discuss fragments. Passing a prior review sidecar with
-`--review` turns it on for that build automatically. An enabled page carries an inert deterministic
-review-target manifest. Use
-`inspectReview({ input, review })` or `agentic-report review <review> [input] --json` to validate a confined
-review and resolve each discussion thread to the current Markdown or partial range. Single-language pages
-export version 3. Multilingual pages export version 4 with the active `report.locale`, so Node-side review,
-build, validate, and inspect route feedback to the matching source variant before binding targets. Valid
-version-2 whole-block reviews remain accepted; legacy v2/v3 input uses a unique exact revision when present
-and otherwise the primary locale. Stale, changed, missing, and ambiguous targets remain explicit; the
-command never rewrites source.
-The manifest accepts at most 5,000 reviewable targets and 750,000 serialized bytes; the byte ceiling may
-bind first when source-location records are unusually long.
+Pages fall into five standard categories — `document` (the default), `landing`, `dashboard`, `answer`,
+and `presentation` — and each has a starter of the same name that `init` copies together with a `brief.md`
+of the questions to settle before writing. A category is a recommendation: any directive works on a page of
+any category. Subvariants and starter contents are listed under
+[«Choose a page category»](docs/AGENT-REFERENCE.md#choose-a-page-category-and-initialize-its-starter).
 
-On a review-enabled page, select any eligible text and choose **Create note**; annotation is available
-everywhere without a separate review mode or block controls. A selection may cross inline markup or adjacent review targets; its
-anchor records both target references and Unicode code-point offsets. The anchored popover shows
-the exact quote and keeps compose, reply, edit, resolve, and reopen beside it. Saved open/resolved ranges
-remain visibly distinct; hover/tap exposes **View thread**, and focusable markers provide the keyboard route.
-Desktop flips, shifts, and clamps the popover within the visual viewport; mobile uses a bounded bottom
-surface that follows browser-chrome and on-screen-keyboard viewport changes without reflowing the report.
-The contextual action and focus markers are clamped by their measured size to a visible range rectangle and
-hide when the saved range is wholly offscreen. A saved-range marker prefers a fully separate position above
-or below the text, keeping marker activation and a direct tap on the highlighted text independent.
-Navigation, Review, language, and theme use distinct package-owned topbar icons with localized names and title
-tooltips. The native language selector remains the locale input and receives visible focus after switching.
-At constrained widths the topbar omits visible labels and secondary page identity instead of clipping or
-inventing an abbreviation; coarse pointers receive larger targets. Visible contextual controls retain their
-labels while 16-pixel pencil/comment icons distinguish Create note from View thread.
+The look of a page is its `theme`: `neutral` by default, another built-in theme, or a theme written as data
+that extends one of them and changes only what it names; the build checks every field and the contrast of
+text, links, actions and focus in each scheme. The layout is `document` by default. Both closed lists are in
+the catalog, and [«Make a theme of your own»](docs/AGENT-REFERENCE.md#make-a-theme-of-your-own) shows how
+to write a theme.
 
-The topbar **Review** action opens only a non-reflowing overlay list, prior evidence, import, and one complete
-export. Choosing an entry returns to the same anchored popover. Existing whole-block threads remain
-list-accessible for version-2/version-3 compatibility, but new threads begin from selected text. Empty,
-whitespace-only, oversized, package-control, and outside-report selections create nothing. Ordinary
-`decision` and `checklist` directives remain static report content. The complete local flow is in the
-[`review-workspace` example](examples/review-workspace/report.md).
+A top-level `section` composes package-owned arrangements, media treatment and bounded motion from closed
+attributes, and a `recipe` sets a coordinated group of them in one word; see
+[«Semantic directives»](docs/AGENT-REFERENCE.md#semantic-directives) for how to use them and the
+[source contract](docs/product/source-contract.md#semantic-primitives) for every value. Charts, flow and
+sequence diagrams and timelines compile offline into accessible SVG or HTML
+([«Data visualizations»](docs/AGENT-REFERENCE.md#data-visualizations)); a local clip plays in the page
+([«Video and agentic-screencast»](docs/AGENT-REFERENCE.md#video-and-agentic-screencast)); `layout: slides`
+makes a presentation that can be shown or filmed ([«Presentations»](docs/AGENT-REFERENCE.md#presentations)).
 
-Pass `--review review.json` to `build`, `validate`, or `inspect` to consume a confined prior sidecar. Exact
-revisions resume current state; stale threads remain prior exact/changed/missing/ambiguous evidence. Continuing
-a changed target appends a current revision segment to the same thread, so prior messages and resolution stay
-in the one exported sidecar instead of being copied onto a different source target.
-Desktop uses a non-modal list overlay; mobile uses a modal sheet. Neither moves the report. State leaves the
-page only through explicit local import/export—there is no account, backend, network sync, or authenticated
-signature.
+Two opt-in layers return the reader's answer to the agent. Review Workspace (`review: true`) lets a reader
+select text, leave notes and export `review.json`, which `agentic-report review` binds back to the Markdown
+([«Resolve review feedback to source»](docs/AGENT-REFERENCE.md#resolve-review-feedback-to-source)).
+Response Workspace collects typed answers — buckets, choices, order, scores, text — as `response.json`
+([«Collect a structured reader response»](docs/AGENT-REFERENCE.md#collect-a-structured-reader-response)).
 
-Response Workspace is the separate typed-answer layer for triage and decisions. Declarative questions cover
-bucket assignment, one or several choices per item, one global choice, priority order, bounded item scores,
-global text, and optional item comments. Native fields and buttons provide the complete keyboard path;
-bucket cards also support drag-and-drop. The reader copies or downloads the same deterministic
-`response.json`, and a foreign, stale, unsupported, or invalid import preserves current-tab answers. The
-complete source is [`examples/response-workspace/report.md`](examples/response-workspace/report.md).
+One artifact may carry an English and a Russian variant, chosen from the reader's system languages and
+switchable in the page; the package never machine-translates. Package-owned controls follow the page
+`language`. See `language` and `localizations` under
+[«Metadata»](docs/product/source-contract.md#metadata).
 
-The package owns four responsive page layouts: `document`, `dashboard`, `landing`, and `mixed`. Authors
-select one as metadata and may choose `material` (default), `monument`, `signal`, `terminal`, or `cinematic`, an
-independent `system`, `light`, or `dark` color mode, and compact token overrides for `density`, `font`,
-`accent`, `width`, and `radius`. Preset defaults apply first and explicitly authored token values apply
-last. `studio` and `editorial` remain accepted compatibility identities for Monument and Material.
-Material provides warm editorial reading, Monument provides large-scale staged storytelling, Signal keeps
-dense data crisp, Terminal adds console texture and prompt rhythm, and Cinematic stages image-first stories.
-These are closed validated values, not CSS or component code.
-The reader gets two independent package-owned controls. The light/dark button is on by default;
-`themeToggle: false` removes it from a page that must stay in the scheme it was built with.
-`presetSwitcher: true` adds a style selector that swaps the preset and its five tokens live without changing
-the reader's color scheme. Buildable examples under
-`examples/layout-*` demonstrate every layout and are listed by
-`agentic-report examples --json`; `examples/interactive-catalog` and `examples/visualization-catalog`
-demonstrate the package-owned interaction and data primitives.
-Composition tracks expand on large displays while paragraphs keep a separate reading measure. Compact
-headings scale down, and action groups wrap at their content width rather than forcing every button across
-the screen. Disclosure, modal, popover, filter, toggle, copy, Review and Response controls receive package
-icons automatically. Authored trigger labels remain visible on phones; no icon markup or CSS is required.
-The visualization catalog includes a 15-node grouped subsystem flow and an ordered compile-request sequence;
-both use the same bounded `diagram`/`group`/`node`/`edge` directives and compile offline. Flow layout goes
-by layers along the flow, picks its direction and node order itself, keeps every connection on its own path
-with its label on it, and needs no tuning. Readers switch between top-to-bottom, left-to-right, and
-right-angle views with buttons above the diagram; `layout="auto|down|right|orthogonal"` sets the view shown
-first and printed, and `auto` picks the clearest one. Groups surround only the nodes they mean. A connection
-says what it is with `kind="call|data|event|dependency"`, a node can add a smaller `detail` line, and
-`legend`/`legend-item` title the legend and name kinds and node emphasis in the author's words. Every
-diagram is also written out in words under the picture.
-
-Recordings play inside the page. `::video{src="assets/run.webm" poster="assets/frame.png" caption="…"}` or a
-plain `![Alt](assets/run.webm)` becomes a muted, looping `<video>` with controls, embedded in single-file
-output and copied beside `index.html` in directory output. It starts while on screen and waits for the reader
-who prefers reduced motion.
-
-Use `:::copyable` for prose that a reader should paste into a message or handoff. Paragraphs, emphasis,
-links, proportional typography, and wrapping remain ordinary Markdown; the localized Copy control writes
-only visible rendered text rather than Markdown or HTML.
-
-Authors may replace heading-only structure with top-level `section` directives. Each section owns a
-visible H2 and stable anchor. Start with `recipe="hero|evidence|story|rail|metrics"` for a coherent
-high-level composition; any explicitly authored detailed attribute overrides only its matching recipe role.
-Closed visual attributes compose package-owned arrangements (`flow`, `stage`,
-`split`, `mosaic`, `story`, `stack`), bounded viewport rhythm, compact/editorial/immersive density,
-body/display/editorial typography, natural/masked/layered/gallery/bleed media, image fit/aspect/focal point,
-and plain/mesh/glow/grain/grid surfaces. They are semantic choices, not CSS or component code; multi-column
-and layered arrangements return to authored order on narrow screens, and gallery overflow stays local. A
-multi-item gallery shows compact continuation and becomes a localized arrow-key focus target only while its
-rail actually overflows; the scroll-only semantics disappear when a wide owner fits every item. Every
-section contains its floats and local layer order. A media stage uses a full-width title row with supporting
-content and media composed below; gallery stages keep their separate title/rail arrangement, while split
-returns to flow before desktop navigation can make its tracks unreadable.
-Because mosaic/stack and layers/gallery would both own the same card layout, those four combinations fail
-before rendering; use flow/stage/split/story with layered/gallery media or natural/mask/bleed media with
-mosaic/stack.
-`transition="reveal|stagger"`, `scene="progress|sticky"`, `interaction="depth|tilt"`, and
-`choreography="cascade"` add bounded package-owned motion. Without a recipe these roles default to `none`; legacy
-`reveal="true"` remains supported. A nested `actions` group composes ordinary safe links with
-primary/secondary/quiet emphasis, `auto|edge|inline|bottom` placement, and an optional primary-only
-`magnetic` effect. Mobile bottom placement remains compact normal-flow content rather than a sticky overlay.
-Add `href` to a `card` when the whole card is one destination. The compiler reuses the safe-link contract,
-rejects nested links, and renders one keyboard focus target with a persistent link icon; cards without
-`href` remain informational articles.
-Legacy heading documents remain valid;
-their H2 headings define the primary navigation while H3 and component anchors remain owned descendant
-targets.
-
-```markdown
-::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
-The content remains ordinary Markdown and semantic directives.
-::::
-```
-
-Use the packaged `layout-mixed` example as the complete bilingual composition reference. The exact domains
-and defaults are in the
-[`section` source contract](docs/product/source-contract.md#semantic-primitives) and machine-readable
-directive schema.
-
-Recipes include their motion: `hero` combines stagger with a scroll-driven scene, `evidence` uses reveal,
-`story` combines reveal with a scroll-driven scene, `rail` uses stagger, and `metrics` combines stagger with
-cascade. To use pointer depth on a hero instead, set `recipe="hero" scene="none" interaction="depth"`.
-Keep the remaining defaults and add a confined local image; the package handles responsive framing and
-reduced motion. See [`motion-showcase`](examples/motion-showcase/report.md) for a complete composition.
-
-Place `::contents` at the document root to keep a generated route map inside the article. Its native links
-use exact visible section headings and final collision-free targets; optional short `nav` labels remain in
-the sidebar. The map stays visible at narrow widths and still renders with zero or one primary section,
-while sidebar/mobile-dialog chrome continues to require at least two.
-
-Inside a `section`, place one opening `:::lead` containing exactly one Markdown paragraph when the first
-thesis needs restrained in-flow emphasis rather than a callout. The lead must be the section's first block
-and accepts no attributes. A glossary definition with `placement="appendix"` may be authored at the document
-root or directly inside that section; the compiler removes it from the section and keeps its existing full-
-definition target in the single ordered appendix. Lists, quotes, lead blocks, and unrelated directives do
-not become valid appendix parents.
-
-Pages with at least two eligible sections receive one responsive contents navigation. Desktop readers can
-collapse the non-modal sidebar without persisting state; mobile readers get a labelled native dialog with
-contained focus and focus return. Exactly one link exposes `aria-current="location"`, including for
-descendant and outside hashes. `scrollProgress: true` enables a decorative progress line. Progress and
-section motion are entirely absent under reduced motion; content remains visible and navigation semantics
-remain available. Reveal activates when any part of a section enters the viewport, including sections taller
-than the screen. Entrance and cascade sequences are capped at 12 items; pointer depth, tilt, and magnetic
-movement run only for a fine pointer, while scene progress and pointer updates are visibility-bound and
-animation-frame-coalesced. Authors choose semantic roles, not timings, coordinates, easing, or scripts.
-If `IntersectionObserver` is unavailable or non-callable, observer-dependent motion and pointer enhancement
-remain inert, baseline content stays readable, and navigation uses its bounded geometry fallback.
+Every generated page shows a compact footer link, **Made with Agentic Report**, pointing to
+`https://agentic-report.witqq.dev/`. Set `attribution: false` in frontmatter or the manifest to remove only
+that footer.
 
 ## Public example portfolio
 
-The packaged portfolio includes complete pages built through the same public source and compiler paths:
-
-| Example                                                    | Reader job                                                                                                     |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| [`layout-mixed`](examples/layout-mixed/)                   | Inspect the complete visual grammar and component range                                                        |
-| [`interactive-catalog`](examples/interactive-catalog/)     | Exercise package-owned interactions                                                                            |
-| [`visualization-catalog`](examples/visualization-catalog/) | Read the complete chart, diagram, and timeline range                                                           |
-| [`terminal-portfolio`](examples/terminal-portfolio/)       | Present systems work through console rhythm, scan treatment, and linked evidence                               |
-| [`cinematic-story`](examples/cinematic-story/)             | Follow an image-first story through staged media, scroll progress, and a gallery rail                          |
-| [`executive-brief`](examples/executive-brief/)             | Compose a Monument decision narrative with evidence cards, a timeline, local imagery, and a handoff            |
-| [`motion-showcase`](examples/motion-showcase/)             | Explore pointer depth, scrolling media, a gallery rail, cascade, and the content-complete reduced-motion state |
-| [`incident-review`](examples/incident-review/)             | Reconstruct a fictional service incident, inspect evidence, and filter accountable follow-up                   |
-| [`vendor-decision`](examples/vendor-decision/)             | Separate mandatory procurement gates from weighted preference and approve a conditional path                   |
-| [`launch-readiness`](examples/launch-readiness/)           | Judge a fictional regional beta from audience value, funnel evidence, launch gates, and a reversible rollout   |
-| [`review-workspace`](examples/review-workspace/)           | Create, reopen, resolve, and export selected-text discussion threads                                           |
-| [`response-workspace`](examples/response-workspace/)       | Return typed triage, choices, ordering, scores, and comments                                                   |
-
-Every packaged starter, layout example, catalog, workspace example, realistic showcase, and the public
-landing pairs its canonical English source with a maintained Russian entry. A generated artifact chooses
-the system-preferred available language initially and keeps the selector available for manual switching.
+The package ships buildable examples beside its starters: layout and component catalogs, Review and
+Response workspaces, and realistic showcases, each with a maintained Russian entry. Their reader jobs and
+page shapes are listed under
+[«Rebuild the public showcases»](docs/AGENT-REFERENCE.md#rebuild-the-public-showcases).
 
 From a repository or package-source checkout, build them with the public CLI:
 
@@ -408,17 +223,13 @@ agentic-report build ./examples/tutorial --share --output ./tutorial-share.html
 
 Open the HTML file or directory `index.html` directly through `file://`. In an installed package,
 `agentic-report examples --json` returns each absolute installed entry path; use its containing directory as
-the build input. These examples remain discovery-only and do not change the six `init` starters.
+the build input. These examples remain discovery-only and do not change the five `init` starters.
 
-`agentic-report fix ./my-report` applies the replacements the product computed exactly and leaves every
-other byte alone. Today one check computes them: the term reference that a registered glossary term is
-missing. It is the only command that writes to an authored source.
-
-Every command answers an agent without a flag, because agents are who run this package: `init`, `build`,
-`validate`, `inspect`, `fix`, `review` and `sitemap` write NDJSON records, and `schema`, `describe` and `examples`
-write their one reference document as a compact JSON line. `--json` is accepted and names that default. Add
-`--human` when a person is reading — it prints prose from `init`, `build`, `validate`, `fix`, `review`, `sitemap`
-and `examples`, and the same document indented from `inspect`, `schema` and `describe`.
+`agentic-report fix ./my-report` is the only command that writes to an authored source: it applies the
+replacements the product computed exactly and leaves every other byte alone
+([«Apply the repairs the product computed»](docs/AGENT-REFERENCE.md#apply-the-repairs-the-product-computed)).
+Every command answers an agent with JSON or NDJSON by default and a person with `--human`; which command
+writes which shape is under [«Command output»](docs/AGENT-REFERENCE.md#command-output).
 
 ## Product-built landing
 
@@ -465,9 +276,9 @@ After a local build:
 pnpm install
 pnpm build
 node dist/node/cli.js init ./my-report
-node dist/node/cli.js init ./research-brief --starter research
-node dist/node/cli.js build examples/basic --output report.html
-node dist/node/cli.js build examples/basic --format directory --output report-dir
+node dist/node/cli.js init ./weekly-status --starter dashboard
+node dist/node/cli.js build examples/document --output report.html
+node dist/node/cli.js build examples/document --format directory --output report-dir
 node dist/node/cli.js validate ./my-report
 node dist/node/cli.js inspect ./my-report --json
 node dist/node/cli.js describe --json
@@ -490,7 +301,7 @@ pnpm pack --pack-destination "$PACK_DIR"
 cd "$CONSUMER_DIR"
 npm init --yes
 npm install "$PACK_DIR"/agentic-report-*.tgz
-npx agentic-report init ./my-report --starter report
+npx agentic-report init ./my-report --starter document
 printf '\nAgent-authored edit.\n' >> ./my-report/report.md
 npx agentic-report build ./my-report --output ./report.html --json
 ```
@@ -514,31 +325,29 @@ agentic-report review ./review.json ./my-report --json
 
 ## Output formats
 
-| Format        | Result                                                        |
-| ------------- | ------------------------------------------------------------- |
-| `single-file` | One HTML file containing styles, runtime, and local resources |
-| `directory`   | `index.html` plus content-hashed package and source resources |
+The default `single-file` output is one HTML file carrying styles, the package runtime and every local
+resource; `directory` writes `index.html` with content-hashed assets beside it. Both behave the same in the
+browser and open through `file://`; the runtime placement follows the format and is not an option. A
+single-file build above the `output.maxInlineBytes` budget fails rather than producing a heavy file. How
+both formats publish atomically, refuse to overwrite a source, and count the budget is under
+[«Output behavior»](docs/product/source-contract.md#output-behavior) in the source contract.
 
-Both formats contain the same package-owned interactive behavior. `single-file` embeds the runtime;
-`directory` writes it as a content-addressed local asset. Runtime placement is not a source or CLI option.
-Remote asset fetching and executable templates are not supported.
-
-Page layout and preset are independent of output format: the same declarative source can be built as
-either one file or a directory artifact. Both paths preserve the selected preset, resolved page tokens,
-responsive navigation, local assets, CSP, and `file://` behavior.
-
-There is no public plugin or author-code execution API. Proposed declarative extensions are evaluated
-against the checked [`extension proposal schema`](docs/generated/extension-proposal.schema.json), which
-enforces the current no-code/no-network trust boundary and requires explicit portability, security,
-accessibility, performance, dependency, license, and compatibility evidence before implementation.
-
-The compiler rejects an output path that resolves to, or shares a filesystem identity with, the entry,
-manifest, partial, or local asset. Both formats are prepared before publication. A single file is written
-exclusively to a private sibling path, closed, and atomically renamed; a directory is assembled in a
-private sibling directory and published by rename. Injected write and rename failures preserve any
-previous authoritative output, remove compiler-owned staging paths, and allow an immediate retry.
-`output.maxInlineBytes` is a warning threshold over the exact serialized inline CSS, package runtime, and
-image/download data-URL occurrences. Font data URLs are counted once through the serialized stylesheet.
+A page extends the vocabulary through the extension manifests it lists in `extensions`: a composite block
+(a Markdown template of existing directives), a provider (a local program that writes Markdown at build
+time), an effect (a bundled script decorating existing directives) or an island (an application in a
+sandboxed frame with a Markdown static equivalent). Author code runs only through them: a provider runs
+locally at build time like any build script you chose, an island has no network and no access to the page,
+and an effect ships with its hash in the page policy only where it is used. `validate`, `inspect` and
+`inspect-review` run providers too, because they expand the page like `build`: do not validate an untrusted
+source that declares providers. The format is in the source
+contract's [«Extensions»](docs/product/source-contract.md#extensions); a change to the core itself first
+passes the checked [`extension proposal schema`](docs/generated/extension-proposal.schema.json).
+The package ships reference extensions to copy from in `extensions/`, each with a README and two example
+pages, and `agentic-report examples` lists them: [`key-figure`](extensions/key-figure/README.md) (a block),
+[`product-theatre`](extensions/product-theatre/README.md) (a block and a provider),
+[`wall-thread`](extensions/wall-thread/README.md) and [`loom`](extensions/loom/README.md) (effects) and
+[`slo-budget`](extensions/slo-budget/README.md) (an island). When to extend and which level to take is in
+the skill's [extensions reference](skills/agentic-report/references/extensions.md).
 
 ### Pages served on the web
 
@@ -548,25 +357,16 @@ Declare the address a page is served from as `url` in its metadata, or pass `--u
 agentic-report build ./site-source --format directory --url https://example.com/guide/ --output ./public/guide
 ```
 
-The page head then carries `<link rel="canonical">`, OpenGraph (`og:url`, `og:title`, `og:description`,
-`og:locale` and the other embedded language as `og:locale:alternate`) and a Twitter card. An optional local
-`image` becomes an absolute `og:image` for link previews in a directory build. Build public pages as
-`directory`: Googlebot reads only the first 2,097,152 bytes of an HTML file, and directory output keeps
-images, fonts, styles and the runtime out of the HTML. A public page above that size reports
-`PUBLIC_PAGE_OVER_CRAWLER_LIMIT`.
-
-After publishing a tree of such pages at one origin, index it:
+The page head then carries a canonical link, OpenGraph and a Twitter card, and an optional local `image`
+becomes the link preview in a directory build. After publishing a tree of such pages at one origin, index it:
 
 ```bash
 agentic-report sitemap ./public
 ```
 
-`sitemap` reads the canonical URL each agentic-report page carries and writes `sitemap.xml` and a
-`robots.txt` that names it. The tree root is the origin root, so every page URL must match the page's
-place in the tree — `guide/index.html` is `https://example.com/guide/`. The command refuses, without
-writing anything, when the files already exist, pages disagree on the origin, a URL does not match its
-place, an agentic-report page has no URL, the tree has no agentic-report page, contains a symbolic link or
-special file, or the path is not a directory; HTML from other tools is listed as skipped.
+`sitemap` writes `sitemap.xml` from the pages' canonical URLs and a `robots.txt` that names it. Why public
+pages are built as `directory`, and when `sitemap` refuses to write, is under
+[«Output selection»](docs/AGENT-REFERENCE.md#output-selection) in the agent reference.
 
 For implementation boundaries and verification guarantees, see
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/TESTING.md`](docs/TESTING.md).

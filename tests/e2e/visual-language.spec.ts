@@ -29,7 +29,7 @@ test('declarative visual families remain distinct, readable, and contained', asy
       'cover',
       'cinematic',
       'right',
-      'mesh',
+      'tint',
     ],
     [
       'split',
@@ -65,7 +65,7 @@ test('declarative visual families remain distinct, readable, and contained', asy
       'cover',
       'landscape',
       'left',
-      'glow',
+      'tint',
     ],
     [
       'stack',
@@ -89,7 +89,7 @@ test('declarative visual families remain distinct, readable, and contained', asy
       'cover',
       'cinematic',
       'center',
-      'mesh',
+      'tint',
     ],
     [
       'layers',
@@ -117,7 +117,10 @@ test('declarative visual families remain distinct, readable, and contained', asy
     ],
   ] as const;
 
-  await expect(page.locator('.semantic-section')).toHaveCount(expected.length);
+  // Каталог показывает и формы драматургии; здесь проверяются семейства композиции.
+  await expect(
+    page.locator(expected.map(([id]) => `.semantic-section#${id}`).join(', ')),
+  ).toHaveCount(expected.length);
   for (const [
     id,
     composition,
@@ -210,7 +213,8 @@ test('declarative visual families remain distinct, readable, and contained', asy
   expect(visualState.compatibleCombinations.layersCardsDisplay).toBe('grid');
   expect(visualState.compatibleCombinations.galleryCardsDisplay).toBe('grid');
   expect(visualState.surfaces.every((background) => background !== 'none')).toBe(true);
-  expect(new Set(visualState.surfaces).size).toBe(4);
+  // Каталог показывает все три непустые поверхности: tint, grain и grid.
+  expect(new Set(visualState.surfaces).size).toBe(3);
   expect(visualState.layerCardTransforms.every((transform) => transform === 'none')).toBe(true);
   if (mobile) {
     expect(visualState.mosaicColumns).toBe(1);

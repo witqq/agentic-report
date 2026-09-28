@@ -163,6 +163,119 @@ test('every public page keeps surfaces inside their immediate layout owner', asy
   await expect(localizedGallery).toHaveAttribute('aria-label', 'Прокручиваемая галерея');
 });
 
+/**
+ * Текст, сжатый внутри своего блока, не выходит за окно, поэтому проверка переполнения выше его не
+ * видит: на 0.17.0 подпись таймлайна `cinematic-story#story` стояла колонкой в 14 px — по букве в
+ * строке, — а карточки ленты `#field-roll` при 1440 px были столбиками шириной 158 px. Сравнивать
+ * блок с его контейнером нельзя: там сжат и сам контейнер. Поэтому меряется то, что видит читатель.
+ *
+ * Длина строки — среднее число символов в отрисованной строке блока длиннее 40 символов (строки
+ * считаются по прямоугольникам `Range.getClientRects()`). Порог 4 лежит между двумя замеренными
+ * полосами: сжатая подпись на 0.17.0 даёт 1,1–1,6 символа в строке, а наименьшее законное значение
+ * на всех публичных страницах при 304–1440 px в обоих языках — 7 (узкая колонка таблицы
+ * `launch-readiness` на 304 px); узкие колонки таблиц и крупные русские заголовки на 304 px дают
+ * 7–11, поэтому порог 12 отбраковал бы законные блоки.
+ *
+ * Ширина элемента ленты — не меньше меньшего из 0,4 ширины содержимого секции и 18rem: на 0.17.0
+ * при 1440 px карточки `#field-roll` — 158 px при пределе 288 px.
+ */
+const MINIMUM_CHARACTERS_PER_LINE = 4;
+const MEASURED_TEXT_LENGTH = 40;
+
+test('every public page keeps its text in readable lines and its gallery items wide', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  test.setTimeout(10 * 60_000);
+
+  const violations: string[] = [];
+  for (const width of [304, 400, 768, 1100, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const route of routes) {
+      await page.goto(routeUrl(route.href));
+      const languages = await page
+        .locator('[data-language-select] option')
+        .evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value));
+      for (const language of languages.length > 0 ? languages : ['']) {
+        if (language !== '') await page.locator('[data-language-select]').selectOption(language);
+        const found = await page.evaluate(
+          ({ minimum, measured }) => {
+            const out: string[] = [];
+            const label = (element: Element): string =>
+              `${element.tagName.toLowerCase()}${element.id === '' ? '' : `#${element.id}`}.${[
+                ...element.classList,
+              ]
+                .slice(0, 2)
+                .join('.')}`;
+            const blocks = [...document.querySelectorAll<HTMLElement>('main *')].filter(
+              (element) => {
+                if (element.closest('[hidden], template, pre, code, svg') !== null) return false;
+                const style = getComputedStyle(element);
+                if (style.display === 'none' || style.visibility === 'hidden') return false;
+                if (style.display.startsWith('inline') || style.display === 'contents')
+                  return false;
+                const ownText = [...element.childNodes].some(
+                  (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim() !== '',
+                );
+                if (!ownText) return false;
+                return [...element.children].every((child) => {
+                  const display = getComputedStyle(child).display;
+                  return (
+                    display.startsWith('inline') || display === 'none' || display === 'contents'
+                  );
+                });
+              },
+            );
+            for (const block of blocks) {
+              const text = (block.textContent ?? '').replace(/\s+/gu, ' ').trim();
+              if (text.length <= measured) continue;
+              const rect = block.getBoundingClientRect();
+              if (rect.width === 0 || rect.height === 0) continue;
+              const range = document.createRange();
+              range.selectNodeContents(block);
+              const lines = new Set(
+                [...range.getClientRects()]
+                  .filter((line) => line.width > 0)
+                  .map((line) => Math.round(line.top)),
+              ).size;
+              const perLine = text.length / Math.max(1, lines);
+              if (perLine < minimum) {
+                out.push(`${label(block)} ${perLine.toFixed(1)} chars/line, ${rect.width}px`);
+              }
+            }
+            const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+            for (const section of document.querySelectorAll<HTMLElement>(
+              '.semantic-section[data-media="gallery"]',
+            )) {
+              if (section.closest('[hidden]') !== null) continue;
+              const style = getComputedStyle(section);
+              const content =
+                section.clientWidth -
+                Number.parseFloat(style.paddingLeft) -
+                Number.parseFloat(style.paddingRight);
+              const limit = Math.min(0.4 * content, 18 * rem);
+              for (const item of section.querySelectorAll<HTMLElement>(
+                ':scope > .semantic-cards > *',
+              )) {
+                const itemWidth = item.getBoundingClientRect().width;
+                if (itemWidth > 0 && itemWidth < limit - 0.5) {
+                  out.push(
+                    `${label(section)} gallery item ${itemWidth.toFixed(0)}px < ${limit.toFixed(0)}px`,
+                  );
+                }
+              }
+            }
+            return out;
+          },
+          { minimum: MINIMUM_CHARACTERS_PER_LINE, measured: MEASURED_TEXT_LENGTH },
+        );
+        violations.push(...found.map((entry) => `${route.id}:${width}:${language}: ${entry}`));
+      }
+    }
+  }
+  expect(violations).toEqual([]);
+});
+
 test('every qualifying gallery rail shares visible and accessible scroll ownership', async ({
   page,
 }, testInfo) => {

@@ -1,0 +1,9 @@
+{
+  "family": "Unbounded",
+  "package": "@fontsource-variable/unbounded",
+  "version": "5.3.0",
+  "fontVersion": "v12",
+  "license": "OFL-1.1",
+  "attribution": "Copyright 2022 The Unbounded Project Authors (https://github.com/googlefonts/unbounded)",
+  "source": "https://github.com/google/fonts"
+}

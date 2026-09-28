@@ -1,0 +1,9 @@
+kind: block
+name: status-note
+description: A short status line drawn as a callout; declared to cover the extensions manifest field.
+staticEquivalent: A bordered notice with the status line.
+forms: [leaf]
+attributes:
+  status: { type: string, required: true }
+template: template.md
+examples: [example-one.md, example-two.md]

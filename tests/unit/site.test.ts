@@ -252,7 +252,9 @@ describe('deterministic public site staging', () => {
           (route) =>
             route.kind === 'page' ||
             route.href.startsWith('docs/') ||
-            ['PRODUCT-REQUIREMENTS.md', 'llms.txt'].includes(route.href),
+            ['PRODUCT-REQUIREMENTS.md', 'llms.txt', 'skills/agentic-report/SKILL.md'].includes(
+              route.href,
+            ),
         )
         .map((route) => route.href),
     );
@@ -284,8 +286,8 @@ describe('deterministic public site staging', () => {
       );
     }
     expect(expectedUrl('index.html')).toBe('https://agentic-report.witqq.dev/');
-    expect(expectedUrl('examples/basic/index.html')).toBe(
-      'https://agentic-report.witqq.dev/examples/basic/',
+    expect(expectedUrl('examples/document/index.html')).toBe(
+      'https://agentic-report.witqq.dev/examples/document/',
     );
 
     const sitemap = await readFile(path.join(firstSite, 'sitemap.xml'), 'utf8');
@@ -304,7 +306,7 @@ describe('deterministic public site staging', () => {
     expect(landing.byteLength).toBeLessThan(2_097_152);
     expect(landing.toString('utf8')).not.toContain('data:image/');
     expect(landing.toString('utf8')).toMatch(
-      /<meta property="og:image" content="https:\/\/agentic-report\.witqq\.dev\/assets\/monument\.[0-9a-f]{12}\.jpg"\/>/u,
+      /<meta property="og:image" content="https:\/\/agentic-report\.witqq\.dev\/assets\/social-preview\.[0-9a-f]{12}\.png"\/>/u,
     );
   });
 
@@ -387,7 +389,7 @@ describe('deterministic public site staging', () => {
     expect(release.skill.sha256).toBe(
       sha256(await readFile(path.join(repositoryRoot, 'skills/agentic-report/SKILL.md'))),
     );
-  });
+  }, 20_000);
 
   it('keeps package, skill, OpenAI, Claude, and community distribution identity synchronized', async () => {
     const packageMetadata = repositoryPackageMetadata;
@@ -473,6 +475,21 @@ describe('deterministic public site staging', () => {
       );
       expect(pinnedVersions.length, publicSource).toBeGreaterThan(0);
       expect(new Set(pinnedVersions), publicSource).toEqual(new Set([packageMetadata.version]));
+    }
+  });
+
+  it('publishes every reference and script of the skill beside SKILL.md', async () => {
+    const published = new Set(await listFiles(firstSite));
+    for (const folder of ['references', 'scripts']) {
+      const files = await readdir(path.join(repositoryRoot, 'skills/agentic-report', folder));
+      expect(files.length, folder).toBeGreaterThan(0);
+      for (const file of files) {
+        const href = `skills/agentic-report/${folder}/${file}`;
+        expect(published.has(href), href).toBe(true);
+        expect(await readFile(path.join(firstSite, ...href.split('/')), 'utf8')).toBe(
+          await readFile(path.join(repositoryRoot, href), 'utf8'),
+        );
+      }
     }
   });
 

@@ -110,7 +110,7 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   exact/changed/missing/ambiguous entry/partial binding, confined review paths, and sanitized review transport,
   exact serialized inline-size accounting, canonical and hard-link source/output collision protection,
   injected partial-write/rename preservation and retry for both output formats, same-process name/content
-  determinism, registry-owned page layouts/themes/token defaults, the complete closed section visual
+  determinism, registry-owned page layouts and built-in theme data, the complete closed section visual
   grammar with independent invalid-value and executable-attribute rejection, registry-declared rejection of
   mosaic/stack with layers/gallery card-layout conflicts, identical single-file/directory and
   document/dashboard projections, post-enhancement per-rail gallery candidate marking across titles, sibling
@@ -126,6 +126,14 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   while proving failed candidates are removed and prior destination bytes are preserved. Hostile concurrent
   path mutation, process/OS crash recovery,
   and a cross-platform determinism matrix are outside the proportionate filesystem contract.
+- Page data and text settled at build time: `tests/unit/page-data.test.ts` covers substitution into text,
+  code, attributes and links, markup in data staying literal, `each` keeping one list and one table whole,
+  `expect` failing at its line, every data refusal, confinement and the data file in the source graph;
+  `tests/unit/text-blocks.test.ts` covers `plural` forms for en/ru with the no-break space, `time` in a
+  declared zone across a daylight-saving change, `source-line`, `message`/`conversation` markup and the
+  eyebrow placed above a section title. `tests/e2e/data-and-text.spec.ts` opens the `run-report` example
+  in both languages and checks the figures, the source-line geometry, the theme caption role, the message
+  mock, print and `hreflang` alternates of a public build.
 - `e2e` uses Playwright with desktop and mobile Chromium profiles. Global setup generates a real
   self-contained artifact; tests open it through `file://` and verify document navigation, code,
   responsive navigation, deterministic current-section ownership, sticky-topbar target clearance and
@@ -138,9 +146,12 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   focus containment/return, normal/reduced-motion progress, reveal/stagger entrances, long sections reached
   near their end with visible rendered contents and a working export action, progress/sticky
   scenes, ordered semantic choreography, fine-pointer depth/tilt/magnetic effects, responsive action
-  placement, offscreen idling and animation-frame coalescing, themes, visible focus,
+  placement, landing opening actions that share a centred heading's axis on wide screens and its start on
+  narrow ones while an explicit edge group ends level with the opening's lead paragraph, offscreen idling and animation-frame
+  coalescing, themes, visible focus,
   locally scrolling wide tables, protected loopback source-location links that preserve the report page,
   authored glossary forms, first-only color-preserving code glossary references, clean code copying,
+  a code Copy button that no line of code intersects at rest or after local horizontal scrolling,
   appendix navigation, 15–20-node grouped flows, ordered sequence messages, diagram geometry and accessible
   descriptions, built-in demo interactions, input-derived Russian shell/runtime chrome, controlled copy
   success/failure, localized filter counts, glossary/modal/popover/demo/visualization states, textless
@@ -155,24 +166,89 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   ultrawide, tall portrait, desktop, mobile, and narrow-mobile viewports. That coverage distinguishes
   computed stage/split/mosaic/story/stack layouts; masked, layered, gallery, and bleed media; independent
   fit/aspect/focal framing; distinct decorative surfaces; authored-order mobile flattening; local gallery
-  overflow; image completion; and document containment. Dedicated foundation coverage also distinguishes
+  overflow; image completion; and document containment. Dedicated video coverage frames a landscape
+  recording, in both the directive and the Markdown-image player, into a section's portrait and square
+  aspect with contain, cover and a focal point. Dedicated foundation coverage also distinguishes
   the localized icon toolbar in fine/coarse pointer profiles, native locale focus, useful compact heading/
   action geometry, section-local short-story floats, and nonintersecting Russian stage titles/media at both
   constrained and wide desktop widths. Wide visual-family coverage separately preserves stage, split, and
   gallery track behavior. Inspected captures supplement those geometry and computed-style assertions.
-  The public component matrix derives its roots and preset identities from the registry and applies each
-  preset's complete font, density, accent, width and radius before measuring containment and effective
-  text/surface contrast. Real diagram and timeline checks preserve kind signals inside plain, accent and
+  The public component matrix derives its roots from the registry, adds the generated rules of every
+  built-in theme and switches the page to each theme's complete root attributes before measuring containment
+  and effective text/surface contrast. The theme engine is checked where it lives: unit tests resolve theme
+  files, frontmatter objects and `extends` chains, report field, contrast, cycle and confinement errors at
+  their lines, and read the static stylesheet to prove no rule selects a theme by name; e2e builds a page for
+  every built-in theme and for a child that extends it, and requires identical computed styles until the
+  child changes one field, which then changes exactly one property. Page categories are checked as
+  registry facts and as behavior: unit tests initialize every category starter, build it, and compare
+  its `brief.md` rows with the category's brief dimensions; they build a landing page with answer and
+  review directives and a document with landing recipes to prove a category restricts nothing; they number
+  unified-diff lines and refuse hunks that disagree with their headers at the directive's source line.
+  `review-vocabulary.spec.ts` opens the diff, findings, and card status in both languages at 320 and 1280
+  pixels without page overflow, reads the line-number gutter, copies the diff without numbers, and checks
+  the reduced-motion end state. Diagrams are checked for one visual language and readable layout:
+  `diagram-style.test.ts` reads the stylesheet rules of diagrams and charts and the SVG renderers and
+  refuses any colour literal or typeface that does not come from the theme; `diagram-views.spec.ts` clicks
+  every view of four flows and opens a sequence at 1440 and 400 pixels and requires no overlapping nodes or
+  label plates, no connection sampled through a foreign node, no page overflow, a different layout per
+  view, and no diagram text rendered below 12 pixels; `diagram-legend.spec.ts` measures every legend item in
+  every built-in theme and both schemes — at least 12 pixels, text contrast 4.5:1 and sample contrast 3:1
+  against the effective background — and keeps each item inside its frame at 400 pixels in English and
+  Russian. The first screen and the dramaturgy forms are checked in `first-screen.test.ts` and
+  `first-screen.spec.ts`: the compiler wraps the title, introduction, and a `place="opening"` section into one
+  frame in reading order and refuses the placement anywhere but the first section of a titled page; no
+  recipe defaults to a stagger or a cascade; every landing route at 1440×900 has no navigation frame above
+  its title, keeps the top bar and navigation before `main`, and does not overflow at 400 pixels; the
+  landing starter's demo fits the first 900 pixels beside the title; each catalog form is visible and still
+  at 1440 and 400 pixels under reduced motion; `compare` follows a click, a drag, and the arrow keys; chapter
+  segments match the chapters, fill to the end, and jump on click. Directed motion is checked in
+  `motion.test.ts` (runtime growth capped at 15 KB compressed over the pre-motion baseline, WebGL code only
+  on pages with the effect in both formats, byte-identical rebuilds, connection order, refusals of wrong
+  scenes and counts, theme motion variables) and in `motion-vocabulary.spec.ts` (reduced motion leaves
+  every technique still and complete at 1440 and 400 pixels; a steps scene pins, switches its picture and
+  lights focus nodes; drawing is empty before the diagram and complete after it; a count passes through
+  intermediate values and ends on the written one; a review note on a line-by-line title keeps its quote
+  after width and language changes and copy stays exact). `webgl-and-performance.spec.ts` runs the threads
+  effect live in both formats, drawn in 2D from the same geometry without a context and on a weak GPU, and
+  still under reduced motion; `effects.spec.ts` runs the sample effect `tests/fixtures/effects/margin-mark` (a
+  canvas and a DOM detail) and requires the same mark positions and states in `live`, `still` and
+  `static`, a drawn mark in all three, byte-identical frames for one clock time and a different frame for
+  another, zero overlap with text lines at 1280 and 390 pixels (and a positive overlap for the planted
+  on-heading placement), and a canvas colour equal to the accent token before and after a scheme switch;
+  `effect-check.spec.ts` runs [`effect-check`](#effect-check) on the sample and on `--built-in threads`
+  (11 of 11) and on a planted defect for each of the eleven checks — an own timer, a hard-coded colour, a
+  mark on a heading, a still state that lives in time, a slow frame, overlapping details, a mount that
+  breaks on a content edit, a state set only live, a layer printed, third-party code without a licence file
+  and two examples with the same text — each failing exactly its check; `effect-bundle.test.ts` refuses a
+  bundle one byte over its budget, compiles the bundle as a classic script and runs it in a VM context,
+  keeps licence texts, refuses a package import and explains a missing esbuild, and compiles a sample
+  effect against the published `agentic-report/effect` types while a misuse of them fails `tsc`;
+  `motion-performance.spec.ts` scrolls the motion showcase with a 4x slower CPU, video and trace recording
+  off because they create long tasks themselves, and requires no long task over 50 ms. It measures the
+  display refresh interval before CPU throttling, then requires the 95th-percentile frame interval to stay
+  within 2.2 refreshes and the mean within 1.25 refreshes; this distinguishes a single missed refresh from
+  sustained half-rate rendering on both 60 Hz and 120 Hz displays. `presentation.spec.ts` turns a fixture deck by keyboard, click and
+  address, reveals and hides steps, keeps notes from the audience and shows them to the presenter, runs a
+  diagram, a clip, a response form and an unpinned steps scene on slides, turns without transitions under
+  reduced motion, prints one slide per page, keeps every slide within 400 pixels, and films the deck: frames
+  taken by address in the film view repeat within 0.1% of pixels, a `next()` command clears the settled
+  flag and restores it after its published duration (±60 ms), the frame then matches a direct load of the
+  same address, and the published durations are stable. `video-sources.test.ts` reads codecs from the
+  agentic-screencast encodings of the presentation example, checks source order and types in directory
+  output, the single source and warning in one file, chapter buttons, the background poster requirement and
+  the manual mode; `video-modes.spec.ts` plays that real clip in both formats, compares `currentSrc` with the
+  first source Chromium can decode, seeks by chapter, pauses the background video with its button, keeps a
+  manual video waiting, and plays nothing by itself under reduced motion. Real diagram and timeline checks preserve kind signals inside plain, accent and
   contrast contexts. Compact-operation checks observe unclipped bilingual labels, icons, touch targets and
   dialog focus return. Public action groups are checked for forced full-width expansion separately from
   naturally long text.
   Public integration separately enumerates the closed staged inventory, opens the bilingual landing, every
   declared live example, and both canonical locale sources for each. It behaviorally distinguishes Terminal
-  console treatment and Cinematic image-first scenes rather than inferring them from preset labels. Initial and
+  console treatment and Cinematic image-first scenes rather than inferring them from theme labels. Initial and
   scrolled states at ultrawide, tall, desktop, mobile, and 304-pixel widths assert useful occupied space,
   readable text, local gallery overflow, real scene/motion state changes, reduced-motion suppression,
   localized switching, contrast, and unchanged document geometry while a selected-text thread is open.
-  All six
+  All five
   package starters are also opened in both profiles, exercise a declared interaction, assert responsive
   containment, and produce inspected captures. Registry-derived portfolio coverage additionally opens every
   shipped starter, layout example, catalog, workspace, and showcase at mobile and ultrawide sizes, switches
@@ -232,11 +308,13 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   and common secret/token patterns. It
   computes and prints the candidate SHA-256, then installs the
   tarball into a clean temporary npm consumer, invokes discovery, and builds complete multilingual offline artifacts through the
-  installed binary in both formats plus directory output through the ESM API. It also builds every packaged
-  page-layout example and all six starters in both formats and verifies the selected layout. Installed
+  installed binary in both formats plus directory output through the ESM API. It also builds every example
+  listed in `examples/manifest.json`, starters included, in both formats and verifies the layout its source
+  declares; the example, starter, theme and reference-extension lists it expects come from the repository
+  manifest, `docs/generated/source-contract.json` and the extension contract, not from counts in the script. Installed
   Terminal and Cinematic examples are built in both formats as well. Their complete source trees are then
   copied from the installed package inside the isolated consumer, edited, and rebuilt as complementary
-  single-file and directory artifacts; the authored edit and expected preset identity must survive.
+  single-file and directory artifacts; the authored edit and expected theme identity must survive.
   Installed
   first-use journeys initialize and edit a starter, then build directly for single-file and directory
   output without an analysis-command prerequisite. The single-file route first supplies invalid source to
@@ -271,6 +349,52 @@ HTML, release identity, direct documentation/source, and other unhashed routes m
 content-addressed assets receive the long immutable policy. The running Nginx image must preserve MIME,
 ETag/conditional `304`, health, and real `404` behavior.
 
+## Effect check
+
+`agentic-report effect-check <extension.yaml> --out <directory>` (or `--built-in threads`) builds the
+examples of an effect, opens the first in Chromium and reports `N of M checks passed`. Pages run on the
+manual page clock except for the performance pass. An init script records what the effect's own code does
+while the engine marks it current: calls of `requestAnimationFrame`, `setTimeout` and `setInterval`, colours
+given to a 2D context (`fillStyle`, `strokeStyle`, `shadowColor`, gradient stops) and to WebGL (`clearColor`,
+3- and 4-component uniforms whose name contains `color`, `colour`, `tint`, `edge`, `fill`, `stroke` or
+`ink`). Each check and the defect it catches:
+
+| Check         | Fails when                                                                                                                                                                      |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `declaration` | a field is empty, fewer than two examples, a named file is missing, the bundle fails, or bundled package code has no licence                                                    |
+| `still`       | under reduced motion the picture at 0 s differs from the picture at 60 s, or the effect is not in `still`                                                                       |
+| `clock`       | the effect calls its own timer, or two seeks to 2 s or two rebuilds change the picture                                                                                          |
+| `performance` | at 4× CPU slowdown while scrolling, resizing and scrolling again, one effect call takes over 50 ms, or the page has a task over 50 ms that a run with effects off does not have |
+| `tokens`      | a recorded colour, or a colour of an effect DOM detail, is not a theme colour, before or after a switch to the dark scheme                                                      |
+| `text`        | over 0.2 % (and 40) of the text-line pixels on screen are covered by the effect's canvas or details, in any render mode                                                         |
+| `widths`      | the page scrolls sideways, effect details overlap by over a quarter, or a host collapses, at 390, 768, 1280 or 1920 px                                                          |
+| `content`     | after duplicating a host's section, moving the last section first, or deleting a host's section, the effect fails or loses hosts                                                |
+| `states`      | the `data-state-*` names set in `live` differ from those set in `still` or `static` after scrolling the page through                                                            |
+| `print`       | the effect layer prints, or a host is hidden or has no text or alternative text in print                                                                                        |
+| `examples`    | fewer than two examples, one does not use the effect, or they share over half of their word triples                                                                             |
+
+A page task over 50 ms counts against the effect only when the same pass with effects off
+(`window.__agenticReportEffectsOff = true`) has none: garbage collection or another process on a loaded
+machine would otherwise fail an effect that did nothing wrong, and the comparison still catches work the
+effect leaves to the browser outside its own calls. A timing failure is confirmed with a second independent
+effect-on/effect-off pair; both pairs must show the same over-budget condition, so an isolated runner stall
+does not reject an effect. The frames `frame-390.png` … `frame-1920.png` are written to the output
+directory. The same directory also contains `performance-diagnostics.json`, updated after each completed
+effect-on or effect-off pass so a CI timeout does not erase earlier measurements. Only tasks whose start
+falls inside a measured scroll or resize phase affect the result; tasks outside those phases are recorded
+separately as `unassignedLongTasks` and `unassignedLongFrames`. Each phase records effect-call duration,
+long tasks, and long animation frame script time, forced style time, and the time remaining after rendering
+and style/layout begin (`renderTailMs` and `layoutAndPaintTailMs`). After a confirmed timing failure,
+`effect-check` runs a separate `effect-diagnostic` pass whose probes do not contribute to the 50 ms verdict.
+If that advisory pass fails or exceeds 20 seconds, `diagnosticUnavailable: true` records its absence without
+replacing the verdict or serializing the browser error.
+In that pass the `wall-thread` reference effect records each build in `phases[].builds`: total duration and
+numeric time spent measuring geometry,
+building the field, route, samples and braid, and assigning stations, balls, nails and chunks. Route time
+is split into waypoints, grid search, path pulling, line construction and other work. Builds outside a
+measured phase appear in `unassignedBuilds`. Build entries contain only finite
+numbers under fixed keys; the file otherwise uses fixed labels and flags, with no authored text or paths.
+
 ## Writing tests
 
 - Use deterministic local fixtures and local assets.
@@ -289,4 +413,12 @@ ETag/conditional `304`, health, and real `404` behavior.
   For responsive or animated UI, assert geometry, state transitions, ordering, reduced-motion behavior, and
   bounded work directly. Use an ordinary settled viewport capture for visual inspection; a stitched
   full-page screenshot can misrepresent sticky state and is not behavioral evidence.
+- Take motion snapshots on the page clock, not after a real wait. Before `page.goto`, run
+  `page.addInitScript(() => { window.__agenticReportClock = 'manual'; })`; time then stands at 0, and
+  `window.__clock.seek(t)` puts every entrance, count, transition, scene and WebGL frame at `t` seconds (the
+  contract is in the page clock section of [`ARCHITECTURE.md`](ARCHITECTURE.md)). Seek, give the page's
+  observers a short real pause, seek to the same `t` again, then capture the viewport. Set scroll-driven
+  progress with the `data-clock-progress` attribute instead of scrolling to a pixel.
+  `tests/e2e/page-clock.spec.ts` shows the pattern and proves that the same `t` gives byte-identical frames
+  across loads and seeks.
 - Do not increase a timeout to mask a state, environment, or implementation defect.

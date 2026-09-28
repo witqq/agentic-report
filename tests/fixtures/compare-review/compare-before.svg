@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <title>Wireframe of a page: empty dashed blocks</title>
+  <rect width="960" height="540" fill="#f4f4f1"/>
+  <g fill="none" stroke="#8a8a86" stroke-width="3" stroke-dasharray="10 8">
+    <rect x="60" y="48" width="840" height="56" rx="6"/>
+    <rect x="60" y="140" width="520" height="120" rx="6"/>
+    <rect x="620" y="140" width="280" height="340" rx="6"/>
+    <rect x="60" y="296" width="250" height="184" rx="6"/>
+    <rect x="330" y="296" width="250" height="184" rx="6"/>
+  </g>
+  <g fill="#b9b9b4">
+    <rect x="84" y="170" width="380" height="22" rx="4"/>
+    <rect x="84" y="208" width="300" height="14" rx="4"/>
+    <rect x="84" y="320" width="180" height="12" rx="4"/>
+    <rect x="354" y="320" width="180" height="12" rx="4"/>
+  </g>
+</svg>

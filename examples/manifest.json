@@ -3,13 +3,15 @@
   "showcaseContract": "showcase-contract.json",
   "examples": [
     {
-      "id": "basic",
-      "path": "basic",
+      "id": "document",
+      "path": "document",
       "entry": "report.md",
-      "title": "Report starter",
+      "title": "Document starter",
       "description": "Decision-ready report with findings, evidence, a local asset, a timeline, and bounded interaction.",
       "classes": ["report", "work-report"],
-      "starter": { "default": true, "aliases": ["report"] },
+      "category": "document",
+      "subvariant": "report",
+      "starter": { "default": true },
       "files": [
         {
           "path": "assets/architecture.ru.svg",
@@ -18,6 +20,10 @@
         {
           "path": "assets/architecture.svg",
           "sha256": "f4a6eb5cacb8b48e0a5d79c15f0db202fd8a1257f42658420dcd4aeb5dee1fe0"
+        },
+        {
+          "path": "brief.md",
+          "sha256": "ccb7554ebbd831ad5cba1a6b2627e8921e909f877714f2f8d58debed7e679ca7"
         },
         {
           "path": "partials/findings.md",
@@ -29,11 +35,81 @@
         },
         {
           "path": "report.md",
-          "sha256": "a8a0193ac5f05d55c75e733da14982baa392e8238ee103127e7c931d86e43148"
+          "sha256": "985238ecf8b503bbd958b7dfae539c8d9240ae66b6dcae48520ab5213523c156"
         },
         {
           "path": "report.ru.md",
-          "sha256": "86ae59498bc3b4922bd3ec2e145d54d9f6dfc9dc39d940e03ad955ddd46fe398"
+          "sha256": "16c26fc183a43a2a28865276f9a29a8d26b74f3eae44c3fae2ff628772f3195e"
+        }
+      ]
+    },
+    {
+      "id": "answer",
+      "path": "answer",
+      "entry": "report.md",
+      "title": "Answer starter",
+      "description": "A question with options and their trade-offs, followed by a response form that exports one structured answer.",
+      "classes": ["structured-response-handoff"],
+      "category": "answer",
+      "subvariant": "choice",
+      "starter": { "default": false },
+      "files": [
+        {
+          "path": "brief.md",
+          "sha256": "fcf03642054ab1597fa1ed9024199d56b3335044a8fd60164c0b6ebed65384ba"
+        },
+        {
+          "path": "report.md",
+          "sha256": "3ae7c4569598eb4b0b5388f3909b3e36feba540a825eeff7b2531df29a4b8d51"
+        },
+        {
+          "path": "report.ru.md",
+          "sha256": "aaf31631d6c080b336c5e8c49d459b8ba1b8c9cc9ca81788d2bced88f9b9b001"
+        }
+      ]
+    },
+    {
+      "id": "presentation",
+      "path": "presentation",
+      "entry": "report.md",
+      "title": "Presentation starter",
+      "description": "A short product demo as slides: a title slide, steps that appear on click, a diagram, a figure, code and a question for the room, with speaker notes.",
+      "classes": ["landing-page"],
+      "category": "presentation",
+      "subvariant": "demo",
+      "starter": { "default": false },
+      "files": [
+        {
+          "path": "assets/demo.av1.mp4",
+          "sha256": "a7afb1774014081aebd0ecdc9a091083cc0896c757a790039ad67d8cc2be3c52"
+        },
+        {
+          "path": "assets/demo.chapters.vtt",
+          "sha256": "717df4f2fba9de041d3df6d8170f24db6caa8b6deb524d393a70b2ea5545bd3c"
+        },
+        {
+          "path": "assets/demo.h264.mp4",
+          "sha256": "751f8e8e13badcb40747a008725e8d6c0bf2f9f55b30c952e0d03da484883b9b"
+        },
+        {
+          "path": "assets/demo.poster.jpg",
+          "sha256": "2070473e69a5a8d28d5a49bd5cf2d5b3d974536e4ee090fdb8bcb75d9afcf3ec"
+        },
+        {
+          "path": "assets/demo.vp9.webm",
+          "sha256": "c3c9608d83811b2afc6d7cda673a716f3cf7f2825e58554008a7005b2c5ece14"
+        },
+        {
+          "path": "brief.md",
+          "sha256": "578dd8b84cc0369c3bec3afb67050bdd1a982fb1aed9f3ff8e35a2b8ba2361df"
+        },
+        {
+          "path": "report.md",
+          "sha256": "609b815ceff811e3c0ac593255629bf2bc532c345574523496e88ebd0ca99eca"
+        },
+        {
+          "path": "report.ru.md",
+          "sha256": "0fe459d8c91988c47c1e0550902a99f8500ec1e9edf8e1057d9ae42f6fdc145b"
         }
       ]
     },
@@ -41,10 +117,11 @@
       "id": "research",
       "path": "research",
       "entry": "report.md",
-      "title": "Research starter",
+      "title": "Research synthesis example",
       "description": "Research synthesis with a method partial, evidence map, comparison chart, tabs, and recommendation.",
       "classes": ["research-report"],
-      "starter": { "default": false, "aliases": [] },
+      "category": "document",
+      "subvariant": "research",
       "files": [
         {
           "path": "assets/evidence-map.ru.svg",
@@ -53,6 +130,10 @@
         {
           "path": "assets/evidence-map.svg",
           "sha256": "62c287de7fa134a45996cc07f4cdee0481d7509fe8ae36d9f33ce5271079d07e"
+        },
+        {
+          "path": "brief.md",
+          "sha256": "6739190d8df24be1ea53684aa4857398de3488c06e8b9d931c87fc455d3785be"
         },
         {
           "path": "partials/method.md",
@@ -64,7 +145,7 @@
         },
         {
           "path": "report.md",
-          "sha256": "d80563015a3a077e686c28bc75971dcda7902767bf279a8d4ac5d08fc4993429"
+          "sha256": "6d6dd241936725a925ed4f4ff9a10b06ebc4971f8de5f71b1d4491536409cbc8"
         },
         {
           "path": "report.ru.md",
@@ -76,10 +157,11 @@
       "id": "architecture",
       "path": "architecture",
       "entry": "report.md",
-      "title": "Architecture starter",
+      "title": "Architecture decision example",
       "description": "Architecture decision packet with a local system map, alternatives, flow diagram, and rollout.",
       "classes": ["architecture-report"],
-      "starter": { "default": false, "aliases": [] },
+      "category": "document",
+      "subvariant": "architecture",
       "files": [
         {
           "path": "assets/system-map.ru.svg",
@@ -88,6 +170,10 @@
         {
           "path": "assets/system-map.svg",
           "sha256": "da896621314b348d4c445564ee1eca9ca1ba2f2e70e52c66d669c355aeec7128"
+        },
+        {
+          "path": "brief.md",
+          "sha256": "5528444253789df35def37e5b6a1bff9c77adbb3ceb979d77d627daed00173d7"
         },
         {
           "path": "partials/decision.md",
@@ -99,11 +185,35 @@
         },
         {
           "path": "report.md",
-          "sha256": "88f8ebf82e73ab2772b346e480924006365f8fa1a7e292a42c6d172171da7bb3"
+          "sha256": "3c77a411a658beaa67f34fe5b8e1440d52a081fcb6feeccb63a55599930890cd"
         },
         {
           "path": "report.ru.md",
-          "sha256": "85d073d1b44ca74736b0da2ad4754069723486373a780300ef5a65ea1c5b778c"
+          "sha256": "cd227fb0883aeff1b064508a610aed81c247973c1b696bb2b48cd39fdd8270da"
+        }
+      ]
+    },
+    {
+      "id": "code-review",
+      "path": "code-review",
+      "entry": "report.md",
+      "title": "Code review",
+      "description": "Review of one change with a verdict, findings by severity, the unified diff, and the steps to merge.",
+      "classes": ["work-report"],
+      "category": "document",
+      "subvariant": "code-review",
+      "files": [
+        {
+          "path": "brief.md",
+          "sha256": "c323bf40ce4763c4f009ad4558fad6a36e6b3bab81d0aa5deee5a7c41f784938"
+        },
+        {
+          "path": "report.md",
+          "sha256": "b961ceb1d7dc55f8e87dd6d2fefeef38b788a7574eff8ed5b4957e702af1db2d"
+        },
+        {
+          "path": "report.ru.md",
+          "sha256": "b7d6ef747f2abba03ab6b3253393e5fd6dbd7b5c74c19dfefce13a66fe6487c4"
         }
       ]
     },
@@ -111,18 +221,23 @@
       "id": "tutorial",
       "path": "tutorial",
       "entry": "report.md",
-      "title": "Tutorial starter",
+      "title": "Tutorial example",
       "description": "Step-by-step learning page with tabs, progressive detail, code, and a bounded practice control.",
       "classes": ["tutorial-with-code-and-bounded-demo"],
-      "starter": { "default": false, "aliases": [] },
+      "category": "document",
+      "subvariant": "guide",
       "files": [
         {
+          "path": "brief.md",
+          "sha256": "39db4447665dd018eeaff869275f5461b1505d4a3f60b77ab0aa5190a1e74fa7"
+        },
+        {
           "path": "report.md",
-          "sha256": "eefb397427ceaea67b7c63ab3e104832c3c985186453e2e22d5f0535bb899c75"
+          "sha256": "a90a348e1fd9945ffc0a72950c0ec9b7fddf6741267b13c166cc7791d0ceebb6"
         },
         {
           "path": "report.ru.md",
-          "sha256": "a642641bb4a36c39ce5c80087a92541292344222397f03e03440c9a9f35ecc33"
+          "sha256": "10a5b622894329c2f40158971bd3948dd12b0775df5fcc02798017d6592c5310"
         }
       ]
     },
@@ -133,15 +248,21 @@
       "title": "Dashboard starter",
       "description": "Operational dashboard with scan-friendly cards, charts, filtering, and optional detail.",
       "classes": ["work-report"],
-      "starter": { "default": false, "aliases": [] },
+      "category": "dashboard",
+      "subvariant": "metrics",
+      "starter": { "default": false },
       "files": [
         {
+          "path": "brief.md",
+          "sha256": "4a1792ead30932849a3c6933d54ce260a8d676df7dff9386f7a3849a34c0916d"
+        },
+        {
           "path": "report.md",
-          "sha256": "8a46874f531ffceb40fbf45c3654f8fc7b09f8e15d7ec3983f9a7a4142dacf44"
+          "sha256": "a22f17b1334b56ed34787de6d1c77e4b2f109f4d80d900bd2339810e9857c50c"
         },
         {
           "path": "report.ru.md",
-          "sha256": "81973c731187a6a5be803ca98a4934034d73aa31a65d7f1b90945be70310bdfb"
+          "sha256": "f56cf67d72736b2cd18b9fc536019d3e776b3ba200d9300254dded51038c5381"
         }
       ]
     },
@@ -152,15 +273,21 @@
       "title": "Landing page starter",
       "description": "Focused product narrative with benefits, proof, delivery milestones, and contextual detail.",
       "classes": ["landing-page"],
-      "starter": { "default": false, "aliases": [] },
+      "category": "landing",
+      "subvariant": "product",
+      "starter": { "default": false },
       "files": [
         {
+          "path": "brief.md",
+          "sha256": "bf66b23afb18f62066578ed6eca3974f09c6176f378b968ce811d7a3bc3171f1"
+        },
+        {
           "path": "report.md",
-          "sha256": "1b99e9a1f5f6275b9c1987fe647aa4a9d815fe0a7a628747bcfa5cfbd58c8a0b"
+          "sha256": "8d38c85343b35c7706624b21e261eee73cebd3a618a645b6cf9137894e0f645a"
         },
         {
           "path": "report.ru.md",
-          "sha256": "27887d6ab636b2760f639fa0e750f955f45f1ce18c9a6ad3d15bc51123cb79ce"
+          "sha256": "872e5ed16b3c591ba8068cecd50ec6bde8778ea5c4e5e9cd9aa6762f88c09f9d"
         }
       ]
     },
@@ -171,7 +298,13 @@
       "title": "Document layout example",
       "description": "Long-form report with persistent contents, decisions, table, code, and local media.",
       "classes": ["architecture-report"],
+      "category": "document",
+      "subvariant": "architecture",
       "files": [
+        {
+          "path": "brief.md",
+          "sha256": "894836c0c772721447d19b30e238994b633dddf2521f88b3f5454c8c54475957"
+        },
         {
           "path": "page-model.ru.svg",
           "sha256": "f9d36b74b54643b7d26c7f7e4e58915581a84d19771d9ceb4a481ee4761da610"
@@ -182,11 +315,11 @@
         },
         {
           "path": "report.md",
-          "sha256": "7ec03096f05caf18db2df3c720ee8b251c2a753b2c7ca8f0fd2ee7cf7cc99ad2"
+          "sha256": "765719c75daca41f5bb3e3d233e4d5cf0ebb2a553dd652845f9f67d4e13774e1"
         },
         {
           "path": "report.ru.md",
-          "sha256": "012640d859555caa6e7545ce914fea7f5e107ded72d6bb1f9afc871515d537d6"
+          "sha256": "0246671f8fcc1dd3baa6753d24aeff2c5fd9fd418c57e0c0d9057e006f2cb5af"
         }
       ]
     },
@@ -197,14 +330,20 @@
       "title": "Dashboard layout example",
       "description": "Wide operational summary using dense cards, callouts, a table, and compact navigation.",
       "classes": ["work-report"],
+      "category": "dashboard",
+      "subvariant": "statuses",
       "files": [
         {
+          "path": "brief.md",
+          "sha256": "8cc66086832f4d2b5f3d9e6709eb4d31f806f19f86dea386dd21379583f22588"
+        },
+        {
           "path": "report.md",
-          "sha256": "bad72cf7be196f9310af6b928451486185c6309fb672cd329aaed8ef01bf554e"
+          "sha256": "d533a4bbee530ea8c0d0c0566974437d384f082544b72f7a27dac4a60f18f702"
         },
         {
           "path": "report.ru.md",
-          "sha256": "8b4df808bebf27cea65717f57c8098befe568cd279909e6d8d7a34635f24b8e4"
+          "sha256": "e42105552d3e3ea910f9ad42ebffe76fa4103122df97bb9d1a123a3792b9ea91"
         }
       ]
     },
@@ -215,14 +354,20 @@
       "title": "Landing layout example",
       "description": "Focused product narrative with a spacious hero, benefits, proof, and next steps.",
       "classes": ["landing-page"],
+      "category": "landing",
+      "subvariant": "product",
       "files": [
         {
+          "path": "brief.md",
+          "sha256": "eb3ccf305831277e7cc7ebc33c1d8f0d7211fa6dfcdca248ddfc7dca6667d7a1"
+        },
+        {
           "path": "report.md",
-          "sha256": "e11dc003bfba78bcf9518c511830b235a1843e397216ee4812b322013c2c81c9"
+          "sha256": "5ab4f6dfab7c8bfdc56fa12e2a9bc58c24990d2fd09ab115545ae6f959b47945"
         },
         {
           "path": "report.ru.md",
-          "sha256": "a9d136788629c950d44f7315d8b30968309fe8b870ec0a2a5b00fd225da849a6"
+          "sha256": "9672b8636486518dfd8ce2dba4c55f377c0143044db33dc88b93dda8aced9e44"
         }
       ]
     },
@@ -233,7 +378,21 @@
       "title": "Complete visual language catalog",
       "description": "Bilingual catalog covering the complete composition, media, surface, motion, and responsive vocabulary.",
       "classes": ["research-report"],
+      "category": "landing",
+      "subvariant": "showcase",
       "files": [
+        {
+          "path": "brief.md",
+          "sha256": "e6722a9fccde1eb423ec0976b337bcca5f62a5df8c668f8956c86d63ebdb7cf6"
+        },
+        {
+          "path": "compare-after.svg",
+          "sha256": "e3640ad11cf8dd2b4f3682e7e9be4bdc886de23d63da1097fa34b8d7fbfaccad"
+        },
+        {
+          "path": "compare-before.svg",
+          "sha256": "cb3f1c3188fb919667f8f5b90c236f7793cea16e232aedd9d5a7d9865fd46eb5"
+        },
         {
           "path": "layout-map.ru.svg",
           "sha256": "1552468c2c30770d7f61710401518883e9e3ea9fad4ca4ba18876d665d0a6099"
@@ -244,11 +403,11 @@
         },
         {
           "path": "report.md",
-          "sha256": "61aee395a773f9c8f3f1802b29b09e3fad147f246474744b3c57183622cdda93"
+          "sha256": "e1e56518b670052416195276cb6fb165834b02973606e1c82f6f23a27b31768f"
         },
         {
           "path": "report.ru.md",
-          "sha256": "62b2915cdb947002ca46bda9fe00080b4bcc055fdc0ce83ebe26660cf0b73a8c"
+          "sha256": "b0b9452eb21fadf048c3461ae3c5deffee9b3fa49d5d7cd968afa5545f45d48a"
         }
       ]
     },
@@ -259,14 +418,20 @@
       "title": "Interactive component catalog",
       "description": "Declarative glossary, disclosure, tabs, overlays, filtering, toggles, and a bounded demo.",
       "classes": ["interactive-component-catalog"],
+      "category": "document",
+      "subvariant": "guide",
       "files": [
         {
+          "path": "brief.md",
+          "sha256": "87fb2290ab1771f04490e9c2ca342fd2a0cbc23a27f808a6dbf2da4435efbb65"
+        },
+        {
           "path": "report.md",
-          "sha256": "3bf5b4cbde465206aed92d0eeb77ff94e8446203430818f2135e03b065560dd1"
+          "sha256": "b051060a6af7c814d2c01a6cdac13740a05c55f0b72a2501c5a4dc9fcc71240a"
         },
         {
           "path": "report.ru.md",
-          "sha256": "e017816029a864d4f1c5eeeeb4e95eed3fdec4becc49a68b85fb707b61fae33b"
+          "sha256": "158b5dae6c01f2a6b5f35abe0f537ab37a9a9acc3bcd509d9aa3a58f7fb3b851"
         }
       ]
     },
@@ -277,14 +442,20 @@
       "title": "Human review handoff example",
       "description": "Offline report with repeated evidence blocks for fragment threads, user/agent messages, resolution, and deterministic review export.",
       "classes": ["work-report"],
+      "category": "document",
+      "subvariant": "report",
       "files": [
+        {
+          "path": "brief.md",
+          "sha256": "bd34f93886618f8c54c986d550f32f702cc3691a37e4c5d110af03f94d51d334"
+        },
         {
           "path": "prior-review.json",
           "sha256": "5843c4a5872bbce6a1323b27eabfb0bcfc184a82672ed335d7a729b61c72be24"
         },
         {
           "path": "report.md",
-          "sha256": "7141b0a0bbe2bf95b7e7dccb16e93b4fccef529dd434219a0afa1e229440d35b"
+          "sha256": "928b37b587e77ba1ac11944e74dfc5f6bcbba70c1340a21a10c5c0b140608ccd"
         },
         {
           "path": "report.ru.md",
@@ -299,14 +470,44 @@
       "title": "Structured reader response workspace",
       "description": "Offline response form covering bucket, per-item choices, ordering, scoring, text, comments, import, and deterministic export.",
       "classes": ["work-report", "structured-response-handoff"],
+      "category": "answer",
+      "subvariant": "survey",
       "files": [
         {
+          "path": "brief.md",
+          "sha256": "b5599813ab196eda1e61e6a8f03e72fa9f7fdcbb2ef80f894330d41450edd82c"
+        },
+        {
           "path": "report.md",
-          "sha256": "2f1ecc213f3ed6a566d2c4ea2af97c4dba9383de32d6bc57a9c28d066b285c42"
+          "sha256": "3ee298b18781e2fcc892c7a704eba9505bdfadacfafccae30c712b5806f8f1e5"
         },
         {
           "path": "report.ru.md",
           "sha256": "1ed3235d30b051e46f0ce7f1d62f319226bba55d89a7ad809009b8b3ca0a245a"
+        }
+      ]
+    },
+    {
+      "id": "question-review",
+      "path": "question-review",
+      "entry": "report.md",
+      "title": "Open questions with context and answers",
+      "description": "Three open decisions, each with its context and options, and one form that collects the answers for the team that asked.",
+      "classes": ["structured-response-handoff"],
+      "category": "answer",
+      "subvariant": "questions",
+      "files": [
+        {
+          "path": "brief.md",
+          "sha256": "55d9fd0048de7ada90412f76102bc9f3b009f964839ea068160048771b9de2c5"
+        },
+        {
+          "path": "report.md",
+          "sha256": "723fd5575782a0310f8a9ad43fc0680e8bba625f91088a48279cd4f49ab86ea5"
+        },
+        {
+          "path": "report.ru.md",
+          "sha256": "ccdec3631269f02fc465d45016717c1fb069ba431127423c3c70891203af0ac9"
         }
       ]
     },
@@ -317,14 +518,20 @@
       "title": "Declarative visualization catalog",
       "description": "Validated bar, line, and pie charts, a directed flow diagram, and a semantic timeline.",
       "classes": ["data-visualization-catalog"],
+      "category": "dashboard",
+      "subvariant": "charts",
       "files": [
         {
+          "path": "brief.md",
+          "sha256": "4989c481f1de20e12af702f1d9f9390893a190e9cafa89f90b052aa5b0e971e4"
+        },
+        {
           "path": "report.md",
-          "sha256": "9903118ebe19d981a941858c1294d6cb6007ba081d997c7c0b1cb01131a3c425"
+          "sha256": "2c969f65784e385a07f726e535db5874b6c4107186e84104a81bfae9ed5cff92"
         },
         {
           "path": "report.ru.md",
-          "sha256": "394dce2c2769755404162baa8c18694a97cc587a3fb7445247ad737f83bf4ab6"
+          "sha256": "ca3082e91f9d4aa86731500e06659e8d2c61d57ddff234a0603e8c50a658753f"
         }
       ]
     },
@@ -335,6 +542,8 @@
       "title": "Service incident command review",
       "description": "Fictional P1 incident review with impact metrics, causal evidence, recovery timeline, and accountable follow-up.",
       "classes": ["work-report", "incident-response-showcase"],
+      "category": "document",
+      "subvariant": "incident",
       "files": [
         {
           "path": "assets/service-topology.ru.svg",
@@ -343,6 +552,10 @@
         {
           "path": "assets/service-topology.svg",
           "sha256": "81df781d029808e3163deb4138a62fdb24966b7360024203a179e99496efc13e"
+        },
+        {
+          "path": "brief.md",
+          "sha256": "9c8e2621d515a658a9660e5ef760a3cf159d502577b7e69a3b057ba707e417a8"
         },
         {
           "path": "partials/actions.md",
@@ -354,11 +567,11 @@
         },
         {
           "path": "report.md",
-          "sha256": "db1c58be71026a5736996eb946a8ac68e786c7abfbf5e6df588ae3382f718b80"
+          "sha256": "bdd41a25b44958cfa45e910252de7352eadb8acfda1f7bf23812800251086fa0"
         },
         {
           "path": "report.ru.md",
-          "sha256": "27bef78a0255da7e77c181a88f9c7282d426b16a421120fc2078af6301a32210"
+          "sha256": "75b133b775bc52695ebb1f783c1d4bf8b9f098f4e4bbffe2114625c556631c5e"
         }
       ]
     },
@@ -369,6 +582,8 @@
       "title": "AI support vendor decision packet",
       "description": "Fictional procurement decision separating hard security gates, weighted evidence, and conditional adoption.",
       "classes": ["research-report", "vendor-governance-showcase"],
+      "category": "answer",
+      "subvariant": "choice",
       "files": [
         {
           "path": "assets/evidence-map.ru.svg",
@@ -377,6 +592,10 @@
         {
           "path": "assets/evidence-map.svg",
           "sha256": "3eb99c2756b75cd3939a3d8d89d0da74d64a87495989461782a896d70f90f8d8"
+        },
+        {
+          "path": "brief.md",
+          "sha256": "1b11e63bed65963f8fd9a21149b320fdd95e383c5f6ae62ad49df797f5c50168"
         },
         {
           "path": "partials/gates.md",
@@ -388,11 +607,11 @@
         },
         {
           "path": "report.md",
-          "sha256": "459fddfdba167b51bfd68735341f855edfa906cf655f6db6a417aad4da6615de"
+          "sha256": "e267e3bc80263569a457095b1396632ae9ad2417cc99837afb97418fa41402d5"
         },
         {
           "path": "report.ru.md",
-          "sha256": "1bc992e25f18c0425a53cc8cbf25c4e86d0ce96774165d771a951a41c51a7231"
+          "sha256": "42452b4d5b2539faa915290f3aab16bb8197c9d96b02dc24ba78294d1aa5f4d3"
         }
       ]
     },
@@ -403,6 +622,8 @@
       "title": "Regional beta launch readiness",
       "description": "Fictional launch brief combining audience value, funnel evidence, operational gates, and a reversible rollout.",
       "classes": ["landing-page", "launch-readiness-showcase"],
+      "category": "landing",
+      "subvariant": "launch",
       "files": [
         {
           "path": "assets/beta-learning-loop.ru.svg",
@@ -411,6 +632,10 @@
         {
           "path": "assets/beta-learning-loop.svg",
           "sha256": "333a42acd4b21c015351b056fb7a4969306423a3c52917211ea56dffdde82342"
+        },
+        {
+          "path": "brief.md",
+          "sha256": "2885786ad550d9d436340092f29fd8fe595ea68d4d6adeafc669280040c4b2af"
         },
         {
           "path": "partials/readiness-register.md",
@@ -422,11 +647,11 @@
         },
         {
           "path": "report.md",
-          "sha256": "b2c37a54a15bf8370e87c775c594549f2cec2de930c6671b6a5426e97de959ab"
+          "sha256": "f55ea103aaad3567dd244724a885edd96a06f2acd3a47ba7b2d850d591e55487"
         },
         {
           "path": "report.ru.md",
-          "sha256": "c35ded41d79d007c8af9238671d5a6078975c53f0e58a5188636ae4d6a08993b"
+          "sha256": "5ea241a11a31f2513abd4e0ca556e0610ba2587a04ec25fa1889637667ca127d"
         }
       ]
     },
@@ -435,28 +660,22 @@
       "path": "executive-brief",
       "entry": "report.md",
       "title": "Executive decision brief",
-      "description": "Monument decision narrative with a staged opening, evidence field, operating path, and finished handoff.",
+      "description": "Decision narrative with a staged opening, evidence field, operating path, and finished handoff.",
       "classes": ["work-report", "executive-brief-showcase"],
+      "category": "document",
+      "subvariant": "report",
       "files": [
         {
-          "path": "assets/field.jpg",
-          "sha256": "30aab33625aeab2eac9957c4de94b6ab01d87caabca7d6cf6f97b5c769ca731e"
-        },
-        {
-          "path": "assets/handoff.jpg",
-          "sha256": "d3583e933e0dacdff482591ece37572fd100f8d55208419c22b2538cc93da429"
-        },
-        {
-          "path": "assets/path.jpg",
-          "sha256": "b2d5d0ec09df6ef20c0ed9339c727fbe85b0c7b45125e2f6e83a01e44f2f1d13"
+          "path": "brief.md",
+          "sha256": "7824f550b256e8a5c92b18998726175ac9b2f6d46381e667314262cde529c474"
         },
         {
           "path": "report.md",
-          "sha256": "67603ac2421f98a57d3461e1ea8299963c7f2f6535d6cb97d3f139c0c3466d9d"
+          "sha256": "ea09fa469fbd53892365b606db4ce3114b3dff336562c8fc971b02b6da3471c5"
         },
         {
           "path": "report.ru.md",
-          "sha256": "4d9bf6060749a2efb74255c87235cbbedbdb1d71971678ded0ccf2e2f1e2f288"
+          "sha256": "1147ad988493a835b132d8146fba2011a9fdabe1cf7d5e31b62cbef3bd054786"
         }
       ]
     },
@@ -465,32 +684,38 @@
       "path": "motion-showcase",
       "entry": "report.md",
       "title": "Motion and depth showcase",
-      "description": "Cinematic demonstration of scroll scenes, reveal, choreography, depth, tilt, and reduced-motion fallback.",
+      "description": "Motion demonstration of scroll scenes, reveal, choreography, depth, tilt, and reduced-motion fallback.",
       "classes": ["landing-page", "motion-showcase"],
+      "category": "landing",
+      "subvariant": "showcase",
       "files": [
         {
-          "path": "assets/aurora.jpg",
-          "sha256": "69848639429e0a3cd0c1e1c4305026fbafa6384d296df36e63210cf3c893e311"
+          "path": "assets/aurora-station.jpg",
+          "sha256": "1c4a5ce932554cdffd62b14ab5895458dcaad9bb6f560a8732836f1310bec354"
         },
         {
-          "path": "assets/cinematic.jpg",
-          "sha256": "d3583e933e0dacdff482591ece37572fd100f8d55208419c22b2538cc93da429"
+          "path": "assets/night-moscow.jpg",
+          "sha256": "f1c6acae1d1626da692e57a8e328a41891a2f72c1abee31980d028a8804c1b0c"
         },
         {
-          "path": "assets/gallery-red.jpg",
-          "sha256": "c6fd64c1b3c2042a910af5766cec85b0c5447a84b80d0e1156dec38d83146774"
+          "path": "assets/richat.jpg",
+          "sha256": "4c911ce07d1a707498abbfc6b4379f766f4be6f817f52dac9c068e40fa4445f2"
         },
         {
-          "path": "assets/terrain.jpg",
-          "sha256": "b2d5d0ec09df6ef20c0ed9339c727fbe85b0c7b45125e2f6e83a01e44f2f1d13"
+          "path": "assets/sand-sea.jpg",
+          "sha256": "5d91899aecebf791da097f4439c3a7649cc9a073c3c245d47abfb1b819314835"
+        },
+        {
+          "path": "brief.md",
+          "sha256": "138169bddf9c0c2c8eee192fdc3a4e93ca0ed640527f35ae96cf32ff063938b7"
         },
         {
           "path": "report.md",
-          "sha256": "034b427f79aec0ecf8943f964b2d2fa9e6bfb02a6c1752f134719c112b92ec48"
+          "sha256": "f73a1a0f3398c09e5c168cf6b969fd91618c020b357e5119dfe4a314066252e9"
         },
         {
           "path": "report.ru.md",
-          "sha256": "7808d0028aaa3f00eac7e3b8e99517498b402960511ae32df6d2c5c44524e60d"
+          "sha256": "0df99a83673b4812121048face619c5d89befcca315fcb9c6e54082b4fd6ba8c"
         }
       ]
     },
@@ -501,18 +726,24 @@
       "title": "Terminal field notes",
       "description": "Console-led systems portfolio with prompt rhythm, linked work, an operating log, and a reproducible handoff.",
       "classes": ["landing-page", "terminal-portfolio-showcase"],
+      "category": "landing",
+      "subvariant": "portfolio",
       "files": [
         {
-          "path": "assets/constellation.jpg",
-          "sha256": "4472230f77a4d8be66f1e85a99d8fa15fd5b6caf7465870718323a98b459a508"
+          "path": "assets/review-diff.jpg",
+          "sha256": "e70e00e2f9f99e82e7e0985824c25517b9c9844e71a5da1ba5653bd6fb6d7e8e"
+        },
+        {
+          "path": "brief.md",
+          "sha256": "9d6d7d7ba3f88a1e6b8f25b6d3b2bc82aeba7b3f5f7dd91f26b58f84aaf6e795"
         },
         {
           "path": "report.md",
-          "sha256": "9af9c3104ad8186c27c6efb9bf0bae69e2cff2e930d439f1836abdb8cd933fb2"
+          "sha256": "e23f283b7f373f3b92c897de69564a3f7641aba6f78c5361e567b0606016c876"
         },
         {
           "path": "report.ru.md",
-          "sha256": "dc433f096ccaf49727aa6b54abd9e1e975543719a8edc43960d79f37c4e0d097"
+          "sha256": "e4a64f872cba58b4fef9eda16fb7a305c3d2861a019b0d1644d204c4d1147484"
         }
       ]
     },
@@ -523,30 +754,68 @@
       "title": "Image-first field story",
       "description": "Local-media visual essay with a staged hero, scroll narrative, image rail, and measured summary.",
       "classes": ["landing-page", "cinematic-story-showcase"],
+      "category": "landing",
+      "subvariant": "showcase",
       "files": [
         {
-          "path": "assets/aurora.jpg",
-          "sha256": "69848639429e0a3cd0c1e1c4305026fbafa6384d296df36e63210cf3c893e311"
+          "path": "assets/aurora-australis.jpg",
+          "sha256": "1088f4dacd342840ee32a7d472ca7d2c2c566608d78da6f59ce35d76aba76fa6"
         },
         {
-          "path": "assets/cinematic.jpg",
-          "sha256": "d3583e933e0dacdff482591ece37572fd100f8d55208419c22b2538cc93da429"
+          "path": "assets/aurora-station.jpg",
+          "sha256": "1c4a5ce932554cdffd62b14ab5895458dcaad9bb6f560a8732836f1310bec354"
         },
         {
-          "path": "assets/gallery-red.jpg",
-          "sha256": "c6fd64c1b3c2042a910af5766cec85b0c5447a84b80d0e1156dec38d83146774"
+          "path": "assets/night-moscow.jpg",
+          "sha256": "f1c6acae1d1626da692e57a8e328a41891a2f72c1abee31980d028a8804c1b0c"
         },
         {
-          "path": "assets/terrain.jpg",
-          "sha256": "b2d5d0ec09df6ef20c0ed9339c727fbe85b0c7b45125e2f6e83a01e44f2f1d13"
+          "path": "assets/richat.jpg",
+          "sha256": "4c911ce07d1a707498abbfc6b4379f766f4be6f817f52dac9c068e40fa4445f2"
+        },
+        {
+          "path": "assets/sand-sea.jpg",
+          "sha256": "5d91899aecebf791da097f4439c3a7649cc9a073c3c245d47abfb1b819314835"
+        },
+        {
+          "path": "brief.md",
+          "sha256": "3611885a384c6f5bef5e1202e5023279a337df0a7bf912fdf89858b87732a501"
         },
         {
           "path": "report.md",
-          "sha256": "0e6a36adfcd6a7a56299fcdc1ae07563932ec4d63a6d9d4d894ba7110c0b6de1"
+          "sha256": "b8016f2707f5d3263e4030984b7e0fff16e30b78de7466a04bf79a05d631e635"
         },
         {
           "path": "report.ru.md",
-          "sha256": "b2269e41e46a3b5db759a45d21a297fb3fd6391d0766eb087e27120a904900a6"
+          "sha256": "3179d44a34fd3c406d9e7375807eaff407da5aca18d5e1d3f5eab327f6f578ff"
+        }
+      ]
+    },
+    {
+      "id": "run-report",
+      "path": "run-report",
+      "entry": "report.md",
+      "title": "Run report from a JSON export",
+      "description": "Bilingual run report whose numbers, stage cards, chart points and table rows come from one JSON file, with control values, number agreement, a dated source line and an illustrative notification.",
+      "classes": ["work-report"],
+      "category": "document",
+      "subvariant": "report",
+      "files": [
+        {
+          "path": "brief.md",
+          "sha256": "532973c5816d357fe52203a6d8038cb312eb70aaaa9bb9c7238e796c58b0eb31"
+        },
+        {
+          "path": "data/run.json",
+          "sha256": "3782698fc3914d6ebe2f73256f745764c667f835667c04918864e418fc60ea9a"
+        },
+        {
+          "path": "report.md",
+          "sha256": "e4afb5f3a2f8fe9876f4b3c0672244b8eb58e89faceec6b71b758c12f406a633"
+        },
+        {
+          "path": "report.ru.md",
+          "sha256": "df17f5119a660b80cd173ce5e139b0aadf058c521ba5823cdc9a6a208fde9083"
         }
       ]
     }

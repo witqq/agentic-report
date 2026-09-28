@@ -6,9 +6,9 @@ language: en
 localizations:
   ru: report.ru.md
 layout: document
+theme: midnight
+scheme: system
 review: true
-theme: system
-preset: monument
 ---
 
 # Human review handoff

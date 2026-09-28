@@ -1,0 +1,27 @@
+name: Feature request
+description: Propose a reusable capability
+title: 'feature: '
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What page cannot be built well with the existing directives, themes, or extension API?
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Observable result
+      description: What result would prove the capability works?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Core or extension
+      description: Is it universal (many kinds of pages need it) or specific to one design (an extension)?
+    validations:
+      required: true

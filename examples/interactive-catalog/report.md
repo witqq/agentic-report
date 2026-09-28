@@ -5,14 +5,12 @@ description: Declarative copyable prose, glossary, disclosure, tabs, overlays, f
 language: en
 localizations:
   ru: report.ru.md
-theme: dark
 layout: mixed
-tokens:
-  density: comfortable
-  font: sans
-  accent: teal
-  width: wide
+theme:
+  name: catalog-teal
+  extends: aurora
   radius: soft
+scheme: dark
 ---
 
 # Interactive component catalog
@@ -31,7 +29,7 @@ A compact bundle of evidence, constraints, and a recommendation that another age
 The same :term[Decision packet]{key="decision-packet"} explanation remains available wherever the concept
 appears.
 
-::::::section{title="Copyable meaning" id="copy" nav="Copy" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Copyable meaning" id="copy" nav="Copy" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="tint" transition="stagger" choreography="cascade"}
 
 :::copyable
 Deploy after **two checks** are complete.
@@ -84,7 +82,7 @@ The page does not need a local web server after it is built.
 :::
 ::::::
 
-::::::section{title="Find, reveal, and demonstrate" id="controls" nav="Controls" width="wide" tone="accent" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="glow" transition="reveal"}
+::::::section{title="Find, reveal, and demonstrate" id="controls" nav="Controls" width="wide" tone="accent" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="tint" transition="reveal"}
 
 :::filter{title="Filter component capabilities" placeholder="Search capabilities"}
 

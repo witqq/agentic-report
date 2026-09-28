@@ -12,8 +12,7 @@ playwright-report/
 !.env.example
 .DS_Store
 
-# Local agent and product-program context; never publish.
-AGENTS.md
+# Local product-program context; never publish.
 docs/product/authoring-projection-ledger.md
 docs/product/global-plan.md
 docs/product/initial-idea.md

@@ -1,87 +1,100 @@
 ---
 contractVersion: 1
 title: Executive decision brief
-description: A Monument decision page combining a staged opening, evidence field, operating path, and explicit handoff.
+description: A decision page — move nightly integration builds onto the shared cache — with its evidence, its path, and who owns each step.
 language: en
 localizations:
   ru: report.ru.md
-theme: system
 layout: mixed
-preset: monument
-scrollProgress: true
+theme: daylight
+scheme: system
+progress: chapters
 ---
 
-# Executive decision brief
+# Move nightly builds onto the shared cache
 
-**Fictional sample.** Every organization, metric, status, and decision on this page exists only to
-demonstrate the report engine; replace it with verified project evidence before use.
+**Fictional sample.** The company, the numbers, and the people on this page are invented to show a decision
+page; replace them with your own measured evidence.
 
-:::::section{title="Make the decision legible before making it large" id="opening" nav="Decision" recipe="hero"}
+:::::section{title="Recommendation: switch on 3 November 2026" id="opening" nav="Decision" recipe="hero"}
 :::lead
-One page should let a reader see the choice, understand the evidence, and find the next owner without
-learning the system that produced it.
+Nightly integration builds at Northwind take 118 minutes and finish after the European morning starts. On
+the shared cache, the four-week trial ran them in 46 minutes. We recommend switching all 38 nightly
+pipelines on Tuesday 3 November 2026, with a one-command way back.
 :::
 
-![An architectural field of luminous planes converging on one clear route](assets/field.jpg)
-
-:::decision{title="Adopt the reversible path"}
-Proceed with the bounded launch after the evidence owner and rollback owner confirm the same release
-packet.
+::::chart{type="bar" title="Nightly build time, median of 20 runs" description="Median nightly integration build time in minutes without and with the shared cache, measured 6 September to 3 October 2026." x-label="Setup" y-label="Minutes"}
+:::series{label="Median minutes"}
+::point{label="Local runners" value="118"}
+::point{label="Shared cache" value="46"}
 :::
+::::
 
 ::::actions{placement="inline"}
-::action[Review the evidence]{href="#evidence" kind="primary" effect="magnetic"}
-::action[See the operating path]{href="#path" kind="secondary"}
-::action[Open the handoff]{href="#handoff" kind="quiet"}
+::action[Review the evidence]{href="#evidence" kind="primary"}
+::action[See the rollout]{href="#path" kind="secondary"}
 ::::
 :::::
 
-:::::section{title="Evidence earns space by helping the decision" id="evidence" nav="Evidence" recipe="metrics"}
+:::::section{title="What the trial measured" id="evidence" nav="Evidence" recipe="metrics"}
 ::::cards
-:::card{title="Reader time"}
-The first useful conclusion appears before supporting detail.
+:::card{title="−61% build time" status="good"}
+Median nightly time fell from 118 to 46 minutes over 20 runs, 6 September – 3 October 2026.
 :::
-:::card{title="Decision state"}
-The recommendation, constraints, and owner remain visible together.
+:::card{title="94% cache hits" status="good"}
+Share of compile steps served from the cache in the last week of the trial.
 :::
-:::card{title="Reversal path"}
-The fallback is a named operating route rather than a footnote.
+:::card{title="+€1,900 a month" status="watch"}
+Storage and egress for the cache at today's volume, quoted by the platform team on 1 October.
 :::
-:::card{title="Evidence boundary"}
-Claims stay separate from illustrative structure.
-:::
-::::
-:::::
-
-:::::section{title="A strong page still respects reading order" id="path" nav="Path" recipe="story"}
-![A dark terrain crossed by a single illuminated path](assets/path.jpg)
-
-::::timeline{title="Operating path" description="Four bounded stages take the decision from review to a reversible release."}
-:::event{date="Frame" title="Name the decision" kind="accent"}
-State the choice and the consequence before presenting detail.
-:::
-:::event{date="Prove" title="Connect evidence" kind="success"}
-Place the strongest observations beside the claim they support.
-:::
-:::event{date="Act" title="Assign the route" kind="neutral"}
-Give every next action one owner and an observable completion state.
-:::
-:::event{date="Recover" title="Keep reversal visible" kind="warning"}
-Make the rollback path as easy to find as the launch path.
+:::card{title="2 stale-cache failures" status="risk"}
+Both came from one misconfigured key in week 1 and were fixed on 12 September; none since.
 :::
 ::::
 :::::
 
-:::::section{title="The handoff should feel finished" id="handoff" nav="Handoff" recipe="evidence" interaction="tilt"}
-![A precise stack of translucent report surfaces ready for handoff](assets/handoff.jpg)
-
-:::callout{kind="success" title="Built from ordinary source"}
-This composition uses the same declarative sections, cards, actions, timeline, local images, Review, and
-responsive runtime available to every report.
+:::::section{title="How we switch, and how we switch back" id="path" nav="Rollout" recipe="story"}
+:::diagram{title="Nightly build with the shared cache" description="The scheduler starts a build, the runner asks the cache for each compile step, and only misses compile locally before results return to the cache." layout="right"}
+::node{id="scheduler" label="Scheduler" detail="02:00 CET"}
+::node{id="runner" label="Build runner"}
+::node{id="cache" label="Shared cache" kind="accent"}
+::node{id="compile" label="Local compile" detail="cache misses only"}
+::edge{from="scheduler" to="runner" label="start nightly build"}
+::edge{from="runner" to="cache" label="look up each step" kind="data"}
+::edge{from="runner" to="compile" label="on a miss"}
+::edge{from="compile" to="cache" label="store the result" kind="data"}
+::legend-item{node="accent" label="New component"}
 :::
 
-::::actions{placement="bottom"}
-::action[Return to the decision]{href="#opening" kind="primary" effect="magnetic"}
-::action[Open the visual catalog]{href="../visual-catalog/index.html" kind="secondary"}
+::::timeline{title="Rollout" description="Four dated steps from the switch to closing the trial, each with one owner."}
+:::event{date="3 Nov" title="Switch 38 pipelines" kind="accent"}
+Owner: Priya Raman, build platform. One flag per pipeline; the old runners stay warm.
+:::
+:::event{date="3–7 Nov" title="Watch the morning" kind="neutral"}
+Owner: Tomás Ferreira, release. Compare finish times with the trial every morning at 07:00.
+:::
+:::event{date="10 Nov" title="Keep or roll back" kind="warning"}
+Owner: Priya Raman. Rolling back is one command that turns the flag off on all pipelines.
+:::
+:::event{date="17 Nov" title="Retire the spare runners" kind="success"}
+Owner: Ana Kovač, finance partner. Only after a full week without a stale-cache failure.
+:::
+::legend-item{event="accent" label="Switch-over"}
+::legend-item{event="warning" label="Decision point"}
+::legend-item{event="success" label="Trial closed"}
 ::::
+:::::
+
+:::::section{title="What we ask of you" id="handoff" nav="Your decision" recipe="evidence"}
+
+| Decision needed           | By         | From              |
+| ------------------------- | ---------- | ----------------- |
+| Approve the €1,900 budget | 24 October | Head of platform  |
+| Agree the 3 November date | 24 October | Release manager   |
+| Name a rollback reviewer  | 31 October | Engineering leads |
+
+:::decision{title="Adopt the shared cache, reversibly"}
+Switch on 3 November, keep the old runners warm for one week, and decide on 10 November from the morning
+finish times.
+:::
 :::::

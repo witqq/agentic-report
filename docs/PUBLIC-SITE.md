@@ -98,11 +98,12 @@ For release `R`, update the package version, CLI runtime identity, `skills/agent
 `metadata.version`, both plugin manifest versions, the Claude marketplace entry, documentation commands,
 and generated `release.json` together. Then:
 
-1. Validate source contracts, package, skill, plugin manifests, staged routes, hashes, and public safety.
-2. Publish the same commit and tag to GitHub and npm.
-3. Prove pinned `agentic-report@R` and unversioned `latest=R` with separate empty npm caches.
-4. Build and deploy that commit; pass trusted TLS, route, MIME, byte, link, and real-404 checks.
-5. Only then submit or update the community OpenAI and Anthropic listings and verify
+1. Pass the single pre-release gate, `pnpm verify` (source contracts, package, skill, plugin manifests, staged
+   routes, hashes, and public safety).
+2. Publish the same commit and tag to GitHub and npm through the trusted workflow; npm reporting `latest` and
+   `version` as `R` is the publication proof — do not repeat it with a second download or isolated install.
+3. Build and deploy that commit; pass trusted TLS, route, MIME, byte, link, and real-404 checks.
+4. Only then submit or update the community OpenAI and Anthropic listings and verify
    `npx skills add witqq/agentic-report --skill agentic-report` from the public repository.
 
 The GitHub Release description must end with a `Made with Moira` link to the same canonical Moira product

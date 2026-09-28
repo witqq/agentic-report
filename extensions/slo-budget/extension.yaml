@@ -1,0 +1,7 @@
+kind: island
+name: slo-budget
+description: An error-budget calculator the reader fills in, showing how much of the budget is spent and when it runs out at the current pace.
+staticEquivalent: The Markdown body of the island directive, which should state the budget of the page's own case and the formula; print, readers without scripts and the moment before the island is ready show it.
+entry: index.html
+assets: [app.js, style.css]
+examples: [example-incident.md, example-guide.md]

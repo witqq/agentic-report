@@ -39,7 +39,7 @@ agentic-report build ./my-page --output ./my-page.html
 
 :::
 :::tab{label="Каталог"}
-Для крупных проектов формат каталога записывает HTML-вход и адресуемые по содержимому ресурсы.
+Для крупных проектов сборка в каталог создаёт HTML-файл и ресурсы с именами по хешу содержимого.
 
 ```sh
 agentic-report build ./my-page --format directory --output ./my-page-dist
@@ -68,7 +68,7 @@ agentic-report build ./my-page --format directory --output ./my-page-dist
 ```yaml
 title: Итоги ревью
 layout: document
-theme: system
+scheme: system
 ```
 
 :::

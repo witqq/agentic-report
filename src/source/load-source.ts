@@ -19,6 +19,9 @@ import {
 } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
 import { supportedPackageLocale } from '../localization.js';
+import { loadExtensions, type LoadedExtensions } from '../extensions/load.js';
+import { loadPageData, type PageData } from './load-data.js';
+import { loadTheme, type LoadedTheme } from './load-theme.js';
 import { sourceLocationFromOffsets } from './source-map.js';
 
 interface MetadataOrigin {
@@ -52,12 +55,20 @@ export async function loadSource(input: string): Promise<SourceDocument> {
       )
     : await realpath(resolvedInput);
   const sourceRoot = path.dirname(entryPath);
-  const primary = await loadSourceEntry(entryPath, sourceRoot, true);
+  const {
+    theme: loadedTheme,
+    extensions,
+    ...primary
+  } = await loadSourceEntry(entryPath, sourceRoot, true);
+  if (loadedTheme === undefined) throw new Error('The primary entry resolved no theme.');
+  const theme = loadedTheme.theme;
   const declared = primary.manifest.localizations;
   const primaryLocale = supportedPackageLocale(primary.manifest.language);
   if (declared === undefined) {
     return {
       ...primary,
+      theme,
+      ...(extensions === undefined ? {} : { extensions }),
       locale: primaryLocale ?? 'en',
       localizations: [],
     };
@@ -139,6 +150,20 @@ export async function loadSource(input: string): Promise<SourceDocument> {
     }
     localizations.push({
       ...loaded,
+      ...(primary.data === undefined
+        ? {}
+        : {
+            data: primary.data,
+            sourceFiles: [
+              ...new Set([...loaded.sourceFiles, ...primary.data.files.map((item) => item.file)]),
+            ],
+            sourceDigests: [
+              ...loaded.sourceDigests,
+              ...dataDigests(primary.data).filter(
+                (digest) => !loaded.sourceDigests.some((known) => known.file === digest.file),
+              ),
+            ],
+          }),
       manifest: localizedManifest(primary.manifest, loaded.manifest),
       locale,
     });
@@ -146,6 +171,8 @@ export async function loadSource(input: string): Promise<SourceDocument> {
 
   return {
     ...primary,
+    theme,
+    ...(extensions === undefined ? {} : { extensions }),
     sourceFiles: [
       ...new Set([primary.sourceFiles, ...localizations.map((item) => item.sourceFiles)].flat()),
     ],
@@ -158,7 +185,12 @@ async function loadSourceEntry(
   entryPath: string,
   sourceRoot: string,
   includeProjectManifest: boolean,
-): Promise<SourceVariantDocument> {
+): Promise<
+  SourceVariantDocument & {
+    readonly theme?: LoadedTheme;
+    readonly extensions?: LoadedExtensions;
+  }
+> {
   const raw = await readFile(entryPath, 'utf8');
   const parsed = parseFrontmatter(raw, entryPath);
   const manifestDocument = includeProjectManifest
@@ -203,6 +235,50 @@ async function loadSourceEntry(
     );
   }
 
+  const theme = includeProjectManifest
+    ? await loadTheme(
+        manifestResult.data.theme,
+        themeDeclaration(
+          metadataPathComesFrom(frontmatterData, ['theme'])
+            ? { file: entryPath, text: raw, frontmatter: parsed.matter }
+            : manifestDocument.origin === undefined
+              ? { file: entryPath, text: raw, frontmatter: parsed.matter }
+              : { file: manifestDocument.origin.file, text: manifestDocument.origin.text },
+        ),
+        sourceRoot,
+        resolveLocalPath,
+      )
+    : undefined;
+
+  const declaredExtensions = manifestResult.data.extensions;
+  const extensions =
+    includeProjectManifest && declaredExtensions !== undefined
+      ? await loadExtensions(declaredExtensions, sourceRoot, {
+          location: metadataPathLocation(
+            metadataPathComesFrom(frontmatterData, ['extensions'])
+              ? frontmatterOrigin
+              : (manifestDocument.origin ?? frontmatterOrigin),
+            ['extensions'],
+          ),
+        })
+      : undefined;
+
+  const declaredData = manifestResult.data.data;
+  const data =
+    includeProjectManifest && declaredData !== undefined
+      ? await loadPageData(
+          declaredData,
+          sourceRoot,
+          metadataPathLocation(
+            metadataPathComesFrom(frontmatterData, ['data'])
+              ? frontmatterOrigin
+              : (manifestDocument.origin ?? frontmatterOrigin),
+            ['data'],
+          ),
+          resolveLocalPath,
+        )
+      : undefined;
+
   const expanded = await expandPartials(
     parsed.content,
     sourceRoot,
@@ -212,6 +288,17 @@ async function loadSourceEntry(
     raw,
     raw.length - parsed.content.length,
   );
+  const themeFiles = theme?.files ?? [];
+  // Файлы расширений страницы (манифесты, шаблоны, стили, модули, ресурсы островов) входят в ревизию:
+  // изменённый шаблон меняет страницу, и прежнее ревью не должно считаться точным.
+  const extensionDigests = await Promise.all(
+    (extensions?.files ?? []).map(async (file) => ({
+      file,
+      sha256: createHash('sha256')
+        .update(await readFile(file))
+        .digest('hex'),
+    })),
+  );
   return {
     entryPath,
     sourceRoot,
@@ -220,12 +307,51 @@ async function loadSourceEntry(
         entryPath,
         ...(manifestDocument.origin === undefined ? [] : [manifestDocument.origin.file]),
         ...expanded.sourceFiles,
+        ...themeFiles.map((themeFile) => themeFile.file),
+        ...(extensions?.files ?? []),
+        ...(data?.files.map((dataFile) => dataFile.file) ?? []),
       ]),
     ],
     markdown: expanded.markdown,
     manifest: manifestResult.data,
     sourceMap: expanded.sourceMap,
-    sourceDigests: sourceDigests(entryPath, raw, manifestDocument.origin, expanded.sourceMap),
+    sourceDigests: [
+      ...sourceDigests(entryPath, raw, manifestDocument.origin, expanded.sourceMap, [
+        ...themeFiles,
+        ...(data?.files ?? []),
+      ]),
+      ...extensionDigests,
+    ],
+    ...(theme === undefined ? {} : { theme }),
+    ...(extensions === undefined ? {} : { extensions }),
+    ...(data === undefined ? {} : { data }),
+  };
+}
+
+/**
+ * Где объявлена тема: во frontmatter — YAML между разделителями, в манифесте — весь файл. Путь до
+ * поля всегда `theme`: по нему диагностики темы во frontmatter указывают на её строку.
+ */
+function themeDeclaration(
+  origin:
+    | { readonly file: string; readonly text: string; readonly frontmatter: string }
+    | { readonly file: string; readonly text: string; readonly frontmatter?: never },
+) {
+  if (origin.frontmatter === undefined)
+    return {
+      file: origin.file,
+      text: origin.text,
+      yamlStart: 0,
+      yamlText: origin.text,
+      path: ['theme'],
+    };
+  const yamlStart = origin.text.startsWith('---') ? 3 : 0;
+  return {
+    file: origin.file,
+    text: origin.text,
+    yamlStart,
+    yamlText: origin.frontmatter,
+    path: ['theme'],
   };
 }
 
@@ -268,7 +394,7 @@ function assertLocalizedMetadata(data: Record<string, unknown>, origin: Metadata
   if (unsupported.length === 0) return;
   throw localizationError(
     `Localized entry has primary-owned metadata: ${unsupported.join(', ')}.`,
-    'Keep layout, theme, tokens, output, attribution, and localizations in the primary entry.',
+    'Keep layout, theme, scheme, output, attribution, and localizations in the primary entry.',
     origin.file,
   );
 }
@@ -319,14 +445,25 @@ function localizationError(message: string, remediation: string, file: string): 
   });
 }
 
+function dataDigests(
+  data: PageData,
+): readonly { readonly file: string; readonly sha256: string }[] {
+  return data.files.map((dataFile) => ({
+    file: dataFile.file,
+    sha256: createHash('sha256').update(dataFile.text).digest('hex'),
+  }));
+}
+
 function sourceDigests(
   entryPath: string,
   entryText: string,
   manifestOrigin: MetadataOrigin | undefined,
   sourceMap: readonly SourceMapSegment[],
+  themeFiles: readonly MetadataOrigin[] = [],
 ): readonly { readonly file: string; readonly sha256: string }[] {
   const sources = new Map<string, string>([[entryPath, entryText]]);
   if (manifestOrigin !== undefined) sources.set(manifestOrigin.file, manifestOrigin.text);
+  for (const themeFile of themeFiles) sources.set(themeFile.file, themeFile.text);
   for (const segment of sourceMap) sources.set(segment.sourceFile, segment.sourceText);
   return [...sources].map(([file, text]) => ({
     file,

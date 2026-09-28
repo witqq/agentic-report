@@ -1,0 +1,9 @@
+{
+  "family": "Martian Mono",
+  "package": "@fontsource-variable/martian-mono",
+  "version": "5.3.0",
+  "fontVersion": "v6",
+  "license": "OFL-1.1",
+  "attribution": "Copyright 2020 The Martian Mono Project Authors (https://github.com/evilmartians/mono)",
+  "source": "https://github.com/google/fonts"
+}

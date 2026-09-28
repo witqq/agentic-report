@@ -2,7 +2,7 @@
 title: Offline private registry corpus
 description: Bounded offline/private report contract coverage.
 language: en
-themeToggle: false
+schemeToggle: false
 attribution: false
 ---
 
@@ -14,6 +14,8 @@ Corpus class: offline-private-report
 
 ::asset{src="private-data.json"}
 
-::video{src="private-recording.webm" poster="private-recording.png" caption="Retained playback recording."}
+::video{src="private-recording.webm" sources="private-recording.webm" mode="background" chapters="private-recording.vtt" poster="private-recording.png" caption="Retained playback recording."}
 
-::font{src="private-font.woff" family="Private Reader"}
+::video{src="private-recording.webm" poster="private-recording.png" caption="Retained clip from its second half-second." start="0.5" seam="fade" expand="true"}
+
+::font{src="private-font.woff" family="Private Reader" role="body"}

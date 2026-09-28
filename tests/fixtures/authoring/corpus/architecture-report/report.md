@@ -4,7 +4,7 @@ description: Bounded architecture-report contract coverage.
 language: en
 localizations:
   ru: report.ru.md
-theme: dark
+scheme: dark
 ---
 
 # Architecture registry corpus

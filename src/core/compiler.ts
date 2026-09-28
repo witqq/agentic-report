@@ -112,6 +112,7 @@ function buildResult(
     share: prepared.share,
     neutralizedSourceLinks: prepared.neutralizedSourceLinks,
     warnings: prepared.warnings,
+    ...(prepared.extensions === undefined ? {} : { extensions: prepared.extensions }),
   };
 }
 

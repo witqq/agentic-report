@@ -1,0 +1,196 @@
+/* Every colour, face, radius and control size comes from the page's theme tokens, which the island bridge
+   sets as custom properties on the root; the fallbacks only keep the island readable before `init`. */
+
+:root {
+  color-scheme: light dark;
+  font-family: var(--font-body, system-ui, sans-serif);
+  line-height: 1.45;
+  color: var(--color-text, CanvasText);
+  background: transparent;
+}
+
+:root[data-scheme='light'] {
+  color-scheme: light;
+}
+
+:root[data-scheme='dark'] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.budget {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border, GrayText);
+  border-radius: var(--radius-card, 0.5rem);
+  background: var(--color-surface, Canvas);
+}
+
+.inputs {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted, GrayText);
+}
+
+select,
+input {
+  min-block-size: var(--control-md, 2.5rem);
+  padding-inline: var(--control-pad-x, 0.75rem);
+  border: 1px solid var(--color-border-strong, GrayText);
+  border-radius: var(--radius-control, 0.375rem);
+  font: inherit;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text, CanvasText);
+  background: var(--color-surface-raised, Field);
+  inline-size: 100%;
+}
+
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--color-focus, Highlight);
+  outline-offset: 2px;
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.figures div {
+  padding-block-start: 0.6rem;
+  border-block-start: 1px solid var(--color-border, GrayText);
+}
+
+dt {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted, GrayText);
+}
+
+dd {
+  margin: 0.2rem 0 0;
+  font-family: var(--font-heading, inherit);
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-heading, CanvasText);
+}
+
+dd .note {
+  display: block;
+  font-family: var(--font-body, inherit);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted, GrayText);
+}
+
+dd {
+  white-space: nowrap;
+}
+
+.verdict {
+  margin: 1rem 0 0.5rem;
+  padding-inline-start: 0.75rem;
+  border-inline-start: 3px solid var(--status-done, currentColor);
+}
+
+.verdict[data-state='short'] {
+  border-inline-start-color: var(--status-review, currentColor);
+}
+
+.verdict[data-state='over'] {
+  border-inline-start-color: var(--status-returned, currentColor);
+}
+
+.chart {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  overflow: visible;
+}
+
+.axis {
+  stroke: var(--color-border-strong, GrayText);
+  stroke-width: 1;
+}
+
+.pace {
+  stroke: var(--color-text-muted, GrayText);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.spent,
+.projection {
+  fill: none;
+  stroke: var(--color-accent, Highlight);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+}
+
+.projection {
+  stroke-width: 1.5;
+  opacity: 0.7;
+}
+
+.today {
+  fill: var(--color-accent, Highlight);
+}
+
+.tick {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  fill: var(--color-text-muted, GrayText);
+}
+
+@media (width >= 44rem) {
+  .budget {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    gap: 2rem;
+    padding: 1.5rem;
+  }
+
+  .inputs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (width < 26rem) {
+  .inputs,
+  .figures {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .figures div {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  dd {
+    text-align: end;
+  }
+
+  /* The chart is drawn at about 290 px here, so its labels are set larger to stay readable. */
+  .tick {
+    font-size: 14px;
+  }
+}

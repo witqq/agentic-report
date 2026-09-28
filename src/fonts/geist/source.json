@@ -1,0 +1,9 @@
+{
+  "family": "Geist",
+  "package": "@fontsource-variable/geist",
+  "version": "5.3.0",
+  "fontVersion": "v5",
+  "license": "OFL-1.1",
+  "attribution": "Copyright 2024 The Geist Project Authors (https://github.com/vercel/geist-font) Geist-Italic[wght].ttf: Copyright 2024 The Geist Project Authors (https://github.com/vercel/geist-font)",
+  "source": "https://github.com/google/fonts"
+}

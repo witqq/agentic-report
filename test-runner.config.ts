@@ -41,15 +41,21 @@ const config: Config = {
         'pnpm exec vitest run --config=vitest.unit.config.ts --reporter=default --reporter=json --outputFile.json=test-results/artifacts/unit.json',
       resultFile: 'unit.json',
       parser: './tests/parsers/vitest-parser.ts',
-      timeout: 120_000,
+      // The complete build/CLI corpus takes longer on hosted runners; individual integration tests
+      // retain their own explicit deadlines and Vitest's default remains 5 s for ordinary tests.
+      timeout: 300_000,
     },
     {
       name: 'e2e',
       type: 'playwright',
       command: 'pnpm exec playwright test --config=playwright.config.ts',
       resultFile: 'e2e.json',
-      timeout: 300_000,
-      workers: 2,
+      // CPU-throttled effect checks need the browser worker to own the CPU while measuring frame
+      // tasks. A second worker can push an otherwise passing task over the 50 ms budget. The suite
+      // hosted Ubuntu browser corpus needs about 27 minutes; leave room for the last tests and JSON
+      // reporter to finish. Individual test deadlines and the 50 ms frame budget stay unchanged.
+      timeout: 1_900_000,
+      workers: 1,
     },
   ],
 };

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  BUILT_IN_THEME_NAMES,
+  resolveBuiltInTheme,
+  type BuiltInThemeName,
+} from '../../src/authoring/themes.js';
+import {
   renderDocument,
   type DocumentRenderOptions,
   type DocumentRuntime,
@@ -10,21 +15,16 @@ const baseOptions = {
   title: 'Runtime contract',
   language: 'en',
   page: {
-    preset: 'studio',
-    theme: 'system',
+    theme: resolveBuiltInTheme('midnight'),
+    switchableThemes: [],
+    scheme: 'system',
     layout: 'document',
-    scrollProgress: false,
+    progress: 'none',
+    opening: 'center',
     attribution: true,
     review: false,
-    themeToggle: true,
-    presetSwitcher: false,
-    tokens: {
-      density: 'comfortable',
-      font: 'sans',
-      accent: 'indigo',
-      width: 'standard',
-      radius: 'soft',
-    },
+    schemeToggle: true,
+    motion: 'expressive',
   },
   contentHtml: '<h1>Runtime contract</h1>',
   navigation: [],
@@ -105,23 +105,17 @@ describe('renderDocument runtime boundary', () => {
   });
 
   it('projects every validated layout and theme through one semantic page shell', () => {
-    for (const preset of ['studio', 'editorial', 'signal'] as const) {
+    for (const themeName of [
+      'midnight',
+      'calm-paper',
+      'terminal',
+    ] as const satisfies readonly BuiltInThemeName[]) {
       for (const layout of ['document', 'dashboard', 'landing', 'mixed'] as const) {
-        for (const theme of ['system', 'light', 'dark'] as const) {
+        for (const scheme of ['system', 'light', 'dark'] as const) {
+          const theme = resolveBuiltInTheme(themeName);
           const html = renderDocument({
             ...inlineOptions,
-            page: {
-              preset,
-              theme,
-              layout,
-              tokens: {
-                density: 'compact',
-                font: 'serif',
-                accent: 'teal',
-                width: 'wide',
-                radius: 'round',
-              },
-            },
+            page: { ...inlineOptions.page, theme, scheme, layout },
             contentHtml:
               '<h1>Page model</h1><h2 id="section">Section</h2><p>Semantic content.</p><h2 id="next">Next</h2>',
             navigation: [
@@ -129,14 +123,15 @@ describe('renderDocument runtime boundary', () => {
               { id: 'next', label: 'Next', depth: 2 },
             ],
           });
-          expect(html).toContain(`data-preset="${preset}"`);
+          expect(html).toContain(`data-theme="${themeName}"`);
           expect(html).toContain(`data-layout="${layout}"`);
-          expect(html).toContain(`data-theme="${theme}"`);
-          expect(html).toContain('data-density="compact"');
-          expect(html).toContain('data-font="serif"');
-          expect(html).toContain('data-accent="teal"');
-          expect(html).toContain('data-width="wide"');
-          expect(html).toContain('data-radius="round"');
+          expect(html).toContain(`data-scheme="${scheme}"`);
+          // Приёмы темы приходят атрибутами корня из её данных, а не из имени темы.
+          expect(html).toContain(`data-theme-topbar="${theme.chrome.topbar}"`);
+          expect(html).toContain(`data-theme-landing="${theme.chrome.landing}"`);
+          expect(html).toContain(
+            `data-theme-heading-prefix="${theme.ornaments.headingPrefix === '' ? 'none' : 'on'}"`,
+          );
           expect(html).toContain('<main id="report-content" class="report-content">');
           expect(html).toContain('aria-label="Document contents" data-navigation="true"');
         }
@@ -171,14 +166,14 @@ describe('renderDocument runtime boundary', () => {
   it('renders one current navigation set, native mobile dialog, and optional progress intent', () => {
     const html = renderDocument({
       ...inlineOptions,
-      page: { ...inlineOptions.page, scrollProgress: true },
+      page: { ...inlineOptions.page, progress: 'chapters' },
       contentHtml: '<h2 id="first">First</h2><h2 id="second">Second</h2>',
       navigation: [
         { id: 'first', label: 'First', depth: 2 },
         { id: 'second', label: 'Second', depth: 2 },
       ],
     });
-    expect(html).toContain('data-scroll-progress="true"');
+    expect(html).toContain('data-progress="chapters"');
     expect(html).toContain('class="report-shell" data-has-navigation="true"');
     expect(html).toContain('aria-label="Hide contents"');
     expect(html).toContain('data-nav-dialog="true"');
@@ -212,14 +207,16 @@ describe('renderDocument runtime boundary', () => {
       },
     });
 
-    expect(html).toContain('class="review-toggle"');
+    expect(html).toContain('class="review-toggle ui-button"');
     expect(html).toContain('data-package-icon="comment"');
     expect(html).toContain('aria-label="Review"');
     expect(html).toContain('aria-controls="report-review-dialog-2"');
     expect(html).toContain(
       'class="review-dialog" id="report-review-dialog-2" aria-labelledby="report-review-dialog-title"',
     );
-    expect(html).toContain('class="review-popover" id="report-review-popover" role="dialog"');
+    expect(html).toContain(
+      'class="review-popover ui-panel" id="report-review-popover" role="dialog"',
+    );
     expect(html).toContain('data-review-popover-close="true"');
     expect(html).toContain('data-review-import="true"');
     expect(html).toContain('data-review-export="true"');
@@ -230,48 +227,42 @@ describe('renderDocument runtime boundary', () => {
     expect(renderDocument(inlineOptions)).not.toContain('data-review-toggle');
   });
 
-  it('offers the style selector only on request and keeps the scheme control separable', () => {
+  it('offers the theme selector only on request and keeps the scheme control separable', () => {
     const plain = renderDocument(inlineOptions);
-    expect(plain).not.toContain('data-preset-select');
-    expect(plain).not.toContain('<template data-preset-catalog');
-    expect(plain).toContain('class="theme-toggle"');
+    expect(plain).not.toContain('data-theme-select');
+    expect(plain).not.toContain('<template data-theme-catalog');
+    expect(plain).toContain('class="scheme-toggle ui-button"');
 
     const switchable = renderDocument({
       ...inlineOptions,
-      page: { ...inlineOptions.page, presetSwitcher: true },
+      page: {
+        ...inlineOptions.page,
+        switchableThemes: BUILT_IN_THEME_NAMES.map(resolveBuiltInTheme),
+      },
     });
-    expect(switchable).toContain('data-preset-select');
+    expect(switchable).toContain('data-theme-select');
     expect(switchable).toContain('data-package-icon="palette"');
-    // Каталог несёт стиль вместе с его токенами: без них смена дала бы смешанный вид.
-    const catalog = /<template data-preset-catalog="true">(.*?)<\/template>/su.exec(
-      switchable,
-    )?.[1];
+    // Каталог несёт тему вместе с её приёмами оболочки: без них смена дала бы смешанный вид.
+    const catalog = /<template data-theme-catalog="true">(.*?)<\/template>/su.exec(switchable)?.[1];
     expect(catalog).toBeDefined();
     const parsed = JSON.parse((catalog ?? '{}').replaceAll('&quot;', '"')) as Record<
       string,
       Record<string, string>
     >;
-    expect(Object.keys(parsed)).toEqual([
-      'monument',
-      'material',
-      'signal',
-      'terminal',
-      'cinematic',
-    ]);
-    expect(parsed.terminal).toEqual({
-      density: 'compact',
-      font: 'mono',
-      accent: 'teal',
-      width: 'wide',
-      radius: 'sharp',
+    expect(Object.keys(parsed)).toEqual([...BUILT_IN_THEME_NAMES]);
+    expect(parsed.terminal).toMatchObject({
+      'data-theme': 'terminal',
+      'data-theme-heading-prefix': 'on',
+      'data-theme-title-cursor': 'on',
+      'data-theme-linked-card': 'edge',
     });
 
     const withoutScheme = renderDocument({
       ...inlineOptions,
-      page: { ...inlineOptions.page, themeToggle: false },
+      page: { ...inlineOptions.page, schemeToggle: false },
     });
-    expect(withoutScheme).not.toContain('class="theme-toggle"');
-    expect(withoutScheme).not.toContain('data-theme-toggle');
+    expect(withoutScheme).not.toContain('class="scheme-toggle ui-button"');
+    expect(withoutScheme).not.toContain('data-scheme-toggle');
   });
 
   it('keeps the review workspace out of an ordinary page even when targets exist', () => {
@@ -292,13 +283,13 @@ describe('renderDocument runtime boundary', () => {
       },
     } as const satisfies DocumentRenderOptions;
     const defaulted = renderDocument(withTargets);
-    expect(defaulted).not.toContain('class="review-toggle"');
+    expect(defaulted).not.toContain('class="review-toggle ui-button"');
     expect(defaulted).not.toContain('<template data-review-manifest');
     const requested = renderDocument({
       ...withTargets,
       page: { ...withTargets.page, review: true },
     });
-    expect(requested).toContain('class="review-toggle"');
+    expect(requested).toContain('class="review-toggle ui-button"');
     expect(requested).toContain('<template data-review-manifest');
   });
 });

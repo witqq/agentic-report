@@ -1,0 +1,59 @@
+{
+  "id": 96,
+  "flow": "nightly-review",
+  "exportedAt": "2026-09-25T01:17",
+  "zone": "Europe/Moscow",
+  "records": 212,
+  "status": "done",
+  "findings": 0,
+  "accepted": 9,
+  "items": 10,
+  "returns": 4,
+  "stages": [
+    {
+      "id": "plan",
+      "title": { "en": "Plan", "ru": "План" },
+      "items": 3,
+      "minutes": 12,
+      "returns": 0,
+      "card": "good",
+      "note": { "en": "accepted on the first pass", "ru": "принят с первого раза" }
+    },
+    {
+      "id": "build",
+      "title": { "en": "Build", "ru": "Сборка" },
+      "items": 4,
+      "minutes": 41,
+      "returns": 1,
+      "card": "watch",
+      "note": { "en": "one flaky test rerun", "ru": "один нестабильный тест перезапущен" }
+    },
+    {
+      "id": "review",
+      "title": { "en": "Review", "ru": "Ревью" },
+      "items": 10,
+      "minutes": 58,
+      "returns": 2,
+      "card": "watch",
+      "note": { "en": "9 of 10 items accepted", "ru": "принято 9 из 10 пунктов" }
+    },
+    {
+      "id": "checks",
+      "title": { "en": "Checks", "ru": "Проверки" },
+      "items": 21,
+      "minutes": 17,
+      "returns": 1,
+      "card": "good",
+      "note": { "en": "all green after one return", "ru": "всё зелёное после одного возврата" }
+    },
+    {
+      "id": "handoff",
+      "title": { "en": "Handoff", "ru": "Передача" },
+      "items": 1,
+      "minutes": 5,
+      "returns": 0,
+      "card": "good",
+      "note": { "en": "page sent to the owner", "ru": "страница отправлена владельцу" }
+    }
+  ]
+}

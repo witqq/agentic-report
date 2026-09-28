@@ -108,21 +108,15 @@ describe('buildReport', () => {
     expect(await readFile(secondOutput, 'utf8')).toBe(await readFile(firstOutput, 'utf8'));
   });
 
-  it('reports a structured warning when the inline size threshold is exceeded', async () => {
-    const workspace = await fixtureWorkspace('size-warning');
+  it('refuses a single file above its size budget and writes nothing', async () => {
+    const workspace = await fixtureWorkspace('size-budget');
     await writeFile(path.join(workspace, 'agentic-report.yaml'), 'output:\n  maxInlineBytes: 1\n');
+    const output = path.join(workspace, 'report.html');
 
-    const result = await buildReport({
-      input: workspace,
-      output: path.join(workspace, 'report.html'),
+    await expect(buildReport({ input: workspace, output })).rejects.toMatchObject({
+      diagnostic: { level: 'error', code: 'INLINE_SIZE_BUDGET_EXCEEDED' },
     });
-
-    expect(result.warnings).toContainEqual(
-      expect.objectContaining({
-        level: 'warning',
-        code: 'INLINE_SIZE_THRESHOLD_EXCEEDED',
-      }),
-    );
+    await expect(readFile(output)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('counts serialized data URLs and the embedded runtime for single-file output', async () => {
@@ -152,14 +146,10 @@ describe('buildReport', () => {
       ].join('\n'),
     );
 
-    const encodedResult = await buildReport({
-      input: encodedWorkspace,
-      output: path.join(encodedWorkspace, 'report.html'),
-    });
     expect(rawTotal).toBeLessThan(threshold);
-    expect(encodedResult.warnings).toContainEqual(
-      expect.objectContaining({ code: 'INLINE_SIZE_THRESHOLD_EXCEEDED' }),
-    );
+    await expect(
+      buildReport({ input: encodedWorkspace, output: path.join(encodedWorkspace, 'report.html') }),
+    ).rejects.toMatchObject({ diagnostic: { code: 'INLINE_SIZE_BUDGET_EXCEEDED' } });
   });
 
   it('counts an inline font data URL exactly once through its serialized stylesheet', async () => {
@@ -176,7 +166,9 @@ describe('buildReport', () => {
       Buffer.byteLength(extractInlineStyles(probeHtml)) +
       Buffer.byteLength(extractInlineRuntime(probeHtml));
     expect(probe.warnings).toEqual([]);
-    expect(probeHtml.match(/data:font\/woff2;base64,/gu)).toHaveLength(1);
+    // Встроенные шрифты темы идут своими data URL; шрифт автора встроен ровно один раз.
+    const authorFont = `data:font/woff2;base64,${Buffer.from('font-contents').toString('base64')}`;
+    expect(probeHtml.split(authorFont)).toHaveLength(2);
 
     await writeFile(
       path.join(workspace, 'agentic-report.yaml'),
@@ -192,16 +184,14 @@ describe('buildReport', () => {
       path.join(workspace, 'agentic-report.yaml'),
       `output:\n  maxInlineBytes: ${exactBundledBytes - 1}\n`,
     );
-    const exceeded = await buildReport({
-      input: workspace,
-      output: path.join(workspace, 'exceeded.html'),
+    await expect(
+      buildReport({ input: workspace, output: path.join(workspace, 'exceeded.html') }),
+    ).rejects.toMatchObject({
+      diagnostic: {
+        code: 'INLINE_SIZE_BUDGET_EXCEEDED',
+        details: { bundledBytes: exactBundledBytes, budget: exactBundledBytes - 1 },
+      },
     });
-    expect(exceeded.warnings).toContainEqual(
-      expect.objectContaining({
-        code: 'INLINE_SIZE_THRESHOLD_EXCEEDED',
-        details: { bundledBytes: exactBundledBytes, threshold: exactBundledBytes - 1 },
-      }),
-    );
   });
 
   it('builds a directory artifact with deterministic external assets', async () => {
@@ -617,7 +607,7 @@ describe('buildReport', () => {
     expect(html).toContain('class="semantic-cards"');
     expect(html).toContain('data-demo-counter');
     expect(html).toContain('data:application/json;base64,');
-    expect(html).toContain('class="semantic-asset"');
+    expect(html).toContain('class="semantic-asset ui-button"');
     expect(html).toContain('>Скачать data.json</a>');
     expect(html).toContain('data:font/woff2;base64,');
     expect(html).toContain('@font-face');

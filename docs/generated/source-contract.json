@@ -40,6 +40,17 @@
     "resources": ["local images", "downloadable local assets", "local fonts"]
   },
   "directives": {
+    "eyebrow": {
+      "description": "A short small-caps line above the title that follows it, in the eyebrow colour of the theme; written first in a section, it stands above the section title.",
+      "forms": ["leaf"],
+      "attributes": {},
+      "children": "label-or-generated-label",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
     "section": {
       "description": "Labelled top-level page section containing Markdown.",
       "forms": ["container"],
@@ -71,10 +82,28 @@
         },
         "recipe": {
           "kind": "enum",
-          "values": ["none", "hero", "evidence", "story", "rail", "metrics"],
+          "values": [
+            "none",
+            "hero",
+            "evidence",
+            "story",
+            "rail",
+            "metrics",
+            "thesis",
+            "statement",
+            "blueprint",
+            "demo"
+          ],
           "required": false,
           "default": "none",
           "description": "High-level package-owned section composition; explicit detailed attributes override its roles."
+        },
+        "place": {
+          "kind": "enum",
+          "values": ["flow", "opening"],
+          "required": false,
+          "default": "flow",
+          "description": "Where the section stands: in the flow of the page, or as the first screen beside the page title (only the first section)."
         },
         "width": {
           "kind": "enum",
@@ -155,24 +184,60 @@
         },
         "surface": {
           "kind": "enum",
-          "values": ["plain", "mesh", "glow", "grain", "grid"],
+          "values": ["plain", "tint", "grain", "grid", "blueprint"],
           "required": false,
           "default": "plain",
-          "description": "Package-owned decorative surface that never replaces content."
+          "description": "Package-owned band behind the section: none, a one-colour tint, a fine grain, a drafting grid, or a blueprint grid with major and minor lines in the accent colour."
+        },
+        "frame": {
+          "kind": "enum",
+          "values": ["none", "panel", "browser"],
+          "required": false,
+          "default": "none",
+          "description": "Section edge: a full-width band with no border, or a bordered rounded panel. browser puts the first picture of the section in a browser window whose bar shows the real address (address) or, for a mock-up, the label Illustration (illustration=\"true\")."
+        },
+        "address": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 300,
+          "format": "absolute-http-url",
+          "required": false,
+          "description": "The real address of the page in the picture, shown in the bar of frame=\"browser\": an absolute http or https URL."
+        },
+        "illustration": {
+          "kind": "boolean",
+          "required": false,
+          "default": false,
+          "description": "The picture in frame=\"browser\" is a mock-up, not a real page: its bar says Illustration."
         },
         "transition": {
           "kind": "enum",
-          "values": ["none", "reveal", "stagger"],
+          "values": ["none", "reveal", "stagger", "lines", "log", "clip", "staged"],
           "required": false,
           "default": "none",
-          "description": "Bounded package-owned entrance treatment."
+          "description": "Bounded package-owned entrance treatment: one section reveal, children in turn, the section title line by line, or log: every code block of the section prints line by line like a log, with its whole text in the page from the start; clip opens the chapter from its lower edge; staged, on the first screen (place=\"opening\") only, brings in the page title by lines, then the eyebrow, the subtitle, the actions and the scene."
         },
         "scene": {
           "kind": "enum",
-          "values": ["none", "progress", "sticky"],
+          "values": ["none", "progress", "sticky", "steps", "scrub"],
           "required": false,
           "default": "none",
-          "description": "Content-driven scroll scene without changing document order."
+          "description": "Content-driven scroll scene without changing document order; steps pins the section media while its beats scroll past and switches the picture, the lit part of the diagram or the lit code lines with each beat; scrub pins the media for one screen per beat (two to four) and plays the beats as a timeline of the scroll."
+        },
+        "slide-transition": {
+          "kind": "enum",
+          "values": ["fade", "push", "wipe", "zoom", "none"],
+          "required": false,
+          "default": "fade",
+          "description": "How this slide arrives in a presentation (layout slides): a fade, a push, a wipe, a zoom, or at once; the duration is fixed and published."
+        },
+        "media-effect": {
+          "kind": "enum",
+          "values": ["none", "threads"],
+          "required": false,
+          "default": "none",
+          "description": "WebGL treatment of the first image of the section: threads unweaves it into threads as it scrolls away. Off by default; a still image without WebGL, on a weak GPU, or under reduced motion."
         },
         "interaction": {
           "kind": "enum",
@@ -193,6 +258,15 @@
           "required": false,
           "default": false,
           "description": "Enables one package-owned one-time section reveal in the normal-motion profile."
+        },
+        "state": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 41,
+          "pattern": "^[a-z][a-z0-9-]{0,40}$",
+          "required": false,
+          "description": "Page state set while the reader has reached this section (its top passed the middle of the screen) and cleared when they scroll back above it; blocks with the same when light."
         }
       },
       "incompatibleCombinations": [
@@ -215,6 +289,19 @@
           "attributes": { "composition": ["story", "stack"], "scene": ["sticky"] },
           "message": "Story and stack compositions already own sticky positioning.",
           "remediation": "Use scene=\"none|progress\" or a flow, stage, split, or mosaic composition."
+        },
+        {
+          "attributes": {
+            "composition": ["story", "stack", "mosaic"],
+            "scene": ["steps", "scrub"]
+          },
+          "message": "A steps or scrub scene arranges its own media and beats.",
+          "remediation": "Use composition=\"flow\" with scene=\"steps\" or scene=\"scrub\"."
+        },
+        {
+          "attributes": { "scene": ["steps", "scrub"], "interaction": ["depth", "tilt"] },
+          "message": "A pinned scene and pointer interaction cannot move the same media.",
+          "remediation": "Use interaction=\"none\" with scene=\"steps\" or scene=\"scrub\"."
         }
       ],
       "children": "markdown",
@@ -227,7 +314,14 @@
     "contents": {
       "description": "Generated in-flow links to final primary sections using their exact visible headings.",
       "forms": ["leaf"],
-      "attributes": {},
+      "attributes": {
+        "sticky": {
+          "kind": "boolean",
+          "required": false,
+          "default": false,
+          "description": "On a landing: the chapters numbered and held at the edge of a wide screen while the reader scrolls, the current chapter marked; in the flow on a narrow screen and in print."
+        }
+      },
       "children": "none",
       "placement": { "topLevelOnly": true },
       "resource": "none",
@@ -241,6 +335,28 @@
       "attributes": {},
       "children": "markdown",
       "placement": { "requiredParent": "section" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "muted": {
+      "description": "The quiet continuation of a paragraph in the muted text colour; the sentence before it reads bright: **The run passed.** :muted[Two retries, both on the network step.]",
+      "forms": ["text"],
+      "attributes": {},
+      "children": "label-or-generated-label",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "meta": {
+      "description": "A short label in the mono face for identifiers and readings: :meta[run 96 · 01:17].",
+      "forms": ["text"],
+      "attributes": {},
+      "children": "label-or-generated-label",
+      "placement": {},
       "resource": "none",
       "runtime": "none",
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
@@ -274,9 +390,9 @@
           "normalization": "trim",
           "minLength": 1,
           "maxLength": 500,
-          "pattern": "^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*)$",
+          "pattern": "^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|tel:\\+?[0-9][0-9().-]{0,31}|sms:\\+?[0-9][0-9().,-]{0,63}(?:\\?body=[^\\s<>]*)?|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*)$",
           "required": true,
-          "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected."
+          "description": "Safe same-page, relative, HTTP(S), email, phone (tel:), or text-message (sms:) link target; executable and local-file schemes are rejected."
         },
         "kind": {
           "kind": "enum",
@@ -365,6 +481,266 @@
       "runtime": "none",
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
       "handoffs": ["semantic-document"]
+    },
+    "source-line": {
+      "description": "The source line under the block before it — which data or footage, how many records, taken when: ::source-line[Moira export of run 96, 212 records]{date=\"2026-09-25\"}.",
+      "forms": ["leaf"],
+      "attributes": {
+        "date": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 32,
+          "required": false,
+          "description": "When the data or footage was taken: 2026-09-25, or 2026-09-25T01:17 together with zone."
+        },
+        "zone": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_+/-]{0,63}$",
+          "required": false,
+          "description": "IANA time zone of a date with a time, such as Europe/Moscow."
+        }
+      },
+      "children": "label-or-generated-label",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "beat": {
+      "description": "One step of a scene=\"steps\" or scene=\"scrub\" section or of a playable demo: Markdown that scrolls past the pinned media or plays in turn; the nth beat shows the nth picture, lights its focus nodes in the diagram or its lines of the code block.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        },
+        "focus": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 640,
+          "required": false,
+          "description": "Diagram node and connection identities lit while this beat is current, separated by commas; a connection lights when named by its id or when both its nodes are lit."
+        },
+        "lines": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^[1-9][0-9]{0,3}(?:-[1-9][0-9]{0,3})?(?:, ?[1-9][0-9]{0,3}(?:-[1-9][0-9]{0,3})?)*$",
+          "required": false,
+          "description": "Lines of the code block in the scene lit while this beat is current, such as 3, 2-4 or 1,5-7; the other lines dim."
+        },
+        "state": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 41,
+          "pattern": "^[a-z][a-z0-9-]{0,40}$",
+          "required": false,
+          "description": "Page state set from the moment this beat becomes current; in a scrub scene it stays set for the later beats, so the last beat holds every state of the scene."
+        }
+      },
+      "children": "markdown",
+      "placement": { "requiredParent": ["section", "demo"] },
+      "resource": "none",
+      "runtime": "package-owned-scene",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "count": {
+      "description": "A number in running text that counts up from zero to its written value when it comes into view; the written value is what the page holds and shows without motion.",
+      "forms": ["text"],
+      "attributes": {
+        "when": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 41,
+          "pattern": "^[a-z][a-z0-9-]{0,40}$",
+          "required": false,
+          "description": "Page state that starts the count instead of the number coming into view, such as the chapter that the figure belongs to being reached."
+        }
+      },
+      "children": "label-or-generated-label",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-count",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "plural": {
+      "description": "A number with its noun in the form the page language requires, settled when the page builds: :plural[5]{forms=\"file|files\"} → 5 files.",
+      "forms": ["text"],
+      "attributes": {
+        "forms": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 3,
+          "maxLength": 200,
+          "required": true,
+          "description": "Noun forms separated by |: English one|other (file|files), Russian one|few|many (файл|файла|файлов)."
+        }
+      },
+      "children": "label-or-generated-label",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "time": {
+      "description": "A date or a moment written in the page language and, for a time, in a declared time zone, settled when the page builds: :time[2026-09-25T01:17]{zone=\"Europe/Moscow\"}.",
+      "forms": ["text"],
+      "attributes": {
+        "zone": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_+/-]{0,63}$",
+          "required": false,
+          "description": "IANA time zone the time is shown in and named by, such as Europe/Moscow; required when the value has a time."
+        },
+        "show": {
+          "kind": "enum",
+          "values": ["auto", "date", "time", "datetime"],
+          "required": false,
+          "default": "auto",
+          "description": "What of the moment the page writes: auto (the date, and the time when one is written), date, time or datetime."
+        }
+      },
+      "children": "label-or-generated-label",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "swap": {
+      "description": "A word in running text that swaps on a beat to up to three other words and returns to the written one within five seconds; the widest word reserves the width, so the line never moves.",
+      "forms": ["text"],
+      "attributes": {
+        "words": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": true,
+          "description": "The other words, separated by commas (one to three); the written label comes first and last."
+        }
+      },
+      "children": "label-or-generated-label",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-typography",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "typing": {
+      "description": "A short line in running text typed in place, character by character, when it comes into view; the whole line is in the page from the start and holds its width, so nothing moves.",
+      "forms": ["text"],
+      "attributes": {},
+      "children": "label-or-generated-label",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-typography",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "mark": {
+      "description": "Words in running text marked by hand: underlined, circled or struck through in the accent colour, drawn when they come into view; the jitter comes from a seed, and a section holds at most two marks.",
+      "forms": ["text"],
+      "attributes": {
+        "shape": {
+          "kind": "enum",
+          "values": ["underline", "circle", "strike"],
+          "required": false,
+          "default": "underline",
+          "description": "How the words are marked: a hand-drawn underline, a circle around them, or a strike through them."
+        },
+        "seed": {
+          "kind": "integer",
+          "minimum": 0,
+          "maximum": 9999,
+          "lexicalPattern": "^\\d{1,4}$",
+          "required": false,
+          "description": "Seed of the hand-drawn jitter (0–9999); the same seed draws the same line. By default it comes from the marked words."
+        }
+      },
+      "children": "label-or-generated-label",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-typography",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "process": {
+      "description": "A mini process in a line of text or a card: its steps, separated by \">\" in the label, drawn as dots in order with arcs for the returns and their «×N»; the step names and returns are said in words for assistive technology.",
+      "forms": ["text"],
+      "attributes": {
+        "current": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 80,
+          "required": false,
+          "description": "The step the process stands at, in review; the steps before it are done and the ones after it not started. Without it every step is done."
+        },
+        "returns": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 3,
+          "maxLength": 400,
+          "required": false,
+          "description": "Returns drawn as arcs over the steps, separated by commas, each \"step>earlier step×N\"; a step returning to itself repeats."
+        }
+      },
+      "children": "label-or-generated-label",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "appear": {
+      "description": "Markdown that appears on the next step of its slide in a presentation (layout slides); on any other page, and under reduced motion or in print, it is simply shown.",
+      "forms": ["container"],
+      "attributes": {
+        "effect": {
+          "kind": "enum",
+          "values": ["rise", "fade", "wipe", "pop"],
+          "required": false,
+          "default": "rise",
+          "description": "How the content arrives on its step: rising, fading, wiping in from the start edge, or popping."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-slides",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "notes": {
+      "description": "Speaker notes of a slide: never shown to the audience, shown under the slide in the presenter view (?view=presenter).",
+      "forms": ["container"],
+      "attributes": {},
+      "children": "markdown",
+      "placement": { "requiredParent": "section" },
+      "resource": "none",
+      "runtime": "package-owned-slides",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
     },
     "decision": {
       "description": "Static Markdown decision or typed decision containing decision-option directives.",
@@ -531,9 +907,25 @@
           "normalization": "trim",
           "minLength": 1,
           "maxLength": 500,
-          "pattern": "^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*)$",
+          "pattern": "^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|tel:\\+?[0-9][0-9().-]{0,31}|sms:\\+?[0-9][0-9().,-]{0,63}(?:\\?body=[^\\s<>]*)?|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*)$",
           "required": false,
-          "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected."
+          "description": "Safe same-page, relative, HTTP(S), email, phone (tel:), or text-message (sms:) link target; executable and local-file schemes are rejected."
+        },
+        "status": {
+          "kind": "enum",
+          "values": ["none", "good", "watch", "risk"],
+          "required": false,
+          "default": "none",
+          "description": "State label shown on the card as text and a marker: good, watch or risk."
+        },
+        "when": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 41,
+          "pattern": "^[a-z][a-z0-9-]{0,40}$",
+          "required": false,
+          "description": "Page state that lights this card, such as a station that lights when the reader reaches its chapter; until then the card is dimmed. Without motion and in print the card is lit."
         }
       },
       "children": "markdown",
@@ -554,6 +946,163 @@
           "maxLength": 200,
           "required": false,
           "description": "Visible title."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "diff": {
+      "description": "One change in unified diff form: exactly one fenced code block with @@ hunks, drawn with old and new line numbers.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        },
+        "file": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 300,
+          "required": false,
+          "description": "Path of the changed file, shown above the change."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "findings": {
+      "description": "Review findings in authored order, with a generated count per severity above them.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        }
+      },
+      "children": "finding-directives",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "finding": {
+      "description": "One review finding with a severity, a title and Markdown detail.",
+      "forms": ["container"],
+      "attributes": {
+        "severity": {
+          "kind": "enum",
+          "values": ["blocking", "major", "minor", "note"],
+          "required": true,
+          "description": "How much the finding blocks the change; shown as text, not only colour."
+        },
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": true,
+          "description": "Visible title."
+        },
+        "location": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 300,
+          "required": false,
+          "description": "Where the finding applies, such as a path and line."
+        }
+      },
+      "children": "markdown",
+      "placement": { "requiredParent": "findings" },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "conversation": {
+      "description": "A mock of a dialog or a notification feed: message directives in order, with an optional title and an illustrative mark.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        },
+        "illustrative": {
+          "kind": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Marks the mock as an illustration: its names, times and numbers are examples, not a record."
+        }
+      },
+      "children": "message-directives",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "message": {
+      "description": "One message or notification: sender, time, Markdown text and an optional status; alone it is a notification, inside conversation it is one turn.",
+      "forms": ["container"],
+      "attributes": {
+        "from": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 80,
+          "required": true,
+          "description": "Sender as the product names it: a person, an agent, a system."
+        },
+        "time": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 40,
+          "required": false,
+          "description": "When it was sent, as the product shows it, such as 01:17 or yesterday."
+        },
+        "side": {
+          "kind": "enum",
+          "values": ["in", "out"],
+          "required": false,
+          "default": "in",
+          "description": "in — received, drawn at the start edge; out — sent by the reader, drawn at the end edge."
+        },
+        "status": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 40,
+          "required": false,
+          "description": "Delivery or run status shown under the text, such as delivered or done."
+        },
+        "illustrative": {
+          "kind": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Marks the mock as an illustration: its names, times and numbers are examples, not a record."
         }
       },
       "children": "markdown",
@@ -762,9 +1311,9 @@
           "normalization": "trim",
           "minLength": 1,
           "maxLength": 500,
-          "pattern": "^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*)$",
+          "pattern": "^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|tel:\\+?[0-9][0-9().-]{0,31}|sms:\\+?[0-9][0-9().,-]{0,63}(?:\\?body=[^\\s<>]*)?|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*)$",
           "required": true,
-          "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected."
+          "description": "Safe same-page, relative, HTTP(S), email, phone (tel:), or text-message (sms:) link target; executable and local-file schemes are rejected."
         },
         "bucket": {
           "kind": "string",
@@ -903,6 +1452,13 @@
           "maxLength": 200,
           "required": false,
           "description": "Visible title."
+        },
+        "orientation": {
+          "kind": "enum",
+          "values": ["horizontal", "vertical"],
+          "required": false,
+          "default": "horizontal",
+          "description": "horizontal: the tab list above the panels. vertical: on a wide screen the tab list stands in a column beside the panels (arrow keys up and down move along it); on a narrow screen it returns above them."
         }
       },
       "children": "markdown-and-tab-directives",
@@ -1054,6 +1610,81 @@
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
       "handoffs": ["semantic-document", "reader-runtime"]
     },
+    "compare": {
+      "description": "Before and after of the same view: exactly two Markdown images, before then after, laid over each other with a divider the reader moves by pointer or keyboard.",
+      "forms": ["container"],
+      "attributes": {
+        "before": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "default": "Before",
+          "description": "Label of the first image."
+        },
+        "after": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "default": "After",
+          "description": "Label of the second image."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-compare",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "spotlight": {
+      "description": "One screenshot with a loupe over one detail: the detail enlarged in place, the rest of the picture dimmed, and the explanation beside it.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        },
+        "x": {
+          "kind": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "lexicalPattern": "^\\d{1,3}$",
+          "required": true,
+          "description": "Horizontal position of the detail, in per cent of the picture width from the left (0–100)."
+        },
+        "y": {
+          "kind": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "lexicalPattern": "^\\d{1,3}$",
+          "required": true,
+          "description": "Vertical position of the detail, in per cent of the picture height from the top (0–100)."
+        },
+        "zoom": {
+          "kind": "number",
+          "minimum": 1.5,
+          "maximum": 4,
+          "lexicalPattern": "^[1-4](?:\\.\\d)?$",
+          "required": false,
+          "default": 2,
+          "description": "How many times the loupe enlarges the detail (1.5–4)."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-spotlight",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
     "chart": {
       "description": "Responsive bar, line, or pie chart rendered at compile time.",
       "forms": ["container"],
@@ -1096,6 +1727,12 @@
           "maxLength": 160,
           "required": false,
           "description": "Vertical-axis label."
+        },
+        "count-up": {
+          "kind": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Grow the bars, lines and slices from zero to their values, and count the slice percentages up, when the chart comes into view; under reduced motion and in print the values stand at once."
         }
       },
       "children": "series-directives",
@@ -1201,6 +1838,22 @@
           "required": false,
           "default": "comfortable",
           "description": "Layout breathing room; the package keeps a readable result at every value."
+        },
+        "draw": {
+          "kind": "enum",
+          "values": ["none", "scroll"],
+          "required": false,
+          "default": "none",
+          "description": "Draw the connections as the diagram scrolls through the view, in flow order, with backward connections as a later phase, while a marker rides the connection being drawn; still and complete, the marker at the end, under reduced motion."
+        },
+        "pulse": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 3,
+          "maxLength": 800,
+          "pattern": "^[a-z][a-z0-9-]{0,63}(\\s*,\\s*[a-z][a-z0-9-]{0,63})+$",
+          "required": false,
+          "description": "A route of node identities separated by commas, each joined to the next by a connection: pulses travel along it three times when the diagram comes into view; under reduced motion the route is marked still."
         }
       },
       "children": "diagram-part-directives",
@@ -1233,7 +1886,7 @@
         }
       },
       "children": "none",
-      "placement": { "requiredParent": "diagram" },
+      "placement": { "requiredParent": ["diagram", "zoom"] },
       "resource": "none",
       "runtime": "none",
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
@@ -1290,17 +1943,23 @@
           "maximum": 20,
           "required": false,
           "description": "Optional one-based flow layer; nodes sharing a row share a layer when their connections allow it."
+        },
+        "status": {
+          "kind": "enum",
+          "values": ["done", "review", "returned", "pending"],
+          "required": false,
+          "description": "Where this step of a process stands: done, review, returned or pending; drawn in the theme status roles with a glyph, named in the legend in package words."
         }
       },
       "children": "none",
-      "placement": { "requiredParent": "diagram" },
+      "placement": { "requiredParent": ["diagram", "zoom"] },
       "resource": "none",
       "runtime": "none",
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
       "handoffs": ["semantic-document"]
     },
     "edge": {
-      "description": "One directed connection between diagram nodes; in a sequence, from equal to to is a step inside one participant drawn as a loop.",
+      "description": "One directed connection between diagram nodes; from equal to to is a step that repeats, drawn as a loop on the node in a flow and on the lifeline in a sequence.",
       "forms": ["leaf"],
       "attributes": {
         "from": {
@@ -1342,10 +2001,26 @@
           "required": false,
           "default": "auto",
           "description": "Optional layout pull; direct keeps the connection short and straight, around lets it stretch."
+        },
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": false,
+          "description": "Optional connection identity, distinct from the node identities: a beat focus lights the connection by it."
+        },
+        "count": {
+          "kind": "integer",
+          "minimum": 1,
+          "maximum": 999,
+          "required": false,
+          "description": "How many times the connection was taken, written «×N» on it: a return repeated, a retry."
         }
       },
       "children": "none",
-      "placement": { "requiredParent": "diagram" },
+      "placement": { "requiredParent": ["diagram", "zoom"] },
       "resource": "none",
       "runtime": "none",
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
@@ -1378,7 +2053,7 @@
       "handoffs": ["semantic-document"]
     },
     "legend-item": {
-      "description": "One legend entry: names a connection kind or a node emphasis in the author's words, or hides a connection kind.",
+      "description": "One legend entry: names a connection kind, a node emphasis, a node status, or a timeline event emphasis in the author's words, or hides a connection kind.",
       "forms": ["leaf"],
       "attributes": {
         "edge": {
@@ -1392,6 +2067,18 @@
           "values": ["neutral", "accent", "success", "warning"],
           "required": false,
           "description": "Node emphasis this entry names; exclusive with edge and requires a label."
+        },
+        "status": {
+          "kind": "enum",
+          "values": ["done", "review", "returned", "pending"],
+          "required": false,
+          "description": "Node status this entry renames in the author's words; exclusive with edge and node."
+        },
+        "event": {
+          "kind": "enum",
+          "values": ["accent", "success", "warning"],
+          "required": false,
+          "description": "Timeline event emphasis this entry names, inside a timeline; requires a label."
         },
         "label": {
           "kind": "string",
@@ -1409,6 +2096,35 @@
         }
       },
       "children": "none",
+      "placement": { "requiredParent": ["diagram", "timeline"] },
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "zoom": {
+      "description": "The inside of one node of a flow diagram, written as its own small flow: while the diagram is pinned on screen the camera flies into that node and the nested flow grows readable in its place.",
+      "forms": ["container"],
+      "attributes": {
+        "node": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Identity of the node of the enclosing diagram that this flow opens."
+        },
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": true,
+          "description": "Title of the nested flow."
+        }
+      },
+      "children": "zoom-part-directives",
       "placement": { "requiredParent": "diagram" },
       "resource": "none",
       "runtime": "none",
@@ -1479,7 +2195,7 @@
       "handoffs": ["semantic-document"]
     },
     "demo": {
-      "description": "Package-owned counter interaction; author code is never executed.",
+      "description": "Package-owned demo: a counter card, or with play a scene that reconstructs the product from ordinary directives (code, a diagram, cards, a picture) and plays its beats by time or by scroll; author code is never executed.",
       "forms": ["container"],
       "attributes": {
         "title": {
@@ -1497,7 +2213,7 @@
           "lexicalPattern": "^-?\\d{1,6}$",
           "required": false,
           "default": 0,
-          "description": "Initial counter value."
+          "description": "Initial counter value (counter demo only)."
         },
         "step": {
           "kind": "integer",
@@ -1506,7 +2222,23 @@
           "lexicalPattern": "^-?\\d{1,6}$",
           "required": false,
           "default": 1,
-          "description": "Amount added per activation."
+          "description": "Amount added per activation (counter demo only)."
+        },
+        "play": {
+          "kind": "enum",
+          "values": ["none", "time", "scroll"],
+          "required": false,
+          "default": "none",
+          "description": "none: a counter card. time: a playable scene whose beats advance by the page clock, with a play and a pause button, ending on its final frame. scroll: the scene is pinned while the reader scrolls through its beats."
+        },
+        "seconds": {
+          "kind": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "lexicalPattern": "^\\d{1,2}$",
+          "required": false,
+          "default": 3,
+          "description": "Seconds each beat of a play=\"time\" scene stays current (1–10); the theme pace scales it."
         }
       },
       "children": "markdown",
@@ -1538,7 +2270,7 @@
       "handoffs": ["resource-graph"]
     },
     "video": {
-      "description": "Embedded local video (webm, mp4, m4v, or ogv) with controls, muted and looping; plays when visible unless the reader prefers reduced motion.",
+      "description": "Embedded local video (webm, mp4, m4v, or ogv) as a looping muted clip, a background with a pause control, or a manually started video with sound; directory output ships every source for the browser to choose from, one file ships the most compatible.",
       "forms": ["leaf"],
       "attributes": {
         "src": {
@@ -1548,7 +2280,31 @@
           "maxLength": 200,
           "format": "relative-local-path",
           "required": true,
-          "description": "Relative local video path: .webm, .mp4, .m4v, or .ogv."
+          "description": "Relative local video path: .webm, .mp4, .m4v, or .ogv. Give the most compatible encoding (H.264 MP4) here."
+        },
+        "sources": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 600,
+          "required": false,
+          "description": "Further encodings of the same video, separated by commas, in order of preference (for example AV1 and VP9 from agentic-screencast web); directory output offers all of them before src, one file embeds only the most compatible."
+        },
+        "mode": {
+          "kind": "enum",
+          "values": ["clip", "background", "manual"],
+          "required": false,
+          "default": "clip",
+          "description": "clip: muted, looping, plays while visible, with controls. background: muted and looping without controls, with a pause button; a poster is required. manual: starts only when the reader presses play, with sound."
+        },
+        "chapters": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "format": "relative-local-path",
+          "required": false,
+          "description": "Relative WebVTT chapters file (.vtt), such as the one agentic-screencast web writes; the chapters appear as buttons under the video that jump to each chapter."
         },
         "poster": {
           "kind": "string",
@@ -1566,6 +2322,27 @@
           "maxLength": 300,
           "required": false,
           "description": "Visible caption under the video; it also names the video for assistive technology."
+        },
+        "start": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 3600,
+          "lexicalPattern": "^\\d{1,4}(?:\\.\\d{1,2})?$",
+          "required": false,
+          "description": "Second of the recording where a looping clip or background starts and every loop returns (0–3600, up to two decimals): the useful part of a recording without re-encoding it."
+        },
+        "seam": {
+          "kind": "enum",
+          "values": ["cut", "fade"],
+          "required": false,
+          "default": "cut",
+          "description": "How a looping clip or background joins its end to its start: cut jumps back at once, fade dims the last half-second and brightens the first, so the loop has no visible jump."
+        },
+        "expand": {
+          "kind": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Adds an Expand button to a clip that opens it large in a dialog with the full player controls and sound."
         }
       },
       "children": "none",
@@ -1576,7 +2353,7 @@
       "handoffs": ["resource-graph"]
     },
     "font": {
-      "description": "Register a confined local font; the first declaration becomes the document font.",
+      "description": "Register a confined local font for one text role; the first declaration of each role replaces the theme font of that role.",
       "forms": ["leaf"],
       "attributes": {
         "src": {
@@ -1596,6 +2373,13 @@
           "pattern": "^[\\p{L}\\p{N} _-]{1,80}$",
           "required": true,
           "description": "CSS font family using letters, numbers, spaces, underscores, or hyphens."
+        },
+        "role": {
+          "kind": "enum",
+          "values": ["body", "heading", "mono"],
+          "required": false,
+          "default": "body",
+          "description": "Text role the font sets: body text and controls, headings and section titles, or code."
         }
       },
       "children": "none",
@@ -1604,6 +2388,82 @@
       "runtime": "none",
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": true },
       "handoffs": ["resource-graph"]
+    },
+    "each": {
+      "description": "Repeats its Markdown once per item of a list from the page data when the page builds; a body that is one list or one table repeats its items or rows inside it.",
+      "forms": ["container"],
+      "attributes": {
+        "in": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]*(?:\\.(?:[A-Za-z_][A-Za-z0-9_-]*|[0-9]+))*$",
+          "required": true,
+          "description": "Path of a list in the page data, such as run.blocks."
+        },
+        "as": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]{0,31}$",
+          "required": true,
+          "description": "Name of the current item inside the body: {{as}} for a plain value, {{as.field}} for a field."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
+    },
+    "expect": {
+      "description": "A control value over the page data: the build fails at this line when the data at the path diverges from the stated count, bounds or value. Renders nothing.",
+      "forms": ["leaf"],
+      "attributes": {
+        "data": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]*(?:\\.(?:[A-Za-z_][A-Za-z0-9_-]*|[0-9]+))*$",
+          "required": true,
+          "description": "Path of the value the expectation reads, such as run.blocks."
+        },
+        "count": {
+          "kind": "integer",
+          "minimum": 0,
+          "maximum": 100000,
+          "required": false,
+          "description": "The list at the path has exactly this many items."
+        },
+        "min": {
+          "kind": "number",
+          "required": false,
+          "description": "A list has at least this many items (min=\"1\": not empty); a number is at least this value."
+        },
+        "max": {
+          "kind": "number",
+          "required": false,
+          "description": "A list has at most this many items; a number is at most this value."
+        },
+        "equals": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 300,
+          "required": false,
+          "description": "A text, number or true/false value written exactly like this."
+        }
+      },
+      "children": "none",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
     }
   },
   "outputs": {
@@ -1612,159 +2472,2170 @@
     "runtimePlacement": { "single-file": "inline", "directory": "external" }
   },
   "page": {
-    "defaultPreset": "material",
-    "presets": [
+    "defaultTheme": "neutral",
+    "themes": [
       {
-        "name": "monument",
-        "description": "Large-scale product storytelling with sculptural type, generous space, and staged depth.",
-        "tokens": {
-          "density": "spacious",
-          "font": "sans",
-          "accent": "indigo",
-          "width": "wide",
-          "radius": "soft"
-        }
+        "name": "calm-paper",
+        "description": "Long reading: warm paper, a Playfair display over Literata text, and one clay accent.",
+        "palette": "Warm paper (#f4f1ea) and dark ink (#1b1a17) for text that reads like print; clay (#c2643f) marks rules and the current place, sage (#4b7a6a) the eyebrows."
       },
       {
-        "name": "material",
-        "description": "Editorial reading with serif display type, tactile warm plates, and document navigation.",
-        "tokens": {
-          "density": "comfortable",
-          "font": "serif",
-          "accent": "indigo",
-          "width": "wide",
-          "radius": "sharp"
-        }
+        "name": "neutral",
+        "description": "Neutral reading and product pages: grey paper, a Literata display over Onest, Martian Mono, one ochre accent.",
+        "palette": "Grey paper (#f5f5f3) and ink (#16171a) with one warm ochre accent (#8a5c00); the dark scheme is warm graphite (#151514), not night blue. No cream, no terracotta."
       },
       {
-        "name": "signal",
-        "description": "Dense operational evidence with compact spacing, broad tracks, and crisp controls.",
-        "tokens": {
-          "density": "compact",
-          "font": "sans",
-          "accent": "teal",
-          "width": "wide",
-          "radius": "sharp"
-        }
+        "name": "frost",
+        "description": "Two colours and one material: stone grey and graphite, an Onest display over IBM Plex Sans; colour is left to statuses.",
+        "palette": "Stone (#eef0f3) and graphite (#383e4e) in the light scheme, graphite night (#1b1e25) and stone (#b6bac5) in the dark; the accent is graphite itself, so green, red and ochre appear only as statuses."
+      },
+      {
+        "name": "daylight",
+        "description": "Product documentation: a bright page, an Onest display over Golos Text, and Geist Mono.",
+        "palette": "Cool white (#f7f8fa) and graphite ink (#121620); cobalt (#1f5bb8) marks the current place and petrol (#0e6f82) the eyebrows. No default framework palette."
+      },
+      {
+        "name": "midnight",
+        "description": "Engineering story at night: a Geologica display over IBM Plex Sans, one blue signal and steel for the eyebrows.",
+        "palette": "Night ink (#0b0e14) with one blue signal (#7aa2ff) and steel (#9fb2c8) for eyebrows; teal stays a chart series only. The light scheme keeps the pair on cool paper."
+      },
+      {
+        "name": "noir",
+        "description": "Cinematic and editorial: spaced Cormorant Garamond capitals over Jost, amber on black.",
+        "palette": "Black (#0a0a0b) and bone (#f4f4f5) with amber (#e0a458) and steel (#9fb2c8); the light scheme is ivory with darker amber."
+      },
+      {
+        "name": "aurora",
+        "description": "Calm research and science: a light Raleway display over Commissioner, one mint signal on deep blue.",
+        "palette": "Deep blue night (#070b16) with one mint signal (#6fd6c4) and sand (#d9c7a0) for eyebrows; the light scheme is pale sea-green paper with ochre eyebrows."
+      },
+      {
+        "name": "blueprint",
+        "description": "Dense technical evidence: a Tektur display over Fira Sans, Martian Mono labels, cyan and yellow on drafting blue.",
+        "palette": "Drafting blue (#0a1a33) with cyan (#4cc9f0) and signal yellow (#f9c74f) and a faint grid; the light scheme is blueprint paper."
+      },
+      {
+        "name": "ember",
+        "description": "Launches and announcements: a condensed Oswald capital page title over Rubik, orange on dark embers.",
+        "palette": "Ember black (#0e0907) and warm white (#fff4ec) with one orange signal (#ff7a3d) and warm grey (#c9b8a8) for eyebrows; the light scheme is warm paper with burnt orange."
+      },
+      {
+        "name": "synthwave",
+        "description": "Games and music only: a wide Unbounded display over Exo 2, magenta and cyan on violet night; not for a product landing.",
+        "palette": "Violet night (#140b27) with magenta (#ff4fd8) and cyan (#37e0ff), for pages whose subject is play or music; the light scheme is lilac paper."
       },
       {
         "name": "terminal",
-        "description": "Console-oriented storytelling with mono type, luminous signals, scan texture, and explicit prompts.",
-        "tokens": {
-          "density": "compact",
-          "font": "mono",
-          "accent": "teal",
-          "width": "wide",
-          "radius": "sharp"
-        }
-      },
-      {
-        "name": "cinematic",
-        "description": "Image-first narrative with deep staging, broad media, restrained overlays, and scroll-driven scenes.",
-        "tokens": {
-          "density": "spacious",
-          "font": "sans",
-          "accent": "coral",
-          "width": "wide",
-          "radius": "round"
-        }
-      },
-      {
-        "name": "studio",
-        "description": "Compatibility identity mapped to the Monument visual system.",
-        "tokens": {
-          "density": "spacious",
-          "font": "sans",
-          "accent": "indigo",
-          "width": "wide",
-          "radius": "soft"
-        }
-      },
-      {
-        "name": "editorial",
-        "description": "Compatibility identity mapped to the Material editorial visual system.",
-        "tokens": {
-          "density": "comfortable",
-          "font": "serif",
-          "accent": "indigo",
-          "width": "wide",
-          "radius": "sharp"
-        }
+        "description": "Developer console: Martian Mono and JetBrains Mono on graphite, a green prompt, amber labels and a cursor at the page heading.",
+        "palette": "Console graphite (#0c0e0d) with light grey text (#c9d4cc); one muted green (#5ccf8a) for the prompt and markers, amber (#e0a84a) for labels and focus. Dark scheme only; scanlines and glow are off unless the author turns them on."
       }
     ],
+    "themeFileExtensions": [".yaml", ".yml", ".json"],
     "defaultLayout": "document",
-    "layouts": ["document", "dashboard", "landing", "mixed"],
-    "defaultTheme": "system",
-    "themes": ["system", "light", "dark"],
-    "defaultScrollProgress": false,
+    "layouts": ["document", "dashboard", "landing", "mixed", "slides", "screens"],
+    "defaultScheme": "system",
+    "schemes": ["system", "light", "dark"],
+    "defaultProgress": "none",
+    "progress": ["none", "page", "chapters", "nodes"],
+    "defaultMotion": "expressive",
+    "motionLevels": ["none", "restrained", "expressive"],
+    "defaultOpening": "center",
+    "openings": ["center", "start"],
     "defaultAttribution": true,
     "defaultReview": false,
-    "defaultThemeToggle": true,
-    "defaultPresetSwitcher": false,
+    "defaultSchemeToggle": true,
+    "defaultThemeSwitcher": false,
     "motion": {
-      "scrollProgress": { "normalMotionOnly": true },
+      "progress": { "pageNormalMotionOnly": true },
       "sectionReveal": {
         "default": false,
         "normalMotionOnly": true,
         "durationMs": 420,
-        "translationPx": 24
+        "translationPx": 16
       },
       "stagger": { "stepMs": 90, "maximumItems": 12 },
-      "scene": { "normalMotionOnly": true },
+      "scene": { "normalMotionOnly": true, "parallaxPx": 24 },
       "pointer": {
         "normalMotionOnly": true,
         "finePointerOnly": true,
-        "depthPx": 24,
+        "depthPx": 12,
         "tiltDegrees": 4.5,
         "magneticPx": 9
       },
-      "choreography": { "stepMs": 75, "maximumItems": 12, "normalMotionOnly": true }
+      "choreography": { "stepMs": 75, "maximumItems": 12, "normalMotionOnly": true },
+      "roles": {
+        "textMs": 700,
+        "textLineStepMs": 70,
+        "textRisePercent": 108,
+        "sceneMs": 1200,
+        "backMs": 240
+      },
+      "scrub": {
+        "maximumScreens": 4,
+        "minimumScreens": 2,
+        "captionSwitchAt": 0.3333333333333333,
+        "smoothingMs": 600
+      },
+      "pinnedScene": { "maximumScreens": 4 },
+      "pause": { "continuousAfterMs": 5000, "storageKey": "agentic-report:motion-paused" }
     },
-    "tokens": [
+    "categories": [
       {
-        "name": "density",
-        "description": "Controls the shared spacing rhythm and control padding.",
-        "required": false,
-        "default": "comfortable",
-        "constraint": { "kind": "enum", "values": ["compact", "comfortable", "spacious"] },
-        "defaultVisibility": "normalization-only"
+        "id": "landing",
+        "title": "Landing",
+        "purpose": "Convince a reader to try, adopt or remember something and send them to one next step.",
+        "layout": "landing",
+        "subvariants": ["product", "portfolio", "showcase", "launch"],
+        "dimensions": [
+          { "id": "subvariant", "question": "Which kind of page within the category is this?" },
+          { "id": "audience", "question": "Who reads the page, and what do they already know?" },
+          {
+            "id": "reader-task",
+            "question": "What must the reader be able to decide or do after reading?"
+          },
+          {
+            "id": "material",
+            "question": "What real material exists: screenshots, data, code, clips, quotes, documents?"
+          },
+          { "id": "language", "question": "Which languages does the page ship in?" },
+          {
+            "id": "art-direction",
+            "question": "Which visual concept and theme fit the subject and the audience?"
+          },
+          {
+            "id": "motion",
+            "question": "How much motion suits the page: none, restrained or expressive?"
+          },
+          {
+            "id": "interactivity",
+            "question": "What does the reader do on the page: only read, filter and switch views, comment (Review Workspace), or answer (Response Workspace)?"
+          },
+          {
+            "id": "delivery",
+            "question": "How is the page delivered: one file, a published directory, public or private?"
+          },
+          {
+            "id": "references",
+            "question": "Which 5–10 real sites on the same subject were studied before the concepts, and what does each teach?"
+          },
+          {
+            "id": "first-screen",
+            "question": "What does the first screen show: the result, code beside the result, a diagram or a clip?"
+          },
+          { "id": "call-to-action", "question": "What is the one action the reader should take?" }
+        ]
       },
       {
-        "name": "font",
-        "description": "Selects the package-owned typography stack.",
-        "required": false,
-        "default": "sans",
-        "constraint": { "kind": "enum", "values": ["sans", "serif", "mono"] },
-        "defaultVisibility": "normalization-only"
+        "id": "document",
+        "title": "Document",
+        "purpose": "Explain a finding, a system or a procedure so the reader can check and act on it.",
+        "layout": "document",
+        "subvariants": ["report", "research", "architecture", "code-review", "incident", "guide"],
+        "dimensions": [
+          { "id": "subvariant", "question": "Which kind of page within the category is this?" },
+          { "id": "audience", "question": "Who reads the page, and what do they already know?" },
+          {
+            "id": "reader-task",
+            "question": "What must the reader be able to decide or do after reading?"
+          },
+          {
+            "id": "material",
+            "question": "What real material exists: screenshots, data, code, clips, quotes, documents?"
+          },
+          { "id": "language", "question": "Which languages does the page ship in?" },
+          {
+            "id": "art-direction",
+            "question": "Which visual concept and theme fit the subject and the audience?"
+          },
+          {
+            "id": "motion",
+            "question": "How much motion suits the page: none, restrained or expressive?"
+          },
+          {
+            "id": "interactivity",
+            "question": "What does the reader do on the page: only read, filter and switch views, comment (Review Workspace), or answer (Response Workspace)?"
+          },
+          {
+            "id": "delivery",
+            "question": "How is the page delivered: one file, a published directory, public or private?"
+          },
+          {
+            "id": "depth",
+            "question": "Does the reader need the conclusion only, or the full evidence behind it?"
+          },
+          {
+            "id": "review",
+            "question": "Will someone review the page in place and hand notes back?"
+          }
+        ]
       },
       {
-        "name": "accent",
-        "description": "Selects the accent and visible-focus color family.",
-        "required": false,
-        "default": "indigo",
-        "constraint": { "kind": "enum", "values": ["indigo", "teal", "coral"] },
-        "defaultVisibility": "normalization-only"
+        "id": "dashboard",
+        "title": "Dashboard",
+        "purpose": "Show the current state of something at a glance, with the detail one step away.",
+        "layout": "dashboard",
+        "subvariants": ["metrics", "charts", "filters", "statuses"],
+        "dimensions": [
+          { "id": "subvariant", "question": "Which kind of page within the category is this?" },
+          { "id": "audience", "question": "Who reads the page, and what do they already know?" },
+          {
+            "id": "reader-task",
+            "question": "What must the reader be able to decide or do after reading?"
+          },
+          {
+            "id": "material",
+            "question": "What real material exists: screenshots, data, code, clips, quotes, documents?"
+          },
+          { "id": "language", "question": "Which languages does the page ship in?" },
+          {
+            "id": "art-direction",
+            "question": "Which visual concept and theme fit the subject and the audience?"
+          },
+          {
+            "id": "motion",
+            "question": "How much motion suits the page: none, restrained or expressive?"
+          },
+          {
+            "id": "interactivity",
+            "question": "What does the reader do on the page: only read, filter and switch views, comment (Review Workspace), or answer (Response Workspace)?"
+          },
+          {
+            "id": "delivery",
+            "question": "How is the page delivered: one file, a published directory, public or private?"
+          },
+          {
+            "id": "signals",
+            "question": "Which numbers and statuses matter, and what counts as good, watch and risk?"
+          },
+          { "id": "freshness", "question": "When was the data taken, and from which source?" }
+        ]
       },
       {
-        "name": "width",
-        "description": "Controls the maximum shell and reading width.",
-        "required": false,
-        "default": "standard",
-        "constraint": { "kind": "enum", "values": ["narrow", "standard", "wide"] },
-        "defaultVisibility": "normalization-only"
+        "id": "presentation",
+        "title": "Presentation",
+        "purpose": "Show something to people one slide at a time — live, as a file to click through, or filmed — between a screencast and a slide deck.",
+        "layout": "slides",
+        "subvariants": ["demo", "pitch", "update", "lesson"],
+        "dimensions": [
+          { "id": "subvariant", "question": "Which kind of page within the category is this?" },
+          { "id": "audience", "question": "Who reads the page, and what do they already know?" },
+          {
+            "id": "reader-task",
+            "question": "What must the reader be able to decide or do after reading?"
+          },
+          {
+            "id": "material",
+            "question": "What real material exists: screenshots, data, code, clips, quotes, documents?"
+          },
+          { "id": "language", "question": "Which languages does the page ship in?" },
+          {
+            "id": "art-direction",
+            "question": "Which visual concept and theme fit the subject and the audience?"
+          },
+          {
+            "id": "motion",
+            "question": "How much motion suits the page: none, restrained or expressive?"
+          },
+          {
+            "id": "interactivity",
+            "question": "What does the reader do on the page: only read, filter and switch views, comment (Review Workspace), or answer (Response Workspace)?"
+          },
+          {
+            "id": "delivery",
+            "question": "How is the page delivered: one file, a published directory, public or private?"
+          },
+          {
+            "id": "setting",
+            "question": "How is it shown: presented live, sent to click through alone, or filmed?"
+          },
+          { "id": "length", "question": "How many slides and how many minutes does it have?" }
+        ]
       },
       {
-        "name": "radius",
-        "description": "Controls the shared corner treatment for surfaces and controls.",
-        "required": false,
-        "default": "soft",
-        "constraint": { "kind": "enum", "values": ["sharp", "soft", "round"] },
-        "defaultVisibility": "normalization-only"
+        "id": "answer",
+        "title": "Answer",
+        "purpose": "Put a question, choices or a form in front of the reader and collect a structured answer.",
+        "layout": "document",
+        "subvariants": ["choice", "questions", "survey", "brief"],
+        "dimensions": [
+          { "id": "subvariant", "question": "Which kind of page within the category is this?" },
+          { "id": "audience", "question": "Who reads the page, and what do they already know?" },
+          {
+            "id": "reader-task",
+            "question": "What must the reader be able to decide or do after reading?"
+          },
+          {
+            "id": "material",
+            "question": "What real material exists: screenshots, data, code, clips, quotes, documents?"
+          },
+          { "id": "language", "question": "Which languages does the page ship in?" },
+          {
+            "id": "art-direction",
+            "question": "Which visual concept and theme fit the subject and the audience?"
+          },
+          {
+            "id": "motion",
+            "question": "How much motion suits the page: none, restrained or expressive?"
+          },
+          {
+            "id": "interactivity",
+            "question": "What does the reader do on the page: only read, filter and switch views, comment (Review Workspace), or answer (Response Workspace)?"
+          },
+          {
+            "id": "delivery",
+            "question": "How is the page delivered: one file, a published directory, public or private?"
+          },
+          { "id": "respondent", "question": "Who answers, and how much context do they have?" },
+          {
+            "id": "handoff",
+            "question": "Where do the answers go after export, and who reads them?"
+          }
+        ]
       }
     ],
-    "tokenResolution": {
-      "defaultsFrom": "selected-preset",
-      "precedence": ["selected-preset", "explicit-tokens"]
+    "theme": {
+      "fields": [
+        {
+          "name": "name",
+          "description": "Theme identity shown in the theme selector; a theme file defaults to its file name, an inline theme to custom.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          }
+        },
+        {
+          "name": "extends",
+          "description": "Built-in theme name or relative path to another theme file this theme starts from; defaults to the default theme.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 300
+          }
+        },
+        {
+          "name": "description",
+          "description": "One sentence saying what kind of page the theme is for.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 300
+          }
+        },
+        {
+          "name": "palette",
+          "description": "Why the palette looks the way it does, in words: the named colours and the reason for them.",
+          "required": false,
+          "constraint": {
+            "kind": "string",
+            "normalization": "trim",
+            "minLength": 1,
+            "maxLength": 600
+          }
+        },
+        {
+          "name": "scheme",
+          "description": "Colour schemes the theme draws: both light and dark, or dark only.",
+          "required": false,
+          "constraint": { "kind": "enum", "values": ["both", "dark"] }
+        },
+        {
+          "name": "accent",
+          "description": "Named accent family for both schemes; explicit accent colours override it.",
+          "required": false,
+          "constraint": {
+            "kind": "enum",
+            "values": [
+              "graphite",
+              "cobalt",
+              "rust",
+              "moss",
+              "ochre",
+              "ink",
+              "indigo",
+              "teal",
+              "coral"
+            ]
+          }
+        },
+        {
+          "name": "fonts",
+          "description": "Type pair for the three text roles, or a family per role; the embedded families carry Latin and Cyrillic.",
+          "required": false,
+          "fields": [
+            {
+              "name": "pair",
+              "description": "Coordinated heading, body and code families; a family named for a role in the same theme refines it.",
+              "required": false,
+              "constraint": {
+                "kind": "enum",
+                "values": [
+                  "midnight",
+                  "calm-paper",
+                  "synthwave",
+                  "noir",
+                  "aurora",
+                  "daylight",
+                  "ember",
+                  "blueprint",
+                  "terminal",
+                  "neutral",
+                  "frost",
+                  "system"
+                ]
+              }
+            },
+            {
+              "name": "heading",
+              "description": "Headings and section titles.",
+              "required": false,
+              "constraint": {
+                "kind": "enum",
+                "values": [
+                  "onest",
+                  "golos-text",
+                  "ibm-plex-sans",
+                  "exo-2",
+                  "jost",
+                  "commissioner",
+                  "rubik",
+                  "fira-sans",
+                  "geologica",
+                  "manrope",
+                  "raleway",
+                  "unbounded",
+                  "oswald",
+                  "tektur",
+                  "geist",
+                  "literata",
+                  "playfair",
+                  "cormorant-garamond",
+                  "jetbrains-mono",
+                  "martian-mono",
+                  "geist-mono",
+                  "victor-mono",
+                  "pt-mono",
+                  "system-sans",
+                  "system-serif",
+                  "system-mono"
+                ]
+              }
+            },
+            {
+              "name": "body",
+              "description": "Body text and controls.",
+              "required": false,
+              "constraint": {
+                "kind": "enum",
+                "values": [
+                  "onest",
+                  "golos-text",
+                  "ibm-plex-sans",
+                  "exo-2",
+                  "jost",
+                  "commissioner",
+                  "rubik",
+                  "fira-sans",
+                  "geologica",
+                  "manrope",
+                  "raleway",
+                  "unbounded",
+                  "oswald",
+                  "tektur",
+                  "geist",
+                  "literata",
+                  "playfair",
+                  "cormorant-garamond",
+                  "jetbrains-mono",
+                  "martian-mono",
+                  "geist-mono",
+                  "victor-mono",
+                  "pt-mono",
+                  "system-sans",
+                  "system-serif",
+                  "system-mono"
+                ]
+              }
+            },
+            {
+              "name": "mono",
+              "description": "Code, commands and metadata.",
+              "required": false,
+              "constraint": {
+                "kind": "enum",
+                "values": [
+                  "onest",
+                  "golos-text",
+                  "ibm-plex-sans",
+                  "exo-2",
+                  "jost",
+                  "commissioner",
+                  "rubik",
+                  "fira-sans",
+                  "geologica",
+                  "manrope",
+                  "raleway",
+                  "unbounded",
+                  "oswald",
+                  "tektur",
+                  "geist",
+                  "literata",
+                  "playfair",
+                  "cormorant-garamond",
+                  "jetbrains-mono",
+                  "martian-mono",
+                  "geist-mono",
+                  "victor-mono",
+                  "pt-mono",
+                  "system-sans",
+                  "system-serif",
+                  "system-mono"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "typography",
+          "description": "Weight, tracking and leading of the type.",
+          "required": false,
+          "fields": [
+            {
+              "name": "headingWeight",
+              "description": "Weight of headings, 300 to 900.",
+              "required": false,
+              "constraint": { "kind": "integer", "minimum": 300, "maximum": 900 }
+            },
+            {
+              "name": "displayWeight",
+              "description": "Weight of display-size titles, 300 to 900.",
+              "required": false,
+              "constraint": { "kind": "integer", "minimum": 300, "maximum": 900 }
+            },
+            {
+              "name": "headingTracking",
+              "description": "Letter spacing of large headings in Latin text, in em; Cyrillic text never goes tighter than -0.025em.",
+              "required": false,
+              "constraint": { "kind": "number", "minimum": -0.1, "maximum": 0.15 }
+            },
+            {
+              "name": "displayCase",
+              "description": "Letter case of display headings: as written, or capitals that want positive tracking.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["none", "uppercase"] }
+            },
+            {
+              "name": "displayScale",
+              "description": "Size of display headings against the package scale; wide faces usually look better below 1. Word fit on phones is automatic from the face metrics.",
+              "required": false,
+              "constraint": { "kind": "number", "minimum": 0.6, "maximum": 1.2 }
+            },
+            {
+              "name": "headingMeasure",
+              "description": "Longest line of the page title and of display and editorial section titles, in ch; unset keeps the package measure of each: the reading measure for a report title, 10 to 17ch for landing, first-screen and display titles.",
+              "required": false,
+              "constraint": { "kind": "number", "minimum": 8, "maximum": 40 }
+            },
+            {
+              "name": "bodyLeading",
+              "description": "Line height of body text.",
+              "required": false,
+              "constraint": { "kind": "number", "minimum": 1.2, "maximum": 2 }
+            },
+            {
+              "name": "bodyTracking",
+              "description": "Letter spacing of body text, in em.",
+              "required": false,
+              "constraint": { "kind": "number", "minimum": -0.05, "maximum": 0.05 }
+            },
+            {
+              "name": "captions",
+              "description": "Figure captions and source lines: plain in the text face, or italic in the heading face, the serif italic caption of an editorial page when the heading face is a serif.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["plain", "italic"] }
+            }
+          ]
+        },
+        {
+          "name": "spacing",
+          "description": "Density and rhythm of the page.",
+          "required": false,
+          "fields": [
+            {
+              "name": "density",
+              "description": "Shared spacing scale and control padding.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["compact", "comfortable", "spacious"] }
+            },
+            {
+              "name": "rhythm",
+              "description": "Gap between sections, in rem before density.",
+              "required": false,
+              "constraint": { "kind": "number", "minimum": 2, "maximum": 6 }
+            },
+            {
+              "name": "cardMinimum",
+              "description": "Narrowest card column, in rem.",
+              "required": false,
+              "constraint": { "kind": "number", "minimum": 10, "maximum": 24 }
+            },
+            {
+              "name": "gap",
+              "description": "Gap between the navigation column and the content.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["regular", "tight"] }
+            }
+          ]
+        },
+        {
+          "name": "width",
+          "description": "Maximum shell width and reading measure.",
+          "required": false,
+          "constraint": { "kind": "enum", "values": ["narrow", "standard", "wide"] }
+        },
+        {
+          "name": "radius",
+          "description": "Corner treatment of surfaces and controls.",
+          "required": false,
+          "constraint": { "kind": "enum", "values": ["sharp", "soft", "round"] }
+        },
+        {
+          "name": "radii",
+          "description": "Which step of the radius scale each role takes: sharp controls with soft cards, square media in a round theme.",
+          "required": false,
+          "fields": [
+            {
+              "name": "control",
+              "description": "Buttons, fields and toolbars; default small.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["none", "small", "medium", "large"] }
+            },
+            {
+              "name": "card",
+              "description": "Cards, panels, dialogs, popovers and stages; default medium.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["none", "small", "medium", "large"] }
+            },
+            {
+              "name": "media",
+              "description": "Images and video on the page; default medium.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["none", "small", "medium", "large"] }
+            }
+          ]
+        },
+        {
+          "name": "controls",
+          "description": "Size of buttons, inputs and actions.",
+          "required": false,
+          "constraint": { "kind": "enum", "values": ["regular", "compact"] }
+        },
+        {
+          "name": "backdrop",
+          "description": "Package-drawn page background in the theme colours.",
+          "required": false,
+          "constraint": { "kind": "enum", "values": ["none", "dots", "grid", "tint", "grain"] }
+        },
+        {
+          "name": "elevation",
+          "description": "Geometry of raised shadows.",
+          "required": false,
+          "constraint": { "kind": "enum", "values": ["lifted", "close", "flat"] }
+        },
+        {
+          "name": "motion",
+          "description": "Character of the package motion: a named curve and a pace for every duration.",
+          "required": false,
+          "fields": [
+            {
+              "name": "easing",
+              "description": "How moving things arrive: standard settles quickly, gentle eases in and out, decisive starts late and lands hard.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["standard", "gentle", "decisive"] }
+            },
+            {
+              "name": "pace",
+              "description": "Multiplier of every package duration: brisk, calm (the package timing), or slow.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["brisk", "calm", "slow"] }
+            }
+          ]
+        },
+        {
+          "name": "colors",
+          "description": "Colour roles of each scheme; any role left out comes from the extended theme.",
+          "required": false,
+          "fields": [
+            {
+              "name": "light",
+              "description": "Light scheme colour roles.",
+              "required": false,
+              "fields": [
+                {
+                  "name": "background",
+                  "description": "Page background. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "surface",
+                  "description": "Surface of cards, panels and components. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "raised",
+                  "description": "Raised surface of controls and table headers. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "muted",
+                  "description": "Muted surface of secondary chips. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "heading",
+                  "description": "Headings and the fill of primary actions. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "text",
+                  "description": "Body text. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "textMuted",
+                  "description": "Secondary text: captions, labels, metadata. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "border",
+                  "description": "Ordinary borders and rules. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "borderStrong",
+                  "description": "Strong borders, lifelines and scrollbars. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "accent",
+                  "description": "Accent: rules, markers and the current item; drawn, not read as text. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "accentStrong",
+                  "description": "Strong accent: links and text in accent colour. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "accentSoft",
+                  "description": "Soft accent: selection and highlight backgrounds. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "accent2",
+                  "description": "Second accent: eyebrows, kickers and secondary markers. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "focus",
+                  "description": "Visible keyboard focus ring. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "chart1",
+                  "description": "First chart and diagram series colour. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "chart2",
+                  "description": "Second series colour; the default of statusDone. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "chart3",
+                  "description": "Third series colour; the default of statusReturned. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "chart4",
+                  "description": "Fourth series colour; the default of statusReview. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "chart5",
+                  "description": "Fifth series colour. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "chart6",
+                  "description": "Sixth series colour. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "statusDone",
+                  "description": "Status «done»: success callouts, good cards, added diff lines, finished process steps; follows chart2 unless set. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "statusReview",
+                  "description": "Status «needs a look»: warning callouts, watched cards, major findings, steps in review; follows chart4 unless set. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "statusReturned",
+                  "description": "Status «returned or failed»: danger callouts, risky cards, blocking findings, removed diff lines, invalid fields; follows chart3 unless set. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "marker",
+                  "description": "Editorial marker: eyebrow lines and error rules. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "shadow",
+                  "description": "Colour of raised shadows, usually translucent. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "mediaBacking",
+                  "description": "Paper behind transparent images on the page surface. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codeBackground",
+                  "description": "Background of code blocks. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codeText",
+                  "description": "Plain code text. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codeKeyword",
+                  "description": "Keywords and operators in code. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codeString",
+                  "description": "Strings in code. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codeNumber",
+                  "description": "Numbers and constants in code. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codeFunction",
+                  "description": "Function names in code. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codeType",
+                  "description": "Types, parameters and attributes in code. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codeComment",
+                  "description": "Comments in code. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codePunctuation",
+                  "description": "Punctuation in code. (light scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "dark",
+              "description": "Dark scheme colour roles.",
+              "required": false,
+              "fields": [
+                {
+                  "name": "background",
+                  "description": "Page background. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "surface",
+                  "description": "Surface of cards, panels and components. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "raised",
+                  "description": "Raised surface of controls and table headers. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "muted",
+                  "description": "Muted surface of secondary chips. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "heading",
+                  "description": "Headings and the fill of primary actions. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "text",
+                  "description": "Body text. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "textMuted",
+                  "description": "Secondary text: captions, labels, metadata. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "border",
+                  "description": "Ordinary borders and rules. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "borderStrong",
+                  "description": "Strong borders, lifelines and scrollbars. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "accent",
+                  "description": "Accent: rules, markers and the current item; drawn, not read as text. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "accentStrong",
+                  "description": "Strong accent: links and text in accent colour. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "accentSoft",
+                  "description": "Soft accent: selection and highlight backgrounds. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "accent2",
+                  "description": "Second accent: eyebrows, kickers and secondary markers. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "focus",
+                  "description": "Visible keyboard focus ring. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "chart1",
+                  "description": "First chart and diagram series colour. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "chart2",
+                  "description": "Second series colour; the default of statusDone. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "chart3",
+                  "description": "Third series colour; the default of statusReturned. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "chart4",
+                  "description": "Fourth series colour; the default of statusReview. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "chart5",
+                  "description": "Fifth series colour. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "chart6",
+                  "description": "Sixth series colour. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "statusDone",
+                  "description": "Status «done»: success callouts, good cards, added diff lines, finished process steps; follows chart2 unless set. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "statusReview",
+                  "description": "Status «needs a look»: warning callouts, watched cards, major findings, steps in review; follows chart4 unless set. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "statusReturned",
+                  "description": "Status «returned or failed»: danger callouts, risky cards, blocking findings, removed diff lines, invalid fields; follows chart3 unless set. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "marker",
+                  "description": "Editorial marker: eyebrow lines and error rules. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "shadow",
+                  "description": "Colour of raised shadows, usually translucent. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "mediaBacking",
+                  "description": "Paper behind transparent images on the page surface. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codeBackground",
+                  "description": "Background of code blocks. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codeText",
+                  "description": "Plain code text. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codeKeyword",
+                  "description": "Keywords and operators in code. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codeString",
+                  "description": "Strings in code. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codeNumber",
+                  "description": "Numbers and constants in code. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codeFunction",
+                  "description": "Function names in code. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codeType",
+                  "description": "Types, parameters and attributes in code. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codeComment",
+                  "description": "Comments in code. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                },
+                {
+                  "name": "codePunctuation",
+                  "description": "Punctuation in code. (dark scheme)",
+                  "required": false,
+                  "constraint": {
+                    "kind": "string",
+                    "normalization": "trim",
+                    "minLength": 1,
+                    "maxLength": 11,
+                    "pattern": "^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent)$"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "chrome",
+          "description": "How the package draws the shell and shared components.",
+          "required": false,
+          "fields": [
+            {
+              "name": "topbar",
+              "description": "Glass bar with the page title, or a ledger bar with the current section.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["glass", "ledger"] }
+            },
+            {
+              "name": "navigation",
+              "description": "Plain section list, or numbered chapters.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["plain", "numbered"] }
+            },
+            {
+              "name": "sectionTitle",
+              "description": "Section title without a rule, underlined, or with a side bar.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["plain", "rule", "bar"] }
+            },
+            {
+              "name": "cards",
+              "description": "Raised cards, or cards ruled by an accent line.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["raised", "ruled"] }
+            },
+            {
+              "name": "components",
+              "description": "Soft components, flat framed components, or components with a signal edge.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["soft", "flat", "edged"] }
+            },
+            {
+              "name": "landing",
+              "description": "Landing opening centred, or a ledger with a side rail and an eyebrow.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["centered", "ledger"] }
+            },
+            {
+              "name": "edges",
+              "description": "Nothing at the screen edges, or small monospace captions along them on a wide screen: the page title on the left, the current chapter and its number on the right — for a technical product.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["none", "mono"] }
+            }
+          ]
+        },
+        {
+          "name": "ornaments",
+          "description": "Small signature details of the theme.",
+          "required": false,
+          "fields": [
+            {
+              "name": "headingPrefix",
+              "description": "Up to three characters drawn before the page heading in the accent colour, such as > or §; no spaces, quotes, backslash or <; empty for none.",
+              "required": false,
+              "constraint": {
+                "kind": "string",
+                "normalization": "trim",
+                "minLength": 0,
+                "maxLength": 3,
+                "pattern": "^[^\\s<\"'\\\\]{0,3}$"
+              }
+            },
+            {
+              "name": "titleCursor",
+              "description": "Cursor after the page heading: blinks six times, then stays lit; still under reduced motion.",
+              "required": false,
+              "constraint": { "kind": "boolean" }
+            },
+            {
+              "name": "heroEmphasis",
+              "description": "Hero and story sections unmarked, marked by a thin accent rule, or lifted by a shadow.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["none", "rule", "shadow"] }
+            },
+            {
+              "name": "mediaTreatment",
+              "description": "Plain images, or images with depth and slightly richer colour.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["plain", "vivid"] }
+            },
+            {
+              "name": "console",
+              "description": "Console details: bracketed labels, dashed rules and a prompt mark at the current contents item.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["none", "on"] }
+            },
+            {
+              "name": "scanlines",
+              "description": "Faint scanlines over the whole page; off by default, because a texture over the text reads as a generated-site cliché.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["none", "on"] }
+            },
+            {
+              "name": "glow",
+              "description": "Phosphor glow on headings and the primary action; off by default for the same reason.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["none", "on"] }
+            },
+            {
+              "name": "linkedCard",
+              "description": "Linked cards raised on hover, or marked by an accent edge.",
+              "required": false,
+              "constraint": { "kind": "enum", "values": ["raised", "edge"] }
+            }
+          ]
+        }
+      ],
+      "accents": {
+        "graphite": {
+          "light": {
+            "accent": "#363b43",
+            "accentStrong": "#1f2329",
+            "accentSoft": "#e8e9eb",
+            "focus": "#363b43"
+          },
+          "dark": {
+            "accent": "#c9ced6",
+            "accentStrong": "#e6e9ee",
+            "accentSoft": "#2a2e35",
+            "focus": "#d5d9e0"
+          }
+        },
+        "cobalt": {
+          "light": {
+            "accent": "#1f5bb8",
+            "accentStrong": "#174a96",
+            "accentSoft": "#e3ecfa",
+            "focus": "#1f5bb8"
+          },
+          "dark": {
+            "accent": "#86b4f5",
+            "accentStrong": "#bcd5fb",
+            "accentSoft": "#172a47",
+            "focus": "#9dc3f8"
+          }
+        },
+        "rust": {
+          "light": {
+            "accent": "#a8431c",
+            "accentStrong": "#853413",
+            "accentSoft": "#f7e6dc",
+            "focus": "#a8431c"
+          },
+          "dark": {
+            "accent": "#ef9a74",
+            "accentStrong": "#f6c1a8",
+            "accentSoft": "#42210f",
+            "focus": "#f3ab8a"
+          }
+        },
+        "moss": {
+          "light": {
+            "accent": "#4a6629",
+            "accentStrong": "#39501e",
+            "accentSoft": "#e7eddb",
+            "focus": "#4a6629"
+          },
+          "dark": {
+            "accent": "#a9c983",
+            "accentStrong": "#cbe0b0",
+            "accentSoft": "#253119",
+            "focus": "#b8d496"
+          }
+        },
+        "ochre": {
+          "light": {
+            "accent": "#8a5c00",
+            "accentStrong": "#6d4800",
+            "accentSoft": "#f5ebd3",
+            "focus": "#8a5c00"
+          },
+          "dark": {
+            "accent": "#e2b556",
+            "accentStrong": "#efd394",
+            "accentSoft": "#3b2d0c",
+            "focus": "#e8c26d"
+          }
+        },
+        "ink": {
+          "light": {
+            "accent": "#1d3a5f",
+            "accentStrong": "#132a46",
+            "accentSoft": "#e2e8f0",
+            "focus": "#1d3a5f"
+          },
+          "dark": {
+            "accent": "#a2bbdb",
+            "accentStrong": "#c9d7ea",
+            "accentSoft": "#1b2839",
+            "focus": "#b3c8e3"
+          }
+        },
+        "indigo": {
+          "light": {
+            "accent": "#3856d8",
+            "accentStrong": "#243da7",
+            "accentSoft": "#e7ecff",
+            "focus": "#3856d8"
+          },
+          "dark": {
+            "accent": "#91a9ff",
+            "accentStrong": "#c2ceff",
+            "accentSoft": "#202e5a",
+            "focus": "#a9bbff"
+          }
+        },
+        "teal": {
+          "light": {
+            "accent": "#087f75",
+            "accentStrong": "#075e57",
+            "accentSoft": "#dff7f3",
+            "focus": "#087f75"
+          },
+          "dark": {
+            "accent": "#5ee0cf",
+            "accentStrong": "#a5f3e8",
+            "accentSoft": "#123d3a",
+            "focus": "#75eadb"
+          }
+        },
+        "coral": {
+          "light": {
+            "accent": "#c2415d",
+            "accentStrong": "#942f45",
+            "accentSoft": "#ffe7ec",
+            "focus": "#c2415d"
+          },
+          "dark": {
+            "accent": "#ff91a7",
+            "accentStrong": "#ffc0cc",
+            "accentSoft": "#4b2130",
+            "focus": "#ffa6b8"
+          }
+        }
+      },
+      "fontFamilies": {
+        "onest": {
+          "family": "Onest",
+          "files": "onest",
+          "weights": { "min": 100, "max": 900 },
+          "stack": "'Onest', system-ui, sans-serif",
+          "advance": { "mixed": 0.616, "caps": 0.744 }
+        },
+        "golos-text": {
+          "family": "Golos Text",
+          "files": "golos-text",
+          "weights": { "min": 400, "max": 900 },
+          "stack": "'Golos Text', system-ui, sans-serif",
+          "advance": { "mixed": 0.625, "caps": 0.761 }
+        },
+        "ibm-plex-sans": {
+          "family": "IBM Plex Sans",
+          "files": "ibm-plex-sans",
+          "weights": { "min": 100, "max": 700 },
+          "stack": "'IBM Plex Sans', system-ui, sans-serif",
+          "advance": { "mixed": 0.612, "caps": 0.713 }
+        },
+        "exo-2": {
+          "family": "Exo 2",
+          "files": "exo-2",
+          "weights": { "min": 100, "max": 900 },
+          "stack": "'Exo 2', system-ui, sans-serif",
+          "advance": { "mixed": 0.618, "caps": 0.701 }
+        },
+        "jost": {
+          "family": "Jost",
+          "files": "jost",
+          "weights": { "min": 100, "max": 900 },
+          "stack": "'Jost', system-ui, sans-serif",
+          "advance": { "mixed": 0.607, "caps": 0.772 }
+        },
+        "commissioner": {
+          "family": "Commissioner",
+          "files": "commissioner",
+          "weights": { "min": 100, "max": 900 },
+          "stack": "'Commissioner', system-ui, sans-serif",
+          "advance": { "mixed": 0.594, "caps": 0.743 }
+        },
+        "rubik": {
+          "family": "Rubik",
+          "files": "rubik",
+          "weights": { "min": 300, "max": 900 },
+          "stack": "'Rubik', system-ui, sans-serif",
+          "advance": { "mixed": 0.66, "caps": 0.77 }
+        },
+        "fira-sans": {
+          "family": "Fira Sans",
+          "files": "fira-sans",
+          "weights": [400, 500, 600, 700],
+          "stack": "'Fira Sans', system-ui, sans-serif",
+          "advance": { "mixed": 0.592, "caps": 0.653 }
+        },
+        "geologica": {
+          "family": "Geologica",
+          "files": "geologica",
+          "weights": { "min": 100, "max": 900 },
+          "stack": "'Geologica', system-ui, sans-serif",
+          "advance": { "mixed": 0.652, "caps": 0.76 }
+        },
+        "manrope": {
+          "family": "Manrope",
+          "files": "manrope",
+          "weights": { "min": 200, "max": 800 },
+          "stack": "'Manrope', system-ui, sans-serif",
+          "advance": { "mixed": 0.623, "caps": 0.713 }
+        },
+        "raleway": {
+          "family": "Raleway",
+          "files": "raleway",
+          "weights": { "min": 100, "max": 900 },
+          "stack": "'Raleway', system-ui, sans-serif",
+          "advance": { "mixed": 0.62, "caps": 0.722 }
+        },
+        "unbounded": {
+          "family": "Unbounded",
+          "files": "unbounded",
+          "weights": { "min": 200, "max": 900 },
+          "stack": "'Unbounded', system-ui, sans-serif",
+          "advance": { "mixed": 0.854, "caps": 0.963 }
+        },
+        "oswald": {
+          "family": "Oswald",
+          "files": "oswald",
+          "weights": { "min": 200, "max": 700 },
+          "stack": "'Oswald', system-ui, sans-serif",
+          "advance": { "mixed": 0.525, "caps": 0.606 }
+        },
+        "tektur": {
+          "family": "Tektur",
+          "files": "tektur",
+          "weights": { "min": 400, "max": 900 },
+          "stack": "'Tektur', system-ui, sans-serif",
+          "advance": { "mixed": 0.646, "caps": 0.684 }
+        },
+        "geist": {
+          "family": "Geist",
+          "files": "geist",
+          "weights": { "min": 100, "max": 900 },
+          "stack": "'Geist', system-ui, sans-serif",
+          "advance": { "mixed": 0.646, "caps": 0.742 }
+        },
+        "literata": {
+          "family": "Literata",
+          "files": "literata",
+          "weights": { "min": 200, "max": 900 },
+          "stack": "'Literata', Georgia, serif",
+          "advance": { "mixed": 0.686, "caps": 0.797 },
+          "opticalSize": { "min": 7, "max": 72 }
+        },
+        "playfair": {
+          "family": "Playfair",
+          "files": "playfair",
+          "weights": { "min": 300, "max": 900 },
+          "stack": "'Playfair', Georgia, serif",
+          "advance": { "mixed": 0.564, "caps": 0.686 },
+          "opticalSize": { "min": 5, "max": 1200 }
+        },
+        "cormorant-garamond": {
+          "family": "Cormorant Garamond",
+          "files": "cormorant-garamond",
+          "weights": { "min": 300, "max": 700 },
+          "stack": "'Cormorant Garamond', Georgia, serif",
+          "advance": { "mixed": 0.503, "caps": 0.702 },
+          "displayOnly": true
+        },
+        "jetbrains-mono": {
+          "family": "JetBrains Mono",
+          "files": "jetbrains-mono",
+          "weights": { "min": 100, "max": 800 },
+          "stack": "'JetBrains Mono', ui-monospace, monospace",
+          "advance": { "mixed": 0.6, "caps": 0.6 }
+        },
+        "martian-mono": {
+          "family": "Martian Mono",
+          "files": "martian-mono",
+          "weights": { "min": 100, "max": 800 },
+          "stack": "'Martian Mono', ui-monospace, monospace",
+          "advance": { "mixed": 0.7, "caps": 0.7 }
+        },
+        "geist-mono": {
+          "family": "Geist Mono",
+          "files": "geist-mono",
+          "weights": { "min": 100, "max": 900 },
+          "stack": "'Geist Mono', ui-monospace, monospace",
+          "advance": { "mixed": 0.6, "caps": 0.6 }
+        },
+        "victor-mono": {
+          "family": "Victor Mono",
+          "files": "victor-mono",
+          "weights": { "min": 100, "max": 700 },
+          "stack": "'Victor Mono', ui-monospace, monospace",
+          "advance": { "mixed": 0.6, "caps": 0.6 }
+        },
+        "pt-mono": {
+          "family": "PT Mono",
+          "files": "pt-mono",
+          "weights": [400],
+          "stack": "'PT Mono', ui-monospace, monospace",
+          "advance": { "mixed": 0.6, "caps": 0.6 }
+        },
+        "system-sans": {
+          "stack": "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          "advance": { "mixed": 0.66, "caps": 0.78 }
+        },
+        "system-serif": {
+          "stack": "Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif",
+          "advance": { "mixed": 0.64, "caps": 0.78 }
+        },
+        "system-mono": {
+          "stack": "ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace",
+          "advance": { "mixed": 0.62, "caps": 0.62 }
+        }
+      },
+      "resolution": ["default theme", "extends chain", "accent", "explicit fields"],
+      "contrast": [
+        {
+          "foreground": "heading",
+          "background": "background",
+          "minimum": 4.5,
+          "use": "headings on the page"
+        },
+        {
+          "foreground": "text",
+          "background": "background",
+          "minimum": 4.5,
+          "use": "body text on the page"
+        },
+        {
+          "foreground": "text",
+          "background": "surface",
+          "minimum": 4.5,
+          "use": "text inside components"
+        },
+        {
+          "foreground": "textMuted",
+          "background": "background",
+          "minimum": 4.5,
+          "use": "captions on the page"
+        },
+        {
+          "foreground": "textMuted",
+          "background": "surface",
+          "minimum": 4.5,
+          "use": "captions in components"
+        },
+        {
+          "foreground": "text",
+          "background": "raised",
+          "minimum": 4.5,
+          "use": "text on raised panels"
+        },
+        {
+          "foreground": "textMuted",
+          "background": "raised",
+          "minimum": 4.5,
+          "use": "captions on raised panels"
+        },
+        {
+          "foreground": "textMuted",
+          "background": "muted",
+          "minimum": 4.5,
+          "use": "captions on muted wells"
+        },
+        {
+          "foreground": "heading",
+          "background": "accentSoft",
+          "minimum": 4.5,
+          "use": "titles in accent sections"
+        },
+        {
+          "foreground": "text",
+          "background": "accentSoft",
+          "minimum": 4.5,
+          "use": "text in accent sections"
+        },
+        {
+          "foreground": "text",
+          "background": "accentSoft",
+          "minimum": 4.5,
+          "use": "captions in accent sections",
+          "foregroundShare": 0.8
+        },
+        {
+          "foreground": "accentStrong",
+          "background": "background",
+          "minimum": 4.5,
+          "use": "links on the page"
+        },
+        {
+          "foreground": "accentStrong",
+          "background": "surface",
+          "minimum": 4.5,
+          "use": "links in components"
+        },
+        {
+          "foreground": "accent2",
+          "background": "background",
+          "minimum": 4.5,
+          "use": "eyebrows and kickers"
+        },
+        {
+          "foreground": "accent",
+          "background": "background",
+          "minimum": 3,
+          "use": "accent rules and markers"
+        },
+        {
+          "foreground": "background",
+          "background": "heading",
+          "minimum": 4.5,
+          "use": "primary action label"
+        },
+        {
+          "foreground": "focus",
+          "background": "background",
+          "minimum": 3,
+          "use": "keyboard focus ring"
+        },
+        {
+          "foreground": "statusDone",
+          "background": "background",
+          "minimum": 3,
+          "use": "status «done» marks"
+        },
+        {
+          "foreground": "statusDone",
+          "background": "surface",
+          "minimum": 3,
+          "use": "status «done» in cards"
+        },
+        {
+          "foreground": "statusReview",
+          "background": "background",
+          "minimum": 3,
+          "use": "status «review» marks"
+        },
+        {
+          "foreground": "statusReview",
+          "background": "surface",
+          "minimum": 3,
+          "use": "status «review» in cards"
+        },
+        {
+          "foreground": "statusReturned",
+          "background": "background",
+          "minimum": 3,
+          "use": "status «returned» marks"
+        },
+        {
+          "foreground": "statusReturned",
+          "background": "surface",
+          "minimum": 3,
+          "use": "status «returned» in cards"
+        },
+        {
+          "foreground": "focus",
+          "background": "surface",
+          "minimum": 3,
+          "use": "focus ring inside components"
+        },
+        {
+          "foreground": "codeText",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code text"
+        },
+        {
+          "foreground": "codeKeyword",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code keywords"
+        },
+        {
+          "foreground": "codeString",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code strings"
+        },
+        {
+          "foreground": "codeNumber",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code numbers"
+        },
+        {
+          "foreground": "codeFunction",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code functions"
+        },
+        {
+          "foreground": "codeType",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code types"
+        },
+        {
+          "foreground": "codeComment",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code comments"
+        }
+      ]
     }
   },
   "visualizations": {
@@ -1774,12 +4645,16 @@
       "edgeKinds": ["call", "data", "event", "dependency"],
       "defaultEdgeKind": "call",
       "nodeKinds": ["neutral", "accent", "success", "warning"],
+      "nodeStatuses": ["done", "review", "returned", "pending"],
+      "edgeCount": { "minimum": 1, "maximum": 999 },
+      "zoom": { "maximumPerDiagram": 1 },
+      "pulse": { "minimumNodes": 2, "maximumNodes": 12 },
       "edgeKindLegend": { "minimumKinds": 2 },
       "legend": { "maximumPerDiagram": 1, "maximumItems": 8 },
       "flow": {
         "nodes": { "minimum": 1, "maximum": 20 },
         "edges": { "maximum": 40 },
-        "selfEdges": false,
+        "selfEdges": true,
         "layouts": ["auto", "down", "right", "orthogonal"],
         "directions": ["auto", "right", "down"],
         "groups": { "maximum": 5, "minimumMembers": 1, "requireEveryNode": false }
@@ -1795,59 +4670,6 @@
     }
   },
   "authoredRules": [
-    { "subject": "copyable", "rules": [{ "id": "prose-and-terms-only", "dependsOn": [] }] },
-    {
-      "subject": "section/lead",
-      "rules": [
-        { "id": "single-paragraph", "dependsOn": [] },
-        { "id": "first-authored-block", "dependsOn": [] }
-      ]
-    },
-    {
-      "subject": "response/question",
-      "rules": [
-        { "id": "unique-id", "dependsOn": [] },
-        { "id": "unique-child-ids", "dependsOn": [] },
-        { "id": "items-match-kind", "dependsOn": [] },
-        { "id": "buckets-match-kind", "dependsOn": [] },
-        { "id": "item-bucket-references", "dependsOn": ["buckets-match-kind"] },
-        { "id": "options-match-kind", "dependsOn": [] },
-        { "id": "numeric-domain", "dependsOn": [] }
-      ]
-    },
-    {
-      "subject": "decision|checklist",
-      "rules": [
-        { "id": "children-not-mixed", "dependsOn": [] },
-        { "id": "child-limit", "dependsOn": [] },
-        { "id": "stable-decision-id", "dependsOn": [] },
-        { "id": "child-present", "dependsOn": [] },
-        { "id": "unique-child-ids", "dependsOn": ["children-not-mixed", "child-present"] }
-      ]
-    },
-    {
-      "subject": "directive-node",
-      "rules": [
-        { "id": "registered-name", "dependsOn": [] },
-        { "id": "no-prototype-like-attributes", "dependsOn": [] },
-        { "id": "declared-form", "dependsOn": ["registered-name"] },
-        { "id": "declared-placement", "dependsOn": ["registered-name"] },
-        { "id": "declared-children", "dependsOn": ["registered-name"] },
-        {
-          "id": "interpreted-attributes",
-          "dependsOn": ["registered-name", "no-prototype-like-attributes"]
-        },
-        { "id": "action-label", "dependsOn": ["registered-name"] },
-        { "id": "compatible-attribute-combination", "dependsOn": ["interpreted-attributes"] },
-        { "id": "section-identity", "dependsOn": ["interpreted-attributes"] },
-        { "id": "appendix-glossary-placement", "dependsOn": ["interpreted-attributes"] },
-        { "id": "unique-glossary-identity", "dependsOn": ["interpreted-attributes"] },
-        {
-          "id": "declared-glossary-forms",
-          "dependsOn": ["interpreted-attributes", "unique-glossary-identity"]
-        }
-      ]
-    },
     { "subject": "actions", "rules": [{ "id": "action-children-only", "dependsOn": [] }] },
     { "subject": "chart", "rules": [{ "id": "pie-single-series", "dependsOn": [] }] },
     {
@@ -1910,6 +4732,142 @@
       "subject": "diagram/sequence/message",
       "rules": [{ "id": "label-required", "dependsOn": [] }]
     },
+    { "subject": "compare", "rules": [{ "id": "two-images", "dependsOn": [] }] },
+    { "subject": "copyable", "rules": [{ "id": "prose-and-terms-only", "dependsOn": [] }] },
+    {
+      "subject": "decision|checklist",
+      "rules": [
+        { "id": "children-not-mixed", "dependsOn": [] },
+        { "id": "child-limit", "dependsOn": [] },
+        { "id": "stable-decision-id", "dependsOn": [] },
+        { "id": "child-present", "dependsOn": [] },
+        { "id": "unique-child-ids", "dependsOn": ["children-not-mixed", "child-present"] }
+      ]
+    },
+    {
+      "subject": "demo/scene",
+      "rules": [
+        { "id": "beats-in-playing-demo", "dependsOn": [] },
+        { "id": "scene-beat-count", "dependsOn": [] },
+        { "id": "scene-stage", "dependsOn": [] },
+        { "id": "counter-attributes", "dependsOn": [] },
+        { "id": "seconds-with-time", "dependsOn": [] },
+        { "id": "scene-focus-nodes", "dependsOn": [] }
+      ]
+    },
+    {
+      "subject": "diff",
+      "rules": [
+        { "id": "one-code-block", "dependsOn": [] },
+        { "id": "code-language", "dependsOn": ["one-code-block"] },
+        { "id": "unified-hunks", "dependsOn": ["one-code-block"] }
+      ]
+    },
+    {
+      "subject": "response/question",
+      "rules": [
+        { "id": "unique-id", "dependsOn": [] },
+        { "id": "unique-child-ids", "dependsOn": [] },
+        { "id": "items-match-kind", "dependsOn": [] },
+        { "id": "buckets-match-kind", "dependsOn": [] },
+        { "id": "item-bucket-references", "dependsOn": ["buckets-match-kind"] },
+        { "id": "options-match-kind", "dependsOn": [] },
+        { "id": "numeric-domain", "dependsOn": [] }
+      ]
+    },
+    {
+      "subject": "section/steps",
+      "rules": [
+        { "id": "beats-in-steps-scene", "dependsOn": [] },
+        { "id": "beat-count", "dependsOn": [] },
+        { "id": "scrub-screens", "dependsOn": [] },
+        { "id": "stage-media", "dependsOn": [] },
+        { "id": "beat-lines", "dependsOn": [] },
+        { "id": "focus-nodes", "dependsOn": [] }
+      ]
+    },
+    {
+      "subject": "section/place",
+      "rules": [
+        { "id": "first-section", "dependsOn": [] },
+        { "id": "page-title", "dependsOn": [] }
+      ]
+    },
+    {
+      "subject": "section/browser-frame",
+      "rules": [
+        { "id": "real-address-or-illustration", "dependsOn": [] },
+        { "id": "frame-for-address", "dependsOn": [] },
+        { "id": "framed-picture", "dependsOn": [] }
+      ]
+    },
+    {
+      "subject": "section/lead",
+      "rules": [
+        { "id": "single-paragraph", "dependsOn": [] },
+        { "id": "first-authored-block", "dependsOn": [] }
+      ]
+    },
+    {
+      "subject": "spotlight",
+      "rules": [
+        { "id": "one-picture-first", "dependsOn": [] },
+        { "id": "explanation", "dependsOn": [] }
+      ]
+    },
+    {
+      "subject": "swap",
+      "rules": [
+        { "id": "plain-written-word", "dependsOn": [] },
+        { "id": "word-count", "dependsOn": [] },
+        { "id": "word-length", "dependsOn": [] },
+        { "id": "different-words", "dependsOn": [] }
+      ]
+    },
+    {
+      "subject": "typing",
+      "rules": [
+        { "id": "plain-line", "dependsOn": [] },
+        { "id": "short-line", "dependsOn": [] }
+      ]
+    },
+    {
+      "subject": "mark",
+      "rules": [
+        { "id": "marked-words", "dependsOn": [] },
+        { "id": "two-per-screen", "dependsOn": [] }
+      ]
+    },
+    {
+      "subject": "video/loop",
+      "rules": [
+        { "id": "loop-only-start-and-seam", "dependsOn": [] },
+        { "id": "expand-on-clip", "dependsOn": [] }
+      ]
+    },
+    {
+      "subject": "directive-node",
+      "rules": [
+        { "id": "registered-name", "dependsOn": [] },
+        { "id": "no-prototype-like-attributes", "dependsOn": [] },
+        { "id": "declared-form", "dependsOn": ["registered-name"] },
+        { "id": "declared-placement", "dependsOn": ["registered-name"] },
+        { "id": "declared-children", "dependsOn": ["registered-name"] },
+        {
+          "id": "interpreted-attributes",
+          "dependsOn": ["registered-name", "no-prototype-like-attributes"]
+        },
+        { "id": "action-label", "dependsOn": ["registered-name"] },
+        { "id": "compatible-attribute-combination", "dependsOn": ["interpreted-attributes"] },
+        { "id": "section-identity", "dependsOn": ["interpreted-attributes"] },
+        { "id": "appendix-glossary-placement", "dependsOn": ["interpreted-attributes"] },
+        { "id": "unique-glossary-identity", "dependsOn": ["interpreted-attributes"] },
+        {
+          "id": "declared-glossary-forms",
+          "dependsOn": ["interpreted-attributes", "unique-glossary-identity"]
+        }
+      ]
+    },
     {
       "subject": "code-fence/terms",
       "rules": [
@@ -1942,9 +4900,12 @@
     "review": "Resolve a confined review artifact without changing report sources.",
     "build": "Compile a source into a default or share-safe static artifact.",
     "fix": "Apply the replacements the product computed exactly, and nothing else.",
+    "theme": "Write an author theme file from one or two brand colours, their lightness shifted until every contrast pair passes in both schemes.",
     "describe": "Return the complete source contract.",
     "schema": "Return manifest, directive, or complete source JSON Schema.",
-    "examples": "List packaged buildable examples.",
-    "sitemap": "Write sitemap.xml and robots.txt for a published tree of pages built with a public URL."
+    "examples": "List packaged buildable examples and the reference extensions shipped beside them.",
+    "sitemap": "Write sitemap.xml and robots.txt for a published tree of pages built with a public URL.",
+    "snapshot": "Build a page and photograph it at several widths, in both schemes, with and without motion, with a contact sheet; with --measure, measure it instead of photographing.",
+    "effect-check": "Build the examples of an effect extension (or a built-in effect) and run the eleven effect checks in Chromium, reporting N of M checks passed."
   }
 }

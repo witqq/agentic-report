@@ -4,14 +4,13 @@ description: A long-form document layout with durable navigation and evidence.
 language: en
 localizations:
   ru: report.ru.md
-theme: system
 layout: document
-tokens:
-  density: comfortable
-  font: serif
-  accent: indigo
+theme:
+  name: long-read
+  extends: calm-paper
   width: narrow
   radius: soft
+scheme: system
 ---
 
 # Architecture decision record
@@ -21,7 +20,7 @@ demonstrate the report engine; replace it with verified project evidence before 
 
 A focused reading surface for a decision, its evidence, and the path from constraints to rollout.
 
-::::::section{title="Decision context" id="context" nav="Context" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" media="mask" media-fit="cover" media-aspect="cinematic" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Decision context" id="context" nav="Context" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" media="mask" media-fit="cover" media-aspect="cinematic" surface="tint" transition="stagger" choreography="cascade"}
 :::callout{kind="info" title="Decision status"}
 Accepted for the next implementation unit after local validation.
 :::
@@ -49,9 +48,9 @@ Keep layout and visual choices as validated values. Do not expose arbitrary CSS 
 
 ```yaml
 layout: document
-theme: system
-tokens:
-  font: serif
+scheme: system
+theme:
+  extends: calm-paper
   width: narrow
 ```
 

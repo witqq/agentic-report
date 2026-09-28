@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 
-import { PAGE_PRESETS, type PageLocaleChoice } from '../authoring/registry.js';
+import type { PageLocaleChoice } from '../authoring/registry.js';
+import type { ResolvedTheme } from '../authoring/themes.js';
 import type { ReportManifest } from '../contracts.js';
 import { PACKAGE_ICON_PATHS, type PackageIconName } from '../iconography.js';
 import { packageStrings, resolvePackageLocale, type PackageStrings } from '../localization.js';
@@ -8,6 +9,7 @@ import type { ResolvedReviewArtifact } from '../review/binding.js';
 import type { ReviewArtifact, ReviewTargetManifest } from '../review/contract.js';
 import type { NavigationItem } from './navigation.js';
 import type { PublicPageMetadata } from './public-page.js';
+import { themeRootAttributes } from './theme-css.js';
 
 export type { NavigationItem } from './navigation.js';
 
@@ -28,19 +30,24 @@ export interface DocumentPageVariantOptions {
 export interface DocumentRenderOptions extends DocumentPageVariantOptions {
   readonly page: Pick<
     ReportManifest,
-    | 'preset'
-    | 'theme'
+    | 'scheme'
     | 'layout'
-    | 'tokens'
-    | 'scrollProgress'
+    | 'progress'
+    | 'opening'
     | 'attribution'
     | 'review'
-    | 'themeToggle'
-    | 'presetSwitcher'
-  >;
+    | 'schemeToggle'
+    | 'motion'
+  > & {
+    readonly theme: ResolvedTheme;
+    /** Темы переключателя вместе с темой страницы; пусто, когда переключателя нет. */
+    readonly switchableThemes: readonly ResolvedTheme[];
+  };
   readonly contentSecurityPolicy: string;
   readonly styles: { readonly inline?: string; readonly href?: string };
   readonly runtime: DocumentRuntime;
+  /** Скрипты эффектов расширений: после рантайма, только на странице, где эффект используется. */
+  readonly extensionScripts?: readonly DocumentRuntime[];
   readonly localizations?: readonly DocumentPageVariantOptions[];
   readonly publicPage?: PublicPageMetadata;
 }
@@ -49,21 +56,11 @@ export type DocumentRuntime =
   | { readonly inline: string; readonly src?: never }
   | { readonly src: string; readonly inline?: never };
 
-/**
- * Стили, предлагаемые переключателем: только самостоятельные, без совместимых псевдонимов —
- * читателю незачем выбирать между двумя именами одного и того же вида.
- */
-const SWITCHABLE_PRESETS = PAGE_PRESETS.filter(
-  (preset) => !preset.description.startsWith('Compatibility identity'),
-);
-
-/** Стиль вместе со своими токенами: подменять надо весь набор, иначе вид останется смешанным. */
-const PRESET_CATALOG = Object.fromEntries(
-  SWITCHABLE_PRESETS.map((preset) => [preset.name, preset.tokens]),
-);
-
-function presetLabel(name: string): string {
-  return `${name.slice(0, 1).toUpperCase()}${name.slice(1)}`;
+function themeLabel(name: string): string {
+  return name
+    .split('-')
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(' ');
 }
 
 export function renderDocument(options: DocumentRenderOptions): string {
@@ -71,15 +68,12 @@ export function renderDocument(options: DocumentRenderOptions): string {
   const markup = renderToStaticMarkup(
     <html
       lang={options.language}
-      data-preset={options.page.preset}
-      data-theme={options.page.theme}
+      {...themeRootAttributes(options.page.theme)}
+      data-scheme={options.page.scheme}
       data-layout={options.page.layout}
-      data-density={options.page.tokens.density}
-      data-font={options.page.tokens.font}
-      data-accent={options.page.tokens.accent}
-      data-width={options.page.tokens.width}
-      data-radius={options.page.tokens.radius}
-      data-scroll-progress={options.page.scrollProgress ? 'true' : undefined}
+      data-progress={options.page.progress === 'none' ? undefined : options.page.progress}
+      data-opening={options.page.opening}
+      data-motion-level={options.page.motion}
       data-package-locale={resolvePackageLocale(options.language)}
       data-active-locale={options.locale}
     >
@@ -112,9 +106,9 @@ export function renderDocument(options: DocumentRenderOptions): string {
             variants={variants}
             attribution={options.page.attribution}
             review={options.page.review}
-            themeToggle={options.page.themeToggle}
-            presetSwitcher={options.page.presetSwitcher}
-            preset={options.page.preset}
+            schemeToggle={options.page.schemeToggle}
+            switchableThemes={options.page.switchableThemes}
+            theme={options.page.theme.name}
           />
         </div>
         {(options.localizations ?? []).map((variant) => (
@@ -124,9 +118,9 @@ export function renderDocument(options: DocumentRenderOptions): string {
               variants={variants}
               attribution={options.page.attribution}
               review={options.page.review}
-              themeToggle={options.page.themeToggle}
-              presetSwitcher={options.page.presetSwitcher}
-              preset={options.page.preset}
+              schemeToggle={options.page.schemeToggle}
+              switchableThemes={options.page.switchableThemes}
+              theme={options.page.theme.name}
             />
           </template>
         ))}
@@ -135,6 +129,14 @@ export function renderDocument(options: DocumentRenderOptions): string {
           <script dangerouslySetInnerHTML={{ __html: options.runtime.inline }} />
         )}
         {options.runtime.src === undefined ? null : <script src={options.runtime.src} defer />}
+        {(options.extensionScripts ?? []).map((script) =>
+          script.inline === undefined ? (
+            <script key={script.src} src={script.src} defer />
+          ) : (
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: the effect script is bundled by the package and allowed by its CSP hash.
+            <script key={script.inline} dangerouslySetInnerHTML={{ __html: script.inline }} />
+          ),
+        )}
       </body>
     </html>,
   );
@@ -157,6 +159,12 @@ function PublicPageHead({
   return (
     <>
       <link rel="canonical" href={metadata.url} />
+      {metadata.languages.map((language) => (
+        <link key={language} rel="alternate" hrefLang={language} href={metadata.url} />
+      ))}
+      {metadata.languages.length === 0 ? null : (
+        <link rel="alternate" hrefLang="x-default" href={metadata.url} />
+      )}
       <meta property="og:type" content="website" />
       <meta property="og:url" content={metadata.url} />
       <meta property="og:title" content={title} />
@@ -182,17 +190,17 @@ function PageVariant({
   variants,
   attribution,
   review,
-  themeToggle,
-  presetSwitcher,
-  preset,
+  schemeToggle,
+  switchableThemes,
+  theme,
 }: {
   readonly options: DocumentPageVariantOptions;
   readonly variants: readonly DocumentPageVariantOptions[];
   readonly attribution: boolean;
   readonly review: boolean;
-  readonly themeToggle: boolean;
-  readonly presetSwitcher: boolean;
-  readonly preset: string;
+  readonly schemeToggle: boolean;
+  readonly switchableThemes: readonly ResolvedTheme[];
+  readonly theme: string;
 }) {
   const strings = packageStrings(options.language);
   const hasNavigation = options.navigation.length >= 2;
@@ -229,7 +237,11 @@ function PageVariant({
       <header className="topbar" data-nav-outside>
         {hasNavigation ? (
           <button
-            className="nav-toggle"
+            className="nav-toggle ui-button"
+            data-ui-variant="quiet"
+            data-ui-size="md"
+            data-ui-icon-only
+            data-ui-toolbar
             type="button"
             aria-controls={navigationId}
             aria-expanded="true"
@@ -263,7 +275,11 @@ function PageVariant({
         <div className="topbar-tools">
           {hasReviewTargets ? (
             <button
-              className="review-toggle"
+              className="review-toggle ui-button"
+              data-ui-variant="quiet"
+              data-ui-size="md"
+              data-ui-icon-only
+              data-ui-toolbar
               type="button"
               aria-controls={reviewDialogId}
               aria-expanded="false"
@@ -279,7 +295,14 @@ function PageVariant({
             </button>
           ) : null}
           {variants.length > 1 ? (
-            <label className="language-select" title={strings.language}>
+            <label
+              className="language-select ui-button"
+              data-ui-variant="quiet"
+              data-ui-size="md"
+              data-ui-icon-only
+              data-ui-toolbar
+              title={strings.language}
+            >
               <PackageIcon name="language" size={20} />
               <span className="visually-hidden">{strings.language}</span>
               <select
@@ -296,35 +319,46 @@ function PageVariant({
               </select>
             </label>
           ) : null}
-          {presetSwitcher ? (
-            <label className="preset-select" title={strings.chooseStyle}>
+          {switchableThemes.length > 0 ? (
+            <label
+              className="theme-select ui-button"
+              data-ui-variant="quiet"
+              data-ui-size="md"
+              data-ui-icon-only
+              data-ui-toolbar
+              title={strings.chooseTheme}
+            >
               <PackageIcon name="palette" size={20} />
-              <span className="visually-hidden">{strings.style}</span>
+              <span className="visually-hidden">{strings.theme}</span>
               <select
-                aria-label={strings.chooseStyle}
-                title={strings.chooseStyle}
-                defaultValue={preset}
-                data-preset-select
+                aria-label={strings.chooseTheme}
+                title={strings.chooseTheme}
+                defaultValue={theme}
+                data-theme-select
               >
-                {SWITCHABLE_PRESETS.map((candidate) => (
+                {switchableThemes.map((candidate) => (
                   <option key={candidate.name} value={candidate.name}>
-                    {presetLabel(candidate.name)}
+                    {themeLabel(candidate.name)}
                   </option>
                 ))}
               </select>
             </label>
           ) : null}
-          {themeToggle ? (
+          {schemeToggle ? (
             <button
-              className="theme-toggle"
+              className="scheme-toggle ui-button"
+              data-ui-variant="quiet"
+              data-ui-size="md"
+              data-ui-icon-only
+              data-ui-toolbar
               type="button"
-              aria-label={strings.toggleTheme}
-              title={strings.toggleTheme}
-              data-theme-toggle
+              aria-label={strings.toggleScheme}
+              title={strings.toggleScheme}
+              data-scheme-toggle
             >
               <PackageIcon name="sun" size={20} />
-              <span data-theme-toggle-label data-topbar-control-label>
-                {strings.theme}
+              <span data-scheme-toggle-label data-topbar-control-label>
+                {strings.scheme}
               </span>
             </button>
           ) : null}
@@ -338,7 +372,7 @@ function PageVariant({
         {hasNavigation ? (
           <aside className="sidebar" id={navigationHostId} data-nav-desktop-host>
             <nav id={navigationId} aria-label={strings.documentContents} data-navigation>
-              <p className="sidebar-label">{strings.onThisPage}</p>
+              <p className="sidebar-label ui-label">{strings.onThisPage}</p>
               <ol>
                 {options.navigation.map((item, index) => (
                   <li key={item.id} data-depth={item.depth}>
@@ -366,8 +400,16 @@ function PageVariant({
         >
           <div className="nav-dialog-panel">
             <div className="nav-dialog-header">
-              <p id={navigationDialogTitleId}>{strings.contents}</p>
-              <button type="button" className="nav-dialog-close" data-nav-close>
+              <p className="ui-label" id={navigationDialogTitleId}>
+                {strings.contents}
+              </p>
+              <button
+                type="button"
+                className="nav-dialog-close ui-button"
+                data-ui-variant="secondary"
+                data-ui-size="sm"
+                data-nav-close
+              >
                 <PackageIcon name="x" />
                 {strings.close}
               </button>
@@ -388,8 +430,14 @@ function PageVariant({
           }}
         />
       ) : null}
-      {presetSwitcher ? (
-        <template data-preset-catalog>{JSON.stringify(PRESET_CATALOG)}</template>
+      {switchableThemes.length > 0 ? (
+        <template data-theme-catalog>
+          {JSON.stringify(
+            Object.fromEntries(
+              switchableThemes.map((candidate) => [candidate.name, themeRootAttributes(candidate)]),
+            ),
+          )}
+        </template>
       ) : null}
       {hasReviewTargets ? (
         <template data-review-manifest>{JSON.stringify(options.reviewManifest)}</template>
@@ -425,35 +473,53 @@ function ReviewMarkup({
         <div className="review-panel">
           <header className="review-panel-header">
             <div>
-              <p className="review-eyebrow">{strings.reviewWorkspace}</p>
-              <h2 id={ids.dialogTitle}>{strings.reviewThisReport}</h2>
+              <p className="review-eyebrow ui-label">{strings.reviewWorkspace}</p>
+              <h2 className="ui-title" id={ids.dialogTitle}>
+                {strings.reviewThisReport}
+              </h2>
             </div>
-            <button type="button" className="review-close" data-review-close>
+            <button
+              type="button"
+              className="review-close ui-button"
+              data-ui-variant="secondary"
+              data-ui-size="sm"
+              data-review-close
+            >
               <PackageIcon name="x" />
               <span>{strings.close}</span>
             </button>
           </header>
           <div className="review-panel-body">
             <p className="review-error" role="alert" data-review-error hidden />
-            <output className="review-summary" aria-live="polite" data-review-summary>
+            <output className="review-summary ui-meta" aria-live="polite" data-review-summary>
               {strings.noThreads}
             </output>
             <section className="review-form-section" data-review-current-section hidden>
-              <h3>{strings.currentNotes}</h3>
+              <h3 className="ui-label">{strings.currentNotes}</h3>
               <ol className="review-response-list" data-review-current-list />
             </section>
             <section className="review-form-section" data-review-prior-section hidden>
-              <h3>{strings.previousThreads}</h3>
+              <h3 className="ui-label">{strings.previousThreads}</h3>
               <ol className="review-response-list" data-review-prior-list />
             </section>
           </div>
           <footer className="review-panel-footer">
-            <label className="review-file-action">
+            <label
+              className="review-file-action ui-button"
+              data-ui-variant="secondary"
+              data-ui-size="sm"
+            >
               <PackageIcon name="upload" />
               <span>{strings.importReview}</span>
               <input type="file" accept="application/json,.json" data-review-import />
             </label>
-            <button type="button" className="review-primary" data-review-export>
+            <button
+              type="button"
+              className="review-primary ui-button"
+              data-ui-variant="primary"
+              data-ui-size="sm"
+              data-review-export
+            >
               <PackageIcon name="download" />
               <span>{strings.exportReview}</span>
             </button>
@@ -461,7 +527,7 @@ function ReviewMarkup({
         </div>
       </dialog>
       <section
-        className="review-popover"
+        className="review-popover ui-panel"
         id={ids.popover}
         role="dialog"
         aria-labelledby={ids.targetTitle}
@@ -470,12 +536,18 @@ function ReviewMarkup({
       >
         <header className="review-popover-header">
           <div>
-            <h2 id={ids.targetTitle} data-review-editor-title>
+            <h2 className="ui-title" id={ids.targetTitle} data-review-editor-title>
               {strings.noteForSelection}
             </h2>
-            <p className="review-target-label" data-review-target-label />
+            <p className="review-target-label ui-meta" data-review-target-label />
           </div>
-          <button type="button" className="review-close" data-review-popover-close>
+          <button
+            type="button"
+            className="review-close ui-button"
+            data-ui-variant="secondary"
+            data-ui-size="sm"
+            data-review-popover-close
+          >
             <PackageIcon name="x" />
             <span>{strings.close}</span>
           </button>
@@ -489,20 +561,40 @@ function ReviewMarkup({
         <p id={ids.threadTitle} data-review-thread-empty>
           {strings.noMessages}
         </p>
-        <label className="review-field">
-          <span>{strings.newMessage}</span>
-          <textarea rows={4} data-review-message />
+        <label className="review-field ui-field-group">
+          <span className="ui-label">{strings.newMessage}</span>
+          <textarea className="ui-field" rows={3} data-review-message />
         </label>
         <div className="review-inline-actions">
-          <button type="button" className="review-primary" data-review-add-message>
+          <button
+            type="button"
+            className="review-primary ui-button"
+            data-ui-variant="primary"
+            data-ui-size="sm"
+            data-review-add-message
+          >
             <PackageIcon name="comment" />
             <span data-review-add-message-label>{strings.addMessage}</span>
           </button>
-          <button type="button" data-review-cancel-message-edit hidden>
+          <button
+            type="button"
+            className="ui-button"
+            data-ui-variant="secondary"
+            data-ui-size="sm"
+            data-review-cancel-message-edit
+            hidden
+          >
             <PackageIcon name="x" />
             <span>{strings.cancelEdit}</span>
           </button>
-          <button type="button" data-review-resolve-thread hidden>
+          <button
+            type="button"
+            className="ui-button"
+            data-ui-variant="secondary"
+            data-ui-size="sm"
+            data-review-resolve-thread
+            hidden
+          >
             <PackageIcon name="check" />
             <span data-review-resolve-thread-label>{strings.resolveThread}</span>
           </button>
@@ -510,7 +602,9 @@ function ReviewMarkup({
       </section>
       <button
         type="button"
-        className="review-selection-action"
+        className="review-selection-action ui-button"
+        data-ui-variant="primary"
+        data-ui-size="sm"
         title={strings.createNote}
         data-review-selection-action
         hidden

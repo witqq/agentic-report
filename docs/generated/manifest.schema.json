@@ -68,42 +68,64 @@
       "format": "relative-local-path",
       "description": "Local PNG, JPEG, WebP, GIF or AVIF social preview image; published as og:image by a directory build with a public URL."
     },
-    "preset": {
-      "type": "string",
-      "enum": ["monument", "material", "signal", "terminal", "cinematic", "studio", "editorial"],
-      "description": "Coordinated package-owned visual defaults; explicit bounded token values override the preset.",
-      "default": "material"
-    },
     "theme": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "description": "Built-in theme name, or a relative path to a .yaml, .yml or .json theme file."
+        },
+        {
+          "type": "object",
+          "description": "Theme object with extends and the fields it changes; its fields are the theme schema (`agentic-report schema --scope theme`), checked field by field when the page builds."
+        }
+      ],
+      "description": "Visual theme: a built-in theme name, a relative path to a .yaml/.yml/.json theme file, or a theme object with extends and the fields it changes.",
+      "default": "neutral"
+    },
+    "scheme": {
       "type": "string",
       "enum": ["system", "light", "dark"],
-      "description": "Initial document color theme.",
+      "description": "Initial colour scheme: follow the reader system, or light, or dark.",
       "default": "system"
     },
     "layout": {
       "type": "string",
-      "enum": ["document", "dashboard", "landing", "mixed"],
-      "description": "Responsive page composition selected from the package-owned layout catalog.",
+      "enum": ["document", "dashboard", "landing", "mixed", "slides", "screens"],
+      "description": "Responsive page composition selected from the package-owned layout catalog; screens moves one whole screen per gesture, with a screen switcher, keys and anchors, and scrolls normally under reduced motion.",
       "default": "document"
     },
-    "scrollProgress": {
-      "type": "boolean",
-      "description": "Enables a decorative package-owned scroll indicator only in the normal-motion profile.",
-      "default": false
+    "progress": {
+      "type": "string",
+      "enum": ["none", "page", "chapters", "nodes"],
+      "description": "Page-wide progress element at the top edge: none, one bar for the whole page, one segment per chapter that fills as the reader moves through it and jumps to the chapter on click, or a row of nodes, one per chapter, marking the chapters passed and the current one.",
+      "default": "none"
+    },
+    "motion": {
+      "type": "string",
+      "enum": ["none", "restrained", "expressive"],
+      "description": "How much the page moves, decided by the brief: none — everything is drawn in its final state; restrained — at most one chapter entrance and one pointer effect, no pinned scenes, diagram drawing, WebGL or staged entrance; expressive — the whole motion vocabulary. Reduced motion always stills the page.",
+      "default": "expressive"
+    },
+    "opening": {
+      "type": "string",
+      "enum": ["center", "start"],
+      "description": "Alignment of the page title, introduction and actions on a landing page: centered, or aligned to the start edge.",
+      "default": "center"
     },
     "attribution": {
       "type": "boolean",
       "description": "Shows the package-owned “Made with Agentic Report” footer link; set false to omit it.",
       "default": true
     },
-    "themeToggle": {
+    "schemeToggle": {
       "type": "boolean",
       "description": "Shows the package-owned light and dark control; set false for a page that must stay in the scheme it was built with.",
       "default": true
     },
-    "presetSwitcher": {
+    "themeSwitcher": {
       "type": "boolean",
-      "description": "Shows a package-owned visual-style selector that swaps preset and its tokens live; the colour scheme stays where the reader put it.",
+      "description": "Shows a package-owned selector that swaps the page between the built-in themes and its own; the colour scheme stays where the reader put it.",
       "default": false
     },
     "review": {
@@ -111,37 +133,21 @@
       "description": "Enables the package-owned review workspace; off by default so an ordinary page ships as a document rather than a review surface.",
       "default": false
     },
-    "tokens": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "density": {
-          "type": "string",
-          "enum": ["compact", "comfortable", "spacious"],
-          "description": "Controls the shared spacing rhythm and control padding."
-        },
-        "font": {
-          "type": "string",
-          "enum": ["sans", "serif", "mono"],
-          "description": "Selects the package-owned typography stack."
-        },
-        "accent": {
-          "type": "string",
-          "enum": ["indigo", "teal", "coral"],
-          "description": "Selects the accent and visible-focus color family."
-        },
-        "width": {
-          "type": "string",
-          "enum": ["narrow", "standard", "wide"],
-          "description": "Controls the maximum shell and reading width."
-        },
-        "radius": {
-          "type": "string",
-          "enum": ["sharp", "soft", "round"],
-          "description": "Controls the shared corner treatment for surfaces and controls."
-        }
-      },
-      "description": "Compact package-owned visual token overrides; arbitrary CSS is not accepted."
+    "extensions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "format": "relative-local-path" },
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "description": "Extension manifests the page declares (blocks, providers, effects, islands), relative to the source root."
+    },
+    "data": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "format": "relative-local-path" },
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "description": "JSON data files the page reads at build time, relative to the source root; each is addressed by its name without .json, as in {{run.total}}."
     },
     "output": {
       "type": "object",
@@ -156,7 +162,7 @@
         "maxInlineBytes": {
           "type": "integer",
           "minimum": 1,
-          "description": "Warning threshold for bytes embedded into single-file output.",
+          "description": "Size budget of bytes embedded into single-file output; a build above it fails, use directory output or raise it deliberately.",
           "default": 5000000
         }
       },

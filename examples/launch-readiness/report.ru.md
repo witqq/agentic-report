@@ -13,7 +13,7 @@ language: ru
 от вымышленной North Quay Labs. Все пользователи, когорты, показатели, пороги и даты созданы для движка
 отчётов; они не описывают реальный продукт, компанию или рыночный результат.
 
-:::::section{title="Сигнал запуска" id="launch-signal" nav="Сигнал" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
+:::::section{title="Сигнал запуска" id="launch-signal" nav="Сигнал" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 :::callout{kind="success" title="Решение за минуту"}
 15 сентября открыть бета-тест для 240 команд Европейской экономической зоны. Ограничить список приглашений,
 исключить регулируемые процессы и не расширять запуск, пока условия удержания на второй неделе и ответа
@@ -64,7 +64,7 @@ language: ru
 ::::
 :::::
 
-:::::section{title="Данные активации" id="activation" nav="Данные" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="grid" transition="reveal" scene="progress" choreography="cascade"}
+:::::section{title="Данные активации" id="activation" nav="Данные" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="plain" transition="reveal" scene="progress" choreography="cascade"}
 
 ::::chart{type="line" title="Доля активированных рабочих пространств по когортам" description="Вымышленная семидневная доля активации растёт с 46 процентов в первой когорте до 64 в четвёртой." x-label="Когорта дизайн-партнёров" y-label="Активированные пространства, проценты"}
 :::series{label="Активированы за семь дней"}
@@ -94,7 +94,7 @@ language: ru
 
 :::::
 
-:::::section{title="Условия запуска и владельцы" id="gates" nav="Условия" width="wide" align="start" tone="accent" composition="story" viewport="adaptive" section-density="editorial" type="editorial" surface="glow" transition="reveal"}
+:::::section{title="Условия запуска и владельцы" id="gates" nav="Условия" width="wide" align="start" tone="accent" composition="story" viewport="adaptive" section-density="editorial" type="editorial" surface="plain" transition="reveal"}
 
 {{include: partials/readiness-register.ru.md}}
 
@@ -111,16 +111,16 @@ language: ru
 
 :::disclosure{title="Прочитать ограничения эксперимента" open="false"}
 В примере участвуют приглашённые дизайн-партнёры, а не случайная рыночная выборка. Активация и удержание —
-направляющие операционные пороги, не статистическое доказательство соответствия рынку. Тренд когорт не
+ориентиры для работы, а не статистическое доказательство соответствия продукта рынку. Тренд когорт не
 скорректирован по сезонности, а воронка не оценивает платную конверсию.
 :::
 :::::
 
-:::::section{title="Решение и развёртывание" id="rollout" nav="Развёртывание" width="wide" align="start" tone="contrast" composition="stack" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+:::::section{title="Решение и развёртывание" id="rollout" nav="Развёртывание" width="wide" align="start" tone="contrast" composition="stack" viewport="bounded" section-density="compact" type="display" surface="plain" transition="stagger" choreography="cascade"}
 
 :::decision{title="Одобрить ограниченную бету в Европейской экономической зоне"}
-Запустить 15 сентября максимум для 240 приглашённых команд. Продуктовые операции отвечают за лимит приглашений;
-доверие — за еженедельную проверку обработки данных; поддержка — за репетицию ответа. Остановить расширение
+Запустить 15 сентября максимум для 240 приглашённых команд. Команда продуктовых операций отвечает за лимит приглашений;
+команда Trust — за еженедельную проверку обработки данных; поддержка — за репетицию ответа. Остановить расширение
 при провале обязательного условия или достижении условия автоматической остановки. Одобрение этой беты не
 является одобрением общедоступного выпуска.
 :::
@@ -138,6 +138,9 @@ language: ru
 :::event{date="13 окт." title="Расширить или остановить" kind="accent"}
 Добавить оставшиеся приглашения только после двух успешных когорт; иначе остановить приём и замкнуть цикл обучения.
 :::
+::legend-item{event="accent" label="Контрольная точка"}
+::legend-item{event="success" label="Открытие доступа"}
+::legend-item{event="warning" label="Проверка данных"}
 ::::
 
 :::steps{title="Провести ревью запуска"}

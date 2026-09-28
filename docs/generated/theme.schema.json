@@ -1,0 +1,878 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agentic-report:schema:theme:1",
+  "title": "Agentic Report theme",
+  "x-agentic-report-contract": {
+    "currentMajor": 1,
+    "supportedReaderMajors": [1],
+    "legacySourceMajor": 1,
+    "evolution": {
+      "additiveWithinMajor": true,
+      "breakingChangeRequiresNewMajor": true,
+      "silentReinterpretationAllowed": false
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+      "description": "Theme identity shown in the theme selector; a theme file defaults to its file name, an inline theme to custom."
+    },
+    "extends": {
+      "type": "string",
+      "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,298}\\S))\\s*$",
+      "description": "Built-in theme name or relative path to another theme file this theme starts from; defaults to the default theme."
+    },
+    "description": {
+      "type": "string",
+      "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,298}\\S))\\s*$",
+      "description": "One sentence saying what kind of page the theme is for."
+    },
+    "palette": {
+      "type": "string",
+      "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,598}\\S))\\s*$",
+      "description": "Why the palette looks the way it does, in words: the named colours and the reason for them."
+    },
+    "scheme": {
+      "type": "string",
+      "enum": ["both", "dark"],
+      "description": "Colour schemes the theme draws: both light and dark, or dark only."
+    },
+    "accent": {
+      "type": "string",
+      "enum": ["graphite", "cobalt", "rust", "moss", "ochre", "ink", "indigo", "teal", "coral"],
+      "description": "Named accent family for both schemes; explicit accent colours override it."
+    },
+    "fonts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pair": {
+          "type": "string",
+          "enum": [
+            "midnight",
+            "calm-paper",
+            "synthwave",
+            "noir",
+            "aurora",
+            "daylight",
+            "ember",
+            "blueprint",
+            "terminal",
+            "neutral",
+            "frost",
+            "system"
+          ],
+          "description": "Coordinated heading, body and code families; a family named for a role in the same theme refines it."
+        },
+        "heading": {
+          "type": "string",
+          "enum": [
+            "onest",
+            "golos-text",
+            "ibm-plex-sans",
+            "exo-2",
+            "jost",
+            "commissioner",
+            "rubik",
+            "fira-sans",
+            "geologica",
+            "manrope",
+            "raleway",
+            "unbounded",
+            "oswald",
+            "tektur",
+            "geist",
+            "literata",
+            "playfair",
+            "cormorant-garamond",
+            "jetbrains-mono",
+            "martian-mono",
+            "geist-mono",
+            "victor-mono",
+            "pt-mono",
+            "system-sans",
+            "system-serif",
+            "system-mono"
+          ],
+          "description": "Headings and section titles."
+        },
+        "body": {
+          "type": "string",
+          "enum": [
+            "onest",
+            "golos-text",
+            "ibm-plex-sans",
+            "exo-2",
+            "jost",
+            "commissioner",
+            "rubik",
+            "fira-sans",
+            "geologica",
+            "manrope",
+            "raleway",
+            "unbounded",
+            "oswald",
+            "tektur",
+            "geist",
+            "literata",
+            "playfair",
+            "cormorant-garamond",
+            "jetbrains-mono",
+            "martian-mono",
+            "geist-mono",
+            "victor-mono",
+            "pt-mono",
+            "system-sans",
+            "system-serif",
+            "system-mono"
+          ],
+          "description": "Body text and controls."
+        },
+        "mono": {
+          "type": "string",
+          "enum": [
+            "onest",
+            "golos-text",
+            "ibm-plex-sans",
+            "exo-2",
+            "jost",
+            "commissioner",
+            "rubik",
+            "fira-sans",
+            "geologica",
+            "manrope",
+            "raleway",
+            "unbounded",
+            "oswald",
+            "tektur",
+            "geist",
+            "literata",
+            "playfair",
+            "cormorant-garamond",
+            "jetbrains-mono",
+            "martian-mono",
+            "geist-mono",
+            "victor-mono",
+            "pt-mono",
+            "system-sans",
+            "system-serif",
+            "system-mono"
+          ],
+          "description": "Code, commands and metadata."
+        }
+      },
+      "description": "Type pair for the three text roles, or a family per role; the embedded families carry Latin and Cyrillic."
+    },
+    "typography": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "headingWeight": {
+          "type": "integer",
+          "minimum": 300,
+          "maximum": 900,
+          "description": "Weight of headings, 300 to 900."
+        },
+        "displayWeight": {
+          "type": "integer",
+          "minimum": 300,
+          "maximum": 900,
+          "description": "Weight of display-size titles, 300 to 900."
+        },
+        "headingTracking": {
+          "type": "number",
+          "minimum": -0.1,
+          "maximum": 0.15,
+          "description": "Letter spacing of large headings in Latin text, in em; Cyrillic text never goes tighter than -0.025em."
+        },
+        "displayCase": {
+          "type": "string",
+          "enum": ["none", "uppercase"],
+          "description": "Letter case of display headings: as written, or capitals that want positive tracking."
+        },
+        "displayScale": {
+          "type": "number",
+          "minimum": 0.6,
+          "maximum": 1.2,
+          "description": "Size of display headings against the package scale; wide faces usually look better below 1. Word fit on phones is automatic from the face metrics."
+        },
+        "headingMeasure": {
+          "type": "number",
+          "minimum": 8,
+          "maximum": 40,
+          "description": "Longest line of the page title and of display and editorial section titles, in ch; unset keeps the package measure of each: the reading measure for a report title, 10 to 17ch for landing, first-screen and display titles."
+        },
+        "bodyLeading": {
+          "type": "number",
+          "minimum": 1.2,
+          "maximum": 2,
+          "description": "Line height of body text."
+        },
+        "bodyTracking": {
+          "type": "number",
+          "minimum": -0.05,
+          "maximum": 0.05,
+          "description": "Letter spacing of body text, in em."
+        },
+        "captions": {
+          "type": "string",
+          "enum": ["plain", "italic"],
+          "description": "Figure captions and source lines: plain in the text face, or italic in the heading face, the serif italic caption of an editorial page when the heading face is a serif."
+        }
+      },
+      "description": "Weight, tracking and leading of the type."
+    },
+    "spacing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "density": {
+          "type": "string",
+          "enum": ["compact", "comfortable", "spacious"],
+          "description": "Shared spacing scale and control padding."
+        },
+        "rhythm": {
+          "type": "number",
+          "minimum": 2,
+          "maximum": 6,
+          "description": "Gap between sections, in rem before density."
+        },
+        "cardMinimum": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 24,
+          "description": "Narrowest card column, in rem."
+        },
+        "gap": {
+          "type": "string",
+          "enum": ["regular", "tight"],
+          "description": "Gap between the navigation column and the content."
+        }
+      },
+      "description": "Density and rhythm of the page."
+    },
+    "width": {
+      "type": "string",
+      "enum": ["narrow", "standard", "wide"],
+      "description": "Maximum shell width and reading measure."
+    },
+    "radius": {
+      "type": "string",
+      "enum": ["sharp", "soft", "round"],
+      "description": "Corner treatment of surfaces and controls."
+    },
+    "radii": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "control": {
+          "type": "string",
+          "enum": ["none", "small", "medium", "large"],
+          "description": "Buttons, fields and toolbars; default small."
+        },
+        "card": {
+          "type": "string",
+          "enum": ["none", "small", "medium", "large"],
+          "description": "Cards, panels, dialogs, popovers and stages; default medium."
+        },
+        "media": {
+          "type": "string",
+          "enum": ["none", "small", "medium", "large"],
+          "description": "Images and video on the page; default medium."
+        }
+      },
+      "description": "Which step of the radius scale each role takes: sharp controls with soft cards, square media in a round theme."
+    },
+    "controls": {
+      "type": "string",
+      "enum": ["regular", "compact"],
+      "description": "Size of buttons, inputs and actions."
+    },
+    "backdrop": {
+      "type": "string",
+      "enum": ["none", "dots", "grid", "tint", "grain"],
+      "description": "Package-drawn page background in the theme colours."
+    },
+    "elevation": {
+      "type": "string",
+      "enum": ["lifted", "close", "flat"],
+      "description": "Geometry of raised shadows."
+    },
+    "motion": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "easing": {
+          "type": "string",
+          "enum": ["standard", "gentle", "decisive"],
+          "description": "How moving things arrive: standard settles quickly, gentle eases in and out, decisive starts late and lands hard."
+        },
+        "pace": {
+          "type": "string",
+          "enum": ["brisk", "calm", "slow"],
+          "description": "Multiplier of every package duration: brisk, calm (the package timing), or slow."
+        }
+      },
+      "description": "Character of the package motion: a named curve and a pace for every duration."
+    },
+    "colors": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "light": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "background": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Page background. (light scheme)"
+            },
+            "surface": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Surface of cards, panels and components. (light scheme)"
+            },
+            "raised": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Raised surface of controls and table headers. (light scheme)"
+            },
+            "muted": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Muted surface of secondary chips. (light scheme)"
+            },
+            "heading": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Headings and the fill of primary actions. (light scheme)"
+            },
+            "text": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Body text. (light scheme)"
+            },
+            "textMuted": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Secondary text: captions, labels, metadata. (light scheme)"
+            },
+            "border": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Ordinary borders and rules. (light scheme)"
+            },
+            "borderStrong": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Strong borders, lifelines and scrollbars. (light scheme)"
+            },
+            "accent": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Accent: rules, markers and the current item; drawn, not read as text. (light scheme)"
+            },
+            "accentStrong": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Strong accent: links and text in accent colour. (light scheme)"
+            },
+            "accentSoft": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Soft accent: selection and highlight backgrounds. (light scheme)"
+            },
+            "accent2": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Second accent: eyebrows, kickers and secondary markers. (light scheme)"
+            },
+            "focus": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Visible keyboard focus ring. (light scheme)"
+            },
+            "chart1": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "First chart and diagram series colour. (light scheme)"
+            },
+            "chart2": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Second series colour; the default of statusDone. (light scheme)"
+            },
+            "chart3": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Third series colour; the default of statusReturned. (light scheme)"
+            },
+            "chart4": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Fourth series colour; the default of statusReview. (light scheme)"
+            },
+            "chart5": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Fifth series colour. (light scheme)"
+            },
+            "chart6": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Sixth series colour. (light scheme)"
+            },
+            "statusDone": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Status «done»: success callouts, good cards, added diff lines, finished process steps; follows chart2 unless set. (light scheme)"
+            },
+            "statusReview": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Status «needs a look»: warning callouts, watched cards, major findings, steps in review; follows chart4 unless set. (light scheme)"
+            },
+            "statusReturned": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Status «returned or failed»: danger callouts, risky cards, blocking findings, removed diff lines, invalid fields; follows chart3 unless set. (light scheme)"
+            },
+            "marker": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Editorial marker: eyebrow lines and error rules. (light scheme)"
+            },
+            "shadow": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Colour of raised shadows, usually translucent. (light scheme)"
+            },
+            "mediaBacking": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Paper behind transparent images on the page surface. (light scheme)"
+            },
+            "codeBackground": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Background of code blocks. (light scheme)"
+            },
+            "codeText": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Plain code text. (light scheme)"
+            },
+            "codeKeyword": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Keywords and operators in code. (light scheme)"
+            },
+            "codeString": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Strings in code. (light scheme)"
+            },
+            "codeNumber": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Numbers and constants in code. (light scheme)"
+            },
+            "codeFunction": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Function names in code. (light scheme)"
+            },
+            "codeType": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Types, parameters and attributes in code. (light scheme)"
+            },
+            "codeComment": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Comments in code. (light scheme)"
+            },
+            "codePunctuation": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Punctuation in code. (light scheme)"
+            }
+          },
+          "description": "Light scheme colour roles."
+        },
+        "dark": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "background": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Page background. (dark scheme)"
+            },
+            "surface": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Surface of cards, panels and components. (dark scheme)"
+            },
+            "raised": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Raised surface of controls and table headers. (dark scheme)"
+            },
+            "muted": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Muted surface of secondary chips. (dark scheme)"
+            },
+            "heading": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Headings and the fill of primary actions. (dark scheme)"
+            },
+            "text": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Body text. (dark scheme)"
+            },
+            "textMuted": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Secondary text: captions, labels, metadata. (dark scheme)"
+            },
+            "border": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Ordinary borders and rules. (dark scheme)"
+            },
+            "borderStrong": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Strong borders, lifelines and scrollbars. (dark scheme)"
+            },
+            "accent": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Accent: rules, markers and the current item; drawn, not read as text. (dark scheme)"
+            },
+            "accentStrong": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Strong accent: links and text in accent colour. (dark scheme)"
+            },
+            "accentSoft": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Soft accent: selection and highlight backgrounds. (dark scheme)"
+            },
+            "accent2": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Second accent: eyebrows, kickers and secondary markers. (dark scheme)"
+            },
+            "focus": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Visible keyboard focus ring. (dark scheme)"
+            },
+            "chart1": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "First chart and diagram series colour. (dark scheme)"
+            },
+            "chart2": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Second series colour; the default of statusDone. (dark scheme)"
+            },
+            "chart3": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Third series colour; the default of statusReturned. (dark scheme)"
+            },
+            "chart4": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Fourth series colour; the default of statusReview. (dark scheme)"
+            },
+            "chart5": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Fifth series colour. (dark scheme)"
+            },
+            "chart6": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Sixth series colour. (dark scheme)"
+            },
+            "statusDone": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Status «done»: success callouts, good cards, added diff lines, finished process steps; follows chart2 unless set. (dark scheme)"
+            },
+            "statusReview": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Status «needs a look»: warning callouts, watched cards, major findings, steps in review; follows chart4 unless set. (dark scheme)"
+            },
+            "statusReturned": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Status «returned or failed»: danger callouts, risky cards, blocking findings, removed diff lines, invalid fields; follows chart3 unless set. (dark scheme)"
+            },
+            "marker": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Editorial marker: eyebrow lines and error rules. (dark scheme)"
+            },
+            "shadow": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Colour of raised shadows, usually translucent. (dark scheme)"
+            },
+            "mediaBacking": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Paper behind transparent images on the page surface. (dark scheme)"
+            },
+            "codeBackground": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Background of code blocks. (dark scheme)"
+            },
+            "codeText": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Plain code text. (dark scheme)"
+            },
+            "codeKeyword": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Keywords and operators in code. (dark scheme)"
+            },
+            "codeString": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Strings in code. (dark scheme)"
+            },
+            "codeNumber": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Numbers and constants in code. (dark scheme)"
+            },
+            "codeFunction": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Function names in code. (dark scheme)"
+            },
+            "codeType": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Types, parameters and attributes in code. (dark scheme)"
+            },
+            "codeComment": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Comments in code. (dark scheme)"
+            },
+            "codePunctuation": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
+              "description": "Punctuation in code. (dark scheme)"
+            }
+          },
+          "description": "Dark scheme colour roles."
+        }
+      },
+      "description": "Colour roles of each scheme; any role left out comes from the extended theme."
+    },
+    "chrome": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "topbar": {
+          "type": "string",
+          "enum": ["glass", "ledger"],
+          "description": "Glass bar with the page title, or a ledger bar with the current section."
+        },
+        "navigation": {
+          "type": "string",
+          "enum": ["plain", "numbered"],
+          "description": "Plain section list, or numbered chapters."
+        },
+        "sectionTitle": {
+          "type": "string",
+          "enum": ["plain", "rule", "bar"],
+          "description": "Section title without a rule, underlined, or with a side bar."
+        },
+        "cards": {
+          "type": "string",
+          "enum": ["raised", "ruled"],
+          "description": "Raised cards, or cards ruled by an accent line."
+        },
+        "components": {
+          "type": "string",
+          "enum": ["soft", "flat", "edged"],
+          "description": "Soft components, flat framed components, or components with a signal edge."
+        },
+        "landing": {
+          "type": "string",
+          "enum": ["centered", "ledger"],
+          "description": "Landing opening centred, or a ledger with a side rail and an eyebrow."
+        },
+        "edges": {
+          "type": "string",
+          "enum": ["none", "mono"],
+          "description": "Nothing at the screen edges, or small monospace captions along them on a wide screen: the page title on the left, the current chapter and its number on the right — for a technical product."
+        }
+      },
+      "description": "How the package draws the shell and shared components."
+    },
+    "ornaments": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "headingPrefix": {
+          "type": "string",
+          "pattern": "^\\s*(?:|(?=(?:[^\\s<\"'\\\\]{0,3})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,1}\\S))\\s*$",
+          "description": "Up to three characters drawn before the page heading in the accent colour, such as > or §; no spaces, quotes, backslash or <; empty for none."
+        },
+        "titleCursor": {
+          "type": "boolean",
+          "description": "Cursor after the page heading: blinks six times, then stays lit; still under reduced motion."
+        },
+        "heroEmphasis": {
+          "type": "string",
+          "enum": ["none", "rule", "shadow"],
+          "description": "Hero and story sections unmarked, marked by a thin accent rule, or lifted by a shadow."
+        },
+        "mediaTreatment": {
+          "type": "string",
+          "enum": ["plain", "vivid"],
+          "description": "Plain images, or images with depth and slightly richer colour."
+        },
+        "console": {
+          "type": "string",
+          "enum": ["none", "on"],
+          "description": "Console details: bracketed labels, dashed rules and a prompt mark at the current contents item."
+        },
+        "scanlines": {
+          "type": "string",
+          "enum": ["none", "on"],
+          "description": "Faint scanlines over the whole page; off by default, because a texture over the text reads as a generated-site cliché."
+        },
+        "glow": {
+          "type": "string",
+          "enum": ["none", "on"],
+          "description": "Phosphor glow on headings and the primary action; off by default for the same reason."
+        },
+        "linkedCard": {
+          "type": "string",
+          "enum": ["raised", "edge"],
+          "description": "Linked cards raised on hover, or marked by an accent edge."
+        }
+      },
+      "description": "Small signature details of the theme."
+    }
+  },
+  "x-agentic-report-tokens": {
+    "colour": [
+      { "name": "--color-bg", "field": "colors.<scheme>.background" },
+      { "name": "--color-surface", "field": "colors.<scheme>.surface" },
+      { "name": "--color-surface-raised", "field": "colors.<scheme>.raised" },
+      { "name": "--color-surface-muted", "field": "colors.<scheme>.muted" },
+      { "name": "--color-heading", "field": "colors.<scheme>.heading" },
+      { "name": "--color-text", "field": "colors.<scheme>.text" },
+      { "name": "--color-text-muted", "field": "colors.<scheme>.textMuted" },
+      { "name": "--color-border", "field": "colors.<scheme>.border" },
+      { "name": "--color-border-strong", "field": "colors.<scheme>.borderStrong" },
+      { "name": "--color-accent", "field": "colors.<scheme>.accent" },
+      { "name": "--color-accent-strong", "field": "colors.<scheme>.accentStrong" },
+      { "name": "--color-accent-soft", "field": "colors.<scheme>.accentSoft" },
+      { "name": "--color-accent-2", "field": "colors.<scheme>.accent2" },
+      { "name": "--color-focus", "field": "colors.<scheme>.focus" },
+      { "name": "--color-marker", "field": "colors.<scheme>.marker" },
+      { "name": "--shadow-color", "field": "colors.<scheme>.shadow" },
+      { "name": "--media-backing", "field": "colors.<scheme>.mediaBacking" }
+    ],
+    "status": [
+      { "name": "--status-done", "field": "colors.<scheme>.statusDone" },
+      { "name": "--status-review", "field": "colors.<scheme>.statusReview" },
+      { "name": "--status-returned", "field": "colors.<scheme>.statusReturned" }
+    ],
+    "series": [
+      { "name": "--visual-1", "field": "colors.<scheme>.chart1" },
+      { "name": "--visual-2", "field": "colors.<scheme>.chart2" },
+      { "name": "--visual-3", "field": "colors.<scheme>.chart3" },
+      { "name": "--visual-4", "field": "colors.<scheme>.chart4" },
+      { "name": "--visual-5", "field": "colors.<scheme>.chart5" },
+      { "name": "--visual-6", "field": "colors.<scheme>.chart6" }
+    ],
+    "code": [
+      { "name": "--shiki-background", "field": "colors.<scheme>.codeBackground" },
+      { "name": "--shiki-foreground", "field": "colors.<scheme>.codeText" },
+      { "name": "--shiki-token-keyword", "field": "colors.<scheme>.codeKeyword" },
+      { "name": "--shiki-token-string", "field": "colors.<scheme>.codeString" },
+      { "name": "--shiki-token-constant", "field": "colors.<scheme>.codeNumber" },
+      { "name": "--shiki-token-function", "field": "colors.<scheme>.codeFunction" },
+      { "name": "--shiki-token-parameter", "field": "colors.<scheme>.codeType" },
+      { "name": "--shiki-token-comment", "field": "colors.<scheme>.codeComment" },
+      { "name": "--shiki-token-punctuation", "field": "colors.<scheme>.codePunctuation" }
+    ],
+    "type": [
+      { "name": "--font-body", "field": "fonts.body" },
+      { "name": "--font-heading", "field": "fonts.heading" },
+      { "name": "--font-mono", "field": "fonts.mono" },
+      { "name": "--font-heading-small", "field": "fonts.heading" },
+      { "name": "--heading-weight", "field": "typography.headingWeight" },
+      { "name": "--display-weight", "field": "typography.displayWeight" },
+      { "name": "--display-weight-cyrillic", "field": "typography.displayWeight" },
+      { "name": "--heading-tracking", "field": "typography.headingTracking" },
+      { "name": "--display-case", "field": "typography.displayCase" },
+      { "name": "--display-scale", "field": "typography.displayScale" },
+      { "name": "--heading-measure", "field": "typography.headingMeasure" },
+      { "name": "--display-advance", "field": "fonts.heading" },
+      { "name": "--display-advance-small", "field": "fonts.heading" },
+      { "name": "--heading-measure", "field": "typography.headingMeasure" },
+      { "name": "--body-leading", "field": "typography.bodyLeading" },
+      { "name": "--body-tracking", "field": "typography.bodyTracking" }
+    ],
+    "space": [
+      { "name": "--space-factor", "field": "spacing.density" },
+      { "name": "--section-rhythm", "field": "spacing.rhythm" },
+      { "name": "--card-minimum", "field": "spacing.cardMinimum" },
+      { "name": "--shell-gap", "field": "spacing.gap" }
+    ],
+    "width": [
+      { "name": "--content-width", "field": "width" },
+      { "name": "--reading-measure", "field": "width" }
+    ],
+    "radius": [
+      { "name": "--radius-small", "field": "radius" },
+      { "name": "--radius-medium", "field": "radius" },
+      { "name": "--radius-large", "field": "radius" },
+      { "name": "--radius-control", "field": "radii.control" },
+      { "name": "--radius-card", "field": "radii.card" },
+      { "name": "--radius-media", "field": "radii.media" }
+    ],
+    "control": [
+      { "name": "--control-md", "field": "controls" },
+      { "name": "--control-sm", "field": "controls" },
+      { "name": "--control-pad-x", "field": "controls" },
+      { "name": "--control-gap", "field": "controls" }
+    ],
+    "elevation": [{ "name": "--shadow-geometry", "field": "elevation" }],
+    "motion": [
+      { "name": "--motion-ease", "field": "motion.easing" },
+      { "name": "--motion-pace", "field": "motion.pace" }
+    ],
+    "backdrop": [
+      { "name": "--page-backdrop", "field": "backdrop" },
+      { "name": "--page-backdrop-size", "field": "backdrop" }
+    ],
+    "ornament": [{ "name": "--heading-prefix", "field": "ornaments.headingPrefix" }]
+  }
+}

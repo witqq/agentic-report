@@ -5,9 +5,9 @@ description: A practical tutorial for the declarative initialize, edit, build, a
 language: en
 localizations:
   ru: report.ru.md
-theme: light
 layout: document
-preset: material
+theme: daylight
+scheme: light
 ---
 
 # Build your first portable page
@@ -73,7 +73,7 @@ Use steps or a timeline when order changes the meaning.
 ```yaml
 title: Review summary
 layout: document
-theme: system
+scheme: system
 ```
 
 :::

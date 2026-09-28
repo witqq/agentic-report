@@ -5,11 +5,11 @@ description: A fictional launch decision combining audience value, activation ev
 language: en
 localizations:
   ru: report.ru.md
-theme: light
 layout: landing
-preset: studio
-tokens:
-  accent: teal
+theme:
+  name: beta-launch
+  extends: ember
+scheme: light
 ---
 
 # Regional beta launch readiness
@@ -20,7 +20,7 @@ This brief follows a fictional launch review for **Driftwood Rooms**, an invente
 product from the fictional North Quay Labs. Every user, cohort, metric, threshold, and date is sample data
 created for the report engine; none describes a real product, company, or market result.
 
-:::::section{title="Launch signal" id="launch-signal" nav="Signal" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
+:::::section{title="Launch signal" id="launch-signal" nav="Signal" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 :::callout{kind="success" title="Decision in one minute"}
 Open a 240-team European Economic Area beta on 15 September. Keep the invitation list capped, exclude
 regulated workflows, and hold broader expansion until week-two retention and support-response gates pass for
@@ -71,7 +71,7 @@ The beta excludes regulated casework and makes no claim about enterprise-wide ad
 ::::
 :::::
 
-:::::section{title="Activation evidence" id="activation" nav="Evidence" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="grid" transition="reveal" scene="progress" choreography="cascade"}
+:::::section{title="Activation evidence" id="activation" nav="Evidence" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="plain" transition="reveal" scene="progress" choreography="cascade"}
 
 ::::chart{type="line" title="Activated workspace rate by cohort" description="The fictional seven-day activated workspace rate rises from 46 percent in cohort one to 64 percent in cohort four." x-label="Design-partner cohort" y-label="Activated workspaces, percent"}
 :::series{label="Activated within seven days"}
@@ -101,7 +101,7 @@ The beta excludes regulated casework and makes no claim about enterprise-wide ad
 
 :::::
 
-:::::section{title="Launch gates and ownership" id="gates" nav="Gates" width="wide" align="start" tone="accent" composition="story" viewport="adaptive" section-density="editorial" type="editorial" surface="glow" transition="reveal"}
+:::::section{title="Launch gates and ownership" id="gates" nav="Gates" width="wide" align="start" tone="accent" composition="story" viewport="adaptive" section-density="editorial" type="editorial" surface="plain" transition="reveal"}
 
 {{include: partials/readiness-register.md}}
 
@@ -123,7 +123,7 @@ seasonality adjustment, and the funnel does not estimate paid conversion.
 :::
 :::::
 
-:::::section{title="Decision and rollout" id="rollout" nav="Rollout" width="wide" align="start" tone="contrast" composition="stack" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+:::::section{title="Decision and rollout" id="rollout" nav="Rollout" width="wide" align="start" tone="contrast" composition="stack" viewport="bounded" section-density="compact" type="display" surface="plain" transition="stagger" choreography="cascade"}
 
 :::decision{title="Go: bounded European Economic Area beta"}
 Launch on 15 September for no more than 240 invited teams. Product Operations owns the invitation cap;
@@ -145,6 +145,9 @@ Compare activation, retained teams, incident state, and support response with th
 :::event{date="13 Oct" title="Expand or hold" kind="accent"}
 Add the remaining invitations only after two passing cohorts; otherwise stop intake and close the learning loop.
 :::
+::legend-item{event="accent" label="Checkpoint"}
+::legend-item{event="success" label="Access opens"}
+::legend-item{event="warning" label="Evidence review"}
 ::::
 
 :::steps{title="Run the launch review"}

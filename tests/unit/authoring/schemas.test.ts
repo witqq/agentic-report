@@ -160,21 +160,16 @@ describe('authoring schema projections', () => {
     const expectedDefaults = {
       contractVersion: 1,
       language: 'und',
-      preset: 'material',
-      theme: 'system',
+      theme: 'neutral',
+      scheme: 'system',
       layout: 'document',
       review: false,
-      themeToggle: true,
-      presetSwitcher: false,
-      scrollProgress: false,
+      schemeToggle: true,
+      themeSwitcher: false,
+      progress: 'none',
+      motion: 'expressive',
+      opening: 'center',
       attribution: true,
-      tokens: {
-        density: 'comfortable',
-        font: 'serif',
-        accent: 'indigo',
-        width: 'wide',
-        radius: 'sharp',
-      },
       output: { format: 'single-file', maxInlineBytes: 5_000_000 },
     };
     expect(parseReportManifest({})).toEqual(expectedDefaults);
@@ -192,112 +187,15 @@ describe('authoring schema projections', () => {
     expect(reportManifestInputSchema.safeParse({ unknown: true }).success).toBe(false);
     expect(reportManifestInputSchema.safeParse({ output: { unknown: true } }).success).toBe(false);
 
-    const presetDefaults = {
-      monument: {
-        density: 'spacious',
-        font: 'sans',
-        accent: 'indigo',
-        width: 'wide',
-        radius: 'soft',
-      },
-      material: {
-        density: 'comfortable',
-        font: 'serif',
-        accent: 'indigo',
-        width: 'wide',
-        radius: 'sharp',
-      },
-      signal: {
-        density: 'compact',
-        font: 'sans',
-        accent: 'teal',
-        width: 'wide',
-        radius: 'sharp',
-      },
-      terminal: {
-        density: 'compact',
-        font: 'mono',
-        accent: 'teal',
-        width: 'wide',
-        radius: 'sharp',
-      },
-      cinematic: {
-        density: 'spacious',
-        font: 'sans',
-        accent: 'coral',
-        width: 'wide',
-        radius: 'round',
-      },
-      studio: {
-        density: 'spacious',
-        font: 'sans',
-        accent: 'indigo',
-        width: 'wide',
-        radius: 'soft',
-      },
-      editorial: {
-        density: 'comfortable',
-        font: 'serif',
-        accent: 'indigo',
-        width: 'wide',
-        radius: 'sharp',
-      },
-    } as const;
-    for (const [preset, tokens] of Object.entries(presetDefaults)) {
-      expect(parseReportManifest({ preset }).tokens).toEqual(tokens);
-    }
-    expect(
-      parseReportManifest({
-        preset: 'signal',
-        tokens: {
-          density: 'spacious',
-          font: 'mono',
-          accent: 'coral',
-          width: 'narrow',
-          radius: 'round',
-        },
-      }).tokens,
-    ).toEqual({
-      density: 'spacious',
-      font: 'mono',
-      accent: 'coral',
-      width: 'narrow',
-      radius: 'round',
-    });
-    expect(parseReportManifest({ preset: 'editorial', tokens: { accent: 'teal' } }).tokens).toEqual(
+    // Тема во frontmatter приходит как есть: её поля проверяет загрузчик темы со строками файла.
+    expect(parseReportManifest({ theme: 'blueprint' }).theme).toBe('blueprint');
+    expect(parseReportManifest({ theme: 'brand.theme.yaml' }).theme).toBe('brand.theme.yaml');
+    expect(parseReportManifest({ theme: { extends: 'blueprint', accent: 'coral' } }).theme).toEqual(
       {
-        ...presetDefaults.editorial,
-        accent: 'teal',
+        extends: 'blueprint',
+        accent: 'coral',
       },
     );
-
-    const manifestSchema = getManifestSchema() as {
-      readonly properties: {
-        readonly tokens: {
-          readonly default?: unknown;
-          readonly properties: Readonly<Record<string, { readonly default?: unknown }>>;
-        };
-      };
-    };
-    expect(manifestSchema.properties.tokens.default).toBeUndefined();
-    expect(
-      Object.values(manifestSchema.properties.tokens.properties).every(
-        (property) => property.default === undefined,
-      ),
-    ).toBe(true);
-    const applySchemaDefaults = createAjv({ useDefaults: true }).compile(getManifestSchema());
-    for (const [authored, expected] of [
-      [{ preset: 'editorial' }, presetDefaults.editorial],
-      [{ preset: 'signal' }, presetDefaults.signal],
-      [
-        { preset: 'editorial', tokens: { accent: 'teal' } },
-        { ...presetDefaults.editorial, accent: 'teal' },
-      ],
-    ] as const) {
-      const defaulted = structuredClone(authored) as Record<string, unknown>;
-      expect(applySchemaDefaults(defaulted)).toBe(true);
-      expect(parseReportManifest(defaulted).tokens).toEqual(expected);
-    }
 
     const changedRegistry = {
       ...authoringRegistry,
@@ -327,31 +225,34 @@ describe('authoring schema projections', () => {
       accepted('trimmed language tag', { language: '  zh-Hant-TW  ' }),
       accepted('localized Russian entry', { localizations: { ru: 'report.ru.md' } }),
       accepted('localized English entry', { localizations: { en: 'report.en.md' } }),
-      accepted('studio preset', { preset: 'studio' }),
-      accepted('editorial preset', { preset: 'editorial' }),
-      accepted('signal preset', { preset: 'signal' }),
-      accepted('monument preset', { preset: 'monument' }),
-      accepted('material preset', { preset: 'material' }),
-      accepted('terminal preset', { preset: 'terminal' }),
-      accepted('cinematic preset', { preset: 'cinematic' }),
-      accepted('theme enum', { theme: 'dark' }),
+      ...[
+        'neutral',
+        'frost',
+        'calm-paper',
+        'daylight',
+        'midnight',
+        'noir',
+        'aurora',
+        'blueprint',
+        'ember',
+        'synthwave',
+        'terminal',
+      ].map((theme) => accepted(`${theme} theme`, { theme })),
+      accepted('theme file', { theme: 'themes/brand.yaml' }),
+      accepted('inline theme object', { theme: { extends: 'blueprint', accent: 'coral' } }),
+      accepted('scheme enum', { scheme: 'dark' }),
       accepted('every layout enum', { layout: 'document' }),
       accepted('dashboard layout', { layout: 'dashboard' }),
       accepted('landing layout', { layout: 'landing' }),
       accepted('mixed layout', { layout: 'mixed' }),
-      accepted('scroll progress enabled', { scrollProgress: true }),
-      accepted('scroll progress disabled', { scrollProgress: false }),
+      accepted('page progress', { progress: 'page' }),
+      accepted('chapter progress', { progress: 'chapters' }),
+      accepted('no progress', { progress: 'none' }),
+      accepted('start opening', { opening: 'start' }),
       accepted('attribution enabled', { attribution: true }),
       accepted('attribution disabled', { attribution: false }),
-      accepted('compact visual token overrides', {
-        tokens: {
-          density: 'compact',
-          font: 'serif',
-          accent: 'teal',
-          width: 'wide',
-          radius: 'round',
-        },
-      }),
+      accepted('scheme toggle off', { schemeToggle: false }),
+      accepted('theme switcher on', { themeSwitcher: true }),
       accepted('public https URL', { url: 'https://example.com/docs/' }),
       accepted('trimmed public http URL', { url: '  http://example.com/  ' }),
       accepted('public URL with query', { url: 'https://example.com/page?lang=en' }),
@@ -381,23 +282,21 @@ describe('authoring schema projections', () => {
       rejected('numeric public URL', { url: 1 }),
       rejected('escaping social image', { image: '../preview.png' }),
       rejected('absolute social image path', { image: '/tmp/preview.png' }),
-      rejected('unknown preset', { preset: 'neon' }),
-      rejected('numeric preset', { preset: 1 }),
-      rejected('unknown theme', { theme: 'sepia' }),
+      rejected('retired preset field', { preset: 'signal' }),
+      rejected('retired tokens field', { tokens: { accent: 'teal' } }),
+      rejected('empty theme', { theme: '' }),
       rejected('numeric theme', { theme: 1 }),
+      rejected('array theme', { theme: ['blueprint'] }),
+      rejected('unknown scheme', { scheme: 'sepia' }),
+      rejected('numeric scheme', { scheme: 1 }),
+      rejected('string scheme toggle', { schemeToggle: 'false' }),
       rejected('unknown layout', { layout: 'poster' }),
       rejected('numeric layout', { layout: 1 }),
-      rejected('string scroll progress', { scrollProgress: 'true' }),
-      rejected('numeric scroll progress', { scrollProgress: 1 }),
+      rejected('boolean progress', { progress: true }),
+      rejected('unknown progress', { progress: 'bar' }),
+      rejected('unknown opening', { opening: 'right' }),
       rejected('string attribution', { attribution: 'false' }),
       rejected('numeric attribution', { attribution: 0 }),
-      rejected('non-object tokens', { tokens: 'wide' }),
-      rejected('unknown token field', { tokens: { color: 'red' } }),
-      rejected('unknown density token', { tokens: { density: 'tiny' } }),
-      rejected('unknown font token', { tokens: { font: 'comic' } }),
-      rejected('unknown accent token', { tokens: { accent: 'unsafe-css' } }),
-      rejected('unknown width token', { tokens: { width: '100vw' } }),
-      rejected('unknown radius token', { tokens: { radius: '12px' } }),
       rejected('non-object output', { output: 'single-file' }),
       rejected('null output', { output: null }),
       rejected('unknown format', { output: { format: 'cloud' } }),
@@ -454,13 +353,13 @@ describe('authoring schema projections', () => {
 
   it('detects a deliberate one-sided schema semantic divergence', () => {
     const mutated = getManifestSchema() as {
-      properties: { theme: { enum: string[] } };
+      properties: { scheme: { enum: string[] } };
     };
-    mutated.properties.theme.enum.push('sepia');
+    mutated.properties.scheme.enum.push('sepia');
     const validate = createAjv().compile(mutated);
     expect(() =>
       assertParity(
-        { theme: 'sepia' },
+        { scheme: 'sepia' },
         (value) => reportManifestInputSchema.safeParse(value).success,
         validate,
       ),
@@ -793,7 +692,7 @@ describe('authoring schema projections', () => {
     const fixtures: readonly ValidationFixture[] = [
       accepted('minimal source', { manifest: {}, markdown: '# Report' }),
       accepted('complete source', {
-        manifest: { theme: 'light' },
+        manifest: { scheme: 'light' },
         markdown: '# Report',
         partials: { 'sections/intro.md': 'Intro' },
         resources: ['assets/image.png'],
@@ -1073,10 +972,39 @@ function attributeCases(
       ['x'.repeat(1001), false],
     ];
   }
+  // Строки кода такта — номера и диапазоны: слово для них не значение.
+  if (attribute.name === 'lines')
+    return [
+      ['2-4', true],
+      ['  1, 3-5  ', true],
+      ['value', false],
+      ['0', false],
+      ['', false],
+      [1, false],
+      [null, false],
+    ];
+  // Маршрут импульсов — имена узлов через запятую, не меньше двух: одно слово не маршрут.
+  if (attribute.name === 'pulse')
+    return [
+      ['first,second', true],
+      ['  first-step , second-step  ', true],
+      [`${'a,'.repeat(399)}aa`, true],
+      [`${'a,'.repeat(399)}aaa`, false],
+      ['value', false],
+      ['!', false],
+      ['', false],
+      [1, false],
+      [null, false],
+    ];
   const constraint = attribute.constraint;
   switch (constraint.kind) {
     case 'string': {
-      const valid = constraint.format === 'relative-local-path' ? 'assets/value.bin' : 'value';
+      const valid =
+        constraint.format === 'relative-local-path'
+          ? 'assets/value.bin'
+          : constraint.format === 'absolute-http-url'
+            ? 'https://example.com/page'
+            : 'value';
       const cases: Array<readonly [unknown, boolean]> = [
         [valid, true],
         [`  ${valid}  `, true],
@@ -1084,7 +1012,9 @@ function attributeCases(
         [1, false],
         [null, false],
       ];
-      if (constraint.maxLength !== undefined) {
+      // Адрес проверяется по форме URL: строка из одних «x» не адрес при любой длине.
+      if (constraint.format === 'absolute-http-url') cases.push(['value', false]);
+      else if (constraint.maxLength !== undefined) {
         cases.push(['x'.repeat(constraint.maxLength), true]);
         cases.push(['x'.repeat(constraint.maxLength + 1), false]);
       }
@@ -1134,6 +1064,25 @@ function attributeCases(
         [constraint.values[0], true],
         ['__invalid__', false],
         [1, false],
+        [null, false],
+      ];
+    case 'theme-reference':
+      return [
+        ['blueprint', true],
+        ['theme.yaml', true],
+        [{ extends: 'blueprint' }, true],
+        ['', false],
+        [1, false],
+        [null, false],
+      ];
+    case 'local-path-list':
+      return [
+        [['extensions/card.yaml'], true],
+        [['extensions/card.yaml', 'extensions/other.json'], true],
+        [[], constraint.minItems === 0],
+        [['extensions/card.yaml', 'extensions/card.yaml'], false],
+        [['../outside.yaml'], false],
+        ['extensions/card.yaml', false],
         [null, false],
       ];
     default: {

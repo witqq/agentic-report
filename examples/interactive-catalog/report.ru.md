@@ -10,8 +10,8 @@ language: ru
 **Вымышленный пример.** Все показатели, статусы, организации и решения на этой странице нужны только для
 демонстрации движка отчётов; перед использованием замените их проверенными данными проекта.
 
-Эта страница показывает поведение из пакета, полностью описанное директивами Markdown. Термин
-:term[Пакет решения]{key="decision-packet"} хранит переиспользуемое определение рядом с объясняемой формулировкой.
+Эта страница показывает возможности пакета, описанные директивами Markdown. Для термина
+:term[пакет решения]{key="decision-packet"} рядом с текстом доступно определение из глоссария.
 
 :::glossary{key="decision-packet" term="Пакет решения" forms="пакеты решений, пакета решения"}
 Компактный набор доказательств, ограничений и рекомендации, который может проверить другой агент.
@@ -19,7 +19,7 @@ language: ru
 
 Объяснение :term[пакета решения]{key="decision-packet"} остаётся доступным в каждом месте, где встречается понятие.
 
-::::::section{title="Копируемый смысл" id="copy" nav="Копирование" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Текст для копирования" id="copy" nav="Копирование" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" surface="tint" transition="stagger" choreography="cascade"}
 
 :::copyable
 Выполняйте развёртывание после завершения **двух проверок**.
@@ -72,7 +72,7 @@ language: ru
 :::
 ::::::
 
-::::::section{title="Поиск, раскрытие и демонстрация" id="controls" nav="Управление" width="wide" tone="accent" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="glow" transition="reveal"}
+::::::section{title="Поиск, раскрытие и демонстрация" id="controls" nav="Управление" width="wide" tone="accent" composition="stack" viewport="bounded" section-density="editorial" type="display" surface="tint" transition="reveal"}
 
 :::filter{title="Фильтр возможностей компонентов" placeholder="Найти возможности"}
 
@@ -81,7 +81,7 @@ language: ru
 - Модальное окно с восстановлением фокуса
   - Вложенный клавиатурный маршрут
 - Закрываемая всплывающая панель
-- Клиентский фильтр списка
+- Фильтрация списка в браузере
   :::
 
 :::toggle{title="Необязательные доказательства" label="Показать доказательства проверки" default="off"}

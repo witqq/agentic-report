@@ -6,6 +6,7 @@ import type {
   RendererKey,
 } from './registry.js';
 import { OUTPUT_CONTRACT, PAGE_CONTRACT } from './registry.js';
+import { BUILT_IN_THEME_NAMES } from './themes.js';
 import { isPackageRelativePosixPath } from './local-reference.js';
 import { isRegistryIdentity } from './registry-identity.js';
 
@@ -79,7 +80,7 @@ export function authoringRegistryIntegrityIssues(
       }
     }
     for (const target of [
-      directive.placement.requiredParent,
+      ...[directive.placement.requiredParent ?? []].flat(),
       directive.placement.preferredParent,
     ]) {
       if (
@@ -109,17 +110,19 @@ export function authoringRegistryIntegrityIssues(
   const defaultStarters = starters.filter((example) => example.starter?.default === true);
   if (starters.length === 0) issues.push('example: expected at least one initializable starter');
   if (defaultStarters.length !== 1) issues.push('example: expected exactly one default starter');
-  const starterNames = new Set(registry.examples.map((example) => example.id));
+  // Стартер есть у каждой категории и носит её имя: `init --starter landing` создаёт лендинг.
+  for (const category of registry.page.categories) {
+    const starter = starters.find((example) => example.id === category.id);
+    if (starter === undefined) issues.push(`${category.id}: category has no starter`);
+    else if (starter.category !== category.id)
+      issues.push(`${category.id}: starter belongs to category ${starter.category}`);
+    const dimensions = category.dimensions.map((dimension) => dimension.id);
+    if (new Set(dimensions).size !== dimensions.length)
+      issues.push(`${category.id}: duplicate brief dimension`);
+  }
   for (const starter of starters) {
-    for (const alias of starter.starter?.aliases ?? []) {
-      if (!isRegistryIdentity(alias)) issues.push(`${starter.id}: unsafe starter alias ${alias}`);
-      if (starterNames.has(alias))
-        issues.push(`${starter.id}: starter alias conflicts with ${alias}`);
-      else starterNames.add(alias);
-    }
-    if (new Set(starter.starter?.aliases ?? []).size !== (starter.starter?.aliases ?? []).length) {
-      issues.push(`${starter.id}: duplicate starter alias`);
-    }
+    if (!registry.page.categories.some((category) => category.id === starter.id))
+      issues.push(`${starter.id}: starter is not named after a category`);
   }
   for (const capability of registry.capabilities) {
     if (!isRegistryIdentity(capability.id)) {
@@ -162,6 +165,15 @@ export function authoringRegistryIntegrityIssues(
     if (example.classes.some((value) => value.trim().length === 0)) {
       issues.push(`${example.id}: empty showcase class`);
     }
+    const category = registry.page.categories.find(
+      (candidate) => candidate.id === example.category,
+    );
+    if (category === undefined) issues.push(`${example.id}: unknown category ${example.category}`);
+    else if (
+      example.subvariant !== undefined &&
+      !(category.subvariants as readonly string[]).includes(example.subvariant)
+    )
+      issues.push(`${example.id}: unknown ${example.category} subvariant ${example.subvariant}`);
   }
   return issues;
 }
@@ -182,7 +194,7 @@ function checkDiagramContract(registry: RegistryIntegrityInput, issues: string[]
     issues.push('diagram contract: invalid group bounds');
   }
   if (
-    contract.flow.selfEdges ||
+    !contract.flow.selfEdges ||
     contract.flow.groups.requireEveryNode ||
     !sameOrderedValues(contract.flow.layouts, ['auto', 'down', 'right', 'orthogonal']) ||
     !sameOrderedValues(contract.flow.directions, ['auto', 'right', 'down'])
@@ -287,22 +299,20 @@ function checkOutputFormats(registry: RegistryIntegrityInput, issues: string[]):
 }
 
 function checkPageContract(registry: RegistryIntegrityInput, issues: string[]): void {
-  const presetDomain = topLevelManifestEnumValues(registry, 'preset');
-  const themeDomain = topLevelManifestEnumValues(registry, 'theme');
+  const schemeDomain = topLevelManifestEnumValues(registry, 'scheme');
   const layoutDomain = topLevelManifestEnumValues(registry, 'layout');
-  const presetNames = registry.page.presets.map((preset) => preset.name);
-  const canonicalPresetNames = PAGE_CONTRACT.presets.map((preset) => preset.name);
-  if (!sameOrderedValues(presetNames, canonicalPresetNames)) {
-    issues.push('page preset: registry domain differs from canonical page contract');
+  const themeNames = registry.page.themes.map((theme) => theme.name);
+  if (!sameOrderedValues(themeNames, BUILT_IN_THEME_NAMES)) {
+    issues.push('page theme: registry catalog differs from the built-in theme data');
   }
-  if (!sameOrderedValues(presetDomain, presetNames)) {
-    issues.push('page preset: manifest domain differs from registry domain');
+  if (!themeNames.includes(registry.page.defaultTheme)) {
+    issues.push('page theme: default theme is not a built-in theme');
   }
-  if (!sameOrderedValues(registry.page.themes, PAGE_CONTRACT.themes)) {
-    issues.push('page theme: registry domain differs from canonical page contract');
+  if (!sameOrderedValues(registry.page.schemes, PAGE_CONTRACT.schemes)) {
+    issues.push('page scheme: registry domain differs from canonical page contract');
   }
-  if (!sameOrderedValues(themeDomain, registry.page.themes)) {
-    issues.push('page theme: manifest domain differs from registry domain');
+  if (!sameOrderedValues(schemeDomain, registry.page.schemes)) {
+    issues.push('page scheme: manifest domain differs from registry domain');
   }
   if (!sameOrderedValues(registry.page.layouts, PAGE_CONTRACT.layouts)) {
     issues.push('page layout: registry domain differs from canonical page contract');
@@ -311,8 +321,8 @@ function checkPageContract(registry: RegistryIntegrityInput, issues: string[]): 
     issues.push('page layout: manifest domain differs from registry domain');
   }
   if (
-    registry.page.motion.scrollProgress.normalMotionOnly !==
-      PAGE_CONTRACT.motion.scrollProgress.normalMotionOnly ||
+    registry.page.motion.progress.pageNormalMotionOnly !==
+      PAGE_CONTRACT.motion.progress.pageNormalMotionOnly ||
     registry.page.motion.sectionReveal.default !== PAGE_CONTRACT.motion.sectionReveal.default ||
     registry.page.motion.sectionReveal.normalMotionOnly !==
       PAGE_CONTRACT.motion.sectionReveal.normalMotionOnly ||
@@ -323,28 +333,48 @@ function checkPageContract(registry: RegistryIntegrityInput, issues: string[]): 
   ) {
     issues.push('page motion: registry policy differs from canonical page contract');
   }
-  const preset = registry.manifestFields.find((field) => field.name === 'preset');
   const theme = registry.manifestFields.find((field) => field.name === 'theme');
+  const scheme = registry.manifestFields.find((field) => field.name === 'scheme');
   const layout = registry.manifestFields.find((field) => field.name === 'layout');
-  const scrollProgress = registry.manifestFields.find((field) => field.name === 'scrollProgress');
+  const progress = registry.manifestFields.find((field) => field.name === 'progress');
+  const opening = registry.manifestFields.find((field) => field.name === 'opening');
+  const motion = registry.manifestFields.find((field) => field.name === 'motion');
+  if (
+    motion?.constraint?.kind !== 'enum' ||
+    motion.default !== registry.page.defaultMotion ||
+    !sameOrderedValues(motion.constraint.values, registry.page.motionLevels)
+  ) {
+    issues.push('page motion: manifest field differs from registry default');
+  }
   const attribution = registry.manifestFields.find((field) => field.name === 'attribution');
   const review = registry.manifestFields.find((field) => field.name === 'review');
-  const themeToggle = registry.manifestFields.find((field) => field.name === 'themeToggle');
-  const presetSwitcher = registry.manifestFields.find((field) => field.name === 'presetSwitcher');
-  if (preset?.default !== registry.page.defaultPreset) {
-    issues.push('page preset: manifest default differs from registry default');
+  const schemeToggle = registry.manifestFields.find((field) => field.name === 'schemeToggle');
+  const themeSwitcher = registry.manifestFields.find((field) => field.name === 'themeSwitcher');
+  if (
+    theme?.constraint?.kind !== 'theme-reference' ||
+    theme.default !== registry.page.defaultTheme
+  ) {
+    issues.push('page theme: manifest field differs from registry default');
   }
-  if (theme?.default !== registry.page.defaultTheme) {
-    issues.push('page theme: manifest default differs from registry default');
+  if (scheme?.default !== registry.page.defaultScheme) {
+    issues.push('page scheme: manifest default differs from registry default');
   }
   if (layout?.default !== registry.page.defaultLayout) {
     issues.push('page layout: manifest default differs from registry default');
   }
   if (
-    scrollProgress?.constraint?.kind !== 'boolean' ||
-    scrollProgress.default !== registry.page.defaultScrollProgress
+    progress?.constraint?.kind !== 'enum' ||
+    progress.default !== registry.page.defaultProgress ||
+    !sameOrderedValues(progress.constraint.values, registry.page.progress)
   ) {
-    issues.push('page motion: scroll-progress field differs from registry default');
+    issues.push('page progress: manifest field differs from registry default');
+  }
+  if (
+    opening?.constraint?.kind !== 'enum' ||
+    opening.default !== registry.page.defaultOpening ||
+    !sameOrderedValues(opening.constraint.values, registry.page.openings)
+  ) {
+    issues.push('page opening: manifest field differs from registry default');
   }
   if (
     attribution?.constraint?.kind !== 'boolean' ||
@@ -356,60 +386,16 @@ function checkPageContract(registry: RegistryIntegrityInput, issues: string[]): 
     issues.push('page review: field differs from registry default');
   }
   if (
-    themeToggle?.constraint?.kind !== 'boolean' ||
-    themeToggle.default !== registry.page.defaultThemeToggle
+    schemeToggle?.constraint?.kind !== 'boolean' ||
+    schemeToggle.default !== registry.page.defaultSchemeToggle
   ) {
-    issues.push('page theme control: field differs from registry default');
+    issues.push('page scheme control: field differs from registry default');
   }
   if (
-    presetSwitcher?.constraint?.kind !== 'boolean' ||
-    presetSwitcher.default !== registry.page.defaultPresetSwitcher
+    themeSwitcher?.constraint?.kind !== 'boolean' ||
+    themeSwitcher.default !== registry.page.defaultThemeSwitcher
   ) {
-    issues.push('page preset switcher: field differs from registry default');
-  }
-
-  const tokens = registry.manifestFields.find((field) => field.name === 'tokens');
-  if (tokens?.fields === undefined) {
-    issues.push('page tokens: manifest token object is missing');
-    return;
-  }
-  if (
-    !sameOrderedValues(
-      tokens.fields.map((field) => field.name),
-      registry.page.tokens.map((field) => field.name),
-    )
-  ) {
-    issues.push('page tokens: manifest fields differ from registry token catalog');
-  }
-  for (const token of registry.page.tokens) {
-    const manifestToken = tokens.fields.find((field) => field.name === token.name);
-    const values =
-      manifestToken?.constraint?.kind === 'enum' ? manifestToken.constraint.values : [];
-    if (!sameOrderedValues(values, token.constraint.values)) {
-      issues.push(`page token ${token.name}: manifest domain differs from registry domain`);
-    }
-    if (manifestToken?.default !== token.default) {
-      issues.push(`page token ${token.name}: manifest default differs from registry default`);
-    }
-  }
-  for (const pagePreset of registry.page.presets) {
-    const presetTokenNames = Object.keys(pagePreset.tokens);
-    if (
-      !sameOrderedValues(
-        presetTokenNames,
-        registry.page.tokens.map((token) => token.name),
-      )
-    ) {
-      issues.push(
-        `page preset ${pagePreset.name}: token fields differ from registry token catalog`,
-      );
-      continue;
-    }
-    for (const token of registry.page.tokens) {
-      if (!(token.constraint.values as readonly string[]).includes(pagePreset.tokens[token.name])) {
-        issues.push(`page preset ${pagePreset.name}: invalid ${token.name} token default`);
-      }
-    }
+    issues.push('page theme switcher: field differs from registry default');
   }
 }
 
@@ -424,7 +410,7 @@ function manifestEnumValues(
 
 function topLevelManifestEnumValues(
   registry: RegistryIntegrityInput,
-  fieldName: 'preset' | 'theme' | 'layout',
+  fieldName: 'scheme' | 'layout',
 ): readonly string[] {
   const field = registry.manifestFields.find((candidate) => candidate.name === fieldName);
   return field?.constraint?.kind === 'enum' ? field.constraint.values : [];
@@ -646,6 +632,17 @@ function checkConstraint(
       }
       return { valid };
     }
+    case 'theme-reference':
+      return { valid: true };
+    case 'local-path-list': {
+      const valid =
+        Number.isInteger(constraint.minItems) &&
+        Number.isInteger(constraint.maxItems) &&
+        constraint.minItems >= 0 &&
+        constraint.maxItems >= constraint.minItems;
+      if (!valid) issues.push(`${owner}: invalid list bounds`);
+      return { valid };
+    }
     default: {
       return assertNever(constraint);
     }
@@ -694,6 +691,15 @@ function defaultMatchesConstraint(
       return typeof value === 'boolean';
     case 'enum':
       return typeof value === 'string' && constraint.values.includes(value);
+    case 'theme-reference':
+      return typeof value === 'string' && value.trim() === value && value.length > 0;
+    case 'local-path-list':
+      return (
+        Array.isArray(value) &&
+        value.length >= constraint.minItems &&
+        value.length <= constraint.maxItems &&
+        value.every((item) => typeof item === 'string' && item.length > 0)
+      );
     default: {
       const exhaustive: never = constraint;
       return exhaustive;

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="budget">
+      <form class="inputs" id="inputs" novalidate>
+        <label class="field">
+          <span data-text="target">Availability target</span>
+          <select id="target">
+            <option value="99">99%</option>
+            <option value="99.5">99.5%</option>
+            <option value="99.9" selected>99.9%</option>
+            <option value="99.95">99.95%</option>
+            <option value="99.99">99.99%</option>
+          </select>
+        </label>
+        <label class="field">
+          <span data-text="window">Window</span>
+          <select id="window">
+            <option value="7">7</option>
+            <option value="28">28</option>
+            <option value="30" selected>30</option>
+            <option value="90">90</option>
+          </select>
+        </label>
+        <label class="field">
+          <span data-text="elapsed">Days of the window gone</span>
+          <input id="elapsed" type="number" inputmode="decimal" min="0.1" step="0.5" value="12" />
+        </label>
+        <label class="field">
+          <span data-text="bad">Bad minutes so far</span>
+          <input id="bad" type="number" inputmode="decimal" min="0" step="1" value="18" />
+        </label>
+      </form>
+      <section class="result" aria-live="polite">
+        <dl class="figures">
+          <div>
+            <dt data-text="budget">Budget for the window</dt>
+            <dd id="budget"></dd>
+          </div>
+          <div>
+            <dt data-text="spent">Spent</dt>
+            <dd><span id="spent"></span><span class="note" id="spent-minutes"></span></dd>
+          </div>
+          <div>
+            <dt data-text="burn">Burn rate</dt>
+            <dd id="burn"></dd>
+          </div>
+        </dl>
+        <p class="verdict" id="verdict"></p>
+        <svg
+          class="chart"
+          id="chart"
+          viewBox="0 0 320 150"
+          role="img"
+          aria-labelledby="chart-label"
+        >
+          <title id="chart-label"></title>
+          <line class="axis" x1="28" y1="130" x2="312" y2="130" />
+          <line class="axis" x1="28" y1="12" x2="28" y2="130" />
+          <line class="pace" id="pace" x1="28" y1="12" x2="312" y2="130" />
+          <polyline class="spent" id="spent-line" points="" pathLength="1" />
+          <polyline class="projection" id="projection" points="" pathLength="1" />
+          <circle class="today" id="today" r="3.5" cx="0" cy="0" />
+          <text class="tick" id="full-tick" x="24" y="17" text-anchor="end">100%</text>
+          <text class="tick" x="24" y="133" text-anchor="end">0</text>
+          <text class="tick" id="end-tick" x="312" y="146" text-anchor="end"></text>
+          <text class="tick" id="pace-label" x="170" y="60"></text>
+        </svg>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

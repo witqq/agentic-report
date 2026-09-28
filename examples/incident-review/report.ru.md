@@ -13,7 +13,7 @@ language: ru
 события, показатели и решения на странице — демонстрационные данные для движка отчётов; они не описывают
 реальную компанию или производственную систему.
 
-::::::section{title="Сигнал влияния" id="impact" nav="Влияние" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
+::::::section{title="Сигнал влияния" id="impact" nav="Влияние" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 :::callout{kind="warning" title="Сводка для руководства"}
 Шторм повторных запросов в адаптере оплаты на 47 минут исчерпал пул соединений оформления заказа. Данные
 клиентов сохранились, но на пике **18,4% попыток оформления завершались ошибкой**, а **3 240 продлений были
@@ -34,7 +34,7 @@ language: ru
 :::card{title="Целостность данных"}
 **Потерь не найдено**
 
-Сверка реестра совпала со всеми принятыми событиями оплаты.
+Сверка платёжного журнала подтвердила учёт всех принятых событий оплаты.
 :::
 :::card{title="Последующие действия"}
 **4 действия с владельцами**
@@ -68,6 +68,8 @@ language: ru
 ::edge{from="timeout" to="retry" label="повтор вызовов"}
 ::edge{from="retry" to="pool" label="трафик ×12"}
 ::edge{from="pool" to="checkout" label="нет соединений"}
+::legend-item{node="warning" label="Причина"}
+::legend-item{node="accent" label="Точка отказа"}
 :::
 
 ::::tabs{title="Данные и ограничения"}
@@ -86,7 +88,7 @@ language: ru
   :::
   :::tab{label="Исключено"}
 
-- Записи реестра и хранилища заказов оставались в нормальных диапазонах задержки.
+- Запись в платёжный журнал и хранилище заказов укладывалась в обычное время.
 - В окне инцидента не менялись миграции схемы и флаги функций.
 - Сверка не нашла дубликатов принятых событий оплаты.
   :::
@@ -114,12 +116,15 @@ language: ru
 Успешность оформления десять минут держалась выше 99%, и инцидент перешёл в наблюдение.
 :::
 :::event{date="13:00 UTC" title="Целостность проверена" kind="success"}
-Итоги оплаты, заказов и реестра сошлись без потерь и повторного принятия.
+Итоги оплат, заказов и платёжного журнала сошлись без потерь и повторно принятых событий.
 :::
+::legend-item{event="warning" label="Обнаружение"}
+::legend-item{event="accent" label="Реагирование"}
+::legend-item{event="success" label="Восстановление"}
 ::::
 :::::
 
-:::::section{title="Реестр корректирующих действий" id="actions" nav="Действия" width="wide" align="start" tone="accent" composition="mosaic" viewport="bounded" section-density="editorial" type="editorial" surface="glow" transition="stagger" choreography="cascade"}
+:::::section{title="Реестр корректирующих действий" id="actions" nav="Действия" width="wide" align="start" tone="accent" composition="mosaic" viewport="bounded" section-density="editorial" type="editorial" surface="plain" transition="stagger" choreography="cascade"}
 
 {{include: partials/actions.ru.md}}
 
@@ -131,7 +136,7 @@ language: ru
 
 :::disclosure{title="Открыть черновик сообщения клиентам" open="false"}
 С `09:42` до `10:29 UTC` часть вымышленных клиентов OrbitDesk не могла завершить оформление. Существующие
-подписки и записи оставались в безопасности. Сервис восстановлен, задержанные продления воспроизведены,
+подписки и записи оставались в безопасности. Сервис восстановлен, задержанные продления обработаны,
 добавляются защиты от исчерпания ёмкости оформления повторным трафиком.
 :::
 

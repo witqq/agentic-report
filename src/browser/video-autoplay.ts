@@ -3,7 +3,10 @@
  * поэтому браузер разрешает запуск без жеста. Читатель, который предпочитает меньше движения,
  * запускает видео сам кнопкой, а пауза, поставленная читателем, больше не снимается.
  */
-export function installVideoAutoplay(reducedMotion: MediaQueryList): void {
+export function installVideoAutoplay(
+  reducedMotion: MediaQueryList,
+  strings: { readonly playVideo: string; readonly pauseVideo: string },
+): void {
   const videos = [...document.querySelectorAll<HTMLVideoElement>('video[data-video-autoplay]')];
   if (videos.length === 0 || typeof window.IntersectionObserver !== 'function') return;
 
@@ -41,6 +44,20 @@ export function installVideoAutoplay(reducedMotion: MediaQueryList): void {
     video.muted = true;
     video.addEventListener('play', () => resumable.delete(video));
     observer.observe(video);
+  }
+  // Кнопка фонового видео говорит, что она сделает: остановит идущее или запустит стоящее.
+  for (const video of document.querySelectorAll<HTMLVideoElement>('video[data-video-background]')) {
+    const toggle = video.closest('figure')?.querySelector<HTMLButtonElement>('[data-video-toggle]');
+    if (toggle === null || toggle === undefined) continue;
+    const label = (): void => {
+      const text = video.paused ? strings.playVideo : strings.pauseVideo;
+      toggle.textContent = text;
+      toggle.setAttribute('aria-label', text);
+      toggle.setAttribute('aria-pressed', String(video.paused));
+    };
+    video.addEventListener('play', label);
+    video.addEventListener('pause', label);
+    label();
   }
   reducedMotion.addEventListener('change', () => {
     for (const video of videos) sync(video);

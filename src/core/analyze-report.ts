@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import { authoringRegistry, OUTPUT_FORMATS } from '../authoring/registry.js';
 import type {
+  InspectedExtension,
   InspectReportOptions,
   InspectReportResult,
   OutputFormat,
@@ -15,6 +16,7 @@ import {
   validateRequestedUrl,
   type PreparedReport,
 } from './prepare-report.js';
+import { DEFAULT_MOTION_LEVEL } from '../page-motion.js';
 
 export async function validateReport(
   options: ValidateReportOptions,
@@ -41,10 +43,18 @@ export async function inspectReport(options: InspectReportOptions): Promise<Insp
       runtimePlacement: prepared.runtimePlacement,
     },
     sourceFiles: sourceInventory(prepared),
+    structure: {
+      layout: prepared.source.manifest.layout,
+      motion: prepared.source.manifest.motion ?? DEFAULT_MOTION_LEVEL,
+      ...prepared.variants[0].markdown.structure,
+    },
     observed: {
       directives: [...prepared.observedDirectives],
       resources: { ...prepared.observedResources },
     },
+    ...(prepared.source.extensions === undefined
+      ? {}
+      : { extensions: inspectedExtensions(prepared) }),
     catalog: {
       commands: Object.fromEntries(
         authoringRegistry.commands.map((command) => [command.id, command.description]),
@@ -56,7 +66,6 @@ export async function inspectReport(options: InspectReportOptions): Promise<Insp
           id: example.id,
           title: example.title,
           default: 'starter' in example && example.starter.default === true,
-          aliases: 'starter' in example ? [...(example.starter.aliases ?? [])] : [],
         })),
       capabilities: Object.fromEntries(
         authoringRegistry.capabilities.map((capability) => [capability.id, capability.description]),
@@ -131,6 +140,31 @@ function analysisOptionsError(): AgenticReportError {
       'Pass { input: string, format?: "single-file" | "directory", review?: string, url?: string }.',
     details: { supportedFormats: OUTPUT_FORMATS },
   });
+}
+
+/** Расширения страницы глазами автора: что объявлено, где лежит, что принимает и сколько раз стоит. */
+function inspectedExtensions(prepared: PreparedReport): InspectedExtension[] {
+  const uses = new Map((prepared.extensions ?? []).map((entry) => [entry.name, entry.uses]));
+  return (prepared.source.extensions?.extensions ?? []).map((extension) => ({
+    name: extension.name,
+    kind: extension.kind,
+    manifest: path
+      .relative(prepared.source.sourceRoot, extension.manifestPath)
+      .split(path.sep)
+      .join('/'),
+    description: extension.description,
+    uses: uses.get(extension.name) ?? 0,
+    ...(extension.kind === 'block' || extension.kind === 'provider'
+      ? { attributes: Object.keys(extension.attributes) }
+      : {}),
+    ...(extension.kind === 'effect'
+      ? {
+          targets: extension.targets.map(
+            (target) => `${target.directive}.${target.attribute}=${target.values.join('|')}`,
+          ),
+        }
+      : {}),
+  }));
 }
 
 function sourceInventory(prepared: PreparedReport): string[] {

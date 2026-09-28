@@ -10,14 +10,15 @@ const artifactUrl = (name: string): string => pathToFileURL(path.join(generatedR
 
 const tabConsumers = [
   // Схема добавляет свой список вкладок: переключатель раскладок проходит ту же проверку.
-  { name: 'architecture', artifact: 'starter-architecture.html', groups: 2 },
+  { name: 'architecture', artifact: 'architecture.html', groups: 2 },
   { name: 'incident review', artifact: 'incident-review.html', groups: 2 },
   { name: 'interactive catalog', artifact: 'interactive-catalog.html', groups: 2 },
   { name: 'launch readiness', artifact: 'launch-readiness.html', groups: 1 },
-  { name: 'research', artifact: 'starter-research.html', groups: 1 },
-  { name: 'tutorial', artifact: 'starter-tutorial.html', groups: 1 },
+  { name: 'research', artifact: 'research.html', groups: 1 },
+  { name: 'tutorial', artifact: 'tutorial.html', groups: 1 },
   { name: 'vendor decision', artifact: 'vendor-decision.html', groups: 1 },
-  { name: 'research authoring fixture', artifact: 'research-corpus.html', groups: 3 },
+  // Группа вкладок и переключатели раскладок трёх схем потока, включая схему прогона с возвратами.
+  { name: 'research authoring fixture', artifact: 'research-corpus.html', groups: 4 },
 ] as const;
 
 interface TabGeometry {
@@ -105,6 +106,40 @@ test('semantic tab labels stay readable and overflow within their list from file
           .evaluate((element) => element.scrollWidth > element.clientWidth),
         'the dense incident tab row uses its local scroller',
       ).toBe(true);
+    }
+  }
+});
+
+test('switching a tab keeps the tab row where the reader was looking', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const consumer of tabConsumers) {
+    await page.goto(artifactUrl(consumer.artifact));
+    const tabList = page.locator('[role="tablist"]:not(.visualization-layout-switch)').first();
+    await tabList.evaluate((element) => {
+      window.scrollTo({
+        top: window.scrollY + element.getBoundingClientRect().top - 300,
+        behavior: 'instant',
+      });
+    });
+    const tabs = tabList.getByRole('tab');
+    const before = await tabList.evaluate((element) => element.getBoundingClientRect().top);
+    for (const index of [(await tabs.count()) - 1, 0]) {
+      // Щелчок самой страницы, без прокрутки Playwright к элементу перед щелчком: иначе сдвиг вносил бы
+      // сам тест, а не смена вкладки.
+      await tabs.nth(index).evaluate((tab) => (tab as HTMLElement).click());
+      await expect(tabs.nth(index)).toHaveAttribute('aria-selected', 'true');
+      // Ловит: смена вкладки прокручивает страницу (фокус панели, якорь, смена высоты над рядом), и читатель
+      // теряет место, с которого переключал. Порог — строка текста: сдвиг меньше строки места не теряет
+      // (каталог сейчас сдвигает ряд на 2,7 px при возврате к первой вкладке), прокрутка к панели — сотни px.
+      expect(
+        Math.abs(
+          (await tabList.evaluate((element) => element.getBoundingClientRect().top)) - before,
+        ),
+        `${consumer.name}, tab ${index + 1}`,
+      ).toBeLessThan(16);
     }
   }
 });

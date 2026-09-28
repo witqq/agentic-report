@@ -17,10 +17,14 @@ export { inspectReview } from './core/inspect-review.js';
 export { fixReport } from './core/fix-report.js';
 export { generateSitemap } from './core/site-index.js';
 export { initProject } from './authoring/init-project.js';
+export { createBrandTheme } from './authoring/brand-theme.js';
 export type {
   AppliedFix,
   BuildReportOptions,
   BuildReportResult,
+  BrandThemeRole,
+  CreateBrandThemeOptions,
+  CreateBrandThemeResult,
   Diagnostic,
   DiagnosticFix,
   FixReportOptions,

@@ -11,7 +11,7 @@ language: ru
 ::node{id="accessor" label="CanvasAccessor" detail="аксессор холста" kind="warning"}
 ::node{id="driver" label="Driver" detail="драйвер кадров, requestAnimationFrame" kind="neutral"}
 ::node{id="stage" label="Stage" detail="постановщик: лента, шаги, предпросмотр" kind="success"}
-::node{id="player" label="Player" detail="движок @volga/anim" kind="success"}
+::node{id="player" label="Player" detail="движок анимации" kind="success"}
 ::node{id="port" label="ShowTarget" detail="порт цели у рендереров" kind="warning"}
 ::node{id="block" label="Block" detail="кадр через блок" kind="accent"}
 ::edge{from="canvas" to="accessor" label="new CanvasAccessor(поиск цели, диагностика)" kind="dependency"}

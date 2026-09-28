@@ -3,9 +3,9 @@ title: agentic-report documentation
 description: Human and agent documentation for the local declarative interactive-page builder.
 language: en
 layout: document
-theme: system
-preset: material
-scrollProgress: true
+theme: calm-paper
+scheme: system
+progress: page
 ---
 
 # Build the page, not a frontend project
@@ -24,9 +24,9 @@ Use Node.js 24.18.0 or newer. Start with the [agent quickstart](agent/index.html
 [direct Markdown version](agent/index.md), or install the [agent skill](../skills/agentic-report/SKILL.md).
 
 ```sh
-npx --yes agentic-report@0.17.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.18.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.17.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.18.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Build validates before publishing; use `validate` or `inspect` only
@@ -48,7 +48,7 @@ If you prefer to inspect the implementation instead of executing the published `
 package, clone a specific release tag and run the compiler directly from its build:
 
 ```sh
-git clone --branch v0.17.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.18.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -58,7 +58,7 @@ pnpm install --frozen-lockfile
 pnpm verify
 pnpm build
 
-node dist/node/cli.js init ../my-page --starter report --json
+node dist/node/cli.js init ../my-page --starter document --json
 node dist/node/cli.js build ../my-page --output ../my-page.html --json
 ```
 
@@ -71,9 +71,9 @@ tag pinned so later commands continue to use the revision you inspected.
 
 ::::section{title="Validate, explain, and repair" id="diagnostics" nav="Diagnostics" width="standard" align="start" tone="soft" reveal="true"}
 
-The CLI commands are discoverable: `init`, `validate`, `inspect`, `build`, `fix`, `review`,
-`sitemap`, `describe`, `schema`, and `examples`. Agent output is the default—NDJSON for run commands and one compact
-JSON line for reference commands. `--json` explicitly names that default; `--human` selects prose or
+The CLI commands are discoverable: `describe` lists all of them under `commands`, and the
+[authoring catalog](../skills/agentic-report/references/catalog.md#commands) prints the same list. Agent
+output is the default—NDJSON for run commands and one compact JSON line for reference commands. `--json` explicitly names that default; `--human` selects prose or
 indented JSON without dropping diagnostic facts.
 
 One directive pass returns every independent authored violation it found. The first diagnostic carries the
@@ -95,36 +95,39 @@ Authors write declarative source rather than application code. Use Markdown for 
 manifest for page settings, allowlisted semantic directives for components, confined Markdown partials
 for composition, and local assets for media and downloads.
 
-A top-level `section` can compose package-owned `flow`, `stage`, `split`, `mosaic`, `story`, or `stack`
-arrangements. Closed attributes also select bounded viewport rhythm, density, typography, natural/masked/
-layered/gallery/bleed media, independent image fit/aspect/focal point, and plain/mesh/glow/grain/grid
-surfaces. They work in both output formats without author CSS or JavaScript. Multi-column and layered
+A top-level `section` composes a package-owned arrangement from closed attributes: composition, viewport
+rhythm, density, typography, media treatment, independent image and video fit/aspect/focal point, and a
+decorative surface. Every value is in the [source contract](product/source-contract.md#semantic-primitives).
+They work in both output formats without author CSS or JavaScript. Multi-column and layered
 arrangements flatten to the authored reading order on narrow screens; gallery overflow stays inside its
 rail. A multi-item rail shows compact continuation and receives localized focus and arrow-key scrolling only
 while it actually overflows; those scroll-only semantics disappear when a wide owner fits every item. Every
-section contains its floats and local layer order. A media stage reserves a full-width title row
-and composes supporting content with media below; gallery stages keep their separate title/rail arrangement,
-while split returns to flow before desktop navigation can make its tracks unreadable. Mosaic/stack
+section contains its floats and local layer order. Split and stage arrange only the section's opening,
+the blocks right after the title that read well in half the track, with at most one picture: split sets it
+beside the title, a stage sets its lead, paragraphs, and actions beside its opening picture under a
+full-width title, and a gallery stage keeps its title beside the rail. Every later block spans the whole
+section track, and split returns to flow before desktop navigation can make its tracks unreadable. Mosaic/stack
 composition cannot pair with layers/gallery media because both roles would own the same card layout; those
 four combinations fail before rendering.
 
-Use `recipe="hero|evidence|story|rail|metrics"` as the short path to a coordinated section; explicit detailed
-attributes override only their own recipe roles. The default preset is Material. Monument, Signal, Terminal,
-and Cinematic are the other recommended directions; Studio and Editorial remain compatible. A card may
+A `recipe` is the short path to a coordinated section; explicit detailed attributes override only their own
+recipe roles. The default theme is neutral, and a page may extend any built-in theme with a theme of its
+own. The recipes, the built-in themes, and the page layouts are listed in the generated
+[authoring catalog](../skills/agentic-report/references/catalog.md). A card may
 declare one safe `href` to become a single visibly linked keyboard target, but it cannot contain nested links.
 
 Section tone owns its background and foreground relationship. Decorative surfaces remain behind the
 authored content, while nested cards and visualizations restore their own readable package surface text.
 
 ```markdown
-::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="mesh" transition="stagger" scene="progress" choreography="cascade"}
+::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 The content remains ordinary Markdown and semantic directives.
 ::::
 ```
 
-Sections also accept closed motion roles: `transition="none|reveal|stagger"`,
-`scene="none|progress|sticky"`, `interaction="none|depth|tilt"`, and
-`choreography="none|cascade"`. Without a recipe they default to `none`; reduced motion leaves content visible and pointer
+Sections also accept closed motion roles — `transition`, `scene`, `interaction`, `choreography`, and the
+WebGL `media-effect` — whose values are in the same source-contract table. Without a recipe they default to
+`none`; reduced motion leaves content visible and pointer
 effects require a fine pointer. Conflicting layout or transform owners fail validation. `actions` accepts
 `placement="auto|edge|inline|bottom"`, with bottom kept in normal flow, and only a primary action may use the
 bounded `effect="magnetic"`. The package owns timings, movement, responsive placement, and icons.
@@ -134,7 +137,7 @@ Recipes include their entrance and scene behavior. For a pointer-depth opening, 
 `recipe="rail" scene="progress"` with cards. The
 [Motion showcase](../examples/motion-showcase/index.html) demonstrates the complete combination and links
 to its [Markdown source](../examples/motion-showcase/report.md). The
-[Executive brief](../examples/executive-brief/index.html) shows a Monument decision page with evidence,
+[Executive brief](../examples/executive-brief/index.html) shows a Daylight decision page with evidence,
 timeline and handoff. Long sections reveal when reached even when they are taller than the screen.
 
 Package controls provide icons automatically. Authored modal/popover and toggle labels stay visible on
@@ -191,17 +194,9 @@ or [read its declarative source](../examples/review-workspace/report.md).
 The target manifest is bounded to 5,000 reviewable blocks and 750,000 serialized bytes; unusually large
 handoffs must stay under both limits or be split.
 
-The anchored thread surface flips, shifts, and clamps within the desktop visual viewport; on mobile it
-becomes a bounded bottom surface. Window and visual-viewport changes keep it, the selection action, and saved
-range markers reachable without moving report content. The measured contextual action and focus markers
-follow a visible rectangle from their live range and hide when that range is wholly offscreen. A marker
-prefers to sit fully above or below its saved text before edge clamping, keeping marker activation distinct
-from tapping the highlighted range. The topbar Review entry has a localized title tooltip around its
-20-pixel icon. Navigation, Review, language, and theme use distinct package icons with localized names and
-tooltips. The native language selector receives visible focus after switching. At constrained widths visible
-labels and secondary page identity are omitted without widening the page, and coarse pointers receive larger
-targets. Visible contextual/action controls retain localized labels and use 16-pixel icons; Create note shows
-a pencil and View thread shows a comment.
+The anchored thread surface never moves report content on desktop or mobile; how it is placed, and how its
+markers and topbar icons behave, is in the
+[Review Workspace reader interface](product/source-contract.md#review-workspace-reader-interface).
 
 An agent resolves the downloaded review against the current source with:
 

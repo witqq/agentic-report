@@ -9,11 +9,11 @@ language: ru
 **Вымышленный пример.** Все показатели, статусы, организации и решения на этой странице нужны только для
 демонстрации движка отчётов; перед использованием замените их проверенными данными проекта.
 
-Сосредоточенная поверхность для чтения решения, его доказательств и пути от ограничений к внедрению.
+Документ, в котором решение и его обоснование выстроены от ограничений до внедрения.
 
-::::::section{title="Контекст решения" id="context" nav="Контекст" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" media="mask" media-fit="cover" media-aspect="cinematic" surface="mesh" transition="stagger" choreography="cascade"}
+::::::section{title="Контекст решения" id="context" nav="Контекст" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" media="mask" media-fit="cover" media-aspect="cinematic" surface="tint" transition="stagger" choreography="cascade"}
 :::callout{kind="info" title="Статус решения"}
-Принято для следующей единицы реализации после локальной проверки.
+Решение принято для следующего этапа реализации после локальной проверки.
 :::
 
 Продукт превращает декларативный Markdown в переносимую интерактивную браузерную страницу. Автор задаёт
@@ -40,9 +40,9 @@ language: ru
 
 ```yaml
 layout: document
-theme: system
-tokens:
-  font: serif
+scheme: system
+theme:
+  extends: calm-paper
   width: narrow
 ```
 

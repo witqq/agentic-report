@@ -37,7 +37,7 @@ test('system locale selects Russian and the visible switcher changes the complet
         level: 1,
       }),
     ).toBeVisible();
-    await expect(page.locator('[data-navigation] a').first()).toHaveText('Выбрать результат');
+    await expect(page.locator('[data-navigation] a').first()).toHaveText('Демо');
     await expect(page.getByRole('combobox', { name: 'Язык' })).toHaveValue('ru');
     await expect(page.locator('meta[name="description"]')).toHaveAttribute(
       'content',
@@ -60,7 +60,7 @@ test('system locale selects Russian and the visible switcher changes the complet
     await expect(
       page.getByRole('heading', { name: 'A page worth handing over. From Markdown.', level: 1 }),
     ).toBeVisible();
-    await expect(page.locator('[data-navigation] a').first()).toHaveText('Choose a result');
+    await expect(page.locator('[data-navigation] a').first()).toHaveText('Demo');
     await expect(page.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
     await expect(page.getByRole('combobox', { name: 'Language' })).toBeFocused();
 

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Annotated release tag, for example v0.17.0
+        description: Annotated release tag, for example v0.18.0
         required: true
         type: string
       sha256:
@@ -62,6 +62,8 @@ jobs:
           manifest="${RUNNER_TEMP}/package.json"
 
           gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" > "${release_json}"
+          # The single-quoted script is JavaScript for node -e; its ${...} is a template literal.
+          # shellcheck disable=SC2016
           asset_url="$(
             node -e '
               const fs = require("node:fs");
@@ -111,4 +113,4 @@ jobs:
             }
           ' "${manifest}" "${version}" "git+https://github.com/${GITHUB_REPOSITORY}.git"
 
-          npm publish --access public "${asset_url}"
+          npm publish --access public "${tarball}"

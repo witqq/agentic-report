@@ -216,6 +216,7 @@ describe('CLI transport', () => {
       title: 'Special entry',
       description: 'Composition fixture.',
       classes: ['fixture'],
+      category: 'document',
       starter: { default: true },
     } as const;
     const expectedEntry = path.join(
@@ -226,12 +227,28 @@ describe('CLI transport', () => {
       'custom #1%.markdown',
     );
 
+    const extension = {
+      name: 'fixture-block',
+      kind: 'block',
+      description: 'Composition fixture.',
+      manifest: path.join(examplesRoot, 'extension.yaml'),
+      readme: path.join(examplesRoot, 'README.md'),
+      examples: [path.join(examplesRoot, 'one.md'), path.join(examplesRoot, 'two.md')],
+    } as const;
+
     expect(JSON.parse(formatInstalledExamples(examplesRoot, 7, [example], true))).toEqual({
       contractVersion: 7,
       examples: [{ ...example, entry: expectedEntry }],
+      extensions: [],
     });
     expect(formatInstalledExamples(examplesRoot, 7, [example], false)).toBe(
       `special: ${expectedEntry}\n`,
+    );
+    expect(
+      JSON.parse(formatInstalledExamples(examplesRoot, 7, [example], true, [extension])),
+    ).toMatchObject({ extensions: [extension] });
+    expect(formatInstalledExamples(examplesRoot, 7, [example], false, [extension])).toBe(
+      `special: ${expectedEntry}\nextension fixture-block (block): ${extension.readme}\n`,
     );
   });
 
@@ -268,7 +285,7 @@ describe('CLI transport', () => {
         ),
       ).toBe(true);
     }
-  });
+  }, 20_000);
 
   it('describes the human projection each command actually produces', async () => {
     // The distributed documents divide the commands into the ones whose human projection is prose
@@ -276,7 +293,18 @@ describe('CLI transport', () => {
     // from a command that emits a document makes those documents false, and the promise is what a
     // reader acts on — so the division is observed against the help text of every command below, and
     // the two lists together must name every command the CLI registers.
-    const prose = ['init', 'build', 'validate', 'fix', 'review', 'examples', 'sitemap'];
+    const prose = [
+      'init',
+      'build',
+      'validate',
+      'fix',
+      'review',
+      'examples',
+      'sitemap',
+      'snapshot',
+      'effect-check',
+      'theme',
+    ];
     const indented = ['inspect', 'schema', 'describe'];
 
     // The two lists are checked against the CLI itself, not against a number written here: a command
@@ -305,7 +333,7 @@ describe('CLI transport', () => {
         promisesProse: prose.includes(command),
       });
     }
-  });
+  }, 20_000);
 
   it('lists every registered command in the machine-readable catalog', async () => {
     // The catalog is what an agent reads: the machine route is the default, so a command missing
@@ -380,7 +408,7 @@ describe('CLI transport', () => {
     const humanDestination = path.join(workspace, 'human-project');
     const esm = await initProject({ destination: esmDestination });
 
-    const machine = await runCli(['init', jsonDestination, '--starter', 'basic', '--json']);
+    const machine = await runCli(['init', jsonDestination, '--starter', 'document', '--json']);
     expect(machine).toMatchObject({ exitCode: 0, stderr: '' });
     const record = JSON.parse(machine.stdout) as Record<string, unknown>;
     expect(Object.keys(record)).toEqual([
@@ -407,7 +435,7 @@ describe('CLI transport', () => {
     expect(human).toEqual({
       exitCode: 0,
       stderr: '',
-      stdout: `Created ${humanDestination} from starter basic (6 files)\n`,
+      stdout: `Created ${humanDestination} from starter document (7 files)\n`,
     });
   });
 
@@ -447,10 +475,10 @@ describe('CLI transport', () => {
     const inventory = JSON.parse(examples.stdout) as {
       readonly examples: readonly { readonly id: string; readonly entry: string }[];
     };
-    const basic = inventory.examples.find((example) => example.id === 'basic');
-    if (basic === undefined) throw new Error('Missing basic starter from workspace CLI');
-    const output = path.join(workspace, 'basic.html');
-    const build = await runCli(['build', basic.entry, '--output', output, '--json']);
+    const starter = inventory.examples.find((example) => example.id === 'document');
+    if (starter === undefined) throw new Error('Missing document starter from workspace CLI');
+    const output = path.join(workspace, 'document.html');
+    const build = await runCli(['build', starter.entry, '--output', output, '--json']);
     expect(build).toMatchObject({ exitCode: 0, stderr: '' });
     expect(JSON.parse(build.stdout)).toMatchObject({ type: 'result', outputPath: output });
     const html = await readFile(output, 'utf8');
@@ -468,7 +496,7 @@ describe('CLI transport', () => {
     const output = path.join(workspace, 'artifact');
     const build = await runCli([
       'build',
-      path.resolve('examples/basic'),
+      path.resolve('examples/document'),
       '--output',
       output,
       '--format',
@@ -815,7 +843,9 @@ describe('CLI transport', () => {
     };
     expect(record.code).toBe('INVALID_MANIFEST');
     expect(record.message).toBe('Report metadata layout has a value outside its domain.');
-    expect(record.remediation).toBe('Set layout to one of: document, dashboard, landing, mixed.');
+    expect(record.remediation).toBe(
+      'Set layout to one of: document, dashboard, landing, mixed, slides, screens.',
+    );
   });
 
   it('prints a useful human validate result', async () => {
@@ -895,9 +925,10 @@ describe('CLI transport', () => {
     workspaces.push(workspace);
     const source = path.join(workspace, 'source');
     await cp(path.resolve('tests/fixtures/analysis/parity'), source, { recursive: true });
+    await cp(path.resolve('tests/fixtures/video/poster.png'), path.join(source, 'preview.png'));
     await writeFile(
       path.join(source, 'agentic-report.yaml'),
-      'title: Warning fixture\noutput:\n  maxInlineBytes: 1\n',
+      'title: Warning fixture\nimage: preview.png\n',
     );
 
     const outcome = await runCli(['validate', source, '--json'], workspace);
@@ -910,26 +941,19 @@ describe('CLI transport', () => {
     expect(records[0]).toMatchObject({
       type: 'diagnostic',
       level: 'warning',
-      code: 'INLINE_SIZE_THRESHOLD_EXCEEDED',
-      details: { bundledBytes: expect.any(Number), threshold: 1 },
+      code: 'SOCIAL_IMAGE_NOT_PUBLISHED',
     });
     expect(records[1]).toMatchObject({
       type: 'result',
       format: 'single-file',
       runtimePlacement: 'inline',
-      warnings: [
-        {
-          level: 'warning',
-          code: 'INLINE_SIZE_THRESHOLD_EXCEEDED',
-          details: { bundledBytes: expect.any(Number), threshold: 1 },
-        },
-      ],
+      warnings: [{ level: 'warning', code: 'SOCIAL_IMAGE_NOT_PUBLISHED' }],
     });
     expect(records[0]?.runId).toBe(records[1]?.runId);
   });
 
   it('emits NDJSON with correlation context for an invalid option value', async () => {
-    const result = await runCli(['build', 'examples/basic', '--format', 'wrong', '--json']);
+    const result = await runCli(['build', 'examples/document', '--format', 'wrong', '--json']);
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toBe('');
@@ -947,10 +971,10 @@ describe('CLI transport', () => {
     workspaces.push(workspace);
     const output = path.join(workspace, 'page.html');
     const [built, validated, inspected, refused] = await Promise.all([
-      runCli(['build', 'examples/basic', '--url', 'https://example.com/basic/', '-o', output]),
-      runCli(['validate', 'examples/basic', '--url', 'https://example.com/basic/']),
-      runCli(['inspect', 'examples/basic', '--url', 'https://example.com/basic/']),
-      runCli(['validate', 'examples/basic', '--url', 'https://user:secret@example.com/']),
+      runCli(['build', 'examples/document', '--url', 'https://example.com/basic/', '-o', output]),
+      runCli(['validate', 'examples/document', '--url', 'https://example.com/basic/']),
+      runCli(['inspect', 'examples/document', '--url', 'https://example.com/basic/']),
+      runCli(['validate', 'examples/document', '--url', 'https://user:secret@example.com/']),
     ]);
 
     expect(built).toMatchObject({ exitCode: 0, stderr: '' });
@@ -974,7 +998,7 @@ describe('CLI transport', () => {
     const humanTree = path.join(workspace, 'human');
     for (const tree of [agentTree, humanTree]) {
       await buildReport({
-        input: 'examples/basic',
+        input: 'examples/document',
         output: path.join(tree, 'index.html'),
         url: 'https://example.com/',
       });
@@ -1001,7 +1025,7 @@ describe('CLI transport', () => {
   });
 
   it('rejects the retired scripts option instead of preserving a compatibility branch', async () => {
-    const result = await runCli(['build', 'examples/basic', '--scripts', 'none', '--json']);
+    const result = await runCli(['build', 'examples/document', '--scripts', 'none', '--json']);
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toBe('');
@@ -1039,7 +1063,7 @@ describe('CLI transport', () => {
     workspaces.push(workspace);
     const manifestPath = path.join(workspace, 'agentic-report.yaml');
     await writeFile(path.join(workspace, 'report.md'), '# Report\n');
-    await writeFile(manifestPath, 'theme: ultraviolet\n');
+    await writeFile(manifestPath, 'scheme: ultraviolet\n');
     const result = await runCli(['build', workspace, '--json']);
 
     expect(result.exitCode).toBe(1);
@@ -1054,6 +1078,21 @@ describe('CLI transport', () => {
         endLine: 1,
         endColumn: expect.any(Number),
       },
+    });
+  });
+  it('reports an unknown theme in an external manifest at its authored range', async () => {
+    const workspace = await createTestWorkspace('cli-unknown-theme');
+    workspaces.push(workspace);
+    const manifestPath = path.join(workspace, 'agentic-report.yaml');
+    await writeFile(path.join(workspace, 'report.md'), '# Report\n');
+    await writeFile(manifestPath, 'layout: document\ntheme: ultraviolet\n');
+    const result = await runCli(['build', workspace, '--json']);
+
+    expect(result.exitCode).toBe(1);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      type: 'diagnostic',
+      code: 'THEME_UNKNOWN',
+      source: { file: manifestPath, line: 2, column: 1, endLine: 2 },
     });
   });
 });

@@ -13,13 +13,27 @@
     }
   },
   "oneOf": [
+    { "$ref": "#/$defs/eyebrow" },
     { "$ref": "#/$defs/section" },
     { "$ref": "#/$defs/contents" },
     { "$ref": "#/$defs/lead" },
+    { "$ref": "#/$defs/muted" },
+    { "$ref": "#/$defs/meta" },
     { "$ref": "#/$defs/actions" },
     { "$ref": "#/$defs/action" },
     { "$ref": "#/$defs/source-link" },
     { "$ref": "#/$defs/callout" },
+    { "$ref": "#/$defs/source-line" },
+    { "$ref": "#/$defs/beat" },
+    { "$ref": "#/$defs/count" },
+    { "$ref": "#/$defs/plural" },
+    { "$ref": "#/$defs/time" },
+    { "$ref": "#/$defs/swap" },
+    { "$ref": "#/$defs/typing" },
+    { "$ref": "#/$defs/mark" },
+    { "$ref": "#/$defs/process" },
+    { "$ref": "#/$defs/appear" },
+    { "$ref": "#/$defs/notes" },
     { "$ref": "#/$defs/decision" },
     { "$ref": "#/$defs/decision-option" },
     { "$ref": "#/$defs/checklist" },
@@ -27,6 +41,11 @@
     { "$ref": "#/$defs/cards" },
     { "$ref": "#/$defs/card" },
     { "$ref": "#/$defs/steps" },
+    { "$ref": "#/$defs/diff" },
+    { "$ref": "#/$defs/findings" },
+    { "$ref": "#/$defs/finding" },
+    { "$ref": "#/$defs/conversation" },
+    { "$ref": "#/$defs/message" },
     { "$ref": "#/$defs/response" },
     { "$ref": "#/$defs/question" },
     { "$ref": "#/$defs/bucket" },
@@ -42,6 +61,8 @@
     { "$ref": "#/$defs/popover" },
     { "$ref": "#/$defs/filter" },
     { "$ref": "#/$defs/toggle" },
+    { "$ref": "#/$defs/compare" },
+    { "$ref": "#/$defs/spotlight" },
     { "$ref": "#/$defs/chart" },
     { "$ref": "#/$defs/series" },
     { "$ref": "#/$defs/point" },
@@ -51,14 +72,27 @@
     { "$ref": "#/$defs/edge" },
     { "$ref": "#/$defs/legend" },
     { "$ref": "#/$defs/legend-item" },
+    { "$ref": "#/$defs/zoom" },
     { "$ref": "#/$defs/timeline" },
     { "$ref": "#/$defs/event" },
     { "$ref": "#/$defs/demo" },
     { "$ref": "#/$defs/asset" },
     { "$ref": "#/$defs/video" },
-    { "$ref": "#/$defs/font" }
+    { "$ref": "#/$defs/font" },
+    { "$ref": "#/$defs/each" },
+    { "$ref": "#/$defs/expect" }
   ],
   "$defs": {
+    "eyebrow": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "eyebrow" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
+      },
+      "required": ["name", "form", "attributes"]
+    },
     "section": {
       "type": "object",
       "additionalProperties": false,
@@ -86,9 +120,26 @@
             },
             "recipe": {
               "type": "string",
-              "enum": ["none", "hero", "evidence", "story", "rail", "metrics"],
+              "enum": [
+                "none",
+                "hero",
+                "evidence",
+                "story",
+                "rail",
+                "metrics",
+                "thesis",
+                "statement",
+                "blueprint",
+                "demo"
+              ],
               "description": "High-level package-owned section composition; explicit detailed attributes override its roles.",
               "default": "none"
+            },
+            "place": {
+              "type": "string",
+              "enum": ["flow", "opening"],
+              "description": "Where the section stands: in the flow of the page, or as the first screen beside the page title (only the first section).",
+              "default": "flow"
             },
             "width": {
               "type": "string",
@@ -158,20 +209,49 @@
             },
             "surface": {
               "type": "string",
-              "enum": ["plain", "mesh", "glow", "grain", "grid"],
-              "description": "Package-owned decorative surface that never replaces content.",
+              "enum": ["plain", "tint", "grain", "grid", "blueprint"],
+              "description": "Package-owned band behind the section: none, a one-colour tint, a fine grain, a drafting grid, or a blueprint grid with major and minor lines in the accent colour.",
               "default": "plain"
+            },
+            "frame": {
+              "type": "string",
+              "enum": ["none", "panel", "browser"],
+              "description": "Section edge: a full-width band with no border, or a bordered rounded panel. browser puts the first picture of the section in a browser window whose bar shows the real address (address) or, for a mock-up, the label Illustration (illustration=\"true\").",
+              "default": "none"
+            },
+            "address": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,298}\\S))\\s*$",
+              "format": "absolute-http-url",
+              "description": "The real address of the page in the picture, shown in the bar of frame=\"browser\": an absolute http or https URL."
+            },
+            "illustration": {
+              "type": "boolean",
+              "description": "The picture in frame=\"browser\" is a mock-up, not a real page: its bar says Illustration.",
+              "default": false
             },
             "transition": {
               "type": "string",
-              "enum": ["none", "reveal", "stagger"],
-              "description": "Bounded package-owned entrance treatment.",
+              "enum": ["none", "reveal", "stagger", "lines", "log", "clip", "staged"],
+              "description": "Bounded package-owned entrance treatment: one section reveal, children in turn, the section title line by line, or log: every code block of the section prints line by line like a log, with its whole text in the page from the start; clip opens the chapter from its lower edge; staged, on the first screen (place=\"opening\") only, brings in the page title by lines, then the eyebrow, the subtitle, the actions and the scene.",
               "default": "none"
             },
             "scene": {
               "type": "string",
-              "enum": ["none", "progress", "sticky"],
-              "description": "Content-driven scroll scene without changing document order.",
+              "enum": ["none", "progress", "sticky", "steps", "scrub"],
+              "description": "Content-driven scroll scene without changing document order; steps pins the section media while its beats scroll past and switches the picture, the lit part of the diagram or the lit code lines with each beat; scrub pins the media for one screen per beat (two to four) and plays the beats as a timeline of the scroll.",
+              "default": "none"
+            },
+            "slide-transition": {
+              "type": "string",
+              "enum": ["fade", "push", "wipe", "zoom", "none"],
+              "description": "How this slide arrives in a presentation (layout slides): a fade, a push, a wipe, a zoom, or at once; the duration is fixed and published.",
+              "default": "fade"
+            },
+            "media-effect": {
+              "type": "string",
+              "enum": ["none", "threads"],
+              "description": "WebGL treatment of the first image of the section: threads unweaves it into threads as it scrolls away. Off by default; a still image without WebGL, on a weak GPU, or under reduced motion.",
               "default": "none"
             },
             "interaction": {
@@ -190,6 +270,11 @@
               "type": "boolean",
               "description": "Enables one package-owned one-time section reveal in the normal-motion profile.",
               "default": false
+            },
+            "state": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,40})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,39}\\S))\\s*$",
+              "description": "Page state set while the reader has reached this section (its top passed the middle of the screen) and cleared when they scroll back above it; blocks with the same when light."
             }
           },
           "required": ["title"],
@@ -238,6 +323,34 @@
                     "properties": { "composition": { "enum": ["story", "stack"] } }
                   },
                   { "required": ["scene"], "properties": { "scene": { "enum": ["sticky"] } } }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack", "mosaic"] } }
+                  },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
                 ]
               }
             },
@@ -303,6 +416,36 @@
             {
               "not": {
                 "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "hero" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack", "mosaic"] } }
+                  },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "hero" } } },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
                   { "required": ["recipe"], "properties": { "recipe": { "const": "evidence" } } },
                   {
                     "required": ["composition"],
@@ -348,6 +491,36 @@
                     "properties": { "composition": { "enum": ["story", "stack"] } }
                   },
                   { "required": ["scene"], "properties": { "scene": { "enum": ["sticky"] } } }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "evidence" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack", "mosaic"] } }
+                  },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "evidence" } } },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
                 ]
               }
             },
@@ -418,6 +591,41 @@
             {
               "not": {
                 "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "story" } } },
+                  {
+                    "anyOf": [
+                      {
+                        "required": ["composition"],
+                        "properties": { "composition": { "enum": ["story", "stack", "mosaic"] } }
+                      },
+                      { "not": { "required": ["composition"] } }
+                    ]
+                  },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "story" } } },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
                   { "required": ["recipe"], "properties": { "recipe": { "const": "rail" } } },
                   {
                     "required": ["composition"],
@@ -468,6 +676,36 @@
                     "properties": { "composition": { "enum": ["story", "stack"] } }
                   },
                   { "required": ["scene"], "properties": { "scene": { "enum": ["sticky"] } } }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "rail" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack", "mosaic"] } }
+                  },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "rail" } } },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
                 ]
               }
             },
@@ -526,6 +764,365 @@
                   { "required": ["scene"], "properties": { "scene": { "enum": ["sticky"] } } }
                 ]
               }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "metrics" } } },
+                  {
+                    "anyOf": [
+                      {
+                        "required": ["composition"],
+                        "properties": { "composition": { "enum": ["story", "stack", "mosaic"] } }
+                      },
+                      { "not": { "required": ["composition"] } }
+                    ]
+                  },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "metrics" } } },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "thesis" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["mosaic", "stack"] } }
+                  },
+                  {
+                    "required": ["media"],
+                    "properties": { "media": { "enum": ["layers", "gallery"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "thesis" } } },
+                  { "required": ["media"], "properties": { "media": { "enum": ["layers"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "thesis" } } },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["progress"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "thesis" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack"] } }
+                  },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["sticky"] } } }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "thesis" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack", "mosaic"] } }
+                  },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "thesis" } } },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "statement" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["mosaic", "stack"] } }
+                  },
+                  {
+                    "required": ["media"],
+                    "properties": { "media": { "enum": ["layers", "gallery"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "statement" } } },
+                  { "required": ["media"], "properties": { "media": { "enum": ["layers"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "statement" } } },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["progress"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "statement" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack"] } }
+                  },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["sticky"] } } }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "statement" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack", "mosaic"] } }
+                  },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "statement" } } },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "blueprint" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["mosaic", "stack"] } }
+                  },
+                  {
+                    "required": ["media"],
+                    "properties": { "media": { "enum": ["layers", "gallery"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "blueprint" } } },
+                  { "required": ["media"], "properties": { "media": { "enum": ["layers"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "blueprint" } } },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["progress"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "blueprint" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack"] } }
+                  },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["sticky"] } } }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "blueprint" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack", "mosaic"] } }
+                  },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "blueprint" } } },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "demo" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["mosaic", "stack"] } }
+                  },
+                  {
+                    "required": ["media"],
+                    "properties": { "media": { "enum": ["layers", "gallery"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "demo" } } },
+                  { "required": ["media"], "properties": { "media": { "enum": ["layers"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "demo" } } },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["progress"] } } },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "demo" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack"] } }
+                  },
+                  { "required": ["scene"], "properties": { "scene": { "enum": ["sticky"] } } }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "demo" } } },
+                  {
+                    "required": ["composition"],
+                    "properties": { "composition": { "enum": ["story", "stack", "mosaic"] } }
+                  },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "allOf": [
+                  { "required": ["recipe"], "properties": { "recipe": { "const": "demo" } } },
+                  {
+                    "required": ["scene"],
+                    "properties": { "scene": { "enum": ["steps", "scrub"] } }
+                  },
+                  {
+                    "required": ["interaction"],
+                    "properties": { "interaction": { "enum": ["depth", "tilt"] } }
+                  }
+                ]
+              }
             }
           ]
         }
@@ -538,7 +1135,17 @@
       "properties": {
         "name": { "const": "contents" },
         "form": { "type": "string", "enum": ["leaf"] },
-        "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sticky": {
+              "type": "boolean",
+              "description": "On a landing: the chapters numbered and held at the edge of a wide screen while the reader scrolls, the current chapter marked; in the flow on a narrow screen and in print.",
+              "default": false
+            }
+          }
+        }
       },
       "required": ["name", "form", "attributes"]
     },
@@ -548,6 +1155,26 @@
       "properties": {
         "name": { "const": "lead" },
         "form": { "type": "string", "enum": ["container"] },
+        "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "muted": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "muted" },
+        "form": { "type": "string", "enum": ["text"] },
+        "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "meta" },
+        "form": { "type": "string", "enum": ["text"] },
         "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
       },
       "required": ["name", "form", "attributes"]
@@ -585,8 +1212,8 @@
           "properties": {
             "href": {
               "type": "string",
-              "pattern": "^\\s*(?:(?=(?:(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
-              "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected."
+              "pattern": "^\\s*(?:(?=(?:(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|tel:\\+?[0-9][0-9().-]{0,31}|sms:\\+?[0-9][0-9().,-]{0,63}(?:\\?body=[^\\s<>]*)?|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
+              "description": "Safe same-page, relative, HTTP(S), email, phone (tel:), or text-message (sms:) link target; executable and local-file schemes are rejected."
             },
             "kind": {
               "type": "string",
@@ -668,6 +1295,247 @@
             }
           }
         }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "source-line": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "source-line" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "date": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,30}\\S))\\s*$",
+              "description": "When the data or footage was taken: 2026-09-25, or 2026-09-25T01:17 together with zone."
+            },
+            "zone": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[A-Za-z][A-Za-z0-9_+/-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "IANA time zone of a date with a time, such as Europe/Moscow."
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "beat": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "beat" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "focus": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,638}\\S))\\s*$",
+              "description": "Diagram node and connection identities lit while this beat is current, separated by commas; a connection lights when named by its id or when both its nodes are lit."
+            },
+            "lines": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[1-9][0-9]{0,3}(?:-[1-9][0-9]{0,3})?(?:, ?[1-9][0-9]{0,3}(?:-[1-9][0-9]{0,3})?)*)(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,118}\\S))\\s*$",
+              "description": "Lines of the code block in the scene lit while this beat is current, such as 3, 2-4 or 1,5-7; the other lines dim."
+            },
+            "state": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,40})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,39}\\S))\\s*$",
+              "description": "Page state set from the moment this beat becomes current; in a scrub scene it stays set for the later beats, so the last beat holds every state of the scene."
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "count": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "count" },
+        "form": { "type": "string", "enum": ["text"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "when": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,40})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,39}\\S))\\s*$",
+              "description": "Page state that starts the count instead of the number coming into view, such as the chapter that the figure belongs to being reached."
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "plural": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "plural" },
+        "form": { "type": "string", "enum": ["text"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "forms": {
+              "type": "string",
+              "pattern": "^\\s*(?:\\S[\\s\\S]{1,198}\\S)\\s*$",
+              "description": "Noun forms separated by |: English one|other (file|files), Russian one|few|many (файл|файла|файлов)."
+            }
+          },
+          "required": ["forms"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "time": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "time" },
+        "form": { "type": "string", "enum": ["text"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "zone": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[A-Za-z][A-Za-z0-9_+/-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "IANA time zone the time is shown in and named by, such as Europe/Moscow; required when the value has a time."
+            },
+            "show": {
+              "type": "string",
+              "enum": ["auto", "date", "time", "datetime"],
+              "description": "What of the moment the page writes: auto (the date, and the time when one is written), date, time or datetime.",
+              "default": "auto"
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "swap": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "swap" },
+        "form": { "type": "string", "enum": ["text"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "words": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "The other words, separated by commas (one to three); the written label comes first and last."
+            }
+          },
+          "required": ["words"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "typing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "typing" },
+        "form": { "type": "string", "enum": ["text"] },
+        "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "mark": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "mark" },
+        "form": { "type": "string", "enum": ["text"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "shape": {
+              "type": "string",
+              "enum": ["underline", "circle", "strike"],
+              "description": "How the words are marked: a hand-drawn underline, a circle around them, or a strike through them.",
+              "default": "underline"
+            },
+            "seed": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9999,
+              "description": "Seed of the hand-drawn jitter (0–9999); the same seed draws the same line. By default it comes from the marked words."
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "process": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "process" },
+        "form": { "type": "string", "enum": ["text"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "current": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,78}\\S))\\s*$",
+              "description": "The step the process stands at, in review; the steps before it are done and the ones after it not started. Without it every step is done."
+            },
+            "returns": {
+              "type": "string",
+              "pattern": "^\\s*(?:\\S[\\s\\S]{1,398}\\S)\\s*$",
+              "description": "Returns drawn as arcs over the steps, separated by commas, each \"step>earlier step×N\"; a step returning to itself repeats."
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "appear": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "appear" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "effect": {
+              "type": "string",
+              "enum": ["rise", "fade", "wipe", "pop"],
+              "description": "How the content arrives on its step: rising, fading, wiping in from the start edge, or popping.",
+              "default": "rise"
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "notes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "notes" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
       },
       "required": ["name", "form", "attributes"]
     },
@@ -821,8 +1689,19 @@
             },
             "href": {
               "type": "string",
-              "pattern": "^\\s*(?:(?=(?:(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
-              "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected."
+              "pattern": "^\\s*(?:(?=(?:(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|tel:\\+?[0-9][0-9().-]{0,31}|sms:\\+?[0-9][0-9().,-]{0,63}(?:\\?body=[^\\s<>]*)?|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
+              "description": "Safe same-page, relative, HTTP(S), email, phone (tel:), or text-message (sms:) link target; executable and local-file schemes are rejected."
+            },
+            "status": {
+              "type": "string",
+              "enum": ["none", "good", "watch", "risk"],
+              "description": "State label shown on the card as text and a marker: good, watch or risk.",
+              "default": "none"
+            },
+            "when": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,40})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,39}\\S))\\s*$",
+              "description": "Page state that lights this card, such as a station that lights when the reader reaches its chapter; until then the card is dimmed. Without motion and in print the card is lit."
             }
           }
         }
@@ -845,6 +1724,149 @@
               "description": "Visible title."
             }
           }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "diff": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "diff" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "file": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,298}\\S))\\s*$",
+              "description": "Path of the changed file, shown above the change."
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "findings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "findings" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "finding" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "severity": {
+              "type": "string",
+              "enum": ["blocking", "major", "minor", "note"],
+              "description": "How much the finding blocks the change; shown as text, not only colour."
+            },
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "location": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,298}\\S))\\s*$",
+              "description": "Where the finding applies, such as a path and line."
+            }
+          },
+          "required": ["severity", "title"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "conversation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "conversation" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "illustrative": {
+              "type": "boolean",
+              "description": "Marks the mock as an illustration: its names, times and numbers are examples, not a record.",
+              "default": false
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "message": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "message" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,78}\\S))\\s*$",
+              "description": "Sender as the product names it: a person, an agent, a system."
+            },
+            "time": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,38}\\S))\\s*$",
+              "description": "When it was sent, as the product shows it, such as 01:17 or yesterday."
+            },
+            "side": {
+              "type": "string",
+              "enum": ["in", "out"],
+              "description": "in — received, drawn at the start edge; out — sent by the reader, drawn at the end edge.",
+              "default": "in"
+            },
+            "status": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,38}\\S))\\s*$",
+              "description": "Delivery or run status shown under the text, such as delivered or done."
+            },
+            "illustrative": {
+              "type": "boolean",
+              "description": "Marks the mock as an illustration: its names, times and numbers are examples, not a record.",
+              "default": false
+            }
+          },
+          "required": ["from"]
         }
       },
       "required": ["name", "form", "attributes"]
@@ -1016,8 +2038,8 @@
             },
             "href": {
               "type": "string",
-              "pattern": "^\\s*(?:(?=(?:(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
-              "description": "Safe same-page, relative, HTTP(S), or email link target; executable and local-file schemes are rejected."
+              "pattern": "^\\s*(?:(?=(?:(?:#[A-Za-z][A-Za-z0-9_-]{0,127}|https?://[^\\s<>]+|mailto:[^\\s<>]+|tel:\\+?[0-9][0-9().-]{0,31}|sms:\\+?[0-9][0-9().,-]{0,63}(?:\\?body=[^\\s<>]*)?|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:|//|/))[A-Za-z0-9.][^\\s<>\\\\]*))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,498}\\S))\\s*$",
+              "description": "Safe same-page, relative, HTTP(S), email, phone (tel:), or text-message (sms:) link target; executable and local-file schemes are rejected."
             },
             "bucket": {
               "type": "string",
@@ -1144,6 +2166,12 @@
               "type": "string",
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
               "description": "Visible title."
+            },
+            "orientation": {
+              "type": "string",
+              "enum": ["horizontal", "vertical"],
+              "description": "horizontal: the tab list above the panels. vertical: on a wide screen the tab list stands in a column beside the panels (arrow keys up and down move along it); on a narrow screen it returns above them.",
+              "default": "horizontal"
             }
           }
         }
@@ -1283,6 +2311,73 @@
       },
       "required": ["name", "form", "attributes"]
     },
+    "compare": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "compare" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "before": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Label of the first image.",
+              "default": "Before"
+            },
+            "after": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Label of the second image.",
+              "default": "After"
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "spotlight": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "spotlight" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "x": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Horizontal position of the detail, in per cent of the picture width from the left (0–100)."
+            },
+            "y": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Vertical position of the detail, in per cent of the picture height from the top (0–100)."
+            },
+            "zoom": {
+              "type": "number",
+              "minimum": 1.5,
+              "maximum": 4,
+              "description": "How many times the loupe enlarges the detail (1.5–4).",
+              "default": 2
+            }
+          },
+          "required": ["x", "y"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
     "chart": {
       "type": "object",
       "additionalProperties": false,
@@ -1318,6 +2413,11 @@
               "type": "string",
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
               "description": "Vertical-axis label."
+            },
+            "count-up": {
+              "type": "boolean",
+              "description": "Grow the bars, lines and slices from zero to their values, and count the slice percentages up, when the chart comes into view; under reduced motion and in print the values stand at once.",
+              "default": false
             }
           },
           "required": ["title", "description"]
@@ -1417,6 +2517,17 @@
               "enum": ["compact", "comfortable", "spacious"],
               "description": "Layout breathing room; the package keeps a readable result at every value.",
               "default": "comfortable"
+            },
+            "draw": {
+              "type": "string",
+              "enum": ["none", "scroll"],
+              "description": "Draw the connections as the diagram scrolls through the view, in flow order, with backward connections as a later phase, while a marker rides the connection being drawn; still and complete, the marker at the end, under reduced motion.",
+              "default": "none"
+            },
+            "pulse": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63}(\\s*,\\s*[a-z][a-z0-9-]{0,63})+)(?<!\\s)\\s*$)\\S[\\s\\S]{1,798}\\S)\\s*$",
+              "description": "A route of node identities separated by commas, each joined to the next by a connection: pulses travel along it three times when the diagram comes into view; under reduced motion the route is marked still."
             }
           },
           "required": ["title", "description"]
@@ -1491,6 +2602,11 @@
               "minimum": 1,
               "maximum": 20,
               "description": "Optional one-based flow layer; nodes sharing a row share a layer when their connections allow it."
+            },
+            "status": {
+              "type": "string",
+              "enum": ["done", "review", "returned", "pending"],
+              "description": "Where this step of a process stands: done, review, returned or pending; drawn in the theme status roles with a glyph, named in the legend in package words."
             }
           },
           "required": ["id", "label"]
@@ -1534,6 +2650,17 @@
               "enum": ["auto", "direct", "around"],
               "description": "Optional layout pull; direct keeps the connection short and straight, around lets it stretch.",
               "default": "auto"
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Optional connection identity, distinct from the node identities: a beat focus lights the connection by it."
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 999,
+              "description": "How many times the connection was taken, written «×N» on it: a return repeated, a retry."
             }
           },
           "required": ["from", "to"]
@@ -1586,6 +2713,16 @@
               "enum": ["neutral", "accent", "success", "warning"],
               "description": "Node emphasis this entry names; exclusive with edge and requires a label."
             },
+            "status": {
+              "type": "string",
+              "enum": ["done", "review", "returned", "pending"],
+              "description": "Node status this entry renames in the author's words; exclusive with edge and node."
+            },
+            "event": {
+              "type": "string",
+              "enum": ["accent", "success", "warning"],
+              "description": "Timeline event emphasis this entry names, inside a timeline; requires a label."
+            },
             "label": {
               "type": "string",
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
@@ -1597,6 +2734,32 @@
               "default": false
             }
           }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "zoom": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "zoom" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "node": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Identity of the node of the enclosing diagram that this flow opens."
+            },
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Title of the nested flow."
+            }
+          },
+          "required": ["node", "title"]
         }
       },
       "required": ["name", "form", "attributes"]
@@ -1678,15 +2841,28 @@
               "type": "integer",
               "minimum": -999999,
               "maximum": 999999,
-              "description": "Initial counter value.",
+              "description": "Initial counter value (counter demo only).",
               "default": 0
             },
             "step": {
               "type": "integer",
               "minimum": -999999,
               "maximum": 999999,
-              "description": "Amount added per activation.",
+              "description": "Amount added per activation (counter demo only).",
               "default": 1
+            },
+            "play": {
+              "type": "string",
+              "enum": ["none", "time", "scroll"],
+              "description": "none: a counter card. time: a playable scene whose beats advance by the page clock, with a play and a pause button, ending on its final frame. scroll: the scene is pinned while the reader scrolls through its beats.",
+              "default": "none"
+            },
+            "seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "description": "Seconds each beat of a play=\"time\" scene stays current (1–10); the theme pace scales it.",
+              "default": 3
             }
           }
         }
@@ -1729,7 +2905,24 @@
               "type": "string",
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
               "format": "relative-local-path",
-              "description": "Relative local video path: .webm, .mp4, .m4v, or .ogv."
+              "description": "Relative local video path: .webm, .mp4, .m4v, or .ogv. Give the most compatible encoding (H.264 MP4) here."
+            },
+            "sources": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,598}\\S))\\s*$",
+              "description": "Further encodings of the same video, separated by commas, in order of preference (for example AV1 and VP9 from agentic-screencast web); directory output offers all of them before src, one file embeds only the most compatible."
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["clip", "background", "manual"],
+              "description": "clip: muted, looping, plays while visible, with controls. background: muted and looping without controls, with a pause button; a poster is required. manual: starts only when the reader presses play, with sound.",
+              "default": "clip"
+            },
+            "chapters": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "format": "relative-local-path",
+              "description": "Relative WebVTT chapters file (.vtt), such as the one agentic-screencast web writes; the chapters appear as buttons under the video that jump to each chapter."
             },
             "poster": {
               "type": "string",
@@ -1741,6 +2934,23 @@
               "type": "string",
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,298}\\S))\\s*$",
               "description": "Visible caption under the video; it also names the video for assistive technology."
+            },
+            "start": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 3600,
+              "description": "Second of the recording where a looping clip or background starts and every loop returns (0–3600, up to two decimals): the useful part of a recording without re-encoding it."
+            },
+            "seam": {
+              "type": "string",
+              "enum": ["cut", "fade"],
+              "description": "How a looping clip or background joins its end to its start: cut jumps back at once, fade dims the last half-second and brightens the first, so the loop has no visible jump.",
+              "default": "cut"
+            },
+            "expand": {
+              "type": "boolean",
+              "description": "Adds an Expand button to a clip that opens it large in a dialog with the full player controls and sound.",
+              "default": false
             }
           },
           "required": ["src"]
@@ -1768,9 +2978,81 @@
               "type": "string",
               "pattern": "^\\s*(?:(?=(?:[\\p{L}\\p{N} _-]{1,80})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,78}\\S))\\s*$",
               "description": "CSS font family using letters, numbers, spaces, underscores, or hyphens."
+            },
+            "role": {
+              "type": "string",
+              "enum": ["body", "heading", "mono"],
+              "description": "Text role the font sets: body text and controls, headings and section titles, or code.",
+              "default": "body"
             }
           },
           "required": ["src", "family"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "each": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "each" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "in": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[A-Za-z_][A-Za-z0-9_-]*(?:\\.(?:[A-Za-z_][A-Za-z0-9_-]*|[0-9]+))*)(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Path of a list in the page data, such as run.blocks."
+            },
+            "as": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,31})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,30}\\S))\\s*$",
+              "description": "Name of the current item inside the body: {{as}} for a plain value, {{as.field}} for a field."
+            }
+          },
+          "required": ["in", "as"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "expect": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "expect" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[A-Za-z_][A-Za-z0-9_-]*(?:\\.(?:[A-Za-z_][A-Za-z0-9_-]*|[0-9]+))*)(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Path of the value the expectation reads, such as run.blocks."
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000,
+              "description": "The list at the path has exactly this many items."
+            },
+            "min": {
+              "type": "number",
+              "description": "A list has at least this many items (min=\"1\": not empty); a number is at least this value."
+            },
+            "max": {
+              "type": "number",
+              "description": "A list has at most this many items; a number is at most this value."
+            },
+            "equals": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,298}\\S))\\s*$",
+              "description": "A text, number or true/false value written exactly like this."
+            }
+          },
+          "required": ["data"]
         }
       },
       "required": ["name", "form", "attributes"]

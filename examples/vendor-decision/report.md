@@ -5,9 +5,9 @@ description: A fictional security and procurement decision comparing hard gates,
 language: en
 localizations:
   ru: report.ru.md
-theme: light
 layout: document
-preset: editorial
+theme: calm-paper
+scheme: light
 ---
 
 # AI support vendor decision packet
@@ -18,7 +18,7 @@ This demonstration follows a fictional procurement review for Lantern & Field, a
 operations company. Every vendor, score, control, price, and evidence record is sample data created for the
 report engine; none describes a real organization or commercial claim.
 
-:::::section{title="Decision signal" id="decision-signal" nav="Decision" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" surface="mesh" transition="stagger" choreography="cascade"}
+:::::section{title="Decision signal" id="decision-signal" nav="Decision" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" surface="tint" transition="stagger" choreography="cascade"}
 :::callout{kind="info" title="Decision in one minute"}
 Select **Cedar Assist** for a 90-day reversible pilot. Meridian Reply has the highest weighted score, but it
 fails a non-negotiable regional-processing gate. Quill Support passes every gate but trails Cedar on
@@ -69,7 +69,7 @@ non-compensating, so additional usability or price points cannot make the candid
 :::
 :::::
 
-::::::section{title="Weighted comparison" id="evidence" nav="Evidence" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="grid" transition="stagger" scene="progress" choreography="cascade"}
+::::::section{title="Weighted comparison" id="evidence" nav="Evidence" width="wide" align="start" tone="plain" composition="split" viewport="bounded" section-density="editorial" type="display" surface="plain" transition="stagger" scene="progress" choreography="cascade"}
 
 :::::chart{type="bar" title="Weighted score after evidence review" description="Sample weighted scores rank Meridian Reply first at 89, Cedar Assist second at 84, and Quill Support third at 77; Meridian remains ineligible because it fails a separate mandatory constraint." x-label="Fictional candidate" y-label="Weighted score out of 100"}
 ::::series{label="Weighted score"}
@@ -119,7 +119,7 @@ evidence dates; changing any of them requires a new decision record.
 
 ::::::
 
-:::::section{title="Decision and conditions" id="conditions" nav="Conditions" width="wide" align="start" tone="accent" composition="stack" viewport="adaptive" section-density="compact" type="editorial" surface="glow" transition="reveal" choreography="cascade"}
+:::::section{title="Decision and conditions" id="conditions" nav="Conditions" width="wide" align="start" tone="accent" composition="stack" viewport="adaptive" section-density="compact" type="editorial" surface="plain" transition="reveal" choreography="cascade"}
 
 :::decision{title="Approve Cedar Assist for a reversible pilot"}
 Proceed only for the EU support queue and exclude payment data. Security owns deletion verification by
@@ -141,6 +141,9 @@ Evaluate deletion propagation and peak-volume response against the written thres
 :::event{date="04 Sep" title="Go or exit" kind="success"}
 Approve wider use only if every gate remains passing and both pilot conditions close with evidence.
 :::
+::legend-item{event="accent" label="Evidence checkpoint"}
+::legend-item{event="warning" label="Restricted access"}
+::legend-item{event="success" label="Final decision"}
 ::::
 
 :::steps{title="Close the procurement decision"}

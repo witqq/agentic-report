@@ -1,0 +1,11 @@
+kind: block
+name: metric-card
+description: One metric with its value and trend, drawn as a callout.
+staticEquivalent: A bordered notice with the metric name, its value in bold and the explanation.
+forms: [leaf, container]
+attributes:
+  title: { type: string, required: true, description: Metric name }
+  value: { type: string, required: true, description: Metric value as written }
+  trend: { type: enum, values: [up, down, flat], default: flat }
+template: template.md
+examples: [example-one.md, example-two.md]

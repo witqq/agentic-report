@@ -1,0 +1,3 @@
+:::callout{title="Status"}
+{{status}}
+:::
