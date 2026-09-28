@@ -214,6 +214,12 @@
       "kind": "copy"
     },
     {
+      "id": "skill-reference-cli",
+      "href": "skills/agentic-report/references/cli.md",
+      "source": "../skills/agentic-report/references/cli.md",
+      "kind": "copy"
+    },
+    {
       "id": "skill-reference-compose",
       "href": "skills/agentic-report/references/compose.md",
       "source": "../skills/agentic-report/references/compose.md",
@@ -226,9 +232,21 @@
       "kind": "copy"
     },
     {
+      "id": "skill-reference-effect-api",
+      "href": "skills/agentic-report/references/effect-api.md",
+      "source": "../skills/agentic-report/references/effect-api.md",
+      "kind": "copy"
+    },
+    {
       "id": "skill-reference-extensions",
       "href": "skills/agentic-report/references/extensions.md",
       "source": "../skills/agentic-report/references/extensions.md",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-reference-node-api",
+      "href": "skills/agentic-report/references/node-api.md",
+      "source": "../skills/agentic-report/references/node-api.md",
       "kind": "copy"
     },
     {

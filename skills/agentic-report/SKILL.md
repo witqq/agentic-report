@@ -3,7 +3,7 @@ name: agentic-report
 description: Create and build polished local pages from declarative Markdown — landing pages, documents (reports, research, architecture, code reviews, incidents, guides), dashboards, answer forms, and presentations that can be shown or filmed — starting from a brief, with design advice and snapshots before handoff. Use for static agent-to-human page handoff; do not use for hosted apps, live collaboration, deployment, publication, or bespoke frontend development.
 license: MIT
 metadata:
-  version: '0.18.1'
+  version: '0.19.0'
   homepage: https://agentic-report.witqq.dev/
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run. Snapshots also need Playwright and its Chromium.
 ---
@@ -90,17 +90,18 @@ Review Workspace (`review: true`) is a mode any page can switch on, not a catego
 Use the release pinned in this skill:
 
 ```sh
-npx --yes agentic-report@0.18.1 init ./my-page --starter landing --json
-npx --yes agentic-report@0.18.1 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.19.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.19.0 build ./my-page --output ./my-page.html --json
 node scripts/design-check.mjs ./my-page
 npx --yes playwright@1.62.1 install chromium
-npx --yes -p agentic-report@0.18.1 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
+npx --yes -p agentic-report@0.19.0 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
 ```
 
 `--output` names the file `build` writes (a folder with `--format directory`). A source written by hand
 needs only a `title` in its frontmatter; `contractVersion` names the source-contract major it is written
-for — omit it for version 1. What each command prints, delivery flags, and building from a reviewed source
-checkout instead of npm are in [`references/process.md`](references/process.md).
+for — omit it for version 1. Arguments, result records, diagnostics, and delivery flags are in
+[`references/cli.md`](references/cli.md); building from a reviewed source checkout is in
+[`references/process.md`](references/process.md).
 
 ## Where the answer is
 
@@ -111,6 +112,8 @@ checkout instead of npm are in [`references/process.md`](references/process.md).
 | Which directive answers the reader's question; where does a tool fit?   | [`references/vocabulary-use.md`](references/vocabulary-use.md)                                                                                       |
 | How are chapters, data, diagrams, recordings, slides, messages written? | [`references/compose.md`](references/compose.md)                                                                                                     |
 | What is the exact name or allowed value of a field or attribute?        | [`references/catalog.md`](references/catalog.md); `agentic-report schema --scope manifest\|directives\|source\|theme`                                |
+| How do I invoke a command and parse its agent result or diagnostics?    | [`references/cli.md`](references/cli.md)                                                                                                             |
+| How do I call the public Node ESM API from another program?             | [`references/node-api.md`](references/node-api.md)                                                                                                   |
 | What does the product support, and which rule depends on which?         | `agentic-report describe` (its `authoredRules`)                                                                                                      |
 | How is my source structured, what did each recipe resolve to?           | `agentic-report inspect ./my-page`                                                                                                                   |
 | Which complete page can I copy from?                                    | `agentic-report examples`; the exemplars at the end of [`references/playbook.md`](references/playbook.md)                                            |
@@ -119,6 +122,7 @@ checkout instead of npm are in [`references/process.md`](references/process.md).
 | Why does a design rule exist, and how is it fixed?                      | [`references/design-rules.md`](references/design-rules.md)                                                                                           |
 | Where may a picture, clip, font, or effect code come from?              | [`references/assets.md`](references/assets.md)                                                                                                       |
 | The vocabulary lacks what the page needs: do I extend it, and how?      | [`references/extensions.md`](references/extensions.md); the reference extensions in `agentic-report examples`                                        |
+| How do I implement an effect with the complete public context API?      | [`references/effect-api.md`](references/effect-api.md)                                                                                               |
 | How do I audit the prose?                                               | [`references/prose.md`](references/prose.md), [`references/prose-en.md`](references/prose-en.md), [`references/prose-ru.md`](references/prose-ru.md) |
 | How is Russian text set?                                                | [`references/typography-ru.md`](references/typography-ru.md)                                                                                         |
 | How do I check the design, look at the result, review, and hand over?   | [`references/process.md`](references/process.md)                                                                                                     |

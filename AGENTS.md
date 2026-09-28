@@ -19,6 +19,11 @@ commit, everything an agent reads about it:
 
 Each fact lives in one place and the others link to it; a copied fact drifts.
 
+The skill knowledge must be usable without opening external links: state each lesson as an action, condition,
+measurement, or counterexample in the relevant reference. Keep an external address only when the address
+itself is an action target, a literal example, or a licence requirement. List every allowed address with
+its file and reason in `tests/unit/skill-self-contained.test.ts`; the test also rejects obsolete exceptions.
+
 ## Where to look
 
 | Question                                       | Where                                                                                                                    |
@@ -49,6 +54,11 @@ Each fact lives in one place and the others link to it; a copied fact drifts.
 Simplicity, visual quality, and usability are the primary product criteria. `agentic-report` must make a
 polished agent-to-human page materially easier and faster to produce than implementing an equivalent page
 from scratch.
+
+Optimize the agent's path from a brief to a finished, high-quality page. Common cases should need only
+declarative source and strong defaults: keep layout decisions and visual quality in the package, make the
+ordinary `init` → edit → `build` path short, and prefer existing universal primitives before introducing
+another author choice or using a custom extension for a design-specific need.
 
 - Guarantee quality by construction. Ordinary declarative content composed from package-owned components and
   blocks must produce a coherent, polished, responsive result by default.
@@ -102,7 +112,9 @@ tests.
 
 ## Verification
 
-- Run tests only through `pnpm test`, `pnpm test:unit`, or `pnpm test:e2e`; these invoke Testfold.
+- Run tests only through `pnpm test`, `pnpm test:ci`, `pnpm test:unit`, or `pnpm test:e2e`; these invoke
+  Testfold. The default `pnpm test` runs unit and E2E locally; pull-request and release automation use
+  browser-free `pnpm verify:ci`, and scheduled nightly automation runs E2E.
 - Read `test-results/summary.json` and generated failure Markdown before rerunning failures.
 - Run `pnpm verify` before a commit when the environment supports browser tests.
 - Browser tests open normal generated artifacts through `file://`; do not introduce a test server or a

@@ -375,7 +375,7 @@ export const authoringRegistry = {
         },
       },
     },
-    resources: ['local images', 'downloadable local assets', 'local fonts'],
+    resources: ['local images', 'local video', 'downloadable local assets', 'local fonts'],
   },
   output: OUTPUT_CONTRACT,
   page: PAGE_CONTRACT,
@@ -639,7 +639,7 @@ export const authoringRegistry = {
     { id: 'describe', description: 'Return the complete source contract.' },
     {
       id: 'schema',
-      description: 'Return manifest, directive, or complete source JSON Schema.',
+      description: 'Return manifest, directive, complete source, or theme JSON Schema.',
     },
     {
       id: 'examples',

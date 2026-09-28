@@ -13,7 +13,7 @@ Only the syntax below and the generated schemas are accepted.
 
 The input is a Markdown file or a directory containing `report.md` or `index.md`. A source directory may
 also contain one YAML/JSON manifest, confined English/Russian alternate Markdown entries, Markdown partials,
-images, downloadable resources, and fonts. References are relative to the primary entry's canonical
+images, videos, downloadable resources, and fonts. References are relative to the primary entry's canonical
 directory. The compiler resolves symbolic links before reading contents and rejects a canonical target
 outside that directory.
 
@@ -396,7 +396,7 @@ CSS values, class names, JSX, templates, URLs, and callbacks are not accepted.
 `agentic-report describe --json` and the ESM `getSourceContract()` return the built-in themes with their
 intent and palette under `page.themes`, and the theme fields, accents, font families and contrast pairs
 under `page.theme`.
-The public landing uses `midnight`, Executive brief `daylight`, vendor decision `calm-paper`, launch
+The public landing uses `neutral`, Executive brief `daylight`, vendor decision `calm-paper`, launch
 readiness and incident review extend `ember`, Terminal portfolio uses `terminal`, Cinematic story `noir`,
 Motion showcase and research `aurora`, the landing starter `neutral`, and architecture and the dashboard
 `blueprint`. These sources compose the same public components without page-specific CSS.
@@ -1229,7 +1229,7 @@ publish, or deploy. Unknown directives fail instead of silently producing ambigu
 runs only through the [extensions](#extensions) the page declares: a provider runs locally at build time
 like any build script the author chose, an island runs in a sandboxed frame without network or access to
 the page, and an effect's bundled script is allowed by its hash only on pages that use it. `validate`,
-`inspect` and `inspect-review` expand the page as `build` does and therefore run its providers as well: a
+`inspect` and `review` expand the page as `build` does and therefore run its providers as well: a
 provider is code, so an untrusted source with providers must not be validated or inspected either. An
 effect module is bundled with everything it imports, including files outside the source root such as
 `node_modules`; the build result lists those files in the effect's `notes`.

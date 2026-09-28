@@ -13,6 +13,33 @@ const packageMetadata = JSON.parse(await readFile(path.resolve('package.json'), 
   readonly version: string;
   readonly engines: { readonly node: string };
 };
+const exampleRoutes = (
+  JSON.parse(await readFile(path.resolve('website/routes.json'), 'utf8')) as {
+    readonly routes: readonly {
+      readonly id: string;
+      readonly href: string;
+      readonly kind: 'page' | 'copy' | 'generated';
+    }[];
+  }
+).routes.filter((route) => route.kind === 'page' && route.id.startsWith('example-'));
+const examplesWithContents = new Set([
+  'incident-review',
+  'vendor-decision',
+  'launch-readiness',
+  'document',
+  'answer',
+  'code-review',
+  'research',
+  'architecture',
+  'tutorial',
+  'dashboard',
+  'landing',
+  'visual-catalog',
+  'interactive-catalog',
+  'visualization-catalog',
+  'terminal-portfolio',
+  'cinematic-story',
+]);
 const minimumNodeVersion = packageMetadata.engines.node.match(/^>=(\d+\.\d+\.\d+)$/u)?.[1];
 if (minimumNodeVersion === undefined) {
   throw new Error('The public-site test requires a minimum Node.js engine declaration.');
@@ -64,9 +91,7 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
 }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium');
   await page.goto(fileUrl('index.html'));
-  await expect(
-    page.getByRole('heading', { name: 'A page worth handing over. From Markdown.' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'A finished page from Markdown.' })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
   const attribution = page.locator('[data-site-attribution]');
   await expect(attribution.getByRole('link', { name: 'Made with Moira' })).toHaveAttribute(
@@ -151,32 +176,17 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
     'This document defines the current author-facing input',
   );
 
-  for (const example of [
-    'incident-review',
-    'vendor-decision',
-    'launch-readiness',
-    'document',
-    'answer',
-    'code-review',
-    'research',
-    'architecture',
-    'tutorial',
-    'dashboard',
-    'landing',
-    'visual-catalog',
-    'interactive-catalog',
-    'visualization-catalog',
-    'terminal-portfolio',
-    'cinematic-story',
-  ]) {
-    await page.goto(fileUrl(`examples/${example}/index.html`));
+  expect(exampleRoutes.length).toBeGreaterThan(0);
+  for (const example of exampleRoutes) {
+    await page.goto(fileUrl(example.href));
     await expect(page.locator('main')).not.toBeEmpty();
-    // Лендинг открывает оглавление из верхней панели, остальные страницы держат его сбоку.
-    if ((await page.locator('html').getAttribute('data-nav-mode')) === 'dialog') {
-      await page.locator('[data-nav-toggle]').click();
+    if (examplesWithContents.has(example.href.split('/')[1] ?? '')) {
+      if ((await page.locator('html').getAttribute('data-nav-mode')) === 'dialog') {
+        await page.locator('[data-nav-toggle]').click();
+      }
+      await expect(page.locator('[data-navigation]'), example.href).toBeVisible();
+      await page.keyboard.press('Escape');
     }
-    await expect(page.locator('[data-navigation]')).toBeVisible();
-    await page.keyboard.press('Escape');
   }
 });
 

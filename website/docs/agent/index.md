@@ -14,9 +14,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the result:
 
 ```sh
-npx --yes agentic-report@0.18.1 init ./my-page --starter landing --json
+npx --yes agentic-report@0.19.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.18.1 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.19.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. Build validates the complete source before writing, so
@@ -67,13 +67,14 @@ When the user does not trust the published package, do not silently fall back to
 release tag, let the user inspect the repository, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.18.1 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.19.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
 
 # Pause for source, package.json, pnpm-lock.yaml, and lifecycle-script review.
 pnpm install --frozen-lockfile
+pnpm exec playwright install chromium
 pnpm verify
 pnpm build
 
@@ -266,7 +267,7 @@ the page and look at the result:
 ```sh
 node skills/agentic-report/scripts/design-check.mjs ./my-page
 npx --yes playwright@1.62.1 install chromium
-npx --yes -p agentic-report@0.18.1 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
+npx --yes -p agentic-report@0.19.0 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
 ```
 
 The design check is advice on the skill's side; `build` and `validate` never run it. A rule that is wrong
@@ -277,13 +278,18 @@ for one page is switched off by a line with its reason in that page's `brief.md`
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.18.1 describe --json
-npx --yes agentic-report@0.18.1 schema --scope source
-npx --yes agentic-report@0.18.1 examples --json
+npx --yes agentic-report@0.19.0 describe --json
+npx --yes agentic-report@0.19.0 schema --scope source
+npx --yes agentic-report@0.19.0 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),
 or the [agentic-report skill](../../skills/agentic-report/SKILL.md) when more guidance is needed.
+
+For a Node.js integration that imports the package instead of invoking the CLI, use the
+[published root API guide](../../skills/agentic-report/references/node-api.md). When a page needs a
+declared visual effect extension, start with the [extension choice guide](../../skills/agentic-report/references/extensions.md)
+and use the [effect API guide](../../skills/agentic-report/references/effect-api.md) for its module contract.
 
 ## Boundaries
 

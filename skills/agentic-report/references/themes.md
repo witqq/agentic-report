@@ -110,7 +110,7 @@ When the product has its own colours, let the package place them instead of gues
 contrast:
 
 ```sh
-npx --yes agentic-report@0.18.1 theme --colors "#0b5fff,#ff7a00" --extends neutral --output ./my-page/brand-theme.yaml
+npx --yes agentic-report@0.19.0 theme --colors "#0b5fff,#ff7a00" --extends neutral --output ./my-page/brand-theme.yaml
 ```
 
 `--colors` takes one or two colours written `#rgb` or `#rrggbb`. The first becomes the accent family —
@@ -185,12 +185,9 @@ graphite rather than a night blue. A dash marks a value that was not measured.
 | Igloo Inc | a monospace readout over the scene                                | —                    | Two inks, `#b6bac5` and `#383e4e`, one ice material   |
 | Hubtown   | a vertical contents beside the title                              | `rgb(2, 10, 24)`     | Night blue with sci-fi controls: the part not to copy |
 
-Sources: [Linear](https://linear.app), [Vercel](https://vercel.com), [Stripe](https://stripe.com),
-[Temporal](https://temporal.io), [Resend](https://resend.com), [Cursor](https://cursor.com),
-[Raycast](https://www.raycast.com), [Warp](https://www.warp.dev), [Anthropic](https://www.anthropic.com),
-[Framer](https://www.framer.com), [Clerk](https://clerk.com), [n8n](https://n8n.io),
-[Igloo Inc](https://www.igloo.inc), [Hubtown](https://hubtown.co.in), measured live by the Moira landing
-research on 2026-09-25.
+These observations were measured live by the Moira landing research on 2026-09-25. Use the recorded values
+as examples of scale and contrast, then measure current references for the page's own subject before
+choosing a direction; a named site's current appearance may differ from this record.
 
 ## Example
 

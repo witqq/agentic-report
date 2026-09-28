@@ -11,6 +11,7 @@ Run tests only through the package scripts:
 
 ```bash
 pnpm test
+pnpm test:ci
 pnpm test:unit
 pnpm test:e2e
 ```
@@ -22,15 +23,17 @@ writes its summary to `test-results/summary.json` and failure reports under
 The Testfold configuration rejects suites that produce zero test results. This guard prevents setup or
 discovery failures from being reported as successful empty runs.
 
-`pnpm verify` is the required local, pull-request and release gate. It checks generated authoring projections,
-types, lint, formatting, the complete unit suite and the installed npm package through `pnpm pack:check`.
-The package check opens its installed output in Chromium; it does not run the full E2E suite.
+`pnpm test` runs unit and browser E2E locally. It first prepares one installed npm candidate through
+`pnpm pack:check`; `pnpm test:e2e` prepares its own candidate when run alone. The package check installs the
+tarball in a clean npm consumer and checks its CLI, ESM and skill paths without launching a browser.
+Installed-artifact `file://` behavior and snapshots are E2E tests. The clean consumer needs npm registry
+access, and browser E2E needs Chromium installed through Playwright.
 
-The full `pnpm test:e2e` suite runs in `.github/workflows/e2e.yml` every day at 03:00 UTC
-and can be started manually with `workflow_dispatch`. It does not block a pull request or release. Run it
-locally when changing browser behavior or diagnosing a nightly failure. `pnpm test` also runs unit and E2E
-through Testfold. Run these suites sequentially: both own files under `test-results/`, so concurrent workspace
-setup and cleanup would invalidate their results.
+`pnpm verify` is the full local gate: generated authoring projections, types, lint, formatting and
+`pnpm test`. `pnpm test:ci` runs the unit tier; `pnpm verify:ci` adds the non-browser package check and is
+the pull-request and release gate. Neither CI nor release installs Chromium. The full E2E suite also runs
+on the nightly schedule in `.github/workflows/e2e.yml` at 03:00 UTC; it does not block a pull request or
+release. Run test commands sequentially: their workspaces under `test-results/` are shared.
 
 ## Tiers
 
@@ -327,7 +330,7 @@ setup and cleanup would invalidate their results.
   first-use journeys initialize and edit a starter, then build directly for single-file and directory
   output without an analysis-command prerequisite. The single-file route first supplies invalid source to
   build and observes its diagnostic plus preservation of an existing output, then corrects the source and observes
-  successful publication. The exact first-use artifacts are opened through `file://`; optional validate and
+  successful publication. E2E opens the first-use artifacts through `file://`; optional validate and
   inspect behavior remains independently covered. Installed CLI and ESM share builds additionally prove
   exact source-link counts and absence of their workstation paths while default builds retain the links.
   It asserts exact
@@ -336,7 +339,13 @@ setup and cleanup would invalidate their results.
   compiler uses only package-owned runtime assets. Repeated clean-consumer builds compare exact
   single-file bytes and directory trees across independent CLI processes.
   The accepted record is written beside the unique candidate and to the stable ignored
-  `test-results/package/candidate-evidence.json` handoff used by the release runbook.
+  `test-results/package/candidate-evidence.json` handoff used by the release runbook. It also lists the
+  installed artifacts used by browser E2E, without claiming that those browser checks passed.
+
+The installed-package E2E opens those single-file and directory artifacts, checks scheme and review controls,
+builds a bilingual starter for locale switching, and runs the installed snapshot command against the project's
+pinned Playwright dependency. It checks the resulting PNG matrix and contact sheet without a second npm
+installation.
 
 The E2E setup also stages the same-origin public tree and builds directory-format documentation fixtures.
 Starter and non-starter artifact preparation derives from the example registry, so newly registered pages
@@ -349,8 +358,9 @@ assert code/content containment, exercise responsive navigation, and capture des
 states in both formats. Screenshots supplement behavioral and byte assertions; they are never the only
 evidence.
 
-Tests do not need a URL, port, service, credential, database, or external API. Test workspaces and failure
-artifacts live under ignored `test-results/`.
+Generated pages need no URL, port, service, credential, database, or external API. The installed-package
+candidate check does need npm registry access for its fresh consumer. Test workspaces and failure artifacts
+live under ignored `test-results/`.
 
 The deployment cache configuration has a unit contract check and a real-image acceptance check. Mutable
 HTML, release identity, direct documentation/source, and other unhashed routes must revalidate; twelve-hex

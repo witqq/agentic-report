@@ -32,7 +32,7 @@ Russian Markdown entries as direct source routes; staging copies those bytes wit
 rewriting them.
 
 The landing is an ordinary multi-scene visual narrative whose first viewport contains the product value,
-actions, and a generated visual result. Its style chooser, author path, public gallery, selected-text Review,
+a copyable skill-install command, actions, and a source-linked capture from a built example. Its style chooser, author path, public gallery, selected-text Review,
 agent setup, and trust boundary all come from the public declarative grammar. `website/routes.json` stages
 independent pages for every starter, the complete visual/interactive/data catalogs, Terminal and Cinematic
 showcases, the Executive brief, Motion showcase, decision showcases, and Review/Response workspaces. Their images are previews; the live

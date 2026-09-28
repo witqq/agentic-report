@@ -37,7 +37,7 @@
         }
       }
     },
-    "resources": ["local images", "downloadable local assets", "local fonts"]
+    "resources": ["local images", "local video", "downloadable local assets", "local fonts"]
   },
   "directives": {
     "eyebrow": {
@@ -4895,7 +4895,7 @@
     "fix": "Apply the replacements the product computed exactly, and nothing else.",
     "theme": "Write an author theme file from one or two brand colours, their lightness shifted until every contrast pair passes in both schemes.",
     "describe": "Return the complete source contract.",
-    "schema": "Return manifest, directive, or complete source JSON Schema.",
+    "schema": "Return manifest, directive, complete source, or theme JSON Schema.",
     "examples": "List packaged buildable examples and the reference extensions shipped beside them.",
     "sitemap": "Write sitemap.xml and robots.txt for a published tree of pages built with a public URL.",
     "snapshot": "Build a page and photograph it at several widths, in both schemes, with and without motion, with a contact sheet; with --measure, measure it instead of photographing.",
