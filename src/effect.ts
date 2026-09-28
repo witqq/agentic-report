@@ -174,6 +174,8 @@ export interface EffectContext {
   };
   /** Попросить пересборку геометрии; вызовы до следующей пересборки сливаются в один. */
   rebuild(reason: string): void;
+  /** Сообщить об асинхронном отказе отрисовки и перейти в следующий запасной режим. */
+  fallback(): void;
 }
 
 export interface EffectController {

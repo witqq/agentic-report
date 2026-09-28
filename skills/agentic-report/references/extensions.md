@@ -152,7 +152,9 @@ and in print — its two `examples` and the `licenses` of any third-party code i
 - **Three render modes from one geometry.** An effect runs in `live`, `still` (reduced motion: the final
   state drawn directly, never a timeline played forward) or `static` (no WebGL: the same drawing in 2D).
   Every state an effect sets on the page (`ctx.state.set`) exists in every mode. Below `motion: expressive`
-  in the frontmatter the page runs every effect `still` (`reason: "motion-level"`).
+  in the frontmatter the page runs every effect `still` (`reason: "motion-level"`). An asynchronous rendering
+  failure such as a lost WebGL context calls `ctx.fallback()` to enter the next safe mode; use
+  `ctx.rebuild(reason)` for changed geometry, not for resource failure.
 - **Page states are shared.** `ctx.state.set(name, value, document.documentElement)` sets a page state that
   lights every `card` and `:count` with `when="name"`; `ctx.state.watch(name, callback)` follows a state
   that a section, a beat or another effect sets — for example, a station an effect lights when its chapter
@@ -183,7 +185,12 @@ and in print — its two `examples` and the `licenses` of any third-party code i
   render mode, print and the two examples. The same checks run over the built-in `threads`
   (`--built-in threads`). When performance fails, read `performance-diagnostics.json` in the output
   directory for numeric timings by scroll and resize phase. Tasks outside those phases are listed
-  separately and do not affect the result; the file contains no authored text or paths. Hand
+  separately and do not affect the result. After a confirmed timing failure, a separate advisory
+  `effect-diagnostic` pass records the `wall-thread` reference's numeric build stages, including route
+  search and path pulling, under `phases[].builds`; unassigned builds are listed separately. If that
+  advisory pass cannot complete within 20 seconds, `diagnosticUnavailable: true` leaves the confirmed
+  verdict intact.
+  The file contains no authored text or paths. Hand
   over only at `11 of 11 checks passed`.
 - **Licences.** Effect and island code is your own or under MIT, Apache 2.0 or the Unlicense, with its
   notice kept and listed in `licenses`; take ideas from demos, not their code

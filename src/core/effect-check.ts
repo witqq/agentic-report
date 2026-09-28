@@ -76,6 +76,8 @@ export type EffectCheckId = (typeof EFFECT_CHECKS)[number][0];
 const WIDTHS = [390, 768, 1280, 1920] as const;
 const HEIGHT = 900;
 const LONG_TASK_MS = 50;
+const DIAGNOSTIC_PASS_TIMEOUT_MS = 20_000;
+const DIAGNOSTIC_CANCEL_TIMEOUT_MS = 2_000;
 
 /** Two fresh effect-on/effect-off measurements must agree before timing is attributed to an effect. */
 export interface PerformanceSample {
@@ -95,6 +97,42 @@ export function confirmedPerformanceFailures(
     effectCall: callExceeded(first) && callExceeded(second),
     pageTask: pageExceeded(first) && pageExceeded(second),
   };
+}
+
+/** An advisory browser pass cannot replace the verdict when it rejects or exceeds its own deadline. */
+export async function boundedDiagnostic<Result>(
+  pending: Promise<Result>,
+  cancel: () => Promise<unknown> | undefined,
+  timeoutMs: number,
+): Promise<{ readonly available: true; readonly value: Result } | { readonly available: false }> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error('diagnostic deadline')), timeoutMs);
+  });
+  try {
+    return { available: true, value: await Promise.race([pending, deadline]) };
+  } catch {
+    // Close its browser context to interrupt a pending Playwright call. Ignore diagnostic errors here;
+    // the already-confirmed performance failure remains the result and no raw error enters artifacts.
+    void pending.catch(() => undefined);
+    let cancelTimer: ReturnType<typeof setTimeout> | undefined;
+    const cancelDeadline = new Promise<void>((resolve) => {
+      cancelTimer = setTimeout(resolve, DIAGNOSTIC_CANCEL_TIMEOUT_MS);
+    });
+    await Promise.race([
+      Promise.resolve()
+        .then(cancel)
+        .then(
+          () => undefined,
+          () => undefined,
+        ),
+      cancelDeadline,
+    ]);
+    if (cancelTimer !== undefined) clearTimeout(cancelTimer);
+    return { available: false };
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
 }
 /** Доля пикселей строк текста, которую декор может задеть сглаживанием края. */
 const TEXT_COVER_TOLERANCE = 0.002;
@@ -255,6 +293,25 @@ interface BrowserFrame extends BrowserTask {
   readonly layoutAndPaintTailMs: number;
 }
 
+/** Optional build trace emitted by the reference wall-thread; every field is a number. */
+interface BuildTiming extends BrowserTask {
+  readonly width: number;
+  readonly measureMs: number;
+  readonly fieldMs: number;
+  readonly routeMs: number;
+  readonly routeWaypointsMs: number;
+  readonly routeSearchMs: number;
+  readonly routePullMs: number;
+  readonly routeLineMs: number;
+  readonly routeOtherMs: number;
+  readonly sampleMs: number;
+  readonly braidMs: number;
+  readonly stationsMs: number;
+  readonly ballsMs: number;
+  readonly nailsMs: number;
+  readonly chunksMs: number;
+}
+
 /** Browser work belongs to the phase in which it started; setup work stays outside the verdict. */
 export function partitionMeasuredEntries<Entry extends BrowserTask>(
   entries: readonly Entry[],
@@ -279,12 +336,14 @@ interface PerformancePhase {
   readonly effectCallMs: number;
   readonly longTasks: readonly BrowserTask[];
   readonly longFrames: readonly BrowserFrame[];
+  readonly builds: readonly BuildTiming[];
 }
 
 interface PerformancePass {
   readonly longTasks: number[];
   readonly unassignedLongTasks: readonly BrowserTask[];
   readonly unassignedLongFrames: readonly BrowserFrame[];
+  readonly unassignedBuilds: readonly BuildTiming[];
   readonly status: StatusSnapshot | undefined;
   readonly errors: string[];
   readonly phases: readonly PerformancePhase[];
@@ -559,7 +618,12 @@ class Session {
   async open(
     url: string,
     mode: Mode,
-    options: { width?: number; manual?: boolean; effectsOff?: boolean } = {},
+    options: {
+      width?: number;
+      manual?: boolean;
+      effectsOff?: boolean;
+      onContext?: (context: CheckContext) => void;
+    } = {},
   ): Promise<{ page: CheckPage; context: CheckContext; errors: string[] }> {
     const context = await this.browser.newContext({
       viewport: { width: options.width ?? 1280, height: HEIGHT },
@@ -567,6 +631,7 @@ class Session {
       reducedMotion: mode === 'still' ? 'reduce' : 'no-preference',
       colorScheme: 'light',
     });
+    options.onContext?.(context);
     const page = await context.newPage();
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
@@ -732,21 +797,26 @@ async function throttledPass(
   session: Session,
   url: string,
   effectsOff: boolean,
+  profileBuilds = false,
+  onContext?: (context: CheckContext) => void,
 ): Promise<PerformancePass> {
   const { page, context, errors } = await session.open(url, 'live', {
     manual: false,
     effectsOff,
+    ...(onContext === undefined ? {} : { onContext }),
   });
   try {
     const cdp = await context.newCDPSession(page);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
-    await page.evaluate(() => {
+    await page.evaluate((profile) => {
       const holder = window as unknown as {
         __performanceTasks: BrowserTask[];
         __performanceFrames: BrowserFrame[];
+        __agenticReportBuildTimings?: BuildTiming[];
       };
       holder.__performanceTasks = [];
       holder.__performanceFrames = [];
+      if (profile) holder.__agenticReportBuildTimings = [];
       new PerformanceObserver((list) => {
         for (const entry of list.getEntries())
           holder.__performanceTasks.push({ startMs: entry.startTime, durationMs: entry.duration });
@@ -784,8 +854,8 @@ async function throttledPass(
             });
           }
         }).observe({ type: 'long-animation-frame' });
-    }, undefined);
-    const phases: Array<Omit<PerformancePhase, 'longTasks' | 'longFrames'>> = [];
+    }, profileBuilds);
+    const phases: Array<Omit<PerformancePhase, 'longTasks' | 'longFrames' | 'builds'>> = [];
     const phase = async (
       name: PerformancePhase['name'],
       action: () => Promise<void>,
@@ -838,10 +908,50 @@ async function throttledPass(
       const holder = window as unknown as {
         __performanceTasks: BrowserTask[];
         __performanceFrames: BrowserFrame[];
+        __agenticReportBuildTimings?: unknown;
       };
+      // The extension is authored code. Copy only finite numbers under fixed keys into public output.
+      const finite = (value: unknown): number =>
+        typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
+      const rawBuilds = holder.__agenticReportBuildTimings;
+      const builds: BuildTiming[] = Array.isArray(rawBuilds)
+        ? rawBuilds.slice(0, 128).flatMap((raw: unknown) => {
+            if (raw === null || typeof raw !== 'object') return [];
+            const record = raw as Record<string, unknown>;
+            if (
+              typeof record.startMs !== 'number' ||
+              !Number.isFinite(record.startMs) ||
+              typeof record.durationMs !== 'number' ||
+              !Number.isFinite(record.durationMs)
+            )
+              return [];
+            return [
+              {
+                startMs: finite(record.startMs),
+                durationMs: finite(record.durationMs),
+                width: finite(record.width),
+                measureMs: finite(record.measureMs),
+                fieldMs: finite(record.fieldMs),
+                routeMs: finite(record.routeMs),
+                routeWaypointsMs: finite(record.routeWaypointsMs),
+                routeSearchMs: finite(record.routeSearchMs),
+                routePullMs: finite(record.routePullMs),
+                routeLineMs: finite(record.routeLineMs),
+                routeOtherMs: finite(record.routeOtherMs),
+                sampleMs: finite(record.sampleMs),
+                braidMs: finite(record.braidMs),
+                stationsMs: finite(record.stationsMs),
+                ballsMs: finite(record.ballsMs),
+                nailsMs: finite(record.nailsMs),
+                chunksMs: finite(record.chunksMs),
+              },
+            ];
+          })
+        : [];
       return {
         tasks: holder.__performanceTasks,
         frames: holder.__performanceFrames,
+        builds,
         longAnimationFramesSupported:
           PerformanceObserver.supportedEntryTypes.includes('long-animation-frame'),
       };
@@ -849,15 +959,18 @@ async function throttledPass(
     const status = await session.status(page);
     const tasks = partitionMeasuredEntries(measurements.tasks, phases);
     const frames = partitionMeasuredEntries(measurements.frames, phases);
+    const builds = partitionMeasuredEntries(measurements.builds, phases);
     const measuredPhases: PerformancePhase[] = phases.map((item, index) => ({
       ...item,
       longTasks: tasks.byPhase[index] ?? [],
       longFrames: frames.byPhase[index] ?? [],
+      builds: builds.byPhase[index] ?? [],
     }));
     return {
       longTasks: measuredPhases.flatMap((item) => item.longTasks.map((task) => task.durationMs)),
       unassignedLongTasks: tasks.unassigned,
       unassignedLongFrames: frames.unassigned,
+      unassignedBuilds: builds.unassigned,
       status:
         status === undefined
           ? undefined
@@ -882,34 +995,50 @@ async function throttledPass(
  */
 async function checkPerformance(session: Session, url: string, output: string): Promise<Outcome> {
   const passes: Array<{
-    readonly role: 'effect' | 'baseline' | 'effect-confirmation' | 'baseline-confirmation';
+    readonly role:
+      'effect' | 'baseline' | 'effect-confirmation' | 'baseline-confirmation' | 'effect-diagnostic';
     readonly longestEffectCallMs: number;
     readonly longTaskDurationsMs: readonly number[];
     readonly unassignedLongTasks: readonly BrowserTask[];
     readonly unassignedLongFrames: readonly BrowserFrame[];
+    readonly unassignedBuilds: readonly BuildTiming[];
     readonly longAnimationFramesSupported: boolean;
     readonly phases: readonly PerformancePhase[];
   }> = [];
-  const pass = async (
+  let diagnosticUnavailable = false;
+  const persist = async (): Promise<void> => {
+    // Save after each completed pass: CI can reach its aggregate deadline before the next test starts.
+    await writeFile(
+      path.join(output, 'performance-diagnostics.json'),
+      `${JSON.stringify(
+        { version: 1, passes, ...(diagnosticUnavailable ? { diagnosticUnavailable: true } : {}) },
+        null,
+        2,
+      )}\n`,
+    );
+  };
+  const append = async (
     role: (typeof passes)[number]['role'],
-    effectsOff: boolean,
-  ): Promise<PerformancePass> => {
-    const result = await throttledPass(session, url, effectsOff);
+    result: PerformancePass,
+  ): Promise<void> => {
     passes.push({
       role,
       longestEffectCallMs: result.status?.longestMs ?? 0,
       longTaskDurationsMs: result.longTasks,
       unassignedLongTasks: result.unassignedLongTasks,
       unassignedLongFrames: result.unassignedLongFrames,
+      unassignedBuilds: result.unassignedBuilds,
       longAnimationFramesSupported: result.longAnimationFramesSupported,
       phases: result.phases,
     });
-    // The E2E suite may reach its aggregate deadline before the next test starts. Save each
-    // completed pass now, so its browser evidence remains in the uploaded CI artifact.
-    await writeFile(
-      path.join(output, 'performance-diagnostics.json'),
-      `${JSON.stringify({ version: 1, passes }, null, 2)}\n`,
-    );
+    await persist();
+  };
+  const pass = async (
+    role: (typeof passes)[number]['role'],
+    effectsOff: boolean,
+  ): Promise<PerformancePass> => {
+    const result = await throttledPass(session, url, effectsOff);
+    await append(role, result);
     return result;
   };
   const withEffect = await pass('effect', false);
@@ -939,6 +1068,24 @@ async function checkPerformance(session: Session, url: string, output: string): 
       baselineTaskMs: confirmedBaseline,
     },
   );
+  // Build-stage probes cost measurable CPU time. Keep every verdict pass untouched and profile a
+  // separate effect-only context only after independent passes have already confirmed failure.
+  if (confirmed.effectCall || confirmed.pageTask) {
+    let diagnosticContext: CheckContext | undefined;
+    const pending = throttledPass(session, url, false, true, (context) => {
+      diagnosticContext = context;
+    });
+    const attempt = await boundedDiagnostic(
+      pending,
+      () => diagnosticContext?.close(),
+      DIAGNOSTIC_PASS_TIMEOUT_MS,
+    );
+    if (attempt.available) await append('effect-diagnostic', attempt.value);
+    else {
+      diagnosticUnavailable = true;
+      await persist();
+    }
+  }
   const problems: string[] = [];
   if (confirmed.effectCall)
     problems.push(

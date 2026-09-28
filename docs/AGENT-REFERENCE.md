@@ -1250,7 +1250,9 @@ Give each extension two unlike example pages; without them the build warns `EXTE
 
 An effect module is `export default defineEffect({ mount(ctx) { … return { at(t, progress) {} } } })` with
 `defineEffect` and its types imported from `agentic-report/effect`; the build bundles it with its imports
-into one script (refused above `budgetBytes` with `EXTENSION_EFFECT_OVER_BUDGET`). Check an effect with
+into one script (refused above `budgetBytes` with `EXTENSION_EFFECT_OVER_BUDGET`). For an asynchronous
+rendering failure, such as a lost WebGL context, call `ctx.fallback()` to enter the next safe mode;
+`ctx.rebuild(reason)` requests geometry recalculation. Check an effect with
 `agentic-report effect-check <extension.yaml> --out <directory>` — or the package's own with
 `--built-in threads` — which builds both examples, opens them in Chromium (Playwright beside the package,
 as for `snapshot`) and prints `N of M checks passed`: the declaration, the reduced-motion final state, the
@@ -1259,6 +1261,11 @@ text, four widths, content edits, states in every render mode, print and two unl
 writes one `check` NDJSON record per check and a result record; a failed check exits with code `1`. The
 output directory contains `performance-diagnostics.json` with numeric timings and fixed scroll/resize
 phase labels; tasks outside those measured phases are recorded separately and do not affect the result.
+After a confirmed timing failure, a separate `effect-diagnostic` pass records advisory build-stage timings
+without changing the 50 ms verdict; if it fails or exceeds 20 seconds, `diagnosticUnavailable: true`
+marks the missing profile without exposing its browser error. The `wall-thread` reference writes those numeric timings under
+`phases[].builds`, including route search and path pulling; builds outside measured phases appear in
+`unassignedBuilds`.
 The file contains no authored text or paths; inspect it when the 50 ms check fails. The context the effect
 receives is described in [the architecture](ARCHITECTURE.md#level-2--effects-and-the-effect-engine).
 `inspect` lists the extensions a page uses and `build` reports their uses and bundled bytes. The manifest

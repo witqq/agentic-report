@@ -1185,7 +1185,8 @@ marks the effect whose code is running (`__agenticReportEffectEngine.current`) a
   `when` blocks of the page;
 - `state.watch(name, callback)` — called at once and on every change of the page state `data-state-<name>`
   on the root, with its value or `undefined`;
-- `rebuild(reason)` — requests a rebuild.
+- `rebuild(reason)` — requests a rebuild; `fallback()` reports an asynchronous rendering failure and moves
+  the effect to the next safe mode without using the rebuild loop budget.
 
 **Canvas service and layers.** The engine keeps one fixed, viewport-sized layer (`.effect-layer`,
 `z-index: 25`: above content, below the header and panels, no pointer events, hidden in print) with the
@@ -1217,12 +1218,14 @@ every effect `still` with the reason `motion-level`. At most one effect on a pag
 declare `ownsScroll`; a second one is not mounted and reports why. Anchors and focus stay with the runtime.
 
 **The threads effect.** `media-effect="threads"` is the built-in effect `threads`
-(`src/browser/effects/threads.ts`) on the same engine. In `live` it draws every image of its hosts with one
-shader on its page canvas at the image's place on screen; in `static` a 2D canvas draws the same threads
+(`src/browser/effects/threads.ts`) on the same engine. In `live` the native image remains visible while
+unweaving progress is zero; only after it starts does one shader draw the image on the page canvas at its
+place on screen. Returning to zero restores the native image and clears the canvas once. In `static`, a 2D
+canvas draws the same threads
 (`threadColumn`: the same hash, pull, drift, width and fade as the shader) as strips of the image with the
 theme accent on their edges; in `still` it draws nothing and the image stays whole. The image carries
-`data-webgl-state` (`pending`, `live`, `2d`, `static`, `static-slow`); the stylesheet hides it while a
-canvas draws it and shows it in print.
+`data-webgl-state` (`pending`, `live`, `2d`, `static`, `static-slow`); `data-webgl-active` hides a `live`
+image only while the WebGL canvas draws it. The stylesheet shows the native image in print.
 
 **Status and checks.** `window.__agenticReportEffectEngine` exposes `status()` (per effect: mode, reason,
 hosts, the state names it ever set, the tokens it read, rebuilds, loop guards, errors and its longest call),

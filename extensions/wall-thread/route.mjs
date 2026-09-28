@@ -283,9 +283,11 @@ function sag(field, a, b, options) {
 /**
  * @param {{ field: ReturnType<typeof import('./field.mjs').buildField>, hosts: Array<{ role: string,
  *   box: { x: number, y: number, width: number, height: number }, heading: { x: number, y: number,
- *   width: number, height: number } }>, svh: number, options: Record<string, number> }} input
+ *   width: number, height: number } }>, svh: number, options: Record<string, number>,
+ *   timing?: { waypointsMs: number, searchMs: number, pullMs: number, lineMs: number, otherMs: number } }} input
  */
-export function buildRoute({ field, hosts, svh, options, random }) {
+export function buildRoute({ field, hosts, svh, options, random, timing }) {
+  const started = timing === undefined ? 0 : performance.now();
   const balls = [];
   const notes = [];
   /** @type {Array<{ kind: 'ball' | 'nail' | 'point', x: number, y: number, r?: number, hangs?: boolean, host?: number, role?: string }>} */
@@ -341,6 +343,7 @@ export function buildRoute({ field, hosts, svh, options, random }) {
     balls.push(ball);
     waypoints.splice(index + 1, 0, { kind: 'ball', ...ball, role: 'fill' });
   }
+  if (timing !== undefined) timing.waypointsMs = performance.now() - started;
 
   /** The route as ordered pieces: `shape` keeps its form, `line` sags between its ends. */
   const pieces = [];
@@ -363,11 +366,15 @@ export function buildRoute({ field, hosts, svh, options, random }) {
     if (cursor !== undefined) {
       const top = Math.min(cursor.y, arrive.y) - svh * 0.3;
       const bottom = Math.max(cursor.y, arrive.y) + svh * 0.3;
+      const searchStart = timing === undefined ? 0 : performance.now();
       const path =
         search(field, cursor, arrive, top, bottom, options) ??
         search(field, cursor, arrive, 0, field.height, options);
+      if (timing !== undefined) timing.searchMs += performance.now() - searchStart;
       if (path === undefined) notes.push(`no free path to waypoint ${index + 1}; drawn straight`);
+      const pullStart = timing === undefined ? 0 : performance.now();
       const taut = path === undefined ? [cursor, arrive] : pull(field, path, options.clear);
+      if (timing !== undefined) timing.pullMs += performance.now() - pullStart;
       for (let vertex = 1; vertex < taut.length; vertex += 1) {
         const a = taut[vertex - 1];
         const b = taut[vertex];
@@ -420,6 +427,7 @@ export function buildRoute({ field, hosts, svh, options, random }) {
   }
 
   // Centre line: shapes as they are, lines sagging between their ends.
+  const lineStart = timing === undefined ? 0 : performance.now();
   const line = [];
   const pieceStart = [];
   for (const piece of pieces) {
@@ -434,6 +442,18 @@ export function buildRoute({ field, hosts, svh, options, random }) {
   pieceStart.push(line.length);
   if (line.length === 0 && waypoints[0] !== undefined)
     line.push({ x: waypoints[0].x, y: waypoints[0].y });
+  if (timing !== undefined) {
+    timing.lineMs = performance.now() - lineStart;
+    timing.otherMs = Math.max(
+      0,
+      performance.now() -
+        started -
+        timing.waypointsMs -
+        timing.searchMs -
+        timing.pullMs -
+        timing.lineMs,
+    );
+  }
 
   return { line, pieceStart, stations, nails: kept, balls, notes };
 }

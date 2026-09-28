@@ -8,8 +8,9 @@
  * - `static` — WebGL недоступен или видеокарта слабая: те же нити рисует 2D-холст полосами картинки;
  * - `still` — уменьшенное движение или медленные кадры: холста нет, читатель видит картинку целой.
  *
- * Состояние на картинке — `data-webgl-state`: `live`, `2d`, `static` или `static-slow`; стили прячут
- * картинку, пока её рисует холст, а печать всегда показывает саму картинку.
+ * Состояние на картинке — `data-webgl-state`: `live`, `2d`, `static` или `static-slow`; `data-webgl-active`
+ * прячет оригинал только во время распускания нитей. До него видна сама картинка без перерисовки
+ * полноэкранного холста; печать всегда показывает оригинал.
  */
 
 import { defineEffect, type EffectContext, type EffectController } from '../../effect.js';
@@ -154,24 +155,37 @@ function mountLive(context: EffectContext, images: readonly HTMLImageElement[]):
   let alive = true;
   let lost = false;
   let hasVisibleFrame = false;
-  canvas.addEventListener('webglcontextlost', () => {
+  const onContextLost = (): void => {
+    if (!alive || lost) return;
     lost = true;
-  });
+    // A non-continuous effect may not receive another frame while the reader is stationary.
+    // Restore native pixels immediately, then use the engine's failure path to reach 2D even
+    // when its ordinary rebuild loop guard has been exhausted.
+    for (const image of images) image.removeAttribute('data-webgl-active');
+    context.fallback();
+  };
+  canvas.addEventListener('webglcontextlost', onContextLost);
   const draw = (): void => {
     if (lost) throw new Error('WebGL context was lost.');
     const ratio = surface.ratio;
     const visible: { texture: WebGLTexture; progress: number; box: DOMRect }[] = [];
     for (const image of images) {
       const texture = textures.get(image);
-      if (texture === undefined) continue;
+      if (texture === undefined) {
+        image.removeAttribute('data-webgl-active');
+        continue;
+      }
       const progress = threadsProgress(image);
       if (image === first) canvas.dataset.progress = progress.toFixed(3);
       const box = image.getBoundingClientRect();
-      if (box.bottom <= 0 || box.top >= canvas.height / ratio || box.width === 0) continue;
+      const active =
+        progress > 0 && box.bottom > 0 && box.top < canvas.height / ratio && box.width > 0;
+      image.toggleAttribute('data-webgl-active', active);
+      if (!active) continue;
       visible.push({ texture, progress, box });
     }
-    // Clearing a viewport-sized WebGL surface on every scroll frame is expensive even when its
-    // image is far outside the viewport. Clear once as the last image leaves, then leave it idle.
+    // The native image stays visible while progress is zero, so the full-screen surface is left
+    // untouched until unweaving starts. After an active image ends or moves out, clear once.
     if (visible.length === 0 && !hasVisibleFrame) return;
     hasVisibleFrame = visible.length > 0;
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -235,7 +249,11 @@ function mountLive(context: EffectContext, images: readonly HTMLImageElement[]):
     rebuild: draw,
     unmount() {
       alive = false;
-      for (const image of images) delete image.dataset.webglState;
+      canvas.removeEventListener('webglcontextlost', onContextLost);
+      for (const image of images) {
+        delete image.dataset.webglState;
+        image.removeAttribute('data-webgl-active');
+      }
     },
   };
 }

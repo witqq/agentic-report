@@ -384,8 +384,16 @@ effect-on or effect-off pass so a CI timeout does not erase earlier measurements
 falls inside a measured scroll or resize phase affect the result; tasks outside those phases are recorded
 separately as `unassignedLongTasks` and `unassignedLongFrames`. Each phase records effect-call duration,
 long tasks, and long animation frame script time, forced style time, and the time remaining after rendering
-and style/layout begin (`renderTailMs` and `layoutAndPaintTailMs`). The file contains numeric measurements
-and fixed labels only; it contains no authored text or paths.
+and style/layout begin (`renderTailMs` and `layoutAndPaintTailMs`). After a confirmed timing failure,
+`effect-check` runs a separate `effect-diagnostic` pass whose probes do not contribute to the 50 ms verdict.
+If that advisory pass fails or exceeds 20 seconds, `diagnosticUnavailable: true` records its absence without
+replacing the verdict or serializing the browser error.
+In that pass the `wall-thread` reference effect records each build in `phases[].builds`: total duration and
+numeric time spent measuring geometry,
+building the field, route, samples and braid, and assigning stations, balls, nails and chunks. Route time
+is split into waypoints, grid search, path pulling, line construction and other work. Builds outside a
+measured phase appear in `unassignedBuilds`. Build entries contain only finite
+numbers under fixed keys; the file otherwise uses fixed labels and flags, with no authored text or paths.
 
 ## Writing tests
 

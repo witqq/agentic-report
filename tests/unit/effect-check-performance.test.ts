@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  boundedDiagnostic,
   confirmedPerformanceFailures,
   partitionMeasuredEntries,
   type PerformanceSample,
@@ -82,5 +83,21 @@ describe('effect-check performance evidence', () => {
       effectCall: false,
       pageTask: false,
     });
+  });
+
+  it('bounds advisory profiling and cancels it without surfacing its private error', async () => {
+    // A diagnostic rejection or a nonsettling browser call must not replace a confirmed verdict.
+    let cancellations = 0;
+    const cancel = async (): Promise<void> => {
+      await Promise.resolve();
+      cancellations += 1;
+    };
+    expect(
+      await boundedDiagnostic(Promise.reject(new Error('CANARY_PRIVATE_ERROR')), cancel, 100),
+    ).toEqual({ available: false });
+    expect(await boundedDiagnostic(new Promise<never>(() => undefined), cancel, 10)).toEqual({
+      available: false,
+    });
+    expect(cancellations).toBe(2);
   });
 });

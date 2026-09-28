@@ -70,6 +70,8 @@ for (const [name, defects, expected] of [
   ['no-still', "{ time: 'clock' }", ['still']],
   // Дорогой кадр: при замедлении процессора вызов эффекта длится дольше 50 мс.
   ['slow-frame', '{ slow: true }', ['performance']],
+  // Диагностический проход падает, но четыре обычных прохода уже доказали тот же медленный кадр.
+  ['slow-diagnostic-throw', '{ slow: true, diagnosticThrow: true }', ['performance']],
   // Две метки на одном месте: детали эффекта наезжают друг на друга.
   ['overlapping-details', '{ doubleBadge: true }', ['widths']],
   // Эффект ставится один раз и падает, когда правка содержимого ставит его заново.
@@ -86,6 +88,94 @@ for (const [name, defects, expected] of [
     const result = await checkVariant(name, defects);
     expect(failed(result), JSON.stringify(result.checks, null, 2)).toEqual([...expected]);
     expect(result.summary).toBe(`${11 - expected.length} of 11 checks passed`);
+    if (name === 'slow-frame') {
+      // A confirmed slow effect gets an advisory profile; its four verdict passes stay unprofiled.
+      const artifact = await readFile(
+        path.resolve('test-results/e2e-effect-check/slow-frame/out/performance-diagnostics.json'),
+        'utf8',
+      );
+      expect(artifact).not.toContain('CANARY_AUTHOR_TEXT');
+      const diagnostics = JSON.parse(artifact) as {
+        passes: Array<{
+          role: string;
+          phases: Array<{ name: string; builds: Array<Record<string, unknown>> }>;
+          unassignedBuilds: Array<Record<string, unknown>>;
+        }>;
+      };
+      expect(diagnostics.passes.map((pass) => pass.role)).toEqual([
+        'effect',
+        'baseline',
+        'effect-confirmation',
+        'baseline-confirmation',
+        'effect-diagnostic',
+      ]);
+      for (const pass of diagnostics.passes.slice(0, 4))
+        expect([...pass.unassignedBuilds, ...pass.phases.flatMap((phase) => phase.builds)]).toEqual(
+          [],
+        );
+      const diagnostic = diagnostics.passes[4];
+      const fields = [
+        'startMs',
+        'durationMs',
+        'width',
+        'measureMs',
+        'fieldMs',
+        'routeMs',
+        'routeWaypointsMs',
+        'routeSearchMs',
+        'routePullMs',
+        'routeLineMs',
+        'routeOtherMs',
+        'sampleMs',
+        'braidMs',
+        'stationsMs',
+        'ballsMs',
+        'nailsMs',
+        'chunksMs',
+      ].sort();
+      for (const [phaseName, width] of [
+        ['resize-narrow', 768],
+        ['resize-wide', 1280],
+      ] as const) {
+        const builds = diagnostic?.phases.find((phase) => phase.name === phaseName)?.builds ?? [];
+        expect(builds.some((build) => build.width === width && Number(build.durationMs) > 0)).toBe(
+          true,
+        );
+      }
+      for (const build of [
+        ...(diagnostic?.unassignedBuilds ?? []),
+        ...(diagnostic?.phases.flatMap((phase) => phase.builds) ?? []),
+      ]) {
+        expect(Object.keys(build).sort()).toEqual(fields);
+        expect(
+          Object.values(build).every(
+            (value) => typeof value === 'number' && Number.isFinite(value),
+          ),
+        ).toBe(true);
+      }
+    }
+    if (name === 'slow-diagnostic-throw') {
+      // A hostile diagnostic value must not hide the independently confirmed performance failure.
+      const artifact = await readFile(
+        path.resolve(
+          'test-results/e2e-effect-check/slow-diagnostic-throw/out/performance-diagnostics.json',
+        ),
+        'utf8',
+      );
+      expect(artifact).not.toContain('CANARY_PRIVATE_ERROR');
+      expect(artifact).not.toContain('CANARY_AUTHOR_TEXT');
+      const diagnostics = JSON.parse(artifact) as {
+        diagnosticUnavailable?: boolean;
+        passes: Array<{ role: string }>;
+      };
+      expect(diagnostics.diagnosticUnavailable).toBe(true);
+      expect(diagnostics.passes.map((pass) => pass.role)).toEqual([
+        'effect',
+        'baseline',
+        'effect-confirmation',
+        'baseline-confirmation',
+      ]);
+    }
   });
 }
 

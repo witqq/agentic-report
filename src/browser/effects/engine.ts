@@ -429,6 +429,7 @@ function createContext(record: EffectRecord, mounted: Mounted): EffectContext {
         }),
     },
     rebuild: (reason) => requestRebuild(record, reason),
+    fallback: () => guard(() => fail(record, new Error('Effect requested a fallback.'))),
   };
 }
 

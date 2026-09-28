@@ -103,6 +103,11 @@ export default defineEffect({
     const reached = new Map();
 
     const build = () => {
+      // effect-check creates this optional numeric sink after mount, before its measured actions.
+      const timings = Array.isArray(window.__agenticReportBuildTimings)
+        ? window.__agenticReportBuildTimings
+        : undefined;
+      const ticks = timings === undefined ? undefined : [performance.now()];
       const options = ctx.pick({ wide: WIDE, narrow: NARROW });
       const svh = ctx.layout.svh;
       const root = document.documentElement;
@@ -152,6 +157,7 @@ export default defineEffect({
       // measured geometry and element identities: a replacement host or pinned element needs fresh
       // state targets and clipping even when its rectangle is unchanged.
       const geometry = JSON.stringify([width, height, svh, options.narrow, rects, hosts]);
+      ticks?.push(performance.now());
       if (
         built !== undefined &&
         geometry === measuredGeometry &&
@@ -162,10 +168,18 @@ export default defineEffect({
       )
         return;
       const field = buildField({ width, height, cell: options.cell, edge: options.edge, rects });
+      ticks?.push(performance.now());
       const random = ctx.random(`wall-thread:${width}`);
-      const route = buildRoute({ field, hosts, svh, options, random });
+      const routeTiming =
+        ticks === undefined
+          ? undefined
+          : { waypointsMs: 0, searchMs: 0, pullMs: 0, lineMs: 0, otherMs: 0 };
+      const route = buildRoute({ field, hosts, svh, options, random, timing: routeTiming });
+      ticks?.push(performance.now());
       const samples = sampleLine(route.line, options.step);
+      ticks?.push(performance.now());
       const braid = buildBraid(samples, field, route.balls, route.nails, options, random);
+      ticks?.push(performance.now());
       const nearest = (point) => {
         let best = 0;
         let distance = Number.POSITIVE_INFINITY;
@@ -189,6 +203,7 @@ export default defineEffect({
           host: ctx.hosts[station.host],
           sample: firstSampleOf(route.pieceStart[station.piece] ?? 0),
         }));
+      ticks?.push(performance.now());
       const balls = route.balls.map((ball, index) => {
         const inside = [];
         for (let sample = 0; sample < samples.count; sample += 1)
@@ -202,7 +217,9 @@ export default defineEffect({
           fibres: buildBall(ball, options, random),
         };
       });
+      ticks?.push(performance.now());
       const nails = route.nails.map((nail) => ({ ...nail, sample: nearest(nail) }));
+      ticks?.push(performance.now());
       // Chunks of samples with their vertical extent: a frame strokes only those on screen.
       const chunk = 48;
       const chunks = [];
@@ -229,6 +246,28 @@ export default defineEffect({
         notes: route.notes,
       };
       measuredGeometry = geometry;
+      if (ticks !== undefined && timings !== undefined) {
+        const ended = performance.now();
+        timings.push({
+          startMs: ticks[0],
+          durationMs: ended - ticks[0],
+          width,
+          measureMs: ticks[1] - ticks[0],
+          fieldMs: ticks[2] - ticks[1],
+          routeMs: ticks[3] - ticks[2],
+          routeWaypointsMs: routeTiming.waypointsMs,
+          routeSearchMs: routeTiming.searchMs,
+          routePullMs: routeTiming.pullMs,
+          routeLineMs: routeTiming.lineMs,
+          routeOtherMs: routeTiming.otherMs,
+          sampleMs: ticks[4] - ticks[3],
+          braidMs: ticks[5] - ticks[4],
+          stationsMs: ticks[6] - ticks[5],
+          ballsMs: ticks[7] - ticks[6],
+          nailsMs: ticks[8] - ticks[7],
+          chunksMs: ended - ticks[8],
+        });
+      }
     };
     build();
 

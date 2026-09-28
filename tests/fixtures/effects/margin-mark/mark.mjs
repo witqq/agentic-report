@@ -4,7 +4,7 @@ import { placeMark } from './place.mjs';
 const DRAW_SECONDS = 1.2;
 
 /**
- * @param {{ ownTimer?: boolean, colour?: string, placement?: 'free' | 'on-heading', time?: 'at' | 'clock', slow?: boolean, doubleBadge?: boolean, mountOnce?: boolean, liveOnlyState?: boolean, printedLayer?: boolean }} defects
+ * @param {{ ownTimer?: boolean, colour?: string, placement?: 'free' | 'on-heading', time?: 'at' | 'clock', slow?: boolean, diagnosticThrow?: boolean, doubleBadge?: boolean, mountOnce?: boolean, liveOnlyState?: boolean, printedLayer?: boolean }} defects
  */
 export function createMark(defects) {
   let mounts = 0;
@@ -110,7 +110,31 @@ export function createMark(defects) {
             element.style.height = `${box.height}px`;
           }
         },
-        rebuild: layout,
+        rebuild: defects.slow
+          ? () => {
+              const timings = Array.isArray(window.__agenticReportBuildTimings)
+                ? window.__agenticReportBuildTimings
+                : undefined;
+              const started = timings === undefined ? 0 : performance.now();
+              layout();
+              if (timings !== undefined) {
+                const durationMs = performance.now() - started;
+                timings.push({
+                  startMs: started,
+                  durationMs,
+                  width: document.documentElement.clientWidth,
+                  measureMs: durationMs,
+                  untrustedText: 'CANARY_AUTHOR_TEXT',
+                });
+                if (defects.diagnosticThrow && !Object.hasOwn(timings, 'slice'))
+                  Object.defineProperty(timings, 'slice', {
+                    get() {
+                      throw new Error('CANARY_PRIVATE_ERROR');
+                    },
+                  });
+              }
+            }
+          : layout,
         unmount() {
           for (const badge of badges) badge.element.remove();
         },

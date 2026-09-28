@@ -5903,7 +5903,7 @@
     height: 100%;
   }
 
-  img[data-webgl-state='live'],
+  img[data-webgl-state='live'][data-webgl-active],
   img[data-webgl-state='2d'] {
     visibility: hidden;
   }
@@ -5913,6 +5913,7 @@
       display: none;
     }
 
+    img[data-webgl-state='live'][data-webgl-active],
     img[data-webgl-state] {
       visibility: visible;
     }
