@@ -9,8 +9,8 @@ import type { AgenticReportError } from '../../src/diagnostics.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
 
 /**
- * Словарь движения на стороне сборки: предел роста рантайма, WebGL-код только на страницах с
- * приёмом, детерминизм сборки и отказы в неверной разметке сцены по шагам и счётчика.
+ * Словарь движения на стороне сборки: предел роста рантайма, код движка только на страницах
+ * с эффектами расширений, детерминизм сборки и отказы в неверной разметке сцены и счётчика.
  */
 const workspaces: string[] = [];
 
@@ -41,8 +41,6 @@ async function failure(markdown: string): Promise<AgenticReportError> {
   throw new Error('Build unexpectedly succeeded.');
 }
 
-const THREADS =
-  '# Motion\n\n::::section{title="Threads" media-effect="threads"}\n![Plane](a.png)\n::::\n';
 const DIAGRAM = [
   ':::diagram{title="Flow" description="A to C and back." layout="right" draw="scroll"}',
   '::node{id="a" label="A"}',
@@ -63,33 +61,41 @@ describe('motion vocabulary build', () => {
     expect(gzipSync(runtime, { level: 9 }).length).toBeLessThanOrEqual(29_650 + (15 + 9) * 1024);
   });
 
-  it('ships WebGL code only on a page that uses a WebGL effect, in both formats', async () => {
+  it('ships the effect engine only on a page with an effect extension, in both formats', async () => {
     const plain = await source('# Motion\n\n![Plane](a.png)\n');
     await buildReport({ input: plain, output: path.join(plain, 'page.html') });
-    expect(await readFile(path.join(plain, 'page.html'), 'utf8')).not.toContain('u_threads');
+    expect(await readFile(path.join(plain, 'page.html'), 'utf8')).not.toContain(
+      '__agenticReportEffectEngine',
+    );
 
-    const effect = await source(THREADS);
-    await buildReport({ input: effect, output: path.join(effect, 'page.html') });
-    const html = await readFile(path.join(effect, 'page.html'), 'utf8');
-    expect(html).toContain('u_threads');
-    expect(html).toMatch(/<img(?=[^>]*data-webgl="threads")(?=[^>]*src="data:image\/png;base64,)/u);
+    const effect = path.resolve('tests/fixtures/extensions/effect');
+    const output = path.join(plain, 'effect.html');
+    await buildReport({ input: effect, output });
+    expect(await readFile(output, 'utf8')).toContain('__agenticReportEffectEngine');
 
-    await buildReport({ input: effect, output: path.join(effect, 'site'), format: 'directory' });
-    const assets = await readdir(path.join(effect, 'site', 'assets'));
+    await buildReport({ input: effect, output: path.join(plain, 'site'), format: 'directory' });
+    const assets = await readdir(path.join(plain, 'site', 'assets'));
     const runtime = assets.find((name) => name.startsWith('runtime.'));
     expect(runtime).toBeDefined();
-    expect(await readFile(path.join(effect, 'site', 'assets', runtime ?? ''), 'utf8')).toContain(
-      'u_threads',
+    expect(await readFile(path.join(plain, 'site', 'assets', runtime ?? ''), 'utf8')).toContain(
+      '__agenticReportEffectEngine',
     );
-    // Текстура на `file://` должна быть своей: картинка приёма встроена и в каталоговом выводе.
-    expect(await readFile(path.join(effect, 'site', 'index.html'), 'utf8')).toMatch(
-      /<img(?=[^>]*data-webgl="threads")(?=[^>]*src="data:image\/png;base64,)/u,
+    expect(await readFile(path.join(plain, 'site', 'index.html'), 'utf8')).not.toContain(
+      'data-webgl',
     );
+  });
+
+  it('rejects the removed section media effect instead of silently accepting it', async () => {
+    const refused = await failure(
+      '# Motion\n\n::::section{title="Picture" media-effect="threads"}\n![Plane](a.png)\n::::\n',
+    );
+    expect(refused.diagnostic.code).toBe('UNKNOWN_DIRECTIVE_ATTRIBUTE');
+    expect(refused.diagnostic.message).toContain('media-effect');
   });
 
   it('builds a page with every motion technique byte-identically twice', async () => {
     const root = await source(
-      `${THREADS}\n::::section{title="Steps" scene="steps" transition="lines"}\n${DIAGRAM}\n\n:::beat{focus="a, b"}\nOne.\n:::\n\n:::beat{focus="b, c"}\nTwo :count[1,284].\n:::\n::::\n`,
+      `# Motion\n\n::::section{title="Steps" scene="steps" transition="lines"}\n${DIAGRAM}\n\n:::beat{focus="a, b"}\nOne.\n:::\n\n:::beat{focus="b, c"}\nTwo :count[1,284].\n:::\n::::\n`,
     );
     await buildReport({ input: root, output: path.join(root, 'one.html') });
     await buildReport({ input: root, output: path.join(root, 'two.html') });

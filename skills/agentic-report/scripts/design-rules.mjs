@@ -91,14 +91,13 @@ const RULES = {
       fix: 'Let most chapters simply be there (transition="none") and keep an entrance for the one or two where the story turns.',
     };
   },
-  // Catches effects competing for attention: more than one pointer, WebGL or magnetic effect on a page.
+  // Catches effects competing for attention: more than one pointer or magnetic effect on a page.
   'DR-ONE-EFFECT': ({ structure }) => {
     const pointer = structure.sections.filter((section) => section.interaction !== 'none').length;
-    const webgl = structure.sections.filter((section) => section.mediaEffect !== 'none').length;
-    const effects = pointer + webgl + structure.magneticActions;
+    const effects = pointer + structure.magneticActions;
     if (effects <= MAXIMUM_EFFECTS) return undefined;
     return {
-      message: `The page has ${effects} pointer or WebGL effects (${pointer} section interactions, ${webgl} WebGL media, ${structure.magneticActions} magnetic actions).`,
+      message: `The page has ${effects} pointer effects (${pointer} section interactions, ${structure.magneticActions} magnetic actions).`,
       fix: 'Keep the one effect that carries meaning, usually on the opening, and remove the rest.',
     };
   },
@@ -118,7 +117,7 @@ const RULES = {
     return undefined;
   },
   // Catches a page that moves although its brief decided it would not: the brief answers motion «none»
-  // and a section still enters, reacts to the pointer, runs a scene, a choreography or a WebGL effect, or
+  // and a section still enters, reacts to the pointer, runs a scene or a choreography, or
   // an action is magnetic, while the manifest has not stopped the page with motion: none.
   'DR-BRIEF-MATCH': ({ structure, brief }) => {
     if (!brief.present || structure.motion === 'none') return undefined;
@@ -129,8 +128,7 @@ const RULES = {
         section.transition !== 'none' ||
         section.interaction !== 'none' ||
         section.scene !== 'none' ||
-        section.choreography !== 'none' ||
-        section.mediaEffect !== 'none',
+        section.choreography !== 'none',
     ).length;
     // Counts, played scenes, drawn diagrams and swapped or typed words move too, outside the sections' roles.
     const elements = structure.movingElements ?? 0;

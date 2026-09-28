@@ -248,12 +248,6 @@
               "description": "How this slide arrives in a presentation (layout slides): a fade, a push, a wipe, a zoom, or at once; the duration is fixed and published.",
               "default": "fade"
             },
-            "media-effect": {
-              "type": "string",
-              "enum": ["none", "threads"],
-              "description": "WebGL treatment of the first image of the section: threads unweaves it into threads as it scrolls away. Off by default; a still image without WebGL, on a weak GPU, or under reduced motion.",
-              "default": "none"
-            },
             "interaction": {
               "type": "string",
               "enum": ["none", "depth", "tilt"],

@@ -425,7 +425,6 @@ export interface PageSectionStructure {
   readonly scene: string;
   readonly interaction: string;
   readonly choreography: string;
-  readonly mediaEffect: string;
   readonly media: PageMediaCounts;
 }
 

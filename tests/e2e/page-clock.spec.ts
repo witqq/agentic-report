@@ -10,7 +10,7 @@ import { expect, test } from './fixtures.js';
 
 /**
  * Часы страницы: в ручном режиме `window.__clock.seek(t)` приводит всё движение страницы — появление
- * секции, досчёт числа, прогресс сцены и WebGL-нити — к моменту `t`. Приёмка: один и тот же `t` даёт
+ * секции, досчёт числа и прогресс сцены — к моменту `t`. Приёмка: один и тот же `t` даёт
  * побайтово одинаковый снимок на двух загрузках и после перемотки туда и обратно, разные `t` — разные
  * снимки.
  */
@@ -39,10 +39,6 @@ async function buildClockPage(project: string): Promise<string> {
       '::::section{title="Drifts" id="drifts" scene="progress"}',
       '![A mineral plane](plane.jpg)',
       '::::',
-      '',
-      '::::section{title="Unweaves" id="unweaves" media-effect="threads"}',
-      '![A mineral plane seen from orbit](plane.jpg)',
-      '::::',
     ].join('\n'),
   );
   const output = path.join(root, 'page.html');
@@ -56,14 +52,6 @@ async function openManual(page: Page, url: string): Promise<void> {
   });
   await page.goto(url);
   await page.evaluate(() => document.fonts.ready.then(() => true));
-  // Нити загружают текстуру вне главного потока; снимать можно, когда холст живой.
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () => document.querySelector<HTMLImageElement>('img[data-webgl]')?.dataset.webglState,
-      ),
-    )
-    .toMatch(/^(live|static)$/u);
 }
 
 /**
@@ -127,18 +115,14 @@ test('a recording sets scroll-driven progress through data-clock-progress, appli
       scene: document
         .querySelector<HTMLElement>('#drifts')
         ?.style.getPropertyValue('--scene-progress'),
-      threads: document.querySelector<HTMLCanvasElement>('canvas.webgl-canvas')?.dataset.progress,
-      webgl: document.querySelector<HTMLImageElement>('img[data-webgl]')?.dataset.webglState,
     }));
   await page.evaluate(() => {
     document.querySelector('#drifts')?.setAttribute('data-clock-progress', '0.25');
-    document.querySelector('img[data-webgl]')?.setAttribute('data-clock-progress', '0.6');
   });
   await seek(page, 1);
   const set = await state();
-  // Ловит: сцена и нити читают только положение на экране, и запись не может выставить их прогресс.
+  // Ловит: сцена читает только положение на экране, и запись не может выставить её прогресс.
   expect(set.scene).toBe('0.2500');
-  if (set.webgl === 'live') expect(set.threads).toBe('0.600');
 
   await page.evaluate(() => {
     document.querySelector('#drifts')?.setAttribute('data-clock-progress', '0.75');

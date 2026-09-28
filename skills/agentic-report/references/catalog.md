@@ -783,7 +783,6 @@ Forms: container. Children: markdown.
 | `transition`       | `none`, `reveal`, `stagger`, `lines`, `log`, `clip`, `staged`                                      | no       | `none`      |
 | `scene`            | `none`, `progress`, `sticky`, `steps`, `scrub`                                                     | no       | `none`      |
 | `slide-transition` | `fade`, `push`, `wipe`, `zoom`, `none`                                                             | no       | `fade`      |
-| `media-effect`     | `none`, `threads`                                                                                  | no       | `none`      |
 | `interaction`      | `none`, `depth`, `tilt`                                                                            | no       | `none`      |
 | `choreography`     | `none`, `cascade`                                                                                  | no       | `none`      |
 | `reveal`           | true or false                                                                                      | no       | `false`     |
@@ -1048,7 +1047,7 @@ Forms: container. Children: zoom-part-directives. Required parent: `diagram`.
   "examples": "List packaged buildable examples and the reference extensions shipped beside them.",
   "sitemap": "Write sitemap.xml and robots.txt for a published tree of pages built with a public URL.",
   "snapshot": "Build a page and photograph it at several widths, in both schemes, with and without motion, with a contact sheet; with --measure, measure it instead of photographing.",
-  "effect-check": "Build the examples of an effect extension (or a built-in effect) and run the eleven effect checks in Chromium, reporting N of M checks passed."
+  "effect-check": "Build the examples of an effect extension and run the eleven effect checks in Chromium, reporting N of M checks passed."
 }
 ```
 

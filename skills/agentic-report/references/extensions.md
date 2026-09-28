@@ -27,8 +27,8 @@ Extend when one of these is true:
   a light that follows the reader;
 - the reader must try their own values: a calculator, a sorter, a small simulator.
 
-Do not extend to restyle a built-in block, to add a second effect to a page that already has one
-(`DR-ONE-EFFECT`), or to put decoration where the vocabulary already says it plainly. What many pages need
+Do not extend to restyle a built-in block, to crowd a page with another effect, or to put decoration where
+the vocabulary already says it plainly. What many pages need
 belongs in the package, not in an extension: say so in the hand-over instead of building it for one page.
 
 ## Choose the level
@@ -49,6 +49,7 @@ Take the lowest level that does the job. Each level up costs more code, more che
 | directives written from a JSON file, a log or an export at build time      | 1b `provider` | `theatre-script`: a product run as a diagram and timed steps |
 | an element drawn across the page from one marked directive to the next     | 2 `effect`    | `wall-thread`: a thread that runs from section to section    |
 | a decoration beside each marked section, driven by that section's progress | 2 `effect`    | `loom`: cloth woven beside a section as it is read           |
+| a small WebGL mark around an image, with the same 2D fallback              | 2 `effect`    | `focus-frame`: a traced border or four corner marks          |
 | something the reader operates: inputs, a result, a chart of the result     | 3 `island`    | `slo-budget`: an error-budget calculator                     |
 
 A block and a provider can work as a pair: the block is the frame, checked by its attributes, and the
@@ -182,8 +183,7 @@ and in print — its two `examples` and the `licenses` of any third-party code i
   `agentic-report effect-check <extension.yaml> --out <directory>`: it builds both examples, opens them in
   Chromium and checks the declaration, the reduced-motion final state, the page clock, 50 ms per effect
   call at 4× CPU slowdown, theme colours, no decoration on text, four widths, content edits, states in every
-  render mode, print and the two examples. The same checks run over the built-in `threads`
-  (`--built-in threads`). When performance fails, read `performance-diagnostics.json` in the output
+  render mode, print and the two examples. When performance fails, read `performance-diagnostics.json` in the output
   directory for numeric timings by scroll and resize phase. Tasks outside those phases are listed
   separately and do not affect the result. After a confirmed timing failure, a separate advisory
   `effect-diagnostic` pass records the `wall-thread` reference's numeric build stages, including route
@@ -212,6 +212,7 @@ copy its folder beside your page.
 | `product-theatre`, `theatre-script` | `extensions/product-theatre` | 1a and 1b | a frame block and a provider as a pair: a product run from a JSON scenario, replayed as a steps scene   |
 | `wall-thread`                       | `extensions/wall-thread`     | 2         | an effect across the page: target attributes on sections and cards, all three render modes              |
 | `loom`                              | `extensions/loom`            | 2         | a local effect: each host has its own geometry and progress, and states that exist in every render mode |
+| `focus-frame`                       | `extensions/focus-frame`     | 2         | a small WebGL effect on a section image, with token colours and matching 2D/still rendering             |
 | `slo-budget`                        | `extensions/slo-budget`      | 3         | an island: theme tokens, language, reported height, `renderAt`, and a static body with the page's case  |
 
 Each README says when to use the extension and when not, lists its attributes and describes its static

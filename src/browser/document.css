@@ -5884,8 +5884,8 @@
 
   /*
    * Слой движка эффектов: закреплён на весь экран над содержимым и под шапкой и панелями, указатель не
-   * принимает. Холсты эффектов идут по порядку, DOM-детали — над ними. Картинку, которую рисует холст
-   * эффекта `threads`, прячет её состояние; печать не видит слоя и показывает сами картинки.
+   * принимает. Холсты эффектов идут по порядку, DOM-детали — над ними. Печать не видит слоя
+   * и показывает содержимое хостов расширений.
    */
   .effect-layer {
     position: fixed;
@@ -5903,19 +5903,9 @@
     height: 100%;
   }
 
-  img[data-webgl-state='live'][data-webgl-active],
-  img[data-webgl-state='2d'] {
-    visibility: hidden;
-  }
-
   @media print {
     .effect-layer {
       display: none;
-    }
-
-    img[data-webgl-state='live'][data-webgl-active],
-    img[data-webgl-state] {
-      visibility: visible;
     }
   }
 

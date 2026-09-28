@@ -193,11 +193,10 @@ Authors name roles; the diagram draws its connections as it scrolls into view.
 :::
 ::::
 
-::::section{title="An image that unweaves" id="threads" nav="Threads" media-effect="threads"}
+::::section{title="The image stays in the reading flow" id="still-image" nav="Image"}
 ![Four page layouts sharing one foundation](layout-map.svg)
 
-With WebGL the map unweaves into threads as it leaves the screen; without it, and under reduced motion,
-it stays whole.
+The closing map keeps its alternative text and reading order at every screen width and motion setting.
 ::::
 
 :::decision{title="Use one declarative visual language"}

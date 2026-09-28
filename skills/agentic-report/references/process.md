@@ -191,8 +191,7 @@ When the page carries an effect of your own (an extension with `kind: effect`), 
 check — the declaration, the reduced-motion final state, time only from the page clock, a 50 ms budget per
 effect call, colours only from theme tokens, no decoration on text, four widths, content edits, the same
 states in every render mode, print, and two unlike examples. Fix every failed line; the frames it writes
-(`frame-390.png` … `frame-1920.png`) show the effect at each width. `--built-in threads` runs the same checks
-over the package's own WebGL effect.
+(`frame-390.png` … `frame-1920.png`) show the effect at each width.
 
 Look economically: what a check can say in words is cheaper than a frame. Read the build diagnostics and the
 design check first, then run `snapshot` with `--measure`: it writes no pictures and prints, per width,

@@ -33,9 +33,9 @@ point at [`design-rules.md`](design-rules.md).
   The package's motion budget is a floor of safety, not the ceiling of the design: it keeps pointer effects
   to fine pointers and reduced motion still, whatever the level. At every level an entrance moves at most
   16 pixels and a meaningful gesture must be visible (`DR-MOTION-ORIGIN`).
-- **WebGL, video, presentation.** A clip is the strongest demo. WebGL `threads` suits a closing image of a
-  showcase whose subject comes apart or is woven; never on a product screenshot. A launch that is presented
-  live becomes a `presentation` built from the same material.
+- **WebGL, video, presentation.** A clip is the strongest demo. Use a declared effect extension when the
+  subject requires WebGL and the same idea remains clear without it; a product screenshot should stay
+  readable. A launch presented live becomes a `presentation` built from the same material.
 - **Typical mistakes.** The starter's order kept (`DR-LANDING-ORDER`); three identical feature cards
   (`DR-CARD-SAMENESS`); blurred colour behind the hero (`DR-BLOBS`); a claim without a number or a date; a
   clever title instead of a promise; the same primitive repeated section after section.

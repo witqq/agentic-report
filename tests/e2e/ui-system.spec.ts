@@ -354,12 +354,26 @@ async function layoutDefects(page: Page): Promise<string[]> {
   // Переход начинается не сразу после смены окна: событие медиазапроса (оглавление встаёт боковой
   // колонкой) и наблюдатели размера срабатывают в следующем кадре, и под нагрузкой замер, снятый до этого
   // кадра, не видел ни одной анимации и мерил колонку, которую ещё сужает боковая панель. Поэтому ожидание
-  // идёт кадрами: два кадра, затем конец всех конечных анимаций по времени документа, и снова, пока новых
-  // нет. Анимации по прокрутке идут по своей шкале и не кончаются — их не ждём; восемь секунд — только
-  // предохранитель от анимации, которая перезапускает себя.
+  // идёт кадрами: два кадра, затем конец анимаций, которые могут изменить геометрию, и снова, пока новых
+  // нет. Анимация только прозрачности не меняет разрывы строк или границы колонок; её шестисекундное
+  // мигание в terminal не должно задерживать проверку. Анимации по прокрутке идут по своей шкале и не
+  // кончаются — их не ждём; восемь секунд — предохранитель от анимации, которая перезапускает себя.
   await page.evaluate(async () => {
     const frame = (): Promise<void> =>
       new Promise((resolve) => requestAnimationFrame(() => resolve()));
+    const onlyOpacity = (animation: Animation): boolean => {
+      if (!(animation.effect instanceof KeyframeEffect)) return false;
+      const keyframes = animation.effect.getKeyframes();
+      return (
+        keyframes.length > 0 &&
+        keyframes.some((keyframe) => Object.hasOwn(keyframe, 'opacity')) &&
+        keyframes.every((keyframe) =>
+          Object.keys(keyframe).every((property) =>
+            ['composite', 'computedOffset', 'easing', 'offset', 'opacity'].includes(property),
+          ),
+        )
+      );
+    };
     const deadline = performance.now() + 8000;
     for (;;) {
       await frame();
@@ -370,7 +384,8 @@ async function layoutDefects(page: Page): Promise<string[]> {
           (animation) =>
             animation.playState === 'running' &&
             animation.timeline instanceof DocumentTimeline &&
-            animation.effect?.getComputedTiming().endTime !== Infinity,
+            animation.effect?.getComputedTiming().endTime !== Infinity &&
+            !onlyOpacity(animation),
         );
       if (running.length === 0 || performance.now() > deadline) return;
       await Promise.race([
@@ -431,6 +446,48 @@ async function layoutDefects(page: Page): Promise<string[]> {
     return out;
   });
 }
+
+test('layout check ignores opacity-only motion but waits for moving text', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop-chromium');
+  await page.goto(pageUrl('layout-document'));
+  expect(await layoutDefects(page)).toEqual([]);
+  await page.evaluate(() => {
+    const parent = document.createElement('div');
+    parent.id = 'layout-motion-proof';
+    parent.style.cssText = 'position:fixed;left:0;top:0;width:220px;overflow:visible';
+    const heading = document.createElement('h2');
+    heading.textContent = 'Proof';
+    heading.style.cssText =
+      'width:180px;margin:0;font-family:var(--font-author-heading,var(--font-heading));font-size:16px;white-space:nowrap';
+    parent.append(heading);
+    document.body.append(parent);
+    heading.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 6000, fill: 'forwards' });
+    heading.animate([{ transform: 'translateX(-70px)' }, { transform: 'translateX(80px)' }], {
+      duration: 250,
+      fill: 'forwards',
+    });
+  });
+  const defects = await layoutDefects(page);
+  const state = await page.locator('#layout-motion-proof h2').evaluate((heading) => {
+    const animations = heading.getAnimations();
+    const forProperty = (property: string): Animation | undefined =>
+      animations.find(
+        (animation) =>
+          animation.effect instanceof KeyframeEffect &&
+          animation.effect.getKeyframes().some((keyframe) => Object.hasOwn(keyframe, property)),
+      );
+    return {
+      opacity: forProperty('opacity')?.playState,
+      transform: forProperty('transform')?.playState,
+    };
+  });
+  expect(
+    defects.some((defect) => defect.includes('Proof') && defect.includes('leaves its column')),
+  ).toBe(true);
+  expect(state).toEqual({ opacity: 'running', transform: 'finished' });
+});
 
 test('no word breaks or sideways page in any theme, heading face or card text', async ({
   page,

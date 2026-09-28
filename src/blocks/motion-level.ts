@@ -59,8 +59,6 @@ export function motionUses(
     if (typeof interaction === 'string' && interaction !== 'none')
       addOwn('pointer', 'interaction', interaction);
     if (values.choreography === 'cascade') addOwn('count', 'choreography', 'cascade');
-    const effect = values['media-effect'];
-    if (typeof effect === 'string' && effect !== 'none') addOwn('directed', 'media-effect', effect);
   }
   if (node.name === 'action' && values.effect === 'magnetic') add('pointer', 'effect="magnetic"');
   if (node.name === 'diagram' && values.draw === 'scroll') add('directed', 'draw="scroll"');

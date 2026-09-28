@@ -383,7 +383,7 @@
       "files": [
         {
           "path": "brief.md",
-          "sha256": "e6722a9fccde1eb423ec0976b337bcca5f62a5df8c668f8956c86d63ebdb7cf6"
+          "sha256": "6156ad6ea09fb110f08d491c3edf522455c4289780f101390081cc81434333bb"
         },
         {
           "path": "compare-after.svg",
@@ -403,11 +403,11 @@
         },
         {
           "path": "report.md",
-          "sha256": "e1e56518b670052416195276cb6fb165834b02973606e1c82f6f23a27b31768f"
+          "sha256": "82c6f9802278884ccd68b43e9b5e87072b51c86a9f1c7ef1521d8dbc9e8a7b9c"
         },
         {
           "path": "report.ru.md",
-          "sha256": "b0b9452eb21fadf048c3461ae3c5deffee9b3fa49d5d7cd968afa5545f45d48a"
+          "sha256": "00c79fd38a808938cae6ea9789b7eeec1fc5137153670afbba94d79321cff293"
         }
       ]
     },
@@ -707,15 +707,15 @@
         },
         {
           "path": "brief.md",
-          "sha256": "138169bddf9c0c2c8eee192fdc3a4e93ca0ed640527f35ae96cf32ff063938b7"
+          "sha256": "4dcec957e9544069cf357fc3211371531c5f3b1191126f5a863d631bfe0429f2"
         },
         {
           "path": "report.md",
-          "sha256": "f73a1a0f3398c09e5c168cf6b969fd91618c020b357e5119dfe4a314066252e9"
+          "sha256": "c5ba40ae1d1b2986f9361ba84885351f0e01dfd316e708766334ae0978356a9d"
         },
         {
           "path": "report.ru.md",
-          "sha256": "0df99a83673b4812121048face619c5d89befcca315fcb9c6e54082b4fd6ba8c"
+          "sha256": "18c25fc3a7c323e96c32b4e6096bea7af7b818eb563d22cb6b18ff404fab9b9d"
         }
       ]
     },

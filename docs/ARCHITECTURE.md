@@ -100,7 +100,7 @@ Markdown + metadata + local assets + partials + semantic directives
   catalogue does not carry them, its runtime controller, where its styles come from, one sentence saying
   what it is without motion and in print, and source examples that must validate. A tight family shares a
   file — `section.ts` holds section, lead, beat and notes and owns the page passes that read sections
-  (openings, galleries, steps scenes, the media effect, the first screen, slides); `diagram.ts`,
+  (openings, galleries, steps scenes, the first screen, slides); `diagram.ts`,
   `chart.ts`, `timeline.ts`, `response.ts`, `decision.ts`, `cards.ts`, `tabs.ts`, `findings.ts` and
   `actions.ts` hold their families. `src/blocks/index.ts` lists the built-in blocks in registry order,
   and the registry takes its directive list from their definitions. The value sets the definitions read
@@ -767,9 +767,8 @@ IntersectionObserver per scene picks the beat crossing the middle of the screen,
 the lit nodes and edges), line-by-line titles (a measured line count drives a masked, stepped reveal), and
 count-up numbers, and tears them down on locale switch or when the width or motion preference changes.
 Diagram drawing is pure CSS: the compiler orders each connection along the flow and writes its share of a
-view timeline. The WebGL threads of `media-effect="threads"` are a built-in effect of the effect engine
-(`src/browser/effects/`, built to `dist/browser/effects.js`), appended to the runtime script only for pages
-whose HTML carries `data-webgl` or an effect extension; how the engine draws them is described under
+view timeline. The effect engine (`src/browser/effects/`, built to `dist/browser/effects.js`) is appended
+to the runtime script only for pages with an effect extension; its rendering contract is described under
 [Level 2 — effects and the effect engine](#level-2--effects-and-the-effect-engine). For `layout: slides` the compiler wraps the content before the
 first section into a title slide and numbers slides and their `appear` steps; the slides controller owns
 the deck state, the address, the keyboard, click, swipe and button input, the published transition
@@ -800,8 +799,8 @@ unsubscribe function. `registerTimed` is the same call for code outside the runt
 numbers, progress scenes, chapter and page progress bars, the diagram motion module
 (`src/browser/diagram-motion.ts`: diagram drawing without scroll timelines, the draw marker, route pulses,
 the zoom camera and chart growth), the layout and motion modules (screens, page states, the scrub scene,
-the thesis fill, the current row), the island controller and the effect engine (for every effect, including
-the WebGL threads) subscribe. Delays that only defer input handling or release an object URL stay on the
+the thesis fill, the current row), the island controller and the effect engine (for declared extension
+effects) subscribe. Delays that only defer input handling or release an object URL stay on the
 browser's `setTimeout`, and embedded videos keep their own playback time.
 
 The clock has three modes, chosen once when the runtime starts:
@@ -826,7 +825,7 @@ The clock has three modes, chosen once when the runtime starts:
 
 Scroll-driven effects are functions of scroll position, and a seek recomputes them from the current
 geometry. A recorder can set their progress directly instead: the attribute `data-clock-progress` (0–1) on
-a `scene="progress"` section or on the image of `media-effect="threads"` replaces the measured progress on
+a `scene="progress"` section replaces the measured progress on
 the next frame or seek, and an overridden progress scene drops its smoothing transition so the value shows
 exactly. `agentic-report snapshot` uses the manual clock: after its scroll pass it seeks to 10 s and then
 11 s, so every entrance, count and slide transition has finished and repeated runs give identical frames.
@@ -1135,8 +1134,8 @@ without a major performance caveat cannot be created, `live` otherwise. All thre
 In `live`, `at(t, progress)` receives the page-clock time in seconds; in `still` and `static`, `t` is
 `Infinity`, so an effect evaluates the final state of its timeline directly rather than playing it
 forward. `progress` is the page's scroll progress (0–1, or `data-clock-progress` on the root) in every
-mode: `static` means “no WebGL”, not “no scroll position”, and the threads use it to draw the same
-unweaving in 2D. The engine lowers a single effect when it fails: an exception in `live` remounts it in
+mode: `static` means “no WebGL”, not “no scroll position”. The engine lowers a single effect when it fails:
+an exception in `live` remounts it in
 `static`, in `static` in `still`, in `still` it is marked failed; three slow frames at the lowest density
 (`webgl-policy.ts`) remount it in `still` with the reason `slow`. `ctx.render` and `ctx.reason` tell the
 effect which mode it is in and why. For checks, `window.__agenticReportRender = 'live' | 'still' |
@@ -1216,16 +1215,6 @@ the root carries `data-motion-paused` and continuous drawing stops; a clock seek
 `pause-control.ts` puts the button in the flow after them. Below `motion: expressive` the engine mounts
 every effect `still` with the reason `motion-level`. At most one effect on a page may
 declare `ownsScroll`; a second one is not mounted and reports why. Anchors and focus stay with the runtime.
-
-**The threads effect.** `media-effect="threads"` is the built-in effect `threads`
-(`src/browser/effects/threads.ts`) on the same engine. In `live` the native image remains visible while
-unweaving progress is zero; only after it starts does one shader draw the image on the page canvas at its
-place on screen. Returning to zero restores the native image and clears the canvas once. In `static`, a 2D
-canvas draws the same threads
-(`threadColumn`: the same hash, pull, drift, width and fade as the shader) as strips of the image with the
-theme accent on their edges; in `still` it draws nothing and the image stays whole. The image carries
-`data-webgl-state` (`pending`, `live`, `2d`, `static`, `static-slow`); `data-webgl-active` hides a `live`
-image only while the WebGL canvas draws it. The stylesheet shows the native image in print.
 
 **Status and checks.** `window.__agenticReportEffectEngine` exposes `status()` (per effect: mode, reason,
 hosts, the state names it ever set, the tokens it read, rebuilds, loop guards, errors and its longest call),

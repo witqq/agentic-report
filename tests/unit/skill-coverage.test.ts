@@ -233,6 +233,7 @@ describe('hand-written skill covers the authoring surface', () => {
     expect(missing(planted.flags, 'Pass `--out` and `--quiet`.')).toEqual(['--planted-flag']);
     // The real CLI: the multi-line and required options are read too.
     const { flags } = await cliSurface();
-    expect(flags).toEqual(expect.arrayContaining(['--colors', '--measure', '--out', '--built-in']));
+    expect(flags).toEqual(expect.arrayContaining(['--colors', '--measure', '--out']));
+    expect(flags).not.toContain('--built-in');
   });
 });

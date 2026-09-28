@@ -3,7 +3,7 @@ name: agentic-report
 description: Create and build polished local pages from declarative Markdown — landing pages, documents (reports, research, architecture, code reviews, incidents, guides), dashboards, answer forms, and presentations that can be shown or filmed — starting from a brief, with design advice and snapshots before handoff. Use for static agent-to-human page handoff; do not use for hosted apps, live collaboration, deployment, publication, or bespoke frontend development.
 license: MIT
 metadata:
-  version: '0.18.0'
+  version: '0.18.1'
   homepage: https://agentic-report.witqq.dev/
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run. Snapshots also need Playwright and its Chromium.
 ---
@@ -90,11 +90,11 @@ Review Workspace (`review: true`) is a mode any page can switch on, not a catego
 Use the release pinned in this skill:
 
 ```sh
-npx --yes agentic-report@0.18.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.18.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.18.1 init ./my-page --starter landing --json
+npx --yes agentic-report@0.18.1 build ./my-page --output ./my-page.html --json
 node scripts/design-check.mjs ./my-page
 npx --yes playwright@1.62.1 install chromium
-npx --yes -p agentic-report@0.18.0 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
+npx --yes -p agentic-report@0.18.1 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
 ```
 
 `--output` names the file `build` writes (a folder with `--format directory`). A source written by hand
@@ -131,19 +131,18 @@ truth; the catalogue is generated from the same contract.
 Only the top-level choices; every tool's row is in
 [`references/vocabulary-use.md`](references/vocabulary-use.md).
 
-| Technique                            | Take it when                                                                                | Not when                                                           |
-| ------------------------------------ | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `layout: slides`                     | something is shown one idea at a time, live or filmed                                       | people read the page alone and search in it                        |
-| `layout: screens`                    | a page read alone should stop at one idea per screen, one per gesture                       | a document people search, scan or come back to                     |
-| `recipe="demo"` on the first section | a landing must show its product working on the first screen                                 | any section but the first; a report                                |
-| `transition`, `scene`, `interaction` | `motion:` in the frontmatter (the brief's row) allows it and the movement says what changed | every chapter; decoration                                          |
-| `media-effect="threads"` (WebGL)     | the picture's subject unravels or is woven                                                  | a product screenshot, a chart, a face; a second effect on the page |
-| `video`                              | a behaviour needs proof that it is real                                                     | a mechanism a diagram or `scene="steps"` explains better           |
-| `diagram`                            | parts hand work to each other, or calls follow in time                                      | a picture the prose already says in one sentence                   |
-| `response` (Response Workspace)      | the person must hand structured answers back                                                | discussion of the text — that is `review: true`                    |
-| a theme of your own                  | no built-in theme fits the direction in the brief                                           | a built-in theme with one or two fields changed would do           |
-| `--format directory`                 | several clips, or a published site                                                          | a private page handed over as one file                             |
-| `localizations`                      | the page ships in English and Russian                                                       | a single-language page — delete the starter's other entry          |
+| Technique                            | Take it when                                                                                | Not when                                                  |
+| ------------------------------------ | ------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `layout: slides`                     | something is shown one idea at a time, live or filmed                                       | people read the page alone and search in it               |
+| `layout: screens`                    | a page read alone should stop at one idea per screen, one per gesture                       | a document people search, scan or come back to            |
+| `recipe="demo"` on the first section | a landing must show its product working on the first screen                                 | any section but the first; a report                       |
+| `transition`, `scene`, `interaction` | `motion:` in the frontmatter (the brief's row) allows it and the movement says what changed | every chapter; decoration                                 |
+| `video`                              | a behaviour needs proof that it is real                                                     | a mechanism a diagram or `scene="steps"` explains better  |
+| `diagram`                            | parts hand work to each other, or calls follow in time                                      | a picture the prose already says in one sentence          |
+| `response` (Response Workspace)      | the person must hand structured answers back                                                | discussion of the text — that is `review: true`           |
+| a theme of your own                  | no built-in theme fits the direction in the brief                                           | a built-in theme with one or two fields changed would do  |
+| `--format directory`                 | several clips, or a published site                                                          | a private page handed over as one file                    |
+| `localizations`                      | the page ships in English and Russian                                                       | a single-language page — delete the starter's other entry |
 
 ## Rules for every page
 

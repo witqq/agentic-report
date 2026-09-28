@@ -1,5 +1,5 @@
 /**
- * `agentic-report effect-check` — проверка эффекта уровня 2 теми же мерками, что и встроенного `threads`.
+ * `agentic-report effect-check` — проверка эффекта расширения уровня 2.
  * Команда собирает объявленные примеры, открывает их в Chromium (Playwright пользователя, как у
  * `snapshot`) и проходит одиннадцать проверок; итог — «N of M checks passed», по строке на проверку.
  *
@@ -11,9 +11,9 @@
  * Каждая проверка ловит свой дефект; какой — сказано в её описании ниже и в docs/TESTING.md.
  */
 
-import { mkdir, readFile, readdir, stat, writeFile, copyFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
 
 import { THEME_TOKENS } from '../authoring/theme-tokens.js';
 import type { Diagnostic } from '../contracts.js';
@@ -25,13 +25,9 @@ import { MANUAL_CLOCK_INIT_SCRIPT } from '../page-clock.js';
 import { buildReport } from './compiler.js';
 import { launchChromium, loadChromium } from './snapshot.js';
 
-export const EFFECT_CHECK_BUILT_INS = ['threads'] as const;
-export type EffectCheckBuiltIn = (typeof EFFECT_CHECK_BUILT_INS)[number];
-
 export interface EffectCheckOptions {
-  /** Манифест расширения `kind: effect`; или `builtIn`. */
-  readonly manifest?: string;
-  readonly builtIn?: EffectCheckBuiltIn;
+  /** Манифест расширения `kind: effect`. */
+  readonly manifest: string;
   /** Отсутствующий или пустой каталог для собранных примеров и кадров. */
   readonly output: string;
 }
@@ -45,7 +41,6 @@ export interface EffectCheckItem {
 
 export interface EffectCheckResult {
   readonly effect: string;
-  readonly builtIn: boolean;
   readonly passed: number;
   readonly total: number;
   readonly summary: string;
@@ -139,14 +134,13 @@ const TEXT_COVER_TOLERANCE = 0.002;
 /** Сходство примеров (доля общих троек слов), выше которого они считаются одним примером. */
 const EXAMPLE_SIMILARITY_LIMIT = 0.5;
 
-/** Предмет проверки: эффект расширения или встроенный. */
+/** Предмет проверки: эффект расширения. */
 interface Subject {
   readonly name: string;
   readonly selector: string;
   readonly description: string;
   readonly staticEquivalent: string;
   readonly examples: readonly string[];
-  readonly builtIn: boolean;
   readonly declaration: readonly string[];
 }
 
@@ -353,22 +347,18 @@ interface PerformancePass {
 // ---------------------------------------------------------------------------------------------------
 
 export async function effectCheck(options: EffectCheckOptions): Promise<EffectCheckResult> {
-  if ((options.manifest === undefined) === (options.builtIn === undefined))
+  if (options.manifest === undefined)
     throw new AgenticReportError({
       level: 'error',
       code: 'EFFECT_CHECK_SUBJECT',
-      message: 'effect-check needs either an extension manifest or --built-in, and not both.',
-      remediation:
-        'Run `agentic-report effect-check <extension.yaml> --out <dir>` or `agentic-report effect-check --built-in threads --out <dir>`.',
+      message: 'effect-check needs an extension manifest with kind: effect.',
+      remediation: 'Run `agentic-report effect-check <extension.yaml> --out <dir>`.',
     });
   const outputDirectory = path.resolve(options.output);
   await requireEmptyDirectory(outputDirectory);
   await mkdir(outputDirectory, { recursive: true });
   const warnings: Diagnostic[] = [];
-  const subject =
-    options.builtIn === undefined
-      ? await extensionSubject(path.resolve(options.manifest ?? ''), warnings)
-      : await builtInSubject(options.builtIn, outputDirectory);
+  const subject = await extensionSubject(path.resolve(options.manifest), warnings);
 
   const chromium = await loadChromium();
   const pages: { source: string; page: string; hosts: number }[] = [];
@@ -431,7 +421,6 @@ export async function effectCheck(options: EffectCheckOptions): Promise<EffectCh
   const passed = checks.filter((check) => check.passed).length;
   return {
     effect: subject.name,
-    builtIn: subject.builtIn,
     passed,
     total: checks.length,
     summary: `${passed} of ${checks.length} checks passed`,
@@ -465,7 +454,6 @@ async function extensionSubject(manifest: string, warnings: Diagnostic[]): Promi
     description: extension.description,
     staticEquivalent: extension.staticEquivalent,
     examples: extension.examples,
-    builtIn: false,
     declaration: await declarationProblems(extension),
   };
 }
@@ -502,104 +490,6 @@ async function declarationProblems(extension: EffectExtension): Promise<string[]
     problems.push(error instanceof Error ? error.message : String(error));
   }
   return problems;
-}
-
-const THREADS_EXAMPLES = [
-  {
-    file: 'threads-document.md',
-    images: ['richat.jpg'],
-    source: [
-      '---',
-      'title: Threads in a document',
-      'language: en',
-      '---',
-      '',
-      '# Field notes',
-      '',
-      'A short report whose one picture unweaves as the reader moves past it.',
-      '',
-      // Картинка ниже первого экрана: работа, которую эффект откладывает до её появления (первая
-      // загрузка текстуры), попадает в замер прокрутки, а не в загрузку страницы.
-      '::::section{title="Before the picture" id="before"}',
-      ...Array.from(
-        { length: 12 },
-        (_, index) =>
-          `Context ${index + 1}: the survey crossed the plateau twice, once at dawn and once at noon.\n`,
-      ),
-      '::::',
-      '',
-      '::::section{title="The ring structure" id="rings" media-effect="threads"}',
-      '![Concentric rock rings in the desert, seen from orbit](richat.jpg)',
-      '',
-      'The rings are eroded layers of rock, forty kilometres across.',
-      '::::',
-      '',
-      '::::section{title="What the survey found" id="survey"}',
-      ...Array.from(
-        { length: 14 },
-        (_, index) =>
-          `Observation ${index + 1}: the layer boundary stays sharp across the whole frame, and the reading holds.\n`,
-      ),
-      '::::',
-    ],
-  },
-  {
-    file: 'threads-landing.md',
-    images: ['sand-sea.jpg', 'aurora-station.jpg'],
-    source: [
-      '---',
-      'title: Threads on a landing',
-      'language: en',
-      'layout: landing',
-      'theme: aurora',
-      'scheme: dark',
-      '---',
-      '',
-      '# Two places, one motion',
-      '',
-      '::::section{title="Dunes" id="dunes" media-effect="threads" recipe="statement"}',
-      '![Smoke drifting across linear dunes, seen from orbit](sand-sea.jpg)',
-      '::::',
-      '',
-      '::::section{title="Between" id="between"}',
-      '- The first picture leaves the screen.',
-      '- The second arrives on a dark page.',
-      '- Both unweave only while they move.',
-      '::::',
-      '',
-      '::::section{title="Station" id="station" media-effect="threads"}',
-      '![An aurora over a research station at night](aurora-station.jpg)',
-      '',
-      'The page ends here.',
-      '::::',
-    ],
-  },
-] as const;
-
-async function builtInSubject(name: EffectCheckBuiltIn, output: string): Promise<Subject> {
-  // Из `dist/node/core` до корня пакета три шага, из `src/core` — два.
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const packageRoot = path.basename(path.dirname(here)) === 'node' ? '../../..' : '../..';
-  const assets = path.resolve(here, packageRoot, 'examples/motion-showcase/assets');
-  const directory = path.join(output, `${name}-sources`);
-  await mkdir(directory, { recursive: true });
-  const examples: string[] = [];
-  for (const example of THREADS_EXAMPLES) {
-    for (const image of example.images)
-      await copyFile(path.join(assets, image), path.join(directory, image));
-    const file = path.join(directory, example.file);
-    await writeFile(file, `${example.source.join('\n')}\n`);
-    examples.push(file);
-  }
-  return {
-    name,
-    selector: 'img[data-webgl="threads"]',
-    description: 'The first picture of a section unweaves into threads as it leaves the screen.',
-    staticEquivalent: 'The picture itself, whole and still, with its alternative text.',
-    examples,
-    builtIn: true,
-    declaration: [],
-  };
 }
 
 // ---------------------------------------------------------------------------------------------------

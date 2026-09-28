@@ -182,10 +182,9 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
           declaredExtensions,
           routedVariants.map((variant) => variant.markdown.extensions),
         );
-  // Движок эффектов едет только на страницу, где эффект есть — встроенный WebGL-приём или эффект
-  // расширения, — а контроллер островов — только туда, где стоит живой остров.
-  const usesWebgl = routedVariants.some((variant) => variant.markdown.html.includes('data-webgl='));
-  const usesEffects = usesWebgl || (extensionAssembly?.effects.length ?? 0) > 0;
+  // Движок эффектов едет только на страницу с эффектом расширения, а контроллер островов —
+  // только туда, где стоит живой остров.
+  const usesEffects = (extensionAssembly?.effects.length ?? 0) > 0;
   const usesIslands = extensionAssembly?.usesIslands === true;
   const [baseRuntime, styles, effectsEngine, islandsController] = await Promise.all([
     readBrowserAsset('runtime.js'),

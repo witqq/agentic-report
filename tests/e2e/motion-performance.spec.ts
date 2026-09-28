@@ -35,9 +35,7 @@ test('the motion showcase scrolls without long tasks under a 4x slower CPU', asy
     pathToFileURL(path.resolve('test-results/e2e-generated/motion-showcase.html')).href,
   );
   await page.evaluate(() => document.fonts.ready);
-  // Замер — о прокрутке: подготовка WebGL при загрузке (декодирование текстуры, компиляция шейдера)
-  // идёт до него и считается работой загрузки, а не прокрутки.
-  await expect(page.locator('img[data-webgl]')).toHaveAttribute('data-webgl-state', 'live');
+  // Дождаться шрифтов и начальной геометрии до начала замера прокрутки.
   await page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   );

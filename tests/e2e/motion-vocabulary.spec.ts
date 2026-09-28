@@ -9,7 +9,7 @@ import { expect, test } from './fixtures.js';
 
 /**
  * Словарь движения: сцена по шагам, прорисовка схемы, заголовок по строкам, досчитывающие числа и
- * WebGL-нити. При уменьшенном движении всё видно, ничего не закреплено и не сдвинуто; разбиение
+ * статичное изображение. При уменьшенном движении всё видно, ничего не закреплено и не сдвинуто; разбиение
  * заголовка на строки не меняет текст, поэтому заметка ревью и копирование видят прежнюю фразу.
  */
 const generated = (name: string): string =>
@@ -39,7 +39,9 @@ for (const width of [1440, 400]) {
     for (const example of ['motion-showcase', 'layout-mixed']) {
       await page.goto(generated(example));
       const sections =
-        example === 'motion-showcase' ? ['#steps', '#draw', '#numbers'] : ['#motion', '#threads'];
+        example === 'motion-showcase'
+          ? ['#steps', '#draw', '#numbers']
+          : ['#motion', '#still-image'];
       for (const section of sections) {
         await page.locator(section).scrollIntoViewIfNeeded();
         for (const state of await stillState(

@@ -34,7 +34,7 @@ import { type DirectiveNode, isDirectiveNode } from './mdast.js';
 /**
  * The section family: the labelled top-level section, its lead paragraph, the beats of a steps
  * scene, and the speaker notes of a slide. The section also owns the page-level passes that read
- * sections: openings, galleries, steps scenes, the media effect, the first screen and slides.
+ * sections: openings, galleries, steps scenes, the first screen and slides.
  */
 
 function sectionDefinition(): DirectiveDefinition {
@@ -159,12 +159,6 @@ function sectionDefinition(): DirectiveDefinition {
       'How this slide arrives in a presentation (layout slides): a fade, a push, a wipe, a zoom, or at once; the duration is fixed and published.',
       ['fade', 'push', 'wipe', 'zoom', 'none'],
       'fade',
-    ),
-    enumAttribute(
-      'media-effect',
-      'WebGL treatment of the first image of the section: threads unweaves it into threads as it scrolls away. Off by default; a still image without WebGL, on a weak GPU, or under reduced motion.',
-      ['none', 'threads'],
-      'none',
     ),
     enumAttribute(
       'interaction',
@@ -822,7 +816,6 @@ function finalizeSections(
   enhanceGalleryRails(tree);
   enhanceSectionOpenings(tree);
   enhanceStepScenes(tree);
-  enhanceMediaEffects(tree);
   enhancePageOpening(tree);
   if (context.layout === 'slides') enhanceSlides(tree, context.strings);
   if (context.layout === 'screens') enhanceScreens(tree, context.strings);
@@ -1003,25 +996,6 @@ function enhanceScreens(tree: HastRoot, strings: PackageStrings): void {
     child.properties.dataScreen = String(screen);
     screen += 1;
   }
-}
-
-/**
- * Медиаэффект секции относится к её первой картинке. Для WebGL картинка всегда встроена данными:
- * текстура из соседнего файла на `file://` считается чужой, и холст её не принял бы.
- */
-function enhanceMediaEffects(tree: HastRoot): void {
-  visit(tree, 'element', (section: Element) => {
-    if (!isSection(section)) return;
-    const effect = stringProperty(section, 'dataMediaEffect');
-    if (effect === undefined || effect === 'none') return;
-    let image: Element | undefined;
-    visit(section, 'element', (candidate: Element) => {
-      if (image !== undefined) return false;
-      if (candidate.tagName === 'img') image = candidate;
-      return undefined;
-    });
-    if (image !== undefined) image.properties.dataWebgl = effect;
-  });
 }
 
 /**

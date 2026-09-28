@@ -41,7 +41,7 @@ Compile and read offline.
 ![Built preview](preview.png)
 :::
 
-::::::section{title="Scene" id="scene" scene="steps" transition="lines" media-effect="threads"}
+::::::section{title="Scene" id="scene" scene="steps" transition="lines"}
 :::diagram{title="Scene flow" description="Draft becomes page." layout="right" draw="scroll"}
 ::node{id="draft" label="Draft"}
 ::node{id="page" label="Page"}

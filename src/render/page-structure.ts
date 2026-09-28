@@ -112,7 +112,6 @@ function sectionOf(element: Element, depth: number): MutableSection {
     scene: property(element, 'dataScene'),
     interaction: property(element, 'dataInteraction'),
     choreography: property(element, 'dataChoreography'),
-    mediaEffect: property(element, 'dataMediaEffect'),
     media: emptyMedia(),
   };
 }

@@ -33,12 +33,7 @@ import {
   SNAPSHOT_SCHEMES,
   snapshotReport,
 } from './core/snapshot.js';
-import {
-  EFFECT_CHECK_BUILT_INS,
-  effectCheck,
-  type EffectCheckBuiltIn,
-  type EffectCheckResult,
-} from './core/effect-check.js';
+import { effectCheck, type EffectCheckResult } from './core/effect-check.js';
 import {
   emitDiagnostic,
   emitResultRecord,
@@ -332,38 +327,24 @@ program
   .description(
     'Build the examples of an effect extension and run the eleven effect checks in Chromium; prints N of M checks passed.',
   )
-  .argument('[manifest]', 'Extension manifest with kind: effect')
-  .option(
-    '--built-in <effect>',
-    'Check a built-in effect instead of an extension: threads',
-    (value: string) => parseBuiltInEffect(value),
-  )
+  .argument('<manifest>', 'Extension manifest with kind: effect')
   .requiredOption(
     '--out <directory>',
     'Absent or empty directory for the built examples and frames',
   )
   .option('--json', 'Accepted; agent NDJSON is the default output')
   .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
-  .action(
-    async (
-      manifest: string | undefined,
-      commandOptions: { readonly out: string; readonly builtIn?: EffectCheckBuiltIn },
-    ) => {
-      try {
-        const result = await effectCheck({
-          output: commandOptions.out,
-          ...(manifest === undefined ? {} : { manifest }),
-          ...(commandOptions.builtIn === undefined ? {} : { builtIn: commandOptions.builtIn }),
-        });
-        writeEffectCheckSuccess(result, invocationRunId, outputMode);
-        if (result.passed < result.total) process.exitCode = 1;
-      } catch (error) {
-        const diagnostic = toDiagnostic(error);
-        emitDiagnostic(diagnostic, invocationRunId, outputMode);
-        process.exitCode = exitCodeForDiagnostic(diagnostic);
-      }
-    },
-  );
+  .action(async (manifest: string, commandOptions: { readonly out: string }) => {
+    try {
+      const result = await effectCheck({ manifest, output: commandOptions.out });
+      writeEffectCheckSuccess(result, invocationRunId, outputMode);
+      if (result.passed < result.total) process.exitCode = 1;
+    } catch (error) {
+      const diagnostic = toDiagnostic(error);
+      emitDiagnostic(diagnostic, invocationRunId, outputMode);
+      process.exitCode = exitCodeForDiagnostic(diagnostic);
+    }
+  });
 
 program
   .command('review')
@@ -633,12 +614,6 @@ function writeMeasureSuccess(result: MeasureReportResult, runId: string, mode: O
   const line = (cells: readonly string[]): string =>
     `${cells.map((cell, column) => cell.padEnd(widths[column] ?? 0)).join('  ')}\n`;
   process.stdout.write(`Measured ${sanitized.page}\n${line(header)}${rows.map(line).join('')}`);
-}
-
-function parseBuiltInEffect(value: string): EffectCheckBuiltIn {
-  if (!(EFFECT_CHECK_BUILT_INS as readonly string[]).includes(value))
-    throw new InvalidArgumentError(`Built-in effects: ${EFFECT_CHECK_BUILT_INS.join(', ')}.`);
-  return value as EffectCheckBuiltIn;
 }
 
 /** Агенту — одна запись на проверку и итоговая; человеку — строка на проверку и «N of M». */

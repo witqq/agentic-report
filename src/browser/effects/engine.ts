@@ -1,6 +1,6 @@
 /**
- * Движок эффектов страницы: один для встроенных эффектов пакета (`threads`) и эффектов расширений
- * уровня 2. Он находит хосты эффекта, выбирает режим отрисовки, отдаёт эффекту контекст (`EffectContext`
+ * Движок эффектов расширений уровня 2. Он находит хосты эффекта, выбирает режим отрисовки,
+ * отдаёт эффекту контекст (`EffectContext`
  * из `src/effect.ts`) и ведёт его время, пересборку, паузу и понижение режима.
  *
  * Время эффекта — только часы страницы (`src/browser/clock.ts`): движок подписан на их перемотку и сам
@@ -688,7 +688,7 @@ function remountAll(): void {
 }
 
 /** Запустить движок: принять уже поставленные в очередь эффекты и все следующие. */
-export function startEffectEngine(builtIns: readonly EffectRegistration[]): void {
+export function startEffectEngine(): void {
   if (window[ENGINE_GLOBAL] !== undefined) return;
   root.dataset.render = pageRender.render;
   const queued = window[EFFECT_QUEUE_GLOBAL];
@@ -776,5 +776,5 @@ export function startEffectEngine(builtIns: readonly EffectRegistration[]): void
     });
   }).observe(document.body, { childList: true, subtree: true });
 
-  for (const registration of [...builtIns, ...pending]) register(registration);
+  for (const registration of pending) register(registration);
 }
