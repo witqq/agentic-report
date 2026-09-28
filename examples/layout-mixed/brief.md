@@ -43,4 +43,4 @@ One line per fact the page needs but nobody gave: a placeholder link, a missing 
 One line per design check deliberately switched off for this page, in the form `- DR-RULE: reason`.
 
 - DR-SURFACES: the catalog shows every section surface on purpose.
-- DR-ONE-EFFECT: the catalog shows a pointer effect, the WebGL effect, and a magnetic action once each.
+- DR-ONE-EFFECT: the catalog shows pointer depth and a magnetic action to demonstrate both behaviors.

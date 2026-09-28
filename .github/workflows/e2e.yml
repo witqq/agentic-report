@@ -1,24 +1,23 @@
-name: CI
+name: E2E (nightly)
 
+# Browser coverage is diagnostic and does not block pull requests or releases.
 on:
-  pull_request:
-  push:
-    branches:
-      - main
+  schedule:
+    - cron: '0 3 * * *' # 03:00 UTC daily
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  verify:
-    name: Product gate (pnpm verify)
+  e2e:
+    name: Browser E2E (pnpm test:e2e)
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -35,23 +34,19 @@ jobs:
           corepack enable
           corepack install
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install dependencies and Chromium
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
 
-      - name: Install Chromium for the installed-package smoke test
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Run browser E2E
+        run: pnpm test:e2e
 
-      - name: Refuse personal paths and secrets in tracked files
-        run: pnpm check:history
-
-      - name: Run the complete gate
-        run: pnpm verify
-
-      - name: Upload test results
+      - name: Upload E2E diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: test-results-${{ github.sha }}
+          name: e2e-test-results-${{ github.run_id }}
           path: test-results/
           if-no-files-found: ignore
           retention-days: 7

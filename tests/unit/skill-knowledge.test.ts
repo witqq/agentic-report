@@ -45,7 +45,7 @@ function enumValues(directive: string, attribute: string): string[] {
 const withoutNone = (values: readonly string[]) => values.filter((value) => value !== 'none');
 
 describe('skill knowledge base', () => {
-  it('says where every recipe, motion technique, WebGL effect, video mode, review tool, and presentation capability fits', async () => {
+  it('says where every recipe, motion technique, video mode, review tool, and presentation capability fits', async () => {
     const vocabulary = await readSkillFile('references/vocabulary-use.md');
     const entries = firstColumnEntries(vocabulary);
     const pageContract = authoringRegistry.page;
@@ -60,7 +60,6 @@ describe('skill knowledge base', () => {
       ...withoutNone(enumValues('diagram', 'draw')).map((value) => `draw="${value}"`),
       ':count[…]',
       ...withoutNone(pageContract.progress).map((value) => `progress: ${value}`),
-      ...withoutNone(enumValues('section', 'media-effect')),
       ...enumValues('video', 'mode').map((value) => `mode="${value}"`),
       'sources',
       'chapters',
@@ -77,16 +76,14 @@ describe('skill knowledge base', () => {
     ];
     expect(expected.filter((entry) => !entries.has(entry))).toEqual([]);
 
-    // Приём WebGL описан и там, где он становится клише: у таблицы четыре колонки.
+    // WebGL remains extension guidance, while the removed built-in is absent from author advice.
     const webglSection = vocabulary.slice(
       vocabulary.indexOf('## WebGL'),
       vocabulary.indexOf('## Video'),
     );
-    expect(webglSection).toMatch(/\|\s*Where it is a cliché\s*\|/u);
-    for (const effect of withoutNone(enumValues('section', 'media-effect'))) {
-      const row = webglSection.split('\n').find((line) => line.startsWith(`| \`${effect}\``));
-      expect(row?.split('|').filter((cell) => cell.trim().length > 0)).toHaveLength(4);
-    }
+    expect(webglSection).toContain('declared `kind: effect` extension');
+    expect(webglSection).toContain('still equivalent');
+    expect(webglSection).not.toContain('media-effect="threads"');
   });
 
   it('gives every design rule an identifier and a counterexample', async () => {

@@ -659,7 +659,7 @@ export const authoringRegistry = {
     {
       id: 'effect-check',
       description:
-        'Build the examples of an effect extension (or a built-in effect) and run the eleven effect checks in Chromium, reporting N of M checks passed.',
+        'Build the examples of an effect extension and run the eleven effect checks in Chromium, reporting N of M checks passed.',
     },
   ],
   examples: [

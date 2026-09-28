@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-label="Survey sketch of a shoreline">
+  <rect width="960" height="540" fill="#e8efe9"/>
+  <path d="M0 0h960v540H0z" fill="#d7e6e2"/>
+  <path d="M0 395c115-55 186-40 277-90 112-62 143-111 268-115 107-4 153-72 263-94l152-15v459H0z" fill="#c4d3c5"/>
+  <path d="M0 395c115-55 186-40 277-90 112-62 143-111 268-115 107-4 153-72 263-94l152-15" fill="none" stroke="#567e79" stroke-width="7"/>
+  <path d="M92 196 228 238 387 211 559 259 751 207" fill="none" stroke="#476f77" stroke-width="4" stroke-dasharray="14 10"/>
+  <g fill="#fff" stroke="#476f77" stroke-width="5"><circle cx="92" cy="196" r="13"/><circle cx="387" cy="211" r="13"/><circle cx="751" cy="207" r="13"/></g>
+</svg>

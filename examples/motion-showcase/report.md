@@ -110,12 +110,12 @@ The correction back to the filter is drawn last, as its own phase.
 ::::
 :::::
 
-:::::section{title="Numbers that arrive" id="numbers" nav="Numbers" recipe="statement" media-effect="threads"}
+:::::section{title="Numbers that arrive" id="numbers" nav="Numbers" recipe="statement"}
 ![The Richat Structure's concentric rock rings in the Mauritanian desert, photographed from orbit](assets/richat.jpg)
 
 :count[1,284] field frames were read, and :count[97.5%] of them kept their horizon.
 
-The picture unweaves into threads as it leaves the screen; without WebGL it stays still.
+The source keeps the final figures, so reduced motion shows their values without counting.
 :::::
 
 :::::section{title="The effect never owns the meaning" id="fallback" nav="Fallback" recipe="evidence" interaction="tilt"}

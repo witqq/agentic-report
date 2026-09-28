@@ -1,0 +1,11 @@
+kind: effect
+name: focus-frame
+description: A narrow frame follows the first image of a section; trace draws its perimeter as the section is read, corners grows four short corner marks.
+staticEquivalent: The original image, alternative text and section prose stay in document order. In still mode the frame is complete; print hides the decorative frame.
+module: effect.mjs
+targets:
+  - directive: section
+    attribute: focus-frame
+    values: [trace, corners]
+budgetBytes: 12000
+examples: [example-field.md, example-workshop.md]

@@ -19,9 +19,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the resulting file:
 
 ```sh
-npx --yes agentic-report@0.18.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.18.1 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.18.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.18.1 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. `build` validates the complete source before publishing the
@@ -58,7 +58,7 @@ If you do not want to execute the published `agentic-report` npm package, clone 
 inspect the repository, run its checks, and invoke the compiled CLI directly:
 
 ```sh
-git clone --branch v0.18.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.18.1 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -345,7 +345,8 @@ passes the checked [`extension proposal schema`](docs/generated/extension-propos
 The package ships reference extensions to copy from in `extensions/`, each with a README and two example
 pages, and `agentic-report examples` lists them: [`key-figure`](extensions/key-figure/README.md) (a block),
 [`product-theatre`](extensions/product-theatre/README.md) (a block and a provider),
-[`wall-thread`](extensions/wall-thread/README.md) and [`loom`](extensions/loom/README.md) (effects) and
+[`wall-thread`](extensions/wall-thread/README.md), [`loom`](extensions/loom/README.md), and
+[`focus-frame`](extensions/focus-frame/README.md) (effects) and
 [`slo-budget`](extensions/slo-budget/README.md) (an island). When to extend and which level to take is in
 the skill's [extensions reference](skills/agentic-report/references/extensions.md).
 

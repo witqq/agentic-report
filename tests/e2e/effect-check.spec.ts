@@ -5,7 +5,7 @@ import { effectCheck, EFFECT_CHECKS } from '../../dist/node/core/effect-check.js
 import { expect, test } from './fixtures.js';
 
 /**
- * `effect-check` проходит на образцовом эффекте и на встроенном `threads`, а на эффекте с посаженным
+ * `effect-check` проходит на образцовом эффекте, а на эффекте с посаженным
  * дефектом падает именно та проверка, которая этот дефект ловит. Без второй половины зелёный итог
  * ничего не доказывал бы: проверка, которая не падает на своём контрпримере, — не свидетельство.
  */
@@ -44,17 +44,6 @@ test('a good effect passes all eleven checks', async ({ browserName }, testInfo)
   test.skip(testInfo.project.name !== 'desktop-chromium' || browserName !== 'chromium');
   const result = await checkVariant('good');
   expect(result.total).toBe(EFFECT_CHECKS.length);
-  expect(failed(result), JSON.stringify(result.checks, null, 2)).toEqual([]);
-  expect(result.summary).toBe('11 of 11 checks passed');
-});
-
-test('the built-in threads effect passes the same eleven checks', async ({
-  browserName,
-}, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop-chromium' || browserName !== 'chromium');
-  const out = path.resolve('test-results/e2e-effect-check/threads');
-  await rm(out, { recursive: true, force: true });
-  const result = await effectCheck({ builtIn: 'threads', output: out });
   expect(failed(result), JSON.stringify(result.checks, null, 2)).toEqual([]);
   expect(result.summary).toBe('11 of 11 checks passed');
 });

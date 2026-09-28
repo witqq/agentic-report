@@ -626,13 +626,7 @@ async function processAssetTarget(
   if (isNonLocalReference(source)) {
     return;
   }
-  // Картинку WebGL-эффекта холст берёт как текстуру, а соседний файл на `file://` для него чужой:
-  // такая картинка встраивается данными и в каталоговом выводе.
-  const inlineForCanvas = target.kind === 'image' && target.node.properties.dataWebgl !== undefined;
-  const reference = await materializeLocalAsset(
-    source,
-    inlineForCanvas ? { ...options, format: 'single-file' } : options,
-  );
+  const reference = await materializeLocalAsset(source, options);
   options.collector.sourceFiles.add(reference.sourcePath);
   options.collector.resourceDigests.set(reference.sourcePath, reference.sha256);
   if (options.format === 'single-file') {

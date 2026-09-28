@@ -22,8 +22,15 @@ writes its summary to `test-results/summary.json` and failure reports under
 The Testfold configuration rejects suites that produce zero test results. This guard prevents setup or
 discovery failures from being reported as successful empty runs.
 
-`pnpm verify` runs the unit and E2E entry points sequentially. Both suites own files under `test-results/`, so
-the required pre-commit gate must not run their workspace setup and cleanup concurrently.
+`pnpm verify` is the required local, pull-request and release gate. It checks generated authoring projections,
+types, lint, formatting, the complete unit suite and the installed npm package through `pnpm pack:check`.
+The package check opens its installed output in Chromium; it does not run the full E2E suite.
+
+The full `pnpm test:e2e` suite runs in `.github/workflows/e2e.yml` every day at 03:00 UTC
+and can be started manually with `workflow_dispatch`. It does not block a pull request or release. Run it
+locally when changing browser behavior or diagnosing a nightly failure. `pnpm test` also runs unit and E2E
+through Testfold. Run these suites sequentially: both own files under `test-results/`, so concurrent workspace
+setup and cleanup would invalidate their results.
 
 ## Tiers
 
@@ -202,20 +209,18 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   landing starter's demo fits the first 900 pixels beside the title; each catalog form is visible and still
   at 1440 and 400 pixels under reduced motion; `compare` follows a click, a drag, and the arrow keys; chapter
   segments match the chapters, fill to the end, and jump on click. Directed motion is checked in
-  `motion.test.ts` (runtime growth capped at 15 KB compressed over the pre-motion baseline, WebGL code only
-  on pages with the effect in both formats, byte-identical rebuilds, connection order, refusals of wrong
+  `motion.test.ts` (runtime growth capped at 15 KB compressed over the pre-motion baseline,
+  byte-identical rebuilds, connection order, refusals of wrong
   scenes and counts, theme motion variables) and in `motion-vocabulary.spec.ts` (reduced motion leaves
   every technique still and complete at 1440 and 400 pixels; a steps scene pins, switches its picture and
   lights focus nodes; drawing is empty before the diagram and complete after it; a count passes through
   intermediate values and ends on the written one; a review note on a line-by-line title keeps its quote
-  after width and language changes and copy stays exact). `webgl-and-performance.spec.ts` runs the threads
-  effect live in both formats, drawn in 2D from the same geometry without a context and on a weak GPU, and
-  still under reduced motion; `effects.spec.ts` runs the sample effect `tests/fixtures/effects/margin-mark` (a
+  after width and language changes and copy stays exact). `effects.spec.ts` runs the sample effect `tests/fixtures/effects/margin-mark` (a
   canvas and a DOM detail) and requires the same mark positions and states in `live`, `still` and
   `static`, a drawn mark in all three, byte-identical frames for one clock time and a different frame for
   another, zero overlap with text lines at 1280 and 390 pixels (and a positive overlap for the planted
   on-heading placement), and a canvas colour equal to the accent token before and after a scheme switch;
-  `effect-check.spec.ts` runs [`effect-check`](#effect-check) on the sample and on `--built-in threads`
+  `effect-check.spec.ts` runs [`effect-check`](#effect-check) on the sample
   (11 of 11) and on a planted defect for each of the eleven checks — an own timer, a hard-coded colour, a
   mark on a heading, a still state that lives in time, a slow frame, overlapping details, a mount that
   breaks on a content edit, a state set only live, a layer printed, third-party code without a licence file
@@ -223,6 +228,9 @@ the required pre-commit gate must not run their workspace setup and cleanup conc
   bundle one byte over its budget, compiles the bundle as a classic script and runs it in a VM context,
   keeps licence texts, refuses a package import and explains a missing esbuild, and compiles a sample
   effect against the published `agentic-report/effect` types while a misuse of them fails `tsc`;
+  `focus-frame.spec.ts` opens the reference WebGL frame through `file://`, checks both variants against
+  a page-clock progress change, then checks missing/lost WebGL, the matching 2D drawing, token colours,
+  reduced motion, print and all eleven `effect-check` results;
   `motion-performance.spec.ts` scrolls the motion showcase with a 4x slower CPU, video and trace recording
   off because they create long tasks themselves, and requires no long task over 50 ms. It measures the
   display refresh interval before CPU throttling, then requires the 95th-percentile frame interval to stay
@@ -351,7 +359,7 @@ ETag/conditional `304`, health, and real `404` behavior.
 
 ## Effect check
 
-`agentic-report effect-check <extension.yaml> --out <directory>` (or `--built-in threads`) builds the
+`agentic-report effect-check <extension.yaml> --out <directory>` builds the
 examples of an effect, opens the first in Chromium and reports `N of M checks passed`. Pages run on the
 manual page clock except for the performance pass. An init script records what the effect's own code does
 while the engine marks it current: calls of `requestAnimationFrame`, `setTimeout` and `setInterval`, colours
@@ -415,7 +423,7 @@ numbers under fixed keys; the file otherwise uses fixed labels and flags, with n
   full-page screenshot can misrepresent sticky state and is not behavioral evidence.
 - Take motion snapshots on the page clock, not after a real wait. Before `page.goto`, run
   `page.addInitScript(() => { window.__agenticReportClock = 'manual'; })`; time then stands at 0, and
-  `window.__clock.seek(t)` puts every entrance, count, transition, scene and WebGL frame at `t` seconds (the
+  `window.__clock.seek(t)` puts every entrance, count, transition, scene and extension effect frame at `t` seconds (the
   contract is in the page clock section of [`ARCHITECTURE.md`](ARCHITECTURE.md)). Seek, give the page's
   observers a short real pause, seek to the same `t` again, then capture the viewport. Set scroll-driven
   progress with the `data-clock-progress` attribute instead of scrolling to a pixel.

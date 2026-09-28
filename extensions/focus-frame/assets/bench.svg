@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-label="Workshop bench with a three-step assembly">
+  <rect width="960" height="540" fill="#ecedf0"/>
+  <rect x="80" y="98" width="800" height="344" rx="18" fill="#d6dbe2"/>
+  <path d="M195 270h555" stroke="#55677c" stroke-width="8" stroke-linecap="round"/>
+  <g fill="#fff" stroke="#55677c" stroke-width="7">
+    <rect x="155" y="192" width="126" height="156" rx="12"/>
+    <rect x="417" y="192" width="126" height="156" rx="12"/>
+    <rect x="679" y="192" width="126" height="156" rx="12"/>
+  </g>
+  <g fill="#657e93"><circle cx="218" cy="270" r="24"/><circle cx="480" cy="270" r="24"/><circle cx="742" cy="270" r="24"/></g>
+</svg>

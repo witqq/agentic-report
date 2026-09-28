@@ -191,14 +191,16 @@ describe('showcase', () => {
     expect(demo.slice(demo.indexOf('```', demo.indexOf('```md') + 3) + 3)).toContain(fenced ?? '');
   });
 
-  it('keeps a presentation, a page with a filmed clip, and a page with the WebGL effect', async () => {
+  it('keeps a presentation, a filmed clip, and a showcase with image-led steps', async () => {
     const presentation = await structureOf(path.join(examplesRoot, 'presentation'));
     expect(presentation.structure.layout).toBe('slides');
     const brief = await readFile(path.join(examplesRoot, 'presentation', 'brief.md'), 'utf8');
     expect(mediaRows(brief).get('assets/demo.h264.mp4')?.origin).toBe('screencast');
     const motion = await structureOf(path.join(examplesRoot, 'motion-showcase'));
-    expect(motion.structure.sections.some((section) => section.mediaEffect === 'threads')).toBe(
-      true,
-    );
+    expect(
+      motion.structure.sections.some(
+        (section) => section.scene === 'steps' && section.media.images > 0,
+      ),
+    ).toBe(true);
   });
 });

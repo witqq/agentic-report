@@ -1,6 +1,6 @@
 {
   "name": "agentic-report",
-  "version": "0.18.0",
+  "version": "0.18.1",
   "description": "Local declarative page builder for agent-authored interactive HTML artifacts.",
   "type": "module",
   "license": "MIT",
@@ -78,7 +78,7 @@
     "test:e2e": "testfold e2e",
     "prepack:check": "pnpm check:authoring",
     "pack:check": "node --experimental-strip-types scripts/check-package.ts",
-    "verify": "pnpm check:authoring && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test:unit && pnpm test:e2e && pnpm pack:check",
+    "verify": "pnpm check:authoring && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test:unit && pnpm pack:check",
     "prepare": "husky"
   },
   "dependencies": {

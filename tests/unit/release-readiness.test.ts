@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import matter from 'gray-matter';
@@ -7,7 +7,11 @@ import { unified } from 'unified';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parse as parseYaml } from 'yaml';
 
-import { inspectExecutableSearch } from '../../scripts/package-provenance.ts';
+import {
+  findPackedSensitiveContent,
+  inspectExecutableSearch,
+  readPackedRegularFile,
+} from '../../scripts/package-provenance.ts';
 import { validateExtensionProposal } from '../../src/authoring/extension-gate.js';
 import { buildReport } from '../../src/core/compiler.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
@@ -121,6 +125,53 @@ describe('release readiness', () => {
       ],
       allAbsent: false,
     });
+  });
+
+  it('reads extracted package bytes only from their exact regular member path', async () => {
+    const workspace = await createTestWorkspace('release-packed-file');
+    workspaces.push(workspace);
+    const extracted = path.join(workspace, 'extracted');
+    const docs = path.join(extracted, 'package', 'docs');
+    await mkdir(docs, { recursive: true });
+    await writeFile(path.join(docs, 'safe.txt'), 'accepted bytes');
+    expect((await readPackedRegularFile(extracted, 'package/docs/safe.txt')).toString('utf8')).toBe(
+      'accepted bytes',
+    );
+
+    // Counterexample: an allowlisted-looking name cannot escape through traversal or a symlink.
+    await expect(readPackedRegularFile(extracted, 'package/docs/../safe.txt')).rejects.toThrow(
+      'unsafe path',
+    );
+    const outside = path.join(workspace, 'outside');
+    await mkdir(outside);
+    await writeFile(path.join(outside, 'secret.txt'), 'outside bytes');
+    await symlink(path.join(outside, 'secret.txt'), path.join(docs, 'linked.txt'));
+    await expect(readPackedRegularFile(extracted, 'package/docs/linked.txt')).rejects.toThrow(
+      'not a confined regular file',
+    );
+    await symlink(outside, path.join(extracted, 'package', 'linked-directory'));
+    await expect(
+      readPackedRegularFile(extracted, 'package/linked-directory/secret.txt'),
+    ).rejects.toThrow('not a confined regular file');
+  });
+
+  it('scans the extracted member text for the same private bytes as tar stdout', () => {
+    const samples = [
+      ['private key', ['-----BEGIN OPENSSH ', 'PRIVATE KEY-----'].join('')],
+      ['GitHub token', `gh${'p'}_${'a'.repeat(22)}`],
+      ['OpenAI token', `sk-${'b'.repeat(22)}`],
+      ['AWS access key', `AKIA${'A'.repeat(16)}`],
+      ['Google API key', `AIza${'A'.repeat(30)}`],
+      ['Slack token', `xox${'b'}-${'a'.repeat(12)}`],
+      ['absolute local user path', ['', 'Users', 'owner', 'private'].join('/')],
+    ] as const;
+    const entries = samples.map(([, text], index) => ({ path: `package/file-${index}`, text }));
+    expect(findPackedSensitiveContent(entries)).toEqual(
+      samples.map(([label], index) => `package/file-${index}: ${label}`),
+    );
+    expect(findPackedSensitiveContent([{ path: 'package/safe.txt', text: 'public text' }])).toEqual(
+      [],
+    );
   });
 });
 

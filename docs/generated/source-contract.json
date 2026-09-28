@@ -232,13 +232,6 @@
           "default": "fade",
           "description": "How this slide arrives in a presentation (layout slides): a fade, a push, a wipe, a zoom, or at once; the duration is fixed and published."
         },
-        "media-effect": {
-          "kind": "enum",
-          "values": ["none", "threads"],
-          "required": false,
-          "default": "none",
-          "description": "WebGL treatment of the first image of the section: threads unweaves it into threads as it scrolls away. Off by default; a still image without WebGL, on a weak GPU, or under reduced motion."
-        },
         "interaction": {
           "kind": "enum",
           "values": ["none", "depth", "tilt"],
@@ -4906,6 +4899,6 @@
     "examples": "List packaged buildable examples and the reference extensions shipped beside them.",
     "sitemap": "Write sitemap.xml and robots.txt for a published tree of pages built with a public URL.",
     "snapshot": "Build a page and photograph it at several widths, in both schemes, with and without motion, with a contact sheet; with --measure, measure it instead of photographing.",
-    "effect-check": "Build the examples of an effect extension (or a built-in effect) and run the eleven effect checks in Chromium, reporting N of M checks passed."
+    "effect-check": "Build the examples of an effect extension and run the eleven effect checks in Chromium, reporting N of M checks passed."
   }
 }

@@ -24,9 +24,9 @@ Use Node.js 24.18.0 or newer. Start with the [agent quickstart](agent/index.html
 [direct Markdown version](agent/index.md), or install the [agent skill](../skills/agentic-report/SKILL.md).
 
 ```sh
-npx --yes agentic-report@0.18.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.18.1 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.18.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.18.1 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Build validates before publishing; use `validate` or `inspect` only
@@ -48,7 +48,7 @@ If you prefer to inspect the implementation instead of executing the published `
 package, clone a specific release tag and run the compiler directly from its build:
 
 ```sh
-git clone --branch v0.18.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.18.1 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -125,8 +125,8 @@ The content remains ordinary Markdown and semantic directives.
 ::::
 ```
 
-Sections also accept closed motion roles — `transition`, `scene`, `interaction`, `choreography`, and the
-WebGL `media-effect` — whose values are in the same source-contract table. Without a recipe they default to
+Sections also accept closed motion roles — `transition`, `scene`, `interaction`, and `choreography` — whose
+values are in the same source-contract table. Without a recipe they default to
 `none`; reduced motion leaves content visible and pointer
 effects require a fine pointer. Conflicting layout or transform owners fail validation. `actions` accepts
 `placement="auto|edge|inline|bottom"`, with bottom kept in normal flow, and only a primary action may use the

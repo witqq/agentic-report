@@ -110,7 +110,7 @@ When the product has its own colours, let the package place them instead of gues
 contrast:
 
 ```sh
-npx --yes agentic-report@0.18.0 theme --colors "#0b5fff,#ff7a00" --extends neutral --output ./my-page/brand-theme.yaml
+npx --yes agentic-report@0.18.1 theme --colors "#0b5fff,#ff7a00" --extends neutral --output ./my-page/brand-theme.yaml
 ```
 
 `--colors` takes one or two colours written `#rgb` or `#rrggbb`. The first becomes the accent family —
@@ -140,7 +140,7 @@ is a quiet eyebrow colour, and two loud colours break the one-accent rule (`DR-O
 A theme becomes CSS variables on the page root, grouped as colour, status, series, code, type, space, width,
 radius, control, elevation, motion, backdrop and ornament. `agentic-report schema --scope theme` lists them
 under `x-agentic-report-tokens`, each with the theme field it comes from. Everything that draws the page —
-the package styles, the WebGL threads (their torn edges take `--color-accent`), an extension — reads only
+the package styles and declared extensions — reads only
 these tokens and never names a colour or a typeface of its own: a new meaning becomes a theme role and passes
 the contrast check, like the status roles did.
 

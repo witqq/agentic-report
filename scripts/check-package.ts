@@ -54,7 +54,11 @@ import { promisify } from 'node:util';
 import { chromium } from '@playwright/test';
 
 import { EXTENSION_KINDS } from '../src/extensions/types.ts';
-import { inspectExecutableSearch } from './package-provenance.ts';
+import {
+  findPackedSensitiveContent,
+  inspectExecutableSearch,
+  readPackedRegularFile,
+} from './package-provenance.ts';
 
 const execFileAsync = promisify(execFile);
 const executableDirectory = path.dirname(process.execPath);
@@ -145,7 +149,7 @@ if (missingPackedFiles.length > 0 || unexpectedPackedFiles.length > 0) {
     ].join('\n'),
   );
 }
-await assertPackedContentIsPublishSafe(tarballPath, packedFiles);
+assertPackedPathsArePublishSafe(packedFiles);
 const tarballBytes = await readFile(tarballPath);
 const tarballSha256 = createHash('sha256').update(tarballBytes).digest('hex');
 const tarballShasum = createHash('sha1').update(tarballBytes).digest('hex');
@@ -154,16 +158,23 @@ const tarballSize = (await lstat(tarballPath)).size;
 const extractedDirectory = path.join(packageRunDirectory, 'extracted');
 await mkdir(extractedDirectory);
 await execFileAsync('tar', ['-xf', tarballPath, '-C', extractedDirectory]);
-const packedInventory = await Promise.all(
+const packedEntries = await Promise.all(
   packedFiles.map(async (file) => {
-    const bytes = await readFile(path.join(extractedDirectory, ...file.split('/')));
+    const bytes = await readPackedRegularFile(extractedDirectory, file);
     return {
       path: file,
       size: bytes.byteLength,
       sha256: createHash('sha256').update(bytes).digest('hex'),
+      text: bytes.toString('utf8'),
     };
   }),
 );
+assertPackedContentIsPublishSafe(packedEntries);
+const packedInventory = packedEntries.map(({ path: file, size, sha256 }) => ({
+  path: file,
+  size,
+  sha256,
+}));
 assertNpmPackRecord(npmPackRecord, {
   tarballFilename,
   tarballShasum,
@@ -1901,10 +1912,7 @@ async function expectedTarballFiles(): Promise<string[]> {
  * пути, а по содержимому — приватные ключи, распространённые токены и абсолютные домашние пути машины
  * сборки.
  */
-async function assertPackedContentIsPublishSafe(
-  tarballPath: string,
-  packedFiles: readonly string[],
-): Promise<void> {
+function assertPackedPathsArePublishSafe(packedFiles: readonly string[]): void {
   const forbiddenPath =
     /(?:^|\/)(?:\.env(?:\.[^/]*)?|\.npmrc|\.gitconfig|id_(?:rsa|dsa|ecdsa|ed25519)|[^/]+\.(?:pem|key|p12|log|tmp|bak)|moira-ws|agent_temp_files_local|test-results)(?:\/|$)/u;
   const forbiddenPaths = packedFiles.filter((file) => forbiddenPath.test(file));
@@ -1913,25 +1921,12 @@ async function assertPackedContentIsPublishSafe(
       `Packed npm tarball contains private or temporary paths:\n${forbiddenPaths.join('\n')}`,
     );
   }
+}
 
-  const sensitivePatterns = [
-    ['private key', /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/u],
-    ['GitHub token', /gh[pousr]_[A-Za-z0-9_]{20,}/u],
-    ['OpenAI token', /sk-[A-Za-z0-9_-]{20,}/u],
-    ['AWS access key', /AKIA[0-9A-Z]{16}/u],
-    ['Google API key', /AIza[0-9A-Za-z_-]{30,}/u],
-    ['Slack token', /xox[baprs]-[0-9A-Za-z-]{10,}/u],
-    ['absolute local user path', /(?:\/Users\/|\/home\/)[A-Za-z0-9._-]+\//u],
-  ] as const;
-  const findings: string[] = [];
-  for (const file of packedFiles) {
-    const { stdout } = await execFileAsync('tar', ['-xOf', tarballPath, file], {
-      maxBuffer: 10 * 1024 * 1024,
-    });
-    for (const [label, pattern] of sensitivePatterns) {
-      if (pattern.test(stdout)) findings.push(`${file}: ${label}`);
-    }
-  }
+function assertPackedContentIsPublishSafe(
+  packedEntries: readonly { readonly path: string; readonly text: string }[],
+): void {
+  const findings = findPackedSensitiveContent(packedEntries);
   if (findings.length > 0) {
     throw new Error(
       `Packed npm tarball failed the sensitive-content scan:\n${findings.join('\n')}`,

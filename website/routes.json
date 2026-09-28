@@ -322,6 +322,12 @@
       "kind": "copy"
     },
     {
+      "id": "extension-focus-frame",
+      "href": "extensions/focus-frame/README.md",
+      "source": "../extensions/focus-frame/README.md",
+      "kind": "copy"
+    },
+    {
       "id": "extension-slo-budget",
       "href": "extensions/slo-budget/README.md",
       "source": "../extensions/slo-budget/README.md",

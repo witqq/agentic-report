@@ -1,6 +1,6 @@
 # Where each tool fits
 
-Every recipe, motion technique, WebGL effect, video mode, review tool, and presentation capability has a
+Every recipe, motion technique, video mode, review tool, and presentation capability has a
 place where it helps the reader and a place where it only decorates. Read the row before you reach for the
 tool. The rule identifiers such as `DR-UNIFORM-ENTRANCE` point at [`design-rules.md`](design-rules.md).
 
@@ -101,17 +101,17 @@ fails with `MOTION_LEVEL_EXCEEDED` where it is written, and a value a recipe bro
 recipe — write that attribute as `"none"` or raise the level. Leave `motion` out only when the brief gives
 the whole vocabulary (`expressive`).
 
-| Lowest level | Techniques                                                                                                                                                                                                                                                 |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `restrained` | One chapter entrance: `transition` `reveal`, `stagger`, `lines`, `clip` or `log`, or `reveal="true"`                                                                                                                                                       |
-| `restrained` | One pointer effect: `interaction` `depth` or `tilt`, `effect="magnetic"` on an `action`                                                                                                                                                                    |
-| `restrained` | Any number of counts and small in-place movements: `:count`, `count-up` on a `chart`, `choreography="cascade"`, `:swap`, `:typing`, `:mark`, `spotlight`, `seam="fade"` on a `video`                                                                       |
-| `expressive` | Directed motion: `scene` `progress`, `steps` or `scrub`, `transition="staged"`, `draw="scroll"`, `pulse` and `zoom` on a `diagram`, `demo` with `play` (`time` or `scroll`), `media-effect`; below this level effects of extensions draw their still state |
+| Lowest level | Techniques                                                                                                                                                                                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `restrained` | One chapter entrance: `transition` `reveal`, `stagger`, `lines`, `clip` or `log`, or `reveal="true"`                                                                                                                                                          |
+| `restrained` | One pointer effect: `interaction` `depth` or `tilt`, `effect="magnetic"` on an `action`                                                                                                                                                                       |
+| `restrained` | Any number of counts and small in-place movements: `:count`, `count-up` on a `chart`, `choreography="cascade"`, `:swap`, `:typing`, `:mark`, `spotlight`, `seam="fade"` on a `video`                                                                          |
+| `expressive` | Directed motion: `scene` `progress`, `steps` or `scrub`, `transition="staged"`, `draw="scroll"`, `pulse` and `zoom` on a `diagram`, `demo` with `play` (`time` or `scroll`), and extension effects; below this level extension effects draw their still state |
 
 For each moving element, say in one sentence what the
 reader learns from the movement; remove the ones without an answer (`DR-MOTION-MEANING`); an entrance
 travels at most 16 pixels toward its source, and a meaningful gesture is large enough to see
-(`DR-MOTION-ORIGIN`). Most chapters simply are there (`DR-UNIFORM-ENTRANCE`); at most one pointer or WebGL
+(`DR-MOTION-ORIGIN`). Most chapters simply are there (`DR-UNIFORM-ENTRANCE`); at most one pointer or magnetic
 effect per page (`DR-ONE-EFFECT`). Do not invent timing, coordinates, CSS, or browser code.
 
 The table says where each technique helps. The last two columns say what the reader gets under reduced motion and on a phone; a
@@ -335,27 +335,20 @@ the section and has no window buttons or made-up tabs (see the cliché table in
 
 ## WebGL
 
-`media-effect="threads"` on a `section` is the one WebGL effect: an image that comes apart into threads as the reader
-scrolls. It suits a picture whose subject is unravelling or woven, never a product screenshot, a chart, or
-a face. Without WebGL, on a weak GPU, or under reduced motion the image stays whole.
+WebGL belongs in a declared `kind: effect` extension when the visual subject needs it. The core has no
+WebGL section attribute. Give the effect a still equivalent and a fallback for a missing or weak WebGL
+context; the [extensions reference](extensions.md) describes the contract and its checks. The packaged
+[`focus-frame`](../../../extensions/focus-frame/README.md) shows a small WebGL effect with two image-frame
+variants and matching 2D rendering.
 
-| Effect    | Where it fits                                                                                                                                                                                                                   | Where it does not                                      | Where it is a cliché                                                                  |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| `threads` | A picture whose subject is unravelling, weaving, or coming apart: a closing image of a story, a "before" that dissolves (drawn at high precision, no denser than 1.5 on phones; on slow frames it returns to the still picture) | Product screenshots, charts, faces, pictures with text | Used on the first picture only because it is the first; two WebGL effects on one page |
-
-Without WebGL, on a weak GPU or under reduced motion `threads` shows the picture whole; on a phone it runs
-at a lower pixel density.
-
-- **The law of motion comes from the subject.** Threads unravel because the story comes apart; a network
+- **The law of motion comes from the subject.** A network
   lights the path the data took. «Premium» for a product tool comes from directing the mechanism, not from a
   shader: Linear's home page has no `<canvas>` and no `<video>`, only SVG and HTML on a timeline.
-- **Fewer exact elements beat a million particles.** Three hundred threads that each mean something say
-  more than a particle cloud.
+- **Fewer exact elements beat a million particles.** Draw only the marks that explain the subject or guide
+  the reader; more marks do not make the point clearer.
 - **Outdated tricks of 2018–2024:** a photo that distorts under the cursor, an RGB split, «liquid»
   transitions, tilt from scroll speed, particles that gather into a logo, cube, whip and zoom-blur
   transitions, bloom as a filter.
-- **Curl noise, not bare Perlin,** for a flow field: bare Perlin is worn out; evenly spaced lines read as
-  cloth, not hair.
 - **Pre-render the heavy.** Procedural scenes that only play are cheaper as a clip with the live interface
   beside it; keep live only what answers the reader or shows the steps.
 - **At rest the effect matches its still picture,** and every state it shows exists without WebGL
@@ -366,14 +359,11 @@ at a lower pixel density.
 A short list of references for real WebGL: [Igloo Inc](https://www.igloo.inc) (one object, procedural
 crystals), [Lusion](https://lusion.co) (physics without losing legibility),
 [Messenger by Abeto](https://messenger.abeto.co/) (stylised rather than photoreal),
-[Codrops, Unwoven](https://tympanus.net/codrops/2026/09/05/building-an-infinite-loom-unravelling-images-into-threads-with-three-js/)
-(an image unravelling into threads),
 [Codrops, the engineering behind ZERO](https://tympanus.net/codrops/2026/07/17/zero-the-engineering-behind-a-defiant-interactive-narrative/)
 (adaptive quality, `highp`).
 
 Sources: [Tyler Hobbs, flow fields](https://www.tylerxhobbs.com/words/flow-fields);
-[14islands, progressive enhancement with WebGL](https://www.14islands.com/journal/progressive-enhancement-with-webgl-and-react);
-the reviews of the WebGL directions of the Moira landing (September 2026).
+[14islands, progressive enhancement with WebGL](https://www.14islands.com/journal/progressive-enhancement-with-webgl-and-react).
 
 ## Video
 

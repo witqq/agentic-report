@@ -72,7 +72,7 @@ Frontmatter takes precedence. Supported fields are:
   cascade, `count-up`, `:swap`, `:typing`, `:mark`, `spotlight` or `seam="fade"`; `restrained` allows one
   chapter entrance (`transition="log"` included), one pointer effect, and those counts and small in-place
   movements, but no `scene="progress|steps|scrub"`, `draw="scroll"`, `pulse`, `zoom`, `demo` with `play`,
-  `media-effect` or `transition="staged"`. The
+  `transition="staged"`. The
   level is written on the root as `data-motion-level`; `none` stills the page for the runtime like reduced
   motion, and below `expressive` extension effects draw their still state (`reason: "motion-level"`);
 - `schemeToggle`: boolean; default `true`; shows the reader's package-owned light/dark button;
@@ -709,7 +709,6 @@ short navigation text. The complete visual grammar is closed and package-owned:
 | `transition`      | `none`, `reveal`, `stagger`, `lines`, `log`, `clip`, `staged`                                      | `none`      |
 | `scene`           | `none`, `progress`, `sticky`, `steps`, `scrub`                                                     | `none`      |
 | `state`           | page state name, `^[a-z][a-z0-9-]{0,40}$`                                                          | —           |
-| `media-effect`    | `none`, `threads`                                                                                  | `none`      |
 | `interaction`     | `none`, `depth`, `tilt`                                                                            | `none`      |
 | `choreography`    | `none`, `cascade`                                                                                  | `none`      |
 | `reveal`          | boolean                                                                                            | `false`     |
@@ -801,10 +800,8 @@ by the progress through a three-screen scene (or `data-clock-progress` on the fi
 as they reach a readable size. Without motion and in print the diagram and the inside stand as two figures
 side by side. `chart{count-up}` grows bars, lines and slices from zero and counts slice percentages up over
 0.9 s of the page clock once the chart is half visible; without motion the final values stand.
-`:count[value]` counts up to its written value, which stays in the HTML. `media-effect="threads"` turns the
-section's first image into WebGL threads as it leaves the screen; the WebGL module is added only to pages
-that use it, the image is embedded as data in both formats, and without WebGL, on a weak GPU, or under
-reduced motion the image stays whole. Themes set the curve and pace of all of it through `motion.easing`
+`:count[value]` counts up to its written value, which stays in the HTML. Themes set the curve and pace of
+all motion through `motion.easing`
 (`standard`, `gentle`, `decisive`) and `motion.pace` (`brisk`, `calm`, `slow`).
 
 The vocabulary techniques run on the same page clock and have the same still end state. A timed `demo`

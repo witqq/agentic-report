@@ -287,9 +287,9 @@ their motion was the same everywhere: every block entered the same way, so no mo
 story turned.
 Fix: let most chapters simply be there; keep an entrance for the one or two chapters that change the story.
 
-### DR-ONE-EFFECT — at most one pointer or WebGL effect per page · checked
+### DR-ONE-EFFECT — at most one pointer or magnetic effect per page · checked
 
-Depth, tilt, magnetic buttons, and WebGL each ask for attention. Two of them compete; three make the page a
+Depth, tilt, and magnetic buttons each ask for attention. Two of them compete; three make the page a
 toy.
 Counterexample: the 0.17 executive brief combined pointer tilt on one section with magnetic pull on two
 primary buttons, so three elements moved under the pointer on one screen.

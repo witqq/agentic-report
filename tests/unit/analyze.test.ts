@@ -692,7 +692,8 @@ describe('report analysis', () => {
           source: { file: report, line: 3 },
         },
       });
-      expect(JSON.stringify(error.diagnostic)).not.toMatch(
+      // The asserted source.file is an absolute test path and may itself contain "private".
+      expect(JSON.stringify({ ...error.diagnostic, source: undefined })).not.toMatch(
         /alice|password|private|credential-sentinel|signature-sentinel|security-token-sentinel/u,
       );
       expect(JSON.stringify(error.diagnostic)).toContain('[REDACTED]');

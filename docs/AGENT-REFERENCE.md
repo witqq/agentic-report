@@ -9,9 +9,9 @@ Use Node.js 24.18.0 or newer. Initialize a suitable packaged starter, replace it
 once, and open the result:
 
 ```bash
-npx --yes agentic-report@0.18.0 init ./my-report --starter document --json
+npx --yes agentic-report@0.18.1 init ./my-report --starter document --json
 # Edit ./my-report/report.md and its local assets.
-npx --yes agentic-report@0.18.0 build ./my-report --output ./my-report.html --json
+npx --yes agentic-report@0.18.1 build ./my-report --output ./my-report.html --json
 ```
 
 Open `my-report.html` through `file://`. Build runs the complete source and render preparation before
@@ -192,7 +192,7 @@ plus:
   the default applied; `beforeFirstSection`, the images,
   videos, diagrams, charts, timelines and code blocks shown before the first `section`; `sections`, one entry per
   authored section in source order with its nesting `depth`, resolved `recipe`, `place`, `surface`,
-  `transition`, `scene`, `interaction`, `choreography`, `mediaEffect`, and the same media counts;
+  `transition`, `scene`, `interaction`, `choreography`, and the same media counts;
   `magneticActions`; `movingElements`, the elements that move by themselves outside those section roles
   (`:count`, a `count-up` chart, a diagram with `draw="scroll"`, `pulse` or `zoom`, a `demo` with `play`,
   `:swap`, `:typing`, `:mark`, `spotlight`, a `video` with `seam="fade"`); and `cardGroups`, one entry per `cards` group with its number of `cards`, of distinct
@@ -913,28 +913,27 @@ write `recipe="hero" scene="none" interaction="depth"` and add a local image. Fo
 write `recipe="rail" scene="progress"` with image cards. The complete
 [`motion-showcase`](../examples/motion-showcase/report.md) demonstrates both without custom runtime code.
 
-### Directed motion and WebGL
+### Directed motion
 
 Motion is part of the closed vocabulary and always has a still end state: under reduced motion every
 technique below shows its final state, nothing is pinned, and nothing moves.
 
-| Technique                      | How to write it                                                                                               |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| Pinned scene switched by steps | `scene="steps"` on a section: its first images, video, diagram or code block, then 2–8 `:::beat` containers   |
-| Diagram lit by the story       | `beat{focus="node-a, edge-id"}` lights those nodes and connections, and connections between lit nodes         |
-| Code lit line by line          | `beat{lines="2-4"}` in a steps or scrub scene with a code block: those lines light, the others dim            |
-| Scene played by the scroll     | `scene="scrub"` with 2–4 beats: one screen per beat, caption at a third of its step, the last step holds all  |
-| Chapter opened by a mask       | `transition="clip"` on a section: the chapter opens from its lower edge, nothing slides                       |
-| Staged first screen            | `transition="staged"` with `place="opening"`: title by lines, eyebrow, subtitle, actions, then the scene      |
-| Thesis filled while read       | `recipe="thesis"`: the heading colour fills its lead from the top while the reader passes it                  |
-| Page state from progress       | `state="name"` on a section or beat, `when="name"` on a `card` or `:count`: lit while the state is set        |
-| Diagram drawn while scrolling  | `draw="scroll"` on a `diagram`: connections draw in flow order, backward ones later, a marker rides along     |
-| Pulses along a route           | `pulse="a,b,c"` on a flow `diagram`: a pulse runs the route three times; the route is marked still            |
-| Flight into a node             | `:::zoom{node="api" title="…"}` inside a flow `diagram`: the camera flies into the node, its inside grows     |
-| Chart growing to its values    | `count-up="true"` on a `chart`: bars, lines and slices grow from zero, slice percentages count up             |
-| Title line by line             | `transition="lines"` on a section: its title opens one line at a time, without touching the text              |
-| Number that counts up          | `:count[1,284]` in running text: counts from zero to the written value, which is what the page holds          |
-| Image unweaving into threads   | `media-effect="threads"` on a section: WebGL pulls its first image apart into threads as it leaves the screen |
+| Technique                      | How to write it                                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| Pinned scene switched by steps | `scene="steps"` on a section: its first images, video, diagram or code block, then 2–8 `:::beat` containers  |
+| Diagram lit by the story       | `beat{focus="node-a, edge-id"}` lights those nodes and connections, and connections between lit nodes        |
+| Code lit line by line          | `beat{lines="2-4"}` in a steps or scrub scene with a code block: those lines light, the others dim           |
+| Scene played by the scroll     | `scene="scrub"` with 2–4 beats: one screen per beat, caption at a third of its step, the last step holds all |
+| Chapter opened by a mask       | `transition="clip"` on a section: the chapter opens from its lower edge, nothing slides                      |
+| Staged first screen            | `transition="staged"` with `place="opening"`: title by lines, eyebrow, subtitle, actions, then the scene     |
+| Thesis filled while read       | `recipe="thesis"`: the heading colour fills its lead from the top while the reader passes it                 |
+| Page state from progress       | `state="name"` on a section or beat, `when="name"` on a `card` or `:count`: lit while the state is set       |
+| Diagram drawn while scrolling  | `draw="scroll"` on a `diagram`: connections draw in flow order, backward ones later, a marker rides along    |
+| Pulses along a route           | `pulse="a,b,c"` on a flow `diagram`: a pulse runs the route three times; the route is marked still           |
+| Flight into a node             | `:::zoom{node="api" title="…"}` inside a flow `diagram`: the camera flies into the node, its inside grows    |
+| Chart growing to its values    | `count-up="true"` on a `chart`: bars, lines and slices grow from zero, slice percentages count up            |
+| Title line by line             | `transition="lines"` on a section: its title opens one line at a time, without touching the text             |
+| Number that counts up          | `:count[1,284]` in running text: counts from zero to the written value, which is what the page holds         |
 
 A steps scene pins its media beside the beats only on a screen at least 57rem wide with normal motion; each
 beat takes up to two thirds of the screen and the pinned part stays within four screens. On a narrow screen
@@ -942,12 +941,6 @@ with normal motion the media stays under the top bar above the current beat; und
 and the beats simply follow each other. A scrub scene holds two to four beats — a fifth is refused — because
 each beat is a whole screen of scrolling. The nth beat shows the nth image; a beat's `focus`
 names node ids of the diagram in the same section, and a missing id fails at the beat's line.
-
-`media-effect="threads"` is off by default and needs no author code. The WebGL module ships only on a
-page that uses the effect; its image is embedded as data even in directory output, because a sibling file
-opened from `file://` cannot become a WebGL texture. Without WebGL, on a weak GPU (the browser refuses a
-context with a major performance caveat), or under reduced motion the image stays whole and still, and
-the first frame of the effect is that same whole image.
 
 The pace and the curve of all package motion come from the theme: `motion.easing` is `standard`, `gentle`,
 or `decisive`, and `motion.pace` is `brisk`, `calm` (the package timing), or `slow`.
@@ -1253,8 +1246,7 @@ An effect module is `export default defineEffect({ mount(ctx) { … return { at(
 into one script (refused above `budgetBytes` with `EXTENSION_EFFECT_OVER_BUDGET`). For an asynchronous
 rendering failure, such as a lost WebGL context, call `ctx.fallback()` to enter the next safe mode;
 `ctx.rebuild(reason)` requests geometry recalculation. Check an effect with
-`agentic-report effect-check <extension.yaml> --out <directory>` — or the package's own with
-`--built-in threads` — which builds both examples, opens them in Chromium (Playwright beside the package,
+`agentic-report effect-check <extension.yaml> --out <directory>`, which builds both examples, opens them in Chromium (Playwright beside the package,
 as for `snapshot`) and prints `N of M checks passed`: the declaration, the reduced-motion final state, the
 page clock, a 50 ms budget per effect call at 4× CPU slowdown, colours from theme tokens, no decoration on
 text, four widths, content edits, states in every render mode, print and two unlike examples. By default it
@@ -1283,6 +1275,7 @@ its manifest:
 | [`product-theatre`](../extensions/product-theatre/README.md) | block and provider (`theatre-script`) | a product run from a JSON scenario, replayed as a steps scene    |
 | [`wall-thread`](../extensions/wall-thread/README.md)         | effect                                | a thread drawn from section to section in all three render modes |
 | [`loom`](../extensions/loom/README.md)                       | effect                                | cloth woven beside a section as the reader goes through it       |
+| [`focus-frame`](../extensions/focus-frame/README.md)         | effect                                | a small WebGL frame around an image with 2D and still fallbacks  |
 | [`slo-budget`](../extensions/slo-budget/README.md)           | island                                | an error-budget calculator with a static body for print          |
 
 When to extend at all and how to choose the level is in the skill's

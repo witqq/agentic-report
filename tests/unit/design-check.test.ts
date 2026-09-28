@@ -56,7 +56,6 @@ function section(overrides: Partial<PageSectionStructure> = {}): PageSectionStru
     scene: 'none',
     interaction: 'none',
     choreography: 'none',
-    mediaEffect: 'none',
     media: noMedia,
     ...overrides,
   };
