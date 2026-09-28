@@ -8,16 +8,13 @@ the source itself is in [`compose.md`](compose.md) and [`vocabulary-use.md`](voc
 ## Build a reproducible page
 
 Use the release pinned in `SKILL.md`; its commands block has the exact `init`, `build`, and `snapshot`
-lines. `init` copies the starter and its `brief.md` into an absent destination whose parent exists. `build`
-validates the complete source before it writes output; resolve every structured diagnostic at its reported
-file and range, then rerun. Open the result through `file://`. Use `validate` for a diagnostic-only run,
-`inspect` for the source's structure and the catalog, and `--format directory` only when multi-file output
-is needed (several clips, a published site).
-
-Every command answers an agent without a flag and accepts `--json` as the name of that default: the run
-commands `init`, `build`, `validate`, `inspect`, `fix`, `review`, `sitemap`, `snapshot`, `effect-check`, and `theme` write NDJSON
-records, while `schema`, `describe`, and `examples` write one compact JSON document. `--human` selects the
-form for a person. One failed run lists every independent violation it found, so fix them together.
+lines. The complete command arguments, machine result records, and diagnostic shape are in
+[`cli.md`](cli.md). `init` copies the starter and its `brief.md` into an absent destination whose parent
+exists. `build` validates the complete source before it writes output; resolve every structured
+diagnostic at its reported file and range, then rerun. Open the result through `file://`. Use `validate`
+for a diagnostic-only run, `inspect` for the source's structure and the catalog, and `--format directory`
+only when multi-file output is needed (several clips, a published site). One failed run lists every
+independent violation it found, so fix them together.
 
 ### Deliver the page
 
@@ -129,7 +126,8 @@ under «Unresolved content facts».
 
 For a single-language page, delete the starter's `report.ru.md` (or `report.en.md`) and the
 `localizations` key. A link the product does not have yet, such as a sign-up address, uses an
-`https://….example/` placeholder and is listed as an unresolved fact.
+`https://product.example/signup` placeholder (the reserved `.example` domain cannot be a real destination)
+and is listed as an unresolved fact. Replace it with the verified real address before handover.
 
 ## Check the design
 
@@ -265,6 +263,7 @@ cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
 pnpm install --frozen-lockfile
+pnpm exec playwright install chromium
 pnpm verify
 pnpm build
 node dist/node/cli.js init ../my-page --starter document --json

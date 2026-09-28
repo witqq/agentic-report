@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Product gate (pnpm verify)
+    name: Product gate (pnpm verify:ci)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -38,14 +38,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Chromium for the installed-package smoke test
-        run: pnpm exec playwright install --with-deps chromium
-
       - name: Refuse personal paths and secrets in tracked files
         run: pnpm check:history
 
       - name: Run the complete gate
-        run: pnpm verify
+        run: pnpm verify:ci
 
       - name: Upload test results
         if: always()

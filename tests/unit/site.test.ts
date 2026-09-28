@@ -69,6 +69,10 @@ const repositoryPackageMetadata = JSON.parse(
 };
 
 const sha256 = (value: Buffer | string): string => createHash('sha256').update(value).digest('hex');
+// The effect guide's token parameter uses the CSS custom-property type `--${string}`.
+// Exclude only that parameter signature; credential assignments remain forbidden in staged files.
+const CREDENTIAL_ASSIGNMENT =
+  /(?:api[_-]?key|token|password|secret)\s*[:=]\s*(?!\\?`--\$\{string\}\\?`\))[^\s"']+/iu;
 
 const listFiles = async (root: string, current = root): Promise<string[]> => {
   const entries = await readdir(current, { withFileTypes: true });
@@ -498,11 +502,24 @@ describe('deterministic public site staging', () => {
     for (const file of publicFiles) {
       const source = await readFile(path.join(firstSite, ...file.split('/')), 'utf8');
       expect(source).not.toMatch(/(?:\/Users\/|moira-ws|agent_temp_files_local|CODEX_THREAD_ID)/u);
-      expect(source).not.toMatch(/(?:api[_-]?key|token|password|secret)\s*[:=]\s*[^\s"']+/iu);
+      expect(source, file).not.toMatch(CREDENTIAL_ASSIGNMENT);
       expect(source).not.toMatch(
         /(?:official|curated|verified)\s+(?:OpenAI|Anthropic|skills\.sh)/iu,
       );
     }
+  });
+
+  it('recognizes credential values while allowing the CSS-token type in the published effect guide', () => {
+    const cssTokenType = ['--$', '{string}'].join('');
+    const bareType = ['`', cssTokenType, '`'].join('');
+    const escapedType = ['\\`', cssTokenType, '\\`'].join('');
+    expect(`(token: ${bareType}): string`).not.toMatch(CREDENTIAL_ASSIGNMENT);
+    expect(`(token: ${escapedType}): string`).not.toMatch(CREDENTIAL_ASSIGNMENT);
+    expect('token=actual-value').toMatch(CREDENTIAL_ASSIGNMENT);
+    expect('token: actual-value').toMatch(CREDENTIAL_ASSIGNMENT);
+    expect(`token: ${bareType}-actual-value`).toMatch(CREDENTIAL_ASSIGNMENT);
+    expect(`token: ${escapedType}-actual-value`).toMatch(CREDENTIAL_ASSIGNMENT);
+    expect('apiKey: actual-value').toMatch(CREDENTIAL_ASSIGNMENT);
   });
 
   it('rejects route and source escapes and direct-file symlinks at the production staging boundary', async () => {

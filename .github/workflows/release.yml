@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing annotated tag, for example v0.18.1
+        description: Existing annotated tag, for example v0.19.0
         required: true
         type: string
 
@@ -45,10 +45,8 @@ jobs:
           corepack enable
           corepack install
 
-      - name: Install dependencies and Chromium for the installed-package smoke test
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm exec playwright install --with-deps chromium
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Verify tag and package version
         run: |
@@ -65,7 +63,7 @@ jobs:
         run: pnpm check:history
 
       - name: Run the complete gate
-        run: pnpm verify
+        run: pnpm verify:ci
 
       - name: Refuse to replace an existing release
         env:

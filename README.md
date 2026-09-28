@@ -19,9 +19,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the resulting file:
 
 ```sh
-npx --yes agentic-report@0.18.1 init ./my-page --starter landing --json
+npx --yes agentic-report@0.19.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.18.1 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.19.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. `build` validates the complete source before publishing the
@@ -44,8 +44,12 @@ paths. Validation and inspection remain available when focused diagnostics are u
 intended for finished agent-to-human handoffs with evidence, relationships,
 timelines, code explanations, visualizations, or fragment-level review; simple answers should stay in chat.
 Beside `SKILL.md` the skill carries [`references/catalog.md`](skills/agentic-report/references/catalog.md),
-generated from the package contract with every field, directive, and allowed value, and English and Russian
-prose guides; `pnpm check:authoring` fails when the catalog drifts from the compiler.
+generated from the package contract with every field, directive, and allowed value,
+[`references/cli.md`](skills/agentic-report/references/cli.md) for command options and agent results, and
+[`references/node-api.md`](skills/agentic-report/references/node-api.md) and
+[`references/effect-api.md`](skills/agentic-report/references/effect-api.md) for the published ESM entry
+points, alongside English and Russian prose guides; `pnpm check:authoring` fails when the catalog drifts
+from the compiler.
 
 You can also use the CLI as the rendering stage of a domain-specific skill. The custom skill owns research,
 judgment, and the trigger; `agentic-report` owns the safe source contract, responsive page, packaged
@@ -58,13 +62,14 @@ If you do not want to execute the published `agentic-report` npm package, clone 
 inspect the repository, run its checks, and invoke the compiled CLI directly:
 
 ```sh
-git clone --branch v0.18.1 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.19.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
 
 # Inspect README.md, LICENSE, package.json, pnpm-lock.yaml, and the source before installing dependencies.
 pnpm install --frozen-lockfile
+pnpm exec playwright install chromium
 pnpm verify
 pnpm build
 
@@ -84,18 +89,21 @@ for reproducibility.
 
 ## Document map
 
-| Document                                                                                     | Role                                                                   |
-| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| [`PRODUCT-REQUIREMENTS.md`](PRODUCT-REQUIREMENTS.md)                                         | Normative product requirements                                         |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)                                               | Authoritative description of the runnable current compiler             |
-| [`docs/product/source-contract.md`](docs/product/source-contract.md)                         | Exact current declarative authoring contract                           |
-| [`docs/AGENT-REFERENCE.md`](docs/AGENT-REFERENCE.md)                                         | Current copyable CLI and source reference for agents                   |
-| [`docs/TESTING.md`](docs/TESTING.md)                                                         | Current verification entry points and covered guarantees               |
-| [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)                                                 | Contributor setup and local quality commands                           |
-| [`docs/PUBLIC-SITE.md`](docs/PUBLIC-SITE.md)                                                 | Static-site and skill release contract                                 |
-| [`docs/RELEASE.md`](docs/RELEASE.md)                                                         | Ordered release and post-publication verification runbook              |
-| [`skills/agentic-report/SKILL.md`](skills/agentic-report/SKILL.md)                           | Canonical cross-agent authoring skill                                  |
-| [`skills/agentic-report/references/catalog.md`](skills/agentic-report/references/catalog.md) | Generated closed lists: themes, layouts, recipes, directives, commands |
+| Document                                                                                           | Role                                                                   |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [`PRODUCT-REQUIREMENTS.md`](PRODUCT-REQUIREMENTS.md)                                               | Normative product requirements                                         |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)                                                     | Authoritative description of the runnable current compiler             |
+| [`docs/product/source-contract.md`](docs/product/source-contract.md)                               | Exact current declarative authoring contract                           |
+| [`docs/AGENT-REFERENCE.md`](docs/AGENT-REFERENCE.md)                                               | Current copyable CLI and source reference for agents                   |
+| [`docs/TESTING.md`](docs/TESTING.md)                                                               | Current verification entry points and covered guarantees               |
+| [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)                                                       | Contributor setup and local quality commands                           |
+| [`docs/PUBLIC-SITE.md`](docs/PUBLIC-SITE.md)                                                       | Static-site and skill release contract                                 |
+| [`docs/RELEASE.md`](docs/RELEASE.md)                                                               | Ordered release and post-publication verification runbook              |
+| [`skills/agentic-report/SKILL.md`](skills/agentic-report/SKILL.md)                                 | Canonical cross-agent authoring skill                                  |
+| [`skills/agentic-report/references/catalog.md`](skills/agentic-report/references/catalog.md)       | Generated closed lists: themes, layouts, recipes, directives, commands |
+| [`skills/agentic-report/references/cli.md`](skills/agentic-report/references/cli.md)               | CLI options, agent output, diagnostics, and result fields              |
+| [`skills/agentic-report/references/node-api.md`](skills/agentic-report/references/node-api.md)     | Published Node ESM functions, types, and result shapes                 |
+| [`skills/agentic-report/references/effect-api.md`](skills/agentic-report/references/effect-api.md) | Effect module context, rendering modes, and lifecycle                  |
 
 ## Source format
 
@@ -162,6 +170,9 @@ Each part of the format is described in one place:
 | What a source may contain: every metadata field, directive, limit and the output behaviour              | [`docs/product/source-contract.md`](docs/product/source-contract.md)                                                                 |
 | How to write a page: categories and starters, themes, sections and recipes, visualizations, workspaces  | [`docs/AGENT-REFERENCE.md`](docs/AGENT-REFERENCE.md)                                                                                 |
 | The closed lists: built-in themes, layouts, recipes, directives with their attributes, and CLI commands | [`skills/agentic-report/references/catalog.md`](skills/agentic-report/references/catalog.md), generated                              |
+| How to call commands and parse their agent results                                                      | [`skills/agentic-report/references/cli.md`](skills/agentic-report/references/cli.md)                                                 |
+| How to call the published Node ESM API                                                                  | [`skills/agentic-report/references/node-api.md`](skills/agentic-report/references/node-api.md)                                       |
+| How to write an effect module with the published effect API                                             | [`skills/agentic-report/references/effect-api.md`](skills/agentic-report/references/effect-api.md)                                   |
 | The same contract as JSON                                                                               | `agentic-report describe`, `agentic-report schema --scope manifest\|directives\|source\|theme`, [`docs/generated/`](docs/generated/) |
 
 The catalog and the JSON projections are generated from the package registry; `pnpm check:authoring` fails
@@ -229,13 +240,14 @@ the build input. These examples remain discovery-only and do not change the five
 replacements the product computed exactly and leaves every other byte alone
 ([«Apply the repairs the product computed»](docs/AGENT-REFERENCE.md#apply-the-repairs-the-product-computed)).
 Every command answers an agent with JSON or NDJSON by default and a person with `--human`; which command
-writes which shape is under [«Command output»](docs/AGENT-REFERENCE.md#command-output).
+writes which shape is in the skill's [CLI reference](skills/agentic-report/references/cli.md#agent-output-and-diagnostics).
 
 ## Product-built landing
 
 The canonical public landing is itself an ordinary compiler input at
 [`website/landing`](website/landing/). It uses only supported Markdown, frontmatter, semantic directives,
-and local media. Its first viewport presents the value, actions, and a generated result; the remaining
+and local media. Its first viewport presents the value, a copyable skill-install command, actions, and a
+source-linked capture from a real built example; the remaining
 sections lead through style choice, the three-step author path, the full public gallery, selected-text Review,
 product reasons, agent setup, and the trust boundary. Its paired Russian entry and every public demo use the
 same multilingual contract as package consumers. Build it through the same public path as any user page:
@@ -338,7 +350,7 @@ time), an effect (a bundled script decorating existing directives) or an island 
 sandboxed frame with a Markdown static equivalent). Author code runs only through them: a provider runs
 locally at build time like any build script you chose, an island has no network and no access to the page,
 and an effect ships with its hash in the page policy only where it is used. `validate`, `inspect` and
-`inspect-review` run providers too, because they expand the page like `build`: do not validate an untrusted
+`review` run providers too, because they expand the page like `build`: do not validate an untrusted
 source that declares providers. The format is in the source
 contract's [«Extensions»](docs/product/source-contract.md#extensions); a change to the core itself first
 passes the checked [`extension proposal schema`](docs/generated/extension-proposal.schema.json).

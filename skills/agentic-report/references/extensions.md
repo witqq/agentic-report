@@ -6,8 +6,8 @@ application in its own frame. It is declared in the page's frontmatter, lives in
 is checked like the built-in blocks. This file says when to extend, which of the four levels to take, and
 the rules every extension follows. The installed package holds the rest: the exact manifest format in
 `docs/product/source-contract.md` (section «Extensions»), how each level is built and isolated and the
-context an effect receives in `docs/ARCHITECTURE.md` (sections «Extensions» and «Level 2 — effects and the
-effect engine»).
+context an effect receives in [`effect-api.md`](effect-api.md). The installed package's
+`docs/ARCHITECTURE.md` explains the engine architecture.
 
 ## First, the vocabulary
 
@@ -104,7 +104,7 @@ and in print — its two `examples` and the `licenses` of any third-party code i
   name in an attribute, as `product-theatre` does with `scenario="run"`. `source.file` is relative to the
   page's folder. A non-zero exit fails the build at
   the directive with the end of its standard error: refuse bad data there, with a message that says what to
-  fix. `validate`, `inspect` and `inspect-review` run providers exactly as `build` does — a provider is
+  fix. `validate`, `inspect` and `review` run providers exactly as `build` does — a provider is
   code, so do not validate an untrusted source that declares providers. A provider that starts its own
   children (`sh -c`, `npm run`) is stopped as a whole process group at `timeoutMs`.
 - **`effect`** — `module`, `targets` (`directive`, `attribute`, `values`: the attribute a built-in
@@ -115,6 +115,9 @@ and in print — its two `examples` and the `licenses` of any third-party code i
   theme change and a clock seek, for an effect whose state the scroll sets (by default it draws every
   frame while a host is on screen), and `endless: true` (see the pause button below). The author writes
   the target attribute on the host directive, and the effect reads it with `ctx.attribute(host, name)`:
+
+  Read the complete effect definition, context, canvas and fallback contract in
+  [`effect-api.md`](effect-api.md) before writing the module.
 
   ```markdown
   ---

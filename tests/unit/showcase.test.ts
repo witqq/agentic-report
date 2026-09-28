@@ -179,16 +179,21 @@ describe('showcase', () => {
     const { structure } = await structureOf(siteLanding);
     const first = structure.sections[0];
     expect(first).toMatchObject({ recipe: 'demo', place: 'opening' });
-    expect(first?.media.code).toBeGreaterThan(0);
-    const source = await readFile(path.join(siteLanding, 'report.md'), 'utf8');
-    const demo = source.slice(
-      source.indexOf('id="demo"'),
-      source.indexOf('::::::\n', source.indexOf('id="demo"')),
-    );
-    const fenced = /```md\n([\s\S]*?)\n```/u.exec(demo)?.[1];
-    expect(fenced).toBeDefined();
-    // Результат рядом с исходником — те же директивы, собранные пакетом.
-    expect(demo.slice(demo.indexOf('```', demo.indexOf('```md') + 3) + 3)).toContain(fenced ?? '');
+    expect(first?.media.images).toBeGreaterThan(0);
+    const example = await readFile('examples/incident-review/report.md', 'utf8');
+    expect(example).toContain('**18.4% peak failures**');
+    for (const entry of ['report.md', 'report.ru.md']) {
+      const source = await readFile(path.join(siteLanding, entry), 'utf8');
+      const demo = source.slice(
+        source.indexOf('id="demo"'),
+        source.indexOf('::::::\n', source.indexOf('id="demo"')),
+      );
+      expect(demo).toContain(
+        entry === 'report.md' ? '18.4% peak failures' : '18,4% ошибок на пике',
+      );
+      expect(demo).toContain('incident-impact-card');
+      expect(demo).toContain('examples/incident-review/index.html');
+    }
   });
 
   it('keeps a presentation, a filmed clip, and a showcase with image-led steps', async () => {

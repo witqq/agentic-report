@@ -22,14 +22,13 @@
  *   утечки учётных данных, validate и inspect не трогают вывод, CLI и ESM описывают проект одинаково;
  * - ревью: манифест целей, привязка `review.json`, прошлое ревью в validate, inspect и build;
  * - детерминизм: два независимых процесса дают одни байты single-file и одно дерево directory;
- * - Chromium: собранные кандидаты открываются через `file://` без ошибок, переключают схему и открывают
- *   рабочее место ревью;
- * - ресурсы браузера берутся из пакета, а не из рабочего каталога потребителя;
+ * - браузерные E2E получают пути к собранным артефактам из свидетельства кандидата;
+ * - ресурсы страницы берутся из пакета, а не из рабочего каталога потребителя;
  * - договоры результата сборки, ссылки на исходники (сохраняются по умолчанию, `--share` их обезвреживает),
  *   directory-вывод с адресуемыми по содержимому ресурсами, ESM `buildReport`;
  * - отказы: неверный формат ESM без порчи соседних файлов, публичные типы под `tsc`, удалённая опция
  *   `--scripts`, диагностика отсутствующего входа;
- * - путь скилла вне репозитория: проверка оформления скриптом из пакета и снимки командой из SKILL.md.
+ * - путь скилла вне репозитория: запуск стартера и проверки оформления скриптом из пакета.
  */
 
 import { execFile, spawn } from 'node:child_process';
@@ -48,10 +47,7 @@ import {
 } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
-
-import { chromium } from '@playwright/test';
 
 import { EXTENSION_KINDS } from '../src/extensions/types.ts';
 import {
@@ -104,6 +100,9 @@ const sourceThemeNames = requireArray(
 ).map((theme) => requireRecord(theme, 'generated theme').name);
 const packageDirectory = path.resolve('test-results/package');
 await mkdir(packageDirectory, { recursive: true });
+// A failed candidate must not leave a previous run's stable handoff looking accepted.
+const stableCandidateEvidencePath = path.join(packageDirectory, 'candidate-evidence.json');
+await rm(stableCandidateEvidencePath, { force: true });
 const packageRunDirectory = await mkdtemp(path.join(packageDirectory, 'candidate-'));
 const npmPackCacheDirectory = path.join(packageRunDirectory, '.npm-cache');
 const npmPackEnvironment: NodeJS.ProcessEnv = {
@@ -1254,9 +1253,9 @@ if (
 ) {
   throw new Error('Independent installed CLI processes produced different directory trees.');
 }
-// Ловит собранные у потребителя страницы, которые в Chromium падают, переполняются или теряют
-// переключатель схемы и рабочее место ревью (подробности — у inspectCandidateArtifacts).
-const candidateBrowserEvidence = await inspectCandidateArtifacts([
+// Четыре собранных артефакта остаются в каталоге чистого потребителя для браузерного E2E.
+// Это входные данные, а не свидетельство успешного открытия страницы в браузере.
+const browserInputs = [
   { format: 'single-file', path: firstUseOutput },
   { format: 'directory', path: path.join(directoryJourneyOutput, 'index.html') },
   { format: 'single-file', path: installedPriorSingle, expectReviewThreads: true },
@@ -1265,7 +1264,7 @@ const candidateBrowserEvidence = await inspectCandidateArtifacts([
     path: path.join(installedPriorDirectory, 'index.html'),
     expectReviewThreads: true,
   },
-]);
+] as const;
 
 // Ловит CLI, который читает рантайм и стили из `dist/browser` рабочего каталога, а не из своего пакета:
 // подложенные туда файлы не должны попасть в страницу.
@@ -1587,8 +1586,7 @@ if (
 }
 
 // Путь скилла от установленного тарбола во временном каталоге вне репозитория: стартер, проверка
-// оформления скриптом из пакета и снимки ровно той командой, что описана в SKILL.md, — с Playwright,
-// поставленным рядом через `npx -p`, потому что пакет браузера не везёт.
+// оформления скриптом из пакета. Браузерные снимки проверяет E2E.
 const skillJourneyRoot = await mkdtemp(path.join(os.tmpdir(), 'agentic-report-skill-journey-'));
 // Ловит прогон внутри репозитория, где скилл мог бы опереться на его файлы, а не на пакет.
 if (skillJourneyRoot.startsWith(`${path.resolve('.')}${path.sep}`)) {
@@ -1597,27 +1595,7 @@ if (skillJourneyRoot.startsWith(`${path.resolve('.')}${path.sep}`)) {
 const skillJourneyEnvironment: NodeJS.ProcessEnv = {
   ...candidateInstallEnvironment,
   ...(process.env.HOME === undefined ? {} : { HOME: process.env.HOME }),
-  ...(process.env.PLAYWRIGHT_BROWSERS_PATH === undefined
-    ? {}
-    : { PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH }),
 };
-const playwrightVersion = requireString(
-  requireRecord(sourcePackage.devDependencies, 'source devDependencies')['@playwright/test'],
-  '@playwright/test version',
-);
-// Ловит SKILL.md, где команда снимков не закрепляет Playwright или закрепляет не ту версию, что у проекта.
-const skillSourceText = await readFile(path.resolve('skills/agentic-report/SKILL.md'), 'utf8');
-const pinnedPlaywright = [...skillSourceText.matchAll(/\bplaywright@(\S+)/gu)].map(
-  (match) => match[1],
-);
-if (
-  pinnedPlaywright.length === 0 ||
-  pinnedPlaywright.some((version) => version !== playwrightVersion)
-) {
-  throw new Error(
-    `SKILL.md must pin playwright@${playwrightVersion} for snapshots; found ${pinnedPlaywright.join(', ')}.`,
-  );
-}
 const journeyPage = path.join(skillJourneyRoot, 'page');
 await execFileAsync(binary, ['init', journeyPage, '--starter', 'landing'], {
   cwd: skillJourneyRoot,
@@ -1639,40 +1617,6 @@ const designCheckOutcome = await execFileAsync(
 );
 const designCheck = requireRecord(JSON.parse(designCheckOutcome.stdout), 'design check result');
 if (!Array.isArray(designCheck.advice)) throw new Error('Design check returned no advice list.');
-// Ловит команду снимков из SKILL.md, которая с тарболом и закреплённым Playwright не снимает все сочетания
-// ширин, схем и движения (2 × 2 × 2) или не собирает PNG-лист.
-const snapshotArgv = [
-  '--yes',
-  '-p',
-  tarballPath,
-  '-p',
-  `playwright@${playwrightVersion}`,
-  'agentic-report',
-  'snapshot',
-  journeyPage,
-  '--out',
-  path.join(skillJourneyRoot, 'snapshots'),
-  '--widths',
-  '390,1440',
-] as const;
-const snapshotOutcome = await execFileAsync(npxExecutable, snapshotArgv, {
-  cwd: skillJourneyRoot,
-  env: skillJourneyEnvironment,
-  timeout: 300_000,
-  maxBuffer: 16 * 1024 * 1024,
-});
-const snapshotResult = requireSingleNdjsonRecord(snapshotOutcome, 'snapshot');
-const snapshotShots = snapshotResult.shots;
-if (!Array.isArray(snapshotShots) || snapshotShots.length !== 8) {
-  throw new Error(
-    'Snapshot from the installed tarball did not take 2 widths × 2 schemes × 2 motions.',
-  );
-}
-const contactSheet = requireRecord(snapshotResult.contactSheet, 'snapshot contact sheet');
-const contactSheetBytes = await readFile(requireString(contactSheet.image, 'contact sheet image'));
-if (contactSheetBytes.subarray(1, 4).toString('latin1') !== 'PNG') {
-  throw new Error('Snapshot contact sheet is not a PNG image.');
-}
 await rm(skillJourneyRoot, { recursive: true, force: true });
 
 // Запись о кандидате пишется только после всех проверок: на стабильном пути
@@ -1742,13 +1686,13 @@ const candidateEvidenceBytes = `${JSON.stringify(
       ...resolutionOutcome,
     },
     localOnlyNpxCommands: candidateNpxEvidence,
-    chromium: candidateBrowserEvidence,
+    browserInputs,
   },
   null,
   2,
 )}\n`;
 await writeFile(path.join(packageRunDirectory, 'candidate-evidence.json'), candidateEvidenceBytes);
-await writeFile(path.join(packageDirectory, 'candidate-evidence.json'), candidateEvidenceBytes);
+await writeFile(stableCandidateEvidencePath, candidateEvidenceBytes);
 
 console.log(
   `Package and clean npm consumer verified: ${tarballPath} (sha256 ${tarballSha256}, integrity ${tarballIntegrity}, shasum ${tarballShasum}, ${tarballSize} bytes, ${packedFiles.length} files)`,
@@ -1987,130 +1931,6 @@ async function pathExists(candidate: string): Promise<boolean> {
   } catch (error) {
     if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return false;
     throw error;
-  }
-}
-
-/**
- * Открывает собранные у потребителя страницы в Chromium через `file://` и ловит: ошибки страницы и консоли,
- * пустой заголовок, горизонтальное переполнение, переключатель схемы, который не меняет схему, отсутствие
- * рабочего места ревью или его диалога, элементы `[data-review-target-control]` на блоках, выделение
- * текста без действия и всплывающего окна, сдвиг макета при открытии ревью, потерю встроенных нитей
- * прошлого ревью и модальность диалога не по формату (модальный — только в directory).
- */
-async function inspectCandidateArtifacts(
-  artifacts: readonly {
-    readonly format: 'single-file' | 'directory';
-    readonly path: string;
-    readonly expectReviewThreads?: boolean;
-  }[],
-): Promise<readonly Readonly<Record<string, unknown>>[]> {
-  const browser = await chromium.launch();
-  try {
-    const evidence: Readonly<Record<string, unknown>>[] = [];
-    for (const artifact of artifacts) {
-      const context = await browser.newContext({
-        viewport:
-          artifact.format === 'single-file'
-            ? { width: 1440, height: 1000 }
-            : { width: 390, height: 844 },
-      });
-      const page = await context.newPage();
-      const errors: string[] = [];
-      page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
-      page.on('console', (message) => {
-        if (message.type() === 'error') errors.push(`console: ${message.text()}`);
-      });
-      await page.goto(pathToFileURL(artifact.path).href);
-      const themeToggle = page.locator('[data-scheme-toggle]');
-      const themeBefore = await page.locator('html').getAttribute('data-scheme');
-      if ((await themeToggle.count()) !== 1) {
-        throw new Error(`Installed ${artifact.format} candidate is missing its scheme control.`);
-      }
-      await themeToggle.click();
-      const themeAfter = await page.locator('html').getAttribute('data-scheme');
-      const reviewToggle = page.locator('[data-review-toggle]');
-      if ((await reviewToggle.count()) !== 1) {
-        throw new Error(`Installed ${artifact.format} candidate is missing Review Workspace.`);
-      }
-      const shellBefore = await page.locator('.report-shell').boundingBox();
-      await reviewToggle.click();
-      const reviewDialog = page.locator('[data-review-dialog]');
-      const reviewOpen = await reviewDialog.getAttribute('open');
-      const shellAfter = await page.locator('.report-shell').boundingBox();
-      const reviewOwners = await page.locator('[data-review-target]').count();
-      const blockControls = await page.locator('[data-review-target-control]').count();
-      const reviewThreads = await page
-        .locator('[data-review-current-list] [data-review-thread-open]')
-        .count();
-      const reviewModal = await reviewDialog.evaluate((element) => element.matches(':modal'));
-      await page.locator('[data-review-close]').click();
-      const selectionAction = await page
-        .locator('[data-review-target]')
-        .filter({ hasText: /\S/u })
-        .first()
-        .evaluate((owner) => {
-          const walker = document.createTreeWalker(owner, NodeFilter.SHOW_TEXT);
-          for (
-            let candidate = walker.nextNode();
-            candidate !== null;
-            candidate = walker.nextNode()
-          ) {
-            if (!(candidate instanceof Text) || candidate.data.trim().length === 0) continue;
-            const start = candidate.data.search(/\S/u);
-            const range = document.createRange();
-            range.setStart(candidate, start);
-            range.setEnd(candidate, Math.min(start + 4, candidate.data.length));
-            const selection = window.getSelection();
-            selection?.removeAllRanges();
-            selection?.addRange(range);
-            document.dispatchEvent(new Event('selectionchange'));
-            return true;
-          }
-          return false;
-        });
-      if (selectionAction) await page.locator('[data-review-selection-action]').click();
-      const popoverOpen = await page.locator('[data-review-popover]').isVisible();
-      const observed = await page.evaluate(() => ({
-        title: document.title,
-        heading: document.querySelector('h1')?.textContent ?? '',
-        horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
-      }));
-      await context.close();
-      if (
-        errors.length > 0 ||
-        observed.heading === '' ||
-        observed.horizontalOverflow ||
-        themeBefore === themeAfter ||
-        reviewOpen === null ||
-        reviewOwners === 0 ||
-        blockControls !== 0 ||
-        !selectionAction ||
-        !popoverOpen ||
-        JSON.stringify(shellBefore) !== JSON.stringify(shellAfter) ||
-        (artifact.expectReviewThreads === true && reviewThreads === 0) ||
-        reviewModal !== (artifact.format === 'directory')
-      ) {
-        throw new Error(
-          `Installed ${artifact.format} candidate failed Chromium inspection: ${JSON.stringify({ errors, observed })}`,
-        );
-      }
-      evidence.push({
-        format: artifact.format,
-        path: artifact.path,
-        errors,
-        themeBefore,
-        themeAfter,
-        reviewOwners,
-        blockControls,
-        reviewResponses: reviewThreads,
-        reviewModal,
-        popoverOpen,
-        ...observed,
-      });
-    }
-    return evidence;
-  } finally {
-    await browser.close();
   }
 }
 

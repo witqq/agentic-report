@@ -1,7 +1,9 @@
 # Agent reference
 
 This is the copyable reference for the implemented CLI and declarative source contract. Only syntax exposed
-by the commands, generated schemas, and source contract below is supported.
+by the commands, generated schemas, and source contract below is supported. For programmatic Node.js use,
+follow the published [Node ESM API reference](../skills/agentic-report/references/node-api.md); effect
+modules use the separate [effect API reference](../skills/agentic-report/references/effect-api.md).
 
 ## Build the first page
 
@@ -9,9 +11,9 @@ Use Node.js 24.18.0 or newer. Initialize a suitable packaged starter, replace it
 once, and open the result:
 
 ```bash
-npx --yes agentic-report@0.18.1 init ./my-report --starter document --json
+npx --yes agentic-report@0.19.0 init ./my-report --starter document --json
 # Edit ./my-report/report.md and its local assets.
-npx --yes agentic-report@0.18.1 build ./my-report --output ./my-report.html --json
+npx --yes agentic-report@0.19.0 build ./my-report --output ./my-report.html --json
 ```
 
 Open `my-report.html` through `file://`. Build runs the complete source and render preparation before
@@ -77,7 +79,8 @@ returns package-relative example identities and entry paths, while the CLI resol
 installed paths. The complete checked JSON projection is
 [`generated/source-contract.json`](generated/source-contract.json), and the hash-bound packaged inventory is
 [`../examples/manifest.json`](../examples/manifest.json). Agents should inspect these contracts instead of
-inferring unsupported fields.
+inferring unsupported fields. The [Node API reference](../skills/agentic-report/references/node-api.md)
+covers the other published root exports and their result shapes.
 
 ## Choose a page category and initialize its starter
 
@@ -1259,7 +1262,8 @@ marks the missing profile without exposing its browser error. The `wall-thread` 
 `phases[].builds`, including route search and path pulling; builds outside measured phases appear in
 `unassignedBuilds`.
 The file contains no authored text or paths; inspect it when the 50 ms check fails. The context the effect
-receives is described in [the architecture](ARCHITECTURE.md#level-2--effects-and-the-effect-engine).
+receives, including its render modes, canvas coordinates, services and lifecycle, is described in the
+[effect API reference](../skills/agentic-report/references/effect-api.md).
 `inspect` lists the extensions a page uses and `build` reports their uses and bundled bytes. The manifest
 format is in the source contract, [Extensions](product/source-contract.md#extensions); how each level
 is built and isolated is in [the architecture](ARCHITECTURE.md#extensions).

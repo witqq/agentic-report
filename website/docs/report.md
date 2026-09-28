@@ -24,9 +24,9 @@ Use Node.js 24.18.0 or newer. Start with the [agent quickstart](agent/index.html
 [direct Markdown version](agent/index.md), or install the [agent skill](../skills/agentic-report/SKILL.md).
 
 ```sh
-npx --yes agentic-report@0.18.1 init ./my-page --starter landing --json
+npx --yes agentic-report@0.19.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.18.1 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.19.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Build validates before publishing; use `validate` or `inspect` only
@@ -48,13 +48,14 @@ If you prefer to inspect the implementation instead of executing the published `
 package, clone a specific release tag and run the compiler directly from its build:
 
 ```sh
-git clone --branch v0.18.1 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.19.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
 
 # Review the source, package.json, pnpm-lock.yaml, and lifecycle scripts first.
 pnpm install --frozen-lockfile
+pnpm exec playwright install chromium
 pnpm verify
 pnpm build
 
@@ -171,6 +172,17 @@ The authoritative syntax, confinement boundary, output modes, and security model
 :::card{title="Live discovery"}
 Run `describe --json`, `schema`, and `examples --json` against the installed release for machine-readable
 runtime truth.
+:::
+:::card{title="Programmatic API"}
+The published Node.js root entry covers page operations, discovery, review artifacts, and diagnostics.
+
+[Read the Node API guide](../skills/agentic-report/references/node-api.md)
+:::
+:::card{title="Effect extensions"}
+The extension guide explains when to declare an effect; the effect API defines its module and lifecycle.
+
+[Choose an extension](../skills/agentic-report/references/extensions.md) ·
+[Read the effect API](../skills/agentic-report/references/effect-api.md)
 :::
 ::::
 

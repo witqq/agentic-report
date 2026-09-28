@@ -1,6 +1,6 @@
 # Русская проза страницы отчёта
 
-Адаптация [smixs/humanizer-ru](https://github.com/smixs/humanizer-ru) (MIT, Serge Shima); первоисточник
+Адаптация smixs/humanizer-ru (MIT, Serge Shima; полный текст лицензии в [`prose.md`](prose.md#licence-notices)); первоисточник
 признаков — руководство Википедии «Signs of AI writing» проекта WikiProject AI Cleanup. Этот файл берётся,
 когда язык страницы русский. Английская пара — `prose-en.md`; общие для обоих языков правила (когда идёт
 аудит, что он затрагивает, что править сразу) — в [`prose.md`](prose.md).

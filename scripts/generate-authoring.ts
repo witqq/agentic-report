@@ -11,6 +11,8 @@ import {
 } from '../dist/node/authoring/extension-gate.js';
 import { getAuthoringSchema, getSourceContract, listExamples } from '../dist/node/discovery.js';
 import type { SourceContract } from '../dist/node/discovery.js';
+import { authoringRegistry } from '../dist/node/authoring/registry.js';
+import type { FieldDefinition } from '../dist/node/authoring/registry.js';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const prettierOptions = (await resolveConfig(path.join(projectRoot, 'package.json'))) ?? {};
@@ -38,9 +40,7 @@ projections.set(
 projections.set('examples/manifest.json', await serialize(await createExampleManifest()));
 projections.set(
   'skills/agentic-report/references/catalog.md',
-  await formatMarkdown(
-    renderSkillCatalog(getSourceContract(), getAuthoringSchema('manifest') as ManifestSchema),
-  ),
+  await formatMarkdown(renderSkillCatalog(getSourceContract(), authoringRegistry.manifestFields)),
 );
 await writeProjections(projections);
 if (check && stale.length > 0) {
@@ -71,11 +71,10 @@ async function formatMarkdown(markdown: string): Promise<string> {
  * Полный перечень авторской поверхности внутри скилла. Собирается из того же контракта, которым
  * работают проверки, поэтому расходиться с ними не может: расхождение ловит `--check`.
  */
-interface ManifestSchema {
-  readonly properties?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
-}
-
-function renderSkillCatalog(contract: SourceContract, manifest: ManifestSchema): string {
+function renderSkillCatalog(
+  contract: SourceContract,
+  manifestFields: readonly FieldDefinition[],
+): string {
   const lines: string[] = [
     '# Authoring catalog',
     '',
@@ -152,19 +151,25 @@ function renderSkillCatalog(contract: SourceContract, manifest: ManifestSchema):
     '',
     'Every accepted field; anything else is refused as an unknown field.',
     '',
-    '| Field | Type | Default | Meaning |',
-    '| --- | --- | --- | --- |',
+    '| Field | Type | Accepted values and constraints | Default | Meaning |',
+    '| --- | --- | --- | --- | --- |',
   );
-  for (const [field, definition] of Object.entries(manifest.properties ?? {})) {
+  for (const [field, definition] of flattenManifestFields(manifestFields)) {
     const type =
-      typeof definition.type === 'string'
-        ? definition.type
-        : Array.isArray(definition.oneOf)
-          ? 'string or object'
-          : 'object';
+      definition.fields !== undefined
+        ? 'object'
+        : definition.constraint.kind === 'local-path-list'
+          ? 'array'
+          : definition.constraint.kind === 'theme-reference'
+            ? 'string or object'
+            : definition.constraint.kind === 'enum'
+              ? 'string'
+              : definition.constraint.kind;
     const fallback = 'default' in definition ? `\`${JSON.stringify(definition.default)}\`` : '—';
-    const meaning = typeof definition.description === 'string' ? definition.description : '';
-    lines.push(`| \`${field}\` | ${type} | ${fallback} | ${meaning} |`);
+    const meaning = definition.description;
+    lines.push(
+      `| \`${field}\` | ${type} | ${definition.fields === undefined ? describeConstraint(definition.constraint) : '—'} | ${fallback} | ${escapeTable(meaning)} |`,
+    );
   }
   lines.push(
     '',
@@ -188,17 +193,40 @@ function renderSkillCatalog(contract: SourceContract, manifest: ManifestSchema):
           .map((name) => `\`${name}\``)
           .join(' or ')}.`,
       );
+    if ((directive.placement as { topLevelOnly?: boolean }).topLevelOnly === true) {
+      facts.push('Top-level only.');
+    }
     lines.push(facts.join(' '), '');
     const attributes = Object.entries(directive.attributes ?? {});
     if (attributes.length > 0) {
-      lines.push('| Attribute | Values | Required | Default |', '| --- | --- | --- | --- |');
+      lines.push(
+        '| Attribute | Values and constraints | Required | Default | Meaning |',
+        '| --- | --- | --- | --- | --- |',
+      );
       for (const [attribute, rawDefinition] of attributes) {
-        const definition = rawDefinition as { required?: boolean; default?: unknown };
+        const definition = rawDefinition as {
+          required?: boolean;
+          default?: unknown;
+          description?: string;
+        };
         lines.push(
           `| \`${attribute}\` | ${describeConstraint(definition)} | ${definition.required === true ? 'yes' : 'no'} | ${
             'default' in definition ? `\`${String(definition.default)}\`` : '—'
-          } |`,
+          } | ${escapeTable(definition.description ?? '')} |`,
         );
+      }
+      lines.push('');
+    }
+    if (directive.incompatibleCombinations !== undefined) {
+      lines.push('Incompatible combinations:', '');
+      for (const combination of directive.incompatibleCombinations) {
+        const when = Object.entries(combination.attributes)
+          .map(
+            ([attribute, values]) =>
+              `\`${attribute}\` is ${values.map((value) => `\`${value}\``).join(' or ')}`,
+          )
+          .join('; ');
+        lines.push(`- ${when}: ${combination.message} ${combination.remediation}`);
       }
       lines.push('');
     }
@@ -223,6 +251,12 @@ function renderSkillCatalog(contract: SourceContract, manifest: ManifestSchema):
     JSON.stringify(contract.commands, undefined, 2),
     '```',
     '',
+    '## Capabilities',
+    '',
+    '```json',
+    JSON.stringify(contract.capabilities, undefined, 2),
+    '```',
+    '',
     '## Rules checked for you',
     '',
   );
@@ -235,6 +269,23 @@ function renderSkillCatalog(contract: SourceContract, manifest: ManifestSchema):
   }
   lines.push('');
   return lines.join('\n');
+}
+
+function flattenManifestFields(
+  fields: readonly FieldDefinition[],
+  prefix = '',
+): readonly (readonly [string, FieldDefinition])[] {
+  return fields.flatMap((definition) => {
+    const path = `${prefix}${definition.name}`;
+    return [
+      [path, definition] as const,
+      ...flattenManifestFields(definition.fields ?? [], `${path}.`),
+    ];
+  });
+}
+
+function escapeTable(value: string): string {
+  return value.replaceAll('|', '\\|').replaceAll('\n', ' ');
 }
 
 interface ContractField {
@@ -278,8 +329,15 @@ function describeConstraint(definition: unknown): string {
     values?: readonly string[];
     minimum?: number;
     maximum?: number;
+    multipleOf?: number;
+    lexicalPattern?: string;
     minLength?: number;
     maxLength?: number;
+    minItems?: number;
+    maxItems?: number;
+    pattern?: string;
+    format?: string;
+    normalization?: string;
   };
   if (record.kind === 'enum' && record.values !== undefined) {
     return record.values.map((value) => `\`${value}\``).join(', ');
@@ -289,20 +347,33 @@ function describeConstraint(definition: unknown): string {
     const bounds: string[] = [];
     if (record.minimum !== undefined) bounds.push(`from ${record.minimum}`);
     if (record.maximum !== undefined) bounds.push(`to ${record.maximum}`);
+    if (record.multipleOf !== undefined) bounds.push(`step ${record.multipleOf}`);
+    if (record.lexicalPattern !== undefined)
+      bounds.push(`spelling ${inlineCode(record.lexicalPattern)}`);
     return `${record.kind}${bounds.length === 0 ? '' : ` ${bounds.join(' ')}`}`;
   }
   if (
     record.kind === 'string' &&
     (record as { pattern?: string }).pattern?.includes('#[0-9a-fA-F]')
   ) {
-    return '`#rgb`, `#rrggbb`, `#rrggbbaa` or `transparent`';
+    return (
+      '`#rgb`, `#rrggbb`, `#rrggbbaa` or `transparent`' +
+      (record.normalization === 'trim' ? ' (trimmed)' : '')
+    );
   }
   if (record.kind === 'string') {
     const bounds: string[] = [];
+    if (record.normalization === 'trim') bounds.push('trimmed');
     if (record.minLength !== undefined) bounds.push(`min ${record.minLength}`);
     if (record.maxLength !== undefined) bounds.push(`max ${record.maxLength}`);
+    if (record.format !== undefined) bounds.push(`format ${inlineCode(record.format)}`);
+    if (record.pattern !== undefined) bounds.push(`pattern ${inlineCode(record.pattern)}`);
     return `text${bounds.length === 0 ? '' : ` (${bounds.join(', ')})`}`;
   }
+  if (record.kind === 'local-path-list') {
+    return `unique local paths (${record.minItems ?? 0}–${record.maxItems ?? 'unbounded'} items)`;
+  }
+  if (record.kind === 'theme-reference') return 'built-in theme, local theme file, or theme object';
   return record.kind ?? 'value';
 }
 

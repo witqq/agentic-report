@@ -43,10 +43,10 @@ Schemes: `system`, `light`, `dark`. Layouts: `document`, `dashboard`, `landing`,
 
 | Field                        | Values                                                                                                                                                                                                                                                                                                                                           | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `name`                       | text (min 1, max 64)                                                                                                                                                                                                                                                                                                                             | Theme identity shown in the theme selector; a theme file defaults to its file name, an inline theme to custom.                                                                                                                                                                                                                                                                                                                                                                             |
-| `extends`                    | text (min 1, max 300)                                                                                                                                                                                                                                                                                                                            | Built-in theme name or relative path to another theme file this theme starts from; defaults to the default theme.                                                                                                                                                                                                                                                                                                                                                                          |
-| `description`                | text (min 1, max 300)                                                                                                                                                                                                                                                                                                                            | One sentence saying what kind of page the theme is for.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `palette`                    | text (min 1, max 600)                                                                                                                                                                                                                                                                                                                            | Why the palette looks the way it does, in words: the named colours and the reason for them.                                                                                                                                                                                                                                                                                                                                                                                                |
+| `name`                       | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`)                                                                                                                                                                                                                                                                                  | Theme identity shown in the theme selector; a theme file defaults to its file name, an inline theme to custom.                                                                                                                                                                                                                                                                                                                                                                             |
+| `extends`                    | text (trimmed, min 1, max 300)                                                                                                                                                                                                                                                                                                                   | Built-in theme name or relative path to another theme file this theme starts from; defaults to the default theme.                                                                                                                                                                                                                                                                                                                                                                          |
+| `description`                | text (trimmed, min 1, max 300)                                                                                                                                                                                                                                                                                                                   | One sentence saying what kind of page the theme is for.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `palette`                    | text (trimmed, min 1, max 600)                                                                                                                                                                                                                                                                                                                   | Why the palette looks the way it does, in words: the named colours and the reason for them.                                                                                                                                                                                                                                                                                                                                                                                                |
 | `scheme`                     | `both`, `dark`                                                                                                                                                                                                                                                                                                                                   | Colour schemes the theme draws: both light and dark, or dark only.                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `accent`                     | `graphite`, `cobalt`, `rust`, `moss`, `ochre`, `ink`, `indigo`, `teal`, `coral`                                                                                                                                                                                                                                                                  | Named accent family for both schemes; explicit accent colours override it.                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `fonts.pair`                 | `midnight`, `calm-paper`, `synthwave`, `noir`, `aurora`, `daylight`, `ember`, `blueprint`, `terminal`, `neutral`, `frost`, `system`                                                                                                                                                                                                              | Coordinated heading, body and code families; a family named for a role in the same theme refines it.                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -76,8 +76,8 @@ Schemes: `system`, `light`, `dark`. Layouts: `document`, `dashboard`, `landing`,
 | `elevation`                  | `lifted`, `close`, `flat`                                                                                                                                                                                                                                                                                                                        | Geometry of raised shadows.                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `motion.easing`              | `standard`, `gentle`, `decisive`                                                                                                                                                                                                                                                                                                                 | How moving things arrive: standard settles quickly, gentle eases in and out, decisive starts late and lands hard.                                                                                                                                                                                                                                                                                                                                                                          |
 | `motion.pace`                | `brisk`, `calm`, `slow`                                                                                                                                                                                                                                                                                                                          | Multiplier of every package duration: brisk, calm (the package timing), or slow.                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `colors.light.<role>`        | `#rgb`, `#rrggbb`, `#rrggbbaa` or `transparent`                                                                                                                                                                                                                                                                                                  | Light scheme colour roles. Roles: `background`, `surface`, `raised`, `muted`, `heading`, `text`, `textMuted`, `border`, `borderStrong`, `accent`, `accentStrong`, `accentSoft`, `accent2`, `focus`, `chart1`, `chart2`, `chart3`, `chart4`, `chart5`, `chart6`, `statusDone`, `statusReview`, `statusReturned`, `marker`, `shadow`, `mediaBacking`, `codeBackground`, `codeText`, `codeKeyword`, `codeString`, `codeNumber`, `codeFunction`, `codeType`, `codeComment`, `codePunctuation`. |
-| `colors.dark.<role>`         | `#rgb`, `#rrggbb`, `#rrggbbaa` or `transparent`                                                                                                                                                                                                                                                                                                  | Dark scheme colour roles. Roles: `background`, `surface`, `raised`, `muted`, `heading`, `text`, `textMuted`, `border`, `borderStrong`, `accent`, `accentStrong`, `accentSoft`, `accent2`, `focus`, `chart1`, `chart2`, `chart3`, `chart4`, `chart5`, `chart6`, `statusDone`, `statusReview`, `statusReturned`, `marker`, `shadow`, `mediaBacking`, `codeBackground`, `codeText`, `codeKeyword`, `codeString`, `codeNumber`, `codeFunction`, `codeType`, `codeComment`, `codePunctuation`.  |
+| `colors.light.<role>`        | `#rgb`, `#rrggbb`, `#rrggbbaa` or `transparent` (trimmed)                                                                                                                                                                                                                                                                                        | Light scheme colour roles. Roles: `background`, `surface`, `raised`, `muted`, `heading`, `text`, `textMuted`, `border`, `borderStrong`, `accent`, `accentStrong`, `accentSoft`, `accent2`, `focus`, `chart1`, `chart2`, `chart3`, `chart4`, `chart5`, `chart6`, `statusDone`, `statusReview`, `statusReturned`, `marker`, `shadow`, `mediaBacking`, `codeBackground`, `codeText`, `codeKeyword`, `codeString`, `codeNumber`, `codeFunction`, `codeType`, `codeComment`, `codePunctuation`. |
+| `colors.dark.<role>`         | `#rgb`, `#rrggbb`, `#rrggbbaa` or `transparent` (trimmed)                                                                                                                                                                                                                                                                                        | Dark scheme colour roles. Roles: `background`, `surface`, `raised`, `muted`, `heading`, `text`, `textMuted`, `border`, `borderStrong`, `accent`, `accentStrong`, `accentSoft`, `accent2`, `focus`, `chart1`, `chart2`, `chart3`, `chart4`, `chart5`, `chart6`, `statusDone`, `statusReview`, `statusReturned`, `marker`, `shadow`, `mediaBacking`, `codeBackground`, `codeText`, `codeKeyword`, `codeString`, `codeNumber`, `codeFunction`, `codeType`, `codeComment`, `codePunctuation`.  |
 | `chrome.topbar`              | `glass`, `ledger`                                                                                                                                                                                                                                                                                                                                | Glass bar with the page title, or a ledger bar with the current section.                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `chrome.navigation`          | `plain`, `numbered`                                                                                                                                                                                                                                                                                                                              | Plain section list, or numbered chapters.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `chrome.sectionTitle`        | `plain`, `rule`, `bar`                                                                                                                                                                                                                                                                                                                           | Section title without a rule, underlined, or with a side bar.                                                                                                                                                                                                                                                                                                                                                                                                                              |
@@ -85,7 +85,7 @@ Schemes: `system`, `light`, `dark`. Layouts: `document`, `dashboard`, `landing`,
 | `chrome.components`          | `soft`, `flat`, `edged`                                                                                                                                                                                                                                                                                                                          | Soft components, flat framed components, or components with a signal edge.                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `chrome.landing`             | `centered`, `ledger`                                                                                                                                                                                                                                                                                                                             | Landing opening centred, or a ledger with a side rail and an eyebrow.                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `chrome.edges`               | `none`, `mono`                                                                                                                                                                                                                                                                                                                                   | Nothing at the screen edges, or small monospace captions along them on a wide screen: the page title on the left, the current chapter and its number on the right — for a technical product.                                                                                                                                                                                                                                                                                               |
-| `ornaments.headingPrefix`    | text (min 0, max 3)                                                                                                                                                                                                                                                                                                                              | Up to three characters drawn before the page heading in the accent colour, such as > or §; no spaces, quotes, backslash or <; empty for none.                                                                                                                                                                                                                                                                                                                                              |
+| `ornaments.headingPrefix`    | text (trimmed, min 0, max 3, pattern `^[^\s<"'\\]{0,3}$`)                                                                                                                                                                                                                                                                                        | Up to three characters drawn before the page heading in the accent colour, such as > or §; no spaces, quotes, backslash or <; empty for none.                                                                                                                                                                                                                                                                                                                                              |
 | `ornaments.titleCursor`      | true or false                                                                                                                                                                                                                                                                                                                                    | Cursor after the page heading: blinks six times, then stays lit; still under reduced motion.                                                                                                                                                                                                                                                                                                                                                                                               |
 | `ornaments.heroEmphasis`     | `none`, `rule`, `shadow`                                                                                                                                                                                                                                                                                                                         | Hero and story sections unmarked, marked by a thin accent rule, or lifted by a shadow.                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `ornaments.mediaTreatment`   | `plain`, `vivid`                                                                                                                                                                                                                                                                                                                                 | Plain images, or images with depth and slightly richer colour.                                                                                                                                                                                                                                                                                                                                                                                                                             |
@@ -136,28 +136,32 @@ The build refuses a theme whose colours fail these contrast pairs in any scheme 
 
 Every accepted field; anything else is refused as an unknown field.
 
-| Field             | Type             | Default                                             | Meaning                                                                                                                                                                                                                                                                                                       |
-| ----------------- | ---------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `contractVersion` | integer          | `1`                                                 | Authored source-contract major; omitted legacy source is interpreted as version 1.                                                                                                                                                                                                                            |
-| `title`           | string           | —                                                   | Document title.                                                                                                                                                                                                                                                                                               |
-| `description`     | string           | —                                                   | Plain-text document description for metadata.                                                                                                                                                                                                                                                                 |
-| `language`        | string           | `"und"`                                             | Language tag using the supported 2-8 letter primary and optional 2-8 character alphanumeric subtags.                                                                                                                                                                                                          |
-| `localizations`   | object           | —                                                   | Confined alternate Markdown entries for package-supported reader locales; the primary entry is the fallback.                                                                                                                                                                                                  |
-| `url`             | string           | —                                                   | Absolute public http(s) URL of the page; enables canonical, OpenGraph and Twitter card metadata.                                                                                                                                                                                                              |
-| `image`           | string           | —                                                   | Local PNG, JPEG, WebP, GIF or AVIF social preview image; published as og:image by a directory build with a public URL.                                                                                                                                                                                        |
-| `theme`           | string or object | `"neutral"`                                         | Visual theme: a built-in theme name, a relative path to a .yaml/.yml/.json theme file, or a theme object with extends and the fields it changes.                                                                                                                                                              |
-| `scheme`          | string           | `"system"`                                          | Initial colour scheme: follow the reader system, or light, or dark.                                                                                                                                                                                                                                           |
-| `layout`          | string           | `"document"`                                        | Responsive page composition selected from the package-owned layout catalog; screens moves one whole screen per gesture, with a screen switcher, keys and anchors, and scrolls normally under reduced motion.                                                                                                  |
-| `progress`        | string           | `"none"`                                            | Page-wide progress element at the top edge: none, one bar for the whole page, one segment per chapter that fills as the reader moves through it and jumps to the chapter on click, or a row of nodes, one per chapter, marking the chapters passed and the current one.                                       |
-| `motion`          | string           | `"expressive"`                                      | How much the page moves, decided by the brief: none — everything is drawn in its final state; restrained — at most one chapter entrance and one pointer effect, no pinned scenes, diagram drawing, WebGL or staged entrance; expressive — the whole motion vocabulary. Reduced motion always stills the page. |
-| `opening`         | string           | `"center"`                                          | Alignment of the page title, introduction and actions on a landing page: centered, or aligned to the start edge.                                                                                                                                                                                              |
-| `attribution`     | boolean          | `true`                                              | Shows the package-owned “Made with Agentic Report” footer link; set false to omit it.                                                                                                                                                                                                                         |
-| `schemeToggle`    | boolean          | `true`                                              | Shows the package-owned light and dark control; set false for a page that must stay in the scheme it was built with.                                                                                                                                                                                          |
-| `themeSwitcher`   | boolean          | `false`                                             | Shows a package-owned selector that swaps the page between the built-in themes and its own; the colour scheme stays where the reader put it.                                                                                                                                                                  |
-| `review`          | boolean          | `false`                                             | Enables the package-owned review workspace; off by default so an ordinary page ships as a document rather than a review surface.                                                                                                                                                                              |
-| `extensions`      | array            | —                                                   | Extension manifests the page declares (blocks, providers, effects, islands), relative to the source root.                                                                                                                                                                                                     |
-| `data`            | array            | —                                                   | JSON data files the page reads at build time, relative to the source root; each is addressed by its name without .json, as in {{run.total}}.                                                                                                                                                                  |
-| `output`          | object           | `{"format":"single-file","maxInlineBytes":5000000}` | Default output settings; command-line flags can override the format.                                                                                                                                                                                                                                          |
+| Field                   | Type             | Accepted values and constraints                                                            | Default                                             | Meaning                                                                                                                                                                                                                                                                                                       |
+| ----------------------- | ---------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `contractVersion`       | integer          | integer from 1                                                                             | `1`                                                 | Authored source-contract major; omitted legacy source is interpreted as version 1.                                                                                                                                                                                                                            |
+| `title`                 | string           | text (trimmed, min 1)                                                                      | —                                                   | Document title.                                                                                                                                                                                                                                                                                               |
+| `description`           | string           | text (trimmed, min 1)                                                                      | —                                                   | Plain-text document description for metadata.                                                                                                                                                                                                                                                                 |
+| `language`              | string           | text (trimmed, min 2, pattern `^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{2,8})*$`)                     | `"und"`                                             | Language tag using the supported 2-8 letter primary and optional 2-8 character alphanumeric subtags.                                                                                                                                                                                                          |
+| `localizations`         | object           | —                                                                                          | —                                                   | Confined alternate Markdown entries for package-supported reader locales; the primary entry is the fallback.                                                                                                                                                                                                  |
+| `localizations.en`      | string           | text (trimmed, min 1, format `relative-local-path`)                                        | —                                                   | Alternate English Markdown entry relative to the primary source root.                                                                                                                                                                                                                                         |
+| `localizations.ru`      | string           | text (trimmed, min 1, format `relative-local-path`)                                        | —                                                   | Alternate Russian Markdown entry relative to the primary source root.                                                                                                                                                                                                                                         |
+| `url`                   | string           | text (trimmed, min 1, format `absolute-http-url`, pattern `^[Hh][Tt][Tt][Pp][Ss]?://\S+$`) | —                                                   | Absolute public http(s) URL of the page; enables canonical, OpenGraph and Twitter card metadata.                                                                                                                                                                                                              |
+| `image`                 | string           | text (trimmed, min 1, format `relative-local-path`)                                        | —                                                   | Local PNG, JPEG, WebP, GIF or AVIF social preview image; published as og:image by a directory build with a public URL.                                                                                                                                                                                        |
+| `theme`                 | string or object | built-in theme, local theme file, or theme object                                          | `"neutral"`                                         | Visual theme: a built-in theme name, a relative path to a .yaml/.yml/.json theme file, or a theme object with extends and the fields it changes.                                                                                                                                                              |
+| `scheme`                | string           | `system`, `light`, `dark`                                                                  | `"system"`                                          | Initial colour scheme: follow the reader system, or light, or dark.                                                                                                                                                                                                                                           |
+| `layout`                | string           | `document`, `dashboard`, `landing`, `mixed`, `slides`, `screens`                           | `"document"`                                        | Responsive page composition selected from the package-owned layout catalog; screens moves one whole screen per gesture, with a screen switcher, keys and anchors, and scrolls normally under reduced motion.                                                                                                  |
+| `progress`              | string           | `none`, `page`, `chapters`, `nodes`                                                        | `"none"`                                            | Page-wide progress element at the top edge: none, one bar for the whole page, one segment per chapter that fills as the reader moves through it and jumps to the chapter on click, or a row of nodes, one per chapter, marking the chapters passed and the current one.                                       |
+| `motion`                | string           | `none`, `restrained`, `expressive`                                                         | `"expressive"`                                      | How much the page moves, decided by the brief: none — everything is drawn in its final state; restrained — at most one chapter entrance and one pointer effect, no pinned scenes, diagram drawing, WebGL or staged entrance; expressive — the whole motion vocabulary. Reduced motion always stills the page. |
+| `opening`               | string           | `center`, `start`                                                                          | `"center"`                                          | Alignment of the page title, introduction and actions on a landing page: centered, or aligned to the start edge.                                                                                                                                                                                              |
+| `attribution`           | boolean          | true or false                                                                              | `true`                                              | Shows the package-owned “Made with Agentic Report” footer link; set false to omit it.                                                                                                                                                                                                                         |
+| `schemeToggle`          | boolean          | true or false                                                                              | `true`                                              | Shows the package-owned light and dark control; set false for a page that must stay in the scheme it was built with.                                                                                                                                                                                          |
+| `themeSwitcher`         | boolean          | true or false                                                                              | `false`                                             | Shows a package-owned selector that swaps the page between the built-in themes and its own; the colour scheme stays where the reader put it.                                                                                                                                                                  |
+| `review`                | boolean          | true or false                                                                              | `false`                                             | Enables the package-owned review workspace; off by default so an ordinary page ships as a document rather than a review surface.                                                                                                                                                                              |
+| `extensions`            | array            | unique local paths (1–32 items)                                                            | —                                                   | Extension manifests the page declares (blocks, providers, effects, islands), relative to the source root.                                                                                                                                                                                                     |
+| `data`                  | array            | unique local paths (1–16 items)                                                            | —                                                   | JSON data files the page reads at build time, relative to the source root; each is addressed by its name without .json, as in {{run.total}}.                                                                                                                                                                  |
+| `output`                | object           | —                                                                                          | `{"format":"single-file","maxInlineBytes":5000000}` | Default output settings; command-line flags can override the format.                                                                                                                                                                                                                                          |
+| `output.format`         | string           | `single-file`, `directory`                                                                 | `"single-file"`                                     | Static artifact layout; single-file is the portable default.                                                                                                                                                                                                                                                  |
+| `output.maxInlineBytes` | integer          | integer from 1                                                                             | `5000000`                                           | Size budget of bytes embedded into single-file output; a build above it fails, use directory output or raise it deliberately.                                                                                                                                                                                 |
 
 ## Directives
 
@@ -169,11 +173,15 @@ Ordinary safe link inside an actions group.
 
 Forms: leaf. Children: label-or-generated-label. Required parent: `actions`.
 
-| Attribute | Values                          | Required | Default   |
-| --------- | ------------------------------- | -------- | --------- |
-| `href`    | text (min 1, max 500)           | yes      | —         |
-| `kind`    | `primary`, `secondary`, `quiet` | no       | `primary` |
-| `effect`  | `none`, `magnetic`              | no       | `none`    |
+| Attribute | Values and constraints                                                                                                                                                                                                                                          | Required | Default   | Meaning                                                                                                                                     |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `href`    | text (trimmed, min 1, max 500, pattern `^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}\|https?://[^\s<>]+\|mailto:[^\s<>]+\|tel:\+?[0-9][0-9().-]{0,31}\|sms:\+?[0-9][0-9().,-]{0,63}(?:\?body=[^\s<>]*)?\|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:\|//\|/))[A-Za-z0-9.][^\s<>\\]*)$`) | yes      | —         | Safe same-page, relative, HTTP(S), email, phone (tel:), or text-message (sms:) link target; executable and local-file schemes are rejected. |
+| `kind`    | `primary`, `secondary`, `quiet`                                                                                                                                                                                                                                 | no       | `primary` | Package-owned action emphasis.                                                                                                              |
+| `effect`  | `none`, `magnetic`                                                                                                                                                                                                                                              | no       | `none`    | Rare package-owned action interaction.                                                                                                      |
+
+Incompatible combinations:
+
+- `kind` is `secondary` or `quiet`; `effect` is `magnetic`: Magnetic action treatment is available only for a primary action. Use kind="primary" or effect="none".
 
 ### `actions`
 
@@ -181,9 +189,9 @@ Responsive group containing ordinary action links.
 
 Forms: container. Children: action-directives.
 
-| Attribute   | Values                             | Required | Default |
-| ----------- | ---------------------------------- | -------- | ------- |
-| `placement` | `auto`, `edge`, `inline`, `bottom` | no       | `auto`  |
+| Attribute   | Values and constraints             | Required | Default | Meaning                                        |
+| ----------- | ---------------------------------- | -------- | ------- | ---------------------------------------------- |
+| `placement` | `auto`, `edge`, `inline`, `bottom` | no       | `auto`  | Responsive placement for one action inventory. |
 
 ### `appear`
 
@@ -191,9 +199,9 @@ Markdown that appears on the next step of its slide in a presentation (layout sl
 
 Forms: container. Children: markdown.
 
-| Attribute | Values                        | Required | Default |
-| --------- | ----------------------------- | -------- | ------- |
-| `effect`  | `rise`, `fade`, `wipe`, `pop` | no       | `rise`  |
+| Attribute | Values and constraints        | Required | Default | Meaning                                                                                         |
+| --------- | ----------------------------- | -------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `effect`  | `rise`, `fade`, `wipe`, `pop` | no       | `rise`  | How the content arrives on its step: rising, fading, wiping in from the start edge, or popping. |
 
 ### `asset`
 
@@ -201,9 +209,9 @@ Download link to a confined local file.
 
 Forms: text, leaf. Children: label-or-generated-label.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `src`     | text (min 1, max 200) | yes      | —       |
+| Attribute | Values and constraints                                       | Required | Default | Meaning                       |
+| --------- | ------------------------------------------------------------ | -------- | ------- | ----------------------------- |
+| `src`     | text (trimmed, min 1, max 200, format `relative-local-path`) | yes      | —       | Relative local resource path. |
 
 ### `beat`
 
@@ -211,12 +219,12 @@ One step of a scene="steps" or scene="scrub" section or of a playable demo: Mark
 
 Forms: container. Children: markdown. Required parent: `section` or `demo`.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `title`   | text (min 1, max 200) | no       | —       |
-| `focus`   | text (min 1, max 640) | no       | —       |
-| `lines`   | text (min 1, max 120) | no       | —       |
-| `state`   | text (min 1, max 41)  | no       | —       |
+| Attribute | Values and constraints                                                                                                       | Required | Default | Meaning                                                                                                                                                              |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`   | text (trimmed, min 1, max 200)                                                                                               | no       | —       | Visible title.                                                                                                                                                       |
+| `focus`   | text (trimmed, min 1, max 640)                                                                                               | no       | —       | Diagram node and connection identities lit while this beat is current, separated by commas; a connection lights when named by its id or when both its nodes are lit. |
+| `lines`   | text (trimmed, min 1, max 120, pattern `^[1-9][0-9]{0,3}(?:-[1-9][0-9]{0,3})?(?:, ?[1-9][0-9]{0,3}(?:-[1-9][0-9]{0,3})?)*$`) | no       | —       | Lines of the code block in the scene lit while this beat is current, such as 3, 2-4 or 1,5-7; the other lines dim.                                                   |
+| `state`   | text (trimmed, min 1, max 41, pattern `^[a-z][a-z0-9-]{0,40}$`)                                                              | no       | —       | Page state set from the moment this beat becomes current; in a scrub scene it stays set for the later beats, so the last beat holds every state of the scene.        |
 
 ### `bucket`
 
@@ -224,10 +232,10 @@ One named assignment bucket.
 
 Forms: leaf. Children: none. Required parent: `question`.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `id`      | text (min 1, max 64)  | yes      | —       |
-| `label`   | text (min 1, max 200) | yes      | —       |
+| Attribute | Values and constraints                                          | Required | Default | Meaning                                     |
+| --------- | --------------------------------------------------------------- | -------- | ------- | ------------------------------------------- |
+| `id`      | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`) | yes      | —       | Stable bucket identity within the question. |
+| `label`   | text (trimmed, min 1, max 200)                                  | yes      | —       | Visible bucket label.                       |
 
 ### `callout`
 
@@ -235,10 +243,10 @@ Emphasized finding or notice containing Markdown.
 
 Forms: container. Children: markdown.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `title`   | text (min 1, max 200) | no       | —       |
-| `kind`    | text (min 1, max 32)  | no       | `info`  |
+| Attribute | Values and constraints                                          | Required | Default | Meaning                       |
+| --------- | --------------------------------------------------------------- | -------- | ------- | ----------------------------- |
+| `title`   | text (trimmed, min 1, max 200)                                  | no       | —       | Visible title.                |
+| `kind`    | text (trimmed, min 1, max 32, pattern `^[a-z][a-z0-9-]{0,31}$`) | no       | `info`  | Lowercase presentation token. |
 
 ### `card`
 
@@ -246,12 +254,12 @@ One semantic card containing Markdown, optionally promoted to one safe whole-car
 
 Forms: container. Children: markdown. Required parent: `cards`.
 
-| Attribute | Values                          | Required | Default |
-| --------- | ------------------------------- | -------- | ------- |
-| `title`   | text (min 1, max 200)           | no       | —       |
-| `href`    | text (min 1, max 500)           | no       | —       |
-| `status`  | `none`, `good`, `watch`, `risk` | no       | `none`  |
-| `when`    | text (min 1, max 41)            | no       | —       |
+| Attribute | Values and constraints                                                                                                                                                                                                                                          | Required | Default | Meaning                                                                                                                                                                          |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`   | text (trimmed, min 1, max 200)                                                                                                                                                                                                                                  | no       | —       | Visible title.                                                                                                                                                                   |
+| `href`    | text (trimmed, min 1, max 500, pattern `^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}\|https?://[^\s<>]+\|mailto:[^\s<>]+\|tel:\+?[0-9][0-9().-]{0,31}\|sms:\+?[0-9][0-9().,-]{0,63}(?:\?body=[^\s<>]*)?\|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:\|//\|/))[A-Za-z0-9.][^\s<>\\]*)$`) | no       | —       | Safe same-page, relative, HTTP(S), email, phone (tel:), or text-message (sms:) link target; executable and local-file schemes are rejected.                                      |
+| `status`  | `none`, `good`, `watch`, `risk`                                                                                                                                                                                                                                 | no       | `none`  | State label shown on the card as text and a marker: good, watch or risk.                                                                                                         |
+| `when`    | text (trimmed, min 1, max 41, pattern `^[a-z][a-z0-9-]{0,40}$`)                                                                                                                                                                                                 | no       | —       | Page state that lights this card, such as a station that lights when the reader reaches its chapter; until then the card is dimmed. Without motion and in print the card is lit. |
 
 ### `cards`
 
@@ -259,9 +267,9 @@ Responsive grid, normally containing card directives.
 
 Forms: container. Children: markdown-and-card-directives.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `title`   | text (min 1, max 200) | no       | —       |
+| Attribute | Values and constraints         | Required | Default | Meaning        |
+| --------- | ------------------------------ | -------- | ------- | -------------- |
+| `title`   | text (trimmed, min 1, max 200) | no       | —       | Visible title. |
 
 ### `chart`
 
@@ -269,14 +277,14 @@ Responsive bar, line, or pie chart rendered at compile time.
 
 Forms: container. Children: series-directives.
 
-| Attribute     | Values                | Required | Default |
-| ------------- | --------------------- | -------- | ------- |
-| `title`       | text (min 1, max 200) | yes      | —       |
-| `description` | text (min 1, max 300) | yes      | —       |
-| `type`        | `bar`, `line`, `pie`  | no       | `bar`   |
-| `x-label`     | text (min 1, max 160) | no       | —       |
-| `y-label`     | text (min 1, max 160) | no       | —       |
-| `count-up`    | true or false         | no       | `false` |
+| Attribute     | Values and constraints         | Required | Default | Meaning                                                                                                                                                                                    |
+| ------------- | ------------------------------ | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `title`       | text (trimmed, min 1, max 200) | yes      | —       | Visible title.                                                                                                                                                                             |
+| `description` | text (trimmed, min 1, max 300) | yes      | —       | Meaningful plain-text description for the visual.                                                                                                                                          |
+| `type`        | `bar`, `line`, `pie`           | no       | `bar`   | Chart form.                                                                                                                                                                                |
+| `x-label`     | text (trimmed, min 1, max 160) | no       | —       | Horizontal-axis label.                                                                                                                                                                     |
+| `y-label`     | text (trimmed, min 1, max 160) | no       | —       | Vertical-axis label.                                                                                                                                                                       |
+| `count-up`    | true or false                  | no       | `false` | Grow the bars, lines and slices from zero to their values, and count the slice percentages up, when the chart comes into view; under reduced motion and in print the values stand at once. |
 
 ### `check-item`
 
@@ -284,11 +292,11 @@ One labelled required or optional checklist item.
 
 Forms: leaf. Children: label-or-generated-label. Required parent: `checklist`.
 
-| Attribute  | Values                | Required | Default |
-| ---------- | --------------------- | -------- | ------- |
-| `id`       | text (min 1, max 64)  | yes      | —       |
-| `label`    | text (min 1, max 160) | yes      | —       |
-| `required` | true or false         | no       | `false` |
+| Attribute  | Values and constraints                                          | Required | Default | Meaning                                             |
+| ---------- | --------------------------------------------------------------- | -------- | ------- | --------------------------------------------------- |
+| `id`       | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`) | yes      | —       | Stable checklist item identity.                     |
+| `label`    | text (trimmed, min 1, max 160)                                  | yes      | —       | Visible checklist item label.                       |
+| `required` | true or false                                                   | no       | `false` | Marks this item as required in the static document. |
 
 ### `checklist`
 
@@ -296,10 +304,10 @@ Static structured checklist containing stable check-item directives.
 
 Forms: container. Children: check-item-directives.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `title`   | text (min 1, max 200) | yes      | —       |
-| `id`      | text (min 1, max 64)  | yes      | —       |
+| Attribute | Values and constraints                                          | Required | Default | Meaning                    |
+| --------- | --------------------------------------------------------------- | -------- | ------- | -------------------------- |
+| `title`   | text (trimmed, min 1, max 200)                                  | yes      | —       | Visible title.             |
+| `id`      | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`) | yes      | —       | Stable checklist identity. |
 
 ### `compare`
 
@@ -307,20 +315,20 @@ Before and after of the same view: exactly two Markdown images, before then afte
 
 Forms: container. Children: markdown.
 
-| Attribute | Values                | Required | Default  |
-| --------- | --------------------- | -------- | -------- |
-| `before`  | text (min 1, max 160) | no       | `Before` |
-| `after`   | text (min 1, max 160) | no       | `After`  |
+| Attribute | Values and constraints         | Required | Default  | Meaning                    |
+| --------- | ------------------------------ | -------- | -------- | -------------------------- |
+| `before`  | text (trimmed, min 1, max 160) | no       | `Before` | Label of the first image.  |
+| `after`   | text (trimmed, min 1, max 160) | no       | `After`  | Label of the second image. |
 
 ### `contents`
 
 Generated in-flow links to final primary sections using their exact visible headings.
 
-Forms: leaf. Children: none.
+Forms: leaf. Children: none. Top-level only.
 
-| Attribute | Values        | Required | Default |
-| --------- | ------------- | -------- | ------- |
-| `sticky`  | true or false | no       | `false` |
+| Attribute | Values and constraints | Required | Default | Meaning                                                                                                                                                                      |
+| --------- | ---------------------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sticky`  | true or false          | no       | `false` | On a landing: the chapters numbered and held at the edge of a wide screen while the reader scrolls, the current chapter marked; in the flow on a narrow screen and in print. |
 
 ### `conversation`
 
@@ -328,10 +336,10 @@ A mock of a dialog or a notification feed: message directives in order, with an 
 
 Forms: container. Children: message-directives.
 
-| Attribute      | Values                | Required | Default |
-| -------------- | --------------------- | -------- | ------- |
-| `title`        | text (min 1, max 200) | no       | —       |
-| `illustrative` | true or false         | no       | `false` |
+| Attribute      | Values and constraints         | Required | Default | Meaning                                                                                     |
+| -------------- | ------------------------------ | -------- | ------- | ------------------------------------------------------------------------------------------- |
+| `title`        | text (trimmed, min 1, max 200) | no       | —       | Visible title.                                                                              |
+| `illustrative` | true or false                  | no       | `false` | Marks the mock as an illustration: its names, times and numbers are examples, not a record. |
 
 ### `copyable`
 
@@ -345,9 +353,9 @@ A number in running text that counts up from zero to its written value when it c
 
 Forms: text. Children: label-or-generated-label.
 
-| Attribute | Values               | Required | Default |
-| --------- | -------------------- | -------- | ------- |
-| `when`    | text (min 1, max 41) | no       | —       |
+| Attribute | Values and constraints                                          | Required | Default | Meaning                                                                                                                                |
+| --------- | --------------------------------------------------------------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `when`    | text (trimmed, min 1, max 41, pattern `^[a-z][a-z0-9-]{0,40}$`) | no       | —       | Page state that starts the count instead of the number coming into view, such as the chapter that the figure belongs to being reached. |
 
 ### `decision`
 
@@ -355,11 +363,11 @@ Static Markdown decision or typed decision containing decision-option directives
 
 Forms: container. Children: decision-option-directives.
 
-| Attribute  | Values                | Required | Default |
-| ---------- | --------------------- | -------- | ------- |
-| `title`    | text (min 1, max 200) | no       | —       |
-| `id`       | text (min 1, max 64)  | no       | —       |
-| `required` | true or false         | no       | `false` |
+| Attribute  | Values and constraints                                          | Required | Default | Meaning                                                      |
+| ---------- | --------------------------------------------------------------- | -------- | ------- | ------------------------------------------------------------ |
+| `title`    | text (trimmed, min 1, max 200)                                  | no       | —       | Visible title.                                               |
+| `id`       | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`) | no       | —       | Stable identity required when decision options are authored. |
+| `required` | true or false                                                   | no       | `false` | Marks this decision as required in the static document.      |
 
 ### `decision-option`
 
@@ -367,10 +375,10 @@ One labelled option inside a typed decision.
 
 Forms: leaf. Children: label-or-generated-label. Required parent: `decision`.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `id`      | text (min 1, max 64)  | yes      | —       |
-| `label`   | text (min 1, max 160) | yes      | —       |
+| Attribute | Values and constraints                                          | Required | Default | Meaning                 |
+| --------- | --------------------------------------------------------------- | -------- | ------- | ----------------------- |
+| `id`      | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`) | yes      | —       | Stable option identity. |
+| `label`   | text (trimmed, min 1, max 160)                                  | yes      | —       | Visible option label.   |
 
 ### `demo`
 
@@ -378,13 +386,13 @@ Package-owned demo: a counter card, or with play a scene that reconstructs the p
 
 Forms: container. Children: markdown.
 
-| Attribute | Values                         | Required | Default |
-| --------- | ------------------------------ | -------- | ------- |
-| `title`   | text (min 1, max 200)          | no       | —       |
-| `start`   | integer from -999999 to 999999 | no       | `0`     |
-| `step`    | integer from -999999 to 999999 | no       | `1`     |
-| `play`    | `none`, `time`, `scroll`       | no       | `none`  |
-| `seconds` | integer from 1 to 10           | no       | `3`     |
+| Attribute | Values and constraints                                | Required | Default | Meaning                                                                                                                                                                                                                |
+| --------- | ----------------------------------------------------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`   | text (trimmed, min 1, max 200)                        | no       | —       | Visible title.                                                                                                                                                                                                         |
+| `start`   | integer from -999999 to 999999 spelling `^-?\d{1,6}$` | no       | `0`     | Initial counter value (counter demo only).                                                                                                                                                                             |
+| `step`    | integer from -999999 to 999999 spelling `^-?\d{1,6}$` | no       | `1`     | Amount added per activation (counter demo only).                                                                                                                                                                       |
+| `play`    | `none`, `time`, `scroll`                              | no       | `none`  | none: a counter card. time: a playable scene whose beats advance by the page clock, with a play and a pause button, ending on its final frame. scroll: the scene is pinned while the reader scrolls through its beats. |
+| `seconds` | integer from 1 to 10 spelling `^\d{1,2}$`             | no       | `3`     | Seconds each beat of a play="time" scene stays current (1–10); the theme pace scales it.                                                                                                                               |
 
 ### `diagram`
 
@@ -392,16 +400,16 @@ Directed flow diagram rendered as deterministic SVG.
 
 Forms: container. Children: diagram-part-directives.
 
-| Attribute     | Values                                | Required | Default       |
-| ------------- | ------------------------------------- | -------- | ------------- |
-| `title`       | text (min 1, max 200)                 | yes      | —             |
-| `description` | text (min 1, max 300)                 | yes      | —             |
-| `type`        | `flow`, `sequence`                    | no       | `flow`        |
-| `direction`   | `auto`, `right`, `down`               | no       | `auto`        |
-| `layout`      | `auto`, `down`, `right`, `orthogonal` | no       | `auto`        |
-| `spacing`     | `compact`, `comfortable`, `spacious`  | no       | `comfortable` |
-| `draw`        | `none`, `scroll`                      | no       | `none`        |
-| `pulse`       | text (min 3, max 800)                 | no       | —             |
+| Attribute     | Values and constraints                                                                         | Required | Default       | Meaning                                                                                                                                                                                                                                    |
+| ------------- | ---------------------------------------------------------------------------------------------- | -------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `title`       | text (trimmed, min 1, max 200)                                                                 | yes      | —             | Visible title.                                                                                                                                                                                                                             |
+| `description` | text (trimmed, min 1, max 300)                                                                 | yes      | —             | Meaningful plain-text description for the visual.                                                                                                                                                                                          |
+| `type`        | `flow`, `sequence`                                                                             | no       | `flow`        | Diagram form.                                                                                                                                                                                                                              |
+| `direction`   | `auto`, `right`, `down`                                                                        | no       | `auto`        | Direction in which flow layers follow each other; auto lets the layout pick the one that reads larger on the page.                                                                                                                         |
+| `layout`      | `auto`, `down`, `right`, `orthogonal`                                                          | no       | `auto`        | Flow view shown first and printed: auto picks the clearest; down and right are layered, orthogonal routes at right angles; readers can switch.                                                                                             |
+| `spacing`     | `compact`, `comfortable`, `spacious`                                                           | no       | `comfortable` | Layout breathing room; the package keeps a readable result at every value.                                                                                                                                                                 |
+| `draw`        | `none`, `scroll`                                                                               | no       | `none`        | Draw the connections as the diagram scrolls through the view, in flow order, with backward connections as a later phase, while a marker rides the connection being drawn; still and complete, the marker at the end, under reduced motion. |
+| `pulse`       | text (trimmed, min 3, max 800, pattern `^[a-z][a-z0-9-]{0,63}(\s*,\s*[a-z][a-z0-9-]{0,63})+$`) | no       | —             | A route of node identities separated by commas, each joined to the next by a connection: pulses travel along it three times when the diagram comes into view; under reduced motion the route is marked still.                              |
 
 ### `diff`
 
@@ -409,10 +417,10 @@ One change in unified diff form: exactly one fenced code block with @@ hunks, dr
 
 Forms: container. Children: markdown.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `title`   | text (min 1, max 200) | no       | —       |
-| `file`    | text (min 1, max 300) | no       | —       |
+| Attribute | Values and constraints         | Required | Default | Meaning                                           |
+| --------- | ------------------------------ | -------- | ------- | ------------------------------------------------- |
+| `title`   | text (trimmed, min 1, max 200) | no       | —       | Visible title.                                    |
+| `file`    | text (trimmed, min 1, max 300) | no       | —       | Path of the changed file, shown above the change. |
 
 ### `disclosure`
 
@@ -420,10 +428,10 @@ Native disclosure with a visible summary.
 
 Forms: container. Children: markdown.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `title`   | text (min 1, max 200) | yes      | —       |
-| `open`    | `false`, `true`       | no       | `false` |
+| Attribute | Values and constraints         | Required | Default | Meaning                   |
+| --------- | ------------------------------ | -------- | ------- | ------------------------- |
+| `title`   | text (trimmed, min 1, max 200) | yes      | —       | Visible title.            |
+| `open`    | `false`, `true`                | no       | `false` | Initial disclosure state. |
 
 ### `each`
 
@@ -431,10 +439,10 @@ Repeats its Markdown once per item of a list from the page data when the page bu
 
 Forms: container. Children: markdown.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `in`      | text (min 1, max 200) | yes      | —       |
-| `as`      | text (min 1, max 32)  | yes      | —       |
+| Attribute | Values and constraints                                                                                        | Required | Default | Meaning                                                                                       |
+| --------- | ------------------------------------------------------------------------------------------------------------- | -------- | ------- | --------------------------------------------------------------------------------------------- |
+| `in`      | text (trimmed, min 1, max 200, pattern `^[A-Za-z_][A-Za-z0-9_-]*(?:\.(?:[A-Za-z_][A-Za-z0-9_-]*\|[0-9]+))*$`) | yes      | —       | Path of a list in the page data, such as run.blocks.                                          |
+| `as`      | text (trimmed, min 1, max 32, pattern `^[a-z][a-z0-9-]{0,31}$`)                                               | yes      | —       | Name of the current item inside the body: {{as}} for a plain value, {{as.field}} for a field. |
 
 ### `edge`
 
@@ -442,15 +450,15 @@ One directed connection between diagram nodes; from equal to to is a step that r
 
 Forms: leaf. Children: none. Required parent: `diagram` or `zoom`.
 
-| Attribute | Values                                | Required | Default |
-| --------- | ------------------------------------- | -------- | ------- |
-| `from`    | text (min 1, max 64)                  | yes      | —       |
-| `to`      | text (min 1, max 64)                  | yes      | —       |
-| `label`   | text (min 1, max 160)                 | no       | —       |
-| `kind`    | `call`, `data`, `event`, `dependency` | no       | `call`  |
-| `route`   | `auto`, `direct`, `around`            | no       | `auto`  |
-| `id`      | text (min 1, max 64)                  | no       | —       |
-| `count`   | integer from 1 to 999                 | no       | —       |
+| Attribute | Values and constraints                                          | Required | Default | Meaning                                                                                                    |
+| --------- | --------------------------------------------------------------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------- |
+| `from`    | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`) | yes      | —       | Source node identity.                                                                                      |
+| `to`      | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`) | yes      | —       | Target node identity; a flow requires a different node.                                                    |
+| `label`   | text (trimmed, min 1, max 160)                                  | no       | —       | Optional connection label, required in a sequence; a long label wraps onto several lines and is never cut. |
+| `kind`    | `call`, `data`, `event`, `dependency`                           | no       | `call`  | What the connection means; each kind has its own package-drawn line and arrowhead.                         |
+| `route`   | `auto`, `direct`, `around`                                      | no       | `auto`  | Optional layout pull; direct keeps the connection short and straight, around lets it stretch.              |
+| `id`      | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`) | no       | —       | Optional connection identity, distinct from the node identities: a beat focus lights the connection by it. |
+| `count`   | integer from 1 to 999                                           | no       | —       | How many times the connection was taken, written «×N» on it: a return repeated, a retry.                   |
 
 ### `event`
 
@@ -458,11 +466,11 @@ One dated timeline event with optional Markdown detail.
 
 Forms: container. Children: markdown. Required parent: `timeline`.
 
-| Attribute | Values                                    | Required | Default   |
-| --------- | ----------------------------------------- | -------- | --------- |
-| `date`    | text (min 1, max 160)                     | yes      | —         |
-| `title`   | text (min 1, max 200)                     | yes      | —         |
-| `kind`    | `neutral`, `accent`, `success`, `warning` | no       | `neutral` |
+| Attribute | Values and constraints                    | Required | Default   | Meaning                       |
+| --------- | ----------------------------------------- | -------- | --------- | ----------------------------- |
+| `date`    | text (trimmed, min 1, max 160)            | yes      | —         | Visible date or phase label.  |
+| `title`   | text (trimmed, min 1, max 200)            | yes      | —         | Visible title.                |
+| `kind`    | `neutral`, `accent`, `success`, `warning` | no       | `neutral` | Package-owned event emphasis. |
 
 ### `expect`
 
@@ -470,13 +478,13 @@ A control value over the page data: the build fails at this line when the data a
 
 Forms: leaf. Children: none.
 
-| Attribute | Values                   | Required | Default |
-| --------- | ------------------------ | -------- | ------- |
-| `data`    | text (min 1, max 200)    | yes      | —       |
-| `count`   | integer from 0 to 100000 | no       | —       |
-| `min`     | number                   | no       | —       |
-| `max`     | number                   | no       | —       |
-| `equals`  | text (min 1, max 300)    | no       | —       |
+| Attribute | Values and constraints                                                                                        | Required | Default | Meaning                                                                                    |
+| --------- | ------------------------------------------------------------------------------------------------------------- | -------- | ------- | ------------------------------------------------------------------------------------------ |
+| `data`    | text (trimmed, min 1, max 200, pattern `^[A-Za-z_][A-Za-z0-9_-]*(?:\.(?:[A-Za-z_][A-Za-z0-9_-]*\|[0-9]+))*$`) | yes      | —       | Path of the value the expectation reads, such as run.blocks.                               |
+| `count`   | integer from 0 to 100000                                                                                      | no       | —       | The list at the path has exactly this many items.                                          |
+| `min`     | number                                                                                                        | no       | —       | A list has at least this many items (min="1": not empty); a number is at least this value. |
+| `max`     | number                                                                                                        | no       | —       | A list has at most this many items; a number is at most this value.                        |
+| `equals`  | text (trimmed, min 1, max 300)                                                                                | no       | —       | A text, number or true/false value written exactly like this.                              |
 
 ### `eyebrow`
 
@@ -490,10 +498,10 @@ Client-side text filter for authored list items.
 
 Forms: container. Children: markdown.
 
-| Attribute     | Values                | Required | Default        |
-| ------------- | --------------------- | -------- | -------------- |
-| `title`       | text (min 1, max 200) | no       | —              |
-| `placeholder` | text (min 1, max 160) | no       | `Filter items` |
+| Attribute     | Values and constraints         | Required | Default        | Meaning                   |
+| ------------- | ------------------------------ | -------- | -------------- | ------------------------- |
+| `title`       | text (trimmed, min 1, max 200) | no       | —              | Visible title.            |
+| `placeholder` | text (trimmed, min 1, max 160) | no       | `Filter items` | Search-field placeholder. |
 
 ### `finding`
 
@@ -501,11 +509,11 @@ One review finding with a severity, a title and Markdown detail.
 
 Forms: container. Children: markdown. Required parent: `findings`.
 
-| Attribute  | Values                               | Required | Default |
-| ---------- | ------------------------------------ | -------- | ------- |
-| `severity` | `blocking`, `major`, `minor`, `note` | yes      | —       |
-| `title`    | text (min 1, max 200)                | yes      | —       |
-| `location` | text (min 1, max 300)                | no       | —       |
+| Attribute  | Values and constraints               | Required | Default | Meaning                                                                 |
+| ---------- | ------------------------------------ | -------- | ------- | ----------------------------------------------------------------------- |
+| `severity` | `blocking`, `major`, `minor`, `note` | yes      | —       | How much the finding blocks the change; shown as text, not only colour. |
+| `title`    | text (trimmed, min 1, max 200)       | yes      | —       | Visible title.                                                          |
+| `location` | text (trimmed, min 1, max 300)       | no       | —       | Where the finding applies, such as a path and line.                     |
 
 ### `findings`
 
@@ -513,9 +521,9 @@ Review findings in authored order, with a generated count per severity above the
 
 Forms: container. Children: finding-directives.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `title`   | text (min 1, max 200) | no       | —       |
+| Attribute | Values and constraints         | Required | Default | Meaning        |
+| --------- | ------------------------------ | -------- | ------- | -------------- |
+| `title`   | text (trimmed, min 1, max 200) | no       | —       | Visible title. |
 
 ### `font`
 
@@ -523,11 +531,11 @@ Register a confined local font for one text role; the first declaration of each 
 
 Forms: leaf. Children: none.
 
-| Attribute | Values                    | Required | Default |
-| --------- | ------------------------- | -------- | ------- |
-| `src`     | text (min 1, max 200)     | yes      | —       |
-| `family`  | text (min 1, max 80)      | yes      | —       |
-| `role`    | `body`, `heading`, `mono` | no       | `body`  |
+| Attribute | Values and constraints                                           | Required | Default | Meaning                                                                                |
+| --------- | ---------------------------------------------------------------- | -------- | ------- | -------------------------------------------------------------------------------------- |
+| `src`     | text (trimmed, min 1, max 200, format `relative-local-path`)     | yes      | —       | Relative local font path.                                                              |
+| `family`  | text (trimmed, min 1, max 80, pattern `^[\p{L}\p{N} _-]{1,80}$`) | yes      | —       | CSS font family using letters, numbers, spaces, underscores, or hyphens.               |
+| `role`    | `body`, `heading`, `mono`                                        | no       | `body`  | Text role the font sets: body text and controls, headings and section titles, or code. |
 
 ### `glossary`
 
@@ -535,12 +543,12 @@ Reusable glossary definition containing Markdown, optionally moved from the docu
 
 Forms: container. Children: markdown.
 
-| Attribute   | Values                | Required | Default  |
-| ----------- | --------------------- | -------- | -------- |
-| `key`       | text (min 1, max 64)  | yes      | —        |
-| `term`      | text (min 1, max 160) | yes      | —        |
-| `forms`     | text (min 1, max 640) | no       | —        |
-| `placement` | `inline`, `appendix`  | no       | `inline` |
+| Attribute   | Values and constraints                                          | Required | Default  | Meaning                                                                                                                                       |
+| ----------- | --------------------------------------------------------------- | -------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `key`       | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`) | yes      | —        | Stable glossary definition key.                                                                                                               |
+| `term`      | text (trimmed, min 1, max 160)                                  | yes      | —        | Canonical glossary identity and explanation title.                                                                                            |
+| `forms`     | text (trimmed, min 1, max 640)                                  | no       | —        | Additional declared spellings of the canonical term, comma separated. An occurrence of any declared form counts as an occurrence of the term. |
+| `placement` | `inline`, `appendix`                                            | no       | `inline` | Definition location in the authored flow or, from the document root or a direct section child, one package-owned reference appendix.          |
 
 ### `group`
 
@@ -548,10 +556,10 @@ One labelled subsystem group around some nodes of a flow diagram.
 
 Forms: leaf. Children: none. Required parent: `diagram` or `zoom`.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `id`      | text (min 1, max 64)  | yes      | —       |
-| `label`   | text (min 1, max 160) | yes      | —       |
+| Attribute | Values and constraints                                          | Required | Default | Meaning                                   |
+| --------- | --------------------------------------------------------------- | -------- | ------- | ----------------------------------------- |
+| `id`      | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`) | yes      | —       | Unique group identity within the diagram. |
+| `label`   | text (trimmed, min 1, max 160)                                  | yes      | —       | Visible group label.                      |
 
 ### `item`
 
@@ -559,15 +567,15 @@ One readable response item.
 
 Forms: leaf. Children: none. Required parent: `question`.
 
-| Attribute | Values                 | Required | Default |
-| --------- | ---------------------- | -------- | ------- |
-| `id`      | text (min 1, max 64)   | yes      | —       |
-| `label`   | text (min 1, max 500)  | yes      | —       |
-| `note`    | text (min 1, max 1000) | yes      | —       |
-| `meta`    | text (min 1, max 500)  | yes      | —       |
-| `href`    | text (min 1, max 500)  | yes      | —       |
-| `bucket`  | text (min 1, max 64)   | no       | —       |
-| `comment` | true or false          | no       | `false` |
+| Attribute | Values and constraints                                                                                                                                                                                                                                          | Required | Default | Meaning                                                                                                                                     |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`      | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`)                                                                                                                                                                                                 | yes      | —       | Stable item identity within the question.                                                                                                   |
+| `label`   | text (trimmed, min 1, max 500)                                                                                                                                                                                                                                  | yes      | —       | Visible item title.                                                                                                                         |
+| `note`    | text (trimmed, min 1, max 1000)                                                                                                                                                                                                                                 | yes      | —       | Required explanatory line.                                                                                                                  |
+| `meta`    | text (trimmed, min 1, max 500)                                                                                                                                                                                                                                  | yes      | —       | Required metadata line.                                                                                                                     |
+| `href`    | text (trimmed, min 1, max 500, pattern `^(?:#[A-Za-z][A-Za-z0-9_-]{0,127}\|https?://[^\s<>]+\|mailto:[^\s<>]+\|tel:\+?[0-9][0-9().-]{0,31}\|sms:\+?[0-9][0-9().,-]{0,63}(?:\?body=[^\s<>]*)?\|(?!(?:[A-Za-z][A-Za-z0-9+.-]*:\|//\|/))[A-Za-z0-9.][^\s<>\\]*)$`) | yes      | —       | Safe same-page, relative, HTTP(S), email, phone (tel:), or text-message (sms:) link target; executable and local-file schemes are rejected. |
+| `bucket`  | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`)                                                                                                                                                                                                 | no       | —       | Optional authored initial bucket.                                                                                                           |
+| `comment` | true or false                                                                                                                                                                                                                                                   | no       | `false` | Enables one optional comment for this item.                                                                                                 |
 
 ### `lead`
 
@@ -581,10 +589,10 @@ Optional title and policy for the diagram legend; at most one per diagram.
 
 Forms: leaf. Children: none. Required parent: `diagram`.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `title`   | text (min 1, max 160) | no       | —       |
-| `auto`    | true or false         | no       | `true`  |
+| Attribute | Values and constraints         | Required | Default | Meaning                                                                        |
+| --------- | ------------------------------ | -------- | ------- | ------------------------------------------------------------------------------ |
+| `title`   | text (trimmed, min 1, max 160) | no       | —       | Visible legend title.                                                          |
+| `auto`    | true or false                  | no       | `true`  | Add the connection kinds the diagram mixes without a legend item of their own. |
 
 ### `legend-item`
 
@@ -592,14 +600,14 @@ One legend entry: names a connection kind, a node emphasis, a node status, or a 
 
 Forms: leaf. Children: none. Required parent: `diagram` or `timeline`.
 
-| Attribute | Values                                    | Required | Default |
-| --------- | ----------------------------------------- | -------- | ------- |
-| `edge`    | `call`, `data`, `event`, `dependency`     | no       | —       |
-| `node`    | `neutral`, `accent`, `success`, `warning` | no       | —       |
-| `status`  | `done`, `review`, `returned`, `pending`   | no       | —       |
-| `event`   | `accent`, `success`, `warning`            | no       | —       |
-| `label`   | text (min 1, max 160)                     | no       | —       |
-| `hidden`  | true or false                             | no       | `false` |
+| Attribute | Values and constraints                    | Required | Default | Meaning                                                                             |
+| --------- | ----------------------------------------- | -------- | ------- | ----------------------------------------------------------------------------------- |
+| `edge`    | `call`, `data`, `event`, `dependency`     | no       | —       | Connection kind this entry names; exclusive with node.                              |
+| `node`    | `neutral`, `accent`, `success`, `warning` | no       | —       | Node emphasis this entry names; exclusive with edge and requires a label.           |
+| `status`  | `done`, `review`, `returned`, `pending`   | no       | —       | Node status this entry renames in the author's words; exclusive with edge and node. |
+| `event`   | `accent`, `success`, `warning`            | no       | —       | Timeline event emphasis this entry names, inside a timeline; requires a label.      |
+| `label`   | text (trimmed, min 1, max 160)            | no       | —       | Entry text; a connection kind without one keeps its package name.                   |
+| `hidden`  | true or false                             | no       | `false` | Leave this connection kind out of the legend.                                       |
 
 ### `mark`
 
@@ -607,10 +615,10 @@ Words in running text marked by hand: underlined, circled or struck through in t
 
 Forms: text. Children: label-or-generated-label.
 
-| Attribute | Values                          | Required | Default     |
-| --------- | ------------------------------- | -------- | ----------- |
-| `shape`   | `underline`, `circle`, `strike` | no       | `underline` |
-| `seed`    | integer from 0 to 9999          | no       | —           |
+| Attribute | Values and constraints                      | Required | Default     | Meaning                                                                                                               |
+| --------- | ------------------------------------------- | -------- | ----------- | --------------------------------------------------------------------------------------------------------------------- |
+| `shape`   | `underline`, `circle`, `strike`             | no       | `underline` | How the words are marked: a hand-drawn underline, a circle around them, or a strike through them.                     |
+| `seed`    | integer from 0 to 9999 spelling `^\d{1,4}$` | no       | —           | Seed of the hand-drawn jitter (0–9999); the same seed draws the same line. By default it comes from the marked words. |
 
 ### `message`
 
@@ -618,13 +626,13 @@ One message or notification: sender, time, Markdown text and an optional status;
 
 Forms: container. Children: markdown.
 
-| Attribute      | Values               | Required | Default |
-| -------------- | -------------------- | -------- | ------- |
-| `from`         | text (min 1, max 80) | yes      | —       |
-| `time`         | text (min 1, max 40) | no       | —       |
-| `side`         | `in`, `out`          | no       | `in`    |
-| `status`       | text (min 1, max 40) | no       | —       |
-| `illustrative` | true or false        | no       | `false` |
+| Attribute      | Values and constraints        | Required | Default | Meaning                                                                                     |
+| -------------- | ----------------------------- | -------- | ------- | ------------------------------------------------------------------------------------------- |
+| `from`         | text (trimmed, min 1, max 80) | yes      | —       | Sender as the product names it: a person, an agent, a system.                               |
+| `time`         | text (trimmed, min 1, max 40) | no       | —       | When it was sent, as the product shows it, such as 01:17 or yesterday.                      |
+| `side`         | `in`, `out`                   | no       | `in`    | in — received, drawn at the start edge; out — sent by the reader, drawn at the end edge.    |
+| `status`       | text (trimmed, min 1, max 40) | no       | —       | Delivery or run status shown under the text, such as delivered or done.                     |
+| `illustrative` | true or false                 | no       | `false` | Marks the mock as an illustration: its names, times and numbers are examples, not a record. |
 
 ### `meta`
 
@@ -638,10 +646,10 @@ Modal dialog opened by a package-owned control.
 
 Forms: container. Children: markdown.
 
-| Attribute | Values                | Required | Default       |
-| --------- | --------------------- | -------- | ------------- |
-| `title`   | text (min 1, max 200) | yes      | —             |
-| `trigger` | text (min 1, max 160) | no       | `Open dialog` |
+| Attribute | Values and constraints         | Required | Default       | Meaning                       |
+| --------- | ------------------------------ | -------- | ------------- | ----------------------------- |
+| `title`   | text (trimmed, min 1, max 200) | yes      | —             | Visible title.                |
+| `trigger` | text (trimmed, min 1, max 160) | no       | `Open dialog` | Visible dialog trigger label. |
 
 ### `muted`
 
@@ -655,15 +663,15 @@ One labelled node in a flow diagram.
 
 Forms: leaf. Children: none. Required parent: `diagram` or `zoom`.
 
-| Attribute | Values                                    | Required | Default   |
-| --------- | ----------------------------------------- | -------- | --------- |
-| `id`      | text (min 1, max 64)                      | yes      | —         |
-| `label`   | text (min 1, max 160)                     | yes      | —         |
-| `detail`  | text (min 1, max 160)                     | no       | —         |
-| `group`   | text (min 1, max 64)                      | no       | —         |
-| `kind`    | `neutral`, `accent`, `success`, `warning` | no       | `neutral` |
-| `row`     | integer from 1 to 20                      | no       | —         |
-| `status`  | `done`, `review`, `returned`, `pending`   | no       | —         |
+| Attribute | Values and constraints                                          | Required | Default   | Meaning                                                                                                                                                     |
+| --------- | --------------------------------------------------------------- | -------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`      | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`) | yes      | —         | Unique node identity within the diagram.                                                                                                                    |
+| `label`   | text (trimmed, min 1, max 160)                                  | yes      | —         | Visible node label.                                                                                                                                         |
+| `detail`  | text (trimmed, min 1, max 160)                                  | no       | —         | Optional second line under the label, set smaller: what the node holds or does.                                                                             |
+| `group`   | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`) | no       | —         | Optional subsystem group identity; nodes without one stand beside the groups.                                                                               |
+| `kind`    | `neutral`, `accent`, `success`, `warning`                       | no       | `neutral` | Package-owned node emphasis; a legend item names what it means.                                                                                             |
+| `row`     | integer from 1 to 20                                            | no       | —         | Optional one-based flow layer; nodes sharing a row share a layer when their connections allow it.                                                           |
+| `status`  | `done`, `review`, `returned`, `pending`                         | no       | —         | Where this step of a process stands: done, review, returned or pending; drawn in the theme status roles with a glyph, named in the legend in package words. |
 
 ### `notes`
 
@@ -677,10 +685,10 @@ One selectable answer option.
 
 Forms: leaf. Children: none. Required parent: `question`.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `id`      | text (min 1, max 64)  | yes      | —       |
-| `label`   | text (min 1, max 200) | yes      | —       |
+| Attribute | Values and constraints                                          | Required | Default | Meaning                                     |
+| --------- | --------------------------------------------------------------- | -------- | ------- | ------------------------------------------- |
+| `id`      | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`) | yes      | —       | Stable option identity within the question. |
+| `label`   | text (trimmed, min 1, max 200)                                  | yes      | —       | Visible option label.                       |
 
 ### `plural`
 
@@ -688,9 +696,9 @@ A number with its noun in the form the page language requires, settled when the 
 
 Forms: text. Children: label-or-generated-label.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `forms`   | text (min 3, max 200) | yes      | —       |
+| Attribute | Values and constraints         | Required | Default | Meaning                                                                                                     |
+| --------- | ------------------------------ | -------- | ------- | ----------------------------------------------------------------------------------------------------------- |
+| `forms`   | text (trimmed, min 3, max 200) | yes      | —       | Noun forms separated by \|: English one\|other (file\|files), Russian one\|few\|many (файл\|файла\|файлов). |
 
 ### `point`
 
@@ -698,10 +706,10 @@ One labelled numeric value in a chart series.
 
 Forms: leaf. Children: none. Required parent: `series`.
 
-| Attribute | Values                              | Required | Default |
-| --------- | ----------------------------------- | -------- | ------- |
-| `label`   | text (min 1, max 160)               | yes      | —       |
-| `value`   | number from -999999999 to 999999999 | yes      | —       |
+| Attribute | Values and constraints                                                                           | Required | Default | Meaning                                                |
+| --------- | ------------------------------------------------------------------------------------------------ | -------- | ------- | ------------------------------------------------------ |
+| `label`   | text (trimmed, min 1, max 160)                                                                   | yes      | —       | Category label.                                        |
+| `value`   | number from -999999999 to 999999999 step 0.0001 spelling `^-?(?:0\|[1-9]\d{0,8})(?:\.\d{1,4})?$` | yes      | —       | Finite numeric value between -999999999 and 999999999. |
 
 ### `popover`
 
@@ -709,10 +717,10 @@ Non-modal contextual panel opened by a package-owned control.
 
 Forms: container. Children: markdown.
 
-| Attribute | Values                | Required | Default        |
-| --------- | --------------------- | -------- | -------------- |
-| `title`   | text (min 1, max 200) | yes      | —              |
-| `trigger` | text (min 1, max 160) | no       | `Show details` |
+| Attribute | Values and constraints         | Required | Default        | Meaning                        |
+| --------- | ------------------------------ | -------- | -------------- | ------------------------------ |
+| `title`   | text (trimmed, min 1, max 200) | yes      | —              | Visible title.                 |
+| `trigger` | text (trimmed, min 1, max 160) | no       | `Show details` | Visible popover trigger label. |
 
 ### `process`
 
@@ -720,10 +728,10 @@ A mini process in a line of text or a card: its steps, separated by ">" in the l
 
 Forms: text. Children: label-or-generated-label.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `current` | text (min 1, max 80)  | no       | —       |
-| `returns` | text (min 3, max 400) | no       | —       |
+| Attribute | Values and constraints         | Required | Default | Meaning                                                                                                                                   |
+| --------- | ------------------------------ | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `current` | text (trimmed, min 1, max 80)  | no       | —       | The step the process stands at, in review; the steps before it are done and the ones after it not started. Without it every step is done. |
+| `returns` | text (trimmed, min 3, max 400) | no       | —       | Returns drawn as arcs over the steps, separated by commas, each "step>earlier step×N"; a step returning to itself repeats.                |
 
 ### `question`
 
@@ -731,15 +739,15 @@ One typed question inside a response workspace.
 
 Forms: container. Children: response-field-directives. Required parent: `response`.
 
-| Attribute | Values                                                                     | Required | Default |
-| --------- | -------------------------------------------------------------------------- | -------- | ------- |
-| `id`      | text (min 1, max 64)                                                       | yes      | —       |
-| `kind`    | `bucket`, `item-single`, `item-multi`, `single`, `order`, `number`, `text` | yes      | —       |
-| `title`   | text (min 1, max 200)                                                      | yes      | —       |
-| `prompt`  | text (min 1, max 500)                                                      | no       | —       |
-| `min`     | number from -999999999 to 999999999                                        | no       | —       |
-| `max`     | number from -999999999 to 999999999                                        | no       | —       |
-| `step`    | number from -999999999 to 999999999                                        | no       | —       |
+| Attribute | Values and constraints                                                                           | Required | Default | Meaning                                            |
+| --------- | ------------------------------------------------------------------------------------------------ | -------- | ------- | -------------------------------------------------- |
+| `id`      | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`)                                  | yes      | —       | Stable question identity within the response form. |
+| `kind`    | `bucket`, `item-single`, `item-multi`, `single`, `order`, `number`, `text`                       | yes      | —       | Structured answer kind.                            |
+| `title`   | text (trimmed, min 1, max 200)                                                                   | yes      | —       | Visible title.                                     |
+| `prompt`  | text (trimmed, min 1, max 500)                                                                   | no       | —       | Optional reader instruction.                       |
+| `min`     | number from -999999999 to 999999999 step 0.0001 spelling `^-?(?:0\|[1-9]\d{0,8})(?:\.\d{1,4})?$` | no       | —       | Required minimum for number questions.             |
+| `max`     | number from -999999999 to 999999999 step 0.0001 spelling `^-?(?:0\|[1-9]\d{0,8})(?:\.\d{1,4})?$` | no       | —       | Required maximum for number questions.             |
+| `step`    | number from -999999999 to 999999999 step 0.0001 spelling `^-?(?:0\|[1-9]\d{0,8})(?:\.\d{1,4})?$` | no       | —       | Optional positive increment for number questions.  |
 
 ### `response`
 
@@ -747,46 +755,55 @@ Local structured reader-response workspace with deterministic export.
 
 Forms: container. Children: response-question-directives.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `title`   | text (min 1, max 200) | yes      | —       |
-| `id`      | text (min 1, max 64)  | yes      | —       |
+| Attribute | Values and constraints                                          | Required | Default | Meaning                        |
+| --------- | --------------------------------------------------------------- | -------- | ------- | ------------------------------ |
+| `title`   | text (trimmed, min 1, max 200)                                  | yes      | —       | Visible title.                 |
+| `id`      | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`) | yes      | —       | Stable response form identity. |
 
 ### `section`
 
 Labelled top-level page section containing Markdown.
 
-Forms: container. Children: markdown.
+Forms: container. Children: markdown. Top-level only.
 
-| Attribute          | Values                                                                                             | Required | Default     |
-| ------------------ | -------------------------------------------------------------------------------------------------- | -------- | ----------- |
-| `title`            | text (min 1, max 200)                                                                              | yes      | —           |
-| `id`               | text (min 1, max 64)                                                                               | no       | —           |
-| `nav`              | text (min 1, max 160)                                                                              | no       | —           |
-| `recipe`           | `none`, `hero`, `evidence`, `story`, `rail`, `metrics`, `thesis`, `statement`, `blueprint`, `demo` | no       | `none`      |
-| `place`            | `flow`, `opening`                                                                                  | no       | `flow`      |
-| `width`            | `reading`, `standard`, `wide`                                                                      | no       | `standard`  |
-| `align`            | `start`, `center`                                                                                  | no       | `start`     |
-| `tone`             | `plain`, `soft`, `accent`, `contrast`                                                              | no       | `plain`     |
-| `composition`      | `flow`, `stage`, `split`, `mosaic`, `story`, `stack`                                               | no       | `flow`      |
-| `viewport`         | `adaptive`, `full`, `bounded`                                                                      | no       | `adaptive`  |
-| `section-density`  | `compact`, `editorial`, `immersive`                                                                | no       | `editorial` |
-| `type`             | `body`, `display`, `editorial`                                                                     | no       | `body`      |
-| `media`            | `natural`, `mask`, `layers`, `gallery`, `bleed`                                                    | no       | `natural`   |
-| `media-fit`        | `natural`, `contain`, `cover`                                                                      | no       | `natural`   |
-| `media-aspect`     | `natural`, `landscape`, `cinematic`, `portrait`, `square`                                          | no       | `natural`   |
-| `focal`            | `center`, `top`, `right`, `bottom`, `left`                                                         | no       | `center`    |
-| `surface`          | `plain`, `tint`, `grain`, `grid`, `blueprint`                                                      | no       | `plain`     |
-| `frame`            | `none`, `panel`, `browser`                                                                         | no       | `none`      |
-| `address`          | text (min 1, max 300)                                                                              | no       | —           |
-| `illustration`     | true or false                                                                                      | no       | `false`     |
-| `transition`       | `none`, `reveal`, `stagger`, `lines`, `log`, `clip`, `staged`                                      | no       | `none`      |
-| `scene`            | `none`, `progress`, `sticky`, `steps`, `scrub`                                                     | no       | `none`      |
-| `slide-transition` | `fade`, `push`, `wipe`, `zoom`, `none`                                                             | no       | `fade`      |
-| `interaction`      | `none`, `depth`, `tilt`                                                                            | no       | `none`      |
-| `choreography`     | `none`, `cascade`                                                                                  | no       | `none`      |
-| `reveal`           | true or false                                                                                      | no       | `false`     |
-| `state`            | text (min 1, max 41)                                                                               | no       | —           |
+| Attribute          | Values and constraints                                                                             | Required | Default     | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------ | -------------------------------------------------------------------------------------------------- | -------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`            | text (trimmed, min 1, max 200)                                                                     | yes      | —           | Visible title.                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `id`               | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`)                                    | no       | —           | Optional stable section anchor.                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `nav`              | text (trimmed, min 1, max 160)                                                                     | no       | —           | Optional short primary-navigation label.                                                                                                                                                                                                                                                                                                                                                                                              |
+| `recipe`           | `none`, `hero`, `evidence`, `story`, `rail`, `metrics`, `thesis`, `statement`, `blueprint`, `demo` | no       | `none`      | High-level package-owned section composition; explicit detailed attributes override its roles.                                                                                                                                                                                                                                                                                                                                        |
+| `place`            | `flow`, `opening`                                                                                  | no       | `flow`      | Where the section stands: in the flow of the page, or as the first screen beside the page title (only the first section).                                                                                                                                                                                                                                                                                                             |
+| `width`            | `reading`, `standard`, `wide`                                                                      | no       | `standard`  | Section content track.                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `align`            | `start`, `center`                                                                                  | no       | `start`     | Section content alignment.                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `tone`             | `plain`, `soft`, `accent`, `contrast`                                                              | no       | `plain`     | Package-owned section surface tone.                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `composition`      | `flow`, `stage`, `split`, `mosaic`, `story`, `stack`                                               | no       | `flow`      | Semantic arrangement for the section content; authored reading order is unchanged.                                                                                                                                                                                                                                                                                                                                                    |
+| `viewport`         | `adaptive`, `full`, `bounded`                                                                      | no       | `adaptive`  | Bounded use of the available viewport without changing document order.                                                                                                                                                                                                                                                                                                                                                                |
+| `section-density`  | `compact`, `editorial`, `immersive`                                                                | no       | `editorial` | Section-local content rhythm independent of the page density token.                                                                                                                                                                                                                                                                                                                                                                   |
+| `type`             | `body`, `display`, `editorial`                                                                     | no       | `body`      | Section-local typography role.                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `media`            | `natural`, `mask`, `layers`, `gallery`, `bleed`                                                    | no       | `natural`   | Art direction for confined local images inside the section.                                                                                                                                                                                                                                                                                                                                                                           |
+| `media-fit`        | `natural`, `contain`, `cover`                                                                      | no       | `natural`   | Section-local object fitting for confined images.                                                                                                                                                                                                                                                                                                                                                                                     |
+| `media-aspect`     | `natural`, `landscape`, `cinematic`, `portrait`, `square`                                          | no       | `natural`   | Section-local aspect ratio for confined images.                                                                                                                                                                                                                                                                                                                                                                                       |
+| `focal`            | `center`, `top`, `right`, `bottom`, `left`                                                         | no       | `center`    | Package-owned object position for cropped local media.                                                                                                                                                                                                                                                                                                                                                                                |
+| `surface`          | `plain`, `tint`, `grain`, `grid`, `blueprint`                                                      | no       | `plain`     | Package-owned band behind the section: none, a one-colour tint, a fine grain, a drafting grid, or a blueprint grid with major and minor lines in the accent colour.                                                                                                                                                                                                                                                                   |
+| `frame`            | `none`, `panel`, `browser`                                                                         | no       | `none`      | Section edge: a full-width band with no border, or a bordered rounded panel. browser puts the first picture of the section in a browser window whose bar shows the real address (address) or, for a mock-up, the label Illustration (illustration="true").                                                                                                                                                                            |
+| `address`          | text (trimmed, min 1, max 300, format `absolute-http-url`)                                         | no       | —           | The real address of the page in the picture, shown in the bar of frame="browser": an absolute http or https URL.                                                                                                                                                                                                                                                                                                                      |
+| `illustration`     | true or false                                                                                      | no       | `false`     | The picture in frame="browser" is a mock-up, not a real page: its bar says Illustration.                                                                                                                                                                                                                                                                                                                                              |
+| `transition`       | `none`, `reveal`, `stagger`, `lines`, `log`, `clip`, `staged`                                      | no       | `none`      | Bounded package-owned entrance treatment: one section reveal, children in turn, the section title line by line, or log: every code block of the section prints line by line like a log, with its whole text in the page from the start; clip opens the chapter from its lower edge; staged, on the first screen (place="opening") only, brings in the page title by lines, then the eyebrow, the subtitle, the actions and the scene. |
+| `scene`            | `none`, `progress`, `sticky`, `steps`, `scrub`                                                     | no       | `none`      | Content-driven scroll scene without changing document order; steps pins the section media while its beats scroll past and switches the picture, the lit part of the diagram or the lit code lines with each beat; scrub pins the media for one screen per beat (two to four) and plays the beats as a timeline of the scroll.                                                                                                         |
+| `slide-transition` | `fade`, `push`, `wipe`, `zoom`, `none`                                                             | no       | `fade`      | How this slide arrives in a presentation (layout slides): a fade, a push, a wipe, a zoom, or at once; the duration is fixed and published.                                                                                                                                                                                                                                                                                            |
+| `interaction`      | `none`, `depth`, `tilt`                                                                            | no       | `none`      | Fine-pointer-only media interaction.                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `choreography`     | `none`, `cascade`                                                                                  | no       | `none`      | Semantic ordered emphasis for metrics and visualizations.                                                                                                                                                                                                                                                                                                                                                                             |
+| `reveal`           | true or false                                                                                      | no       | `false`     | Enables one package-owned one-time section reveal in the normal-motion profile.                                                                                                                                                                                                                                                                                                                                                       |
+| `state`            | text (trimmed, min 1, max 41, pattern `^[a-z][a-z0-9-]{0,40}$`)                                    | no       | —           | Page state set while the reader has reached this section (its top passed the middle of the screen) and cleared when they scroll back above it; blocks with the same when light.                                                                                                                                                                                                                                                       |
+
+Incompatible combinations:
+
+- `composition` is `mosaic` or `stack`; `media` is `layers` or `gallery`: section composition mosaic or stack cannot be combined with layered or gallery media. Use composition flow, stage, split, or story with layered/gallery media, or use natural, mask, or bleed media with mosaic/stack composition.
+- `media` is `layers`; `interaction` is `depth` or `tilt`: Layered media cannot also own a pointer transform. Use interaction="none" with layered media or another media treatment.
+- `scene` is `progress`; `interaction` is `depth` or `tilt`: A progress scene and pointer interaction cannot transform the same media. Use either scene="progress" or a depth/tilt interaction.
+- `composition` is `story` or `stack`; `scene` is `sticky`: Story and stack compositions already own sticky positioning. Use scene="none|progress" or a flow, stage, split, or mosaic composition.
+- `composition` is `story` or `stack` or `mosaic`; `scene` is `steps` or `scrub`: A steps or scrub scene arranges its own media and beats. Use composition="flow" with scene="steps" or scene="scrub".
+- `scene` is `steps` or `scrub`; `interaction` is `depth` or `tilt`: A pinned scene and pointer interaction cannot move the same media. Use interaction="none" with scene="steps" or scene="scrub".
 
 ### `series`
 
@@ -794,9 +811,9 @@ One named chart series containing data points.
 
 Forms: container. Children: point-directives. Required parent: `chart`.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `label`   | text (min 1, max 160) | yes      | —       |
+| Attribute | Values and constraints         | Required | Default | Meaning       |
+| --------- | ------------------------------ | -------- | ------- | ------------- |
+| `label`   | text (trimmed, min 1, max 160) | yes      | —       | Legend label. |
 
 ### `source-line`
 
@@ -804,10 +821,10 @@ The source line under the block before it — which data or footage, how many re
 
 Forms: leaf. Children: label-or-generated-label.
 
-| Attribute | Values               | Required | Default |
-| --------- | -------------------- | -------- | ------- |
-| `date`    | text (min 1, max 32) | no       | —       |
-| `zone`    | text (min 1, max 64) | no       | —       |
+| Attribute | Values and constraints                                                   | Required | Default | Meaning                                                                                 |
+| --------- | ------------------------------------------------------------------------ | -------- | ------- | --------------------------------------------------------------------------------------- |
+| `date`    | text (trimmed, min 1, max 32)                                            | no       | —       | When the data or footage was taken: 2026-09-25, or 2026-09-25T01:17 together with zone. |
+| `zone`    | text (trimmed, min 1, max 64, pattern `^[A-Za-z][A-Za-z0-9_+/-]{0,63}$`) | no       | —       | IANA time zone of a date with a time, such as Europe/Moscow.                            |
 
 ### `source-link`
 
@@ -815,10 +832,10 @@ Source location opened through an explicit IPv4 loopback editor helper without r
 
 Forms: text. Children: none.
 
-| Attribute | Values                 | Required | Default |
-| --------- | ---------------------- | -------- | ------- |
-| `label`   | text (min 1, max 160)  | yes      | —       |
-| `href`    | text (min 1, max 1000) | yes      | —       |
+| Attribute | Values and constraints                                                                                                                                                                                                 | Required | Default | Meaning                                                                         |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- | ------------------------------------------------------------------------------- |
+| `label`   | text (trimmed, min 1, max 160)                                                                                                                                                                                         | yes      | —       | Short visible source path and line.                                             |
+| `href`    | text (trimmed, min 1, max 1000, pattern `^http://127\.0\.0\.1:(?:[1-9][0-9]{0,3}\|[1-5][0-9]{4}\|6[0-4][0-9]{3}\|65[0-4][0-9]{2}\|655[0-2][0-9]\|6553[0-5])/open\?path=(?:%2[Ff]\|/)[^\s<>&#]+&line=[1-9][0-9]{0,8}$`) | yes      | —       | IPv4 loopback editor-helper URL with an absolute path and positive source line. |
 
 ### `spotlight`
 
@@ -826,12 +843,12 @@ One screenshot with a loupe over one detail: the detail enlarged in place, the r
 
 Forms: container. Children: markdown.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `title`   | text (min 1, max 200) | no       | —       |
-| `x`       | integer from 0 to 100 | yes      | —       |
-| `y`       | integer from 0 to 100 | yes      | —       |
-| `zoom`    | number from 1.5 to 4  | no       | `2`     |
+| Attribute | Values and constraints                           | Required | Default | Meaning                                                                                    |
+| --------- | ------------------------------------------------ | -------- | ------- | ------------------------------------------------------------------------------------------ |
+| `title`   | text (trimmed, min 1, max 200)                   | no       | —       | Visible title.                                                                             |
+| `x`       | integer from 0 to 100 spelling `^\d{1,3}$`       | yes      | —       | Horizontal position of the detail, in per cent of the picture width from the left (0–100). |
+| `y`       | integer from 0 to 100 spelling `^\d{1,3}$`       | yes      | —       | Vertical position of the detail, in per cent of the picture height from the top (0–100).   |
+| `zoom`    | number from 1.5 to 4 spelling `^[1-4](?:\.\d)?$` | no       | `2`     | How many times the loupe enlarges the detail (1.5–4).                                      |
 
 ### `steps`
 
@@ -839,9 +856,9 @@ Process or tutorial sequence containing Markdown, normally an ordered list.
 
 Forms: container. Children: markdown.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `title`   | text (min 1, max 200) | no       | —       |
+| Attribute | Values and constraints         | Required | Default | Meaning        |
+| --------- | ------------------------------ | -------- | ------- | -------------- |
+| `title`   | text (trimmed, min 1, max 200) | no       | —       | Visible title. |
 
 ### `swap`
 
@@ -849,9 +866,9 @@ A word in running text that swaps on a beat to up to three other words and retur
 
 Forms: text. Children: label-or-generated-label.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `words`   | text (min 1, max 160) | yes      | —       |
+| Attribute | Values and constraints         | Required | Default | Meaning                                                                                      |
+| --------- | ------------------------------ | -------- | ------- | -------------------------------------------------------------------------------------------- |
+| `words`   | text (trimmed, min 1, max 160) | yes      | —       | The other words, separated by commas (one to three); the written label comes first and last. |
 
 ### `tab`
 
@@ -859,9 +876,9 @@ One labelled panel inside tabs.
 
 Forms: container. Children: markdown. Required parent: `tabs`.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `label`   | text (min 1, max 160) | yes      | —       |
+| Attribute | Values and constraints         | Required | Default | Meaning            |
+| --------- | ------------------------------ | -------- | ------- | ------------------ |
+| `label`   | text (trimmed, min 1, max 160) | yes      | —       | Visible tab label. |
 
 ### `tabs`
 
@@ -869,10 +886,10 @@ Keyboard-operable group of tab panels.
 
 Forms: container. Children: markdown-and-tab-directives.
 
-| Attribute     | Values                   | Required | Default      |
-| ------------- | ------------------------ | -------- | ------------ |
-| `title`       | text (min 1, max 200)    | no       | —            |
-| `orientation` | `horizontal`, `vertical` | no       | `horizontal` |
+| Attribute     | Values and constraints         | Required | Default      | Meaning                                                                                                                                                                                                   |
+| ------------- | ------------------------------ | -------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`       | text (trimmed, min 1, max 200) | no       | —            | Visible title.                                                                                                                                                                                            |
+| `orientation` | `horizontal`, `vertical`       | no       | `horizontal` | horizontal: the tab list above the panels. vertical: on a wide screen the tab list stands in a column beside the panels (arrow keys up and down move along it); on a narrow screen it returns above them. |
 
 ### `term`
 
@@ -880,9 +897,9 @@ Inline or standalone reference that opens a registered glossary explanation. Pro
 
 Forms: leaf, text. Children: label-or-generated-label.
 
-| Attribute | Values               | Required | Default |
-| --------- | -------------------- | -------- | ------- |
-| `key`     | text (min 1, max 64) | yes      | —       |
+| Attribute | Values and constraints                                          | Required | Default | Meaning                                      |
+| --------- | --------------------------------------------------------------- | -------- | ------- | -------------------------------------------- |
+| `key`     | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`) | yes      | —       | Key of the glossary definition to reference. |
 
 ### `time`
 
@@ -890,10 +907,10 @@ A date or a moment written in the page language and, for a time, in a declared t
 
 Forms: text. Children: label-or-generated-label.
 
-| Attribute | Values                             | Required | Default |
-| --------- | ---------------------------------- | -------- | ------- |
-| `zone`    | text (min 1, max 64)               | no       | —       |
-| `show`    | `auto`, `date`, `time`, `datetime` | no       | `auto`  |
+| Attribute | Values and constraints                                                   | Required | Default | Meaning                                                                                                        |
+| --------- | ------------------------------------------------------------------------ | -------- | ------- | -------------------------------------------------------------------------------------------------------------- |
+| `zone`    | text (trimmed, min 1, max 64, pattern `^[A-Za-z][A-Za-z0-9_+/-]{0,63}$`) | no       | —       | IANA time zone the time is shown in and named by, such as Europe/Moscow; required when the value has a time.   |
+| `show`    | `auto`, `date`, `time`, `datetime`                                       | no       | `auto`  | What of the moment the page writes: auto (the date, and the time when one is written), date, time or datetime. |
 
 ### `timeline`
 
@@ -901,10 +918,10 @@ Semantic chronological sequence with bounded events.
 
 Forms: container. Children: event-directives.
 
-| Attribute     | Values                | Required | Default |
-| ------------- | --------------------- | -------- | ------- |
-| `title`       | text (min 1, max 200) | yes      | —       |
-| `description` | text (min 1, max 300) | yes      | —       |
+| Attribute     | Values and constraints         | Required | Default | Meaning                                           |
+| ------------- | ------------------------------ | -------- | ------- | ------------------------------------------------- |
+| `title`       | text (trimmed, min 1, max 200) | yes      | —       | Visible title.                                    |
+| `description` | text (trimmed, min 1, max 300) | yes      | —       | Meaningful plain-text description for the visual. |
 
 ### `toggle`
 
@@ -912,11 +929,11 @@ Switch controlling visibility of declarative content.
 
 Forms: container. Children: markdown.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `title`   | text (min 1, max 200) | no       | —       |
-| `label`   | text (min 1, max 160) | yes      | —       |
-| `default` | `off`, `on`           | no       | `off`   |
+| Attribute | Values and constraints         | Required | Default | Meaning               |
+| --------- | ------------------------------ | -------- | ------- | --------------------- |
+| `title`   | text (trimmed, min 1, max 200) | no       | —       | Visible title.        |
+| `label`   | text (trimmed, min 1, max 160) | yes      | —       | Visible switch label. |
+| `default` | `off`, `on`                    | no       | `off`   | Initial switch state. |
 
 ### `typing`
 
@@ -930,17 +947,17 @@ Embedded local video (webm, mp4, m4v, or ogv) as a looping muted clip, a backgro
 
 Forms: leaf. Children: none.
 
-| Attribute  | Values                         | Required | Default |
-| ---------- | ------------------------------ | -------- | ------- |
-| `src`      | text (min 1, max 200)          | yes      | —       |
-| `sources`  | text (min 1, max 600)          | no       | —       |
-| `mode`     | `clip`, `background`, `manual` | no       | `clip`  |
-| `chapters` | text (min 1, max 200)          | no       | —       |
-| `poster`   | text (min 1, max 200)          | no       | —       |
-| `caption`  | text (min 1, max 300)          | no       | —       |
-| `start`    | number from 0 to 3600          | no       | —       |
-| `seam`     | `cut`, `fade`                  | no       | `cut`   |
-| `expand`   | true or false                  | no       | `false` |
+| Attribute  | Values and constraints                                       | Required | Default | Meaning                                                                                                                                                                                                                           |
+| ---------- | ------------------------------------------------------------ | -------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src`      | text (trimmed, min 1, max 200, format `relative-local-path`) | yes      | —       | Relative local video path: .webm, .mp4, .m4v, or .ogv. Give the most compatible encoding (H.264 MP4) here.                                                                                                                        |
+| `sources`  | text (trimmed, min 1, max 600)                               | no       | —       | Further encodings of the same video, separated by commas, in order of preference (for example AV1 and VP9 from agentic-screencast web); directory output offers all of them before src, one file embeds only the most compatible. |
+| `mode`     | `clip`, `background`, `manual`                               | no       | `clip`  | clip: muted, looping, plays while visible, with controls. background: muted and looping without controls, with a pause button; a poster is required. manual: starts only when the reader presses play, with sound.                |
+| `chapters` | text (trimmed, min 1, max 200, format `relative-local-path`) | no       | —       | Relative WebVTT chapters file (.vtt), such as the one agentic-screencast web writes; the chapters appear as buttons under the video that jump to each chapter.                                                                    |
+| `poster`   | text (trimmed, min 1, max 200, format `relative-local-path`) | no       | —       | Relative local image shown before playback and in print: .png, .jpg, .jpeg, .webp, .gif, or .avif.                                                                                                                                |
+| `caption`  | text (trimmed, min 1, max 300)                               | no       | —       | Visible caption under the video; it also names the video for assistive technology.                                                                                                                                                |
+| `start`    | number from 0 to 3600 spelling `^\d{1,4}(?:\.\d{1,2})?$`     | no       | —       | Second of the recording where a looping clip or background starts and every loop returns (0–3600, up to two decimals): the useful part of a recording without re-encoding it.                                                     |
+| `seam`     | `cut`, `fade`                                                | no       | `cut`   | How a looping clip or background joins its end to its start: cut jumps back at once, fade dims the last half-second and brightens the first, so the loop has no visible jump.                                                     |
+| `expand`   | true or false                                                | no       | `false` | Adds an Expand button to a clip that opens it large in a dialog with the full player controls and sound.                                                                                                                          |
 
 ### `zoom`
 
@@ -948,10 +965,10 @@ The inside of one node of a flow diagram, written as its own small flow: while t
 
 Forms: container. Children: zoom-part-directives. Required parent: `diagram`.
 
-| Attribute | Values                | Required | Default |
-| --------- | --------------------- | -------- | ------- |
-| `node`    | text (min 1, max 64)  | yes      | —       |
-| `title`   | text (min 1, max 200) | yes      | —       |
+| Attribute | Values and constraints                                          | Required | Default | Meaning                                                             |
+| --------- | --------------------------------------------------------------- | -------- | ------- | ------------------------------------------------------------------- |
+| `node`    | text (trimmed, min 1, max 64, pattern `^[a-z][a-z0-9-]{0,63}$`) | yes      | —       | Identity of the node of the enclosing diagram that this flow opens. |
+| `title`   | text (trimmed, min 1, max 200)                                  | yes      | —       | Title of the nested flow.                                           |
 
 ## Visualization limits
 
@@ -1043,11 +1060,22 @@ Forms: container. Children: zoom-part-directives. Required parent: `diagram`.
   "fix": "Apply the replacements the product computed exactly, and nothing else.",
   "theme": "Write an author theme file from one or two brand colours, their lightness shifted until every contrast pair passes in both schemes.",
   "describe": "Return the complete source contract.",
-  "schema": "Return manifest, directive, or complete source JSON Schema.",
+  "schema": "Return manifest, directive, complete source, or theme JSON Schema.",
   "examples": "List packaged buildable examples and the reference extensions shipped beside them.",
   "sitemap": "Write sitemap.xml and robots.txt for a published tree of pages built with a public URL.",
   "snapshot": "Build a page and photograph it at several widths, in both schemes, with and without motion, with a contact sheet; with --measure, measure it instead of photographing.",
   "effect-check": "Build the examples of an effect extension and run the eleven effect checks in Chromium, reporting N of M checks passed."
+}
+```
+
+## Capabilities
+
+```json
+{
+  "init": "Initialize a packaged declarative starter without overwriting user content.",
+  "validate": "Validate a project through the production preparation pipeline.",
+  "inspect": "Inspect a valid project through the production preparation pipeline.",
+  "review": "Resolve a versioned review artifact to current Markdown source locations."
 }
 ```
 

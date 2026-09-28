@@ -13,18 +13,16 @@ the cliché it carries. A first round built only from a list of things to avoid 
 looks cheap. References give rhythm and technique, not code: never copy a site's code or assets
 ([`assets.md`](assets.md), licences). The measured sites in [`themes.md`](themes.md) and the exemplars in
 [`playbook.md`](playbook.md) are a starting set, not a substitute for sites on the page's own subject.
-
-Sources: the owner's rejection of the first Moira landing round (September 2026), which followed only a
-study of «how not to look generated»;
-[Viktor Shmatko, what makes a website look premium](https://viktorshmatko.com/blog/what-makes-a-website-look-premium);
-[Awwwards sites of the day](https://www.awwwards.com/websites/sites_of_the_day/).
+For each new reference, record the capture date and viewport alongside any measured size or colour: a live
+site can change after the study. The first Moira landing round (September 2026) studied only how to avoid
+generated-looking pages; its four resulting directions were rejected as crude despite obeying those bans.
 
 ## What makes a page premium
 
 Avoiding clichés removes the template but does not make a page good. The four prototypes of the first Moira
 landing round had no indigo, no Inter, no glow, no identical cards, no emoji, and passed the «cover the logo»
-test; the owner still called them crude. A premium page is control and hundreds of small decisions, «a
-single point of view executed with discipline», not a rare effect. Build the concept from these practices:
+test; the owner still called them crude. A considered page carries one point of view through its layout,
+type, evidence and motion. Build the concept from these practices:
 
 | Practice                       | What it means on the page                                                                                                     |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
@@ -42,11 +40,10 @@ Four shifts turn a concept from average to considered, and each concept should a
 demo, the metaphor as material, direction of motion, type as a decision — with the palette and the faces
 taken from the subject.
 
-Sources: [Viktor Shmatko, premium website design details](https://viktorshmatko.com/blog/premium-website-design-details);
-[Made by Evoke, what makes a website look expensive](https://madebyevoke.com/blog/what-makes-a-website-look-expensive);
-[Emil Kowalski, practical animation tips](https://emilkowal.ski/ui/7-practical-animation-tips); the measured
-sites [Linear](https://linear.app), [Stripe](https://stripe.com), [Warp](https://www.warp.dev),
-[Cursor](https://cursor.com), [Igloo Inc](https://www.igloo.inc).
+The September 2026 reference study behind this list recorded the useful choices, rather than a style to
+copy: Linear reserved colour for signals, Stripe used light display type, Warp let a terminal-like product
+surface lead, Cursor gave the real interface more area than its title, and Igloo Inc used one changing
+object as the page's visual motif. Choose only the technique that supports the current subject.
 
 ## One metaphor, one object
 
@@ -54,14 +51,14 @@ sites [Linear](https://linear.app), [Stripe](https://stripe.com), [Warp](https:/
   two colours (`#b6bac5` and `#383e4e`) that changes state as the reader scrolls; Oryzo shows one object
   revealing its properties. A second metaphor on the same page dilutes the first.
 - **The metaphor is the material, not a caption.** A flat line of constant width on paper reads as a
-  diagram: the first Moira round drew its «thread» as a one-pixel SVG line and was rejected as crude; the
-  accepted round made the same thread a lit volume with sag, tension and recoil, born from hundreds of
-  fibres. A metaphor expressed as a table stays a table.
+  diagram: the first Moira round drew its main object as a one-pixel SVG path and was rejected as crude;
+  the accepted round gave that object visible volume, light and a response to motion. A metaphor expressed
+  as a table stays a table.
 - **The deletion test.** Remove the main scene in your head: if the page loses none of its numbers, its
   refusal and its path, the scene is decoration (`DR-SCENE-CARRIES` in [`design-rules.md`](design-rules.md)).
-- **Chaos grows only inside a frame.** Organic, generative or tangled material lives inside a disciplined
-  layout: the grid, the type and the controls stay calm around it. Three hundred exact threads say more than
-  a million particles.
+- **Chaos grows only inside a frame.** Organic or generative material lives inside a disciplined layout:
+  the grid, the type and the controls stay calm around it. A few controlled forms can say more than a
+  million particles.
 - **One solved element per screen.** Every screen has one element that is not a stock component — a stamp
   turned across a ruled frame, a number set in place, a line that leaves the column — and it is the one
   thing the concept names as its solved element. Everything symmetric on the grid is a template.
@@ -70,9 +67,10 @@ sites [Linear](https://linear.app), [Stripe](https://stripe.com), [Warp](https:/
 - **Check the metaphor against the thesis.** A glowing brain for a product whose point is that the model is
   an unreliable worker says the opposite of the page.
 
-Sources: [Igloo Inc case study](https://www.awwwards.com/igloo-inc-case-study.html);
-[Oryzo](https://oryzo.ai); [Tyler Hobbs, flow fields](https://www.tylerxhobbs.com/words/flow-fields); the two
-Moira landing rounds and their reviews (September 2026).
+For a generated field, start from a bounded area and a small set of controlled paths; vary density or
+direction to show the data, while labels and controls remain fixed. This is the transferable lesson from
+flow-field studies, not a reason to add particles. The ice-object and changing-object examples above, and
+the two Moira landing rounds, were recorded in the September 2026 direction review.
 
 ## Write a concept
 
@@ -157,7 +155,7 @@ artifact before changing it, and list them on an index of variants ([`playbook.m
 | A call-to-action box with two buttons at the end                    | A closing template; a framed button reads as an afterthought      | A final scene: the main image resolved, one action inside it                                                                     |
 | A logo strip, an integrations cloud, a testimonial wall             | Borrowed proof the reader cannot check                            | One named customer with a real quote and a date, or the product's own evidence                                                   |
 | A switcher of SDK languages for its own sake                        | Interaction that shows the same thing five times                  | One real snippet in the reader's language; tabs only when the reader truly picks one                                             |
-| A gold CSS gradient, gold on black                                  | Reads as cheap luxury                                             | Metal only as a photograph or a render; one metal thread among matte ones                                                        |
+| A gold CSS gradient, gold on black                                  | Reads as cheap luxury                                             | Metal only as a photograph or a render; one small metal detail among matte forms                                                 |
 | White marble as «eternal classic»                                   | A texture pasted on a plane                                       | A scan or photograph with light, large, monochrome, as a fragment                                                                |
 | Paper and one ink, no material, light, or depth                     | Correct and plain: the rejected first round of the Moira landing  | Two inks and one material with light                                                                                             |
 | Newspaper hairlines with dense columns                              | The ruled template of an «editorial» page                         | Fewer, wider columns; rules only where they separate meaning                                                                     |
@@ -168,15 +166,10 @@ artifact before changing it, and list them on an index of variants ([`playbook.m
 
 Four or more of these on one page mean an average page, not a distinctive one.
 
-Sources: [Jack Pearce, the purple gradient](https://www.jackpearce.co.uk/notes/purple-gradient-ai-aesthetics/);
-[why every AI-built website looks the same](https://dev.to/alanwest/why-every-ai-built-website-looks-the-same-blame-tailwinds-indigo-500-3h2p);
-[925 Studios, AI slop design tells](https://www.925studios.co/blog/ai-slop-design-tells);
-[every AI startup website looks the same](https://daily.dev/posts/every-ai-startup-website-looks-the-same-9cn0zndyo);
-[Superdesign, fixing a generic AI landing page](https://superdesign.dev/blog/fix-generic-ai-landing-page);
-[Creative Boom, trends creatives are over in 2026](https://www.creativeboom.com/insight/10-trends-creatives-are-so-over-in-2026/);
-[Adrian Roselli, do not split words into letters](https://adrianroselli.com/2026/02/you-know-what-just-dont-split-words-into-letters.html);
-[the curse of the custom cursor](https://stiftelsenfunka.org/about-us/columns/the-curse-of-the-custom-cursor/);
-the rejected Moira prototypes and the live Moira landing reviewed on 2026-09-25.
+The 2026 cliché survey and the rejected Moira prototypes supplied these counterexamples. Check the
+mechanism as well as the look: splitting a heading into animated letters can disrupt its reading order,
+and a custom cursor can hide the expected pointer or make a target harder to acquire. Keep each heading
+as readable text and retain the system cursor. The live Moira landing was reviewed on 2026-09-25.
 
 ## A synonym is not a fix
 
@@ -198,9 +191,9 @@ These substitutions look like changes and leave the cliché in place:
 | Letter-by-letter title animation     | A text scramble, a typewriter on every heading                   | A still title, or one title by line                     |
 | A glowing neural network             | A plexus of lines and dots without the glow                      | The real material: named nodes from the real data       |
 
-Sources: [Codrops, real-time ASCII and dithering effects](https://tympanus.net/codrops/2026/01/04/efecto-building-real-time-ascii-and-dithering-effects-with-webgl-shaders/)
-(the «next mesh gradient»); [Instrument Serif](https://github.com/Instrument/instrument-serif) and
-[Bricolage Grotesque](https://fontsource.org/fonts/bricolage-grotesque), neither with Cyrillic.
+ASCII and dithering shaders can replace a mesh gradient without adding meaning; ask what the picture
+proves before choosing either. Instrument Serif and Bricolage Grotesque lack Cyrillic in the recorded
+reference set, so a bilingual page needs a face with the required glyphs instead.
 
 ## What makes a palette look considered
 
@@ -226,45 +219,45 @@ Sources: [Codrops, real-time ASCII and dithering effects](https://tympanus.net/c
 - **Faces without Cyrillic are not an option** for a bilingual page: Instrument Serif and Bricolage
   Grotesque have none. Cormorant Garamond is for large sizes only.
 
-Sources: [Stripe](https://stripe.com) (measured display weight 300);
-[Resend](https://resend.com) (a serif at 96 px on black); [Literata with Cyrillic](https://fonts.google.com/specimen/Literata?subset=cyrillic);
-[Cormorant](https://github.com/catharsisfonts/cormorant).
+The September 2026 reference measurements include Stripe's display weight 300 and Resend's 96 px serif
+on black. Those are observations, not universal settings: compare their hierarchy with the current page
+at the same viewport before borrowing it. Literata has a Cyrillic subset; Cormorant needs large display
+sizes. Verify the actual embedded font files cover every language in the page.
 
 ## Thematic presentation
 
 A theme lives in the name, the verbs and the material, not in an illustration of the theme.
 
-- **Myth.** Palantir, Anduril, Nike and Hermes Agent carry the myth in the name and show data on the screen.
-  Craft at scale works as material: Loewe Weaves, Anni Albers and the Jacquard punched card as weaving that
-  programs. Do: the myth in the name and at most three verbs of the mechanism; the material with light, in
-  two inks; one large serif; motion tied to the product; no generated pictures. Do not: antique decor,
-  neon statues, vaporwave, literal goddesses, stock «threads of fate»; decor that can be removed without
-  losing meaning is costume.
-- **Neural networks.** Show the real material with its physics and data: Anthropic's «Mapping the mind»
-  and attribution graphs, the Activation Atlas, the FlyWire and H01 connectomes, Ramón y Cajal's drawings,
-  Brendan Bycroft's LLM visualisation. Clichés: the plexus, the glowing blue brain, the Matrix rain of
-  zeros and ones, robots; DeepMind's «Visualising AI» set is now recognised as stock.
+- **Myth.** Put the allusion in the name, then show what the product does. Palantir uses a seeing-stone
+  name and a compact monochrome mark while the product's data remains the subject; borrow the separation
+  of symbolic identity from concrete evidence. Anduril pairs its mythic name with restrained black-and-white
+  typography; its product imagery supplies the colour, so medieval decoration is unnecessary. Hermes Agent
+  takes a messenger name but leads with a direct product promise and an install action; borrow the plain
+  first step rather than illustrating the deity. For a craft metaphor, borrow Loewe Weaves' focus on the
+  material at close range, Anni Albers' ordered variation of a repeated pattern, or the Jacquard card's
+  visible mapping from a punched instruction to a woven result. Use at most three verbs of the mechanism,
+  a material with light in two inks, one large serif and motion tied to the product. Antique decor, neon
+  statues and literal goddesses are costume when they can be removed without losing the argument.
+- **Neural networks.** Show the system's real structure and data. Anthropic's «Mapping the mind» and its
+  attribution graphs make relationships readable as labelled features and directed links; borrow the
+  labelled cause-to-effect path, not a decorative web. Activation Atlas uses a grid of related activation
+  images so comparison is possible; borrow its fixed frame, grouping and caption. FlyWire and H01 show
+  traced anatomy with scale and spatial context; Ramón y Cajal's drawings isolate the branching form
+  against a quiet field. Brendan Bycroft's LLM visualisation walks through layers and token flow; reveal
+  one stage at a time, with labels that stay attached to the part they explain. For a research figure,
+  give the whole structure a static overview, then enlarge the one path the chapter argues about; put
+  the source, scale or unit and caption next to the figure, not in distant prose. The recorded DeepMind
+  «Visualising AI» set is a cautionary example of abstract AI imagery that can be reused without telling
+  the reader which system or finding is shown. Avoid the glowing blue brain, Matrix rain and robots too.
 - **Check the metaphor against the thesis.** A glowing brain says «intelligence», so it contradicts a page
   whose point is that the model is an unreliable worker held to a procedure.
 - **Colour and motion come from the data.** A path lit where the run went, a speed from the recorded time,
   a node size from its count.
-- **«Chaos to order» without neon.** The tangle is warm and lit, the order is ink on paper; FIELD.IO's IBM
-  work shows the drama without a glow.
-
-Sources: [Palantir logo](https://www.designrush.com/best-designs/logo/palantir);
-[Anduril type](https://fontsinuse.com/uses/32662/anduril-industries);
-[Hermes 4](https://hermes4.nousresearch.com/);
-[Loewe Weaves](https://www.loewe.com/usa/en/stories-collection/loewe-weaves.html);
-[Anni Albers at Tate Modern](https://www.tate.org.uk/whats-on/tate-modern/anni-albers);
-[Anthropic, mapping the mind of a language model](https://www.anthropic.com/research/mapping-mind-language-model);
-[attribution graphs](https://transformer-circuits.pub/2025/attribution-graphs/biology.html);
-[Activation Atlas](https://distill.pub/2019/activation-atlas/); [FlyWire](https://flywire.ai/);
-[H01](https://research.google/blog/ten-years-of-neuroscience-at-google-yields-maps-of-human-brain/);
-[Cajal's drawings](https://www.janelia.org/archive/santiago-ram%C3%B3n-y-cajal-drawings);
-[Bycroft LLM visualisation](https://bbycroft.net/llm);
-[FIELD.IO, IBM Generation](https://field.io/work/ibm-generation);
-[Better Images of AI, the glowing blue brain](https://blog.betterimagesofai.org/glowing-blue-brain/);
-[DeepMind Visualising AI](https://visualisingai.deepmind.com/about).
+- **«Chaos to order» without neon.** FIELD.IO's IBM Generation starts from many apparently uncontrolled
+  data points and reveals a pattern and structure; borrow the visible transformation, not arbitrary noise.
+  Keep it inside one bounded frame, and change the positions or connections that explain the transition.
+  The disorder can be warm and lit; the resolved state can be ink on paper. Do not add a glow as a
+  substitute for a visible change.
 
 ## Controls are the package's, the voice is the theme's
 

@@ -193,11 +193,13 @@ The cargo is aboard.
   the picture should never have to chase it.
 - **Depth is 12 pixels.** The pointer response of `interaction="depth"` stays within the 5–15-pixel norm;
   wider is sway, not depth.
-- **One continuous movement per page, and quiet.** Anything that moves by itself for longer than five
-  seconds is a single quiet movement with a pause button in the flow of the page (WCAG 2.2.2), still under
-  reduced motion; a constant pulse stops feeling like energy. The package adds that button itself — **Pause
-  motion** after the block where a live effect draws every frame, pressed from the start under reduced
-  motion, remembered between visits — so do not write one.
+- **One continuous movement per page, and quiet.** WCAG 2.2.2 calls for a pause, stop or hide control when
+  visible information starts moving automatically, lasts more than five seconds and appears beside other
+  content, unless that motion is essential to the activity. Automatically updated information beside other
+  content needs such a control or an update-frequency control even below five seconds. A constant pulse
+  stops feeling like energy. For an effect with `endless: true`, the package adds **Pause motion** in the
+  page flow in live mode and remembers the reader's pause choice between visits; do not write another
+  button. Under reduced motion the effect draws its still state and needs no motion button.
 - **Captions of a scrub scene are short.** Every caption shares one cell of fixed height, so the longest
   sets the height of all; one or two sentences, and a status that appears only when its step is reached.
 - **`:count` only on a real figure with its date.** Counting an invented or undated number animates a
@@ -216,12 +218,9 @@ slides` or `layout: screens`); on a scrolling page it is decoration.
   the screen takes the look it has under the pointer; nothing is hidden behind hover.
 - **Grain only under a large fill beside real material.** Grain on an empty gradient is a cliché.
 
-Sources: [Val Head on parallax and vestibular safety, A List Apart](https://alistapart.com/article/designing-safer-web-animation-for-motion-sensitivity/);
-[WCAG 2.3.3, animation from interactions](https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html);
-[WCAG 2.2.2, pause, stop, hide](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html);
-[Nielsen Norman Group, scrolljacking](https://www.nngroup.com/articles/scrolljacking-101/);
-[Emil Kowalski, animation tips](https://emilkowal.ski/ui/7-practical-animation-tips);
-[CSS-Tricks, grainy gradients](https://css-tricks.com/grainy-gradients/).
+Keep scroll under the reader's control: a pinned or scrubbed scene follows the reader's gesture rather
+than taking over wheel input to play a fixed-duration film. Use grain only under a large fill beside real
+material; it cannot supply the subject of a page by itself.
 
 ## Played scenes, marks and frames
 
@@ -321,10 +320,10 @@ title: The live page
 
 # The live page
 
-::::section{title="The page as it is" id="live" frame="browser" address="https://example.com/pricing"}
-![The pricing page in a browser](assets/pricing.png)
+::::section{title="Illustrative pricing layout" id="pricing" frame="browser" illustration="true"}
+![Mock pricing layout marked as an illustration](assets/pricing.png)
 
-The pricing page, as a reader sees it today.
+This is a mock layout, not a live pricing page.
 ::::
 ```
 
@@ -341,9 +340,8 @@ context; the [extensions reference](extensions.md) describes the contract and it
 [`focus-frame`](../../../extensions/focus-frame/README.md) shows a small WebGL effect with two image-frame
 variants and matching 2D rendering.
 
-- **The law of motion comes from the subject.** A network
-  lights the path the data took. «Premium» for a product tool comes from directing the mechanism, not from a
-  shader: Linear's home page has no `<canvas>` and no `<video>`, only SVG and HTML on a timeline.
+- **The law of motion comes from the subject.** A network lights the path the data took. A product tool can
+  show its mechanism with timed HTML and SVG states; a shader helps only when the visual subject needs it.
 - **Fewer exact elements beat a million particles.** Draw only the marks that explain the subject or guide
   the reader; more marks do not make the point clearer.
 - **Outdated tricks of 2018–2024:** a photo that distorts under the cursor, an RGB split, «liquid»
@@ -356,14 +354,11 @@ variants and matching 2D rendering.
 - **Do not:** a camera driven by key frames from scroll without the owner's decision (it costs months),
   GPGPU particles, WebGPU without a fallback to WebGL, scene data in JSON instead of textures.
 
-A short list of references for real WebGL: [Igloo Inc](https://www.igloo.inc) (one object, procedural
-crystals), [Lusion](https://lusion.co) (physics without losing legibility),
-[Messenger by Abeto](https://messenger.abeto.co/) (stylised rather than photoreal),
-[Codrops, the engineering behind ZERO](https://tympanus.net/codrops/2026/07/17/zero-the-engineering-behind-a-defiant-interactive-narrative/)
-(adaptive quality, `highp`).
-
-Sources: [Tyler Hobbs, flow fields](https://www.tylerxhobbs.com/words/flow-fields);
-[14islands, progressive enhancement with WebGL](https://www.14islands.com/journal/progressive-enhancement-with-webgl-and-react).
+Reference lessons without copying their code: Igloo Inc keeps one procedural ice object as the subject;
+Lusion lets physics move the scene while text stays legible; Messenger by Abeto uses stylised shapes rather
+than photorealism. If a shader is costly, lower its work after measured slow frames and use high precision
+where coordinates actually need it. For this package, begin with one marked host, inspect frame cost with
+`effect-check`, reduce work before adding detail, and keep a matching 2D/still rendering path.
 
 ## Video
 
@@ -398,11 +393,8 @@ Without motion a clip waits on its poster for the reader to press play; on a pho
 - **Do not:** a video as a WebGL texture only to show a clip (it costs a WebGL context), image sequences in
   a canvas, a YouTube embed on the first screen (the player weighs more than the clip).
 
-Sources: [Swarmify, video on a landing page](https://swarmify.com/blog/video-landing-page/);
-[SmoothCapture, landing page video](https://www.smoothcapture.app/blog/landing-page-video);
-[John Beales, performant video hero backgrounds](https://johnbeales.com/2025/performant-video-hero-backgrounds/);
-[Muffin Man, scrubbing videos](https://muffinman.io/blog/scrubbing-videos-using-javascript/);
-[Zed](https://zed.dev/) (product clips switched by an accordion).
+When several product clips are equally useful, give each a named tab or disclosure and play only the
+reader's selected clip. The still poster and caption explain each choice before playback.
 
 ## Detail on demand
 
