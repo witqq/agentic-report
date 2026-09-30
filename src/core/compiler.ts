@@ -27,6 +27,9 @@ export async function buildReport(options: BuildReportOptions): Promise<BuildRep
   const url = validateRequestedUrl(options.url);
   const prepared = await prepareReport({
     input: options.input,
+    ...(options.manifestDefaults === undefined
+      ? {}
+      : { manifestDefaults: options.manifestDefaults }),
     ...(requestedFormat === undefined ? {} : { format: requestedFormat }),
     ...(options.output === undefined ? {} : { output: options.output }),
     ...(options.review === undefined ? {} : { review: options.review }),

@@ -52,6 +52,9 @@ judgment, and the trigger; `agentic-report` owns the safe source contract, respo
 interaction runtime, and portable output. See the [agent quickstart](website/docs/agent/index.md) for a
 copyable custom-skill pattern and example prompts.
 
+For a Node integration, use the public ESM `buildReport` API with author-overridable page-control defaults;
+see [Build from ESM](docs/product/source-contract.md#build-from-esm) for its typed options and precedence.
+
 ### Build from reviewed source instead of installing the package
 
 If you do not want to execute the published `agentic-report` npm package, clone a specific release tag,

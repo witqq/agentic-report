@@ -61,6 +61,10 @@ Your skill owns when the handoff is useful and what the content means. The utili
 contract, accessible layout, interaction runtime, and portable output. Do not ask the agent to write a
 parallel React page, custom CSS, or browser script.
 
+A Node host can build the original page source through the public ESM API and supply author-overridable
+page-control defaults. See [Build from ESM](../product/source-contract.md#build-from-esm) for the typed
+options and precedence.
+
 ## Use reviewed source instead of the npm package
 
 When the user does not trust the published package, do not silently fall back to `npx`. Clone the requested

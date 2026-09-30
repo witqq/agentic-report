@@ -122,6 +122,8 @@ node scripts/craft.mjs table
 needs only a `title` in its frontmatter; `contractVersion` names the source-contract major it is written
 for — omit it for version 1. What each command prints, delivery flags, and building from a reviewed source
 checkout instead of npm are in [`references/process.md`](references/process.md).
+For a Node host that supplies author-overridable page-control defaults, use `buildReport` with
+`manifestDefaults`; read «Build inside a Node host» in that reference.
 
 ## Where the answer is
 

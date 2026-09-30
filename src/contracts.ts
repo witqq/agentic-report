@@ -106,8 +106,17 @@ export interface Diagnostic {
   readonly related?: readonly Diagnostic[];
 }
 
+/** Caller policy for controls the author has not specified; authored metadata always wins. */
+export type BuildManifestDefaults = {
+  readonly [
+    Field in keyof Pick<ReportManifestInput, 'topbar' | 'schemeToggle' | 'themeSwitcher' | 'review'>
+  ]?: ReportManifestInput[Field] | undefined;
+};
+
 export interface BuildReportOptions {
   readonly input: string;
+  /** Defaults below the project manifest and primary frontmatter, shared by every locale. */
+  readonly manifestDefaults?: BuildManifestDefaults;
   readonly output?: string;
   readonly format?: OutputFormat;
   readonly review?: string;

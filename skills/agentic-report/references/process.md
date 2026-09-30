@@ -19,6 +19,18 @@ commands `init`, `build`, `validate`, `inspect`, `fix`, `review`, `sitemap`, `sn
 records, while `schema`, `describe`, and `examples` write one compact JSON document. `--human` selects the
 form for a person. One failed run lists every independent violation it found, so fix them together.
 
+### Build inside a Node host
+
+When a Node integration needs defaults for page controls, import `buildReport` from `agentic-report` and
+pass `manifestDefaults` with any of the optional boolean fields `topbar`, `schemeToggle`, `themeSwitcher`
+and `review`. The exported `BuildManifestDefaults` type describes this object. An omitted field or
+`undefined` leaves the package default in place; the project manifest and then primary frontmatter
+override caller defaults, including with an explicit `false`. Localized entries use the resolved primary
+settings. Pass the original source path as `input`: the compiler keeps its authored paths for partials,
+diagnostics and review targets, without a temporary source copy. Keep normal manifest combinations valid:
+`topbar: false` with enabled Review Workspace or `themeSwitcher: true` still fails. This is an ESM build
+option, not a CLI flag or a field to write into Markdown.
+
 ### Deliver the page
 
 - Keep the default **Made with Agentic Report** link; `attribution: false` removes only that footer when

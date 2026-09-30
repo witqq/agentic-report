@@ -180,8 +180,41 @@ empty bands, clipped headings, first screen, stops, page errors, wide and sparse
 column, code broken inside a word, diagram labels, off-scheme blocks). It never overwrites a non-empty destination. Both commands read
 and validate all resources required by the selected format but do not create or replace an output artifact.
 
-`buildReport({ input, output?, format?, review?, share?, url? })` is the publishing operation. `url`, and
-CLI `--url <url>` on `build`, `validate` and `inspect`, overrides the manifest `url` with the same validation
+### Build from ESM
+
+`buildReport({ input, output?, format?, review?, share?, url?, since?, manifestDefaults? })` is the publishing operation.
+`BuildReportOptions.manifestDefaults` accepts the exported `BuildManifestDefaults` type with four optional
+readonly fields: `topbar`, `schemeToggle`, `themeSwitcher` and `review`. Each accepts a boolean or
+`undefined`; omission or `undefined` supplies no default for that field.
+Resolution applies package defaults, then these caller defaults, then the project manifest, then primary
+frontmatter. Explicit authored values, including `false`, win. Alternate language entries inherit the
+resolved primary settings.
+
+```ts
+import { buildReport, type BuildManifestDefaults } from 'agentic-report';
+
+const manifestDefaults: BuildManifestDefaults = {
+  topbar: false,
+  schemeToggle: false,
+  themeSwitcher: false,
+  review: false,
+};
+await buildReport({
+  input: './my-page/report.md',
+  output: './my-page.html',
+  manifestDefaults,
+});
+```
+
+Use these defaults when a Node host has a page-control policy and authors must remain able to override
+it. The compiler reads the original entry, partials and localized files without copying or rewriting
+source, so source identity, diagnostics and review targets retain their authored paths. The option is
+specific to `buildReport`; it is not a CLI flag or an authored metadata field. Unknown fields,
+non-object values and non-boolean field values fail before source I/O with `INVALID_MANIFEST_DEFAULTS`,
+without returning submitted values or keys. The resolved settings still undergo normal manifest checks:
+for example, `topbar: false` cannot combine with enabled Review Workspace or `themeSwitcher: true`.
+
+`url` and CLI `--url <url>` on `build`, `validate` and `inspect` override the manifest `url` with the same validation
 and fails with `PUBLIC_URL_INVALID` otherwise. A page with a public URL whose HTML exceeds 2,097,152 bytes,
 the part of an HTML file Googlebot reads, reports `PUBLIC_PAGE_OVER_CRAWLER_LIMIT` with the measured size;
 directory output keeps images, fonts, styles, and the runtime out of the HTML and removes that risk. `share: true`, or
@@ -1420,7 +1453,7 @@ publish, or deploy. Unknown directives fail instead of silently producing ambigu
 runs only through the [extensions](#extensions) the page declares: a provider runs locally at build time
 like any build script the author chose, an island runs in a sandboxed frame without network or access to
 the page, and an effect's bundled script is allowed by its hash only on pages that use it. `validate`,
-`inspect` and `inspect-review` expand the page as `build` does and therefore run its providers as well: a
+`inspect` and `review` expand the page as `build` does and therefore run its providers as well: a
 provider is code, so an untrusted source with providers must not be validated or inspected either. An
 effect module is bundled with everything it imports, including files outside the source root such as
 `node_modules`; the build result lists those files in the effect's `notes`.

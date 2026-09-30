@@ -12,6 +12,7 @@ import {
   type RuntimePlacement,
 } from '../authoring/registry.js';
 import type {
+  BuildManifestDefaults,
   Diagnostic,
   OutputFormat,
   SourceDocument,
@@ -63,6 +64,7 @@ import { resolvePackageLocale } from '../localization.js';
 
 export interface PrepareReportOptions {
   readonly input: string;
+  readonly manifestDefaults?: BuildManifestDefaults;
   readonly format?: OutputFormat;
   readonly output?: string;
   readonly publication?: true;
@@ -120,7 +122,7 @@ export interface PreparedReport {
 }
 
 export async function prepareReport(options: PrepareReportOptions): Promise<PreparedReport> {
-  const source = await loadSource(options.input);
+  const source = await loadSource(options.input, options.manifestDefaults);
   const format = options.format ?? source.manifest.output.format;
   const runtimePlacement = runtimePlacementForFormat(format);
   const outputPath =

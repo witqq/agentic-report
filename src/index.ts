@@ -20,6 +20,7 @@ export { initProject } from './authoring/init-project.js';
 export { createBrandTheme } from './authoring/brand-theme.js';
 export type {
   AppliedFix,
+  BuildManifestDefaults,
   BuildReportOptions,
   BuildReportResult,
   BrandThemeRole,

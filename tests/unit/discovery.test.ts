@@ -307,6 +307,7 @@ describe('agent discovery contract', () => {
       types: [
         'AppliedFix',
         'BrandThemeRole',
+        'BuildManifestDefaults',
         'BuildReportOptions',
         'BuildReportResult',
         'CreateBrandThemeOptions',
