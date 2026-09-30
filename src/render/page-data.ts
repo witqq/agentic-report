@@ -14,7 +14,7 @@
  *   data diverge.
  *
  * There is no expression language: a derived value (a streak, «k of N», a sum) is written into the JSON
- * beforehand or produced by a provider (docs/decisions.md, «Данные страницы без языка выражений»).
+ * beforehand or produced by a provider (docs/product/source-contract.md, «Page data»).
  * Every refusal is collected with the authored range of the node it concerns and reported together with
  * the directive phase; a repeated node keeps the position of its template line.
  */

@@ -123,7 +123,13 @@ export function createMark(defects) {
                   startMs: started,
                   durationMs,
                   width: document.documentElement.clientWidth,
-                  measureMs: durationMs,
+                  // The author's own stage names come through; text, bad names and non-numbers are dropped.
+                  stages: {
+                    layout: durationMs,
+                    'badge-paint': 0,
+                    'CANARY_AUTHOR_TEXT has spaces': 1,
+                    note: 'CANARY_AUTHOR_TEXT',
+                  },
                   untrustedText: 'CANARY_AUTHOR_TEXT',
                 });
                 if (defects.diagnosticThrow && !Object.hasOwn(timings, 'slice'))

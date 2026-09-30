@@ -118,7 +118,7 @@ The correction back to the filter is drawn last, as its own phase.
 The source keeps the final figures, so reduced motion shows their values without counting.
 :::::
 
-:::::section{title="The effect never owns the meaning" id="fallback" nav="Fallback" recipe="evidence" interaction="tilt"}
+:::::section{title="The effect never owns the meaning" id="fallback" nav="Fallback" recipe="evidence" media="mask" media-fit="cover" media-aspect="landscape" interaction="tilt"}
 ![Smoke from a well-head flare drifting across the linear dunes of the Calanscio Sand Sea, seen from orbit](assets/sand-sea.jpg)
 
 :::decision{title="Keep content complete without motion"}

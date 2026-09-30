@@ -3,6 +3,7 @@ import type { Plugin } from 'unified';
 
 import type {
   PageCardGroup,
+  PageEmptyBlocks,
   PageMediaCounts,
   PageSectionStructure,
   PageStructure,
@@ -25,6 +26,12 @@ export const rehypePageStructure: Plugin<[PageStructureCollector], Root> =
     let movingElements = 0;
     let sectionSeen = false;
     const cardGroups: PageCardGroup[] = [];
+    let emojiHeadings = 0;
+    const emptyBlocks: { -readonly [Key in keyof PageEmptyBlocks]: number } = {
+      sections: 0,
+      tables: 0,
+      cardGroups: 0,
+    };
 
     const visitChildren = (
       children: readonly (ElementContent | Root['children'][number])[],
@@ -45,14 +52,22 @@ export const rehypePageStructure: Plugin<[PageStructureCollector], Root> =
       current: MutableSection | undefined,
       depth: number,
     ): void => {
+      if (isHeading(element) && EMOJI.test(textOf(element))) emojiHeadings += 1;
       if (isAuthoredSection(element)) {
         sectionSeen = true;
+        if (isEmptySection(element)) emptyBlocks.sections += 1;
         const section = sectionOf(element, depth);
         sections.push(section);
         visitChildren(element.children, section, depth + 1);
         return;
       }
-      if (element.properties.dataSemantic === 'cards') cardGroups.push(cardGroupOf(element));
+      if (element.properties.dataSemantic === 'cards') {
+        const group = cardGroupOf(element);
+        cardGroups.push(group);
+        if (group.cards === 0) emptyBlocks.cardGroups += 1;
+      }
+      if (element.tagName === 'table' && bodyRows(element) === 0) emptyBlocks.tables += 1;
+
       const kind = mediaKind(element);
       if (kind !== undefined) {
         const target = current?.media ?? (sectionSeen ? undefined : beforeFirstSection);
@@ -70,8 +85,49 @@ export const rehypePageStructure: Plugin<[PageStructureCollector], Root> =
       magneticActions,
       movingElements,
       cardGroups,
+      emojiHeadings,
+      emptyBlocks,
     };
   };
+
+/**
+ * Эмодзи-картинка: знак, который рисуется цветным значком по умолчанию, или любой пиктографический знак
+ * с селектором варианта U+FE0F. Буквенные знаки вроде © и ✓ сюда не попадают.
+ */
+const EMOJI = /\p{Emoji_Presentation}|\p{Extended_Pictographic}\uFE0F/u;
+
+function isHeading(element: Element): boolean {
+  return /^h[1-6]$/u.test(element.tagName);
+}
+
+function textOf(node: Element | ElementContent): string {
+  if (node.type === 'text') return node.value;
+  if (node.type !== 'element') return '';
+  return node.children.map(textOf).join('');
+}
+
+/** Секция автора, в которой нет ничего, кроме её заголовка: ни блока, ни текста. */
+function isEmptySection(section: Element): boolean {
+  return section.children.every((child) => {
+    if (child.type === 'text') return child.value.trim().length === 0;
+    if (child.type !== 'element') return true;
+    return isHeading(child);
+  });
+}
+
+/** Строки таблицы вне её шапки. */
+function bodyRows(table: Element): number {
+  let rows = 0;
+  const walk = (element: Element, inHead: boolean): void => {
+    for (const child of element.children) {
+      if (child.type !== 'element') continue;
+      if (child.tagName === 'tr' && !inHead) rows += 1;
+      walk(child, inHead || child.tagName === 'thead');
+    }
+  };
+  walk(table, false);
+  return rows;
+}
 
 type MutableMedia = { -readonly [Key in keyof PageMediaCounts]: number };
 type MutableSection = Omit<PageSectionStructure, 'media'> & { readonly media: MutableMedia };

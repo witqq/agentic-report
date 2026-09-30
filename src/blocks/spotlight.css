@@ -1,0 +1,103 @@
+@layer components {
+  @media (prefers-reduced-motion: reduce) {
+    .spotlight-loupe > img[data-spotlight-copy] {
+      transition: none;
+    }
+  }
+
+  /* Лупа: картинка приглушена, деталь в круге увеличена на месте, пояснение рядом. */
+  .semantic-spotlight {
+    --spot-size: 15cqw;
+
+    display: grid;
+    gap: calc(1rem * var(--space-factor));
+    max-width: 100%;
+    margin: calc(1.75rem * var(--space-factor)) 0;
+  }
+  @media (min-width: 57rem) {
+    .semantic-spotlight {
+      grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+      column-gap: clamp(1.5rem, 4vw, 3rem);
+      align-items: center;
+    }
+  }
+
+  .spotlight-stage {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-media);
+    container-type: inline-size;
+    line-height: 0;
+  }
+
+  .spotlight-stage > img {
+    filter: brightness(0.5) saturate(0.7);
+  }
+
+  .spotlight-loupe {
+    position: absolute;
+    inset: 0;
+    clip-path: circle(
+      var(--spot-size) at calc(var(--spot-x, 50) * 1%) calc(var(--spot-y, 50) * 1%)
+    );
+  }
+
+  .spotlight-ring {
+    position: absolute;
+    top: calc(var(--spot-y, 50) * 1% - var(--spot-size));
+    left: calc(var(--spot-x, 50) * 1% - var(--spot-size));
+    width: calc(var(--spot-size) * 2);
+    aspect-ratio: 1;
+    border: 2px solid var(--color-accent);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .spotlight-stage > img,
+  .spotlight-loupe,
+  .spotlight-loupe > img,
+  .spotlight-ring {
+    transition:
+      filter calc(900ms * var(--motion-pace, 1)) var(--motion-ease, ease-out),
+      clip-path calc(900ms * var(--motion-pace, 1)) var(--motion-ease, ease-out),
+      transform calc(900ms * var(--motion-pace, 1)) var(--motion-ease, ease-out),
+      opacity calc(900ms * var(--motion-pace, 1)) var(--motion-ease, ease-out);
+  }
+
+  .semantic-spotlight[data-spotlight-pending] .spotlight-stage > img {
+    filter: none;
+  }
+
+  .semantic-spotlight[data-spotlight-pending] .spotlight-loupe {
+    clip-path: circle(0 at calc(var(--spot-x, 50) * 1%) calc(var(--spot-y, 50) * 1%));
+  }
+
+  .semantic-spotlight[data-spotlight-pending] .spotlight-loupe > img {
+    transform: scale(1);
+  }
+
+  .spotlight-note {
+    margin: 0;
+    color: var(--color-text);
+  }
+
+  .spotlight-note > :is(p, h3, ul, ol):first-child {
+    margin-top: 0;
+  }
+
+  @media print {
+    .semantic-spotlight[data-spotlight-pending] .spotlight-stage > img {
+      filter: brightness(0.5) saturate(0.7);
+    }
+
+    .semantic-spotlight[data-spotlight-pending] .spotlight-loupe {
+      clip-path: circle(
+        var(--spot-size) at calc(var(--spot-x, 50) * 1%) calc(var(--spot-y, 50) * 1%)
+      );
+    }
+
+    .semantic-spotlight[data-spotlight-pending] .spotlight-loupe > img {
+      transform: scale(var(--spot-zoom, 2));
+    }
+  }
+}

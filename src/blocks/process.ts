@@ -107,8 +107,9 @@ function validateProcess(node: DirectiveNode, context: BlockValidationContext): 
 
 const STEP = 18;
 const EDGE = 7;
-const BASE = 20;
-const HEIGHT = 26;
+const BASE = 24;
+/** Room above the line for a return arc and its «×N», whose glyphs stay readable (11 px or more). */
+const HEIGHT = 30;
 
 type StepState = 'done' | 'review' | 'pending';
 
@@ -286,7 +287,7 @@ export const processBlock = defineBlock<undefined, DiagramMessages>({
   validate: validateProcess,
   enhance: enhanceProcess,
   strings: DIAGRAM_MESSAGES,
-  styles: 'package',
+  feature: 'process',
   staticEquivalent:
     'The same dots and arcs drawn still, with the steps and returns in words beside them.',
   examples: [

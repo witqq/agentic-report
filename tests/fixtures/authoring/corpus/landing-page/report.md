@@ -71,6 +71,16 @@ Only for the speaker.
 Arrives on its step in a presentation.
 :::
 
+:::::deck{title="Briefing" id="briefing"}
+::::slide{transition="wipe"}
+Slides inside the page.
+
+:::notes
+Said, not shown.
+:::
+::::
+:::::
+
 ::contents{sticky="true"}
 
 Reviews become :swap[faster]{words="calmer, exact"}; run :typing[agentic-report build page]; it passed :mark[three times]{shape="circle" seed="7"}.

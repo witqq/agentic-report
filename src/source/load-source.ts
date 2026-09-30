@@ -11,6 +11,8 @@ import { authoringRegistry, STILL_IMAGE_EXTENSIONS } from '../authoring/registry
 import { normalizePackageRelativePosixReference } from '../authoring/local-reference.js';
 import {
   ReportManifestSchema,
+  ReportManifestInputSchema,
+  type BuildManifestDefaults,
   type LocalizedSourceDocument,
   type SourceDocument,
   type SourceLocation,
@@ -42,7 +44,42 @@ const MANIFEST_CANDIDATES = [
 ] as const;
 const INCLUDE_PATTERN = /\{\{include:\s*([^}\n]+?)\s*\}\}/g;
 
-export async function loadSource(input: string): Promise<SourceDocument> {
+const MANIFEST_DEFAULT_KEYS = ['topbar', 'schemeToggle', 'themeSwitcher', 'review'] as const;
+
+/** Validates caller policy independently, before reading source and before authored keys can mask it. */
+function validateManifestDefaults(value: unknown): BuildManifestDefaults {
+  if (value === undefined) return {};
+  const invalid = () =>
+    new AgenticReportError({
+      level: 'error',
+      code: 'INVALID_MANIFEST_DEFAULTS',
+      message:
+        'Manifest defaults must be an object containing only supported boolean control fields.',
+      remediation:
+        'Use only topbar, schemeToggle, themeSwitcher, and review with boolean values; omit unspecified fields.',
+    });
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) throw invalid();
+  const prototype: unknown = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) throw invalid();
+  if (
+    Reflect.ownKeys(value).some((key) => !MANIFEST_DEFAULT_KEYS.some((allowed) => key === allowed))
+  )
+    throw invalid();
+  const parsed = ReportManifestInputSchema.safeParse(value);
+  if (!parsed.success) throw invalid();
+  const defaults: Partial<Record<(typeof MANIFEST_DEFAULT_KEYS)[number], boolean>> = {};
+  for (const key of MANIFEST_DEFAULT_KEYS) {
+    const selected = parsed.data[key];
+    if (selected !== undefined) defaults[key] = selected;
+  }
+  return defaults;
+}
+
+export async function loadSource(
+  input: string,
+  manifestDefaults?: BuildManifestDefaults,
+): Promise<SourceDocument> {
+  const defaults = validateManifestDefaults(manifestDefaults);
   const resolvedInput = path.resolve(input);
   const inputStat = await statOrInputError(resolvedInput);
   const entryPath = inputStat.isDirectory()
@@ -59,7 +96,7 @@ export async function loadSource(input: string): Promise<SourceDocument> {
     theme: loadedTheme,
     extensions,
     ...primary
-  } = await loadSourceEntry(entryPath, sourceRoot, true);
+  } = await loadSourceEntry(entryPath, sourceRoot, true, defaults);
   if (loadedTheme === undefined) throw new Error('The primary entry resolved no theme.');
   const theme = loadedTheme.theme;
   const declared = primary.manifest.localizations;
@@ -185,6 +222,7 @@ async function loadSourceEntry(
   entryPath: string,
   sourceRoot: string,
   includeProjectManifest: boolean,
+  manifestDefaults: BuildManifestDefaults = {},
 ): Promise<
   SourceVariantDocument & {
     readonly theme?: LoadedTheme;
@@ -199,7 +237,10 @@ async function loadSourceEntry(
   const frontmatterOrigin: MetadataOrigin = { file: entryPath, text: raw };
   const frontmatterData = requireMetadataRecord(parsed.data, frontmatterOrigin, 'frontmatter');
   if (!includeProjectManifest) assertLocalizedMetadata(frontmatterData, frontmatterOrigin);
-  const merged = mergeManifestData(manifestDocument.data, frontmatterData);
+  const merged: Record<string, unknown> = {
+    ...manifestDefaults,
+    ...mergeManifestData(manifestDocument.data, frontmatterData),
+  };
   const headingTitle = /^#\s+(.+)$/m.exec(parsed.content)?.[1]?.trim();
   const withDerivedTitle =
     merged.title === undefined && headingTitle !== undefined

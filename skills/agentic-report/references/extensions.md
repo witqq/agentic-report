@@ -6,8 +6,8 @@ application in its own frame. It is declared in the page's frontmatter, lives in
 is checked like the built-in blocks. This file says when to extend, which of the four levels to take, and
 the rules every extension follows. The installed package holds the rest: the exact manifest format in
 `docs/product/source-contract.md` (section «Extensions»), how each level is built and isolated and the
-context an effect receives in [`effect-api.md`](effect-api.md). The installed package's
-`docs/ARCHITECTURE.md` explains the engine architecture.
+context an effect receives in `docs/ARCHITECTURE.md` (sections «Extensions» and «Level 2 — effects and the
+effect engine»).
 
 ## First, the vocabulary
 
@@ -47,7 +47,6 @@ Take the lowest level that does the job. Each level up costs more code, more che
 | the same arrangement of directives with required fields, many times        | 1a `block`    | `key-figure`: a figure that cannot lose its date and source  |
 | a fixed frame — a section, its scene and what follows it — around data     | 1a `block`    | `product-theatre`: a steps scene and the table of the run    |
 | directives written from a JSON file, a log or an export at build time      | 1b `provider` | `theatre-script`: a product run as a diagram and timed steps |
-| an element drawn across the page from one marked directive to the next     | 2 `effect`    | `wall-thread`: a thread that runs from section to section    |
 | a decoration beside each marked section, driven by that section's progress | 2 `effect`    | `loom`: cloth woven beside a section as it is read           |
 | a small WebGL mark around an image, with the same 2D fallback              | 2 `effect`    | `focus-frame`: a traced border or four corner marks          |
 | something the reader operates: inputs, a result, a chart of the result     | 3 `island`    | `slo-budget`: an error-budget calculator                     |
@@ -104,7 +103,7 @@ and in print — its two `examples` and the `licenses` of any third-party code i
   name in an attribute, as `product-theatre` does with `scenario="run"`. `source.file` is relative to the
   page's folder. A non-zero exit fails the build at
   the directive with the end of its standard error: refuse bad data there, with a message that says what to
-  fix. `validate`, `inspect` and `review` run providers exactly as `build` does — a provider is
+  fix. `validate`, `inspect` and `inspect-review` run providers exactly as `build` does — a provider is
   code, so do not validate an untrusted source that declares providers. A provider that starts its own
   children (`sh -c`, `npm run`) is stopped as a whole process group at `timeoutMs`.
 - **`effect`** — `module`, `targets` (`directive`, `attribute`, `values`: the attribute a built-in
@@ -116,23 +115,20 @@ and in print — its two `examples` and the `licenses` of any third-party code i
   frame while a host is on screen), and `endless: true` (see the pause button below). The author writes
   the target attribute on the host directive, and the effect reads it with `ctx.attribute(host, name)`:
 
-  Read the complete effect definition, context, canvas and fallback contract in
-  [`effect-api.md`](effect-api.md) before writing the module.
-
   ```markdown
   ---
-  title: Shipment
-  extensions: [extensions/wall-thread/extension.yaml]
+  title: How cloth is woven
+  extensions: [extensions/loom/extension.yaml]
   ---
 
-  # Shipment
+  # How cloth is woven
 
-  ::::section{title="Packed" id="packed" thread="start"}
-  The order leaves the shelf.
+  ::::section{title="The warp" id="warp" loom="selvedge"}
+  The long threads are strung first.
   ::::
 
-  ::::section{title="Delivered" id="delivered" thread="end"}
-  The parcel reaches the door.
+  ::::section{title="The weft" id="weft" loom="band"}
+  The cross threads go over and under them.
   ::::
   ```
 
@@ -172,7 +168,9 @@ and in print — its two `examples` and the `licenses` of any third-party code i
   island is ready show the static form. The island body is required: write there the result of the page's
   own case, not «interactive calculator».
 - **Nothing on the text.** An effect's canvas and details stay off the lines of text (`ctx.obstacles()`
-  gives the rectangles to avoid); an island stays inside its frame. Fixed and sticky elements — the top
+  gives the rectangles to avoid); an island stays inside its frame. The frame narrows to the width the island
+  actually draws in (fixed-size pictures in a wide figure get a frame of their width), so draw the island's
+  panel on its root at full width and let its content decide; an island that should span the column fills it. Fixed and sticky elements — the top
   bar, the contents column — come as their own layer `ctx.obstacles().pinned` (`{ element, rect }`, the
   rectangle in viewport coordinates); the other layers and `ctx.measure.lines` leave their text out, so a
   route measured at any scroll is the same. Cut pinned elements out of the drawing at their current place.
@@ -189,11 +187,12 @@ and in print — its two `examples` and the `licenses` of any third-party code i
   render mode, print and the two examples. When performance fails, read `performance-diagnostics.json` in the output
   directory for numeric timings by scroll and resize phase. Tasks outside those phases are listed
   separately and do not affect the result. After a confirmed timing failure, a separate advisory
-  `effect-diagnostic` pass records the `wall-thread` reference's numeric build stages, including route
-  search and path pulling, under `phases[].builds`; unassigned builds are listed separately. If that
+  `effect-diagnostic` pass records the build timings an effect pushes to
+  `window.__agenticReportBuildTimings` ([their shape](#build-timings)) under `phases[].builds`; unassigned
+  builds are listed separately. If that
   advisory pass cannot complete within 20 seconds, `diagnosticUnavailable: true` leaves the confirmed
   verdict intact.
-  The file contains no authored text or paths. Hand
+  The file contains no authored text or paths beyond validated stage names. Hand
   over only at `11 of 11 checks passed`.
 - **Licences.** Effect and island code is your own or under MIT, Apache 2.0 or the Unlicense, with its
   notice kept and listed in `licenses`; take ideas from demos, not their code
@@ -201,6 +200,33 @@ and in print — its two `examples` and the `licenses` of any third-party code i
   embedded.
 - **Weight.** An effect bundle is refused above `budgetBytes` (80 000 bytes by default); `build` reports
   the bytes of each bundled effect and island document. Keep an island to what the reader operates.
+
+## Build timings
+
+When an effect is slow, it can say where the time goes. In the advisory `effect-diagnostic` pass
+`effect-check` sets `window.__agenticReportBuildTimings` to an empty array; an effect that finds the array
+pushes one record per build (a rebuild or another costly recalculation) and does nothing when the array is
+absent, which is every ordinary page:
+
+```js
+const timings = window.__agenticReportBuildTimings;
+const started = performance.now();
+// … measure, then lay out …
+if (Array.isArray(timings))
+  timings.push({
+    startMs: started, // performance.now() when the build began; places it in a scroll or resize phase
+    durationMs: performance.now() - started,
+    width: document.documentElement.clientWidth,
+    stages: { measure: 3.1, layout: 7.4 }, // your own stage names, in milliseconds
+  });
+```
+
+`startMs` and `durationMs` are required finite non-negative numbers, otherwise the record is dropped;
+`width` becomes 0 when it is not such a number. Stage names are yours: a letter followed by letters, digits
+or hyphens, 32 characters at most. A stage with another name or a value that is not a finite non-negative
+number is dropped, only the first 16 valid stages of a build and the first 128 builds of a pass are kept,
+and any other key is ignored. So `performance-diagnostics.json` holds these numbers and your stage names,
+never other text the effect wrote.
 
 ## Reference extensions
 
@@ -213,7 +239,6 @@ copy its folder beside your page.
 | ----------------------------------- | ---------------------------- | --------- | ------------------------------------------------------------------------------------------------------- |
 | `key-figure`                        | `extensions/key-figure`      | 1a        | the simplest template: one card, required date and source                                               |
 | `product-theatre`, `theatre-script` | `extensions/product-theatre` | 1a and 1b | a frame block and a provider as a pair: a product run from a JSON scenario, replayed as a steps scene   |
-| `wall-thread`                       | `extensions/wall-thread`     | 2         | an effect across the page: target attributes on sections and cards, all three render modes              |
 | `loom`                              | `extensions/loom`            | 2         | a local effect: each host has its own geometry and progress, and states that exist in every render mode |
 | `focus-frame`                       | `extensions/focus-frame`     | 2         | a small WebGL effect on a section image, with token colours and matching 2D/still rendering             |
 | `slo-budget`                        | `extensions/slo-budget`      | 3         | an island: theme tokens, language, reported height, `renderAt`, and a static body with the page's case  |

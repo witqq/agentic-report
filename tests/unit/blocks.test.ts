@@ -1,4 +1,4 @@
-import { copyFile, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, cp, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { parse } from '@babel/parser';
@@ -10,6 +10,7 @@ import { type BlockEnhancementServices, defineBlock } from '../../src/blocks/def
 import { EXAMPLE_PAGE_DATA } from '../../src/blocks/data.js';
 import { BUILT_IN_BLOCKS } from '../../src/blocks/index.js';
 import { packageStrings } from '../../src/localization.js';
+import { pageFeature } from '../../src/page-features.js';
 import { renderMarkdown } from '../../src/render/markdown.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
 
@@ -53,13 +54,17 @@ describe('block modules', () => {
     });
   });
 
-  it('describes every block without motion, names its runtime and ships validating examples', async () => {
+  it('describes every block without motion, names its feature and ships validating examples', async () => {
     const workspace = await blockWorkspace();
     for (const block of BUILT_IN_BLOCKS) {
       expect(block.staticEquivalent.trim().length, block.name).toBeGreaterThan(0);
-      expect(block.styles, block.name).toBe('package');
-      const runtime = block.definition.behavior.runtime;
-      expect(block.runtime, block.name).toBe(runtime === 'none' ? undefined : runtime);
+      // A block whose grammar names a package-owned controller gets it from its feature's script or
+      // from the core; a feature without a script would leave the block without its controller.
+      if (
+        block.definition.behavior.runtime.startsWith('package-owned-') &&
+        block.feature !== 'core'
+      )
+        expect(pageFeature(block.feature).script, block.name).toBeDefined();
       expect(block.examples.length, `${block.name} has no example`).toBeGreaterThan(0);
       for (const example of block.examples) {
         const rendered = await render(workspace, example);
@@ -81,7 +86,7 @@ describe('block modules', () => {
       enhance: (_element, context) => {
         seen.push(context.messages.hello);
       },
-      styles: 'package',
+      feature: 'core',
       staticEquivalent: 'A greeting.',
     });
     const element: Element = { type: 'element', tagName: 'div', properties: {}, children: [] };
@@ -95,7 +100,7 @@ describe('block modules', () => {
       defineBlock({
         definition: BUILT_IN_BLOCKS[0].definition,
         localizedDefaults: ['title'],
-        styles: 'package',
+        feature: 'core',
         staticEquivalent: 'A section.',
       }),
     ).toThrow(/has no default/u);
@@ -171,6 +176,10 @@ async function blockWorkspace(): Promise<string> {
   for (const image of ['clip-poster.png', 'before.png', 'after.png']) {
     await copyFile(path.resolve('tests/fixtures/video/poster.png'), path.join(workspace, image));
   }
+  // The film the video example names with from: an agentic-screencast web output directory.
+  await cp(path.resolve('tests/fixtures/video/film'), path.join(workspace, 'film'), {
+    recursive: true,
+  });
   return workspace;
 }
 

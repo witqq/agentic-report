@@ -233,7 +233,7 @@ export const conversation = defineBlock<undefined, MessageStrings>({
   validate: validateConversation,
   enhance: enhanceConversation,
   strings: MESSAGE_STRINGS,
-  styles: 'package',
+  feature: 'message',
   staticEquivalent:
     'The messages as an ordered list of bordered blocks, each with its sender and time, the same in print.',
   examples: [CONVERSATION_EXAMPLE],
@@ -243,7 +243,7 @@ export const message = defineBlock<undefined, MessageStrings>({
   definition: messageDefinition(),
   enhance: enhanceMessage,
   strings: MESSAGE_STRINGS,
-  styles: 'package',
+  feature: 'message',
   staticEquivalent: 'A bordered block with the sender, time, text and status, the same in print.',
   examples: [
     ':::message{from="CI" time="09:41" status="failed" illustrative="true"}\nBuild 412 failed on `tests/e2e/data.spec.ts`.\n:::\n',

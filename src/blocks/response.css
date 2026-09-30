@@ -1,0 +1,214 @@
+@layer components {
+  .response-item > label {
+    margin-top: 0.7rem;
+  }
+
+  /*
+ * Форма ответа — не матрёшка рамок: вопросы идут строками под линией, корзины — колонками под своей
+ * линией, пункт — единственная рамка. Подписи, состояния и счётчики — моноширинные метки.
+ */
+  .response-question-list {
+    display: grid;
+    gap: 0;
+  }
+
+  .response-question > legend {
+    float: left;
+    width: 100%;
+    max-width: min(100%, var(--reading-measure));
+    margin-bottom: 0.4rem;
+    padding: 0;
+  }
+
+  /* Легенда плавает, чтобы вести себя как обычный блок; всё после неё начинается под ней. */
+  .response-question > legend ~ * {
+    clear: left;
+  }
+
+  .response-prompt,
+  .response-item-note,
+  .response-item-meta,
+  .response-answer-state,
+  .response-status {
+    color: var(--color-text-muted);
+  }
+
+  .response-prompt {
+    margin: 0 0 0.6rem;
+    font-size: var(--text-sm);
+  }
+
+  .response-answer-state,
+  .response-bucket-title {
+    display: block;
+    margin: 0 0 0.6rem;
+  }
+
+  .response-bucket-items,
+  .response-item-list,
+  .response-order-list {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .response-item[draggable='true'] {
+    cursor: grab;
+  }
+
+  .response-item-label,
+  .response-item-note,
+  .response-item-meta {
+    margin: 0;
+  }
+
+  .response-item-label {
+    overflow-wrap: anywhere;
+  }
+
+  /*
+   * Подвал карточки — единственное место её действий: малые тихие кнопки в строку, первая стоит по
+   * краю текста. Поле комментария открывается под подвалом, и кнопка остаётся на месте.
+   */
+  .response-item-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.75rem;
+    margin-inline-start: calc(var(--control-pad-x) * -0.5);
+  }
+
+  .response-item-move {
+    display: flex;
+    gap: 0.25rem;
+    margin-inline-start: auto;
+  }
+
+  .response-item-note {
+    font-size: var(--text-sm);
+    line-height: 1.45;
+  }
+
+  /* Варианты ответа идут строкой с переносом: короткие подписи не растягивают вопрос в столбец. */
+  .response-choice-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.5rem;
+  }
+
+  .response-order-list {
+    counter-reset: response-order;
+  }
+
+  .semantic-response .response-order-list > li::before {
+    display: inline-block;
+    min-width: 1.75rem;
+    margin-bottom: 0.2rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-author-mono, var(--font-mono));
+    font-size: var(--text-label);
+    content: counter(response-order, decimal-leading-zero);
+  }
+
+  .response-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .response-actions {
+    margin-top: 1rem;
+  }
+
+  .response-file-action {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .response-file-action input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .response-file-action:focus-within {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 0.18rem;
+  }
+}
+@layer defaults {
+  .ui-choice {
+    display: flex;
+    min-width: 0;
+  }
+}
+@layer primitives {
+  /* Вариант выбора: своя отметка из токенов темы, форма — галочка или точка, не только цвет. */
+  .ui-choice {
+    min-height: var(--control-height-sm);
+    align-items: center;
+    gap: 0.55rem;
+    color: var(--color-heading);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: var(--text-sm);
+    font-weight: var(--weight-regular);
+    letter-spacing: normal;
+    line-height: 1.35;
+    text-transform: none;
+    cursor: pointer;
+  }
+
+  .ui-choice > input {
+    display: grid;
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 auto;
+    place-content: center;
+    margin: 0;
+    border: 1px solid var(--color-text-muted);
+    border-radius: calc(var(--radius-small) * 0.6);
+    background: transparent;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  .ui-choice > input[type='radio'] {
+    border-radius: 50%;
+  }
+
+  .ui-choice > input:checked {
+    border-color: var(--color-heading);
+    background: var(--color-heading);
+  }
+
+  .ui-choice > input[type='radio']:checked::before {
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 50%;
+    background: var(--color-bg);
+    content: '';
+  }
+
+  .ui-choice > input[type='checkbox']:checked::before {
+    width: 0.3rem;
+    height: 0.55rem;
+    border-right: 2px solid var(--color-bg);
+    border-bottom: 2px solid var(--color-bg);
+    content: '';
+    transform: translateY(-0.06rem) rotate(45deg);
+  }
+
+  .ui-choice > input:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}
+@layer treatments {
+  :root[data-theme-console='on'] .ui-choice > input[type='checkbox'] {
+    border-radius: 0;
+  }
+}

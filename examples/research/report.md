@@ -28,7 +28,7 @@ Which authoring route gives agents the shortest path to a portable, reviewable i
 
 ::::::section{title="Evidence model" id="evidence" nav="Evidence" recipe="evidence"}
 
-![Research inputs converging into a recommendation](assets/evidence-map.svg)
+![Research inputs converging into a recommendation](assets/evidence-map.svg){dark="assets/evidence-map-dark.svg"}
 
 ::::tabs{title="Evidence views"}
 :::tab{label="Observed"}

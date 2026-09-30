@@ -1,0 +1,365 @@
+@layer components {
+  /*
+ * Сцена по шагам. На широком экране при обычном движении медиа закреплено сбоку, а такты идут рядом:
+ * текущий такт в полную силу, остальные приглушены; картинка сцены — та, что принадлежит такту, а в
+ * схеме горят узлы его фокуса. Такт занимает не больше двух третей экрана и не выше 24rem, так что сцена
+ * короче шести экранов и на высоком мониторе не оставляет пустот. На узком экране и при уменьшенном движении ничего не закреплено: медиа, затем такты.
+ */
+  .scene-beats {
+    display: grid;
+    gap: calc(1.25rem * var(--space-factor));
+  }
+  @media (min-width: 57rem) and (prefers-reduced-motion: no-preference) {
+    .semantic-section[data-scene='steps'][data-scene-live] > .semantic-section-title {
+      grid-column: 1 / -1;
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-live] > .scene-stage img[data-scene-frame] {
+      grid-area: 1 / 1;
+      opacity: 0;
+      transition: opacity calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
+        var(--motion-ease, ease-out);
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-live]
+      > .scene-stage
+      :is(p, figure):has(> img) {
+      display: grid;
+      margin: 0;
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-live] > .scene-stage img[data-scene-active] {
+      opacity: 1;
+    }
+  }
+
+  /*
+ * Строки кода такта (SPEC 7.3): такт с `lines` зажигает свои строки блока кода сцены, остальные
+ * приглушены — состояние «строка кода» по шагам. Без движения ничего не гаснет.
+ */
+  .semantic-section[data-code-focus] .scene-stage pre code .line {
+    opacity: 0.38;
+    transition: opacity calc(var(--duration-back) * var(--motion-pace, 1)) var(--ease-ui);
+  }
+
+  .semantic-section[data-code-focus] .scene-stage pre code .line[data-lit] {
+    opacity: 1;
+    background: var(--color-accent-soft);
+    transition-duration: calc(var(--duration-text) * 0.5 * var(--motion-pace, 1));
+  }
+
+  @media (max-width: 56.99rem) and (prefers-reduced-motion: no-preference) {
+    .semantic-section[data-scene='steps'][data-scene-narrow] > .scene-stage {
+      position: sticky;
+      z-index: 2;
+      /* Вплотную под верхней панелью: запас `--topbar-clearance` над якорем здесь дал бы щель. */
+      top: calc(var(--topbar-clearance, 4.5rem) - 0.9375rem);
+      display: grid;
+      /*
+       * Колонка без явного размера растёт до минимальной ширины содержимого: схема шире экрана
+       * раздвигала сцену за край страницы. Колонка по ширине сцены — схема прокручивается в своей рамке.
+       */
+      grid-template-columns: minmax(0, 1fr);
+      max-block-size: 42svh;
+      overflow: auto;
+      padding-block: 0.5rem;
+      background: var(--color-bg);
+      /* The page colour spans the screen beside the stage: a beat that bleeds to the screen edge (a code
+       block, a table) scrolls under the stage and would show in the gutters. */
+      box-shadow:
+        0 1px 0 var(--color-border),
+        0 0 0 100vmax var(--color-bg);
+      clip-path: inset(0 -100vmax -1px);
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-narrow] > .scene-stage > * {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    /*
+     * A figure on the narrow stage is its picture. Its full caption, layout switch, legend and words run to
+     * several screens and would leave the picture a strip inside a stage two fifths of a screen tall; on the
+     * stage the figure keeps its title and the full-screen button, and the picture fits the rest whole. The
+     * reader opens the full figure with that button; without motion the figure stands complete in the flow.
+     */
+    .semantic-section[data-scene='steps'][data-scene-narrow] > .scene-stage > figure:only-child {
+      display: flex;
+      flex-direction: column;
+      block-size: calc(42svh - 1rem);
+      margin: 0;
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-narrow]
+      > .scene-stage
+      > figure:only-child
+      :is(
+        .visualization-description,
+        .visualization-layout-switch,
+        .visualization-diagram-legend,
+        .visualization-transcript,
+        .visualization-legend
+      ) {
+      display: none;
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-narrow]
+      > .scene-stage
+      > figure:only-child
+      > .visualization-caption {
+      margin-bottom: 0.4rem;
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-narrow]
+      > .scene-stage
+      > figure:only-child
+      :is(.visualization-layouts, .visualization-layout-view:not([hidden]), .visualization-frame) {
+      display: flex;
+      flex: 1 1 0;
+      flex-direction: column;
+      min-block-size: 0;
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-narrow]
+      > .scene-stage
+      > figure:only-child
+      .visualization-frame
+      > .visualization-svg {
+      flex: 1 1 0;
+      min-width: 0;
+      min-block-size: 0;
+      height: 100%;
+      max-height: none;
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-narrow]
+      > .scene-stage:has(> figure:only-child) {
+      overflow: hidden;
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-narrow] > .scene-stage img[data-scene-frame] {
+      grid-area: 1 / 1;
+      max-block-size: calc(42svh - 1rem);
+      object-fit: contain;
+      opacity: 0;
+      transition: opacity calc(var(--duration-text) * var(--motion-pace, 1)) var(--ease-text);
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-narrow]
+      > .scene-stage
+      :is(p, figure):has(> img) {
+      display: grid;
+      margin: 0;
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-narrow] > .scene-stage img[data-scene-active] {
+      opacity: 1;
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-narrow] .semantic-beat {
+      min-block-size: 46svh;
+      align-content: center;
+      opacity: 0.42;
+      transition: opacity calc(var(--duration-back) * var(--motion-pace, 1)) var(--ease-ui);
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-narrow] .semantic-beat[data-current] {
+      opacity: 1;
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-focus][data-scene-narrow]
+      :is(.semantic-node:not([data-lit]), .semantic-edge:not([data-lit])) {
+      opacity: 0.28;
+    }
+  }
+
+  @media (min-width: 57rem) and (prefers-reduced-motion: no-preference) {
+    .semantic-section[data-scene='steps'][data-scene-live] .semantic-beat {
+      min-block-size: min(62svh, 24rem, calc(400svh / var(--scene-beats, 1)));
+    }
+  }
+
+  /*
+   * Сцена со скрабом (`scene="scrub"`): дорожка длиной в такт на экран, в ней закреплена рама под
+   * верхней панелью — сцена и подпись. Подписи лежат в одной ячейке (её высота — высота самой длинной),
+   * видна подпись текущего такта; картинки такта сменяются прозрачностью; полоса отрезков и номер шага
+   * стоят под подписью. На широком экране сцена слева, подпись справа; на телефоне сцена над подписью.
+   * Без движения и в печати дорожки нет: сцена, затем такты подряд.
+   */
+  .semantic-section[data-scene='scrub'][data-scene-live] > .scene-track {
+    position: relative;
+    block-size: calc(var(--scene-beats, 1) * 100svh);
+  }
+
+  .semantic-section[data-scene='scrub'][data-scene-live] {
+    --scene-top: var(--topbar-clearance, 4.5rem);
+  }
+
+  :root[data-layout='screens'] .semantic-section[data-scene='scrub'][data-scene-live] {
+    --scene-top: var(--screen-offset, 3.5rem);
+
+    /* Экран сцены — ровно её рама под заголовком: поля главы дали бы экран выше окна. */
+    padding-block: 0;
+  }
+
+  /* Заголовок сцены стоит над рамой, пока идут её экраны: сцена читается как одна закреплённая глава. */
+  .semantic-section[data-scene='scrub'][data-scene-live] > .semantic-section-title {
+    position: sticky;
+    z-index: 1;
+    top: var(--scene-top);
+  }
+  @media screen {
+    .semantic-section[data-scene='scrub'][data-scene-live] > .semantic-section-title {
+      margin-block-end: calc(var(--scene-title-gap, 0px) + var(--scene-release, 0px));
+    }
+
+    .semantic-section[data-scene='scrub'][data-scene-live] > .scene-track {
+      margin-block-start: calc(-1 * var(--scene-release, 0px));
+    }
+  }
+
+  .semantic-section[data-scene='scrub'][data-scene-live] .scene-pin {
+    position: sticky;
+    top: calc(var(--scene-top) + var(--scene-title, 0px));
+    display: grid;
+    block-size: calc(100svh - var(--scene-top) - var(--scene-title, 0px));
+    grid-template:
+      'stage' minmax(0, 1fr)
+      'caption' auto
+      'meta' auto / minmax(0, 1fr);
+    gap: 0.75rem;
+    padding-block: 0.75rem;
+  }
+
+  .semantic-section[data-scene='scrub'][data-scene-live] .scene-stage {
+    display: grid;
+    min-block-size: 0;
+    grid-area: stage;
+    overflow: hidden;
+    place-items: center;
+  }
+
+  .semantic-section[data-scene='scrub'][data-scene-live] .scene-stage > * {
+    min-width: 0;
+    max-width: 100%;
+    max-block-size: 100%;
+    margin: 0;
+  }
+
+  .semantic-section[data-scene='scrub'][data-scene-live] .scene-stage :is(p, figure):has(> img) {
+    display: grid;
+    max-block-size: 100%;
+    margin: 0;
+  }
+
+  .semantic-section[data-scene='scrub'][data-scene-live] .scene-stage img[data-scene-frame] {
+    grid-area: 1 / 1;
+    max-block-size: 100%;
+    object-fit: contain;
+    opacity: 0;
+    transition: opacity calc(var(--duration-back) * var(--motion-pace, 1)) var(--ease-ui);
+  }
+
+  .semantic-section[data-scene='scrub'][data-scene-live] .scene-stage img[data-scene-active] {
+    opacity: 1;
+    transition: opacity calc(var(--duration-scene) * 0.5 * var(--motion-pace, 1)) var(--ease-scene);
+  }
+
+  .semantic-section[data-scene='scrub'][data-scene-live] .scene-beats {
+    display: grid;
+    grid-area: caption;
+    align-items: start;
+  }
+
+  .semantic-section[data-scene='scrub'][data-scene-live] .semantic-beat {
+    grid-area: 1 / 1;
+    opacity: 0;
+    transform: translateY(calc(var(--motion-reveal-translation) * 0.5));
+    transition:
+      opacity calc(var(--duration-back) * var(--motion-pace, 1)) var(--ease-ui),
+      transform calc(var(--duration-back) * var(--motion-pace, 1)) var(--ease-ui);
+  }
+
+  .semantic-section[data-scene='scrub'][data-scene-live] .semantic-beat[data-current] {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity calc(var(--duration-text) * var(--motion-pace, 1)) var(--ease-text),
+      transform calc(var(--duration-text) * var(--motion-pace, 1)) var(--ease-text);
+  }
+
+  .semantic-section[data-scene='scrub'][data-scene-focus]
+    :is(.semantic-node, .semantic-edge):not([data-lit]) {
+    opacity: 0.28;
+  }
+
+  .semantic-section[data-scene='scrub'] :is(.semantic-node, .semantic-edge) {
+    transition: opacity calc(var(--duration-text) * 0.5 * var(--motion-pace, 1)) var(--ease-ui);
+  }
+
+  .scene-segments {
+    display: flex;
+    grid-area: meta;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .scene-segments > li::after {
+    position: absolute;
+    inset: 0;
+    background: var(--color-accent);
+    content: '';
+    transform: scaleX(var(--segment-fill));
+    transform-origin: left center;
+  }
+
+  .scene-position {
+    grid-area: meta;
+    justify-self: end;
+    margin: 0.5rem 0 0;
+    color: var(--color-text-muted);
+  }
+
+  @media (min-width: 57rem) {
+    .semantic-section[data-scene='scrub'][data-scene-live] .scene-pin {
+      grid-template:
+        'stage caption' minmax(0, 1fr)
+        'stage meta' auto / minmax(0, 1.2fr) minmax(0, 0.8fr);
+      column-gap: clamp(2rem, 5vw, 5rem);
+    }
+
+    .semantic-section[data-scene='scrub'][data-scene-live] .scene-beats {
+      align-self: center;
+    }
+  }
+
+  @media print {
+    .scene-segments,
+    .scene-position {
+      display: none;
+    }
+
+    /* Печать страницы с живой сценой: те же селекторы, что у живой сцены, стоят позже и берут верх. */
+    .semantic-section[data-scene='scrub'][data-scene-live] > .scene-track {
+      block-size: auto;
+    }
+
+    .semantic-section[data-scene='scrub'][data-scene-live] > .semantic-section-title,
+    .semantic-section[data-scene='scrub'][data-scene-live] .scene-pin {
+      position: static;
+      display: block;
+      block-size: auto;
+    }
+
+    .semantic-section[data-scene='scrub'][data-scene-live] .semantic-beat,
+    .semantic-section[data-scene='scrub'][data-scene-live] .semantic-beat[data-current],
+    .semantic-section[data-scene='scrub'][data-scene-live] .scene-stage img[data-scene-frame],
+    .semantic-section[data-scene='scrub'][data-scene-live] .scene-stage img[data-scene-active] {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+}

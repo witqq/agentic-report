@@ -7,7 +7,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { BuildReportOptions, Diagnostic } from '../../src/contracts.js';
 import { type AgenticReportError, exitCodeForDiagnostic } from '../../src/diagnostics.js';
 import { buildReport } from '../../src/core/compiler.js';
+import { extractEditionRecords } from '../../src/edition/read-since.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
+import { bundlePageAssets } from '../../src/core/page-assets.js';
 
 const workspaces: string[] = [];
 const publicationControl = vi.hoisted(() => ({
@@ -121,10 +123,10 @@ describe('buildReport', () => {
 
   it('counts serialized data URLs and the embedded runtime for single-file output', async () => {
     const encodedWorkspace = await trackedWorkspace('encoded-size-warning');
-    const [styles, runtime] = await Promise.all([
-      readFile(path.resolve('dist/browser/document.css')),
-      readFile(path.resolve('dist/browser/runtime.js')),
-    ]);
+    // The page below renders only core blocks in English: its bundle is the core alone.
+    const assets = await bundlePageAssets([], ['en']);
+    const styles = Buffer.from(assets.styles);
+    const runtime = Buffer.from(assets.script);
     const payload = Buffer.alloc(6_000, 0x61);
     const rawTotal = styles.byteLength + runtime.byteLength + payload.byteLength;
     const encodedTotal =
@@ -162,9 +164,14 @@ describe('buildReport', () => {
     const probeOutput = path.join(workspace, 'probe.html');
     const probe = await buildReport({ input: workspace, output: probeOutput });
     const probeHtml = await readFile(probeOutput, 'utf8');
+    // Запись редакции входит в бюджет одного файла.
     const exactBundledBytes =
       Buffer.byteLength(extractInlineStyles(probeHtml)) +
-      Buffer.byteLength(extractInlineRuntime(probeHtml));
+      Buffer.byteLength(extractInlineRuntime(probeHtml)) +
+      [...extractEditionRecords(probeHtml).values()].reduce(
+        (sum, record) => sum + Buffer.byteLength(JSON.stringify(record)),
+        0,
+      );
     expect(probe.warnings).toEqual([]);
     // Встроенные шрифты темы идут своими data URL; шрифт автора встроен ровно один раз.
     const authorFont = `data:font/woff2;base64,${Buffer.from('font-contents').toString('base64')}`;
@@ -1177,7 +1184,7 @@ describe('buildReport', () => {
       entry,
       [
         ...frontmatter,
-        ':::section{title="Первый"}',
+        '::::section{title="Первый"}',
         ':::lead',
         'Один.',
         '',
@@ -1187,7 +1194,7 @@ describe('buildReport', () => {
         ':::lead',
         'Три.',
         ':::',
-        ':::',
+        '::::',
       ].join('\n'),
     );
     const leads = await diagnosticOf();
@@ -1526,11 +1533,11 @@ describe('buildReport', () => {
       entry,
       [
         ...frontmatter,
-        ':::section',
+        '::::section',
         ':::glossary{key="spec" term="спека"}',
         'Согласованное требование.',
         ':::',
-        ':::',
+        '::::',
         '',
         ':::section{title="Раздел"}',
         'Тут :term[спека]{key="spec"} рядом.',
@@ -1630,21 +1637,21 @@ describe('buildReport', () => {
         'lead paragraphs',
         'INVALID_DIRECTIVE_PLACEMENT',
         [
-          ':::section{title="Первый"}',
+          '::::section{title="Первый"}',
           ':::lead',
           'Один.',
           '',
           'Два.',
           ':::',
-          ':::',
+          '::::',
           '',
-          ':::section{title="Второй"}',
+          '::::section{title="Второй"}',
           ':::lead',
           'Три.',
           '',
           'Четыре.',
           ':::',
-          ':::',
+          '::::',
         ],
       ],
       [

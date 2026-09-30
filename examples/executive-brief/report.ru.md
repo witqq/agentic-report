@@ -10,6 +10,11 @@ language: ru
 **Вымышленный пример.** Компания, числа и люди на этой странице придуманы, чтобы показать страницу решения;
 замените их собственными измеренными данными.
 
+:::actions
+::action[Посмотреть данные]{href="#evidence" kind="primary"}
+::action[Посмотреть план]{href="#path" kind="secondary"}
+:::
+
 :::::section{title="Рекомендация: переключить 3 ноября 2026 года" id="opening" nav="Решение" recipe="hero"}
 :::lead
 Ночные интеграционные сборки в Northwind идут 118 минут и заканчиваются, когда в Европе уже начинается утро.
@@ -24,10 +29,6 @@ language: ru
 :::
 ::::
 
-::::actions{placement="inline"}
-::action[Посмотреть данные]{href="#evidence" kind="primary"}
-::action[Посмотреть план]{href="#path" kind="secondary"}
-::::
 :::::
 
 :::::section{title="Что показал пробный период" id="evidence" nav="Данные" recipe="metrics"}

@@ -1,9 +1,7 @@
 # Testing
 
 This document describes current verification entry points and the guarantees covered by the present test
-implementation. The complete target is defined in
-[`../PRODUCT-REQUIREMENTS.md`](../PRODUCT-REQUIREMENTS.md); requirements without scoped evidence are not
-made current merely by an aggregate green run.
+implementation. A guarantee without scoped evidence is not made current merely by an aggregate green run.
 
 ## Supported entry points
 
@@ -11,9 +9,9 @@ Run tests only through the package scripts:
 
 ```bash
 pnpm test
-pnpm test:ci
 pnpm test:unit
 pnpm test:e2e
+pnpm test:perf
 ```
 
 The scripts invoke Testfold. Do not call Vitest or Playwright directly during normal diagnosis. Testfold
@@ -23,17 +21,26 @@ writes its summary to `test-results/summary.json` and failure reports under
 The Testfold configuration rejects suites that produce zero test results. This guard prevents setup or
 discovery failures from being reported as successful empty runs.
 
-`pnpm test` runs unit and browser E2E locally. It first prepares one installed npm candidate through
-`pnpm pack:check`; `pnpm test:e2e` prepares its own candidate when run alone. The package check installs the
-tarball in a clean npm consumer and checks its CLI, ESM and skill paths without launching a browser.
-Installed-artifact `file://` behavior and snapshots are E2E tests. The clean consumer needs npm registry
-access, and browser E2E needs Chromium installed through Playwright.
+`pnpm verify` is the required local, pull-request and release gate. It checks generated authoring projections,
+types, lint, formatting, the complete unit suite and the installed npm package through `pnpm pack:check`.
+The package check opens its installed output in Chromium; it does not run the full E2E suite.
 
-`pnpm verify` is the full local gate: generated authoring projections, types, lint, formatting and
-`pnpm test`. `pnpm test:ci` runs the unit tier; `pnpm verify:ci` adds the non-browser package check and is
-the pull-request and release gate. Neither CI nor release installs Chromium. The full E2E suite also runs
-on the nightly schedule in `.github/workflows/e2e.yml` at 03:00 UTC; it does not block a pull request or
-release. Run test commands sequentially: their workspaces under `test-results/` are shared.
+The full `pnpm test:e2e` suite runs in `.github/workflows/e2e.yml` every day at 03:00 UTC
+and can be started manually with `workflow_dispatch`. It does not block a pull request or release. Run it
+locally when changing browser behavior or diagnosing a nightly failure. `pnpm test` also runs unit and E2E
+through Testfold. Run these suites sequentially: both own files under `test-results/`, so concurrent workspace
+setup and cleanup would invalidate their results.
+
+Timed checks — tests that compare browser tasks or frame intervals with a budget at 4× CPU slowdown — live in
+`tests/perf` and run only through `pnpm test:perf` (`playwright.perf.config.ts`: one worker, one desktop
+Chromium project, no video or trace). A budget measured while other tests share the CPU measures them, not
+the page, so these checks are not part of `pnpm test`, `pnpm test:e2e` or `pnpm verify`. The nightly workflow
+runs them after the browser suite; because each run replaces `test-results/summary.json`, it keeps the two
+summaries as `summary-e2e.json` and `summary-perf.json` in the uploaded `test-results/` artifact. They are `motion-performance.spec.ts` (the motion showcase scrolls without
+long tasks and near the display rate), `effect-check.spec.ts` (the sample effect passes all eleven
+`effect-check` checks and each planted defect fails exactly its check) and `reference-effect-checks.spec.ts`
+(the reference effects `loom` and `focus-frame` pass all eleven checks). `effect-check` itself stays a CLI
+command; only the test runs of it moved.
 
 ## Tiers
 
@@ -201,7 +208,7 @@ release. Run test commands sequentially: their workspaces under `test-results/` 
   refuses any colour literal or typeface that does not come from the theme; `diagram-views.spec.ts` clicks
   every view of four flows and opens a sequence at 1440 and 400 pixels and requires no overlapping nodes or
   label plates, no connection sampled through a foreign node, no page overflow, a different layout per
-  view, and no diagram text rendered below 12 pixels; `diagram-legend.spec.ts` measures every legend item in
+  view, and no diagram text rendered below 11 pixels (with a 0.05-pixel measurement tolerance); `diagram-legend.spec.ts` measures every legend item in
   every built-in theme and both schemes — at least 12 pixels, text contrast 4.5:1 and sample contrast 3:1
   against the effective background — and keeps each item inside its frame at 400 pixels in English and
   Russian. The first screen and the dramaturgy forms are checked in `first-screen.test.ts` and
@@ -212,7 +219,8 @@ release. Run test commands sequentially: their workspaces under `test-results/` 
   landing starter's demo fits the first 900 pixels beside the title; each catalog form is visible and still
   at 1440 and 400 pixels under reduced motion; `compare` follows a click, a drag, and the arrow keys; chapter
   segments match the chapters, fill to the end, and jump on click. Directed motion is checked in
-  `motion.test.ts` (runtime growth capped at 15 KB compressed over the pre-motion baseline,
+  `motion.test.ts` (the core page script every page carries stays under a 64 KB gzip ceiling and the script
+  of a page with every feature under 160 KB — a guard against runaway growth, not a per-change budget —
   byte-identical rebuilds, connection order, refusals of wrong
   scenes and counts, theme motion variables) and in `motion-vocabulary.spec.ts` (reduced motion leaves
   every technique still and complete at 1440 and 400 pixels; a steps scene pins, switches its picture and
@@ -223,7 +231,7 @@ release. Run test commands sequentially: their workspaces under `test-results/` 
   `static`, a drawn mark in all three, byte-identical frames for one clock time and a different frame for
   another, zero overlap with text lines at 1280 and 390 pixels (and a positive overlap for the planted
   on-heading placement), and a canvas colour equal to the accent token before and after a scheme switch;
-  `effect-check.spec.ts` runs [`effect-check`](#effect-check) on the sample
+  `tests/perf/effect-check.spec.ts` runs [`effect-check`](#effect-check) on the sample
   (11 of 11) and on a planted defect for each of the eleven checks — an own timer, a hard-coded colour, a
   mark on a heading, a still state that lives in time, a slow frame, overlapping details, a mount that
   breaks on a content edit, a state set only live, a layer printed, third-party code without a licence file
@@ -233,8 +241,9 @@ release. Run test commands sequentially: their workspaces under `test-results/` 
   effect against the published `agentic-report/effect` types while a misuse of them fails `tsc`;
   `focus-frame.spec.ts` opens the reference WebGL frame through `file://`, checks both variants against
   a page-clock progress change, then checks missing/lost WebGL, the matching 2D drawing, token colours,
-  reduced motion, print and all eleven `effect-check` results;
-  `motion-performance.spec.ts` scrolls the motion showcase with a 4x slower CPU, video and trace recording
+  reduced motion and print (its eleven `effect-check` results run in `tests/perf`);
+  `offscreen-work.spec.ts` counts no SVG geometry call for a scroll-drawn diagram far below the window and
+  resumed drawing when it approaches; `tests/perf/motion-performance.spec.ts` scrolls the motion showcase with a 4x slower CPU, video and trace recording
   off because they create long tasks themselves, and requires no long task over 50 ms. It measures the
   display refresh interval before CPU throttling, then requires the 95th-percentile frame interval to stay
   within 2.2 refreshes and the mean within 1.25 refreshes; this distinguishes a single missed refresh from
@@ -330,7 +339,7 @@ release. Run test commands sequentially: their workspaces under `test-results/` 
   first-use journeys initialize and edit a starter, then build directly for single-file and directory
   output without an analysis-command prerequisite. The single-file route first supplies invalid source to
   build and observes its diagnostic plus preservation of an existing output, then corrects the source and observes
-  successful publication. E2E opens the first-use artifacts through `file://`; optional validate and
+  successful publication. The exact first-use artifacts are opened through `file://`; optional validate and
   inspect behavior remains independently covered. Installed CLI and ESM share builds additionally prove
   exact source-link counts and absence of their workstation paths while default builds retain the links.
   It asserts exact
@@ -339,13 +348,7 @@ release. Run test commands sequentially: their workspaces under `test-results/` 
   compiler uses only package-owned runtime assets. Repeated clean-consumer builds compare exact
   single-file bytes and directory trees across independent CLI processes.
   The accepted record is written beside the unique candidate and to the stable ignored
-  `test-results/package/candidate-evidence.json` handoff used by the release runbook. It also lists the
-  installed artifacts used by browser E2E, without claiming that those browser checks passed.
-
-The installed-package E2E opens those single-file and directory artifacts, checks scheme and review controls,
-builds a bilingual starter for locale switching, and runs the installed snapshot command against the project's
-pinned Playwright dependency. It checks the resulting PNG matrix and contact sheet without a second npm
-installation.
+  `test-results/package/candidate-evidence.json` handoff used by the release runbook.
 
 The E2E setup also stages the same-origin public tree and builds directory-format documentation fixtures.
 Starter and non-starter artifact preparation derives from the example registry, so newly registered pages
@@ -358,14 +361,35 @@ assert code/content containment, exercise responsive navigation, and capture des
 states in both formats. Screenshots supplement behavioral and byte assertions; they are never the only
 evidence.
 
-Generated pages need no URL, port, service, credential, database, or external API. The installed-package
-candidate check does need npm registry access for its fresh consumer. Test workspaces and failure artifacts
-live under ignored `test-results/`.
+Tests do not need a URL, port, service, credential, database, or external API. Test workspaces and failure
+artifacts live under ignored `test-results/`.
 
 The deployment cache configuration has a unit contract check and a real-image acceptance check. Mutable
 HTML, release identity, direct documentation/source, and other unhashed routes must revalidate; twelve-hex
 content-addressed assets receive the long immutable policy. The running Nginx image must preserve MIME,
 ETag/conditional `304`, health, and real `404` behavior.
+
+## Page assets
+
+A page receives only the scripts and styles of the features it needs (`docs/ARCHITECTURE.md`, «Page
+assets»), and three checks hold that. `tests/unit/page-assets.test.ts` builds a page with no feature and a
+page from the first example of every block, in both output formats, and reads the stable markers each
+feature leaves — the legal comment `/*! agentic-report script: <id> */` that begins its module and
+`/*! agentic-report style: <id> */` that the build puts before its stylesheet: the plain page carries none,
+the block's page carries its feature's markers and those of the features it requires. The same file checks
+that every built-in block names a feature of the table, that every stylesheet and feature module of the
+source tree belongs to exactly one feature, that an English page's script has no Russian strings and the
+other way round, and that two builds of one page in separate processes are byte-identical in both formats.
+`tests/e2e/page-assets.spec.ts` looks from the built page: on every example and site page, every element a
+feature exists for (a block's element, a code block, a table, a video, a scene, the review entry, the deck)
+comes with that feature's markers.
+
+The cascade across the core and the feature stylesheets is checked by comparison rather than by a test:
+`node --experimental-strip-types scripts/compare-styles.ts <before> <after>` loads single-file pages built
+by two versions of the package, at 390 and 1440 pixels in both schemes with reduced motion and the manual
+clock, and compares the computed style of every element and of its `::before` and `::after`. Run it on the
+examples and site pages after a change to the order of `PAGE_FEATURES` or to a rule that competes with a
+rule of a later stylesheet; it must report no differing element.
 
 ## Effect check
 
@@ -406,12 +430,12 @@ and style/layout begin (`renderTailMs` and `layoutAndPaintTailMs`). After a conf
 `effect-check` runs a separate `effect-diagnostic` pass whose probes do not contribute to the 50 ms verdict.
 If that advisory pass fails or exceeds 20 seconds, `diagnosticUnavailable: true` records its absence without
 replacing the verdict or serializing the browser error.
-In that pass the `wall-thread` reference effect records each build in `phases[].builds`: total duration and
-numeric time spent measuring geometry,
-building the field, route, samples and braid, and assigning stations, balls, nails and chunks. Route time
-is split into waypoints, grid search, path pulling, line construction and other work. Builds outside a
-measured phase appear in `unassignedBuilds`. Build entries contain only finite
-numbers under fixed keys; the file otherwise uses fixed labels and flags, with no authored text or paths.
+In that pass an effect that pushes build timings to `window.__agenticReportBuildTimings` has each build
+recorded in `phases[].builds` (total duration, width and the stage times it reports under its own stage
+names); builds outside a measured phase appear in `unassignedBuilds`. The record shape and the limits on
+stage names are in the
+[extensions reference](../skills/agentic-report/references/extensions.md#build-timings); besides those
+validated names the file uses fixed labels, flags and numbers, with no authored text or paths.
 
 ## Writing tests
 

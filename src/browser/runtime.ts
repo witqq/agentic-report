@@ -1,24 +1,22 @@
-import { asUiButton } from './ui.js';
-import './document.css';
+/**
+ * The core runtime of every page. Feature modules (`features/*.ts`), bundled before this module only on
+ * pages that need them, fill the slots of `features.ts`; this module calls them where their behaviour
+ * belongs and skips a slot nobody filled.
+ */
 
 import { packageStrings, type PackageLocale } from '../localization.js';
 import { PAGE_MOTION_POLICY } from '../page-motion.js';
 import type { ReviewArtifact } from '../review/contract.js';
-import { placeSurface, visualViewportBounds } from './overlay-position.js';
 import { pageClock, progressOverride } from './clock.js';
-import { browserIcon } from './icon.js';
-import './diagram-motion.js';
-import {
-  installResponseWorkspaces,
-  type ResponseWorkspacesController,
-} from './response-workspace.js';
-import { installReviewWorkspace, type ReviewWorkspaceController } from './review-workspace.js';
-import { installVideoAutoplay } from './video-autoplay.js';
-import { lightCodeLines, setBeatStates } from './scenes.js';
+import { type Destroyable, feature } from './features.js';
+import { hashTarget } from './hash-target.js';
+import type { ResponseWorkspacesController } from './response-workspace.js';
+import type { ReviewWorkspaceController } from './review-workspace.js';
 import { stillMotionQuery } from './motion-level.js';
 import { installPageModules } from './page-modules.js';
-import { switchWithTransition } from './view-transitions.js';
-import './vocabulary-techniques.js';
+import { restingTop } from './reading-position.js';
+import { textWithoutEditionLayer } from './edition-text.js';
+import './techniques.js';
 
 const root = document.documentElement;
 // Часы создаются первыми: всё, что дальше читает время или просит кадр, идёт через них.
@@ -26,6 +24,7 @@ const clock = pageClock();
 hydrateSharedImages(document);
 const localizedPage = createLocalizedPageController();
 let strings = packageStrings(root.dataset.packageLocale);
+const currentStrings = () => strings;
 root.style.setProperty(
   '--motion-reveal-duration',
   `${PAGE_MOTION_POLICY.sectionReveal.durationMs}ms`,
@@ -40,32 +39,23 @@ root.style.setProperty('--motion-depth', `${PAGE_MOTION_POLICY.pointer.depthPx}p
 root.style.setProperty('--scene-parallax', `${PAGE_MOTION_POLICY.scene.parallaxPx}px`);
 root.style.setProperty('--motion-tilt', `${PAGE_MOTION_POLICY.pointer.tiltDegrees}deg`);
 root.style.setProperty('--motion-magnetic', `${PAGE_MOTION_POLICY.pointer.magneticPx}px`);
-const modalOpeners = new WeakMap<HTMLDialogElement, HTMLButtonElement>();
-const popoverPortals = new Map<
-  HTMLElement,
-  { readonly panel: HTMLElement; readonly placeholder: Comment }
->();
-const popoverPortalOwners = new WeakMap<HTMLElement, HTMLElement>();
-const pendingPopoverCloses = new Map<HTMLElement, number>();
-let overlayHost: HTMLElement | undefined;
-let popoverPositionAbort: AbortController | undefined;
-let popoverPositionFrame: number | undefined;
 // «Страница стоит»: просьба читателя об уменьшенном движении или `motion: none` в шапке страницы.
 const reducedMotion = stillMotionQuery(window.matchMedia('(prefers-reduced-motion: reduce)'));
 const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
 let navigationController: NavigationController | undefined;
 let motionController: MotionController | undefined;
-let galleryController: GalleryController | undefined;
-let diagramFitController: { readonly destroy: () => void } | undefined;
-let storyController: { readonly destroy: () => void } | undefined;
-let slidesController: { readonly destroy: () => void } | undefined;
+let galleryController: Destroyable | undefined;
+let diagramFitController: Destroyable | undefined;
+let storyController: Destroyable | undefined;
+let slidesController: Destroyable | undefined;
+let decksController: Destroyable | undefined;
 let pageModules: (() => void) | undefined;
 let responseController: ResponseWorkspacesController | undefined;
 let reviewController: ReviewWorkspaceController | undefined;
 const responseControllers = new Map<PackageLocale, ResponseWorkspacesController>();
 const reviewStates = new Map<PackageLocale, ReviewArtifact>();
 activateCurrentPage();
-installVideoAutoplay(reducedMotion, strings);
+feature('video')?.autoplay(reducedMotion, strings);
 
 reducedMotion.addEventListener('change', () => motionController?.sync());
 finePointer.addEventListener('change', () => motionController?.sync());
@@ -77,7 +67,7 @@ document.addEventListener('click', (event) => {
     navigationController?.closeMobile(true);
     return;
   }
-  closePopoversOutside(target);
+  feature('popover')?.closeOutside(target);
 
   const schemeToggle = target.closest<HTMLButtonElement>('[data-scheme-toggle]');
   if (schemeToggle !== null) {
@@ -90,21 +80,13 @@ document.addEventListener('click', (event) => {
 
   const videoToggle = target.closest<HTMLButtonElement>('[data-video-toggle]');
   if (videoToggle !== null) {
-    const video = videoToggle.closest('figure')?.querySelector('video');
-    if (video instanceof HTMLVideoElement) {
-      if (video.paused) void video.play().catch(() => undefined);
-      else video.pause();
-    }
+    feature('video')?.toggle(videoToggle);
     return;
   }
 
   const seek = target.closest<HTMLButtonElement>('[data-video-seek]');
   if (seek !== null) {
-    const video = seek.closest('figure')?.querySelector('video');
-    if (video instanceof HTMLVideoElement) {
-      video.currentTime = Number(seek.dataset.videoSeek ?? '0');
-      void video.play().catch(() => undefined);
-    }
+    feature('video')?.seek(seek);
     return;
   }
 
@@ -128,68 +110,42 @@ document.addEventListener('click', (event) => {
 
   const tab = target.closest<HTMLButtonElement>('[data-tab]');
   if (tab !== null) {
-    switchTab(tab, false);
+    feature('tabs')?.select(tab, false);
     return;
   }
 
   const modalOpen = target.closest<HTMLButtonElement>('[data-modal-open]');
   if (modalOpen !== null) {
-    const dialog = document.getElementById(
-      modalOpen.dataset.modalOpen ?? '',
-    ) as HTMLDialogElement | null;
-    if (dialog !== null) {
-      modalOpeners.set(dialog, modalOpen);
-      dialog.showModal();
-    }
+    feature('modal')?.open(modalOpen);
     return;
   }
 
   const modalClose = target.closest<HTMLButtonElement>('[data-modal-close]');
   if (modalClose !== null) {
-    modalClose.closest<HTMLDialogElement>('dialog')?.close();
+    feature('modal')?.close(modalClose);
     return;
   }
 
   const popoverTrigger = target.closest<HTMLElement>('[data-popover-trigger]');
   if (popoverTrigger !== null) {
-    const popover = popoverTrigger.closest<HTMLElement>('[data-popover]');
-    const panel = popover === null ? null : popoverPanel(popover, popoverTrigger);
-    if (popover !== null && panel !== null) {
-      if (popover.matches('[data-glossary-reference]')) openPopover(popover);
-      else if (panel.hidden) openPopover(popover);
-      else closePopover(popover, false);
-    }
+    feature('popover')?.trigger(popoverTrigger);
     return;
   }
 
   const toggle = target.closest<HTMLButtonElement>('[data-toggle-control]');
   if (toggle !== null) {
-    const panel = toggle
-      .closest<HTMLElement>('[data-toggle]')
-      ?.querySelector<HTMLElement>('[data-toggle-panel]');
-    if (panel !== undefined && panel !== null) {
-      const active = toggle.getAttribute('aria-checked') !== 'true';
-      toggle.setAttribute('aria-checked', String(active));
-      panel.hidden = !active;
-    }
+    feature('toggle')?.(toggle);
     return;
   }
 
   const increment = target.closest<HTMLButtonElement>('[data-demo-increment]');
   if (increment !== null) {
-    const demo = increment.closest<HTMLElement>('[data-demo-counter]');
-    const output = demo?.querySelector<HTMLOutputElement>('[data-demo-output]');
-    if (demo !== null && demo !== undefined && output !== null && output !== undefined) {
-      const value = Number(output.value || output.textContent || demo.dataset.start || '0');
-      const next = value + Number(demo.dataset.step ?? '1');
-      output.value = String(next);
-      output.textContent = String(next);
-    }
+    feature('demo')?.increment(increment);
     return;
   }
 
   const copy = target.closest<HTMLButtonElement>('[data-copy-code], [data-copy-prose]');
-  if (copy !== null) void copyContent(copy);
+  if (copy !== null) void feature('copy')?.run(copy, currentStrings);
 });
 
 document.addEventListener('change', (event) => {
@@ -234,190 +190,57 @@ function applyTheme(name: string): void {
 document.addEventListener('keydown', (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
-  const gallery = target.closest<HTMLElement>('[data-gallery-scroller]');
-  if (gallery === target && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
-    event.preventDefault();
-    const direction = event.key === 'ArrowRight' ? 1 : -1;
-    gallery.scrollBy({ left: direction * Math.max(40, gallery.clientWidth * 0.8) });
-    return;
-  }
+  if (feature('gallery')?.keydown(event, target) === true) return;
   const tab = target.closest<HTMLButtonElement>('[data-tab]');
   if (tab !== null && ['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) {
-    const controls = tabControls(tab);
-    const current = controls.indexOf(tab);
-    const next =
-      event.key === 'ArrowRight'
-        ? controls[(current + 1) % controls.length]
-        : event.key === 'ArrowLeft'
-          ? controls[(current - 1 + controls.length) % controls.length]
-          : event.key === 'Home'
-            ? controls[0]
-            : controls.at(-1);
-    if (next !== undefined) {
-      event.preventDefault();
-      switchTab(next, true);
-    }
+    feature('tabs')?.key(event, tab);
     return;
   }
-  if (event.key === 'Escape') {
-    const popover = popoverOwner(target);
-    if (popover !== null) closePopover(popover, true);
-  }
+  if (event.key === 'Escape') feature('popover')?.escape(target);
 });
 
 document.addEventListener('input', (event) => {
   if (!(event.target instanceof HTMLInputElement)) return;
   if (event.target.matches('[data-compare-range]')) {
-    setComparePosition(event.target, Number(event.target.value));
+    feature('compare')?.input(event.target);
     return;
   }
   if (!event.target.matches('[data-filter-input]')) return;
-  applyFilter(event.target);
+  feature('filter')?.(event.target, strings);
 });
 
-/** Граница «до/после» стоит там, куда её поставил ползунок; указатель двигает тот же ползунок. */
-function setComparePosition(range: HTMLInputElement, value: number): void {
-  const position = Math.min(100, Math.max(0, Math.round(value)));
-  range.value = String(position);
-  range
-    .closest<HTMLElement>('[data-compare]')
-    ?.style.setProperty('--compare-position', `${position}%`);
+const compare = feature('compare');
+if (compare !== undefined) {
+  document.addEventListener('pointerdown', compare.pointerDown);
+  // Перетаскивание границы сравнения пальцем (`features/compare.ts`).
+  document.addEventListener('touchstart', compare.touchStart, { passive: true });
 }
 
-document.addEventListener('pointerdown', (event) => {
-  // Касание ведут события касаний ниже: Safari на телефоне отменяет указатель, едва жест похож на
-  // прокрутку страницы, и перетаскивание по картинке обрывалось.
-  if (!(event.target instanceof Element) || event.button !== 0 || event.pointerType === 'touch')
-    return;
-  const stage = event.target.closest<HTMLElement>('[data-compare-stage]');
-  const range = stage?.parentElement?.querySelector<HTMLInputElement>('[data-compare-range]');
-  if (stage === undefined || stage === null || range === null || range === undefined) return;
-  event.preventDefault();
-  const follow = (moving: PointerEvent): void => {
-    const box = stage.getBoundingClientRect();
-    if (box.width <= 0) return;
-    setComparePosition(range, ((moving.clientX - box.left) / box.width) * 100);
-  };
-  follow(event);
-  // Захват указателя на телефоне может не состояться (Safari отказывает, если касание уже отдано
-  // прокрутке), поэтому движение слушает окно, а не сцена: перетаскивание работает и без захвата.
-  try {
-    stage.setPointerCapture(event.pointerId);
-  } catch {
-    // Без захвата окно всё равно получает движение этого указателя.
-  }
-  const move = (moving: PointerEvent): void => {
-    if (moving.pointerId === event.pointerId) follow(moving);
-  };
-  const stop = (ending: PointerEvent): void => {
-    if (ending.pointerId !== event.pointerId) return;
-    window.removeEventListener('pointermove', move);
-    window.removeEventListener('pointerup', stop);
-    window.removeEventListener('pointercancel', stop);
-  };
-  window.addEventListener('pointermove', move);
-  window.addEventListener('pointerup', stop);
-  window.addEventListener('pointercancel', stop);
-});
+const popover = feature('popover');
+if (popover !== undefined) {
+  document.addEventListener('pointerover', (event) => {
+    if (event.target instanceof Element) popover.pointerOver(event.target);
+  });
+  document.addEventListener('pointerout', (event) => {
+    if (event.target instanceof Element) popover.pointerOut(event.target, event.relatedTarget);
+  });
+  document.addEventListener('focusin', (event) => {
+    if (event.target instanceof Element) popover.focusIn(event.target);
+  });
+  document.addEventListener('focusout', (event) => {
+    if (event.target instanceof Element) popover.focusOut(event.target, event.relatedTarget);
+  });
+}
 
-/**
- * Перетаскивание границы сравнения пальцем. Жест, который начался вбок, принадлежит сравнению: его
- * движение не прокручивает страницу. Жест, начавшийся вверх или вниз, остаётся прокруткой.
- */
-document.addEventListener(
-  'touchstart',
-  (event) => {
-    if (!(event.target instanceof Element) || event.touches.length !== 1) return;
-    const stage = event.target.closest<HTMLElement>('[data-compare-stage]');
-    const range = stage?.parentElement?.querySelector<HTMLInputElement>('[data-compare-range]');
-    const first = event.touches[0];
-    if (stage === null || stage === undefined || range === null || range === undefined) return;
-    if (first === undefined) return;
-    const startX = first.clientX;
-    const startY = first.clientY;
-    let intent: 'undecided' | 'drag' | 'scroll' = 'undecided';
-    const follow = (x: number): void => {
-      const box = stage.getBoundingClientRect();
-      if (box.width > 0) setComparePosition(range, ((x - box.left) / box.width) * 100);
-    };
-    const move = (moving: TouchEvent): void => {
-      const touch = moving.touches[0];
-      if (touch === undefined) return;
-      if (intent === 'undecided') {
-        const dx = Math.abs(touch.clientX - startX);
-        const dy = Math.abs(touch.clientY - startY);
-        if (dx < 4 && dy < 4) return;
-        intent = dx >= dy ? 'drag' : 'scroll';
-      }
-      if (intent !== 'drag') return;
-      moving.preventDefault();
-      follow(touch.clientX);
-    };
-    const end = (ending: TouchEvent): void => {
-      if (intent === 'undecided') {
-        const touch = ending.changedTouches[0];
-        if (touch !== undefined) follow(touch.clientX);
-      }
-      window.removeEventListener('touchmove', move);
-      window.removeEventListener('touchend', end);
-      window.removeEventListener('touchcancel', end);
-    };
-    window.addEventListener('touchmove', move, { passive: false });
-    window.addEventListener('touchend', end);
-    window.addEventListener('touchcancel', end);
-  },
-  { passive: true },
-);
-
-document.addEventListener('pointerover', (event) => {
-  if (!(event.target instanceof Element)) return;
-  const glossary = glossaryOwner(event.target);
-  if (glossary !== null) {
-    cancelScheduledPopoverClose(glossary);
-    openPopover(glossary);
-  }
-});
-
-document.addEventListener('pointerout', (event) => {
-  if (!(event.target instanceof Element)) return;
-  const glossary = glossaryOwner(event.target);
-  if (
-    glossary !== null &&
-    !popoverContains(glossary, event.relatedTarget) &&
-    !popoverContains(glossary, document.activeElement)
-  ) {
-    schedulePopoverClose(glossary);
-  }
-});
-
-document.addEventListener('focusin', (event) => {
-  if (!(event.target instanceof Element)) return;
-  const glossary = glossaryOwner(event.target);
-  if (glossary !== null) {
-    cancelScheduledPopoverClose(glossary);
-    openPopover(glossary);
-  }
-});
-
-document.addEventListener('focusout', (event) => {
-  if (!(event.target instanceof Element)) return;
-  const glossary = glossaryOwner(event.target);
-  if (
-    glossary !== null &&
-    !popoverContains(glossary, event.relatedTarget) &&
-    !glossary.matches(':hover')
-  ) {
-    schedulePopoverClose(glossary);
-  }
-});
-
-document.addEventListener(
-  'close',
-  (event) => {
-    if (event.target instanceof HTMLDialogElement) modalOpeners.get(event.target)?.focus();
-  },
-  true,
-);
+const modal = feature('modal');
+if (modal !== undefined)
+  document.addEventListener(
+    'close',
+    (event) => {
+      if (event.target instanceof HTMLDialogElement) modal.closed(event.target);
+    },
+    true,
+  );
 
 let sharedImages: Readonly<Record<string, string>> | undefined;
 
@@ -427,7 +250,9 @@ let sharedImages: Readonly<Record<string, string>> | undefined;
  * при загрузке страницы и в каждой разметке, вставленной позже.
  */
 function hydrateSharedImages(scope: ParentNode): void {
-  const media = scope.querySelectorAll<HTMLElement>('[data-shared-src], [data-shared-poster]');
+  const media = scope.querySelectorAll<HTMLElement>(
+    '[data-shared-src], [data-shared-poster], [data-shared-dark-src], [data-shared-dark-poster]',
+  );
   if (media.length === 0) return;
   sharedImages ??= JSON.parse(
     document.getElementById('agentic-shared-images')?.textContent ?? '{}',
@@ -446,6 +271,17 @@ function hydrateSharedImages(scope: ParentNode): void {
     if (poster !== undefined) {
       element.setAttribute('poster', poster);
       delete element.dataset.sharedPoster;
+    }
+    // Dark variants (`scheme-media.ts`) are shared the same way.
+    const darkSrc = sharedImages[element.dataset.sharedDarkSrc ?? ''];
+    if (darkSrc !== undefined) {
+      element.dataset.darkSrc = darkSrc;
+      delete element.dataset.sharedDarkSrc;
+    }
+    const darkPoster = sharedImages[element.dataset.sharedDarkPoster ?? ''];
+    if (darkPoster !== undefined) {
+      element.dataset.darkPoster = darkPoster;
+      delete element.dataset.sharedDarkPoster;
     }
   }
   for (const video of reload) video.load();
@@ -542,9 +378,9 @@ function switchPageLocale(locale: PackageLocale): void {
   diagramFitController?.destroy();
   storyController?.destroy();
   slidesController?.destroy();
+  decksController?.destroy();
   pageModules?.();
-  for (const popover of document.querySelectorAll<HTMLElement>('[data-popover]'))
-    closePopover(popover, false);
+  feature('popover')?.closeAll();
   localizedPage.activate(locale);
   strings = packageStrings(root.dataset.packageLocale);
   activateCurrentPage();
@@ -556,292 +392,34 @@ function activateCurrentPage(): void {
   strings = packageStrings(page.dataset.pagePackageLocale);
   navigationController = createNavigationController();
   motionController = createMotionController(reducedMotion);
-  galleryController = createGalleryController(page);
-  diagramFitController = createDiagramFitController(page);
+  galleryController = feature('gallery')?.create(page, currentStrings);
+  diagramFitController = feature('diagramFit')?.(page);
   storyController = createStoryController(page, reducedMotion);
-  slidesController = createSlidesController(page, reducedMotion);
+  slidesController = feature('slides')?.(page, reducedMotion, currentStrings);
+  decksController = feature('decks')?.(page, reducedMotion, currentStrings);
   pageModules = installPageModules(page, reducedMotion, strings);
-  responseController = responseControllers.get(localizedPage.locale());
-  if (responseController === undefined) {
-    responseController = installResponseWorkspaces(page);
-    responseControllers.set(localizedPage.locale(), responseController);
+  const installResponse = feature('response');
+  if (installResponse !== undefined) {
+    responseController = responseControllers.get(localizedPage.locale());
+    if (responseController === undefined) {
+      responseController = installResponse(page);
+      responseControllers.set(localizedPage.locale(), responseController);
+    }
   }
-  reviewController = installReviewWorkspace(page, reviewStates.get(localizedPage.locale()));
-  for (const input of page.querySelectorAll<HTMLInputElement>('[data-filter-input]'))
-    applyFilter(input);
-  for (const block of page.querySelectorAll<HTMLElement>('pre'))
-    if (block.querySelector(':scope > [data-copy-code]') === null)
-      block.append(createCopyButton('code'));
-  for (const block of page.querySelectorAll<HTMLElement>('[data-copyable-prose]'))
-    if (block.querySelector(':scope > [data-copy-prose]') === null)
-      block.append(createCopyButton('prose'));
-}
-
-/** Длительность перехода каждого вида при темпе темы «спокойно»; темп темы умножает её. */
-const SLIDE_TRANSITION_MS: Readonly<Record<string, number>> = {
-  fade: 420,
-  push: 520,
-  wipe: 520,
-  zoom: 460,
-  none: 0,
-};
-/** Длительность появления шага слайда при темпе «спокойно». */
-const SLIDE_STEP_MS = 320;
-
-interface SlideState {
-  readonly slide: number;
-  readonly step: number;
-}
-
-/**
- * Презентация. Страница `layout: slides` показывается слайдами на весь экран: клавиатура, щелчок и
- * касание листают слайды и шаги, адрес `#/слайд/шаг` открывает любой из них, а API
- * `window.agenticSlides` делает то же для записи. Длительность каждого перехода фиксирована и
- * объявлена атрибутом корня; пока переход идёт, `data-slide-state` равен `moving`, по его окончании —
- * `settled`, и приходит событие `agentic-slides:settled`. Вид `?view=film` убирает оболочку, вид
- * `?view=presenter` показывает заметки докладчика. При уменьшенном движении шаги слайда открыты
- * сразу, а переходов нет.
- */
-function createSlidesController(
-  page: HTMLElement,
-  motion: MediaQueryList,
-): { readonly destroy: () => void } | undefined {
-  if (root.dataset.layout !== 'slides') return undefined;
-  const slides = [...page.querySelectorAll<HTMLElement>('article > section[data-slide]')];
-  if (slides.length === 0) return undefined;
-  const abort = new AbortController();
-  const view = new URLSearchParams(window.location.search).get('view');
-  if (view === 'film' || view === 'presenter') root.dataset.view = view;
-  root.setAttribute('data-slides-active', '');
-  const pace = (): number => Number(getComputedStyle(root).getPropertyValue('--motion-pace')) || 1;
-  const stepsOf = (index: number): number =>
-    motion.matches ? 0 : Number(slides[index]?.dataset.slideSteps ?? '0');
-  const transitionOf = (index: number): string => slides[index]?.dataset.slideTransition ?? 'fade';
-  const durationOf = (index: number): number =>
-    motion.matches ? 0 : Math.round((SLIDE_TRANSITION_MS[transitionOf(index)] ?? 0) * pace());
-
-  const controls = document.createElement('nav');
-  controls.className = 'slide-controls';
-  controls.setAttribute('aria-label', strings.slides);
-  const previous = document.createElement('button');
-  previous.type = 'button';
-  previous.className = 'slide-control';
-  asUiButton(previous, 'secondary', 'md', true);
-  previous.setAttribute('aria-label', strings.previousSlide);
-  previous.append(browserIcon('arrow-left'));
-  const counter = document.createElement('span');
-  counter.className = 'slide-counter ui-meta';
-  counter.setAttribute('aria-live', 'polite');
-  const next = document.createElement('button');
-  next.type = 'button';
-  next.className = 'slide-control';
-  asUiButton(next, 'secondary', 'md', true);
-  next.setAttribute('aria-label', strings.nextSlide);
-  next.append(browserIcon('arrow-right'));
-  controls.append(previous, counter, next);
-  document.body.append(controls);
-
-  let state: SlideState = { slide: 0, step: 0 };
-  let timer = 0;
-  let settledWaiters: Array<() => void> = [];
-  const settle = (): void => {
-    timer = 0;
-    for (const slide of slides) slide.removeAttribute('data-slide-leaving');
-    root.dataset.slideState = 'settled';
-    for (const resolve of settledWaiters) resolve();
-    settledWaiters = [];
-    document.dispatchEvent(
-      new CustomEvent('agentic-slides:settled', {
-        detail: { slide: state.slide + 1, step: state.step },
-      }),
-    );
-  };
-  const show = (target: SlideState, options: { readonly instant?: boolean } = {}): void => {
-    const slide = Math.min(slides.length - 1, Math.max(0, target.slide));
-    const step = Math.min(stepsOf(slide), Math.max(0, target.step));
-    const changedSlide = slide !== state.slide;
-    const changedStep = step !== state.step;
-    const previousSlide = state.slide;
-    state = { slide, step };
-    if (timer !== 0) clock.cancelLater(timer);
-    for (const [index, element] of slides.entries()) {
-      element.toggleAttribute('data-slide-current', index === slide);
-      element.toggleAttribute(
-        'data-slide-leaving',
-        changedSlide && index === previousSlide && !options.instant,
-      );
-      element.setAttribute('aria-hidden', String(index !== slide));
-      if (index !== slide) element.setAttribute('inert', '');
-      else element.removeAttribute('inert');
-    }
-    for (const appear of slides[slide]?.querySelectorAll<HTMLElement>('[data-step]') ?? []) {
-      appear.toggleAttribute('data-shown', motion.matches || Number(appear.dataset.step) <= step);
-    }
-    const duration = options.instant
-      ? 0
-      : changedSlide
-        ? durationOf(slide)
-        : changedStep && !motion.matches
-          ? Math.round(SLIDE_STEP_MS * pace())
-          : 0;
-    root.style.setProperty('--slide-duration', `${duration}ms`);
-    root.dataset.slideDuration = String(duration);
-    counter.textContent = strings.slideCounter(slide + 1, slides.length);
-    previous.disabled = slide === 0 && step === 0;
-    next.disabled = slide === slides.length - 1 && step === stepsOf(slide);
-    const hash = `#/${slide + 1}/${step}`;
-    if (window.location.hash !== hash) history.replaceState(null, '', hash);
-    root.dataset.slideState = 'moving';
-    if (duration === 0) settle();
-    else timer = clock.later(settle, duration);
-  };
-  const forward = (): void => {
-    if (state.step < stepsOf(state.slide)) show({ slide: state.slide, step: state.step + 1 });
-    else if (state.slide < slides.length - 1) show({ slide: state.slide + 1, step: 0 });
-  };
-  const backward = (): void => {
-    if (state.step > 0) show({ slide: state.slide, step: state.step - 1 });
-    else if (state.slide > 0) show({ slide: state.slide - 1, step: stepsOf(state.slide - 1) });
-  };
-  const fromHash = (instant: boolean): void => {
-    const match = /^#\/(\d+)(?:\/(\d+))?$/u.exec(window.location.hash);
-    if (match !== null) {
-      show({ slide: Number(match[1]) - 1, step: Number(match[2] ?? '0') }, { instant });
-      return;
-    }
-    const target = hashTarget(window.location.hash);
-    const owner = target === undefined ? -1 : slides.findIndex((slide) => slide.contains(target));
-    show({ slide: owner < 0 ? 0 : owner, step: 0 }, { instant });
-  };
-
-  previous.addEventListener('click', backward, { signal: abort.signal });
-  next.addEventListener('click', forward, { signal: abort.signal });
-  document.addEventListener(
-    'keydown',
-    (event) => {
-      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
-      const target = event.target;
-      if (
-        target instanceof Element &&
-        target.closest('input, textarea, select, [contenteditable], [role="tablist"], dialog[open]')
-      )
-        return;
-      if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(event.key)) {
-        if (
-          (event.key === ' ' || event.key === 'Enter') &&
-          target instanceof Element &&
-          target.closest('button, a, summary')
-        )
-          return;
-        event.preventDefault();
-        forward();
-      } else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(event.key)) {
-        event.preventDefault();
-        backward();
-      } else if (event.key === 'Home') {
-        event.preventDefault();
-        show({ slide: 0, step: 0 });
-      } else if (event.key === 'End') {
-        event.preventDefault();
-        show({ slide: slides.length - 1, step: stepsOf(slides.length - 1) });
-      }
-    },
-    { signal: abort.signal },
-  );
-  page.addEventListener(
-    'click',
-    (event) => {
-      const target = event.target;
-      if (!(target instanceof Element) || target.closest('[data-slide]') === null) return;
-      if (
-        target.closest(
-          'a, button, input, textarea, select, label, summary, details, video, [data-compare-stage], [data-review-highlight-marker], [role="tab"]',
-        )
-      )
-        return;
-      if ((window.getSelection()?.toString() ?? '') !== '') return;
-      forward();
-    },
-    { signal: abort.signal },
-  );
-  let touchStart: { readonly x: number; readonly y: number } | undefined;
-  page.addEventListener(
-    'pointerdown',
-    (event) => {
-      if (event.pointerType === 'touch') touchStart = { x: event.clientX, y: event.clientY };
-    },
-    { signal: abort.signal },
-  );
-  page.addEventListener(
-    'pointerup',
-    (event) => {
-      if (touchStart === undefined || event.pointerType !== 'touch') return;
-      const dx = event.clientX - touchStart.x;
-      const dy = event.clientY - touchStart.y;
-      touchStart = undefined;
-      if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy)) return;
-      if (dx < 0) forward();
-      else backward();
-    },
-    { signal: abort.signal },
-  );
-  window.addEventListener('hashchange', () => fromHash(false), { signal: abort.signal });
-  motion.addEventListener('change', () => show(state, { instant: true }), { signal: abort.signal });
-
-  const api = {
-    get count(): number {
-      return slides.length;
-    },
-    state: (): {
-      slide: number;
-      step: number;
-      steps: number;
-      duration: number;
-      settled: boolean;
-    } => ({
-      slide: state.slide + 1,
-      step: state.step,
-      steps: stepsOf(state.slide),
-      duration: Number(root.dataset.slideDuration ?? '0'),
-      settled: root.dataset.slideState === 'settled',
-    }),
-    goto: (slide: number, step = 0): void => show({ slide: slide - 1, step }),
-    next: forward,
-    previous: backward,
-    durationOf: (slide: number): number => durationOf(slide - 1),
-    settled: (): Promise<void> =>
-      root.dataset.slideState === 'settled'
-        ? Promise.resolve()
-        : new Promise((resolve) => settledWaiters.push(resolve)),
-  };
-  Reflect.set(window, 'agenticSlides', api);
-  fromHash(true);
-
-  return {
-    destroy: () => {
-      abort.abort();
-      if (timer !== 0) clock.cancelLater(timer);
-      controls.remove();
-      root.removeAttribute('data-slides-active');
-      Reflect.deleteProperty(window, 'agenticSlides');
-      for (const slide of slides) {
-        slide.removeAttribute('data-slide-current');
-        slide.removeAttribute('data-slide-leaving');
-        slide.removeAttribute('aria-hidden');
-        slide.removeAttribute('inert');
-      }
-    },
-  };
+  reviewController = feature('review')?.(page, reviewStates.get(localizedPage.locale()));
+  const filter = feature('filter');
+  if (filter !== undefined)
+    for (const input of page.querySelectorAll<HTMLInputElement>('[data-filter-input]'))
+      filter(input, strings);
+  feature('code')?.(page, strings);
+  feature('copyable')?.(page, strings);
 }
 
 /**
  * Режиссура движения страницы: сцены по шагам, заголовки по строкам и досчитывающие числа. Всё это
  * живёт только при обычном движении; при уменьшенном страница остаётся в конечном состоянии.
  */
-function createStoryController(
-  page: HTMLElement,
-  motion: MediaQueryList,
-): { readonly destroy: () => void } {
+function createStoryController(page: HTMLElement, motion: MediaQueryList): Destroyable {
   let cleanups: Array<() => void> = [];
   const wide = window.matchMedia('(min-width: 57rem)');
   let installedFor: string | undefined;
@@ -853,27 +431,31 @@ function createStoryController(
     installedFor = conditions;
     for (const cleanup of cleanups) cleanup();
     cleanups = [];
-    for (const section of page.querySelectorAll<HTMLElement>('[data-scene="steps"]')) {
-      // На слайде нет прокрутки страницы, которую сцена могла бы вести: там такты идут подряд.
-      // На узком экране сцена стоит над текущим тактом (SPEC 7.3): медиа перед каждым шагом.
-      cleanups.push(
-        installStepScene(
-          section,
-          motion.matches || root.dataset.layout === 'slides'
-            ? undefined
-            : wide.matches
-              ? 'wide'
-              : 'narrow',
-        ),
-      );
-    }
+    const stepScene = feature('stepScene');
+    if (stepScene !== undefined)
+      for (const section of page.querySelectorAll<HTMLElement>('[data-scene="steps"]')) {
+        // На слайде нет прокрутки страницы, которую сцена могла бы вести: там такты идут подряд.
+        // На узком экране сцена стоит над текущим тактом (SPEC 7.3): медиа перед каждым шагом.
+        cleanups.push(
+          stepScene(
+            section,
+            motion.matches || root.dataset.layout === 'slides'
+              ? undefined
+              : wide.matches
+                ? 'wide'
+                : 'narrow',
+          ),
+        );
+      }
     if (motion.matches) return;
     for (const section of page.querySelectorAll<HTMLElement>('[data-transition="lines"]')) {
       cleanups.push(installTitleLines(section));
     }
-    for (const count of page.querySelectorAll<HTMLElement>('.semantic-count')) {
-      cleanups.push(installCount(count));
-    }
+    const count = feature('count');
+    if (count !== undefined)
+      for (const element of page.querySelectorAll<HTMLElement>('.semantic-count')) {
+        cleanups.push(count(element));
+      }
   };
   install();
   wide.addEventListener('change', install);
@@ -885,68 +467,6 @@ function createStoryController(
       for (const cleanup of cleanups) cleanup();
       cleanups = [];
     },
-  };
-}
-
-/** Текущий такт — тот, что пересекает середину экрана; ему принадлежат кадр сцены и фокус схемы. */
-function installStepScene(section: HTMLElement, live: 'wide' | 'narrow' | undefined): () => void {
-  const beats = [...section.querySelectorAll<HTMLElement>('.semantic-beat[data-beat]')];
-  const frames = [...section.querySelectorAll<HTMLElement>('img[data-scene-frame]')];
-  const clear = (): void => {
-    section.removeAttribute('data-scene-live');
-    section.removeAttribute('data-scene-narrow');
-    section.removeAttribute('data-scene-focus');
-    lightCodeLines(section, undefined);
-    setBeatStates(section, beats, () => false);
-    for (const beat of beats) beat.removeAttribute('data-current');
-    for (const frame of frames) frame.removeAttribute('data-scene-active');
-    for (const lit of section.querySelectorAll('[data-lit]')) lit.removeAttribute('data-lit');
-  };
-  clear();
-  if (live === undefined || beats.length === 0) {
-    // Без движения такты стоят подряд, и каждое их состояние страницы горит: конечная картина.
-    setBeatStates(section, beats, () => true);
-    return clear;
-  }
-  section.setAttribute(live === 'wide' ? 'data-scene-live' : 'data-scene-narrow', '');
-  const select = (index: number): void => {
-    for (const [position, beat] of beats.entries())
-      beat.toggleAttribute('data-current', position === index);
-    const frame = Math.min(index, frames.length - 1);
-    for (const [position, image] of frames.entries())
-      image.toggleAttribute('data-scene-active', position === frame);
-    lightCodeLines(section, beats[index]);
-    setBeatStates(section, beats, (position) => position === index);
-    const focus = new Set(
-      (beats[index]?.dataset.focus ?? '')
-        .split(',')
-        .map((id) => id.trim())
-        .filter(Boolean),
-    );
-    section.toggleAttribute('data-scene-focus', focus.size > 0);
-    for (const node of section.querySelectorAll<SVGElement>('[data-node-id]'))
-      node.toggleAttribute('data-lit', focus.has(node.dataset.nodeId ?? ''));
-    for (const edge of section.querySelectorAll<SVGElement>('[data-from][data-to]'))
-      edge.toggleAttribute(
-        'data-lit',
-        focus.has(edge.dataset.edgeId ?? '') ||
-          (focus.has(edge.dataset.from ?? '') && focus.has(edge.dataset.to ?? '')),
-      );
-  };
-  select(0);
-  const observer = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        select(beats.indexOf(entry.target as HTMLElement));
-      }
-    },
-    { rootMargin: '-48% 0px -48% 0px', threshold: 0 },
-  );
-  for (const beat of beats) observer.observe(beat);
-  return () => {
-    observer.disconnect();
-    clear();
   };
 }
 
@@ -991,243 +511,6 @@ function installTitleLines(section: HTMLElement): () => void {
   };
 }
 
-/**
- * Число досчитывает от нуля до записанного значения, когда показывается. Записанное значение
- * остаётся источником: разделители групп и число знаков после запятой берутся из него, а в конце
- * возвращается ровно записанный текст.
- */
-function installCount(element: HTMLElement): () => void {
-  const final = element.dataset.countFinal ?? element.textContent ?? '';
-  element.dataset.countFinal = final;
-  const match = /\d[\d\s,.\u00a0\u202f]*\d|\d/u.exec(final);
-  if (match === null) return () => undefined;
-  const written = match[0];
-  const separators = written.replace(/\d/gu, '');
-  const lastSeparator = separators.at(-1);
-  const tail =
-    lastSeparator === undefined ? '' : written.slice(written.lastIndexOf(lastSeparator) + 1);
-  const decimalMark =
-    lastSeparator !== undefined &&
-    (separators.length === 1 ? tail.length !== 3 : !separators.slice(0, -1).includes(lastSeparator))
-      ? lastSeparator
-      : undefined;
-  const group = [...separators].find((mark) => mark !== decimalMark);
-  const decimals = decimalMark === undefined ? 0 : tail.length;
-  const value = Number(
-    written
-      .split(decimalMark ?? '\u0000')
-      .map((part) => part.replace(/\D/gu, ''))
-      .join('.'),
-  );
-  const format = (current: number): string => {
-    const [whole = '0', fraction] = current.toFixed(decimals).split('.');
-    const grouped = group === undefined ? whole : whole.replace(/\B(?=(\d{3})+(?!\d))/gu, group);
-    return fraction === undefined ? grouped : `${grouped}${decimalMark}${fraction}`;
-  };
-  let frame = 0;
-  let unregister = (): void => undefined;
-  const run = (): void => {
-    const pace = Number(getComputedStyle(root).getPropertyValue('--motion-pace')) || 1;
-    const duration = 900 * pace;
-    const start = clock.now();
-    // Досчёт — функция времени часов: перемотка назад показывает то же число, что и первый проход.
-    const render = (now: number): boolean => {
-      const progress = Math.min(1, Math.max(0, (now - start) / duration));
-      const eased = 1 - (1 - progress) ** 3;
-      element.textContent = progress >= 1 ? final : final.replace(written, format(value * eased));
-      return progress < 1;
-    };
-    const step = (now: number): void => {
-      if (render(now)) frame = clock.frame(step);
-    };
-    unregister = clock.register({ at: (seconds) => render(seconds * 1000) });
-    frame = clock.frame(step);
-  };
-  // Число с `when` считает, когда встаёт его состояние страницы, а не когда показывается.
-  const stateObserver = new MutationObserver(() => {
-    if (!element.hasAttribute('data-state-on')) return;
-    stateObserver.disconnect();
-    run();
-  });
-  const observer = new IntersectionObserver(
-    (entries) => {
-      if (!entries.some((entry) => entry.isIntersecting)) return;
-      observer.disconnect();
-      run();
-    },
-    { threshold: 0.6 },
-  );
-  if (element.dataset.when === undefined) observer.observe(element);
-  else if (element.hasAttribute('data-state-on')) run();
-  else stateObserver.observe(element, { attributes: true, attributeFilter: ['data-state-on'] });
-  return () => {
-    observer.disconnect();
-    stateObserver.disconnect();
-    unregister();
-    if (frame !== 0) clock.cancelFrame(frame);
-    element.textContent = final;
-  };
-}
-
-interface GalleryController {
-  readonly destroy: () => void;
-}
-
-function createGalleryController(page: HTMLElement): GalleryController | undefined {
-  const rails = [...page.querySelectorAll<HTMLElement>('[data-gallery-rail]')];
-  if (rails.length === 0) return undefined;
-  let active = true;
-  const sync = (): void => {
-    if (!active) return;
-    for (const rail of rails) {
-      const scrollable = rail.scrollWidth > rail.clientWidth + 1;
-      rail.toggleAttribute('data-gallery-scroller', scrollable);
-      if (scrollable) {
-        rail.setAttribute('role', 'group');
-        rail.setAttribute('aria-label', strings.scrollableGallery);
-        rail.tabIndex = 0;
-      } else {
-        rail.removeAttribute('role');
-        rail.removeAttribute('aria-label');
-        rail.removeAttribute('tabindex');
-        rail.scrollLeft = 0;
-      }
-    }
-  };
-  const observer = new ResizeObserver(sync);
-  for (const rail of rails) observer.observe(rail);
-  sync();
-  void document.fonts.ready.then(sync);
-  return {
-    destroy: () => {
-      active = false;
-      observer.disconnect();
-      for (const rail of rails) {
-        rail.removeAttribute('data-gallery-scroller');
-        rail.removeAttribute('role');
-        rail.removeAttribute('aria-label');
-        rail.removeAttribute('tabindex');
-      }
-    },
-  };
-}
-
-/**
- * Page CSS never draws a diagram smaller than this share of its natural width; the rest scrolls. At this
- * scale the smallest diagram text, a 13px connection label, still renders at 12px.
- */
-const DIAGRAM_MINIMUM_SCALE = 12 / 13;
-/** Keys with which a reader selects a tab; other keys only pass through the tab list. */
-const TAB_SELECTION_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter', ' ']);
-
-/**
- * Shows, until the reader picks a view, a diagram view that fits its frame when the authored one would have
- * to scroll: a flow drawn left to right on a phone is replaced by its top-down view. The authored view stays
- * the one printed and one tab away; a reader's choice is never overridden. When no view fits, the frame
- * first opens scrolled to the start of the flow, so the first look is not its cut middle.
- */
-function createDiagramFitController(
-  page: HTMLElement,
-): { readonly destroy: () => void } | undefined {
-  const switchers = [...page.querySelectorAll<HTMLElement>('.visualization-layouts[data-tabs]')];
-  if (switchers.length === 0) return undefined;
-  const chosen = new WeakSet<HTMLElement>();
-  const abort = new AbortController();
-  const naturalWidth = (panel: HTMLElement): number =>
-    Number(panel.querySelector('svg')?.getAttribute('width') ?? 0);
-  const revealed = new WeakSet<HTMLElement>();
-  const revealFlowStart = (switcher: HTMLElement): void => {
-    const frame = switcher.querySelector<HTMLElement>(
-      ':scope > [data-tab-panel]:not([hidden]) .visualization-frame',
-    );
-    if (frame === null || revealed.has(frame) || frame.scrollWidth <= frame.clientWidth + 1) return;
-    // Начало потока — все узлы без входящей прямой связи, а не только первый слой: у потока с двумя
-    // источниками второй может лежать в другом слое, и центр одного прятал другой за краем.
-    const entered = new Set(
-      [...frame.querySelectorAll<SVGElement>('[data-to]:not([data-draw-phase="backward"])')].map(
-        (edge) => edge.dataset.to ?? '',
-      ),
-    );
-    const starts = [...frame.querySelectorAll<SVGGElement>('[data-node-id]')]
-      .filter((node) => !entered.has(node.dataset.nodeId ?? ''))
-      .map((node) => node.getBoundingClientRect());
-    if (starts.length === 0) return;
-    revealed.add(frame);
-    const left = Math.min(...starts.map((box) => box.left));
-    const right = Math.max(...starts.map((box) => box.right));
-    const frameLeft = frame.getBoundingClientRect().left;
-    // Начало потока, которое шире рамки (несколько узлов первого слоя вида сверху вниз), открывается
-    // с левого края: центр такого слоя прячет его первые узлы за краем.
-    frame.scrollLeft +=
-      right - left <= frame.clientWidth
-        ? (left + right) / 2 - frameLeft - frame.clientWidth / 2
-        : left - frameLeft - 8;
-  };
-  const fitView = (switcher: HTMLElement): void => {
-    const available = switcher.clientWidth;
-    if (chosen.has(switcher) || available <= 0) return;
-    const panels = [...switcher.children].filter(
-      (child): child is HTMLElement =>
-        child instanceof HTMLElement && child.matches('[data-tab-panel]'),
-    );
-    const authored = panels.find((panel) => panel.hasAttribute('data-layout-default'));
-    if (authored === undefined) return;
-    const fits = (panel: HTMLElement): boolean =>
-      naturalWidth(panel) * DIAGRAM_MINIMUM_SCALE <= available;
-    const fitting = panels.filter(fits);
-    const target = fits(authored)
-      ? authored
-      : (fitting.sort((left, right) => naturalWidth(right) - naturalWidth(left))[0] ??
-        [...panels].sort((left, right) => naturalWidth(left) - naturalWidth(right))[0]);
-    if (target?.hidden) {
-      const control = switcher.querySelector<HTMLButtonElement>(
-        `[data-tab][aria-controls="${CSS.escape(target.id)}"]`,
-      );
-      if (control !== null) activateTab(control, false);
-    }
-    revealFlowStart(switcher);
-  };
-  const markChosen = (event: Event): void => {
-    const target = event.target;
-    if (!(target instanceof Element) || target.closest('[data-tab]') === null) return;
-    if (event instanceof KeyboardEvent && !TAB_SELECTION_KEYS.has(event.key)) return;
-    const switcher = target.closest<HTMLElement>('.visualization-layouts[data-tabs]');
-    if (switcher === null) return;
-    chosen.add(switcher);
-    // The delegated tab handler shows the chosen view after this listener; reveal its start then.
-    clock.frame(() => revealFlowStart(switcher));
-  };
-  for (const switcher of switchers) {
-    switcher.addEventListener('click', markChosen, { signal: abort.signal });
-    switcher.addEventListener('keydown', markChosen, { signal: abort.signal });
-  }
-  const observer = new ResizeObserver((entries) => {
-    for (const entry of entries) if (entry.target instanceof HTMLElement) fitView(entry.target);
-  });
-  for (const switcher of switchers) observer.observe(switcher);
-  return {
-    destroy: () => {
-      abort.abort();
-      observer.disconnect();
-    },
-  };
-}
-
-function createCopyButton(kind: 'code' | 'prose'): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = kind === 'code' ? 'copy-code' : 'copy-prose';
-  asUiButton(button, kind === 'code' ? 'quiet' : 'secondary', 'sm');
-  if (kind === 'code') button.dataset.copyCode = '';
-  else button.dataset.copyProse = '';
-  const label = document.createElement('span');
-  label.dataset.copyLabel = '';
-  if (kind === 'code') label.dataset.copyCodeLabel = '';
-  label.textContent = strings.copy;
-  button.append(browserIcon('copy'), label);
-  return button;
-}
-
 interface NavigationController {
   readonly toggle: () => void;
   readonly closeMobile: (restoreFocus: boolean) => void;
@@ -1248,10 +531,12 @@ function createNavigationController(): NavigationController | undefined {
   const dialog = document.querySelector<HTMLDialogElement>('[data-nav-dialog]');
   const dialogContent = dialog?.querySelector<HTMLElement>('[data-nav-dialog-content]');
   const close = dialog?.querySelector<HTMLButtonElement>('[data-nav-close]');
-  const toggle = document.querySelector<HTMLButtonElement>('[data-nav-toggle]');
-  const toggleLabel = toggle?.querySelector<HTMLElement>('[data-nav-toggle-label]');
-  const currentLabel = document.querySelector<HTMLElement>('[data-topbar-current]');
-  const topbar = document.querySelector<HTMLElement>('.topbar');
+  // Страница без верхней панели (`topbar: false`) не несёт ни кнопки оглавления, ни строки текущего
+  // раздела: оглавление сбоку и выбор текущего раздела работают без них, а отступ якоря — от края.
+  const toggle = document.querySelector<HTMLButtonElement>('[data-nav-toggle]') ?? undefined;
+  const toggleLabel = toggle?.querySelector<HTMLElement>('[data-nav-toggle-label]') ?? undefined;
+  const currentLabel = document.querySelector<HTMLElement>('[data-topbar-current]') ?? undefined;
+  const topbar = document.querySelector<HTMLElement>('.topbar') ?? undefined;
   if (
     navigation === null ||
     desktopHost === null ||
@@ -1260,11 +545,8 @@ function createNavigationController(): NavigationController | undefined {
     dialogContent === null ||
     close === undefined ||
     close === null ||
-    toggle === null ||
-    toggleLabel === undefined ||
-    toggleLabel === null ||
-    currentLabel === null ||
-    topbar === null
+    (topbar !== undefined &&
+      (toggle === undefined || toggleLabel === undefined || currentLabel === undefined))
   ) {
     return undefined;
   }
@@ -1301,7 +583,6 @@ function createNavigationController(): NavigationController | undefined {
   let focusAfterClose: HTMLElement | undefined;
   let currentObserver: IntersectionObserver | undefined;
   let currentObserverSuspended = false;
-  let pendingInitialHashOwner: NavigationOwner | undefined;
   const supportsScrollEnd = 'onscrollend' in window;
   let fallbackScrollTimer: number | undefined;
   const navigationOffset = 16;
@@ -1309,11 +590,11 @@ function createNavigationController(): NavigationController | undefined {
   const syncTopbarClearance = (): void => {
     root.style.setProperty(
       '--topbar-clearance',
-      `${Math.ceil(topbar.offsetHeight) + navigationOffset - hashOwnershipOverlap}px`,
+      `${Math.ceil(topbar?.offsetHeight ?? 0) + navigationOffset - hashOwnershipOverlap}px`,
     );
   };
   const topbarObserver = new ResizeObserver(syncTopbarClearance);
-  topbarObserver.observe(topbar);
+  if (topbar !== undefined) topbarObserver.observe(topbar);
   syncTopbarClearance();
   const cancelFallbackScrollSelection = (): void => {
     if (fallbackScrollTimer === undefined) return;
@@ -1330,8 +611,9 @@ function createNavigationController(): NavigationController | undefined {
       if (candidate === owner) candidate.link.setAttribute('aria-current', 'location');
       else candidate.link.removeAttribute('aria-current');
     }
-    currentLabel.textContent =
-      owner.link.textContent?.trim() || owner.heading.textContent?.trim() || '';
+    if (currentLabel !== undefined)
+      currentLabel.textContent =
+        owner.link.textContent?.trim() || owner.heading.textContent?.trim() || '';
   };
 
   const ownerForTarget = (target: HTMLElement): NavigationOwner => {
@@ -1360,7 +642,7 @@ function createNavigationController(): NavigationController | undefined {
     const line = activationLine();
     let selected = owners[0] ?? unreachableNavigationOwner();
     for (const owner of owners) {
-      if (owner.heading.getBoundingClientRect().top <= line) selected = owner;
+      if (restingTop(owner.heading) <= line) selected = owner;
     }
     setCurrent(selected);
   };
@@ -1377,19 +659,6 @@ function createNavigationController(): NavigationController | undefined {
     }
   };
 
-  const alignPendingInitialHash = (): boolean => {
-    const owner = pendingInitialHashOwner;
-    if (owner === undefined) return false;
-    pendingInitialHashOwner = undefined;
-    window.scrollBy({
-      top: owner.heading.getBoundingClientRect().top - activationLine() + hashOwnershipOverlap,
-      behavior: 'instant',
-    });
-    currentObserverSuspended = true;
-    setCurrent(owner);
-    return true;
-  };
-
   const setOutsideInert = (inert: boolean): void => {
     for (const element of outside) element.toggleAttribute('inert', inert);
   };
@@ -1397,6 +666,7 @@ function createNavigationController(): NavigationController | undefined {
   const updateDesktopState = (): void => {
     navigation.hidden = !desktopExpanded;
     root.toggleAttribute('data-nav-collapsed', !desktopExpanded);
+    if (toggle === undefined || toggleLabel === undefined) return;
     toggle.setAttribute('aria-expanded', String(desktopExpanded));
     toggle.setAttribute(
       'aria-label',
@@ -1414,7 +684,7 @@ function createNavigationController(): NavigationController | undefined {
         dialog.close();
       }
       desktopHost.append(navigation);
-      toggle.setAttribute('aria-controls', navigation.id);
+      toggle?.setAttribute('aria-controls', navigation.id);
       setOutsideInert(false);
       updateDesktopState();
       return;
@@ -1426,6 +696,7 @@ function createNavigationController(): NavigationController | undefined {
     dialogContent.append(navigation);
     navigation.hidden = false;
     root.removeAttribute('data-nav-collapsed');
+    if (toggle === undefined || toggleLabel === undefined) return;
     toggle.setAttribute('aria-controls', dialog.id);
     toggle.setAttribute('aria-expanded', 'false');
     toggle.setAttribute('aria-label', strings.openContents);
@@ -1443,8 +714,8 @@ function createNavigationController(): NavigationController | undefined {
     if (dialog.open) return;
     dialog.showModal();
     setOutsideInert(true);
-    toggle.setAttribute('aria-expanded', 'true');
-    toggle.setAttribute('aria-label', strings.closeContents);
+    toggle?.setAttribute('aria-expanded', 'true');
+    toggle?.setAttribute('aria-label', strings.closeContents);
     close.focus();
   };
 
@@ -1498,12 +769,12 @@ function createNavigationController(): NavigationController | undefined {
       if (desktop.matches) {
         updateDesktopState();
       } else {
-        toggle.setAttribute('aria-expanded', 'false');
-        toggle.setAttribute('aria-label', strings.openContents);
+        toggle?.setAttribute('aria-expanded', 'false');
+        toggle?.setAttribute('aria-label', strings.openContents);
       }
       const target = focusAfterClose ?? toggle;
       focusAfterClose = undefined;
-      target.focus({ preventScroll: true });
+      target?.focus({ preventScroll: true });
     },
     { signal: abort.signal },
   );
@@ -1525,7 +796,9 @@ function createNavigationController(): NavigationController | undefined {
     window.addEventListener(
       'scrollend',
       () => {
-        if (alignPendingInitialHash()) return;
+        // Переход по якорю ведёт рантайм покадрово (`reading-position.ts`): каждый его кадр — отдельная
+        // мгновенная прокрутка, и текущая глава выбирается, когда переход кончился, а не на каждом кадре.
+        if (root.hasAttribute('data-reading-travel')) return;
         currentObserverSuspended = false;
         selectFromGeometry();
       },
@@ -1539,7 +812,7 @@ function createNavigationController(): NavigationController | undefined {
         cancelFallbackScrollSelection();
         fallbackScrollTimer = clock.later(() => {
           fallbackScrollTimer = undefined;
-          if (alignPendingInitialHash()) return;
+          if (root.hasAttribute('data-reading-travel')) return;
           currentObserverSuspended = false;
           selectFromGeometry();
         }, 80);
@@ -1552,13 +825,11 @@ function createNavigationController(): NavigationController | undefined {
   );
 
   applyViewport();
+  // Место якоря адреса ставит модуль места чтения (`reading-position.ts`); здесь — только текущая глава.
   const initialTarget = hashTarget(window.location.hash);
   if (initialTarget !== undefined) {
     currentObserverSuspended = true;
-    const initialOwner = ownerForTarget(initialTarget);
-    pendingInitialHashOwner = initialOwner;
-    setCurrent(initialOwner);
-    if (!supportsScrollEnd) clock.frame(() => alignPendingInitialHash());
+    setCurrent(ownerForTarget(initialTarget));
   }
   rebuildCurrentObserver();
 
@@ -1572,7 +843,7 @@ function createNavigationController(): NavigationController | undefined {
       desktopExpanded = !desktopExpanded;
       root.toggleAttribute('data-nav-toggled', true);
       updateDesktopState();
-      toggle.focus();
+      toggle?.focus();
     },
     closeMobile,
     activate: (link) => {
@@ -1592,7 +863,6 @@ function createNavigationController(): NavigationController | undefined {
       topbarObserver.disconnect();
       themeObserver.disconnect();
       delete root.dataset.navMode;
-      pendingInitialHashOwner = undefined;
       cancelFallbackScrollSelection();
       bottomSentinel.remove();
       root.removeAttribute('data-nav-collapsed');
@@ -1600,15 +870,6 @@ function createNavigationController(): NavigationController | undefined {
       root.style.removeProperty('--topbar-clearance');
     },
   };
-}
-
-function hashTarget(hash: string): HTMLElement | undefined {
-  if (!hash.startsWith('#') || hash.length === 1) return undefined;
-  try {
-    return document.getElementById(decodeURIComponent(hash.slice(1))) ?? undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 function unreachableNavigationOwner(): never {
@@ -1714,25 +975,31 @@ function installSceneAndChoreography(capabilities: {
   const abort = new AbortController();
   const activeScenes = new Set<HTMLElement>();
   let frame = 0;
-  const paint = (scene: HTMLElement): void => {
-    // Смещение сцены `progress` рисует шкала прокрутки браузера (`animation-timeline: view()`); прогресс
-    // здесь — запасной путь без неё, путь записи по часам и опубликованная переменная `--scene-progress`.
-    const rect = scene.getBoundingClientRect();
-    const span = rect.height + innerHeight;
-    const progress =
-      progressOverride(scene) ??
-      (span <= 0 ? 0 : Math.min(1, Math.max(0, (innerHeight - rect.top) / span)));
-    scene.style.setProperty('--scene-progress', progress.toFixed(4));
+  // Смещение сцены `progress` рисует шкала прокрутки браузера (`animation-timeline: view()`); прогресс
+  // здесь — запасной путь без неё, путь записи по часам и опубликованная переменная `--scene-progress`.
+  // Сначала читаются все коробки, потом пишутся все переменные: чтение после записи заставило бы браузер
+  // пересчитывать стиль и раскладку страницы на каждую сцену кадра.
+  const paint = (painted: Iterable<HTMLElement>): void => {
+    const progress = [...painted].map((scene): [HTMLElement, number] => {
+      const override = progressOverride(scene);
+      if (override !== undefined) return [scene, override];
+      const rect = scene.getBoundingClientRect();
+      const span = rect.height + innerHeight;
+      return [scene, span <= 0 ? 0 : Math.min(1, Math.max(0, (innerHeight - rect.top) / span))];
+    });
+    for (const [scene, value] of progress)
+      scene.style.setProperty('--scene-progress', value.toFixed(4));
   };
   const update = (): void => {
     frame = 0;
-    for (const scene of activeScenes) paint(scene);
+    paint(activeScenes);
   };
   // Перемотка часов ставит прогресс сразу: по положению на экране или по выставленному записью.
   const unregister = clock.register({
     at: () => {
-      for (const scene of scenes)
-        if (activeScenes.has(scene) || progressOverride(scene) !== undefined) paint(scene);
+      paint(
+        scenes.filter((scene) => activeScenes.has(scene) || progressOverride(scene) !== undefined),
+      );
     },
   });
   const schedule = (): void => {
@@ -1884,7 +1151,8 @@ function installChapterProgress(): (() => void) | undefined {
     segment.className = 'chapter-progress-segment';
     segment.href = `#${chapter.id}`;
     segment.tabIndex = -1;
-    segment.title = chapter.querySelector(':scope > h2')?.textContent?.trim() ?? chapter.id;
+    const heading = chapter.querySelector(':scope > h2');
+    segment.title = heading === null ? chapter.id : textWithoutEditionLayer(heading).trim();
     bar.append(segment);
     return segment;
   });
@@ -1895,13 +1163,17 @@ function installChapterProgress(): (() => void) | undefined {
     const line = topbar.getBoundingClientRect().bottom + window.innerHeight * 0.3;
     const atEnd =
       Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 1;
+    // Сначала все коробки глав, потом все записи в полосу: запись между чтениями заставила бы браузер
+    // пересчитывать стиль и раскладку страницы на каждую главу каждого кадра прокрутки.
+    const boxes = chapters.map((chapter) => chapter.getBoundingClientRect());
     let current = -1;
-    for (const [index, chapter] of chapters.entries()) {
-      const box = chapter.getBoundingClientRect();
+    for (const [index, box] of boxes.entries()) {
       const fill = atEnd ? 1 : Math.min(1, Math.max(0, (line - box.top) / Math.max(1, box.height)));
       const segment = segments[index];
       if (segment === undefined) continue;
-      segment.style.setProperty('--chapter-fill', fill.toFixed(3));
+      const value = fill.toFixed(3);
+      if (segment.style.getPropertyValue('--chapter-fill') !== value)
+        segment.style.setProperty('--chapter-fill', value);
       segment.toggleAttribute('data-passed', fill >= 1);
       if (box.top <= line) current = index;
     }
@@ -2012,271 +1284,4 @@ function installSectionReveal(
       target.removeAttribute('data-reveal-motion');
     }
   };
-}
-
-/** Выбор читателя меняет вкладку переходом вида; смена вида раскладкой схемы идёт мгновенно. */
-function switchTab(control: HTMLButtonElement, moveFocus: boolean): void {
-  const from = control
-    .closest<HTMLElement>('[data-tabs]')
-    ?.querySelector<HTMLElement>(':scope > [data-tab-panel]:not([hidden])');
-  const to = document.getElementById(control.getAttribute('aria-controls') ?? '');
-  switchWithTransition(from, to, reducedMotion, () => activateTab(control, moveFocus));
-}
-
-function activateTab(control: HTMLButtonElement, moveFocus: boolean): void {
-  const tabs = control.closest<HTMLElement>('[data-tabs]');
-  if (tabs === null) return;
-  const controls = tabControls(control);
-  const panels = [...tabs.children].filter(
-    (child): child is HTMLElement =>
-      child instanceof HTMLElement && child.matches('[data-tab-panel]'),
-  );
-  for (const candidate of controls) {
-    const selected = candidate === control;
-    candidate.setAttribute('aria-selected', String(selected));
-    candidate.tabIndex = selected ? 0 : -1;
-    const panel = panels.find((item) => item.id === candidate.getAttribute('aria-controls'));
-    if (panel !== undefined) panel.hidden = !selected;
-  }
-  if (moveFocus) control.focus();
-}
-
-function tabControls(control: HTMLButtonElement): HTMLButtonElement[] {
-  const tabs = control.closest<HTMLElement>('[data-tabs]');
-  const tabList = tabs?.querySelector<HTMLElement>(':scope > [role="tablist"]');
-  return tabList === undefined || tabList === null
-    ? []
-    : [...tabList.querySelectorAll<HTMLButtonElement>('[data-tab]')];
-}
-
-function closePopoversOutside(target: Element): void {
-  for (const popover of document.querySelectorAll<HTMLElement>('[data-popover]')) {
-    if (!popoverContains(popover, target)) closePopover(popover, false);
-  }
-}
-
-function openPopover(popover: HTMLElement): void {
-  cancelScheduledPopoverClose(popover);
-  const trigger = popover.querySelector<HTMLElement>('[data-popover-trigger]');
-  const panel = popoverPanel(popover, trigger);
-  if (trigger === null || panel === null || !panel.hidden) return;
-  portalPopoverPanel(popover, panel);
-  panel.hidden = false;
-  trigger.setAttribute('aria-expanded', 'true');
-  positionPopoverPortal(popover);
-}
-
-function closePopover(popover: HTMLElement, restoreFocus: boolean): void {
-  cancelScheduledPopoverClose(popover);
-  const trigger = popover.querySelector<HTMLElement>('[data-popover-trigger]');
-  const panel = popoverPanel(popover, trigger);
-  if (trigger === null || panel === null || panel.hidden) return;
-  panel.hidden = true;
-  trigger.setAttribute('aria-expanded', 'false');
-  restorePopoverPanel(popover);
-  if (restoreFocus) trigger.focus();
-}
-
-function schedulePopoverClose(popover: HTMLElement): void {
-  cancelScheduledPopoverClose(popover);
-  const timeout = clock.later(() => {
-    pendingPopoverCloses.delete(popover);
-    const portal = popoverPortals.get(popover);
-    if (
-      popover.matches(':hover') ||
-      portal?.panel.matches(':hover') === true ||
-      popoverContains(popover, document.activeElement)
-    ) {
-      return;
-    }
-    closePopover(popover, false);
-  }, 100);
-  pendingPopoverCloses.set(popover, timeout);
-}
-
-function cancelScheduledPopoverClose(popover: HTMLElement): void {
-  const timeout = pendingPopoverCloses.get(popover);
-  if (timeout === undefined) return;
-  clock.cancelLater(timeout);
-  pendingPopoverCloses.delete(popover);
-}
-
-function popoverPanel(popover: HTMLElement, trigger: HTMLElement | null): HTMLElement | null {
-  const controlled = trigger?.getAttribute('aria-controls');
-  if (controlled !== null && controlled !== undefined) {
-    const panel = document.getElementById(controlled);
-    if (panel instanceof HTMLElement && panel.matches('[data-popover-panel]')) return panel;
-  }
-  return popover.querySelector<HTMLElement>('[data-popover-panel]');
-}
-
-function popoverOwner(target: Element): HTMLElement | null {
-  const direct = target.closest<HTMLElement>('[data-popover]');
-  if (direct !== null) return direct;
-  const panel = target.closest<HTMLElement>('[data-popover-portal]');
-  return panel === null ? null : (popoverPortalOwners.get(panel) ?? null);
-}
-
-function glossaryOwner(target: Element): HTMLElement | null {
-  const direct = target.closest<HTMLElement>('[data-glossary-reference]');
-  if (direct !== null) return direct;
-  const panel = target.closest<HTMLElement>('[data-popover-portal]');
-  const owner = panel === null ? undefined : popoverPortalOwners.get(panel);
-  return owner?.matches('[data-glossary-reference]') === true ? owner : null;
-}
-
-function popoverContains(popover: HTMLElement, target: EventTarget | null): boolean {
-  if (!(target instanceof Node)) return false;
-  if (popover.contains(target)) return true;
-  return popoverPortals.get(popover)?.panel.contains(target) === true;
-}
-
-function portalPopoverPanel(popover: HTMLElement, panel: HTMLElement): void {
-  if (popoverPortals.has(popover)) return;
-  const placeholder = document.createComment('agentic-report popover portal');
-  panel.replaceWith(placeholder);
-  overlayHostElement().append(panel);
-  panel.dataset.popoverPortal = '';
-  if (popover.matches('[data-glossary-reference]')) panel.dataset.glossaryPortal = '';
-  popoverPortals.set(popover, { panel, placeholder });
-  popoverPortalOwners.set(panel, popover);
-  if (popoverPortals.size === 1) startPopoverPositioning();
-}
-
-function restorePopoverPanel(popover: HTMLElement): void {
-  const portal = popoverPortals.get(popover);
-  if (portal === undefined) return;
-  portal.placeholder.replaceWith(portal.panel);
-  portal.panel.removeAttribute('data-popover-portal');
-  portal.panel.removeAttribute('data-glossary-portal');
-  portal.panel.style.removeProperty('inset');
-  portal.panel.style.removeProperty('top');
-  portal.panel.style.removeProperty('left');
-  portal.panel.style.removeProperty('width');
-  portal.panel.style.removeProperty('max-height');
-  popoverPortals.delete(popover);
-  popoverPortalOwners.delete(portal.panel);
-  if (popoverPortals.size === 0) stopPopoverPositioning();
-}
-
-function overlayHostElement(): HTMLElement {
-  if (overlayHost !== undefined) return overlayHost;
-  overlayHost = document.body;
-  overlayHost.dataset.overlayHost = '';
-  return overlayHost;
-}
-
-function startPopoverPositioning(): void {
-  popoverPositionAbort = new AbortController();
-  const signal = popoverPositionAbort.signal;
-  window.addEventListener('resize', schedulePopoverPositioning, { signal });
-  window.visualViewport?.addEventListener('resize', schedulePopoverPositioning, { signal });
-  window.visualViewport?.addEventListener('scroll', schedulePopoverPositioning, { signal });
-  document.addEventListener('scroll', schedulePopoverPositioning, { capture: true, signal });
-}
-
-function stopPopoverPositioning(): void {
-  popoverPositionAbort?.abort();
-  popoverPositionAbort = undefined;
-  if (popoverPositionFrame !== undefined) clock.cancelFrame(popoverPositionFrame);
-  popoverPositionFrame = undefined;
-  overlayHost?.removeAttribute('data-overlay-host');
-  overlayHost = undefined;
-}
-
-function schedulePopoverPositioning(): void {
-  if (popoverPositionFrame !== undefined) return;
-  popoverPositionFrame = clock.frame(() => {
-    popoverPositionFrame = undefined;
-    for (const popover of popoverPortals.keys()) positionPopoverPortal(popover);
-  });
-}
-
-function positionPopoverPortal(popover: HTMLElement): void {
-  const portal = popoverPortals.get(popover);
-  const trigger = popover.querySelector<HTMLElement>('[data-popover-trigger]');
-  if (portal === undefined || trigger === null || portal.panel.hidden) return;
-  const viewport = visualViewportBounds();
-  const gutter = 16;
-  const gap = popover.matches('.semantic-code-term') ? 0 : 8;
-  const triggerRect = trigger.getBoundingClientRect();
-  portal.panel.style.inset = 'auto';
-  portal.panel.style.width = `${Math.max(0, Math.min(448, viewport.right - viewport.left - gutter * 2))}px`;
-  portal.panel.style.maxHeight = `${Math.max(0, viewport.bottom - viewport.top - gutter * 2)}px`;
-  const panelRect = portal.panel.getBoundingClientRect();
-  const position = placeSurface({
-    anchor: triggerRect,
-    surface: { width: panelRect.width, height: panelRect.height },
-    viewport,
-    gutter,
-    gap,
-    preference: 'block',
-  });
-  portal.panel.style.left = `${position.left}px`;
-  portal.panel.style.top = `${position.top}px`;
-}
-
-function applyFilter(input: HTMLInputElement): void {
-  const filter = input.closest<HTMLElement>('[data-filter]');
-  if (filter === null) return;
-  const output = filter.querySelector<HTMLOutputElement>('[data-filter-count]');
-  const items = [...filter.querySelectorAll<HTMLLIElement>(':scope > ul > li, :scope > ol > li')];
-  const query = input.value.trim().toLocaleLowerCase();
-  let visible = 0;
-  for (const item of items) {
-    item.hidden = !item.textContent?.toLocaleLowerCase().includes(query);
-    if (!item.hidden) visible += 1;
-  }
-  if (output !== null) output.textContent = strings.items(visible);
-}
-
-async function copyContent(button: HTMLButtonElement): Promise<void> {
-  let text: string;
-  if (button.matches('[data-copy-prose]')) {
-    const prose = button
-      .closest<HTMLElement>('[data-copyable-prose]')
-      ?.querySelector<HTMLElement>('[data-copyable-content]');
-    text = prose === undefined || prose === null ? '' : renderedProseText(prose);
-  } else {
-    const code = button.closest('pre')?.querySelector('code');
-    const copy = code?.cloneNode(true);
-    if (copy instanceof HTMLElement) {
-      for (const panel of copy.querySelectorAll('[data-glossary-panel]')) panel.remove();
-    }
-    text = copy?.textContent ?? '';
-  }
-  const label = button.querySelector<HTMLElement>('[data-copy-label]') ?? button;
-  try {
-    await navigator.clipboard.writeText(text);
-    label.textContent = strings.copied;
-  } catch {
-    label.textContent = strings.copyUnavailable;
-  }
-  clock.later(() => {
-    label.textContent = strings.copy;
-  }, 1200);
-}
-
-function renderedProseText(content: HTMLElement): string {
-  const copy = content.cloneNode(true);
-  if (!(copy instanceof HTMLElement)) return '';
-  for (const reference of copy.querySelectorAll<HTMLElement>('[data-glossary-reference]')) {
-    const label =
-      reference.querySelector<HTMLElement>('[data-glossary-trigger]')?.textContent ?? '';
-    reference.replaceWith(document.createTextNode(label));
-  }
-  for (const generated of copy.querySelectorAll(
-    '[hidden], [aria-hidden="true"], button, input, select, textarea, output, [role="dialog"]',
-  ))
-    generated.remove();
-  copy.style.position = 'fixed';
-  copy.style.top = '0';
-  copy.style.left = '-10000px';
-  copy.style.width = `${content.getBoundingClientRect().width}px`;
-  copy.style.pointerEvents = 'none';
-  copy.setAttribute('aria-hidden', 'true');
-  document.body.append(copy);
-  const text = copy.innerText.replace(/\r\n?/gu, '\n').trim();
-  copy.remove();
-  return text;
 }

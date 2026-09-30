@@ -37,7 +37,7 @@
         }
       }
     },
-    "resources": ["local images", "local video", "downloadable local assets", "local fonts"]
+    "resources": ["local images", "downloadable local assets", "local fonts"]
   },
   "directives": {
     "eyebrow": {
@@ -725,11 +725,59 @@
       "handoffs": ["semantic-document", "reader-runtime"]
     },
     "notes": {
-      "description": "Speaker notes of a slide: never shown to the audience, shown under the slide in the presenter view (?view=presenter).",
+      "description": "Speaker notes of a slide — a presentation section or a deck slide: never shown to the audience; on a presentation page the presenter view (?view=presenter) shows them under the slide.",
       "forms": ["container"],
       "attributes": {},
       "children": "markdown",
-      "placement": { "requiredParent": "section" },
+      "placement": { "requiredParent": ["section", "slide"] },
+      "resource": "none",
+      "runtime": "package-owned-slides",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "deck": {
+      "description": "A slide deck inside the page: slide directives shown one at a time in a 16:9 slot of the column, paged with buttons and keys, and opened on the whole screen; without the runtime and in print the slides follow one another.",
+      "forms": ["container"],
+      "attributes": {
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        },
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": false,
+          "description": "Optional anchor: #id opens the deck, #id/3 opens its third slide."
+        }
+      },
+      "children": "slide-directives",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-slides",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "slide": {
+      "description": "One slide of a deck: Markdown with optional appear steps and speaker notes.",
+      "forms": ["container"],
+      "attributes": {
+        "transition": {
+          "kind": "enum",
+          "values": ["fade", "push", "wipe", "zoom", "none"],
+          "required": false,
+          "default": "fade",
+          "description": "How the slide arrives: fade, push from the side, wipe from the start edge, zoom in, or none."
+        }
+      },
+      "children": "markdown",
+      "placement": { "requiredParent": "deck" },
       "resource": "none",
       "runtime": "package-owned-slides",
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
@@ -1341,6 +1389,25 @@
       "runtime": "package-owned-copy",
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
       "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "table": {
+      "description": "One Markdown table with a chosen narrow-track layout; a table without the directive uses layout auto.",
+      "forms": ["container"],
+      "attributes": {
+        "layout": {
+          "kind": "enum",
+          "values": ["auto", "stack", "scroll"],
+          "required": false,
+          "default": "auto",
+          "description": "How the table meets a narrow track: auto wraps prose and turns rows into labelled cards only when the columns cannot fit readably; stack turns rows into cards on every narrow track; scroll keeps the grid, scrolls sideways and keeps the first column in view."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "none",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document"]
     },
     "glossary": {
       "description": "Reusable glossary definition containing Markdown, optionally moved from the document root or a direct section child into the appendix.",
@@ -2263,7 +2330,7 @@
       "handoffs": ["resource-graph"]
     },
     "video": {
-      "description": "Embedded local video (webm, mp4, m4v, or ogv) as a looping muted clip, a background with a pause control, or a manually started video with sound; directory output ships every source for the browser to choose from, one file ships the most compatible.",
+      "description": "Embedded local video (webm, mp4, m4v, or ogv), or an agentic-screencast film named by from, as a looping muted clip, a background with a pause control, or a manually started video with sound (the default for a recording that carries sound); directory output ships every source for the browser to choose from, one file ships the most compatible; each source is typed with the codecs read from its file.",
       "forms": ["leaf"],
       "attributes": {
         "src": {
@@ -2272,8 +2339,17 @@
           "minLength": 1,
           "maxLength": 200,
           "format": "relative-local-path",
-          "required": true,
-          "description": "Relative local video path: .webm, .mp4, .m4v, or .ogv. Give the most compatible encoding (H.264 MP4) here."
+          "required": false,
+          "description": "Relative local video path: .webm, .mp4, .m4v, or .ogv. Give the most compatible encoding (H.264 MP4) here. Required unless from names a film."
+        },
+        "from": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "format": "relative-local-path",
+          "required": false,
+          "description": "A film made by agentic-screencast web: its <film>.web.json manifest, or the directory holding exactly one. The film gives every encoding in the manifest order, the poster, and the chapters; poster, dark-poster, chapters, and sources written here override the film. Use instead of src."
         },
         "sources": {
           "kind": "string",
@@ -2287,8 +2363,7 @@
           "kind": "enum",
           "values": ["clip", "background", "manual"],
           "required": false,
-          "default": "clip",
-          "description": "clip: muted, looping, plays while visible, with controls. background: muted and looping without controls, with a pause button; a poster is required. manual: starts only when the reader presses play, with sound."
+          "description": "clip: muted, looping, plays while visible, with controls. background: muted and looping without controls, with a pause button; a poster is required. manual: starts only when the reader presses play, with sound. Without mode, a recording whose file carries sound (a voice-over; a silent audio track does not count) is manual and a silent one is clip; start, seam=\"fade\", or expand keep it a clip."
         },
         "chapters": {
           "kind": "string",
@@ -2307,6 +2382,15 @@
           "format": "relative-local-path",
           "required": false,
           "description": "Relative local image shown before playback and in print: .png, .jpg, .jpeg, .webp, .gif, or .avif."
+        },
+        "dark-poster": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "format": "relative-local-path",
+          "required": false,
+          "description": "Relative local image shown instead of the poster while the page scheme is dark; needs poster, same image types. Print shows the light poster."
         },
         "caption": {
           "kind": "string",
@@ -2369,10 +2453,10 @@
         },
         "role": {
           "kind": "enum",
-          "values": ["body", "heading", "mono"],
+          "values": ["body", "heading", "mono", "code"],
           "required": false,
           "default": "body",
-          "description": "Text role the font sets: body text and controls, headings and section titles, or code."
+          "description": "Text role the font sets: body text and controls, headings and section titles, monospaced labels and metadata, or code blocks and inline code."
         }
       },
       "children": "none",
@@ -2470,11 +2554,11 @@
       {
         "name": "calm-paper",
         "description": "Long reading: warm paper, a Playfair display over Literata text, and one clay accent.",
-        "palette": "Warm paper (#f4f1ea) and dark ink (#1b1a17) for text that reads like print; clay (#c2643f) marks rules and the current place, sage (#4b7a6a) the eyebrows."
+        "palette": "Warm paper (#f4f1ea) and dark ink (#1b1a17) for text that reads like print; clay (#ae522d) marks rules and the current place, sage (#3f6b5d) the eyebrows."
       },
       {
         "name": "neutral",
-        "description": "Neutral reading and product pages: grey paper, a Literata display over Onest, Martian Mono, one ochre accent.",
+        "description": "Neutral reading and product pages: grey paper, a Literata display over Onest, Martian Mono meta lines and JetBrains Mono code, one ochre accent.",
         "palette": "Grey paper (#f5f5f3) and ink (#16171a) with one warm ochre accent (#8a5c00); the dark scheme is warm graphite (#151514), not night blue. No cream, no terracotta."
       },
       {
@@ -2504,7 +2588,7 @@
       },
       {
         "name": "blueprint",
-        "description": "Dense technical evidence: a Tektur display over Fira Sans, Martian Mono labels, cyan and yellow on drafting blue.",
+        "description": "Dense technical evidence: a Tektur display over Fira Sans, Martian Mono meta lines, cyan and yellow on drafting blue.",
         "palette": "Drafting blue (#0a1a33) with cyan (#4cc9f0) and signal yellow (#f9c74f) and a faint grid; the light scheme is blueprint paper."
       },
       {
@@ -2519,8 +2603,8 @@
       },
       {
         "name": "terminal",
-        "description": "Developer console: Martian Mono and JetBrains Mono on graphite, a green prompt, amber labels and a cursor at the page heading.",
-        "palette": "Console graphite (#0c0e0d) with light grey text (#c9d4cc); one muted green (#5ccf8a) for the prompt and markers, amber (#e0a84a) for labels and focus. Dark scheme only; scanlines and glow are off unless the author turns them on."
+        "description": "Developer console: Martian Mono and JetBrains Mono on graphite or pale console paper, a green prompt, amber labels and a cursor at the page heading.",
+        "palette": "Console graphite (#0c0e0d) with light grey text (#c9d4cc), one muted green (#5ccf8a) for the prompt and markers and amber (#e0a84a) for labels and focus; the light scheme is pale console paper (#f3f5f1) with deep green (#1d7a45) and dark amber (#8a5a00). Scanlines and glow are off unless the author turns them on."
       }
     ],
     "themeFileExtensions": [".yaml", ".yml", ".json"],
@@ -2537,6 +2621,7 @@
     "defaultAttribution": true,
     "defaultReview": false,
     "defaultSchemeToggle": true,
+    "defaultTopbar": true,
     "defaultThemeSwitcher": false,
     "motion": {
       "progress": { "pageNormalMotionOnly": true },
@@ -2860,12 +2945,12 @@
         },
         {
           "name": "fonts",
-          "description": "Type pair for the three text roles, or a family per role; the embedded families carry Latin and Cyrillic.",
+          "description": "Type set for the four text roles, or a family per role; the embedded families carry Latin and Cyrillic.",
           "required": false,
           "fields": [
             {
               "name": "pair",
-              "description": "Coordinated heading, body and code families; a family named for a role in the same theme refines it.",
+              "description": "Coordinated heading, body, label and code families; a family named for a role in the same theme refines it.",
               "required": false,
               "constraint": {
                 "kind": "enum",
@@ -2959,7 +3044,7 @@
             },
             {
               "name": "mono",
-              "description": "Code, commands and metadata.",
+              "description": "Meta lines, chapter numbers and other monospaced interface text (not code); labels use the body face.",
               "required": false,
               "constraint": {
                 "kind": "enum",
@@ -2991,6 +3076,15 @@
                   "system-serif",
                   "system-mono"
                 ]
+              }
+            },
+            {
+              "name": "code",
+              "description": "Code blocks and inline code: a text-grade programming face.",
+              "required": false,
+              "constraint": {
+                "kind": "enum",
+                "values": ["jetbrains-mono", "geist-mono", "system-mono"]
               }
             }
           ]
@@ -3413,7 +3507,7 @@
                 },
                 {
                   "name": "statusDone",
-                  "description": "Status «done»: success callouts, good cards, added diff lines, finished process steps; follows chart2 unless set. (light scheme)",
+                  "description": "Status «done»: success callouts, good cards, added diff and edition lines, finished process steps; follows chart2 unless set. (light scheme)",
                   "required": false,
                   "constraint": {
                     "kind": "string",
@@ -3437,7 +3531,7 @@
                 },
                 {
                   "name": "statusReturned",
-                  "description": "Status «returned or failed»: danger callouts, risky cards, blocking findings, removed diff lines, invalid fields; follows chart3 unless set. (light scheme)",
+                  "description": "Status «returned or failed»: danger callouts, risky cards, blocking findings, removed diff lines and edition ghosts, invalid fields; follows chart3 unless set. (light scheme)",
                   "required": false,
                   "constraint": {
                     "kind": "string",
@@ -3473,7 +3567,7 @@
                 },
                 {
                   "name": "mediaBacking",
-                  "description": "Paper behind transparent images on the page surface. (light scheme)",
+                  "description": "Paper behind transparent images; transparent lets the surface show through. Keep it in the scheme: a light paper on a dark page reads as a hole, so a dark-ink image ships a dark variant instead. (light scheme)",
                   "required": false,
                   "constraint": {
                     "kind": "string",
@@ -3840,7 +3934,7 @@
                 },
                 {
                   "name": "statusDone",
-                  "description": "Status «done»: success callouts, good cards, added diff lines, finished process steps; follows chart2 unless set. (dark scheme)",
+                  "description": "Status «done»: success callouts, good cards, added diff and edition lines, finished process steps; follows chart2 unless set. (dark scheme)",
                   "required": false,
                   "constraint": {
                     "kind": "string",
@@ -3864,7 +3958,7 @@
                 },
                 {
                   "name": "statusReturned",
-                  "description": "Status «returned or failed»: danger callouts, risky cards, blocking findings, removed diff lines, invalid fields; follows chart3 unless set. (dark scheme)",
+                  "description": "Status «returned or failed»: danger callouts, risky cards, blocking findings, removed diff lines and edition ghosts, invalid fields; follows chart3 unless set. (dark scheme)",
                   "required": false,
                   "constraint": {
                     "kind": "string",
@@ -3900,7 +3994,7 @@
                 },
                 {
                   "name": "mediaBacking",
-                  "description": "Paper behind transparent images on the page surface. (dark scheme)",
+                  "description": "Paper behind transparent images; transparent lets the surface show through. Keep it in the scheme: a light paper on a dark page reads as a hole, so a dark-ink image ships a dark variant instead. (dark scheme)",
                   "required": false,
                   "constraint": {
                     "kind": "string",
@@ -4626,7 +4720,229 @@
           "foreground": "codeComment",
           "background": "codeBackground",
           "minimum": 4.5,
-          "use": "code comments"
+          "use": "code comments and line numbers"
+        },
+        {
+          "foreground": "codePunctuation",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code punctuation"
+        },
+        {
+          "foreground": "codeText",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code text on added diff and edition lines",
+          "backgroundTint": { "role": "statusDone", "share": 0.16 }
+        },
+        {
+          "foreground": "codeKeyword",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code keywords on added diff and edition lines",
+          "backgroundTint": { "role": "statusDone", "share": 0.16 }
+        },
+        {
+          "foreground": "codeString",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code strings on added diff and edition lines",
+          "backgroundTint": { "role": "statusDone", "share": 0.16 }
+        },
+        {
+          "foreground": "codeNumber",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code numbers on added diff and edition lines",
+          "backgroundTint": { "role": "statusDone", "share": 0.16 }
+        },
+        {
+          "foreground": "codeFunction",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code functions on added diff and edition lines",
+          "backgroundTint": { "role": "statusDone", "share": 0.16 }
+        },
+        {
+          "foreground": "codeType",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code types on added diff and edition lines",
+          "backgroundTint": { "role": "statusDone", "share": 0.16 }
+        },
+        {
+          "foreground": "codeComment",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code comments and line numbers on added diff and edition lines",
+          "backgroundTint": { "role": "statusDone", "share": 0.16 }
+        },
+        {
+          "foreground": "codePunctuation",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code punctuation on added diff and edition lines",
+          "backgroundTint": { "role": "statusDone", "share": 0.16 }
+        },
+        {
+          "foreground": "codeText",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code text on removed diff lines and removed-line ghosts of an edition",
+          "backgroundTint": { "role": "statusReturned", "share": 0.14 }
+        },
+        {
+          "foreground": "codeKeyword",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code keywords on removed diff lines and removed-line ghosts of an edition",
+          "backgroundTint": { "role": "statusReturned", "share": 0.14 }
+        },
+        {
+          "foreground": "codeString",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code strings on removed diff lines and removed-line ghosts of an edition",
+          "backgroundTint": { "role": "statusReturned", "share": 0.14 }
+        },
+        {
+          "foreground": "codeNumber",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code numbers on removed diff lines and removed-line ghosts of an edition",
+          "backgroundTint": { "role": "statusReturned", "share": 0.14 }
+        },
+        {
+          "foreground": "codeFunction",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code functions on removed diff lines and removed-line ghosts of an edition",
+          "backgroundTint": { "role": "statusReturned", "share": 0.14 }
+        },
+        {
+          "foreground": "codeType",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code types on removed diff lines and removed-line ghosts of an edition",
+          "backgroundTint": { "role": "statusReturned", "share": 0.14 }
+        },
+        {
+          "foreground": "codeComment",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code comments and line numbers on removed diff lines and removed-line ghosts of an edition",
+          "backgroundTint": { "role": "statusReturned", "share": 0.14 }
+        },
+        {
+          "foreground": "codePunctuation",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code punctuation on removed diff lines and removed-line ghosts of an edition",
+          "backgroundTint": { "role": "statusReturned", "share": 0.14 }
+        },
+        {
+          "foreground": "codeText",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code text on diff hunk lines",
+          "backgroundTint": { "role": "accent", "share": 0.09 }
+        },
+        {
+          "foreground": "codeKeyword",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code keywords on diff hunk lines",
+          "backgroundTint": { "role": "accent", "share": 0.09 }
+        },
+        {
+          "foreground": "codeString",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code strings on diff hunk lines",
+          "backgroundTint": { "role": "accent", "share": 0.09 }
+        },
+        {
+          "foreground": "codeNumber",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code numbers on diff hunk lines",
+          "backgroundTint": { "role": "accent", "share": 0.09 }
+        },
+        {
+          "foreground": "codeFunction",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code functions on diff hunk lines",
+          "backgroundTint": { "role": "accent", "share": 0.09 }
+        },
+        {
+          "foreground": "codeType",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code types on diff hunk lines",
+          "backgroundTint": { "role": "accent", "share": 0.09 }
+        },
+        {
+          "foreground": "codeComment",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code comments and line numbers on diff hunk lines",
+          "backgroundTint": { "role": "accent", "share": 0.09 }
+        },
+        {
+          "foreground": "codePunctuation",
+          "background": "codeBackground",
+          "minimum": 4.5,
+          "use": "code punctuation on diff hunk lines",
+          "backgroundTint": { "role": "accent", "share": 0.09 }
+        },
+        {
+          "foreground": "codeText",
+          "background": "accentSoft",
+          "minimum": 4.5,
+          "use": "code text on lines lit by a scene step"
+        },
+        {
+          "foreground": "codeKeyword",
+          "background": "accentSoft",
+          "minimum": 4.5,
+          "use": "code keywords on lines lit by a scene step"
+        },
+        {
+          "foreground": "codeString",
+          "background": "accentSoft",
+          "minimum": 4.5,
+          "use": "code strings on lines lit by a scene step"
+        },
+        {
+          "foreground": "codeNumber",
+          "background": "accentSoft",
+          "minimum": 4.5,
+          "use": "code numbers on lines lit by a scene step"
+        },
+        {
+          "foreground": "codeFunction",
+          "background": "accentSoft",
+          "minimum": 4.5,
+          "use": "code functions on lines lit by a scene step"
+        },
+        {
+          "foreground": "codeType",
+          "background": "accentSoft",
+          "minimum": 4.5,
+          "use": "code types on lines lit by a scene step"
+        },
+        {
+          "foreground": "codeComment",
+          "background": "accentSoft",
+          "minimum": 4.5,
+          "use": "code comments and line numbers on lines lit by a scene step"
+        },
+        {
+          "foreground": "codePunctuation",
+          "background": "accentSoft",
+          "minimum": 4.5,
+          "use": "code punctuation on lines lit by a scene step"
         }
       ]
     }
@@ -4835,9 +5151,11 @@
       "subject": "video/loop",
       "rules": [
         { "id": "loop-only-start-and-seam", "dependsOn": [] },
+        { "id": "dark-poster-with-poster", "dependsOn": [] },
         { "id": "expand-on-clip", "dependsOn": [] }
       ]
     },
+    { "subject": "video/source", "rules": [{ "id": "src-or-from", "dependsOn": [] }] },
     {
       "subject": "directive-node",
       "rules": [
@@ -4895,7 +5213,7 @@
     "fix": "Apply the replacements the product computed exactly, and nothing else.",
     "theme": "Write an author theme file from one or two brand colours, their lightness shifted until every contrast pair passes in both schemes.",
     "describe": "Return the complete source contract.",
-    "schema": "Return manifest, directive, complete source, or theme JSON Schema.",
+    "schema": "Return manifest, directive, or complete source JSON Schema.",
     "examples": "List packaged buildable examples and the reference extensions shipped beside them.",
     "sitemap": "Write sitemap.xml and robots.txt for a published tree of pages built with a public URL.",
     "snapshot": "Build a page and photograph it at several widths, in both schemes, with and without motion, with a contact sheet; with --measure, measure it instead of photographing.",

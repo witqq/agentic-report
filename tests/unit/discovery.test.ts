@@ -6,18 +6,14 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 
 import { parse } from '@babel/parser';
-import { Ajv2020 } from 'ajv/dist/2020.js';
 import { describe, expect, it } from 'vitest';
 
 import * as publicApi from '../../src/index.js';
 import {
   getAuthoringSchema,
-  getExtensionProposalSchema,
-  getExtensionProposalTemplate,
   getSourceContract,
   listExamples,
   sourceContract,
-  validateExtensionProposal,
   validateReport,
 } from '../../src/index.js';
 import { authoringRegistry } from '../../src/authoring/registry.js';
@@ -210,126 +206,6 @@ describe('agent discovery contract', () => {
     await expect(readFile(maintainedContractPath, 'utf8')).resolves.toBe(maintainedContract);
   }, 20_000);
 
-  it('rejects incomplete or unsafe extension proposals and accepts a complete bounded record', () => {
-    const schema = getExtensionProposalSchema();
-    const template = {
-      ...getExtensionProposalTemplate(),
-      id: 'bounded-extension',
-      summary: 'A bounded declarative extension with complete evidence.',
-    };
-    const ajvValidate = new Ajv2020({ strict: true, allErrors: true, ownProperties: true }).compile(
-      schema,
-    );
-    expect(validateExtensionProposal(template)).toEqual({ accepted: true, issues: [] });
-    expect(ajvValidate(template)).toBe(true);
-    expect(validateExtensionProposal({ ...template, evidence: {} })).toMatchObject({
-      accepted: false,
-      issues: expect.arrayContaining([expect.stringContaining('sourceGrammar')]),
-    });
-    expect(ajvValidate({ ...template, evidence: {} })).toBe(false);
-    expect(validateExtensionProposal({ ...template, plugin: 'dynamic-import' })).toMatchObject({
-      accepted: false,
-      issues: expect.arrayContaining(['proposal.plugin is not allowed']),
-    });
-    expect(ajvValidate({ ...template, plugin: 'dynamic-import' })).toBe(false);
-
-    for (const [key, unsafeValue] of Object.entries({
-      authorCode: 'allowed',
-      callbacks: 'allowed',
-      eval: 'allowed',
-      dynamicImports: 'allowed',
-      networkAccess: 'allowed',
-      confinement: 'unrestricted',
-      offline: 'optional',
-      deterministicSerialization: 'optional',
-      cspCompatible: 'optional',
-      packageOwnedRuntime: 'optional',
-    })) {
-      const unsafe = {
-        ...template,
-        trustBoundary: { ...template.trustBoundary, [key]: unsafeValue },
-      };
-      expect(validateExtensionProposal(unsafe).accepted, key).toBe(false);
-      expect(ajvValidate(unsafe), key).toBe(false);
-    }
-
-    const missingRuntimeBoundary = {
-      ...template,
-      trustBoundary: Object.fromEntries(
-        Object.entries(template.trustBoundary).filter(([key]) => key !== 'packageOwnedRuntime'),
-      ),
-    };
-    expect(validateExtensionProposal(missingRuntimeBoundary)).toMatchObject({
-      accepted: false,
-      issues: expect.arrayContaining(['trustBoundary.packageOwnedRuntime is required']),
-    });
-    expect(ajvValidate(missingRuntimeBoundary)).toBe(false);
-
-    for (const evidence of [
-      { ...template.evidence, cspAndRuntime: 'too short' },
-      Object.fromEntries(
-        Object.entries(template.evidence).filter(([key]) => key !== 'cspAndRuntime'),
-      ),
-    ]) {
-      const unsafe = { ...template, evidence };
-      expect(validateExtensionProposal(unsafe)).toMatchObject({
-        accepted: false,
-        issues: expect.arrayContaining([
-          'evidence.cspAndRuntime must contain at least 20 characters',
-        ]),
-      });
-      expect(ajvValidate(unsafe)).toBe(false);
-    }
-
-    for (const [summary, accepted] of [
-      ['  12345678901234567890  ', true],
-      [' '.repeat(20), false],
-      ['😀'.repeat(10), false],
-      ['😀'.repeat(20), true],
-    ] as const) {
-      expect(validateExtensionProposal({ ...template, summary }).accepted).toBe(accepted);
-      expect(ajvValidate({ ...template, summary })).toBe(accepted);
-    }
-
-    for (const inherited of [
-      Object.create(template) as unknown,
-      { ...template, trustBoundary: Object.create(template.trustBoundary) as unknown },
-      { ...template, evidence: Object.create(template.evidence) as unknown },
-    ]) {
-      expect(validateExtensionProposal(inherited).accepted).toBe(false);
-      expect(ajvValidate(inherited)).toBe(false);
-      expect(validateExtensionProposal(JSON.parse(JSON.stringify(inherited))).accepted).toBe(false);
-    }
-    const roundTrip = JSON.parse(JSON.stringify(template)) as unknown;
-    expect(validateExtensionProposal(roundTrip)).toEqual({ accepted: true, issues: [] });
-    expect(ajvValidate(roundTrip)).toBe(true);
-  });
-
-  it('keeps the generated extension schema and complete template executable', async () => {
-    const generatedSchema = JSON.parse(
-      await readFile(
-        new URL('../../docs/generated/extension-proposal.schema.json', import.meta.url),
-        'utf8',
-      ),
-    ) as Record<string, unknown>;
-    const generatedTemplate = JSON.parse(
-      await readFile(
-        new URL('../../docs/generated/extension-proposal.template.json', import.meta.url),
-        'utf8',
-      ),
-    ) as Record<string, unknown>;
-    expect(generatedSchema).toEqual(getExtensionProposalSchema());
-    const ajvValidate = new Ajv2020({ strict: true, allErrors: true, ownProperties: true }).compile(
-      generatedSchema,
-    );
-    expect(validateExtensionProposal(generatedTemplate)).toEqual({ accepted: true, issues: [] });
-    expect(ajvValidate(generatedTemplate)).toBe(true);
-
-    const incomplete = { ...generatedTemplate, evidence: {} };
-    expect(validateExtensionProposal(incomplete).accepted).toBe(false);
-    expect(ajvValidate(incomplete)).toBe(false);
-  });
-
   it('describes the authored rules and their dependencies without running a check', async () => {
     // The contract is read from the module surface alone: no source is compiled, nothing is
     // validated, no file is touched. Under a phase that reports by throwing, this answer does not
@@ -402,7 +278,6 @@ describe('agent discovery contract', () => {
     expect(indexSource).not.toMatch(/Zod|ReportManifestSchema|ReportManifestInputSchema/u);
     const expectedExports = [
       'AgenticReportError',
-      'EXTENSION_PROPOSAL_CONTRACT_VERSION',
       'MULTILINGUAL_REVIEW_CONTRACT_VERSION',
       'REVIEW_CONTRACT_VERSION',
       'REVIEW_TARGET_MANIFEST_VERSION',
@@ -411,8 +286,6 @@ describe('agent discovery contract', () => {
       'fixReport',
       'generateSitemap',
       'getAuthoringSchema',
-      'getExtensionProposalSchema',
-      'getExtensionProposalTemplate',
       'getSourceContract',
       'initProject',
       'inspectReport',
@@ -422,7 +295,6 @@ describe('agent discovery contract', () => {
       'parseReviewTargetManifest',
       'serializeReviewArtifact',
       'sourceContract',
-      'validateExtensionProposal',
       'validateReport',
     ];
     expect(publicExportIssues(Object.keys(publicApi), expectedExports)).toEqual([]);
@@ -435,6 +307,7 @@ describe('agent discovery contract', () => {
       types: [
         'AppliedFix',
         'BrandThemeRole',
+        'BuildManifestDefaults',
         'BuildReportOptions',
         'BuildReportResult',
         'CreateBrandThemeOptions',
@@ -443,9 +316,6 @@ describe('agent discovery contract', () => {
         'DiagnosticFix',
         'DirectiveName',
         'ExampleContract',
-        'ExtensionProposal',
-        'ExtensionProposalValidation',
-        'ExtensionTrustBoundary',
         'FixReportOptions',
         'FixReportResult',
         'GenerateSitemapOptions',
@@ -678,8 +548,6 @@ const generatedProjectionPaths = [
   'docs/generated/source.schema.json',
   'docs/generated/theme.schema.json',
   'docs/generated/source-contract.json',
-  'docs/generated/extension-proposal.schema.json',
-  'docs/generated/extension-proposal.template.json',
   'examples/manifest.json',
   'examples/landing/brief.md',
   'examples/document/brief.md',

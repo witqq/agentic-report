@@ -185,7 +185,7 @@ export const diff = defineBlock({
   definition: diffDefinition(),
   validate: validateDiff,
   enhance: enhanceDiff,
-  styles: 'package',
+  feature: 'diff',
   staticEquivalent:
     'The change as a code block with old and new line numbers and a count of added and removed lines.',
   examples: [

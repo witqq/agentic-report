@@ -1,0 +1,9 @@
+@layer components {
+  a.semantic-source-link:hover {
+    text-decoration-color: currentcolor;
+  }
+
+  span.semantic-source-link[data-source-link-neutralized] {
+    color: var(--color-text-muted);
+  }
+}

@@ -32,11 +32,17 @@ Russian Markdown entries as direct source routes; staging copies those bytes wit
 rewriting them.
 
 The landing is an ordinary multi-scene visual narrative whose first viewport contains the product value,
-a copyable skill-install command, actions, and a source-linked capture from a built example. Its style chooser, author path, public gallery, selected-text Review,
+actions, and a generated visual result. Its style chooser, author path, public gallery, selected-text Review,
 agent setup, and trust boundary all come from the public declarative grammar. `website/routes.json` stages
 independent pages for every starter, the complete visual/interactive/data catalogs, Terminal and Cinematic
 showcases, the Executive brief, Motion showcase, decision showcases, and Review/Response workspaces. Their images are previews; the live
 bilingual pages and direct English/Russian Markdown routes are the authoritative proof.
+
+The landing's page previews come in pairs, one per colour scheme, so a dark landing shows no light page.
+`website/landing/assets/screenshots.json` names each example, its light `file` and its `darkFile`; after
+`pnpm build`, `node --experimental-strip-types scripts/capture-site-screenshots.ts` rebuilds every example as
+one file, switches it to each scheme at 1280×800 on the stopped page clock, and rewrites both files. The
+landing shows each pair as `![…](assets/<file>){dark="assets/<darkFile>"}`.
 
 Site assembly adds one compact `Made with Moira` footer to every staged HTML page. The footer links to
 `https://moira-mcp.com/`, makes no runtime request, and is deliberately owned by the public-site

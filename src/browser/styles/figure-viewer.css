@@ -1,0 +1,127 @@
+@layer components {
+  .figure-viewer-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.35rem;
+  }
+
+  .figure-viewer-bar[hidden] {
+    display: none;
+  }
+
+  .figure-viewer {
+    --visualization-surface: var(--role-component-bg);
+    --visualization-foreground: var(--role-component-fg);
+    --visualization-muted: var(--role-muted-fg);
+    --visualization-control: var(--role-control-bg);
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  .figure-viewer[open] {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .figure-viewer::backdrop {
+    background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+  }
+
+  .figure-viewer-bar-top {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+    padding: 0.5rem max(0.75rem, env(safe-area-inset-right)) 0.5rem
+      max(0.75rem, env(safe-area-inset-left));
+  }
+
+  .figure-viewer-title {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+    overflow: hidden;
+    color: var(--color-heading);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-strong);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .figure-viewer-controls {
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  .figure-viewer-viewport {
+    position: relative;
+    overflow: hidden;
+    background: var(--visualization-surface);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    overscroll-behavior: contain;
+  }
+
+  .figure-viewer-viewport[data-viewer-dragging] {
+    cursor: grabbing;
+  }
+
+  .figure-viewer-viewport:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: -2px;
+  }
+
+  .figure-viewer-stage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+  }
+
+  .figure-viewer-stage > svg {
+    min-width: 0;
+    color: var(--visualization-foreground);
+  }
+
+  .figure-viewer-html > table {
+    overflow: visible;
+    max-width: none;
+  }
+
+  .figure-viewer-hint {
+    max-width: none;
+    margin: 0;
+    border-top: 1px solid var(--color-border);
+    padding: 0.4rem 0.75rem max(0.4rem, env(safe-area-inset-bottom));
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    :root:not([data-motion-level='none']) .figure-viewer[open] {
+      transition: opacity 200ms ease-out;
+    }
+    @starting-style {
+      :root:not([data-motion-level='none']) .figure-viewer[open] {
+        opacity: 0;
+      }
+    }
+  }
+
+  @media print {
+    .figure-viewer,
+    .figure-viewer-bar {
+      display: none;
+    }
+  }
+}

@@ -132,7 +132,7 @@ function sourceLinkLabelMaximumLength(sourceLink: DirectiveDefinition): number {
 export const sourceLink = defineBlock({
   definition,
   enhance: enhanceSourceLink,
-  styles: 'package',
+  feature: 'source-link',
   staticEquivalent:
     'The file and line as a link to the editor helper; a shared page keeps only the file name and line as text.',
   examples: [

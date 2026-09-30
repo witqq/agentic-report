@@ -1,0 +1,83 @@
+@layer components {
+  .semantic-severity {
+    --severity-signal: var(--color-text-muted);
+  }
+
+  .semantic-severity[data-severity='blocking'],
+  .semantic-finding[data-severity='blocking'] {
+    --severity-signal: var(--status-returned);
+  }
+
+  .semantic-severity[data-severity='major'],
+  .semantic-finding[data-severity='major'] {
+    --severity-signal: var(--status-review);
+  }
+
+  .semantic-severity[data-severity='minor'],
+  .semantic-finding[data-severity='minor'] {
+    --severity-signal: var(--color-accent);
+  }
+
+  .semantic-findings-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.1rem;
+    margin: 0 0 1rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .semantic-findings-summary > .semantic-severity {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .semantic-findings-summary > .semantic-severity::before,
+  .semantic-finding-head > .semantic-severity::before {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--severity-signal);
+    content: '';
+  }
+
+  .semantic-severity-count {
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-strong);
+  }
+
+  .semantic-finding {
+    --severity-signal: var(--color-border-strong);
+    margin: 0;
+    border-top: 1px solid var(--color-border);
+    border-left: 2px solid var(--severity-signal);
+    padding: 0.85rem 0 0.95rem 1.1rem;
+  }
+
+  .semantic-finding:last-child {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .semantic-finding-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.3rem 0.8rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .semantic-finding-head > .semantic-severity {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .semantic-finding-location {
+    overflow-wrap: anywhere;
+  }
+
+  :root[data-theme-console='on'] .semantic-finding {
+    border-top-style: dashed;
+  }
+}

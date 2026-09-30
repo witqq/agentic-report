@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc"><title id="title">Kestrel station map</title><desc id="desc">A stretch of coast with six stations, K1 to K6: three around the harbour, one on the lighthouse point, one by the dunes and one at the coastguard hut.</desc>
+<rect width="1200" height="700" fill="#0f151c"/>
+<path d="M560 0 C600 70 660 110 700 170 C740 210 790 190 830 150 C860 120 900 130 940 170 C1000 230 1060 250 1200 240 L1200 700 L0 700 L0 520 C90 500 170 470 240 430 C300 395 330 360 350 330 C372 300 410 290 450 300 C500 312 520 280 520 230 C520 160 530 80 560 0 Z" fill="#2b323c" stroke="#7d8b9b" stroke-width="4"/>
+<path d="M450 300 L405 250 L392 236" fill="none" stroke="#8795a5" stroke-width="16" stroke-linecap="round"/>
+<path d="M352 330 L318 310 L300 300" fill="none" stroke="#8795a5" stroke-width="16" stroke-linecap="round"/>
+<path d="M455 305 L470 330" fill="none" stroke="#8795a5" stroke-width="12" stroke-linecap="round"/>
+<g fill="#c76841" stroke="#0f151c" stroke-width="6">
+<circle cx="392" cy="236" r="16"/><circle cx="830" cy="150" r="16"/><circle cx="470" cy="330" r="16"/><circle cx="880" cy="470" r="16"/><circle cx="1080" cy="300" r="16"/><circle cx="300" cy="300" r="16"/>
+</g>
+<g font-family="system-ui,sans-serif" font-size="44" font-weight="600" fill="#e6ebf0">
+<text x="332" y="216">K1</text><text x="858" y="130">K2</text><text x="394" y="382">K3</text><text x="908" y="502">K4</text><text x="1000" y="360">K5</text><text x="282" y="362">K6</text>
+</g>
+<g font-family="system-ui,sans-serif" font-size="40" font-weight="600" fill="#e6ebf0"><text x="90" y="110">N</text></g>
+<path d="M104 130 L104 190 M104 130 L92 152 M104 130 L116 152" stroke="#e6ebf0" stroke-width="5" fill="none" stroke-linecap="round"/>
+</svg>

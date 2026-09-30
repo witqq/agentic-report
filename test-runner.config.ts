@@ -50,11 +50,19 @@ const config: Config = {
       type: 'playwright',
       command: 'pnpm exec playwright test --config=playwright.config.ts',
       resultFile: 'e2e.json',
-      // CPU-throttled effect checks need the browser worker to own the CPU while measuring frame
-      // tasks. A second worker can push an otherwise passing task over the 50 ms budget. The suite
-      // hosted Ubuntu browser corpus needs about 27 minutes; leave room for the last tests and JSON
-      // reporter to finish. Individual test deadlines and the 50 ms frame budget stay unchanged.
+      // The hosted Ubuntu browser corpus needs about 27 minutes; leave room for the last tests and JSON
+      // reporter to finish. Timed budgets are not here: they run alone in the `perf` suite below.
       timeout: 1_900_000,
+      workers: 1,
+    },
+    {
+      // Timed checks (`tests/perf`): tasks and frame intervals against a budget at 4× CPU slowdown.
+      // They run alone through `pnpm test:perf`, never in `pnpm test`, `pnpm test:e2e` or `pnpm verify`.
+      name: 'perf',
+      type: 'playwright',
+      command: 'pnpm exec playwright test --config=playwright.perf.config.ts',
+      resultFile: 'perf.json',
+      timeout: 1_200_000,
       workers: 1,
     },
   ],

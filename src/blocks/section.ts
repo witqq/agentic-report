@@ -30,6 +30,7 @@ import {
 } from './define-block.js';
 import { hasClassName, hastContainsTag, stringProperty, takeStringProperty } from './hast.js';
 import { type DirectiveNode, isDirectiveNode } from './mdast.js';
+import { numberSlide } from './slide-steps.js';
 
 /**
  * The section family: the labelled top-level section, its lead paragraph, the beats of a steps
@@ -330,11 +331,11 @@ function notesDefinition(): DirectiveDefinition & { readonly name: 'notes' } {
   return {
     name: 'notes',
     description:
-      'Speaker notes of a slide: never shown to the audience, shown under the slide in the presenter view (?view=presenter).',
+      'Speaker notes of a slide — a presentation section or a deck slide: never shown to the audience; on a presentation page the presenter view (?view=presenter) shows them under the slide.',
     forms: ['container'],
     attributes: [],
     children: 'markdown',
-    placement: { requiredParent: 'section' },
+    placement: { requiredParent: ['section', 'slide'] },
     behavior: { renderer: 'semantic-container', resource: 'none', runtime: 'package-owned-slides' },
     sanitizer: { tagName: 'aside', className: 'semantic-notes', properties: ['dataSemantic'] },
     security: { authorCode: false, rawHtml: false, localResourceOnly: false },
@@ -1024,14 +1025,7 @@ function enhanceSlides(tree: HastRoot, strings: PackageStrings): void {
   let slide = 0;
   for (const child of tree.children) {
     if (child.type !== 'element' || !isSection(child)) continue;
-    child.properties.dataSlide = String(slide);
-    let step = 0;
-    visit(child, 'element', (node: Element) => {
-      if (node.properties.dataSemantic !== 'appear') return;
-      step += 1;
-      node.properties.dataStep = String(step);
-    });
-    child.properties.dataSlideSteps = String(step);
+    numberSlide(child, slide);
     slide += 1;
   }
 }
@@ -1127,7 +1121,7 @@ export const section = defineBlock<undefined, SectionMessages>({
   enhance: enhanceSection,
   strings: SECTION_MESSAGES,
   finalize: finalizeSections,
-  styles: 'package',
+  feature: 'core',
   staticEquivalent:
     'A titled page section in reading order: entrances, scenes and pointer effects are off, and a steps scene reads as its picture followed by the beats.',
   examples: [
@@ -1140,14 +1134,14 @@ export const section = defineBlock<undefined, SectionMessages>({
 export const lead = defineBlock({
   definition: leadDefinition(),
   enhance: enhanceLead,
-  styles: 'package',
+  feature: 'core',
   staticEquivalent: 'The first paragraph of a section, set larger.',
   examples: ['::::section{title="Result"}\n:::lead\nThe change is ready.\n:::\n::::\n'],
 });
 
 export const beat = defineBlock({
   definition: beatDefinition(),
-  styles: 'package',
+  feature: 'core',
   staticEquivalent: 'A titled step read after the section picture, in order, nothing pinned.',
   examples: [
     '::::::section{title="How it works" scene="steps"}\n:::::diagram{title="Flow" description="Request to store."}\n::node{id="api" label="API"}\n::node{id="store" label="Store"}\n::edge{from="api" to="store"}\n:::::\n\n:::beat{title="One" focus="api"}\nThe request arrives.\n:::\n\n:::beat{title="Two" focus="store"}\nIt is stored.\n:::\n::::::\n',
@@ -1156,7 +1150,7 @@ export const beat = defineBlock({
 
 export const notes = defineBlock({
   definition: notesDefinition(),
-  styles: 'package',
+  feature: 'slides',
   staticEquivalent:
     'Speaker notes that never appear on the page; only the presenter view shows them.',
   examples: ['::::section{title="Slide"}\nSlide text.\n\n:::notes\nSay this aloud.\n:::\n::::\n'],

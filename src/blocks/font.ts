@@ -27,10 +27,10 @@ function fontDefinition(): DirectiveDefinition {
       {
         name: 'role',
         description:
-          'Text role the font sets: body text and controls, headings and section titles, or code.',
+          'Text role the font sets: body text and controls, headings and section titles, monospaced labels and metadata, or code blocks and inline code.',
         required: false,
         default: 'body',
-        constraint: { kind: 'enum', values: ['body', 'heading', 'mono'] },
+        constraint: { kind: 'enum', values: ['body', 'heading', 'mono', 'code'] },
         renderProperty: 'dataFontRole',
         invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
       },
@@ -55,7 +55,7 @@ function fontDefinition(): DirectiveDefinition {
 /** The resource step turns the declaration into an embedded `@font-face`; the element stays hidden. */
 export const font = defineBlock({
   definition: fontDefinition(),
-  styles: 'package',
+  feature: 'core',
   staticEquivalent: 'Nothing visible: the page text is set in the registered font.',
   examples: ['::font{src="reader.woff" family="Reader" role="body"}\n\nBody text.\n'],
 });

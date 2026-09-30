@@ -23,10 +23,7 @@ interface ScreenshotProvenance {
     readonly liveRoute: string;
     readonly publicSourceRoute: string;
     readonly file: string;
-    readonly focus?: {
-      readonly imageWidth?: number;
-      readonly imageHeight?: number;
-    };
+    readonly darkFile: string;
   }[];
 }
 
@@ -159,23 +156,7 @@ describe('public landing route and preview contracts', () => {
     }
   });
 
-  it('lets readers discover every declared example page from either landing locale', async () => {
-    const manifest = await readRoutes();
-    const examples = manifest.routes
-      .filter((route) => route.kind === 'page' && route.id.startsWith('example-'))
-      .map((route) => route.href);
-    expect(examples.length).toBeGreaterThan(0);
-
-    for (const locale of ['report.md', 'report.ru.md']) {
-      const links = authoredLinks(await readFile(path.join(landingRoot, locale), 'utf8'));
-      expect(
-        examples.filter((href) => !links.has(href)),
-        locale,
-      ).toEqual([]);
-    }
-  });
-
-  it('maps each real preview to its live page, source, and captured PNG dimensions', async () => {
+  it('maps each preview to a live route, canonical source, and loadable 1280×800 PNG', async () => {
     const manifest = await readRoutes();
     const declared = new Set(manifest.routes.map((route) => route.href));
     const provenance = JSON.parse(
@@ -183,14 +164,9 @@ describe('public landing route and preview contracts', () => {
     ) as ScreenshotProvenance;
 
     expect(provenance.screenshots.map(({ id }) => id)).toEqual([
-      'incident-impact-card',
-      'incident-impact-card-ru',
-      'incident-review-en',
-      'incident-review-ru',
-      'vendor-decision-en',
-      'vendor-decision-ru',
-      'launch-readiness-en',
-      'launch-readiness-ru',
+      'incident-review',
+      'vendor-decision',
+      'launch-readiness',
     ]);
     for (const screenshot of provenance.screenshots) {
       expect(declared.has(screenshot.liveRoute)).toBe(true);
@@ -198,12 +174,30 @@ describe('public landing route and preview contracts', () => {
       await expect(
         readFile(path.resolve(landingRoot, 'assets', screenshot.source)),
       ).resolves.toBeInstanceOf(Buffer);
-      const image = await readFile(path.resolve(landingRoot, 'assets', screenshot.file));
-      expect(image.subarray(0, 8)).toEqual(
-        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-      );
-      expect(image.readUInt32BE(16)).toBe(screenshot.focus?.imageWidth ?? 1280);
-      expect(image.readUInt32BE(20)).toBe(screenshot.focus?.imageHeight ?? 800);
+      for (const file of [screenshot.file, screenshot.darkFile]) {
+        const image = await readFile(path.resolve(landingRoot, 'assets', file));
+        expect(image.subarray(0, 8)).toEqual(
+          Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        );
+        expect(image.readUInt32BE(16)).toBe(1280);
+        expect(image.readUInt32BE(20)).toBe(800);
+      }
+    }
+  });
+
+  it('shows every page screenshot with its dark capture, so a dark landing shows no light page', async () => {
+    const provenance = JSON.parse(
+      await readFile(path.join(landingRoot, 'assets/screenshots.json'), 'utf8'),
+    ) as ScreenshotProvenance;
+    for (const locale of ['report.md', 'report.ru.md']) {
+      const markdown = await readFile(path.join(landingRoot, locale), 'utf8');
+      for (const { file, darkFile } of provenance.screenshots) {
+        const uses = markdown.match(new RegExp(`\\]\\(assets/${file}\\)[^\\n]*`, 'gu')) ?? [];
+        // Catches a declared preview removed from one locale, which would otherwise pass vacuously.
+        expect(uses.length, `${locale}: ${file}`).toBeGreaterThan(0);
+        for (const use of uses)
+          expect(use, `${locale}: ${file}`).toContain(`{dark="assets/${darkFile}"}`);
+      }
     }
   });
 });

@@ -25,7 +25,7 @@ language: ru
 
 ::::::section{title="Карта доказательств" id="evidence" nav="Данные" recipe="evidence"}
 
-![Движение доказательств от источника через проверку к решению о выпуске](assets/architecture.ru.svg)
+![Движение доказательств от источника через проверку к решению о выпуске](assets/architecture.ru.svg){dark="assets/architecture-dark.ru.svg"}
 
 ::asset[Скачать карту доказательств]{src="assets/architecture.ru.svg"}
 

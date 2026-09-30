@@ -25,12 +25,16 @@ The category is a recommendation, not a limit: any directive, mode or effect of 
 
 One row per file under `assets/`: where it came from and under which licence. Origin is `build-screenshot`, `screencast`, `diagram`, `photo`, `drawn`, `placeholder` (a stand-in for real material still to come, marked as such on the page), or `generated` with its reason in Source.
 
-| File                 | Origin | Source                                                              | Licence       |
-| -------------------- | ------ | ------------------------------------------------------------------- | ------------- |
-| `layout-map.svg`     | drawn  | drawn for this page: four layouts sharing one foundation            | project (MIT) |
-| `layout-map.ru.svg`  | drawn  | Russian version of `layout-map.svg`                                 | project (MIT) |
-| `compare-before.svg` | drawn  | drawn for this page: a page before a change, for the `compare` form | project (MIT) |
-| `compare-after.svg`  | drawn  | drawn for this page: the same page after the change                 | project (MIT) |
+| File                      | Origin | Source                                                                                   | Licence       |
+| ------------------------- | ------ | ---------------------------------------------------------------------------------------- | ------------- |
+| `layout-map.svg`          | drawn  | drawn for this page: four layouts sharing one foundation                                 | project (MIT) |
+| `layout-map-dark.svg`     | drawn  | dark-scheme variant of `layout-map.svg`, the same drawing in the page's dark colours     | project (MIT) |
+| `layout-map.ru.svg`       | drawn  | Russian version of `layout-map.svg`                                                      | project (MIT) |
+| `layout-map-dark.ru.svg`  | drawn  | dark-scheme variant of `layout-map.ru.svg`, the same drawing in the page's dark colours  | project (MIT) |
+| `compare-before.svg`      | drawn  | drawn for this page: a page before a change, for the `compare` form                      | project (MIT) |
+| `compare-before-dark.svg` | drawn  | dark-scheme variant of `compare-before.svg`, the same drawing in the page's dark colours | project (MIT) |
+| `compare-after.svg`       | drawn  | drawn for this page: the same page after the change                                      | project (MIT) |
+| `compare-after-dark.svg`  | drawn  | dark-scheme variant of `compare-after.svg`, the same drawing in the page's dark colours  | project (MIT) |
 
 ## Unresolved content facts
 

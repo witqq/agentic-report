@@ -38,7 +38,7 @@ export const timeline = defineBlock({
   ),
   validate: validateVisualization,
   enhance: enhanceTimeline,
-  styles: 'package',
+  feature: 'timeline',
   staticEquivalent: 'The events as an ordered list with their dates, all shown at once.',
   examples: [TIMELINE_EXAMPLE],
 });
@@ -62,7 +62,7 @@ export const event = defineBlock({
       requiredParent: 'timeline',
     },
   ),
-  styles: 'package',
+  feature: 'timeline',
   staticEquivalent: 'One dated entry with its title and detail.',
   examples: [TIMELINE_EXAMPLE],
 });

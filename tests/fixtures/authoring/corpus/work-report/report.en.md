@@ -18,9 +18,13 @@ Copy this ordinary paragraph into a message.
 The work is described declaratively.
 :::
 
+:::table{layout="stack"}
+
 | Task        | State |
 | ----------- | ----- |
 | Local build | Ready |
+
+:::
 
 :::decision{title="Decision" id="corpus-decision" required=true}
 ::decision-option{id="ship" label="Ship"}

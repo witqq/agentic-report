@@ -106,14 +106,77 @@ export interface Diagnostic {
   readonly related?: readonly Diagnostic[];
 }
 
+/** Caller policy for controls the author has not specified; authored metadata always wins. */
+export type BuildManifestDefaults = {
+  readonly [
+    Field in keyof Pick<ReportManifestInput, 'topbar' | 'schemeToggle' | 'themeSwitcher' | 'review'>
+  ]?: ReportManifestInput[Field] | undefined;
+};
+
 export interface BuildReportOptions {
   readonly input: string;
+  /** Defaults below the project manifest and primary frontmatter, shared by every locale. */
+  readonly manifestDefaults?: BuildManifestDefaults;
   readonly output?: string;
   readonly format?: OutputFormat;
   readonly review?: string;
   readonly share?: boolean;
   /** Absolute public http(s) URL of the page; overrides the manifest `url`. */
   readonly url?: string;
+  /**
+   * The previous edition the reader already saw: a page built by this package (`.html` or a directory
+   * with `index.html`) or its source (`.md` or a source directory). The page then shows what changed.
+   */
+  readonly since?: string;
+}
+
+/** A block of the new edition that differs from the previous one; never carries the block's text. */
+export interface EditionBlockChange {
+  readonly kind: string;
+  readonly status: 'changed' | 'added' | 'removed' | 'moved';
+  /** Where the block stands in the new source; a removed block has `previousOrder` instead. */
+  readonly source?: {
+    readonly file: string;
+    readonly line: number;
+    readonly column: number;
+    readonly endLine: number;
+    readonly endColumn: number;
+  };
+  /** Position of a removed block in the previous edition's record. */
+  readonly previousOrder?: number;
+  /** Words inserted and deleted inside changed prose. */
+  readonly words?: { readonly added: number; readonly removed: number };
+  /** Title of the section a moved block came from. */
+  readonly movedFrom?: string;
+}
+
+/** A section with changes; `''` is the page opening before the first section. */
+export interface EditionSectionChange {
+  readonly id: string;
+  /** The section's contents label, as `inspect` already reports it. */
+  readonly title: string;
+  readonly status: 'changed' | 'added' | 'removed';
+  readonly renamedFrom: string | null;
+  /** The section stands in another order among the others. */
+  readonly moved: boolean;
+  readonly blocks: readonly EditionBlockChange[];
+}
+
+/** What changed since the previous edition, per the design of `--since`: counts and places, no text. */
+export interface EditionChanges {
+  readonly locale: string;
+  readonly since: { readonly edition: number; readonly reportRevision: string };
+  readonly edition: number;
+  /** Nothing the reader sees changed; the page carries no change layer. */
+  readonly unchanged: boolean;
+  readonly totals: {
+    readonly unchanged: number;
+    readonly changed: number;
+    readonly added: number;
+    readonly removed: number;
+    readonly moved: number;
+  };
+  readonly sections: readonly EditionSectionChange[];
 }
 
 export interface BuildReportResult {
@@ -128,6 +191,8 @@ export interface BuildReportResult {
   readonly warnings: readonly Diagnostic[];
   /** Расширения страницы: использования, вес упакованного кода, заметки. Нет у страницы без них. */
   readonly extensions?: readonly ExtensionBuildReport[];
+  /** What changed since the edition passed as `since`; present only with `since`. */
+  readonly changes?: EditionChanges;
 }
 
 export type SnapshotScheme = 'light' | 'dark';
@@ -140,6 +205,8 @@ export interface SnapshotReportOptions {
   readonly widths?: readonly number[];
   readonly schemes?: readonly SnapshotScheme[];
   readonly motions?: readonly SnapshotMotion[];
+  /** Previous edition, as for `build`: the photographed page carries its change layer. */
+  readonly since?: string;
 }
 
 export interface SnapshotShot {
@@ -184,6 +251,33 @@ export interface MeasuredContrast {
   readonly opacity: number;
 }
 
+/** One table as `snapshot --measure` sees it. */
+export interface MeasuredTable {
+  readonly element: string;
+  /** Width of the table's content in pixels, including what its scroll box hides. */
+  readonly width: number;
+  /** Visible width of the box that holds it: its own scroll box, a scrolling ancestor, or its parent. */
+  readonly containerWidth: number;
+  /** `width` divided by the window width. */
+  readonly viewportShare: number;
+  /** The table scrolls sideways inside its box. */
+  readonly scrolls: boolean;
+  /** Share of the cells' content area not covered by their text lines or pictures, 0–1. */
+  readonly emptyShare: number;
+  /** Marked `data-table-layout="scroll"`: declared scrollable, so its width is not a defect. */
+  readonly scrollLayout: boolean;
+}
+
+/** A large block whose mean luminance is far from the page background of the current scheme. */
+export interface MeasuredBlock {
+  readonly element: string;
+  /** Mean relative luminance of the block, 0 (black) to 1 (white): pixels for an image, fill for a surface. */
+  readonly luminance: number;
+  readonly pageLuminance: number;
+  /** Share of the block's area whose luminance is 7:1 or more from the page; 1 for a solid surface. */
+  readonly share: number;
+}
+
 /** What `snapshot --measure` measures in the page at one width, scheme and motion setting. */
 export interface SnapshotPageMeasures {
   readonly pageHeight: number;
@@ -199,8 +293,15 @@ export interface SnapshotPageMeasures {
   readonly unmeasuredContrast: number;
   /** Text lines found under a fixed or sticky element at some scroll position (a full-width top bar excepted). */
   readonly coveredText: MeasuredFinding;
-  /** Vertical bands at least half a window high with no text, picture, border or fill; none for screens and slides. */
-  readonly emptyBands: readonly { readonly top: number; readonly height: number }[];
+  /**
+   * Vertical bands at least half a window high with no text, picture, border or fill, including the one
+   * below the last content; `next` names the element that ends the band. None for screens and slides.
+   */
+  readonly emptyBands: readonly {
+    readonly top: number;
+    readonly height: number;
+    readonly next?: string;
+  }[];
   /** Headings cut by their box, an ellipsis, a line clamp or the window edge. */
   readonly clippedHeadings: MeasuredFinding;
   readonly firstScreen: {
@@ -218,6 +319,92 @@ export interface SnapshotPageMeasures {
   readonly placeholders: number;
   /** Font families that failed to load. */
   readonly failedFonts: readonly string[];
+  readonly tables: {
+    readonly count: number;
+    /** Wider than 1.25 windows and not marked `data-table-layout="scroll"`. */
+    readonly wide: MeasuredFinding;
+    /** More than 70% of the cells' content area empty; a table shown as cards is not counted. */
+    readonly sparse: MeasuredFinding;
+    /** A filled table surface wider than the table's cells by more than a quarter of its track. */
+    readonly deadSurface: MeasuredFinding;
+    /** Text of a row's first or last cell within 4 px of the edge of the table's filled surface. */
+    readonly flushText: MeasuredFinding;
+    /** Defective tables first, then the widest. */
+    readonly samples: readonly MeasuredTable[];
+  };
+  /** The width most prose paragraphs share; `narrow` when a window of 480 px or less gives it under 88%. */
+  readonly readingColumn: {
+    readonly width: number;
+    readonly share: number;
+    readonly narrow: boolean;
+    readonly element?: string;
+  };
+  /**
+   * Inline `code` whose line breaks fall inside a word: not after a space or `/ . _ - : ( ,`, and not at a
+   * `<wbr>` the compiler inserted.
+   */
+  readonly codeBreaks: MeasuredFinding;
+  /**
+   * SVG text in a figure or diagram under 11 px on screen (`small`, also counted in `smallText`) or cut by
+   * the window width or a clipping frame (`clipped`); `count` is the labels with either, and the samples
+   * name their figure and SVG. A label hidden only by the sideways scroll of a diagram that has the
+   * full-screen viewer is reachable: it is `scrolled`, informational and not in `count`.
+   */
+  readonly diagramLabels: {
+    readonly count: number;
+    readonly small: number;
+    readonly clipped: number;
+    readonly scrolled: number;
+    readonly samples: readonly string[];
+  };
+  /**
+   * Images and surfaces of at least 120×80 px of which a fifth or more (and at least 120×80 px of area) is
+   * 7:1 or more in luminance from the page background — a light picture or panel on a dark page, a dark
+   * slab on a light one; primary actions and `tone="contrast"` bands are deliberate and excluded.
+   */
+  readonly offSchemeBlocks: { readonly count: number; readonly samples: readonly MeasuredBlock[] };
+  /**
+   * The composition of flow sections on a window wider than 48rem, measured against each section's prose
+   * column (the width most of its direct paragraphs share): `misaligned`, a top-level block of the section
+   * whose left edge is off the column's left edge by more than 2 px (a centred block excepted); `overrun`, a
+   * text-level block — heading, lead, paragraph, list, quote or disclosure — whose lines (a disclosure: its
+   * rules) run more than 24 px past the column's right edge; `emptyTrack`, a section whose column and every
+   * block take less than 60% of the section's track, leaving most of the screen beside it empty. `count`
+   * is their sum. A picture of a `media="bleed"` section reaching the section edge is not misaligned.
+   * Blocks inside an open disclosure count as blocks of its section. `codeWidth`, a code block whose width is
+   * neither the prose column nor the section's track (a third width beside its neighbours); `hollow`, a block
+   * wider than the column that paints a frame or fill (or holds an island frame) and whose ink — text, pictures,
+   * fields, the width an island reports — ends more than 48 px and a quarter of its width before its right edge.
+   * `headWide`, a block of the page's head (the title and whatever stands before the first section) whose box
+   * runs past the right edge of the flow sections; `tocGap`, a page whose content starts more than 96 px
+   * right of the docked table of contents (the column floats in the rest of the window). Not measured for
+   * `screens` and `slides`.
+   */
+  readonly sectionColumns: {
+    readonly count: number;
+    readonly misaligned: number;
+    readonly overrun: number;
+    readonly emptyTrack: number;
+    readonly codeWidth: number;
+    readonly hollow: number;
+    readonly headWide: number;
+    readonly tocGap: number;
+    readonly samples: readonly MeasuredColumnFinding[];
+  };
+}
+
+export interface MeasuredColumnFinding {
+  readonly element: string;
+  readonly kind:
+    'misaligned' | 'overrun' | 'empty-track' | 'code-width' | 'hollow' | 'head-wide' | 'toc-gap';
+  /** Width of the section's prose column, px. */
+  readonly column: number;
+  /**
+   * The block's left offset from the column (`misaligned`), how far it runs past it (`overrun`), the track
+   * width (`empty-track`), the code block's width (`code-width`), the empty width inside the frame (`hollow`),
+   * how far the head block runs past the column (`head-wide`) or the gap to the contents (`toc-gap`), px.
+   */
+  readonly value: number;
 }
 
 export interface SnapshotMeasurement extends SnapshotPageMeasures {
@@ -230,7 +417,9 @@ export interface SnapshotMeasurement extends SnapshotPageMeasures {
   readonly pageErrors: readonly string[];
   /**
    * Number of the defects above: every finding, band, error, failed font, placeholder and cut stop, overflow,
-   * a title outside the first window, and a primary action the page has but not in the first window.
+   * a title outside the first window, a primary action the page has but not in the first window, wide and
+   * sparse tables, tables with a dead or flush surface, a narrow reading column on a phone, code broken inside a word, clipped diagram labels
+   * (small ones are already in `smallText`), off-scheme blocks and section blocks off their prose column.
    */
   readonly defects: number;
 }
@@ -313,6 +502,8 @@ export interface ValidateReportOptions {
   readonly format?: OutputFormat;
   readonly review?: string;
   readonly url?: string;
+  /** Previous edition, as for `build`. */
+  readonly since?: string;
 }
 
 export interface ValidateReportResult {
@@ -356,6 +547,8 @@ export interface InspectReportOptions {
   readonly format?: OutputFormat;
   readonly review?: string;
   readonly url?: string;
+  /** Previous edition, as for `build`. */
+  readonly since?: string;
 }
 
 export interface InspectReportResult {
@@ -379,6 +572,8 @@ export interface InspectReportResult {
   };
   /** Расширения, которые объявила страница, и сколько раз она их использовала. */
   readonly extensions?: readonly InspectedExtension[];
+  /** What changed since the edition passed as `since`; present only with `since`. */
+  readonly changes?: EditionChanges;
   readonly catalog: {
     readonly commands: Readonly<Record<string, string>>;
     readonly formats: readonly OutputFormat[];
@@ -459,6 +654,20 @@ export interface PageStructure {
    */
   readonly movingElements: number;
   readonly cardGroups: readonly PageCardGroup[];
+  /** Headings (`h1`–`h6`, section and block titles included) whose text carries an emoji. */
+  readonly emojiHeadings: number;
+  readonly emptyBlocks: PageEmptyBlocks;
+}
+
+/**
+ * Blocks that reached the page with nothing in them — usually a data `each` over an empty list: a section
+ * with only its title, a table with a header and no rows, a `cards` group without cards. Counts only: data
+ * for the skill's advice, not a judgement of the content.
+ */
+export interface PageEmptyBlocks {
+  readonly sections: number;
+  readonly tables: number;
+  readonly cardGroups: number;
 }
 
 export interface InspectReviewOptions {

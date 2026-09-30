@@ -71,7 +71,7 @@ language: ru
 :::
 :::::
 
-::::section{title="Ваш ход" id="question"}
+::::::section{title="Ваш ход" id="question"}
 :::::response{title="Вопрос к залу" id="room-check"}
 ::::question{id="use" kind="single" title="Где бы вы показали отчёт слайдами?"}
 ::option{id="review" label="Обзор в команде"}
@@ -79,4 +79,4 @@ language: ru
 ::option{id="lesson" label="Урок для новичков"}
 ::::
 :::::
-::::
+::::::

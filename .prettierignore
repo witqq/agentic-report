@@ -5,3 +5,5 @@ test-results/
 agent_temp_files_local/
 moira-ws/
 *.tgz
+# The palettes shared with agentic-screencast are kept byte for byte as in that repository.
+src/authoring/shared-palettes.json

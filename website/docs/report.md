@@ -20,23 +20,23 @@ with content-addressed assets.
 Write the opening thesis as one emphasized prose paragraph, not as a callout or custom HTML component.
 :::
 
-Use Node.js 24.18.0 or newer. Start with the [agent quickstart](agent/index.html), retrieve the
-[direct Markdown version](agent/index.md), or install the [agent skill](../skills/agentic-report/SKILL.md).
-
-```sh
-npx --yes agentic-report@0.19.0 init ./my-page --starter landing --json
-# Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.19.0 build ./my-page --output ./my-page.html --json
-```
-
-Open `my-page.html` through `file://`. Build validates before publishing; use `validate` or `inspect` only
-when a separate diagnostic or source-inventory result is useful.
-
 :::actions
 ::action[Open the quickstart]{href="agent/index.html" kind="primary"}
 ::action[Read agent Markdown]{href="agent/index.md" kind="secondary"}
 ::action[Inspect llms.txt]{href="../llms.txt" kind="quiet"}
 :::
+
+Use Node.js 24.18.0 or newer. Start with the [agent quickstart](agent/index.html), retrieve the
+[direct Markdown version](agent/index.md), or install the [agent skill](../skills/agentic-report/SKILL.md).
+
+```sh
+npx --yes agentic-report@0.20.0 init ./my-page --starter landing --json
+# Edit ./my-page/report.md and its local assets.
+npx --yes agentic-report@0.20.0 build ./my-page --output ./my-page.html --json
+```
+
+Open `my-page.html` through `file://`. Build validates before publishing; use `validate` or `inspect` only
+when a separate diagnostic or source-inventory result is useful.
 
 ::::
 
@@ -48,14 +48,13 @@ If you prefer to inspect the implementation instead of executing the published `
 package, clone a specific release tag and run the compiler directly from its build:
 
 ```sh
-git clone --branch v0.19.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.20.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
 
 # Review the source, package.json, pnpm-lock.yaml, and lifecycle scripts first.
 pnpm install --frozen-lockfile
-pnpm exec playwright install chromium
 pnpm verify
 pnpm build
 
@@ -173,17 +172,6 @@ The authoritative syntax, confinement boundary, output modes, and security model
 Run `describe --json`, `schema`, and `examples --json` against the installed release for machine-readable
 runtime truth.
 :::
-:::card{title="Programmatic API"}
-The published Node.js root entry covers page operations, discovery, review artifacts, and diagnostics.
-
-[Read the Node API guide](../skills/agentic-report/references/node-api.md)
-:::
-:::card{title="Effect extensions"}
-The extension guide explains when to declare an effect; the effect API defines its module and lifecycle.
-
-[Choose an extension](../skills/agentic-report/references/extensions.md) ·
-[Read the effect API](../skills/agentic-report/references/effect-api.md)
-:::
 ::::
 
 :::::
@@ -231,6 +219,12 @@ its [English source](../examples/response-workspace/report.md) and
 
 Use `copyable` when ordinary prose should be pasted elsewhere. It keeps Markdown typography/wrapping and
 copies only visible rendered text through the localized package control.
+
+A Markdown table wraps its prose columns in the width of its column, and on a narrow track it turns each
+row into a card labelled with the column headers when its columns cannot fit readably. Wrap it in
+`:::table{layout="stack"}` to show cards on every narrow track, or `:::table{layout="scroll"}` to keep a
+wide numeric grid that scrolls sideways with its first column in view. Inline code wraps only between
+the parts of a path or identifier.
 
 ::::
 

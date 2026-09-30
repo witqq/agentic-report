@@ -101,11 +101,19 @@ test('wide tables stay inside their owner and show that they scroll', async ({
         ownerRight: owner.getBoundingClientRect().right,
         overflows: element.scrollWidth > element.clientWidth + 1,
         cue: getComputedStyle(element).backgroundImage,
+        cards: getComputedStyle(element.querySelector('tr') as Element).display !== 'table-row',
       };
     });
     expect(table.right, String(viewport.width)).toBeLessThanOrEqual(table.ownerRight + 1);
-    expect(table.cue).toContain('radial-gradient');
-    if (viewport.width === 390) expect(table.overflows).toBe(true);
+    // A grid carries the scroll cue; on a phone this table cannot fit readably, so its rows become
+    // labelled cards (the `auto` table layout) and nothing scrolls sideways.
+    if (viewport.width === 390) {
+      expect(table.cards).toBe(true);
+      expect(table.overflows).toBe(false);
+    } else {
+      expect(table.cards).toBe(false);
+      expect(table.cue).toContain('radial-gradient');
+    }
   }
 });
 
@@ -159,7 +167,9 @@ test('cards, table headers, and pictures stay readable in every tone and theme',
     for (const { text, ratio } of ratios) {
       expect(ratio, `${scheme}:${text}`).toBeGreaterThanOrEqual(4.5);
     }
-    // A transparent picture gets a light paper exactly where its surface is dark, in either theme.
+    // A transparent picture gets no paper from a built-in theme in either scheme: the surface shows through
+    // and the picture stays in the page's scheme (a drawing in dark ink ships a `{dark}` variant instead,
+    // tests/e2e/scheme-media.spec.ts). The counterexample is a light paper slab on a dark surface.
     const pictures = await page.evaluate(() => {
       const canvas = document.createElement('canvas');
       canvas.width = 1;
@@ -191,12 +201,10 @@ test('cards, table headers, and pictures stay readable in every tone and theme',
         };
       });
     });
+    expect(pictures.some(({ darkSurface }) => darkSurface)).toBe(true);
     for (const picture of pictures) {
-      expect(picture.backed, `${scheme}:${picture.id}`).toBe(picture.darkSurface);
+      expect(picture.backed, `${scheme}:${picture.id}`).toBe(false);
     }
-    expect(
-      pictures.find(({ id }) => id === (scheme === 'dark' ? 'long-stage' : 'contrast'))?.backed,
-    ).toBe(true);
   }
 });
 
@@ -208,7 +216,11 @@ test('a diagram that must scroll opens at the start of its flow', async ({ page 
     .poll(() =>
       frame.evaluate((element) => {
         const box = element.getBoundingClientRect();
-        const root = element.querySelector('[data-layer="0"]')?.getBoundingClientRect();
+        // The drawing shown: on a phone a wide flow is drawn in its narrow form, the page form is hidden.
+        const shown = [...element.querySelectorAll('svg')].find(
+          (svg) => svg.getClientRects().length > 0,
+        );
+        const root = shown?.querySelector('[data-layer="0"]')?.getBoundingClientRect();
         return {
           overflows: element.scrollWidth > element.clientWidth + 1,
           rootVisible:
@@ -225,12 +237,14 @@ test('a diagram shows a view that fits its frame until the reader picks one', as
   test.skip(testInfo.project.name !== 'desktop-chromium');
   await openFixture(page, { width: 390, height: 844 }, 'light');
   const diagram = page.locator('#long-stage .semantic-diagram');
-  const visibleView = async (): Promise<{
+  const visibleView = async (
+    section = '#long-stage',
+  ): Promise<{
     readonly mode: string | undefined;
     readonly authored: boolean;
     readonly fits: boolean;
   }> =>
-    diagram.locator('.visualization-layouts').evaluate((switcher) => {
+    page.locator(`${section} .semantic-diagram .visualization-layouts`).evaluate((switcher) => {
       const panel = [...switcher.querySelectorAll<HTMLElement>('[data-tab-panel]')].find(
         (candidate) => !candidate.hidden,
       );
@@ -242,13 +256,31 @@ test('a diagram shows a view that fits its frame until the reader picks one', as
       };
     });
 
-  await expect.poll(visibleView).toMatchObject({ authored: false, fits: true });
+  await expect.poll(() => visibleView()).toMatchObject({ authored: false, fits: true });
   await diagram.getByRole('tab', { name: 'Left to right' }).click();
   await page.setViewportSize({ width: 380, height: 844 });
-  await expect.poll(visibleView).toMatchObject({ mode: 'right', authored: true });
+  await expect.poll(() => visibleView()).toMatchObject({ mode: 'right', authored: true });
 
+  // A stage section of a document lays out inside the text column, so even on a wide screen the long
+  // left-to-right chain (1216 px) does not fit it: a fresh open shows the widest view that does — here the
+  // top-to-bottom one — not the reader's choice from the previous page.
   await openFixture(page, { width: 1920, height: 1000 }, 'light');
-  await expect.poll(visibleView).toMatchObject({ mode: 'right', authored: true });
+  await expect
+    .poll(() => visibleView())
+    .toMatchObject({
+      mode: 'down',
+      authored: false,
+      fits: true,
+    });
+  // The authored view stays wherever it fits: the branching diagram's left-to-right view (865 px) fits the
+  // step, and the view that would fill more of the frame (orthogonal, 889 px) does not replace it.
+  await expect
+    .poll(() => visibleView('#branching'))
+    .toMatchObject({
+      mode: 'right',
+      authored: true,
+      fits: true,
+    });
 });
 
 test('the contents open as a full-height side panel on a phone', async ({ page }, testInfo) => {
@@ -307,4 +339,22 @@ test('every boxed section starts its content at one left edge whatever tone draw
     );
     expect(new Set(edges).size, `${scheme}:${edges.join(',')}`).toBe(1);
   }
+});
+
+// The lead is a paragraph: the prose measure in `ch` of the body rule, read at the lead's larger size, would
+// carry it about a quarter past the column the body text keeps.
+test('a lead in a wide section stays within the prose column', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  await openFixture(page, { width: 1440, height: 1000 }, 'light');
+  const edges = await page.evaluate(() => {
+    const section = document.getElementById('long-lead');
+    const lead = section?.querySelector<HTMLElement>(':scope > .semantic-lead');
+    const body = section?.querySelector<HTMLElement>(':scope > p:not(.semantic-lead)');
+    if (!lead || !body) throw new Error('Missing lead or body');
+    return {
+      lead: lead.getBoundingClientRect().right,
+      body: body.getBoundingClientRect().right,
+    };
+  });
+  expect(edges.lead).toBeLessThanOrEqual(edges.body + 1);
 });

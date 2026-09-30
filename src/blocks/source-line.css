@@ -1,0 +1,6 @@
+@layer components {
+  .semantic-source-line time {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+}

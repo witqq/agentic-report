@@ -1,0 +1,107 @@
+@layer components {
+  .compare-stage {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+    cursor: ew-resize;
+    touch-action: pan-y;
+    user-select: none;
+  }
+
+  .compare-after {
+    position: absolute;
+    inset: 0;
+    clip-path: inset(0 0 0 var(--compare-position, 50%));
+  }
+
+  /* Ручка на линии сравнения: круг с двумя стрелками показывает, что границу можно тянуть. */
+  .compare-divider::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-raised);
+    color: var(--color-heading);
+    font-family: var(--font-author-mono, var(--font-mono));
+    font-size: var(--text-xs);
+    content: '‹›';
+    @supports (content: '' / '') {
+      content: '‹›' / '';
+    }
+    transform: translate(-50%, -50%);
+  }
+
+  .compare-label {
+    position: absolute;
+    top: 0.6rem;
+    pointer-events: none;
+  }
+
+  .compare-label[data-side='before'] {
+    left: 0.6rem;
+  }
+
+  .compare-label[data-side='after'] {
+    right: 0.6rem;
+  }
+}
+
+@layer defaults {
+  .ui-range {
+    width: 100%;
+    margin: 0;
+  }
+}
+
+@layer primitives {
+  /* Ползунок сравнения: дорожка волосяной линией и круглый бегунок цвета заголовков. */
+  .ui-range {
+    height: 1.5rem;
+    background: transparent;
+    appearance: none;
+    cursor: ew-resize;
+  }
+
+  .ui-range::-webkit-slider-runnable-track {
+    height: 2px;
+    border-radius: var(--radius-pill);
+    background: var(--color-border-strong);
+  }
+
+  .ui-range::-moz-range-track {
+    height: 2px;
+    border-radius: var(--radius-pill);
+    background: var(--color-border-strong);
+  }
+
+  .ui-range::-webkit-slider-thumb {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-top: calc(-0.55rem + 1px);
+    border: 2px solid var(--color-bg);
+    border-radius: 50%;
+    background: var(--color-heading);
+    appearance: none;
+  }
+
+  .ui-range::-moz-range-thumb {
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 2px solid var(--color-bg);
+    border-radius: 50%;
+    background: var(--color-heading);
+  }
+}
+
+@layer contexts {
+  @media (pointer: coarse) {
+    .ui-range {
+      height: var(--control-touch);
+    }
+  }
+}

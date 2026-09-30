@@ -54,7 +54,7 @@ export const contents = defineBlock({
   enhance: (node) => {
     if (node.properties.dataSticky !== 'true') delete node.properties.dataSticky;
   },
-  styles: 'package',
+  feature: 'contents',
   staticEquivalent: 'A list of links to the sections of the page, printed as a table of contents.',
   examples: [
     '# Page\n\n::contents\n\n::::section{title="First"}\nText.\n::::\n',

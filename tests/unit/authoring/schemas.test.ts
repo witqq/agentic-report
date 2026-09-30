@@ -165,6 +165,7 @@ describe('authoring schema projections', () => {
       layout: 'document',
       review: false,
       schemeToggle: true,
+      topbar: true,
       themeSwitcher: false,
       progress: 'none',
       motion: 'expressive',

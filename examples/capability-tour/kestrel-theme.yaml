@@ -1,0 +1,20 @@
+# Written by `agentic-report theme`: brand colours, lightness shifted until every contrast pair passes.
+name: kestrel-theme
+extends: daylight
+description: 'Brand theme over daylight: #b0532c leads as the accent, #4a6a8a marks the eyebrows.'
+palette: 'Brand #b0532c as the accent family (rules, links, focus, accent sections, first chart series) and #4a6a8a as the second accent for eyebrows on the daylight palette; lightness shifted per scheme until every contrast pair passes.'
+colors:
+  light:
+    accent: '#b0532c'
+    accentStrong: '#b0532c'
+    accentSoft: '#ffe9e1'
+    focus: '#b0532c'
+    chart1: '#b0532c'
+    accent2: '#4a6a8a'
+  dark:
+    accent: '#b0532c'
+    accentStrong: '#c76841'
+    accentSoft: '#411e0f'
+    focus: '#b0532c'
+    chart1: '#b0532c'
+    accent2: '#6081a2'

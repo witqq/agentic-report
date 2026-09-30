@@ -4,14 +4,16 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { buildReport } from '../../src/index.js';
-import { detectVideoCodec, parseChapters } from '../../src/render/video-media.js';
+import { parseChapters, readVideoStreams } from '../../src/render/video-media.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
 
 /**
  * Видео продукта: несколько кодировок одного ролика (как их пишет agentic-screencast web), режимы
- * клипа, фона и ручного запуска, главы WebVTT. Кодек читается из файла, а не из имени.
+ * клипа, фона и ручного запуска, главы WebVTT. Кодеки с профилем, уровнем и звуком читаются из файла,
+ * а не из имени; режим без `mode` зависит от того, есть ли в файле звук.
  */
 const ASSETS = path.resolve('examples/presentation/assets');
+const CODECS = path.resolve('tests/fixtures/video/codecs');
 const workspaces: string[] = [];
 
 afterEach(async () => {
@@ -35,15 +37,25 @@ const ALL =
 
 describe('video sources', () => {
   it('reads the codec of each encoding from the file itself', async () => {
-    expect(detectVideoCodec(await readFile(path.join(ASSETS, 'demo.av1.mp4')), 'video/mp4')).toBe(
-      'av1',
-    );
-    expect(detectVideoCodec(await readFile(path.join(ASSETS, 'demo.vp9.webm')), 'video/webm')).toBe(
-      'vp9',
-    );
-    expect(detectVideoCodec(await readFile(path.join(ASSETS, 'demo.h264.mp4')), 'video/mp4')).toBe(
-      'h264',
-    );
+    const read = async (file: string, type: string) =>
+      readVideoStreams(await readFile(path.join(ASSETS, file)), type);
+    // The example film carries the silent audio track agentic-screencast gives a film without voice.
+    expect(await read('demo.av1.mp4', 'video/mp4')).toMatchObject({
+      codec: 'av1',
+      codecs: ['av01.0.05M.08', 'mp4a.40.2'],
+      audio: true,
+      sound: false,
+    });
+    expect(await read('demo.vp9.webm', 'video/webm')).toMatchObject({
+      codec: 'vp9',
+      codecs: ['vp9', 'opus'],
+      sound: false,
+    });
+    expect(await read('demo.h264.mp4', 'video/mp4')).toMatchObject({
+      codec: 'h264',
+      codecs: ['avc1.64001f', 'mp4a.40.2'],
+      sound: false,
+    });
   });
 
   it('offers every encoding in directory output, preferred first and the compatible one last', async () => {
@@ -61,9 +73,9 @@ describe('video sources', () => {
       ),
     ].map((match) => [match[1], match[2]?.replaceAll('&#x22;', '"')]);
     expect(types).toEqual([
-      ['av1', 'video/mp4; codecs="av01.0.05M.08"'],
-      ['vp9', 'video/webm; codecs="vp9"'],
-      ['h264', 'video/mp4; codecs="avc1.640028"'],
+      ['av1', 'video/mp4; codecs="av01.0.05M.08, mp4a.40.2"'],
+      ['vp9', 'video/webm; codecs="vp9, opus"'],
+      ['h264', 'video/mp4; codecs="avc1.64001f, mp4a.40.2"'],
     ]);
   });
 
@@ -72,7 +84,7 @@ describe('video sources', () => {
     const result = await buildReport({ input: root, output: path.join(root, 'page.html') });
     const html = await readFile(path.join(root, 'page.html'), 'utf8');
     expect(html.match(/<source /gu)).toHaveLength(1);
-    expect(html).toContain('type="video/mp4; codecs=&#x22;avc1.640028&#x22;"');
+    expect(html).toContain('type="video/mp4; codecs=&#x22;avc1.64001f, mp4a.40.2&#x22;"');
     expect(result.warnings).toContainEqual(
       expect.objectContaining({
         code: 'VIDEO_SOURCES_SINGLE_FILE',
@@ -133,6 +145,51 @@ describe('video sources', () => {
     expect(video).toContain('controls');
     expect(video).not.toContain('muted');
     expect(video).not.toContain('data-video-autoplay');
+  });
+
+  describe('default mode', () => {
+    async function player(file: string, attributes = ''): Promise<string> {
+      const root = await workspace(`::video{src="${file}"${attributes}}\n\n![Inline](${file})`);
+      for (const name of await readdir(CODECS))
+        await copyFile(path.join(CODECS, name), path.join(root, name));
+      await buildReport({ input: root, output: path.join(root, 'page.html') });
+      const html = await readFile(path.join(root, 'page.html'), 'utf8');
+      return [...html.matchAll(/<video[^>]*>/gu)].map((match) => match[0]).join('\n');
+    }
+    const manual = (video: string) => {
+      expect(video).toContain(' controls');
+      expect(video).not.toContain('muted');
+      expect(video).not.toContain('data-video-autoplay');
+    };
+    const clip = (video: string) => {
+      expect(video).toContain('muted loop');
+      expect(video).toContain('data-video-autoplay');
+    };
+
+    it('is manual, with sound, for a recording that carries sound', async () => {
+      for (const video of (await player('h264-aac.mp4')).split('\n')) manual(video);
+      for (const video of (await player('vp9-opus.webm')).split('\n')) manual(video);
+    });
+
+    it('stays a muted clip without an audio track or with a silent one', async () => {
+      for (const video of (await player('h264-main-moov-last.mp4')).split('\n')) clip(video);
+      for (const video of (await player('h264-silent-aac.mp4')).split('\n')) clip(video);
+      for (const video of (await player('vp9-silent-opus.webm')).split('\n')) clip(video);
+    });
+
+    it('keeps the mode the author wrote', async () => {
+      const [directive] = (await player('h264-aac.mp4', ' mode="clip"')).split('\n');
+      clip(directive ?? '');
+      const [silent] = (await player('h264-main-moov-last.mp4', ' mode="manual"')).split('\n');
+      manual(silent ?? '');
+    });
+
+    it('stays a clip when the author shaped the loop', async () => {
+      const [directive] = (await player('h264-aac.mp4', ' start="1" seam="fade"')).split('\n');
+      clip(directive ?? '');
+      const [expand] = (await player('h264-aac.mp4', ' expand="true"')).split('\n');
+      clip(expand ?? '');
+    });
   });
 
   it('refuses chapters that are not WebVTT', async () => {

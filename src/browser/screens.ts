@@ -158,14 +158,29 @@ export function installScreens(
     target.scrollIntoView({ block: 'start', behavior: smooth ? 'smooth' : 'instant' });
     mark(screens.indexOf(target));
   };
-  /** Экран выше окна прокручивается внутри своего места: клавиша сначала доводит его до конца. */
+  /**
+   * Экран выше окна прокручивается внутри своего места: клавиша и колесо сначала доводят его до конца. Экран,
+   * который помещается в окно, листается сразу, где бы он ни стоял: пока страница ещё доводит его до места
+   * (прокрутка к экрану после загрузки, хвост прошлой прокрутки), его край может быть на пару пикселей за
+   * окном, и жест иначе ушёл бы в обычную прокрутку.
+   */
+  const fitsWindow = (screen: HTMLElement): boolean =>
+    screen.getBoundingClientRect().height <= window.innerHeight - offset() + 2;
   const screenEndVisible = (): boolean => {
     const screen = screens[current];
-    return screen === undefined || screen.getBoundingClientRect().bottom <= window.innerHeight + 2;
+    return (
+      screen === undefined ||
+      fitsWindow(screen) ||
+      screen.getBoundingClientRect().bottom <= window.innerHeight + 2
+    );
   };
   const screenStartVisible = (): boolean => {
     const screen = screens[current];
-    return screen === undefined || screen.getBoundingClientRect().top >= offset() - 2;
+    return (
+      screen === undefined ||
+      fitsWindow(screen) ||
+      screen.getBoundingClientRect().top >= offset() - 2
+    );
   };
 
   document.addEventListener(

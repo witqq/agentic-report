@@ -191,6 +191,7 @@ export const PAGE_CONTRACT = {
   defaultAttribution: true,
   defaultReview: false,
   defaultSchemeToggle: true,
+  defaultTopbar: true,
   defaultThemeSwitcher: false,
   motion: PAGE_MOTION_POLICY,
   categories: PAGE_CATEGORIES,
@@ -375,7 +376,7 @@ export const authoringRegistry = {
         },
       },
     },
-    resources: ['local images', 'local video', 'downloadable local assets', 'local fonts'],
+    resources: ['local images', 'downloadable local assets', 'local fonts'],
   },
   output: OUTPUT_CONTRACT,
   page: PAGE_CONTRACT,
@@ -525,6 +526,14 @@ export const authoringRegistry = {
       constraint: { kind: 'boolean' },
     },
     {
+      name: 'topbar',
+      description:
+        'Shows the package-owned top bar with the title, the contents button and the page controls; set false for a page filmed as a scene: the first section starts at the top edge, and review and themeSwitcher, which live in the bar, are refused.',
+      required: false,
+      default: PAGE_CONTRACT.defaultTopbar,
+      constraint: { kind: 'boolean' },
+    },
+    {
       name: 'schemeToggle',
       description:
         'Shows the package-owned light and dark control; set false for a page that must stay in the scheme it was built with.',
@@ -639,7 +648,7 @@ export const authoringRegistry = {
     { id: 'describe', description: 'Return the complete source contract.' },
     {
       id: 'schema',
-      description: 'Return manifest, directive, complete source, or theme JSON Schema.',
+      description: 'Return manifest, directive, or complete source JSON Schema.',
     },
     {
       id: 'examples',
@@ -953,6 +962,17 @@ export const authoringRegistry = {
       classes: ['work-report'],
       category: 'document',
       subvariant: 'report',
+    },
+    {
+      id: 'capability-tour',
+      path: 'capability-tour',
+      entry: 'report.md',
+      title: 'Every technique on one station network',
+      description:
+        'Bilingual guide that follows a fictional weather-station network through a season, one technique per chapter with its Markdown under the result: data from JSON, tables as cards, full-screen viewer, statuses and returns, zoom, a played scene, a scroll scene, a loupe, a film, a brand theme, a companion page in layout screens and an edition pair built with --since.',
+      classes: ['tutorial-with-code-and-bounded-demo', 'capability-tour'],
+      category: 'document',
+      subvariant: 'guide',
     },
   ],
 } as const satisfies AuthoringRegistryDefinition;

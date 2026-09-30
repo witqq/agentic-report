@@ -1,0 +1,58 @@
+@layer components {
+  .semantic-diff-caption {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 0.9rem;
+    margin-bottom: 0.55rem;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .semantic-diff-file {
+    overflow-wrap: anywhere;
+  }
+
+  .semantic-diff-summary {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .semantic-diff pre[data-diff-block] {
+    margin: 0;
+    padding-inline: 0;
+  }
+
+  .semantic-diff pre[data-diff-block] > code {
+    display: grid;
+    min-width: max-content;
+  }
+
+  .semantic-diff .line {
+    display: block;
+    padding-inline-end: var(--space-card);
+  }
+
+  /*
+   * Номера строк стоят на фоне кода, поэтому берут роль кода, проверенную на этом фоне (комментарий кода,
+   * 4,5:1): приглушённый текст страницы на фоне кода не проверен и в тёмном коде светлой темы не читается.
+   */
+  .semantic-diff .line::before {
+    margin-inline-end: 1.5ch;
+    padding-inline-start: 0.75rem;
+    color: var(--shiki-token-comment);
+    content: attr(data-gutter);
+    user-select: none;
+  }
+
+  .semantic-diff .line[data-diff='add'] {
+    background: color-mix(in srgb, var(--status-done) 16%, transparent);
+  }
+
+  .semantic-diff .line[data-diff='remove'] {
+    background: color-mix(in srgb, var(--status-returned) 14%, transparent);
+  }
+
+  .semantic-diff .line:is([data-diff='hunk'], [data-diff='header']) {
+    background: color-mix(in srgb, var(--color-accent) 9%, transparent);
+  }
+}

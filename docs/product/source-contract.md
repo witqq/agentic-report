@@ -5,15 +5,14 @@ semantic intent; they do not write JSX, templates with executable helpers, page 
 the page itself. What one design needs beyond the built-in vocabulary comes through the page
 [extensions](#extensions) it declares.
 
-The product contract is defined in [`../../PRODUCT-REQUIREMENTS.md`](../../PRODUCT-REQUIREMENTS.md), and the
-implementation behind this source contract is described in [`../ARCHITECTURE.md`](../ARCHITECTURE.md).
+The implementation behind this source contract is described in [`../ARCHITECTURE.md`](../ARCHITECTURE.md).
 Only the syntax below and the generated schemas are accepted.
 
 ## Source directory
 
 The input is a Markdown file or a directory containing `report.md` or `index.md`. A source directory may
 also contain one YAML/JSON manifest, confined English/Russian alternate Markdown entries, Markdown partials,
-images, videos, downloadable resources, and fonts. References are relative to the primary entry's canonical
+images, downloadable resources, and fonts. References are relative to the primary entry's canonical
 directory. The compiler resolves symbolic links before reading contents and rejects a canonical target
 outside that directory.
 
@@ -78,6 +77,12 @@ Frontmatter takes precedence. Supported fields are:
 - `schemeToggle`: boolean; default `true`; shows the reader's package-owned light/dark button;
 - `themeSwitcher`: boolean; default `false`; adds a reader theme selector that swaps between the built-in
   themes and the page's own theme live without changing the color scheme;
+- `topbar`: boolean; default `true`; renders the package top bar (title, contents button, page controls).
+  `false` builds a page to be filmed as a scene: no `.topbar`, the root carries `data-topbar="none"`,
+  nothing is reserved above the content in any layout, theme, scheme, width, or print, and anchors, the
+  contents sidebar, and sticky or pinned elements measure from the top edge (`--topbar-clearance` is
+  15 px). The scheme toggle, language selector, and changes list go with the bar; `review` (or a prior
+  review sidecar) and `themeSwitcher` with `topbar: false` fail with `INVALID_MANIFEST`;
 - `review`: boolean; default `false`; ships Review Workspace. A build given a prior review sidecar enables it
   automatically;
 - `extensions`: optional list of 1–32 unique relative paths to extension manifests (`.yaml`, `.yml`,
@@ -171,11 +176,45 @@ registry-derived command/format/starter/capability catalog.
 the source into `<directory>/page.html` and photographs it through a Playwright installed beside the
 package, then writes a contact sheet; with `--measure` it writes no pictures and reports one `measure`
 record per width, scheme and motion instead (overflow, small text, contrast with opacity, covered text,
-empty bands, clipped headings, first screen, stops, page errors). It never overwrites a non-empty destination. Both commands read
+empty bands, clipped headings, first screen, stops, page errors, wide and sparse tables, the reading
+column, code broken inside a word, diagram labels, off-scheme blocks). It never overwrites a non-empty destination. Both commands read
 and validate all resources required by the selected format but do not create or replace an output artifact.
 
-`buildReport({ input, output?, format?, review?, share?, url? })` is the publishing operation. `url`, and
-CLI `--url <url>` on `build`, `validate` and `inspect`, overrides the manifest `url` with the same validation
+### Build from ESM
+
+`buildReport({ input, output?, format?, review?, share?, url?, since?, manifestDefaults? })` is the publishing operation.
+`BuildReportOptions.manifestDefaults` accepts the exported `BuildManifestDefaults` type with four optional
+readonly fields: `topbar`, `schemeToggle`, `themeSwitcher` and `review`. Each accepts a boolean or
+`undefined`; omission or `undefined` supplies no default for that field.
+Resolution applies package defaults, then these caller defaults, then the project manifest, then primary
+frontmatter. Explicit authored values, including `false`, win. Alternate language entries inherit the
+resolved primary settings.
+
+```ts
+import { buildReport, type BuildManifestDefaults } from 'agentic-report';
+
+const manifestDefaults: BuildManifestDefaults = {
+  topbar: false,
+  schemeToggle: false,
+  themeSwitcher: false,
+  review: false,
+};
+await buildReport({
+  input: './my-page/report.md',
+  output: './my-page.html',
+  manifestDefaults,
+});
+```
+
+Use these defaults when a Node host has a page-control policy and authors must remain able to override
+it. The compiler reads the original entry, partials and localized files without copying or rewriting
+source, so source identity, diagnostics and review targets retain their authored paths. The option is
+specific to `buildReport`; it is not a CLI flag or an authored metadata field. Unknown fields,
+non-object values and non-boolean field values fail before source I/O with `INVALID_MANIFEST_DEFAULTS`,
+without returning submitted values or keys. The resolved settings still undergo normal manifest checks:
+for example, `topbar: false` cannot combine with enabled Review Workspace or `themeSwitcher: true`.
+
+`url` and CLI `--url <url>` on `build`, `validate` and `inspect` override the manifest `url` with the same validation
 and fails with `PUBLIC_URL_INVALID` otherwise. A page with a public URL whose HTML exceeds 2,097,152 bytes,
 the part of an HTML file Googlebot reads, reports `PUBLIC_PAGE_OVER_CRAWLER_LIMIT` with the measured size;
 directory output keeps images, fonts, styles, and the runtime out of the HTML and removes that risk. `share: true`, or
@@ -245,6 +284,51 @@ does not rewrite Markdown or publish output.
 Structured thread and message fields are bounded and credential-sanitized before CLI/ESM transport; surrounding source and
 complete input files are never returned.
 
+## Editions and changes
+
+Every page carries, in each language version, an inert `<template data-edition-record>` with the edition
+record: contract version 1, `locale`, `edition` (1 without `--since`), `reportRevision`, the sections
+(`id`, `authoredId`, `title`, `order`) and every block in reading order — its section, kind, optional
+`stableKey`, and its visible text normalized to NFC with any run of spaces as one space: `text` for prose,
+`rows` for a table, `items` for a list, `lines` for code, `nodes`/`edges` for a diagram (its caption in
+`text`), `points` for a chart, `media` (`digest` of the image bytes and `alt`). The record holds no paths
+and no time, so the same source still gives the same bytes; it is limited to 2,000,000 bytes and 5,000
+blocks and counts against `output.maxInlineBytes`. A page built with `--url` carries no record.
+
+`build`, `validate`, `inspect` and `snapshot` accept `--since <path>` (`since` in the ESM options): the
+previous page (`.html`, or a directory with `index.html`, read up to 64 MB) or its source (`.md` or a
+source directory, built in memory by the installed package). The path is a command-line argument like
+`--output`, not confined to the source root; it may equal `--output` because it is read before
+publication, and it may not be a file of the current source (by path or hard link). Sections pair by
+authored `id`, then by shared blocks (Jaccard 0.5) and title; blocks inside a pair by explicit `id`, then by
+identical content, then by word similarity (Dice 0.5); a unique removed and added pair with equal content
+is a move. Prose differs word by word (`Intl.Segmenter`, Myers), code by lines, tables by rows (first cell,
+then position), lists by items, diagrams by node `id` and edge ends, charts by series and label. A block
+with more than 60 % of its words changed is shown replaced. Only what the reader sees counts: kinds of
+spaces, presentation attributes and source file layout do not. The comparison is mechanical and judges
+nothing.
+
+With `--since` the page carries the change layer: an edition strip after the title and intro (on the title
+slide or first screen of `slides` and `screens`) with the «Show changes» switch (on when opened,
+remembered only for the session), previous and next, and the list; a «Changes N» topbar button with the
+list grouped by section (a panel on wide screens, a bottom sheet on phones; links go to `#/n` in slides);
+a dot at changed sections in the contents; a label and margin bar on changed blocks; `ins` and `del` inside
+prose, cells and items; changed code lines; removed blocks as collapsed ghosts with the old text; moved
+blocks with a link at their old place. Every node the layer adds is marked `data-edition-removed`: the
+switch hides it with `display: none`, the Review Workspace offsets and quotes skip it, and the code copy
+button copies only the new code. Colours come only from `--status-done`, `--status-review` and
+`--status-returned`, always doubled by underline, strike-through or a word; forced colours use system
+colours, reduced motion drops the jump highlight, and print follows the switch with ghosts open.
+
+`build` and `inspect` results with `since` carry `changes`: `locale`, `since` (`edition`,
+`reportRevision`), `edition`, `unchanged`, `totals` (`unchanged`, `changed`, `added`, `removed`, `moved`)
+and `sections` with `id`, `title`, `status`, `renamedFrom`, `moved` and `blocks` (`kind`, `status`,
+`source` of a new block or `previousOrder` of a removed one, `words` for prose, `movedFrom`). No block text
+enters any result. Diagnostics: `EDITION_SINCE_UNREADABLE`, `EDITION_SINCE_COLLIDES`,
+`EDITION_RECORD_MISSING`, `EDITION_RECORD_INVALID` (with `details.issues`), `EDITION_VERSION_UNSUPPORTED`
+are errors; `EDITION_UNCHANGED`, `EDITION_LOCALE_ADDED`, `EDITION_REMOVED_TEXT_SHARED` (with `--share`) and
+`EDITION_RECORD_OMITTED` (a record over its limit) are warnings.
+
 ### Review Workspace reader interface
 
 Review Workspace ships only when `review` is `true` or a prior review sidecar is supplied; otherwise the page
@@ -310,7 +394,7 @@ silently replaced by defaults. Validation diagnostics point to the actual manife
 range that supplied the failing value.
 
 Defaults are `layout: document`, `theme: neutral`, `scheme: system`, `schemeToggle: true`,
-`themeSwitcher: false`, `review: false`, `progress: none`, `opening: center`, and `attribution: true`.
+`topbar: true`, `themeSwitcher: false`, `review: false`, `progress: none`, `opening: center`, and `attribution: true`.
 
 ### Themes
 
@@ -327,16 +411,24 @@ when a token is read by nothing, or when a stylesheet or renderer names a colour
 - `extends`: a built-in theme name or a confined relative path to another theme file; defaults to the
   default theme. A chain that returns to a file it has passed fails with `THEME_EXTENDS_CYCLE`;
 - `description`, `palette`: what the theme is for and why its colours are what they are;
-- `scheme`: `both` or `dark` — a dark-only theme draws its dark palette in either reader scheme;
+- `scheme`: `both` or `dark` — a dark-only theme draws its dark palette in either reader scheme and has no
+  scheme button; every built-in theme draws both;
 - `accent`: the restrained `graphite`, `cobalt`, `rust`, `moss`, `ochre`, `ink`, or the brighter `indigo`,
   `teal`, `coral` — a named accent family with a checked light and dark pair;
-- `fonts.pair`: the display, text and code trio of a built-in theme — `midnight` (Geologica, IBM Plex Sans,
-  JetBrains Mono), `calm-paper` (Playfair, Literata, PT Mono), `synthwave` (Unbounded, Exo 2, JetBrains
-  Mono), `noir` (Cormorant Garamond, Jost, PT Mono), `aurora` (Raleway, Commissioner, Victor Mono),
-  `daylight` (Onest, Golos Text, Geist Mono), `ember` (Oswald, Rubik, JetBrains Mono), `blueprint`
-  (Tektur, Fira Sans, Martian Mono), `terminal` (Martian Mono, JetBrains Mono, JetBrains Mono), `neutral`
-  (Literata, Onest, Martian Mono), `frost` (Onest, IBM Plex Sans, Geist Mono) — or `system`
-  (the reader's system faces); `fonts.heading`, `fonts.body`, `fonts.mono` name one of the 23 embedded
+- `fonts.pair`: the display, text, label and code faces of a built-in theme — `midnight` (Geologica, IBM
+  Plex Sans, JetBrains Mono, JetBrains Mono), `calm-paper` (Playfair, Literata, JetBrains Mono, JetBrains
+  Mono), `synthwave` (Unbounded, Exo 2, JetBrains Mono, JetBrains Mono), `noir` (Cormorant Garamond, Jost,
+  PT Mono, JetBrains Mono), `aurora` (Raleway, Commissioner, Victor Mono, Geist Mono), `daylight` (Onest,
+  Golos Text, Geist Mono, Geist Mono), `ember` (Oswald, Rubik, JetBrains Mono, JetBrains Mono), `blueprint`
+  (Tektur, Fira Sans, Martian Mono, JetBrains Mono), `terminal` (Martian Mono, JetBrains Mono, JetBrains
+  Mono, JetBrains Mono), `neutral` (Literata, Onest, Martian Mono, JetBrains Mono), `frost` (Onest, IBM Plex
+  Sans, Geist Mono, Geist Mono) — or `system` (the reader's system faces);
+- `fonts.code`: the face of code blocks and inline code, emitted as `--font-code` — one of the text-grade
+  programming monos `jetbrains-mono`, `geist-mono` or `system-mono` (compact, a distinct 0/O and 1/l/I, full
+  Cyrillic); code is set with ligatures off. `fonts.mono` is the face of meta lines, chapter numbers and
+  other monospaced interface text (`--font-mono`; labels such as field labels and column headers use the
+  body face), where a wide or stylised mono may carry the theme's character;
+- `fonts.heading`, `fonts.body`, `fonts.mono` name one of the 23 embedded
   families (`onest`, `golos-text`, `ibm-plex-sans`, `exo-2`, `jost`, `commissioner`, `rubik`, `fira-sans`,
   `geologica`, `manrope`, `raleway`, `unbounded`, `oswald`, `tektur`, `geist`, `literata`, `playfair`,
   `cormorant-garamond`, `jetbrains-mono`, `martian-mono`, `geist-mono`, `victor-mono`, `pt-mono`) or
@@ -370,9 +462,13 @@ when a token is read by nothing, or when a stylesheet or renderer names a colour
   `accent`, `accentStrong`, `accentSoft`, `accent2`, `focus`, `chart1`–`chart6`, the status roles
   `statusDone`, `statusReview`, `statusReturned` (each follows `chart2`, `chart4`, `chart3` unless set, and
   must reach 3:1 against `background` and `surface`), `marker`, `shadow`,
-  `mediaBacking`, and the code colours `codeBackground`, `codeText`, `codeKeyword`,
+  `mediaBacking` (the paper behind transparent image pixels; built-in themes keep it `transparent`, and a
+  dark scheme should not set a light paper — a dark-ink image ships a dark variant instead), and the code colours `codeBackground`, `codeText`, `codeKeyword`,
   `codeString`, `codeNumber`, `codeFunction`, `codeType`, `codeComment`, `codePunctuation` that colour
-  highlighted code through Shiki's CSS-variables theme;
+  highlighted code through Shiki's CSS-variables theme (every code colour, `codeComment` included because
+  it also draws diff line numbers, must reach 4.5:1 on `codeBackground`, on the tinted lines of a diff or
+  an edition — added lines under `statusDone` at 16 %, removed lines and an edition's ghost of a removed
+  line under `statusReturned` at 14 %, and hunk lines under `accent` at 9 % over `codeBackground` — and on `accentSoft`, which lights the code line of a scene step);
 - `chrome.topbar` (`glass`, `ledger`), `chrome.navigation` (`plain`, `numbered`), `chrome.sectionTitle`
   (`plain`, `rule`, `bar`), `chrome.cards` (`raised`, `ruled`), `chrome.components` (`soft`, `flat`,
   `edged`), `chrome.landing` (`centered`, `ledger`), `chrome.edges` (`none`, `mono`: the page title and the
@@ -396,7 +492,7 @@ CSS values, class names, JSX, templates, URLs, and callbacks are not accepted.
 `agentic-report describe --json` and the ESM `getSourceContract()` return the built-in themes with their
 intent and palette under `page.themes`, and the theme fields, accents, font families and contrast pairs
 under `page.theme`.
-The public landing uses `neutral`, Executive brief `daylight`, vendor decision `calm-paper`, launch
+The public landing uses `midnight`, Executive brief `daylight`, vendor decision `calm-paper`, launch
 readiness and incident review extend `ember`, Terminal portfolio uses `terminal`, Cinematic story `noir`,
 Motion showcase and research `aurora`, the landing starter `neutral`, and architecture and the dashboard
 `blueprint`. These sources compose the same public components without page-specific CSS.
@@ -542,7 +638,10 @@ in `<iframe sandbox="allow-scripts">` built from the entry with every asset inli
 inline event handler is refused. The island talks to the page through `window.agenticReportIsland.on(type,
 callback)`: it receives `init { tokens, scheme, language, reducedMotion }`, `theme { tokens, scheme }`,
 `renderAt { t }` and `resize { width, height }`; the theme tokens are also set as CSS custom properties on
-its root, and its height is reported automatically.
+its root, and its height is reported automatically. So is the width of its content: a frame whose island
+draws in a narrower area than the frame (fixed-size pictures in a wide figure) narrows to that area on the
+same left edge, so no empty panel stands beside the content; an island that fills its
+width keeps the full frame.
 
 **`kind: effect`** adds `module` (an ES module using `defineEffect` from `agentic-report/effect`),
 `targets` (`{ directive, attribute, values }`: a built-in directive gets the attribute with those values,
@@ -594,6 +693,22 @@ The directive vocabulary is:
   `date`, `time` or `datetime`. It renders a `<time datetime>` element with the final text;
 - `copyable`: ordinary Markdown prose plus optional `term` references with a localized reader copy control;
   block code and nested package directives are rejected so clipboard text has one visible prose owner;
+- `table`: container holding exactly one GFM table (anything else is `INVALID_DIRECTIVE_CHILD`) with
+  `layout="auto|stack|scroll"`, default `auto`, which is also what every table without the directive gets.
+  Every table renders inside a `div.table-frame` carrying `data-table-layout`; the compiler adds explicit
+  table roles, a `data-label` with its column header on every data cell, and its estimated readable width.
+  `auto` wraps prose columns and shows each row as a labelled card when its own container is narrower than
+  that width. In `auto`, a column whose cells are all 20 characters or shorter (an id, a date, a status)
+  keeps each value on one line, and a prose column whose longest cell is at least one and a half times its
+  typical one is capped, on a track of 48rem or more, at the width that holds three quarters of its cells on
+  one line (`data-column-cap`), so one long row wraps instead of stretching the column to the track; `stack` shows cards on every track narrower than 40rem; `scroll` never shows cards, keeps short
+  columns on one line and the first column in view while the table scrolls sideways. A table in grid form
+  owns its surface at its own width (never wider than the track) with an inset between the surface edge
+  and its outer cells' text; cards have no surface and keep their text on the prose edge. Print always shows the
+  grid. Inline code everywhere gets a `<wbr>` after `/ . _ - : ( ,` between two word parts and before the
+  capitals of a camel-case part of 24 or more characters, and two inline code values joined by a bare
+  separator (`` `a`/`b` ``) get one after it, so code wraps between parts, never mid-word, and copies as
+  written;
 - `decision`: legacy static Markdown decision with optional `title`, or typed decision with stable `id`,
   optional `required`, and directly nested leaf `decision-option` values with stable `id` and `label`;
 - `checklist`: static structured checklist with required `title` and stable `id`, containing directly nested
@@ -667,7 +782,9 @@ rewriting their historical targets. Invalid sidecars fail before authoritative o
 - `font`: local WOFF2, WOFF, TTF, OTF, or other MIME-detected font resource with required `src` and
   validated `family`.
 
-Container directives use `:::name ... :::`; nested containers use a longer outer fence. `asset` and
+Container directives use `:::name ... :::`; nested containers use a longer outer fence. A paragraph made
+only of fence colons — a closing fence with nothing open, left over when a container was closed early by a
+shorter fence — fails with `UNBALANCED_DIRECTIVE_FENCE` at its line. `asset` and
 `font` support leaf directives. An `action` uses the labelled leaf form
 `::action[Visible label]{href="#target" kind="primary"}`. Use
 `:term[authored form]{key="term-key"}` inside prose; the label is rendered exactly as the visible grammatical
@@ -722,7 +839,9 @@ these incompatibilities through discovery and JSON Schema, and authored Markdown
 `section-density` set bounded rhythm; `type` selects a package typography role; `media` chooses a treatment;
 and `media-fit`, `media-aspect`, and `focal` control image framing without duplicating that treatment.
 `tone` owns the section background and foreground relationship; `surface` adds package decoration behind
-that content without replacing the tone background. Nested package components and visualizations restore
+that content without replacing the tone background. On a screen of 48rem or less, a top-level section with a
+tone, a surface or `frame="panel"` spans the screen and takes the phone gutter as its inset, so its prose starts
+on the same edge as the prose around it. Nested package components and visualizations restore
 their own readable surface text tokens. Transition, scene, interaction, and choreography are closed semantic
 roles rather than author-supplied timing or coordinates. `layers` transforms image descendants rather than
 cards or other semantic containers, preserving stable review geometry. Narrow screens return multi-column
@@ -741,14 +860,29 @@ modal and popover triggers, and actions, and it sits beside the title. For stage
 paragraphs, and actions, and it sits beside its opening picture under a full-width title; a gallery stage
 keeps its title beside the rail. A stage whose opening has no picture, or no text beside it, stays in one
 column. Every block after the opening, including code, tables, cards, visualizations, and further
-pictures, spans the whole section track, so all sections share one start edge and one track width.
+pictures, spans the whole section track, so all sections share one start edge and one track width. On a
+`document` or `mixed` page wider than 48rem, the content is one column of one width, the reading measure.
+It stands on the window's centre line, with the docked table of contents in a rail at its left and an equal
+empty rail at its right; where the window is too narrow for both rails the right one gives way first and the
+column keeps the shell gap from the contents. With the contents collapsed, in a dialog or absent, the column
+alone is centred. From 1440 px wide the type grows with the window (16 px there, 20 px from 2560 px) and the
+column, measured in characters, grows with it. The page title, headings, the lead, paragraphs, lists, quotes, callouts, disclosures, tabs,
+tables, figures, diagrams, cards, code and islands all start on the column's left edge and none runs past its
+right edge; a narrower block — a short table, a small picture — starts on the left edge. A code line longer
+than the column and a table wider than it scroll inside their frame; a diagram shows the view that fits the
+column, and a figure opens on the whole screen. A band (a tone, a surface, a panel) draws its box outside the
+column by its inset, so its text keeps the column's edges; a section of another composition (`split`,
+`stage`, `story` and the rest) lays out its grid inside the column. Two such sections
+without tone, surface or frame share the section rhythm evenly around the rule between them, and the last
+block of each adds no space of its own.
 `align="center"` centers only a full-width title and lead and the section's actions; the body
 keeps the start edge. Split returns to normal flow before a desktop sidebar can leave unreadably narrow
 tracks. Authors cannot supply CSS values, class names, event handlers, or executable layout code.
 
 Recipes provide the short path. Their coordinated detailed values resolve first, and any explicit detailed
 attribute overrides only its own role before the same incompatibility checks run. `hero` stages an opening,
-`evidence` creates a split proof field, `story` creates a scroll narrative, `rail` creates a local media rail,
+`evidence` creates a split proof field whose picture is shown whole (no mask, no crop: set `media`,
+`media-fit` or `media-aspect` explicitly for a photograph), `story` creates a scroll narrative, `rail` creates a local media rail,
 and `metrics` creates a compact data mosaic. A card may declare one safe `href`; it then renders as one
 focusable anchor with a persistent link icon, while nested Markdown links fail validation.
 
@@ -773,7 +907,9 @@ that section's diagram. A beat's `lines` (`3`, `2-4`, `1,5-7`) lights those line
 and dims the rest; `lines` in a scene without a code block is refused. The pinned part of a steps scene
 never runs longer than four screens: with many beats each beat is shorter. On a screen narrower than 57rem
 with normal motion the stage stays under the top bar above the current beat (`data-scene-narrow`), so the
-media stands before every step. `scene="scrub"` pins the media and the captions together for one screen per
+media stands before every step; a figure alone on that stage shows its title, its full-screen button and its
+whole picture fitted to the stage, while its description, layout switch, legend and words wait in the
+full-screen view and in the flow without motion. `scene="scrub"` pins the media and the captions together for one screen per
 beat, two to four beats (a fifth is refused): the caption changes when a third of its step's scroll has
 passed and sits in one cell of constant height, the picture and the diagram focus belong to the reached
 step and stay lit for the later ones, a segment bar and «Step n of N» stand under the caption, and the last
@@ -823,7 +959,18 @@ The content remains ordinary Markdown and semantic directives.
 ```
 
 Documents without explicit sections use legacy H2 headings for primary navigation. H3 and component anchors
-remain owned descendant targets but are not primary links. The packaged bilingual `layout-mixed` example
+remain owned descendant targets but are not primary links. In every scrolling layout (not `slides`, not the
+screens mode) a same-page link, an anchor in the address on opening, and an anchor reached by the address bar
+or by going back land the target under the top bar: a chapter by its heading, any other target by its own
+top edge. The scroll is smooth in normal motion and instant in reduced motion or `motion: none`, to the same
+point, and the point follows the target while content above it changes height (a disclosure opens, an island
+wakes, a font arrives) until the scroll ends; any wheel, touch, key, or press of the reader releases it, and so
+does a scroll that leads away from the target without the layout moving it (the scroll bar, a page script).
+The point is where the target rests: the entrance offset of a section that has not been revealed yet does not
+count, and the contents mark the current chapter by the same resting position. A target without a box (a
+closed dialog, a hidden popover panel) is not scrolled to. A target inside a closed disclosure opens that
+disclosure, and a target inside an inactive tab panel (or the panel itself) chooses that panel's tab, first —
+through every closed disclosure and inactive tab around it. The packaged bilingual `layout-mixed` example
 exercises every visual family through this same source contract and is discoverable through
 `agentic-report examples --json`.
 
@@ -913,7 +1060,26 @@ Titles and descriptions are visible and label each atomic SVG image. The SVG acc
 contains every complete series/point value, or for a diagram a text: node and layer count, groups with
 members, layers in flow order, connections along the flow and backward connections separately in the
 legend's words, or sequence participants and ordered messages, including text shortened only in the visible
-plot. A diagram repeats that text under the picture in a closed «diagram in words» disclosure. Values retain up to the supported four decimal places in observable text. Colors come
+plot. A diagram repeats that text under the picture in a «diagram in words» disclosure, closed on a wide
+screen and open from the start on a screen 620 px wide or narrower. Values retain up to the supported four decimal places in observable text.
+
+A figure is never drawn smaller than it reads. A diagram shrinks to its track only while its smallest text, a
+12.5 px node detail, stays at 11 px or more on screen; below that it changes form instead of shrinking. A
+`sequence` shows a list compiled from the same data: the participants, then every message in order as
+«from → to: message» (a message to itself reads «participant, inside itself: message»). A flow whose
+top-down view is wider than a phone column also carries a narrow top-down view compiled with narrower boxes
+and labels; its top-down panel shows that view on such a track, and the view switcher picks it when no other
+view fits. A flow that cannot fit even so keeps the 11 px floor and scrolls inside its frame. A `zoom` whose
+nested labels would not reach 11 px at the end of the flight on the current track does not fly: it stands as
+its two figures, one under the other whenever both do not fit side by side at that floor. A narrow chart
+variant keeps its 12 px axis labels at 11 px down to a 360 px window. Every diagram and chart, and every
+table wider than its track, has an **Open** control that shows the figure full screen: the same drawing
+(the view the reader has chosen, never the narrow form; a zoom shows both figures), redrawn at each zoom
+step so it stays sharp. Drag moves it, a pinch, `Ctrl` + wheel (a trackpad pinch), a double-click or
+double-tap, the + and − buttons and keys zoom it, **Fit** and `0` fit it to the screen, arrows move it,
+`Escape` closes it, focus stays inside while it is open and returns to the control. It moves nothing on its
+own, so reduced motion changes nothing, and print shows neither the control nor the viewer; print always gets
+the full drawing. Colors come
 from package-owned theme variables. Layout happens at build time; the page runtime only moves what is
 already drawn — the drawing fallback, the draw marker, pulses, the zoom camera and chart growth — on the page
 clock. There is no canvas, network request, author CSS, executable graph DSL, or separate behavior between
@@ -973,10 +1139,31 @@ and authored source range.
 The text form `:asset[Label]{src="path"}` uses the authored accessible label. The leaf form
 `::asset{src="path"}` is also valid and receives the deterministic visible label `Download <filename>`.
 
-`::video{src="path" poster="frame.png" caption="…"}` compiles to a `<figure>` with a `<video>` that has
-controls, is muted, loops, plays inline, and names itself by the caption, followed by the caption as
-`<figcaption>`. `![Alt text](recording.webm)` compiles to the same `<video>` in place of the image, named by
-its alt text. The video and poster are embedded as `data:` URLs in `single-file` output and written as
+A Markdown image may name its dark variant in an attribute block written directly after it, in the same
+`name="value"` form as directive attributes: `![Alt text](shot.png){dark="shot-dark.png"}`. `dark` is the
+only image attribute; another name fails with `IMAGE_ATTRIBUTE_UNKNOWN`, an empty value with
+`IMAGE_DARK_VARIANT_EMPTY`, and braces that do not read as `name="value"` pairs stay text. The dark file is a
+confined local PNG, JPEG, WebP, GIF, AVIF, or SVG image (`INVALID_IMAGE_DARK_VARIANT` otherwise, and on a
+Markdown image of a video file); a missing file fails with `ASSET_READ_FAILED`. It is embedded or copied like
+the image, counts toward `output.maxInlineBytes`, and is shared like any repeated image. The `<img>` keeps
+the light file in `src` and carries the dark one in `data-dark-src`; the package runtime shows the dark file
+while the image's used colour scheme is dark — the page scheme, the system scheme under `scheme: system`,
+the inverse scheme inside `tone="contrast"` — switches live with the scheme toggle and the system setting,
+and shows the light file in print and without the runtime. `compare`, `spotlight`, and section media take
+such images unchanged.
+
+`::video{src="path" poster="frame.png" caption="…"}` compiles to a `<figure>` with a `<video>` that plays
+inline and names itself by the caption, followed by the caption as `<figcaption>`; the video has the
+controls, the muting, and the loop of its mode. `![Alt text](recording.webm)` compiles to the same `<video>`
+in place of the image, named by its alt text.
+
+Without `mode`, the mode follows the sound of the files the page ships: a recording that carries sound is
+`manual`, a silent one is `clip`. An audio track counts as sound when at least one of its frames is larger
+than 24 bytes, the size above which an encoder no longer writes digital silence (AAC writes silence in 4–21
+bytes a frame, Opus in 3), so the silent track of a film without voice keeps it a clip. A video with `start`
+above 0, `seam="fade"`, or `expand="true"` stays a clip, because those attributes shape a loop. A Markdown
+image of a video file takes the same rule. When no shipped file can be read, a film's manifest `audio`
+decides. A `mode` the author writes always wins. The video and poster are embedded as `data:` URLs in `single-file` output and written as
 content-addressed files under `assets/` in `directory` output; the Content Security Policy allows media from
 exactly those places. Embedded video counts toward `output.maxInlineBytes` like any other resource. The
 package runtime starts a video while at least half of it is on screen and pauses it when it leaves, unless the
@@ -991,14 +1178,41 @@ large in a dialog with the full controls and sound, from the same second. A manu
 `seam`, and only a clip takes `expand`.
 
 `mode="background"` removes the controls, adds a package pause button, and requires a `poster`
-(`VIDEO_POSTER_REQUIRED`); `mode="manual"` keeps the controls and the sound and never starts by itself.
+(`VIDEO_POSTER_REQUIRED`); `dark-poster="frame-dark.png"` is the poster's dark variant, chosen by the same
+rule as an image's `dark` and refused without `poster`; `mode="manual"` keeps the controls and the sound and never starts by itself.
 `sources="a.av1.mp4, b.vp9.webm"` adds encodings of the same clip: directory output writes a `<source>` for
-each, in authored order and before `src`, with a `type` whose codec is read from the file (AV1, H.264, HEVC,
-VP9, VP8); single-file output embeds only the most compatible one (H.264, then VP9, VP8, AV1) and warns with
+each, in authored order and before `src`; single-file output embeds only the most compatible one (H.264, then VP9, VP8, AV1) and warns with
 `VIDEO_SOURCES_SINGLE_FILE`. `chapters="film.chapters.vtt"` adds a `kind="chapters"` track, embedded as data
 in both formats because a sibling file on `file://` is a foreign origin, and renders one button per cue that
 seeks to its start; a file that is not WebVTT with a titled cue per chapter fails with
 `INVALID_VIDEO_CHAPTERS`.
+
+Every `<source>` has a `type` built from the file's track list, not from its name: `video/mp4;
+codecs="avc1.640016, mp4a.40.2"`. The build reads the sample entries of an MP4 or M4V (`avcC` gives
+`avc1.PPCCLL`, `av1C` gives `av01.P.LLT.DD`, `hvcC` gives `hvc1.…`, `vpcC` gives `vp09.PP.LL.DD`; `mp4a`
+gives `mp4a.40.<audio object type>` from its `esds`, and `Opus`, `fLaC`, `ac-3`, `ec-3` their names), the
+`CodecID` of each WebM track (`vp8`, `vp9`, `av01.…` from AV1's `CodecPrivate`, `opus`, `vorbis`), and the
+first page of each Ogg stream (`theora`, `vorbis`, `opus`, `flac`), video codecs first and audio after. A
+file whose track list cannot be read, or that holds a codec with no string here, gets the bare container
+type and ranks last for single-file output.
+
+`from="film.web.json"` (or a directory holding exactly one `*.web.json`) replaces `src` with a film written
+by `agentic-screencast web`; `from` and `src` together, or a video with neither, fail with
+`INVALID_DIRECTIVE_ATTRIBUTE`. The manifest is JSON version 1, every path relative to its directory:
+`{version: 1, film, width, height, duration, audio, lang?, poster: {jpg, webp}, sources: [{src, type,
+format, width, height, bytes}], chapters?, thumbnails?: {sprite, vtt}, gif?}`, sources in order of
+preference. The film expands before the video step into `sources` (every entry, in manifest order), `poster`
+(`webp`, else `jpg`), and `chapters`, whose track takes `srclang` from `lang`; `poster`, `dark-poster`,
+`chapters`, and `sources` written on the directive override the film, and the other attributes apply as
+usual. Directory output offers every source; single-file output embeds the most compatible one without
+`VIDEO_SOURCES_SINGLE_FILE`, which stays for sources the author listed. A source keeps the manifest's `type`
+when it names the same container and codecs as the file (in any order and letter case) or when the file
+cannot be read; otherwise the file's type is written and the build warns `VIDEO_MANIFEST_MISMATCH`, which it
+also does when the manifest's `audio` differs from whether the file has an audio track. The warning's details
+name the film, the source, the field (`type` or `audio`), and both values. The manifest file counts among the
+page's source files. `from` is confined like every local path (`ASSET_OUTSIDE_SOURCE`); a missing target, a
+directory with no or several manifests, a file that is not JSON or not version 1, a malformed manifest, or an
+entry that is missing or leaves the source root fails with `INVALID_VIDEO_MANIFEST` naming the file to fix.
 
 ## Interactive reader contract
 
@@ -1120,6 +1334,13 @@ turns slides by keyboard, click, swipe and buttons, addresses them as `#/<slide>
 duration of the running transition as `data-slide-duration`, and marks its end with
 `data-slide-state="settled"` and the `agentic-slides:settled` event. `?view=film` hides the shell and
 `?view=presenter` shows the notes. Print, reduced motion, and a page without the runtime show every step.
+`deck` places a slide deck inside any page: it holds only `slide` directives (1–60; content between slides,
+an empty deck and a slide outside a deck fail with `INVALID_DIRECTIVE_PLACEMENT`), takes an optional `title`
+and `id`, and a `slide` takes `transition` (`fade`, `push`, `wipe`, `zoom`, `none`) and may hold `appear`
+steps and `notes`. Each deck has its own controller in a 16:9 slot of the column — buttons, a counter, keys
+while focused, the browser's full screen or, without it, a window-covering view left by Escape — and
+`#<id>/<n>` opens its slide `n`; it writes no address and exposes no global API. Print and a page without the
+runtime show every slide in sequence with every step; reduced motion opens every step and drops transitions.
 `transition="reveal"` and legacy `reveal="true"` reveal section contents once using opacity and at most 24
 pixels of translation over 420 milliseconds while the section anchor remains stable. Activation follows
 viewport intersection rather than a fraction of section height, so long sections remain readable when
@@ -1156,7 +1377,10 @@ Both formats include every declared locale variant and the same package-owned pa
 responsive navigation and bounded motion, default attribution footer, code-copy, tabs, overlays, filters,
 switches, visualizations, and demo behavior. Matching resources are deduplicated; two locale resources that
 would publish different bytes at the same directory-output path fail rather than overwrite each other. Tabs start on their first panel; disclosures use the
-authored `open` value; toggles use `default: off` unless set to `on`; popovers start closed; filter counts
+authored `open` value when the page is opened afresh, while a reload or a return through history in the same
+tab restores the disclosures the reader opened or closed and the block they were reading at the same
+distance from the top bar (kept in that tab's session storage, dropped when the rebuilt page has a different
+number of disclosures or blocks); toggles use `default: off` unless set to `on`; popovers start closed; filter counts
 and modal state initialize in the browser. Wide tables and code scroll inside their content surface on
 narrow screens instead of breaking the page. Runtime
 placement follows the format and is not authored: inline for `single-file`, or a deterministic hashed local
@@ -1233,12 +1457,3 @@ the page, and an effect's bundled script is allowed by its hash only on pages th
 provider is code, so an untrusted source with providers must not be validated or inspected either. An
 effect module is bundled with everything it imports, including files outside the source root such as
 `node_modules`; the build result lists those files in the effect's `notes`.
-
-A new capability of the core itself — a directive or behavior every page may use — must first satisfy the
-checked
-[`extension proposal schema`](../generated/extension-proposal.schema.json) using the
-[`complete template`](../generated/extension-proposal.template.json). Its closed `trustBoundary` fields
-make author code, callbacks, evaluation, dynamic imports and network access forbidden and require
-source-root confinement, offline deterministic behavior, CSP compatibility and bounded package-owned
-runtime behavior for code the package owns. This is a development-time evidence gate for the core; code
-specific to one design goes through extensions instead.

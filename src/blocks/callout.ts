@@ -60,7 +60,7 @@ function enhanceCallout(node: Element): void {
 export const callout = defineBlock({
   definition: calloutDefinition(),
   enhance: enhanceCallout,
-  styles: 'package',
+  feature: 'callout',
   staticEquivalent: 'A bordered notice with its title line, the same on screen and in print.',
   examples: [':::callout{title="Watch" kind="warning"}\nThe cache is cold after deploys.\n:::\n'],
 });

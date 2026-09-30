@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 240" role="img" aria-labelledby="title description">
+  <title id="title">Agentic report compilation</title>
+  <desc id="description">Markdown and assets flow through agentic-report into one HTML file.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" x2="1">
+      <stop offset="0" stop-color="#0e1631" />
+      <stop offset="1" stop-color="#1f0e31" />
+    </linearGradient>
+  </defs>
+  <rect width="720" height="240" rx="28" fill="url(#background)" />
+  <g fill="#bdc8e1" font-family="system-ui, sans-serif" font-size="22" text-anchor="middle">
+    <rect x="44" y="76" width="170" height="88" rx="16" fill="#161616" stroke="#2b52d3" stroke-width="3" />
+    <text x="129" y="128">Markdown + assets</text>
+    <rect x="275" y="76" width="170" height="88" rx="16" fill="#2b52d3" />
+    <text x="360" y="128" fill="#161616">agentic-report</text>
+    <rect x="506" y="76" width="170" height="88" rx="16" fill="#161616" stroke="#2b52d3" stroke-width="3" />
+    <text x="591" y="128">report.html</text>
+  </g>
+  <g stroke="#2b52d3" stroke-width="5" fill="none" stroke-linecap="round">
+    <path d="M224 120h39" />
+    <path d="m252 108 12 12-12 12" />
+    <path d="M455 120h39" />
+    <path d="m483 108 12 12-12 12" />
+  </g>
+</svg>

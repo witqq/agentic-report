@@ -1,0 +1,17 @@
+@layer components {
+  .semantic-filter-controls {
+    display: grid;
+    gap: 0.4rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .semantic-filter-controls label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--control-gap);
+  }
+
+  .semantic-filter input {
+    width: min(100%, 28rem);
+  }
+}

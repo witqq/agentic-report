@@ -1,0 +1,57 @@
+@layer components {
+  /*
+ * Мини-схема процесса в строке: шаги точками по состояниям, дуги возвратов цветом роли «возвращено»
+ * с кратностью. Высота — от кегля строки, поэтому в карточке и в абзаце знак одного размера с текстом.
+ */
+  .semantic-process {
+    display: inline-block;
+    white-space: nowrap;
+  }
+
+  .visualization-process {
+    display: inline-block;
+    width: auto;
+    height: 1.85em;
+    overflow: visible;
+    vertical-align: -0.5em;
+  }
+
+  .visualization-process-line {
+    stroke: var(--color-border-strong);
+    stroke-width: 1.5;
+  }
+
+  .visualization-process-step-done {
+    fill: var(--status-done);
+  }
+
+  .visualization-process-step-review {
+    fill: var(--status-review);
+    stroke: color-mix(in srgb, var(--status-review) 35%, transparent);
+    stroke-width: 3;
+    paint-order: stroke;
+  }
+
+  .visualization-process-step-pending {
+    fill: var(--color-bg);
+    stroke: var(--color-text-muted);
+    stroke-width: 1.3;
+  }
+
+  .visualization-process-return {
+    fill: none;
+    stroke: var(--status-returned);
+    stroke-width: 1.3;
+  }
+
+  .visualization-process-arrow {
+    fill: var(--status-returned);
+  }
+
+  .visualization-process-count {
+    fill: var(--status-returned);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: 12px;
+    font-weight: var(--weight-strong);
+  }
+}

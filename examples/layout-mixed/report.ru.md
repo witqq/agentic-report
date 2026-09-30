@@ -9,8 +9,12 @@ language: ru
 **Вымышленный пример.** Все наблюдения нужны только для демонстрации авторской системы. Перед применением
 замените их проверенными доказательствами.
 
+:::actions
+::action[Изучить визуальную систему]{href="#mosaic" kind="primary" effect="magnetic"}
+:::
+
 ::::section{title="Вся система на одной карте" id="demo" nav="Карта" recipe="demo"}
-![Четыре компоновки страниц на одном основании](layout-map.ru.svg)
+![Четыре компоновки страниц на одном основании](layout-map.ru.svg){dark="layout-map-dark.ru.svg"}
 ::::
 
 :::::section{title="Доказательство становится пространственным аргументом" id="stage" nav="Сцена" width="wide" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
@@ -19,11 +23,8 @@ language: ru
 поверхность из пакета — без авторского CSS и отдельного рендерера страницы.
 :::
 
-![Четыре компоновки страниц на одном основании](layout-map.ru.svg)
+![Четыре компоновки страниц на одном основании](layout-map.ru.svg){dark="layout-map-dark.ru.svg"}
 
-:::actions{placement="auto"}
-::action[Изучить визуальную систему]{href="#mosaic" kind="primary" effect="magnetic"}
-:::
 :::::
 
 ::::section{title="Исходник остаётся обычным" id="split" nav="Исходник" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grain"}
@@ -39,7 +40,7 @@ language: ru
 :::::section{title="Мозаика меняет ритм, а не смысл" id="mosaic" nav="Мозаика" width="wide" composition="mosaic" section-density="compact" media="natural" media-fit="cover" media-aspect="landscape" focal="center" surface="grid" transition="stagger" choreography="cascade"}
 ::::cards
 :::card{title="Главное доказательство"}
-![Общее основание страниц](layout-map.ru.svg)
+![Общее основание страниц](layout-map.ru.svg){dark="layout-map-dark.ru.svg"}
 
 Первая карточка получает больше визуального пространства, оставаясь первым смысловым элементом.
 :::
@@ -54,7 +55,7 @@ language: ru
 :::::
 
 ::::section{title="Длинное доказательство сохраняет контекст" id="story" nav="История" width="wide" composition="story" viewport="bounded" section-density="immersive" type="display" media="natural" media-fit="cover" media-aspect="landscape" focal="left" surface="tint"}
-![Стабильная визуальная опора рядом с рассуждением](layout-map.ru.svg)
+![Стабильная визуальная опора рядом с рассуждением](layout-map.ru.svg){dark="layout-map-dark.ru.svg"}
 
 На широком экране медиа остаётся рядом с длинным объяснением, не меняя порядок документа. На узком экране
 оно возвращается в обычный поток. Этот абзац начинает аргумент и сохраняет удобную длину строки.
@@ -84,19 +85,19 @@ language: ru
 Исходник остаётся обычным локальным изображением Markdown; пакет доводит его до края визуальной поверхности,
 не принимая авторский CSS или удалённый URL.
 
-![Полноширинный вид внутри смыслового раздела](layout-map.ru.svg)
+![Полноширинный вид внутри смыслового раздела](layout-map.ru.svg){dark="layout-map-dark.ru.svg"}
 ::::
 
 :::::section{title="Несколько локальных видов создают глубину" id="layers" nav="Слои" width="wide" composition="split" viewport="bounded" section-density="editorial" type="editorial" media="layers" media-fit="cover" media-aspect="portrait" focal="center" surface="grain"}
 ::::cards
 :::card
-![Слой основания](layout-map.ru.svg)
+![Слой основания](layout-map.ru.svg){dark="layout-map-dark.ru.svg"}
 :::
 :::card
-![Слой доказательства](layout-map.ru.svg)
+![Слой доказательства](layout-map.ru.svg){dark="layout-map-dark.ru.svg"}
 :::
 :::card
-![Слой решения](layout-map.ru.svg)
+![Слой решения](layout-map.ru.svg){dark="layout-map-dark.ru.svg"}
 :::
 ::::
 :::::
@@ -104,20 +105,20 @@ language: ru
 :::::section{title="Галерея показывает несколько видов" id="gallery" nav="Галерея" width="wide" composition="stage" viewport="adaptive" section-density="compact" type="body" media="gallery" media-fit="cover" media-aspect="landscape" focal="center" surface="plain"}
 ::::cards
 :::card{title="Система"}
-![Системный вид](layout-map.ru.svg)
+![Системный вид](layout-map.ru.svg){dark="layout-map-dark.ru.svg"}
 :::
 :::card{title="Доказательства"}
-![Вид доказательств](layout-map.ru.svg)
+![Вид доказательств](layout-map.ru.svg){dark="layout-map-dark.ru.svg"}
 :::
 :::card{title="Решение"}
-![Вид решения](layout-map.ru.svg)
+![Вид решения](layout-map.ru.svg){dark="layout-map-dark.ru.svg"}
 :::
 ::::
 :::::
 
 ::::section{title="Деталь, на которую стоит посмотреть ближе" id="spotlight" nav="Деталь"}
-:::spotlight{x="30" y="40" zoom="2" title="Общее основание"}
-![Четыре раскладки страницы на одном основании](layout-map.ru.svg)
+:::spotlight{x="50" y="75" zoom="1.5" title="Общее основание"}
+![Четыре раскладки страницы на одном основании](layout-map.ru.svg){dark="layout-map-dark.ru.svg"}
 
 Все раскладки построены на общей основе: единый формат исходника, тема и среда выполнения.
 :::
@@ -133,8 +134,8 @@ language: ru
 
 ::::section{title="Одна страница до и после" id="compare" nav="Сравнение" width="wide"}
 :::compare{before="Эскиз" after="Готовая страница"}
-![Эскиз страницы с пустыми пунктирными блоками](compare-before.svg)
-![Готовая страница с шапкой, графиком и карточками](compare-after.svg)
+![Эскиз страницы с пустыми пунктирными блоками](compare-before.svg){dark="compare-before-dark.svg"}
+![Готовая страница с шапкой, графиком и карточками](compare-after.svg){dark="compare-after-dark.svg"}
 :::
 
 Перетащите границу или двигайте ползунок стрелками; у обеих картинок остаётся текстовое описание.
@@ -185,7 +186,7 @@ language: ru
 ::::
 
 ::::section{title="Иллюстрация остаётся в потоке чтения" id="still-image" nav="Иллюстрация"}
-![Четыре компоновки страниц на одном основании](layout-map.ru.svg)
+![Четыре компоновки страниц на одном основании](layout-map.ru.svg){dark="layout-map-dark.ru.svg"}
 
 Завершающая схема сохраняет описание и место в порядке чтения при любой ширине экрана и настройке движения.
 ::::

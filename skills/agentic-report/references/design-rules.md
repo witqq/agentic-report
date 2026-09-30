@@ -1,9 +1,7 @@
 # Design rules
 
-Each rule has a stable identifier, the reason behind it, a counterexample taken from real pages — pages
-this package produced before the rule existed, or the landing of Moira (an MCP server that leads an AI agent
-through a workflow), whose prototypes were built by hand and reviewed round by round in September 2026 —
-and the fix. Rules marked **fix on sight** justify an edit the
+Each rule has a stable identifier, the reason behind it, a concrete counterexample, and the fix.
+Rules marked **fix on sight** justify an edit the
 first time you see the problem; the rest need judgement against the brief. The design check
 (`scripts/design-check.mjs`) applies the rules marked **checked** to the structure of a built page and
 names the rule it found broken. A rule is switched off for one page only by a line in that page's
@@ -45,9 +43,9 @@ the recipes that argument needs.
 
 A main scene that fills a corner reads as an illustration, and one that collapses on a phone leaves the
 page without its point.
-Counterexample: in the second round of the Moira landing (September 2026) the graph of one direction took
-about 440 of 1440 pixels, some 30 % of the screen, and below 1024 pixels the main scene lost its motion
-entirely; in another direction the hero photograph under a 62–90 % mask became a grey strip on a phone.
+Counterexample: a landing graph takes about 440 of 1440 pixels, some 30 % of the screen,
+and below 1024 pixels the main scene loses its motion
+entirely; a hero photograph under a 62–90 % mask becomes a grey strip on a phone.
 Fix: give the main scene the larger part of its screen at 1440 pixels, and check at 390 pixels that the
 main visual asset is still there and still readable; if it cannot survive, design its narrow version on
 purpose rather than letting it shrink.
@@ -99,9 +97,8 @@ the theme's chart colours.
 
 A signal colour is an alarm. Spread over every status it stops meaning anything, and a status told only by
 colour is lost to a colour-blind reader and in print.
-Counterexample: the «Form» prototype of the first Moira landing round stamped every step red, including
-«Accepted», so the whole column read as an alarm; the reviewer asked for «Accepted» in ink and red only on
-the refusal.
+Counterexample: every step is stamped red, including «Accepted», so the whole column reads as an alarm.
+«Accepted» needs ink and only the refusal needs red.
 Fix: keep the signal colour for the one status the reader must act on (a refusal, a risk); draw the rest in
 ink or neutral; give every status a word or a shape as well (`card status` says it in words).
 
@@ -109,8 +106,8 @@ ink or neutral; give every status a word or a shape as well (`card status` says 
 
 Opacity lowers the contrast of text below what the reader can see, and an automatic contrast check that
 reads only the colour does not notice it.
-Counterexample: in the second Moira landing round the steps a run had not reached were drawn at opacity 0.18
-and read as grey ghosts; in another direction elements muted through `opacity` measured 2.36:1 and 3.19:1
+Counterexample: steps a run has not reached are drawn at opacity 0.18
+and read as grey ghosts; elements muted through `opacity` measure 2.36:1 and 3.19:1
 against their background.
 Fix: mute with a quieter colour that still meets the contrast rule; if transparency is unavoidable, never go
 below 0.35 and measure the contrast of the final colour in both schemes, after every animation has ended.
@@ -119,9 +116,8 @@ below 0.35 and measure the contrast of the final colour in both schemes, after e
 
 A figure scaled to fit a narrow column scales its labels with it, and a label in another language breaks
 the page for the reader it was written for.
-Counterexample: in the second Moira landing round the text inside one direction's figures measured 4.5–6.9
-pixels on screen, labels of the first round's hero were about 6 pixels at 400 pixels wide, and a Russian
-figure carried English labels.
+Counterexample: figure text measures 4.5–6.9 pixels on screen, hero labels are about 6 pixels at
+400 pixels wide, and a Russian figure carries English labels.
 Fix: use the package's `diagram`, `chart` and `timeline`, which keep their labels readable, or put the
 labels in the text beside a picture; translate every label of a figure with the page; a screenshot whose
 text would fall below 11 pixels on a phone becomes a diagram drawn from the data
@@ -167,10 +163,9 @@ See [`assets.md`](assets.md).
 
 A scene that can be removed without losing a number, a refusal, or the path is decoration, however
 beautiful. The deletion test says whether the metaphor is the material of the page or a picture beside it.
-Counterexample: the first Moira landing round drew its «thread» as a flat one-pixel SVG line of constant
-width on paper, while the times, the returns and the text of the refusal lived in the table and the event
-grid under it; the line was a picture of the process, not its carrier, and the owner rejected the round as
-crude.
+Counterexample: a thread is a flat one-pixel SVG line of constant width on paper, while the times,
+the returns and the text of the refusal live in the table and the event grid under it. Removing
+the line leaves every fact intact.
 Fix: put in the scene what the page proves — the numbers, the refusal, the path taken — and check that
 removing the scene would remove them; otherwise shrink the scene to an ornament or drop it.
 
@@ -178,11 +173,10 @@ removing the scene would remove them; otherwise shrink the scene to an ornament 
 
 A chain drawn by hand shows what the author remembers, not what the system does, and it drifts as the
 system changes. A mock-up with numbers looks like a record.
-Counterexample: the live Moira landing (2026-09-25) drew «Made with Moira» as a hand-made chain PLAN → CODE →
-TESTS → DOCS → GIT → NOTIFICATION, not from the flow, and showed a message mock-up «Step 4/6 done: tests
-passed (42/42)» whose numbers were illustrative; in the second round a screenshot of the flow was so small
-and blurred that the owner said nothing in it could be understood, and it was replaced by a map of blocks
-built from the flow's definition.
+Counterexample: a hand-made chain PLAN → CODE → TESTS → DOCS → GIT → NOTIFICATION is drawn from memory
+instead of the flow definition, and a message mock-up says «Step 4/6 done: tests passed (42/42)» without
+marking its numbers as illustrative. A screenshot of the flow shrunk until its text is blurred cannot
+replace a readable map of blocks built from the definition.
 Fix: build the `diagram` from the real definition (its nodes, connections and returns), show the run as it
 was recorded, and label every illustrative number in a mock-up as an example on the page.
 
@@ -190,10 +184,10 @@ was recorded, and label every illustrative number in a mock-up as an example on 
 
 A reader cannot check a figure that does not say which data it shows, when it was taken, and which field
 each number comes from.
-Counterexample: the first Moira landing round said «the run is still going» about an export taken on
-25.09 at 01:17 Moscow time, labelled «sixth review, zero findings» with the time the review was entered
-rather than left, filled two numbers by script as «unchanged» without saying so, and in the second round
-showed two runs in one figure without marking where one ended.
+Counterexample: a page says «the run is still going» about an export taken at 01:17 Moscow time,
+labels «sixth review, zero findings» with the time the review was entered rather than left,
+fills two numbers by script as «unchanged» without saying so, and shows two runs in one figure
+without marking where one ends.
 Fix: put a source line under every block of data — which run or system, taken when, how many records;
 describe a snapshot as a snapshot («as of the export on …»); label a time with the event its field records;
 mark a derived number as derived; call an unknown number unknown on the page («at most 500 characters, the
@@ -205,8 +199,8 @@ export with `data` and `{{…}}`, guard each claimed count with `::expect`, writ
 ### DR-HEADING-COUNT — a number in a heading is counted by a stated rule · judgement
 
 A count in a title is the claim readers remember, so a wrong one is the most visible mistake on the page.
-Counterexample: a first-round Moira title said «Five paths back» and counted the «next unit» loop, which is
-not a path back; the flow had four.
+Counterexample: a title says «Five paths back» and counts the «next unit» loop, which is
+not a path back; the flow has four.
 Fix: write the counting rule in the brief («returns to an earlier block, loops excluded»), derive the number
 from the data by that rule, and check it against the source before handing over.
 
@@ -214,7 +208,7 @@ from the data by that rule, and check it against the source before handing over.
 
 A count of features, themes, or layouts goes stale with the next release while the page keeps saying it.
 Counterexample: this package's own documents said «four layouts» and «six starters» after the product had
-changed, and the Moira project forbids drifting counts in its own rules for the same reason.
+changed.
 Fix: name the capabilities, or leave the number to something generated from the product; if a count must
 stay, check it against the code before every handover.
 
@@ -222,18 +216,18 @@ stay, check it against the code before every handover.
 
 A property of one sample presented as a property of the product is a false claim, and a caption that joins
 data from different levels invents a contract nobody wrote.
-Counterexample: a first-round Moira page said «until the plan has passed an independent review, work does
-not start» — true of the Quick Task flow shown, not of Moira; a column «the agent must return» merged the
-fields of two different steps and left out the step that was refused.
-Fix: tie every statement about an example to the example's name («in Quick Task …»), and caption a group at
+Counterexample: a page says «until the plan has passed an independent review, work does not start»
+about a workflow whose rule applies only to the example shown; a column «the agent must return» merges
+the fields of two different steps and leaves out the step that was refused.
+Fix: tie every statement about an example to the example's name («in this review workflow …»), and caption a group at
 the level its data has.
 
 ### DR-PRIVACY — only safe fields reach the page · judgement
 
 A page travels further than its author expects: a task title, a customer name or a quoted prompt in it
 leaks with every forward.
-Counterexample: the second Moira landing round quoted an edited English sentence that carried the private
-text of a task, and annotated a clip with solid pills laid over the recorded data.
+Counterexample: a quoted sentence carries the private text of a task, and a clip is annotated with
+solid pills laid over the recorded data.
 Fix: show identifiers, names of steps, times, counts, and the text of an error; show a model's answer only
 as its length; crop or cover task titles in screenshots and clips; put annotations outside the data, beside
 the frame; record in the brief which fields were judged safe.
@@ -250,13 +244,45 @@ card forms only and names a group of eight or more cards that all share one form
 is a link is an index and passes); three plain cards it cannot tell from three distinct ones, so judge those
 yourself.
 
+### DR-EMPTY-STATE — an empty block says in words what is empty · checked
+
+A list, a table or a group of cards built from data can be empty, and an empty block on a static page is
+indistinguishable from a broken one: the reader cannot tell «there is nothing» from «nothing loaded».
+Counterexample: a `data` page whose export came with an empty list rendered its table as a header row with
+no rows beneath, and a chapter over an empty `each` as a title with nothing under it; the build passed,
+because an empty list is valid data.
+Fix: when the data may be empty, say so in a sentence where the block would stand — what is absent, as of
+when, and what the reader does next («No open incidents on 29 September at 12:00; the next export runs at
+18:00») — and leave the empty block out; when the data must never be empty, put `::expect{data="…" min="1"}`
+beside it so the build fails instead. The check names chapters with nothing but their title, tables with a
+header and no rows, and `cards` groups without cards; a list over empty data leaves nothing at all, so read
+the page for a heading that introduces a list which is not there.
+A section that is only a title on purpose — a divider slide between parts of a deck, a closing «Questions?»
+screen — is not an empty state, but the check names it the same way. Give it a line when it has one to say
+(a `lead` with what the next part covers); when the title alone is the point, switch the rule off in
+`brief.md` under «Checks switched off» with the reason, for example
+`- DR-EMPTY-STATE: the part dividers and the closing «Questions?» screen are titles by design`. The switch
+covers the whole page, so read the other chapters, tables and card groups for a real empty state yourself.
+
+### DR-HEADING-EMOJI — no emoji in headings and titles · checked
+
+An emoji in a heading is chat residue and an icon borrowed from the reader's keyboard: it renders
+differently on every system, is read aloud by name («rocket») by a screen reader, and is the mark of a
+generated page — the row of three feature cards with an emoji each is one of the six tells of a generic
+landing.
+Counterexample: generated feature cards titled «🚀 Fast», «🔒 Secure», «✨ Simple» — the emoji carries no
+fact, and the three titles stay interchangeable.
+Fix: remove the emoji; if the heading needs a marker, give the block the fact that makes it different — a
+status (`card{status}`), a number, a picture. The check counts headings and block titles that carry an
+emoji-style character; letter-like signs such as © and ✓ do not count.
+
 ### DR-NUMBERS-UNITS — every number carries its unit and its date · fix on sight
 
 «74%» of what, measured when? A number without both is decoration.
 Counterexample: the 0.17 dashboard starter said «137 focused checks passed in the current environment» with
 no date, build, or source.
-A second counterexample: in the second Moira landing round the «1» of a fifth return stood against «9 of 10
-items» and read as «1 9 of 10», and a label «0 · accepted» did not say zero of what.
+A second counterexample: the «1» of a fifth return stands against «9 of 10 items» and reads as
+«1 9 of 10», and a label «0 · accepted» does not say zero of what.
 Fix: write the unit, the population, and the date next to the figure or in its caption, and keep a word
 with every number («0 findings · accepted»). Leave a clear gap between neighbouring numeric labels so two
 figures never read as one. When the source does not give the unit or the date, list the figure under
@@ -270,8 +296,8 @@ is there, in the words the product uses for what is on screen.
 Counterexample: the 0.17 `layout-mixed` catalog showed one and the same `layout-map.svg` eight times under
 eight different alternative texts — «Foundation layer», «Evidence layer», «Decision layer», «System view» —
 so the text described pictures the page did not have.
-A second counterexample: the risky techniques listed from agentic-screencast for the Moira landing included
-slogans in place of captions and decorative «before/after» cards in place of footage.
+A second counterexample: a recording uses slogans in place of captions and decorative
+«before/after» cards in place of footage.
 Fix: one picture per meaning, and alternative text that describes that picture. A caption names what is in
 the frame in the product's own words — the step, the field, the result — never a slogan about it.
 
@@ -282,9 +308,8 @@ the frame in the product's own words — the step, the field, the result — nev
 When every section reveals the same way, the reader learns to wait instead of reading.
 Counterexample: the 0.17 recipes gave hero, rail, and metrics a staggered entrance, so a page built from
 them made every block fade up in turn.
-A second counterexample: the first prototypes of the Moira landing were rejected as crude partly because
-their motion was the same everywhere: every block entered the same way, so no movement marked the moment the
-story turned.
+A second counterexample: every block enters the same way, so no movement marks the moment
+the story turns.
 Fix: let most chapters simply be there; keep an entrance for the one or two chapters that change the story.
 
 ### DR-ONE-EFFECT — at most one pointer or magnetic effect per page · checked
@@ -301,8 +326,8 @@ A diagram that draws its flow in order, a number that counts because it is new, 
 the step being explained: these carry meaning. Motion that only decorates distracts.
 Counterexample: the 0.17 motion showcase put pointer depth on the hero, tilt on a card, and a magnetic pull on
 two buttons of one page; none of the movements told the reader anything about the subject.
-A second counterexample: the same first Moira round showed the process — a plan returned by review, a refused
-answer, a fix — as a static picture, so the order of events, which was the point, had to be read from labels.
+A second counterexample: a process — a plan returned by review, a refused answer, a fix — is shown
+as a static picture, so the order of events, which is the point, has to be read from labels.
 Fix: for each moving element, say in one sentence what the reader learns from the movement; remove the
 ones without an answer. A process whose order is the explanation moves in that order: `scene="steps"` over
 one picture, or `draw="scroll"` on its diagram.
@@ -311,10 +336,12 @@ one picture, or `draw="scroll"` on its diagram.
 
 An entrance that slides in from nowhere is noise; a meaningful gesture too small to notice is wasted. The
 two are different classes of motion and get different sizes.
-Counterexample: in the second Moira landing round the «jerk» of a refused step was a 10-pixel dip the
-reviewer could not see — about 40 pixels of recoil were needed — and a fly-in «is easy to miss at normal
-scroll speed»; elsewhere secondary elements kept moving while the main gesture played.
-Fix: an entrance moves at most 16 pixels, toward the source it comes from, and scales only from 0.97 to 1;
+Counterexample: the «jerk» of a refused step is a 10-pixel dip that disappears at normal scrolling
+speed, where about 40 pixels of recoil are needed; secondary elements keep moving while the main
+gesture plays.
+Fix: an entrance moves at most 16 pixels, toward the source it comes from, and scales only from 0.97 to 1
+(a slide's `slide-transition="zoom"` from 0.94 and `appear` with `effect="pop"` from 0.9 are named accents, not
+entrances);
 a meaningful gesture (a jerk, a cut, a recoil) is large enough to see at normal scroll speed, around 40
 pixels; while the main gesture of a screen plays, everything else stands still and text arrives before or
 after it. Check each key effect at normal scrolling speed, not frame by frame.
@@ -325,9 +352,8 @@ after it. Check each key effect at normal scrolling speed, not frame by frame.
 
 WebGL is a layer over a page that already works. When the effect at rest looks worse than the still picture
 under it, or sets states the other render paths never get, the effect costs the page.
-Counterexample: in the second Moira landing round one WebGL scene lifted the blacks of its picture and drew
-hairline seams about every 15 pixels, and in another direction the step statuses were set only inside the
-WebGL path, so under reduced motion and without WebGL they disappeared.
+Counterexample: a WebGL scene lifts the blacks of its picture and draws hairline seams about every
+15 pixels; step statuses set only inside the WebGL path disappear under reduced motion and without WebGL.
 Fix: at rest the effect must match the still picture pixel for pixel; every state the scene shows exists in
 every render path; the still version is drawn directly in its final state from the same geometry, not a
 single screenshot of the effect.
@@ -336,9 +362,8 @@ single screenshot of the effect.
 
 An SVG layer scaled one way and HTML labels placed another way agree at one width and drift apart at every
 other.
-Counterexample: in the second Moira landing round an SVG layer was scaled with
-`preserveAspectRatio="xMidYMid meet"` while its HTML labels were positioned against the page, and the row
-captions landed one row below their rows.
+Counterexample: an SVG layer scales with `preserveAspectRatio="xMidYMid meet"` while its HTML labels
+are positioned against the page, and the row captions land one row below their rows.
 Fix: draw labels inside the figure's own coordinate system, or keep the `viewBox` equal to the figure's box;
 the package's `diagram`, `chart`, and `timeline` already do this.
 
@@ -346,8 +371,8 @@ the package's `diagram`, `chart`, and `timeline` already do this.
 
 A decorative canvas that runs under translucent, blurred blocks turns to mud, and a floating control laid
 over text hides the words it sits on.
-Counterexample: in the second Moira landing round the thread canvas ran under blocks with
-`backdrop-filter`, so the thread went muddy behind them, and a floating pause button covered text on a phone.
+Counterexample: a decorative canvas runs under blocks with `backdrop-filter`, so its drawing becomes
+muddy behind them, and a floating pause button covers text on a phone.
 Fix: give blocks over a decorative scene an opaque background or none at all; keep pause buttons and other
 controls in the flow of the page, beside the content they control, never on top of text.
 
@@ -355,8 +380,7 @@ controls in the flow of the page, beside the content they control, never on top 
 
 Speed is part of a premium page, and a single file that carries several clips becomes too heavy to send.
 Counterexample: in 0.17 exceeding `output.maxInlineBytes` only warned, and the `cinematic-story` example
-alone weighed 3.66 MB with one clip; the Moira landing prototypes set themselves an 8 MB ceiling per file and
-failed their own bundle above it.
+alone weighed 3.66 MB with one clip. A page with an 8 MB ceiling must refuse its bundle above that size.
 Fix: keep one file under the budget (the build now fails above `output.maxInlineBytes`), put a page with
 several clips in a directory build, follow the sizes in [`assets.md`](assets.md), and check the first
 screen's bytes with `inspect` before handing over.
@@ -377,8 +401,8 @@ its source (`request`, `asked`, or `inferred`); the check names the rows left em
 
 The brief is the decision; a page that contradicts it was built from a different decision nobody wrote
 down.
-Counterexample: the review of this package's landing in September 2026 counted «the brief and the result
-diverge» among its 37 defect classes, and nothing but the reader's eye compared the two.
+Counterexample: the brief requests no motion, but the built page animates its chapter entrances and
+numbers, and no check compares the two.
 Fix: when the brief answers motion «None», write `motion: none` in the manifest and drop the motion
 attributes, or change the brief's answer and give the reason. The check names a brief whose motion answer
 is «None» while a section still moves, an action is magnetic, or another element moves by itself — a

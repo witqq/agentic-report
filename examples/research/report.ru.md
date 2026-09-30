@@ -23,7 +23,7 @@ language: ru
 
 ::::::section{title="Модель доказательств" id="evidence" nav="Данные" recipe="evidence"}
 
-![Исследовательские данные сходятся в рекомендацию](assets/evidence-map.ru.svg)
+![Исследовательские данные сходятся в рекомендацию](assets/evidence-map.ru.svg){dark="assets/evidence-map-dark.ru.svg"}
 
 ::::tabs{title="Представления доказательств"}
 :::tab{label="Наблюдения"}

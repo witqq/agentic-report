@@ -16,6 +16,7 @@ import { themeFontFiles, themeStylesheet } from '../../src/render/theme-css.js';
 import { loadSource } from '../../src/source/load-source.js';
 import { woff2Axes } from '../helpers/woff2.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
+import { readPackageStylesheet } from '../helpers/package-stylesheet.js';
 
 const workspaces: string[] = [];
 
@@ -163,10 +164,7 @@ describe('heading measure from the theme', () => {
   // Ловит заголовок страницы или секции-заявления, чья мера в `ch` записана мимо переменной темы: такой
   // заголовок не слушается `typography.headingMeasure`.
   it('lets the variable govern every ch measure of the page title and display section titles', async () => {
-    const css = (await readFile(path.resolve('src/browser/document.css'), 'utf8')).replace(
-      /\/\*[\s\S]*?\*\//gu,
-      '',
-    );
+    const css = (await readPackageStylesheet()).replace(/\/\*[\s\S]*?\*\//gu, '');
     const governed: string[] = [];
     const bypassing: string[] = [];
     for (const match of css.matchAll(/([^{};]+)\{([^{}]*)\}/gu)) {

@@ -122,6 +122,11 @@
           "description": "Shows the package-owned “Made with Agentic Report” footer link; set false to omit it.",
           "default": true
         },
+        "topbar": {
+          "type": "boolean",
+          "description": "Shows the package-owned top bar with the title, the contents button and the page controls; set false for a page filmed as a scene: the first section starts at the top edge, and review and themeSwitcher, which live in the bar, are refused.",
+          "default": true
+        },
         "schemeToggle": {
           "type": "boolean",
           "description": "Shows the package-owned light and dark control; set false for a page that must stay in the scheme it was built with.",
@@ -209,6 +214,8 @@
         { "$ref": "#/$defs/process" },
         { "$ref": "#/$defs/appear" },
         { "$ref": "#/$defs/notes" },
+        { "$ref": "#/$defs/deck" },
+        { "$ref": "#/$defs/slide" },
         { "$ref": "#/$defs/decision" },
         { "$ref": "#/$defs/decision-option" },
         { "$ref": "#/$defs/checklist" },
@@ -227,6 +234,7 @@
         { "$ref": "#/$defs/option" },
         { "$ref": "#/$defs/item" },
         { "$ref": "#/$defs/copyable" },
+        { "$ref": "#/$defs/table" },
         { "$ref": "#/$defs/glossary" },
         { "$ref": "#/$defs/term" },
         { "$ref": "#/$defs/disclosure" },
@@ -1708,6 +1716,52 @@
       },
       "required": ["name", "form", "attributes"]
     },
+    "deck": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "deck" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Optional anchor: #id opens the deck, #id/3 opens its third slide."
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "slide": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "slide" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "transition": {
+              "type": "string",
+              "enum": ["fade", "push", "wipe", "zoom", "none"],
+              "description": "How the slide arrives: fade, push from the side, wipe from the start edge, zoom in, or none.",
+              "default": "fade"
+            }
+          }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
     "decision": {
       "type": "object",
       "additionalProperties": false,
@@ -2233,6 +2287,27 @@
         "name": { "const": "copyable" },
         "form": { "type": "string", "enum": ["container"] },
         "attributes": { "type": "object", "additionalProperties": false, "properties": {} }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "table": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "table" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "layout": {
+              "type": "string",
+              "enum": ["auto", "stack", "scroll"],
+              "description": "How the table meets a narrow track: auto wraps prose and turns rows into labelled cards only when the columns cannot fit readably; stack turns rows into cards on every narrow track; scroll keeps the grid, scrolls sideways and keeps the first column in view.",
+              "default": "auto"
+            }
+          }
+        }
       },
       "required": ["name", "form", "attributes"]
     },
@@ -3074,7 +3149,13 @@
               "type": "string",
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
               "format": "relative-local-path",
-              "description": "Relative local video path: .webm, .mp4, .m4v, or .ogv. Give the most compatible encoding (H.264 MP4) here."
+              "description": "Relative local video path: .webm, .mp4, .m4v, or .ogv. Give the most compatible encoding (H.264 MP4) here. Required unless from names a film."
+            },
+            "from": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "format": "relative-local-path",
+              "description": "A film made by agentic-screencast web: its <film>.web.json manifest, or the directory holding exactly one. The film gives every encoding in the manifest order, the poster, and the chapters; poster, dark-poster, chapters, and sources written here override the film. Use instead of src."
             },
             "sources": {
               "type": "string",
@@ -3084,8 +3165,7 @@
             "mode": {
               "type": "string",
               "enum": ["clip", "background", "manual"],
-              "description": "clip: muted, looping, plays while visible, with controls. background: muted and looping without controls, with a pause button; a poster is required. manual: starts only when the reader presses play, with sound.",
-              "default": "clip"
+              "description": "clip: muted, looping, plays while visible, with controls. background: muted and looping without controls, with a pause button; a poster is required. manual: starts only when the reader presses play, with sound. Without mode, a recording whose file carries sound (a voice-over; a silent audio track does not count) is manual and a silent one is clip; start, seam=\"fade\", or expand keep it a clip."
             },
             "chapters": {
               "type": "string",
@@ -3098,6 +3178,12 @@
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
               "format": "relative-local-path",
               "description": "Relative local image shown before playback and in print: .png, .jpg, .jpeg, .webp, .gif, or .avif."
+            },
+            "dark-poster": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "format": "relative-local-path",
+              "description": "Relative local image shown instead of the poster while the page scheme is dark; needs poster, same image types. Print shows the light poster."
             },
             "caption": {
               "type": "string",
@@ -3121,8 +3207,7 @@
               "description": "Adds an Expand button to a clip that opens it large in a dialog with the full player controls and sound.",
               "default": false
             }
-          },
-          "required": ["src"]
+          }
         }
       },
       "required": ["name", "form", "attributes"]
@@ -3150,8 +3235,8 @@
             },
             "role": {
               "type": "string",
-              "enum": ["body", "heading", "mono"],
-              "description": "Text role the font sets: body text and controls, headings and section titles, or code.",
+              "enum": ["body", "heading", "mono", "code"],
+              "description": "Text role the font sets: body text and controls, headings and section titles, monospaced labels and metadata, or code blocks and inline code.",
               "default": "body"
             }
           },

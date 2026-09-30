@@ -34,7 +34,7 @@ defect remains in the reviewed scope.
 
 ::::::section{title="Evidence map" id="evidence" nav="Evidence" recipe="evidence"}
 
-![Evidence moving from source through verification to a release decision](assets/architecture.svg)
+![Evidence moving from source through verification to a release decision](assets/architecture.svg){dark="assets/architecture-dark.svg"}
 
 ::asset[Download the evidence map]{src="assets/architecture.svg"}
 

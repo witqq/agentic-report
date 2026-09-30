@@ -4,6 +4,7 @@ name: E2E (nightly)
 on:
   schedule:
     - cron: '0 3 * * *' # 03:00 UTC daily
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,9 +15,9 @@ concurrency:
 
 jobs:
   e2e:
-    name: Browser E2E (pnpm test:e2e)
+    name: Browser E2E and timed checks (pnpm test:e2e, pnpm test:perf)
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -40,6 +41,21 @@ jobs:
 
       - name: Run browser E2E
         run: pnpm test:e2e
+
+      # Testfold writes one test-results/summary.json per run, so the perf run would replace the E2E one;
+      # each suite's summary is kept under its own name for the uploaded artifact.
+      - name: Keep the E2E summary
+        if: always()
+        run: if [ -f test-results/summary.json ]; then cp test-results/summary.json test-results/summary-e2e.json; fi
+
+      # Timed budgets run alone, after the browser suite, so no other test shares the CPU.
+      - name: Run timed performance checks
+        if: always()
+        run: pnpm test:perf
+
+      - name: Keep the perf summary
+        if: always()
+        run: if [ -f test-results/summary.json ]; then cp test-results/summary.json test-results/summary-perf.json; fi
 
       - name: Upload E2E diagnostics
         if: always()

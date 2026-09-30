@@ -1,0 +1,438 @@
+@layer treatments {
+  [data-edition-layer] [data-change] {
+    --edition-signal: var(--status-review);
+  }
+
+  [data-edition-layer] [data-change='added'] {
+    --edition-signal: var(--status-done);
+  }
+
+  [data-edition-layer] [data-change='removed'] {
+    --edition-signal: var(--status-returned);
+  }
+
+  /* Специфичность равна самым сильным правилам показа узлов слоя ниже: выключенный слой побеждает их. */
+  [data-edition-layer='off']
+    :is(
+      [data-edition-removed],
+      pre[data-edition-code] .line[data-edition-removed],
+      :is(figure, pre, .table-frame, section, aside, blockquote, details)
+        > :is(.edition-chip, .edition-chip-detail)
+    ) {
+    display: none;
+  }
+
+  /* Полоса редакции: одна строка сводки и управление слоем; на телефоне переносится в две строки. */
+  .edition-strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    max-width: min(100%, var(--reading-measure));
+    margin-block: calc(1.25rem * var(--space-factor));
+    border: 1px solid var(--color-border);
+    border-inline-start: 3px solid var(--status-review);
+    border-radius: var(--radius-small);
+    padding: 0.55rem 0.85rem;
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  :root[data-layout='landing'] .edition-strip {
+    margin-inline: auto;
+  }
+
+  .edition-strip-summary {
+    flex: 1 1 18rem;
+    margin: 0;
+    font-size: var(--text-sm);
+  }
+
+  .edition-strip-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+  }
+
+  /* Пометка блока: полоса на поле и ярлык словом в начале блока. */
+  [data-edition-layer='on']
+    [data-change]:not(tr, li, .line, g, path, span, .edition-ghost, .edition-entry-status) {
+    position: relative;
+  }
+
+  .edition-bar {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: calc(-1 * clamp(0.55rem, 1.5vw, 0.9rem));
+    width: 3px;
+    border-radius: var(--radius-pill);
+    background: var(--edition-signal);
+    pointer-events: none;
+  }
+
+  pre[data-change],
+  .table-frame[data-change] {
+    box-shadow: inset 3px 0 0 var(--edition-signal);
+  }
+
+  [data-edition-layer='off'] :is(pre, .table-frame)[data-change] {
+    box-shadow: none;
+  }
+
+  /* Метка слоя — роль обычной метки (`.ui-chip`): шрифт текста, без капители; цвет — роль состояния. */
+  .edition-chip {
+    display: inline-flex;
+    align-items: center;
+    margin-inline-end: 0.4rem;
+    border: 1px solid var(--edition-signal);
+    border-radius: var(--radius-pill);
+    padding: 0.05rem 0.5rem;
+    background: color-mix(in srgb, var(--edition-signal) 14%, var(--color-bg));
+    color: var(--color-heading);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: var(--text-label);
+    font-style: normal;
+    font-weight: var(--weight-medium);
+    letter-spacing: 0.01em;
+    line-height: 1.3;
+    text-transform: none;
+    vertical-align: 0.1em;
+    white-space: nowrap;
+  }
+
+  .edition-chip-detail {
+    margin-inline-end: 0.5rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: var(--text-sm);
+    font-style: normal;
+    font-weight: var(--weight-regular);
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  :is(figure, pre, .table-frame, section, aside, blockquote, details) > .edition-chip {
+    display: flex;
+    width: fit-content;
+    margin-block-end: 0.5rem;
+  }
+
+  :is(figure, pre, .table-frame, section, aside, blockquote, details) > .edition-chip-detail {
+    display: block;
+    margin-block: -0.25rem 0.5rem;
+  }
+
+  .table-frame > .edition-chip {
+    position: sticky;
+    inset-inline-start: 0;
+    margin: 0.5rem;
+  }
+
+  /* Пословные правки: текст остаётся цвета текста, смысл несёт подчёркивание и зачёркивание. */
+  [data-edition-layer='on'] ins.edition-ins {
+    background: color-mix(in srgb, var(--status-done) 14%, transparent);
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: var(--status-done);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.18em;
+  }
+
+  [data-edition-layer='off'] ins.edition-ins {
+    background: none;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  del.edition-del {
+    background: color-mix(in srgb, var(--status-returned) 10%, transparent);
+    color: inherit;
+    text-decoration: line-through;
+    text-decoration-color: var(--status-returned);
+    text-decoration-thickness: 2px;
+  }
+
+  del.edition-del + ins.edition-ins {
+    margin-inline-start: 0.2em;
+  }
+
+  /* Пункты, строки таблицы и строки кода помечаются на месте. */
+  [data-edition-layer='on'] li[data-change]::marker {
+    color: var(--edition-signal);
+    font-weight: var(--weight-strong);
+  }
+
+  [data-edition-layer='on'] tr[data-change] > :first-child {
+    box-shadow: inset 3px 0 0 var(--edition-signal);
+  }
+
+  [data-edition-layer='on'] tr[data-change='added'] > * {
+    background: color-mix(in srgb, var(--status-done) 10%, transparent);
+  }
+
+  /* biome-ignore lint/style/noDescendingSpecificity: a ghost row of removed text is never an added row */
+  tr.edition-ghost-row > * {
+    background: color-mix(in srgb, var(--status-returned) 8%, transparent);
+  }
+
+  pre[data-edition-code] > code {
+    display: grid;
+    min-width: max-content;
+  }
+
+  pre[data-edition-code] .line {
+    display: block;
+  }
+
+  pre[data-edition-code] .edition-line-break {
+    display: none;
+  }
+
+  [data-edition-layer='on'] .line[data-change='added'] {
+    background: color-mix(in srgb, var(--status-done) 16%, transparent);
+    box-shadow: inset 3px 0 0 var(--status-done);
+  }
+
+  .line.edition-ghost-line {
+    background: color-mix(in srgb, var(--status-returned) 14%, transparent);
+    box-shadow: inset 3px 0 0 var(--status-returned);
+    text-decoration: line-through;
+    text-decoration-color: var(--status-returned);
+  }
+
+  .edition-note {
+    margin: 0.5rem 0;
+    border-inline-start: 3px solid var(--status-returned);
+    padding-inline-start: 0.6rem;
+    font-size: var(--text-sm);
+  }
+
+  /* Призраки удалённого: свёрнуты с подписью «Удалено: …», раскрываются старым текстом. */
+  .edition-ghost {
+    max-width: min(100%, var(--reading-measure));
+    margin-block: 0.75rem;
+    border: 1px dashed var(--status-returned);
+    border-radius: var(--radius-small);
+    padding: 0.4rem 0.75rem;
+    background: color-mix(in srgb, var(--status-returned) 6%, var(--color-bg));
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    grid-column: 1 / -1;
+  }
+
+  .edition-ghost-summary {
+    cursor: pointer;
+  }
+
+  .edition-ghost-body {
+    margin-top: 0.5rem;
+    overflow-x: auto;
+  }
+
+  .edition-ghost-replaced .edition-ghost-body,
+  .edition-ghost-section .edition-ghost-text {
+    text-decoration: line-through;
+    text-decoration-color: var(--status-returned);
+  }
+
+  .edition-ghost-label {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+
+  .edition-ghost .edition-ghost-text {
+    margin: 0.35rem 0;
+  }
+
+  .edition-ghost-table table {
+    border-collapse: collapse;
+  }
+
+  .edition-ghost-table td {
+    border: 1px solid var(--color-border);
+    padding: 0.25rem 0.5rem;
+  }
+
+  .edition-ghost-code {
+    overflow-x: auto;
+    font-family: var(--font-author-code, var(--font-code, var(--font-mono)));
+    white-space: pre;
+  }
+
+  .edition-ghost-code-line {
+    display: block;
+  }
+
+  .edition-ghost-moved {
+    border-color: var(--status-review);
+    border-style: dotted;
+    background: color-mix(in srgb, var(--status-review) 6%, var(--color-bg));
+  }
+
+  li.edition-ghost-item::marker {
+    color: var(--status-returned);
+  }
+
+  /* Точка у раздела в оглавлении и у подписи свёрнутого блока, внутри которого есть изменения. */
+  .edition-dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-inline-start: 0.4rem;
+    border-radius: 50%;
+    background: var(--status-review);
+    vertical-align: middle;
+  }
+
+  :is([data-navigation], nav.semantic-contents) li > .edition-dot {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: 0;
+    margin: 0;
+    translate: 0 -50%;
+  }
+
+  /* Список изменений: панель ревью на компьютере, нижний лист на телефоне. */
+  .edition-panel-summary {
+    margin: 0 0 1rem;
+    font-size: var(--text-sm);
+  }
+
+  .edition-panel .review-close {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .edition-group + .edition-group {
+    margin-top: 1rem;
+  }
+
+  .edition-list {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0.4rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .edition-entry {
+    display: grid;
+    gap: 0.2rem;
+    border-radius: var(--radius-small);
+    padding: 0.45rem 0.55rem;
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .edition-entry:hover,
+  .edition-entry:focus-visible {
+    background: color-mix(in srgb, var(--color-heading) 7%, transparent);
+  }
+
+  .edition-entry-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.2rem 0.5rem;
+  }
+
+  .edition-entry-status {
+    --edition-signal: var(--status-review);
+
+    width: fit-content;
+    border: 1px solid var(--edition-signal);
+    border-radius: var(--radius-pill);
+    padding: 0 0.45rem;
+    color: var(--color-heading);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: var(--text-label);
+    font-weight: var(--weight-medium);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
+  .edition-entry-detail {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .edition-entry-status[data-change='added'] {
+    --edition-signal: var(--status-done);
+  }
+
+  .edition-entry-status[data-change='removed'] {
+    --edition-signal: var(--status-returned);
+  }
+
+  .edition-entry-excerpt {
+    font-size: var(--text-sm);
+  }
+
+  /* Переход к изменению: секунда подсветки по часам страницы; при меньшем движении её нет. */
+  [data-edition-flash] {
+    animation: edition-flash 1s var(--ease-ui);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [data-edition-flash] {
+      animation: none;
+    }
+  }
+  @media (forced-colors: active) {
+    .edition-bar,
+    .edition-dot {
+      background: Highlight;
+      forced-color-adjust: none;
+    }
+
+    .edition-chip,
+    .edition-entry-status,
+    .edition-ghost {
+      border-color: CanvasText;
+    }
+
+    [data-edition-layer='on'] ins.edition-ins {
+      background: Mark;
+      color: MarkText;
+      forced-color-adjust: none;
+    }
+
+    del.edition-del {
+      text-decoration-color: CanvasText;
+    }
+
+    [data-edition-layer='on'] .line[data-change='added'],
+    .line.edition-ghost-line {
+      box-shadow: inset 3px 0 0 Highlight;
+    }
+  }
+  @media print {
+    .edition-strip-actions {
+      display: none;
+    }
+
+    .edition-bar {
+      border-inline-start: 3px solid var(--edition-signal);
+      background: none;
+    }
+
+    .edition-ghost {
+      break-inside: avoid;
+      border-style: solid;
+    }
+
+    .edition-ghost-summary {
+      list-style: none;
+    }
+  }
+}
+@media print {
+  @layer treatments {
+    details.edition-ghost::details-content {
+      content-visibility: visible;
+      display: block;
+    }
+  }
+}

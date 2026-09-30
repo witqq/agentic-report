@@ -141,7 +141,7 @@ export const compare = defineBlock({
   validate: validateCompare,
   localizedDefaults: ['before', 'after'],
   enhance: enhanceCompare,
-  styles: 'package',
+  feature: 'compare',
   staticEquivalent:
     'The before image with the after image over it, split at the middle, labelled before and after.',
   examples: [

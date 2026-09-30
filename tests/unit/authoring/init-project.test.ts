@@ -169,6 +169,8 @@ describe('starter initialization', () => {
       projectPath: destination,
       entryPath: path.join(destination, 'report.md'),
       files: [
+        'assets/architecture-dark.ru.svg',
+        'assets/architecture-dark.svg',
         'assets/architecture.ru.svg',
         'assets/architecture.svg',
         'brief.md',
@@ -189,6 +191,8 @@ describe('starter initialization', () => {
     ).resolves.toMatchObject({
       starterId: 'document',
       files: [
+        'assets/architecture-dark.ru.svg',
+        'assets/architecture-dark.svg',
         'assets/architecture.ru.svg',
         'assets/architecture.svg',
         'brief.md',
@@ -451,6 +455,8 @@ describe('starter initialization', () => {
       },
     });
     expect(await recursiveFilePaths(destination)).toEqual([
+      'assets/architecture-dark.ru.svg',
+      'assets/architecture-dark.svg',
       'assets/architecture.ru.svg',
       'assets/architecture.svg',
       'brief.md',
@@ -553,6 +559,8 @@ describe('starter initialization', () => {
     const result = JSON.parse(execution.stdout) as { readonly files: readonly string[] };
 
     expect(result.files).toEqual([
+      'assets/architecture-dark.ru.svg',
+      'assets/architecture-dark.svg',
       'assets/architecture.ru.svg',
       'assets/architecture.svg',
       'brief.md',

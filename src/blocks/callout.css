@@ -1,0 +1,22 @@
+@layer components {
+  /* The callout kinds the package knows carry their own signal colour; any other token keeps the accent. */
+  .semantic-callout[data-kind='success'] {
+    --callout-signal: var(--status-done);
+  }
+
+  .semantic-callout[data-kind='warning'] {
+    --callout-signal: var(--status-review);
+  }
+
+  .semantic-callout:is([data-kind='danger'], [data-kind='error']) {
+    --callout-signal: var(--status-returned);
+  }
+
+  :root[data-layout='dashboard'] .semantic-callout {
+    max-width: 100%;
+  }
+
+  :root[data-layout='landing'] .semantic-callout {
+    max-width: 100%;
+  }
+}

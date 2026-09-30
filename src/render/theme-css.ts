@@ -6,6 +6,7 @@ import {
   THEME_FONT_FAMILIES,
   THEME_GAPS,
   THEME_MOTION,
+  THEME_PHONE_GUTTER,
   THEME_RADIUS,
   THEME_WIDTH,
   type ResolvedTheme,
@@ -33,7 +34,7 @@ const BACKDROPS: Readonly<
       'linear-gradient(color-mix(in srgb, var(--color-border) 45%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--color-border) 45%, transparent) 1px, transparent 1px)',
     size: '2rem 2rem, 2rem 2rem',
   },
-  // Зерно рисует слой поверх фона (`document.css`, `data-theme-backdrop='grain'`): его краска — текст темы.
+  // Зерно рисует слой поверх фона (`src/browser/styles/core.css`, `data-theme-backdrop='grain'`): его краска — текст темы.
   grain: { image: 'none', size: 'auto' },
   tint: {
     image:
@@ -73,7 +74,7 @@ export const FONT_SUBSETS = [
 export function themeFontFiles(themes: readonly ResolvedTheme[]): readonly ThemeFontFile[] {
   const names = new Set<keyof typeof THEME_FONT_FAMILIES>();
   for (const theme of themes) {
-    for (const role of ['heading', 'body', 'mono'] as const) names.add(theme.fonts[role]);
+    for (const role of ['heading', 'body', 'mono', 'code'] as const) names.add(theme.fonts[role]);
   }
   const files: ThemeFontFile[] = [];
   for (const name of [...names].sort()) {
@@ -203,6 +204,7 @@ function layoutDeclarations(theme: ResolvedTheme): readonly string[] {
     `--font-body: ${THEME_FONT_FAMILIES[theme.fonts.body].stack}`,
     `--font-heading: ${THEME_FONT_FAMILIES[theme.fonts.heading].stack}`,
     `--font-mono: ${THEME_FONT_FAMILIES[theme.fonts.mono].stack}`,
+    `--font-code: ${THEME_FONT_FAMILIES[theme.fonts.code].stack}`,
     `--font-heading-small: ${smallHeadingStack(theme)}`,
     `--heading-weight: ${theme.typography.headingWeight}`,
     `--display-weight: ${theme.typography.displayWeight}`,
@@ -218,6 +220,7 @@ function layoutDeclarations(theme: ResolvedTheme): readonly string[] {
     `--body-leading: ${theme.typography.bodyLeading}`,
     `--body-tracking: ${theme.typography.bodyTracking}em`,
     `--space-factor: ${THEME_DENSITY[theme.spacing.density]}`,
+    `--phone-gutter: ${THEME_PHONE_GUTTER[theme.spacing.density]}`,
     `--section-rhythm: calc(${theme.spacing.rhythm}rem * var(--space-factor))`,
     `--card-minimum: ${theme.spacing.cardMinimum}rem`,
     `--shell-gap: ${THEME_GAPS[theme.spacing.gap]}`,

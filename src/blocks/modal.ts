@@ -38,7 +38,7 @@ export const modal = defineBlock({
   }),
   localizedDefaults: ['trigger'],
   enhance: enhanceModal,
-  styles: 'package',
+  feature: 'modal',
   staticEquivalent:
     'The dialog content printed in place under its title; on screen a button opens it.',
   examples: [':::modal{title="Checklist" trigger="Open the checklist"}\nEvery gate passed.\n:::\n'],

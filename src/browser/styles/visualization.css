@@ -1,0 +1,60 @@
+@layer components {
+  .visualization-caption::before {
+    color: var(--color-text-muted);
+    font-size: var(--text-label);
+    font-weight: var(--weight-medium);
+    content: 'Fig. ' attr(data-figure-number);
+    @supports (content: '' / '') {
+      content: 'Fig. ' attr(data-figure-number) / '';
+    }
+  }
+  .visualization-svg {
+    --diagram-line: 2;
+    --diagram-line-light: 1.5;
+    --diagram-frame: color-mix(in srgb, var(--visualization-foreground) 36%, transparent);
+    --diagram-guide: color-mix(in srgb, var(--visualization-foreground) 30%, transparent);
+  }
+
+  .visualization-legend-sample
+    :is(.visualization-edge-arrow-open, .visualization-edge-arrow-hollow) {
+    stroke: var(--visualization-foreground);
+  }
+
+  /* Узкий вариант графика нужен только телефону. */
+  .visualization-svg-narrow {
+    display: none;
+  }
+
+  /* `data-figure-open-host`: the caption holds the viewer's open button (`figure-viewer.ts`). */
+  .visualization-caption[data-figure-open-host] {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  .visualization-caption[data-figure-open-host] > :not(.figure-viewer-open) {
+    grid-column: 1 / -1;
+  }
+
+  .visualization-caption > .figure-viewer-open {
+    grid-row: 1;
+    grid-column: 2;
+    align-self: center;
+  }
+
+  @media print {
+    .visualization-caption > .figure-viewer-open {
+      display: none;
+    }
+
+    .visualization-frame[hidden] {
+      display: block;
+    }
+  }
+
+  :root[data-theme-console='on'] .visualization-caption::before {
+    content: '// fig.' attr(data-figure-number);
+    @supports (content: '' / '') {
+      content: '// fig.' attr(data-figure-number) / '';
+    }
+  }
+}

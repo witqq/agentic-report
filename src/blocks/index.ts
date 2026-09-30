@@ -10,6 +10,7 @@ import { contents } from './contents.js';
 import { copyable } from './copyable.js';
 import { count } from './count.js';
 import { dataEach, dataExpectation } from './data.js';
+import { deck, slide } from './deck.js';
 import { checkItem, checklist, decision, decisionOption } from './decision.js';
 import type { Block } from './define-block.js';
 import { demo } from './demo.js';
@@ -31,6 +32,7 @@ import { sourceLink } from './source-link.js';
 import { sourceLine } from './source-line.js';
 import { spotlight } from './spotlight.js';
 import { steps } from './steps.js';
+import { table } from './table.js';
 import { tab, tabs } from './tabs.js';
 import { eyebrow, meta, muted } from './text-roles.js';
 import { event, timeline } from './timeline.js';
@@ -66,6 +68,8 @@ export const BUILT_IN_BLOCKS: readonly [Block, ...Block[]] = [
   processBlock,
   appear,
   notes,
+  deck,
+  slide,
   decision,
   decisionOption,
   checklist,
@@ -84,6 +88,7 @@ export const BUILT_IN_BLOCKS: readonly [Block, ...Block[]] = [
   option,
   item,
   copyable,
+  table,
   glossary,
   term,
   disclosure,

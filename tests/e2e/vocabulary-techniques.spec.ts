@@ -67,16 +67,16 @@ async function buildTechniquesPage(project: string): Promise<string> {
       scene('One deploy, played', 'Build'),
       '::::::::',
       '',
-      '::::::::section{title="Scenarios" id="scenarios"}',
-      '::::::::tabs{title="Scenario" orientation="vertical"}',
-      ':::::::tab{label="First run"}',
+      '::::::::::section{title="Scenarios" id="scenarios"}',
+      ':::::::::tabs{title="Scenario" orientation="vertical"}',
+      '::::::::tab{label="First run"}',
       'The first run.',
-      ':::::::',
-      ':::::::tab{label="A change"}',
+      '::::::::',
+      '::::::::tab{label="A change"}',
       scene('A change, played', 'Rebuild'),
-      ':::::::',
       '::::::::',
-      '::::::::',
+      ':::::::::',
+      '::::::::::',
       '',
       '::::::::section{title="Scrolled" id="scrolled"}',
       ':::::::demo{title="Scroll scene" play="scroll"}',
@@ -411,6 +411,11 @@ test.describe('vocabulary techniques', () => {
     await expect(page.locator('.semantic-typing')).not.toHaveAttribute('data-typing-live', '');
     await expect(page.locator('.semantic-mark')).not.toHaveAttribute('data-mark-pending', '');
     await expect(page.locator('.semantic-spotlight .spotlight-ring')).toHaveCSS('opacity', '1');
+    // Ловит: сброс движения снимает и увеличение лупы, и в ней та же деталь в том же размере.
+    await expect(page.locator('.semantic-spotlight .spotlight-loupe > img')).toHaveCSS(
+      'transform',
+      'matrix(2.5, 0, 0, 2.5, 0, 0)',
+    );
     await expect(page.locator('#log pre')).not.toHaveAttribute('data-log-live', '');
   });
 });

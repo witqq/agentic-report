@@ -25,10 +25,12 @@ The category is a recommendation, not a limit: any directive, mode or effect of 
 
 One row per file under `assets/`: where it came from and under which licence. Origin is `build-screenshot`, `screencast`, `diagram`, `photo`, `drawn`, `placeholder` (a stand-in for real material still to come, marked as such on the page), or `generated` with its reason in Source.
 
-| File                               | Origin | Source                                      | Licence       |
-| ---------------------------------- | ------ | ------------------------------------------- | ------------- |
-| `assets/beta-learning-loop.svg`    | drawn  | drawn for this page: the beta learning loop | project (MIT) |
-| `assets/beta-learning-loop.ru.svg` | drawn  | Russian version of `beta-learning-loop.svg` | project (MIT) |
+| File                                    | Origin | Source                                                                                          | Licence       |
+| --------------------------------------- | ------ | ----------------------------------------------------------------------------------------------- | ------------- |
+| `assets/beta-learning-loop.svg`         | drawn  | drawn for this page: the beta learning loop                                                     | project (MIT) |
+| `assets/beta-learning-loop-dark.svg`    | drawn  | dark-scheme variant of `beta-learning-loop.svg`, the same drawing in the page's dark colours    | project (MIT) |
+| `assets/beta-learning-loop.ru.svg`      | drawn  | Russian version of `beta-learning-loop.svg`                                                     | project (MIT) |
+| `assets/beta-learning-loop-dark.ru.svg` | drawn  | dark-scheme variant of `beta-learning-loop.ru.svg`, the same drawing in the page's dark colours | project (MIT) |
 
 ## Unresolved content facts
 

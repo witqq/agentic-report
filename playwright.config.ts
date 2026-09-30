@@ -5,8 +5,8 @@ export default defineConfig({
   testMatch: '**/*.spec.ts',
   globalSetup: './tests/e2e/global-setup.ts',
   fullyParallel: false,
-  // CPU-throttled effect checks compare page tasks against a 50 ms budget. A second browser worker
-  // competes for the same CPU and makes that measurement depend on unrelated tests.
+  // Timed budgets live in tests/perf (`pnpm test:perf`, playwright.perf.config.ts); this suite keeps one
+  // worker because many tests still wait on real scroll animations and screenshots of settled pages.
   workers: 1,
   retries: 0,
   reporter: [

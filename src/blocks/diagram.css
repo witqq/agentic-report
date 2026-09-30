@@ -1,0 +1,371 @@
+@layer components {
+  .semantic-diagram {
+    --diagram-line: 2;
+    --diagram-line-light: 1.5;
+    --diagram-frame: color-mix(in srgb, var(--visualization-foreground) 36%, transparent);
+    --diagram-guide: color-mix(in srgb, var(--visualization-foreground) 30%, transparent);
+  }
+
+  .visualization-edge {
+    stroke: var(--visualization-muted);
+    stroke-width: var(--diagram-line);
+  }
+
+  .visualization-edge-arrow {
+    fill: var(--visualization-muted);
+  }
+
+  /* Вид связи читается начертанием и наконечником, а не цветом: так он различим и в печати. */
+  .visualization-edge-kind-data {
+    stroke-dasharray: 8 5;
+  }
+
+  .visualization-edge-kind-event {
+    stroke-dasharray: 1 5;
+    stroke-linecap: round;
+  }
+
+  .visualization-edge-kind-dependency {
+    stroke-width: var(--diagram-line-light);
+  }
+
+  .visualization-edge-arrow-open {
+    fill: none;
+    stroke: var(--visualization-muted);
+    stroke-width: var(--diagram-line);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .visualization-edge-arrow-hollow {
+    fill: var(--visualization-surface);
+    stroke: var(--visualization-muted);
+    stroke-width: var(--diagram-line-light);
+    stroke-linejoin: round;
+  }
+
+  .visualization-legend-sample .visualization-edge {
+    stroke: var(--visualization-foreground);
+  }
+
+  .visualization-legend-sample
+    .visualization-edge-arrow:not(
+      .visualization-edge-arrow-open,
+      .visualization-edge-arrow-hollow
+    ) {
+    fill: var(--visualization-foreground);
+  }
+
+  .visualization-node {
+    fill: var(--visualization-control);
+    stroke: var(--diagram-frame);
+    stroke-width: var(--diagram-line);
+  }
+
+  .visualization-node-accent {
+    fill: color-mix(in srgb, var(--color-accent) 16%, var(--visualization-surface));
+    stroke: var(--color-accent);
+  }
+
+  .visualization-node-success {
+    fill: color-mix(in srgb, var(--status-done) 16%, var(--visualization-surface));
+    stroke: var(--status-done);
+  }
+
+  .visualization-node-warning {
+    fill: color-mix(in srgb, var(--status-review) 18%, var(--visualization-surface));
+    stroke: var(--status-review);
+  }
+
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      /* Шкала — сама фигура схемы: её рамка прокручивается только вбок, а путь по странице меряется
+       по документу. */
+      :root:not([data-motion-level='none']) .semantic-diagram[data-draw='scroll'] {
+        view-timeline: --diagram-draw block;
+      }
+
+      :root:not([data-motion-level='none'])
+        .semantic-diagram[data-draw='scroll']:not([data-draw-driven])
+        path[data-draw-phase][pathLength] {
+        stroke-dasharray: 1;
+        animation: diagram-draw linear both;
+        animation-timeline: --diagram-draw;
+        animation-range: cover calc(12% + var(--draw-start) * 0.38) cover
+          calc(12% + var(--draw-end) * 0.38);
+      }
+
+      :root:not([data-motion-level='none'])
+        .semantic-diagram[data-draw='scroll']:not([data-draw-driven])
+        [data-draw-phase]:not([pathLength]) {
+        animation: diagram-appear linear both;
+        animation-timeline: --diagram-draw;
+        animation-range: cover calc(12% + var(--draw-start) * 0.38) cover
+          calc(12% + var(--draw-end) * 0.38);
+      }
+    }
+  }
+
+  /*
+ * Схема процесса: статус шага — рамка цвета роли статуса темы и значок на кромке, который читается
+ * без цвета; кратность «×N» стоит в подписи связи, петля повторяющегося шага — на углу узла.
+ */
+  .visualization-node-status-done {
+    fill: color-mix(in srgb, var(--status-done) 14%, var(--visualization-surface));
+    stroke: var(--status-done);
+  }
+
+  .visualization-node-status-review {
+    fill: color-mix(in srgb, var(--status-review) 16%, var(--visualization-surface));
+    stroke: var(--status-review);
+  }
+
+  .visualization-node-status-returned {
+    fill: color-mix(in srgb, var(--status-returned) 14%, var(--visualization-surface));
+    stroke: var(--status-returned);
+  }
+
+  .visualization-node-status-pending {
+    fill: var(--visualization-surface);
+    stroke-dasharray: 5 4;
+  }
+
+  .visualization-status-disc {
+    fill: var(--visualization-surface);
+    stroke: var(--diagram-frame);
+    stroke-width: var(--diagram-line-light);
+  }
+
+  .visualization-status-done .visualization-status-disc {
+    fill: var(--status-done);
+    stroke: var(--status-done);
+  }
+
+  .visualization-status-review .visualization-status-disc {
+    stroke: var(--status-review);
+  }
+
+  .visualization-status-returned .visualization-status-disc {
+    fill: var(--status-returned);
+    stroke: var(--status-returned);
+  }
+
+  .visualization-status-pending .visualization-status-disc {
+    stroke-dasharray: 2 2;
+  }
+
+  .visualization-status-glyph {
+    fill: none;
+    stroke: var(--visualization-surface);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .visualization-status-dot {
+    fill: var(--visualization-surface);
+  }
+
+  .visualization-status-review .visualization-status-dot {
+    fill: var(--status-review);
+  }
+
+  /*
+ * Маркер прорисовки и импульсы по маршруту. Маршрут `pulse` отмечен акцентом всегда — это его вид без
+ * движения и в печати; точка импульса видна, только пока импульсы идут.
+ */
+  .visualization-draw-marker,
+  .visualization-pulse-dot {
+    fill: var(--color-accent);
+    stroke: var(--visualization-surface);
+    stroke-width: 2;
+  }
+
+  .visualization-pulse-dot {
+    opacity: 0;
+  }
+
+  [data-pulse-live] .visualization-pulse-dot {
+    opacity: 1;
+  }
+
+  .visualization-edge[data-pulse-step] {
+    stroke: var(--color-accent);
+  }
+
+  .visualization-edge[data-pulse-step]
+    + .visualization-edge-arrow:not(
+      .visualization-edge-arrow-open,
+      .visualization-edge-arrow-hollow
+    ) {
+    fill: var(--color-accent);
+  }
+
+  .visualization-edge[data-pulse-step]
+    + :is(.visualization-edge-arrow-open, .visualization-edge-arrow-hollow) {
+    stroke: var(--color-accent);
+  }
+
+  /*
+ * Пролёт внутрь узла. Без движения и в печати — две фигуры рядом: схема целиком с отмеченным узлом и
+ * то, что внутри него. С движением фигура становится дорожкой в несколько экранов, картинка на ней
+ * закреплена, а камеру — её `viewBox` — ведёт сценарий по прогрессу дорожки; линии не толстеют при
+ * приближении, подписи вложенного потока проявляются, когда становятся читаемыми.
+ */
+  .visualization-zoom {
+    display: none;
+  }
+
+  /* Две фигуры стоят рядом, только если обе помещаются в колонку не мельче 0.9 (сборка пишет этот
+     порог в --zoom-still-floor); иначе они встают друг под другом. */
+  .visualization-zoom-static {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--zoom-still-floor, 18rem)), 1fr));
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .visualization-zoom-caption {
+    margin: 0 0 0.4rem;
+    color: var(--visualization-muted);
+    font-size: var(--text-sm);
+  }
+
+  .visualization-zoom-still [data-zoom-target] .visualization-node {
+    stroke: var(--color-accent);
+  }
+
+  @media screen and (prefers-reduced-motion: no-preference) {
+    :root:not([data-motion-level='none']) [data-zoom-live] > .visualization-zoom {
+      display: block;
+      height: 240svh;
+    }
+
+    :root:not([data-motion-level='none']) [data-zoom-live] > .visualization-zoom-static {
+      display: none;
+    }
+
+    .visualization-zoom-stage {
+      position: sticky;
+      top: calc(var(--topbar-clearance, 4.5rem) + 1rem);
+    }
+
+    /* Камера занимает колонку, до 1.6 естественной ширины: в конце пролёта подписи вложенного потока
+       должны дорасти до читаемых; где и так не дорастут, рантайм оставляет две неподвижные фигуры. */
+    .visualization-zoom-camera {
+      width: min(100%, calc(var(--diagram-width, 100%) * 1.6));
+      min-width: 0;
+      max-height: 70svh;
+    }
+
+    .visualization-zoom-camera * {
+      vector-effect: non-scaling-stroke;
+    }
+
+    .visualization-zoom-inner {
+      opacity: var(--zoom-inner-shape, 0);
+    }
+
+    .visualization-zoom-inner text {
+      opacity: var(--zoom-inner-text, 0);
+    }
+  }
+
+  /*
+ * Схема на узкой дорожке и просмотр во весь экран (T4). Узкий вид флоу сверху вниз и список шагов
+ * последовательности показывает рантайм, когда картинка не встаёт в дорожку с подписями не мельче 11 px;
+ * печать всегда получает полный рисунок. Кнопка «Открыть» стоит в подписи фигуры (у широкой таблицы — над
+ * ней), диалог просмотра занимает весь экран; всё берёт вид только из токенов темы.
+ */
+  svg.visualization-diagram[hidden] {
+    display: none;
+  }
+
+  .visualization-sequence-list {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-small);
+    padding: 0.75rem 1rem;
+    background: var(--visualization-surface);
+    color: var(--visualization-foreground);
+    font-size: var(--text-sm);
+  }
+
+  .visualization-sequence-list-heading {
+    margin: 0;
+    color: var(--visualization-muted);
+    font-weight: var(--weight-medium);
+  }
+
+  .visualization-sequence-list-heading:not(:first-child) {
+    margin-top: 0.6rem;
+  }
+
+  .visualization-sequence-participants,
+  .visualization-sequence-steps {
+    margin: 0.3rem 0 0;
+    padding-inline-start: 1.4rem;
+  }
+
+  .visualization-sequence-participants {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    padding-inline-start: 0;
+    list-style: none;
+  }
+
+  .visualization-sequence-step + .visualization-sequence-step {
+    margin-top: 0.35rem;
+  }
+
+  .visualization-sequence-step b {
+    color: var(--color-heading);
+    font-weight: var(--weight-strong);
+  }
+
+  .visualization-sequence-step-kind {
+    color: var(--visualization-muted);
+  }
+
+  @media print {
+    .visualization-sequence-list,
+    svg.visualization-diagram-compact {
+      display: none;
+    }
+
+    svg.visualization-diagram[hidden]:not(.visualization-diagram-compact) {
+      display: block;
+    }
+  }
+}
+@layer contexts {
+  @media print {
+    .visualization-layouts > .visualization-layout-switch,
+    .visualization-layouts > .visualization-layout-view {
+      /* biome-ignore lint/complexity/noImportantStyles: важное в слое сильнее неслойного `[hidden]` */
+      display: none !important;
+    }
+
+    .visualization-layouts > .visualization-layout-view[data-layout-default] {
+      /* biome-ignore lint/complexity/noImportantStyles: печать показывает вид автора поверх `[hidden]` */
+      display: block !important;
+    }
+  }
+}
+@layer treatments {
+  /* Схема: узел и связь помечены обводкой в цвет состояния; новое — ещё и пунктиром. */
+  [data-edition-layer='on'] .semantic-node[data-change] > rect {
+    stroke: var(--edition-signal);
+    stroke-width: 3;
+  }
+
+  [data-edition-layer='on'] .semantic-node[data-change='added'] > rect,
+  [data-edition-layer='on'] path.semantic-edge[data-change='added'] {
+    stroke-dasharray: 7 4;
+  }
+
+  [data-edition-layer='on'] path.semantic-edge[data-change] {
+    stroke: var(--edition-signal);
+    stroke-width: 3;
+  }
+}

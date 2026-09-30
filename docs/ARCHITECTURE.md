@@ -4,15 +4,19 @@ This is the authoritative architecture document for `agentic-report`. It describ
 compiler; proposals do not change this contract until they are reflected here, in code, and in scoped
 verification.
 
-The normative product contract is defined in
-[`../PRODUCT-REQUIREMENTS.md`](../PRODUCT-REQUIREMENTS.md). A requirement listed there is not a current
-architecture guarantee until code and scoped verification support it here.
-
 ## System boundary
 
 `agentic-report` is a local offline compiler distributed as one npm package. It accepts a Markdown
 entry or source directory and writes a static artifact. It does not host files, listen on a port, fetch
 remote resources, deploy output, or publish itself.
+
+Outside the product, and therefore not a source of tasks, budgets or release gates: PDF output, pagination
+and print-profile checks (print styles still show all content, one slide per sheet, and a static equivalent
+of motion); pages working with JavaScript disabled, `scripts:none`, and missing- or broken-runtime
+matrices; mandatory text or table fallbacks for interactive visualizations; exhaustive matrices of
+browsers, assistive technologies and output or script policies; a cloud backend, hosted editor or
+collaboration service (the public site is a static distribution channel, not a hosted mode of the
+compiler); raw HTML and JavaScript written directly in Markdown.
 
 ```text
 Markdown + metadata + local assets + partials + semantic directives
@@ -66,6 +70,14 @@ Markdown + metadata + local assets + partials + semantic directives
   through Shiki metadata. Trusted post-Shiki enhancement splits existing styled HAST spans around bounded
   first glossary occurrences without changing code text. The asset plugin embeds local images, downloads,
   and fonts or copies them under deterministic hashed names.
+- `src/edition/` owns editions: `record.ts` collects the edition record from the finished page tree (the
+  review-target owners, after every enrichment) and parses it strictly; `match.ts` pairs two records with
+  pure functions (sections, blocks, moves, word, line, row, item, node and point differences);
+  `decorate.ts` is the last rehype pass, which records the page and, with a previous edition, bakes the
+  change layer into it; `read-since.ts` reads the previous page's record or builds the previous source.
+  The browser controller `src/browser/edition-changes.ts` only switches the baked layer, steps and lists
+  changes; it is the page feature `edition`, so it joins the page script only on a page that carries a
+  change layer and starts after the runtime, like the effect engine and the island controller. The review walk and code copy skip `[data-edition-removed]` nodes.
 - `src/review/contract.ts`, `src/review/routing.ts`, `src/review/targets.ts`, and `src/review/binding.ts` own the platform-neutral
   versioned review data contract, bounded canonical serialization, compile-time target inventory,
   local-input revision, and exact/changed/missing/ambiguous binding. The unchanged version-2 target manifest
@@ -97,8 +109,8 @@ Markdown + metadata + local assets + partials + semantic directives
   `defineBlock` (`src/blocks/define-block.ts`): its grammar (the registry `DirectiveDefinition`), node
   rules read with that grammar, its own authored checks, an optional preparation, the enhancement of its
   sanitized element, an optional pass over the whole enhanced page, its own messages when the package
-  catalogue does not carry them, its runtime controller, where its styles come from, one sentence saying
-  what it is without motion and in print, and source examples that must validate. A tight family shares a
+  catalogue does not carry them, the page feature that carries its browser controller and its styles
+  (see [Page assets](#page-assets)), one sentence saying what it is without motion and in print, and source examples that must validate. A tight family shares a
   file — `section.ts` holds section, lead, beat and notes and owns the page passes that read sections
   (openings, galleries, steps scenes, the first screen, slides); `diagram.ts`,
   `chart.ts`, `timeline.ts`, `response.ts`, `decision.ts`, `cards.ts`, `tabs.ts`, `findings.ts` and
@@ -154,6 +166,10 @@ Markdown + metadata + local assets + partials + semantic directives
 - `src/authoring/themes.ts` owns the theme contract: the closed theme fields shared by built-in themes,
   theme files and frontmatter theme objects, the accent and font catalogs, the base values and the built-in
   themes as partial data over them, and the merge that resolves a theme through its `extends` chain.
+  Thirteen colour roles of every built-in theme in both schemes (background, surfaces, heading, text,
+  borders, the accents and the done and returned statuses) come from `src/authoring/shared-palettes.json`,
+  the palette file shared byte for byte with agentic-screencast; `tests/unit/shared-palettes.test.ts` pins
+  its digest and compares every role of every built-in theme with it.
   `src/authoring/theme-contrast.ts` holds the contrast pairs a resolved theme must pass.
   `src/source/load-theme.ts` resolves the page `theme` — a built-in name, a confined theme file, or an
   inline object — through the chain inside the source root, validates every field against the shared schema
@@ -174,7 +190,9 @@ Markdown + metadata + local assets + partials + semantic directives
   selector exists only when more than one variant is present. It allocates collision-free shell IDs around
   each variant's authored content IDs and uses them consistently for navigation and accessibility
   relationships.
-- `src/browser/` contains the browser runtime and token-based stylesheet bundled by Vite. The locale
+- `src/browser/` contains the browser runtime and the token-based core stylesheet; the modules and
+  stylesheets of the page features live beside them and in `src/blocks/`, and every page is bundled from
+  them as described under [Page assets](#page-assets). The locale
   controller chooses the initial embedded variant from ordered `navigator.languages`, falls back to the
   primary variant, and atomically swaps the complete active DOM boundary. It updates document metadata and
   language, recreates variant-bound controllers, restores locale-local review/response/component state, and
@@ -182,7 +200,9 @@ Markdown + metadata + local assets + partials + semantic directives
   event controller handles theme/navigation controls, current-section ownership, bounded normal-motion
   progress, entrances, scenes, choreography and fine-pointer effects, responsive action placement, code copying, glossary hover/focus/tap explanations,
   tab selection, modal/popover focus, filtering, switches, and bounded counters. A separate page-bound
-  controller fits each diagram's initial view to its frame until the reader picks one. Every authored glossary or
+  controller fits each diagram's initial view to its frame until the reader picks one, and in the top-down
+  panel shows the compiled narrow top-down view when the full one would shrink its 12.5 px node detail below
+  11 px. Every authored glossary or
   popover panel is portalled to `body` while open, positioned against its trigger from the current visual
   viewport with clamping and above/below flipping, then restored to its exact semantic source position on
   close. This lets transient UI escape the section isolation and local scrolling that intentionally contain
@@ -191,12 +211,25 @@ Markdown + metadata + local assets + partials + semantic directives
   torn down before localized DOM replacement. Interaction instances retain source-owner mappings and state
   in their own semantic DOM subtree, so repeated components do not share accidental state.
 - `src/browser/page-modules.ts` installs the layout and motion runtime on every activated language variant
-  and removes it on a language switch: `screens.ts` (`layout: screens`: gesture-per-screen wheel handling,
+  and removes it on a language switch; the modules that belong to a page feature reach it through their
+  slots (`src/browser/features.ts`): `figure-viewer.ts` (the **Open** control on every diagram and chart
+  and on a table wider than its track, and the full-screen viewer: a clone of the drawing resized per zoom
+  step, drag and pinch pan and zoom, `Ctrl` + wheel, double-click or double-tap, buttons and keys, `Escape`,
+  trapped and restored focus), `diagram-forms.ts` (a sequence that cannot keep 11 px labels in its track
+  shows its compiled list of steps; on a phone «diagram in words» starts open), `screens.ts` (`layout: screens`: gesture-per-screen wheel handling,
   keys, switcher, address, `window.agenticScreens.check()`), `page-states.ts` (root `data-state-*` flags
   from sections and beats, `data-state-on` on `when` blocks), `scenes.ts` with the pure mini timeline
   `timeline.ts` (`scene="scrub"`, code lines and beat states shared with the steps scene),
   `opening-entrance.ts` (`transition="staged"`), `thesis-fill.ts`, `current-row.ts` (`data-current` without
-  hover) and `pause-control.ts` (the **Pause motion** button). `motion-level.ts` turns `data-motion-level`
+  hover), `pause-control.ts` (the **Pause motion** button) and `reading-position.ts` (anchor landing and
+  reload restoration: it owns the scroll of same-page links, the address anchor and `hashchange`, opens
+  closed `details` around a target through `openAround` — shared with the edition-changes layer and the
+  Review Workspace — drives the smooth scroll itself on page-clock frames as one curve that is re-planned
+  from the current speed when the height above the target changes (`planTravel`; the browser's own smooth
+  `scrollTo` restarts from zero speed on every call), lets go of the target when a scroll leads away from it
+  that the layout does not explain, aims at the target's resting position without entrance transforms
+  (`restingTop`, which the navigation controller also uses to pick the current chapter), and on a reload or history return restores the reader's `details` states and reading block from the
+  tab's `sessionStorage`; the navigation controller only marks the current chapter). `motion-level.ts` turns `data-motion-level`
   into the runtime's «page stands still» query: `motion: none` reads as reduced motion everywhere.
   `view-transitions.ts` switches tabs through `document.startViewTransition` with shared names for diagram
   nodes and matching list rows. `geometry-rebuild.ts` is the one geometry rebuild helper used by the scrub
@@ -226,12 +259,15 @@ Markdown + metadata + local assets + partials + semantic directives
   while code retains clone-based glossary-panel exclusion. Neither route accepts author behavior.
 - `src/core/prepare-report.ts` owns the shared side-effect-free preparation used by building, validation,
   and inspection: every declared locale graph, per-locale Markdown/navigation/review preparation,
-  deterministic resource merge/collision checks, registry-owned output selection, package browser assets,
-  size accounting, content hashing, observed source features, and prepared directory resources. Matching
+  deterministic resource merge/collision checks, registry-owned output selection, the page's features and
+  their bundled script and stylesheet (`src/core/page-assets.ts`), size accounting, content hashing, observed source features, and prepared directory resources. Matching
   resource bytes deduplicate; conflicting locale resources at one output path fail. Multilingual authored
   font identities and activation properties are locale-scoped, while single-language font output remains
-  compatible. Package browser assets resolve only beside the installed module, never from the consumer's
-  working directory.
+  compatible. The browser modules pages are bundled from resolve only beside the installed module, never
+  from the consumer's working directory.
+- `src/page-features.ts` lists the page features, `src/render/page-features.ts` records the structural ones
+  a finished page tree needs, and `src/core/page-assets.ts` bundles a page's script and stylesheet from the
+  core and its features; [Page assets](#page-assets) describes the assembly.
 - `src/core/compiler.ts` publishes a prepared single-file or staged directory artifact.
   `src/core/analyze-report.ts` projects the same preparation into compact validation and inspection
   results without output publication. The normal author journey therefore initializes a starter, edits its
@@ -594,7 +630,9 @@ controls. Without the runtime the video still plays from its controls.
 downloadable resources, and declared fonts. Binary resource bytes are encoded as MIME-qualified base64 data
 URLs. The `output.maxInlineBytes` budget measures the complete multilingual artifact; above it the build
 fails with `INLINE_SIZE_BUDGET_EXCEEDED` rather than warning or switching the format. An image that
-appears more than once is embedded once in a data block and counted once.
+appears more than once is embedded once in a data block and counted once. Every language version also
+carries its edition record in `<template data-edition-record>` (not with `--url`), and a `--since` build
+carries the change layer; both count against the budget.
 
 `directory` writes `index.html` and an `assets/` directory. Browser and source assets receive SHA-256
 prefixes in their filenames. A non-empty destination is rejected to avoid destructive cleanup and stale
@@ -629,21 +667,24 @@ human output states that count for an explicit share build. Validation and inspe
 therefore do not accept the build-only profile.
 
 Output format, page layout, and theme are independent public data choices. One data-only registry
-contract owns their defaults and closed domains: `single-file` uses an inline runtime and `directory` uses
-an external content-addressed runtime; layout selects the page composition or the slide deck; the
+contract owns their defaults and closed domains: `single-file` uses an inline page script and `directory`
+uses an external content-addressed one; layout selects the page composition or the slide deck; the
 theme selects the look. Preparation appends the generated theme rules — the page theme, or every built-in
-theme plus the page theme when the theme selector is on — to the shared package stylesheet in both
-formats. The stylesheet owns reading/standard/wide tracks, section
+theme plus the page theme when the theme selector is on — to the page stylesheet in both formats. The
+package stylesheets own reading/standard/wide tracks, section
 rhythm, semantic page/section/component/control/current/muted/inverse color roles, the closed section recipe,
 composition and media grammar, component containment, and package-only
 decorative surfaces. Section tone retains background/foreground ownership, while decorative surfaces change
 only the behind-content treatment and nested package components restore their own readable surface text.
 Cards, table headers, decision gradients, assets, source links, and response items take their surfaces
 from the section's component and control roles, so an accent or contrast section never pairs section text
-with a page surface of the opposite lightness. Every content image on a dark surface gets a light backing
-(`--media-backing`) behind its transparent pixels, because screenshots and exported schemes are usually
-drawn dark on a transparent page; opaque pixels hide it. The backing follows the surface rather than the
-page theme. A contrast section (`tone="contrast"`) is the opposite scheme of the same theme: every scheme
+with a page surface of the opposite lightness. Every content image gets the theme's backing
+(`--media-backing`) behind its transparent pixels; built-in themes keep it transparent in both schemes, so
+an image never puts a light paper on a dark page. An image or a video poster may name a dark variant
+(`{dark="…"}`, `dark-poster`); the runtime module `src/browser/scheme-media.ts` shows the variant that
+matches the used `color-scheme` of the element — the page scheme, the system scheme under `system`, and the
+inverse scheme inside a contrast section — switches it with the scheme toggle, and shows the light one in
+print. A contrast section (`tone="contrast"`) is the opposite scheme of the same theme: every scheme
 block also declares the other scheme's colours as `--inverse-*`, and the section maps each colour role,
 `color-scheme`, and the semantic roles onto them. Accent, focus ring, marker, chart series, media backing,
 and code colours inside the band are therefore the pairs the contrast check already verified for the
@@ -767,12 +808,17 @@ IntersectionObserver per scene picks the beat crossing the middle of the screen,
 the lit nodes and edges), line-by-line titles (a measured line count drives a masked, stepped reveal), and
 count-up numbers, and tears them down on locale switch or when the width or motion preference changes.
 Diagram drawing is pure CSS: the compiler orders each connection along the flow and writes its share of a
-view timeline. The effect engine (`src/browser/effects/`, built to `dist/browser/effects.js`) is appended
-to the runtime script only for pages with an effect extension; its rendering contract is described under
+view timeline. The effect engine (`src/browser/effects/`, the page feature `effects`) joins the page script,
+after the runtime, only for pages with an effect extension; its rendering contract is described under
 [Level 2 — effects and the effect engine](#level-2--effects-and-the-effect-engine). For `layout: slides` the compiler wraps the content before the
 first section into a title slide and numbers slides and their `appear` steps; the slides controller owns
-the deck state, the address, the keyboard, click, swipe and button input, the published transition
-durations and the settled signal, and the navigation controller keeps the contents in its dialog. Section transition, scene, interaction, and choreography roles default to `none`
+the address, the keyboard, click, swipe and button input, the published transition durations and the settled
+signal, and the navigation controller keeps the contents in its dialog. The slide and step state and the
+transitions are one machine, `src/browser/deck-controller.ts`, that writes its state on a host: the page
+root for a presentation, the deck element for a `deck` block. The page feature `deck` gives each deck its own
+instance with its buttons, keys while focus is inside it, the Fullscreen API or a window-covering fallback,
+and the `#<id>/<n>` address; the compiler numbers a deck's slides and steps with the same helper
+(`src/blocks/slide-steps.ts`). Section transition, scene, interaction, and choreography roles default to `none`
 when no recipe supplies them; explicit attributes override recipe defaults.
 Reveal and legacy `reveal=true` use a one-time 24-pixel, 420-millisecond entrance on section contents while
 the anchor owner remains stable; stagger applies it to at most 12 direct children in 90-millisecond steps.
@@ -786,6 +832,69 @@ updates. Reduced motion installs no progress/entrance/scene/choreography/pointer
 hidden pending content; coarse pointers receive no pointer effects. An absent or non-callable
 `IntersectionObserver` leaves sections visible while navigation retains hash, activation-line, equal-top,
 resize, short-final and document-bottom ownership through bounded terminal geometry selection.
+
+## Page assets
+
+A page receives only the scripts and styles it needs. `pnpm build` does not ship one runtime and one
+stylesheet: `scripts/build-browser.ts` transpiles the module closure of the core runtime and of every page
+feature to ESM, one file per source module with its imports kept (`dist/browser/modules/**.js`), and copies
+their stylesheets beside them, with the vendor prefixes Lightning CSS adds for the package's browser targets
+(`BROWSER_TARGETS`: Chrome and Edge 111, Firefox 114, Safari 16.4) and otherwise as written
+(`dist/browser/modules/**.css`). Each page is then bundled from those files by esbuild, an exact runtime
+dependency, in `src/core/page-assets.ts`.
+
+**Features.** `src/page-features.ts` lists the page features in a fixed order. A feature has a browser
+module (`src/browser/features/<id>.ts`, or the edition layer, island controller and effect engine), one
+or more stylesheets (`src/blocks/<family>.css` for a block family, `src/browser/styles/<id>.css` otherwise),
+the features it requires (a diagram draws its views in the tab list and opens in the figure viewer; the
+review workspace and the edition list share the panel styles) and, where the need is structural, its hosts
+in the finished page tree. Every page carries the core: `src/browser/runtime.ts` — the clock, motion level,
+locale, theme and scheme switching, the top bar and navigation, reading position, page states, section
+motion, progress bars, pause control — and `src/browser/styles/core.css` — tokens, base typography, the
+shell, layouts, sections, primitives, contexts and treatments.
+
+**Selection.** The compiler derives a page's features from structure it owns, never by matching text in
+serialized HTML. Every built-in block names its feature in `defineBlock` (`feature`, `core` for a block the
+core carries), and the directive enhancement records the feature of every block it dispatches an element
+to. The last rehype pass (`src/render/page-features.ts`) records the features whose `hosts` the finished
+tree holds: `pre` (code), `table`, `video`, dark image variants (`scheme-media`), `data-popover` (glossary
+references and code terms), `data-tabs` (tabs and diagram views), `data-scene` steps or scrub (`scenes`) and
+gallery rails. Preparation adds page settings — `layout: slides`, `layout: screens`, the review workspace
+when it is on and has targets, the edition change layer, a live island, an effect, and the chrome of the
+page's themes (every theme the reader may switch to): `theme-console` for a theme with the console ornament,
+`theme-ledger` for a ledger top bar or landing — takes the union over every language variant, and closes it
+under `requires` in table order (`resolvePageFeatures`). Those two stylesheets stand first after the core,
+where their rules stood inside it, so no other feature stylesheet meets them in a new order.
+
+**Icons.** `src/iconography.ts` exports one constant per icon, and a browser module imports the icons it
+draws (`browserIcon(COPY_ICON)`), so esbuild keeps only those in the page script; the renderer reads the
+whole set through `src/render/icon-paths.ts`, which no browser module imports.
+
+**Script.** The generated entry imports the selected feature modules, then `runtime.ts`, then the edition
+layer, island controller and effect engine when selected, so modules with work at load run in the same
+order as when they formed one bundle. A feature module fills a slot of `src/browser/features.ts`
+(`provideFeature`); the runtime calls each slot where the behaviour belongs — in activation order, in its
+delegated event branches, in the technique installer (`src/browser/techniques.ts`) — and skips a slot
+nobody filled, since its hosts are not on the page. Browser modules read package strings through
+`src/localization.ts`; in a page bundle an esbuild plugin replaces that module with one holding only the
+locales of the page's variants (`src/localization/en.ts`, `ru.ts`). The bundle is one minified IIFE with
+legal comments kept in place.
+
+**Stylesheet.** The generated CSS entry imports `core.css` and then the selected features' stylesheets in
+table order; esbuild bundles and minifies it, and preparation appends theme rules, fonts, island and
+extension styles as before. The feature stylesheets were cut from one stylesheet so that every rule that
+may compete with a rule emitted before it in the new order — same cascade layer, a shared property,
+equal specificity, and a subject that can be the same element — stays in the core at its place. The
+order of `PAGE_FEATURES` is therefore part of the cascade: `scripts/compare-styles.ts` compares the computed
+style of every element and pseudo-element of two builds of the same pages, at two widths in both schemes,
+and a reorder or a rule that competes with one of a later stylesheet has to leave it without differences.
+
+**Output and determinism.** `single-file` inlines the script (hashed into the page policy) and the
+stylesheet; `directory` writes them as `assets/runtime.<sha12>.js` and `assets/document.<sha12>.css`. The
+bundle depends only on the selection, the locales and fixed options, and one process bundles each
+selection once. Each feature module begins with `/*! agentic-report script: <id> */` and the build puts
+`/*! agentic-report style: <id> */` before each stylesheet, so a page shows which features it carries;
+`tests/unit/page-assets.test.ts` and `tests/e2e/page-assets.spec.ts` read these markers.
 
 ## Page clock
 
@@ -830,7 +939,11 @@ the next frame or seek, and an overridden progress scene drops its smoothing tra
 exactly. `agentic-report snapshot` uses the manual clock: after its scroll pass it seeks to 10 s and then
 11 s, so every entrance, count and slide transition has finished and repeated runs give identical frames.
 It then photographs every stop — each screen of `layout: screens`, and each step of a live scrub scene set
-through `data-clock-progress` on the section — one seek later each.
+through `data-clock-progress` on the section — one seek later each. A seek that changes the page (the
+caption of a step, its frame) starts the transitions to that state at the same clock moment, so after each
+such seek `snapshot` seeks on by the longest remaining finite animation until none remains
+(`seekSettled` in `src/core/snapshot.ts`): the frame shows the settled state a reader sees, not the previous
+caption at the start of its fade.
 
 ## Interface system
 
@@ -850,7 +963,8 @@ to directive output. Elements the browser runtime creates take the same classes 
 button and the review highlight marker stay outside the system: one is part of a sentence, the other is a
 mark over the text.
 
-`src/browser/document.css` orders its rules in cascade layers
+The package stylesheets — `src/browser/styles/core.css`, which declares the layer order, and the
+stylesheets of the page features — order their rules in cascade layers
 `base, defaults, components, primitives, contexts, treatments`, and hidden elements are one unlayered
 `[hidden] { display: none !important }`. The layers divide ownership:
 
@@ -874,6 +988,24 @@ come from the theme's `controls` (`regular`: 36 and 32 px, `compact`: 32 and 28 
 raises. Rows use `--control-row` and the topbar `--control-toolbar`. `tests/unit/theme-tokens.test.ts`
 refuses a literal colour, typeface, radius, weight, or type size in the stylesheet, except for named
 prose and SVG-label cases.
+
+Tables and inline code are shaped at compile time, last before serialization, by `src/render/tables.ts`.
+Every table gets a frame (`div.table-frame`, the size container its layouts query; it paints nothing)
+with `data-table-layout` (`auto` unless the `table` block chose `stack` or `scroll`), explicit
+table roles, a `data-label` with the column header on each data cell, and two widths estimated from its
+columns in rem steps: `data-table-fit`, below which `auto` shows rows as labelled cards, and
+`data-table-code`, from which every code value of the table fits whole on one line. The stylesheet has one
+container rule per step, so no script measures a table. Inline code gets `<wbr>` after `/ . _ - : ( ,`
+between word parts and at the humps of a long camel-case part, and a bare separator joining two inline
+code values (`` `a`/`b` ``) gets one after it; code takes `overflow-wrap: break-word`
+instead of the page's `anywhere`, so it wraps between parts and copies as written. On a phone the
+content column holds the one gutter `--phone-gutter` (16–20 px by theme density), and a table frame or
+code block in the text flow bleeds by that gutter to the screen edges; in `screens` layout the screen
+switcher stands in the right gutter, so these blocks and a lone picture bleed only to the left edge. The table inside the frame owns
+its surface and is its own scroll container: it is as wide as its content allows and never wider than the
+track, so a short table is a panel of its own width, and its outer cells keep an inset equal to the cell
+padding (`--table-inset`) from the surface edge. A table shown as cards has no surface and keeps its text
+on the prose edge; a `scroll` table on a phone spans the screen with the gutter as its inset.
 
 Text set in the heading face never breaks a word. The protection follows the typeface, not a tag list:
 `src/render/heading-fit.ts` covers every element the stylesheet sets in `--font-heading` — page, chapter,
@@ -924,7 +1056,9 @@ direct Markdown/text/skill files without rewriting their bytes. Every page route
 in `directory` format with the public URL of its place in the tree (`examples/document/index.html` →
 `<origin>/examples/document/`), in a private scratch directory whose files are then moved into the staged tree
 without overwriting any staged file; the landing's tree is therefore the site root while every other route
-lives below it. After all routes are staged, the assembler runs the package `generateSitemap` operation,
+lives below it. A page route may name a prior review sidecar (`review`) or the source of the previous
+edition (`since`), which the compiler receives as `--review` and `--since`: the technique tour publishes its
+service notice this way as a first edition and a second one with the change layer. After all routes are staged, the assembler runs the package `generateSitemap` operation,
 so `sitemap.xml` and `robots.txt` come from the pages' own canonical URLs. It publishes the complete new tree
 by one sibling-directory rename and refuses an existing destination.
 
@@ -1004,11 +1138,11 @@ example/starter metadata. Its schemas, discovery values, generated documentation
 examples are integrity-checked together.
 
 The block interface is internal in this stage: the built-in blocks are its only users, and nothing in the
-public API or the published declarations exposes it. Built-in blocks keep their styles in the package
-stylesheet (`styles: 'package'`) and their messages in the package catalogue, which the browser runtime
-shares; the `strings` and `styles` fields exist so that a block shipped outside the package can bring
-token-only styles and its own messages, and `runtime` is metadata naming the controller the runtime will
-mount. A page brings its own blocks, providers, effects and islands through the page extensions described
+public API or the published declarations exposes it. A built-in block names its page feature (`feature`),
+whose module holds its browser controller and whose stylesheet in `src/blocks/` holds its styles, or `core`
+when the page core carries both; its messages stay in the package catalogue, which the browser runtime
+shares, and the `strings` field exists so that a block shipped outside the package can bring its own
+messages. A page brings its own blocks, providers, effects and islands through the page extensions described
 under [Extensions](#extensions); a composite block or provider becomes a `defineBlock` module built from
 its manifest, so it is read by the same grammar as a built-in block. Extensions belong to one page and
 never enter the package registry, its schemas or its catalogue. A large dependency added to the package
@@ -1053,7 +1187,7 @@ Markdown nodes (`EXTENSION_EXPANSION_TOO_LARGE`), so a template that uses its ow
 fails instead of growing as a power of the depth.
 
 A block may bring `styles`, a `.css` file. The loader checks it with the literal rules of the package
-stylesheet (`src/authoring/style-rules.ts`, the same module the unit test of `document.css` runs) without
+stylesheet (`src/authoring/style-rules.ts`, the same module the unit test of the package stylesheets runs) without
 the package's named exceptions, plus isolation rules — only public theme tokens and the `--text-*`,
 `--weight-*` and `--heading-fit` scales are read, no variable is declared, braces balance, no at-rule
 besides `@media` and `@container`, nothing is loaded, no `\` or `<` — and refuses a violation with
@@ -1086,12 +1220,17 @@ equivalent. At build time `island.ts` assembles the island document from its HTM
 package-owned bridge script first. The figure carries the static body and the document in
 `data-island-document`; a `srcdoc` document inherits the page policy, so the hashes of the island's
 scripts are added to the page's `script-src` — only on pages with a live island (`frame-src` is not
-needed for `srcdoc`). The controller `src/browser/islands.ts`, built to `dist/browser/islands.js` and
-appended to the runtime only on such pages, creates `<iframe sandbox="allow-scripts">` at `load`, when
+needed for `srcdoc`). The controller `src/browser/islands.ts`, the page feature `islands`, joins the page
+script after the runtime only on such pages and creates `<iframe sandbox="allow-scripts">` at `load`, when
 idle, when visible, or never (`none`). Messages use protocol `agentic-report-island` version 1: the page
 sends `init { tokens, scheme, language, reducedMotion }`, `theme { tokens, scheme }` when the root's
 attributes or the system scheme change, `renderAt { t }` from the page clock (`registerTimed`) and
-`resize { width, height }`; the island answers `ready` and `height { px }`. The bridge applies tokens as
+`resize { width, height }`; the island answers `ready`, `height { px }` and `width { px, frame }` — the
+right edge of its ink (text lines, pictures, canvases, fields) plus the same inset as on the left, at the
+current frame width. When that is more than 48 px narrower than the figure, the controller narrows the
+frame to it, and if the island's layout reflows there (narrower ink or a taller island) it searches the
+width between by halves to a 16 px step; the width holds until the figure's width changes. The figure
+keeps the last report in `data-island-ink`, which `snapshot --measure` reads. The bridge applies tokens as
 custom properties on the island root and exposes `window.agenticReportIsland.on(type, callback)`. Until
 `ready` the static body shows; print and readers without scripts always see it, never the frame.
 
@@ -1100,8 +1239,8 @@ directives. The page vocabulary adds them to those directives only when the page
 elsewhere they are unknown attributes; the value reaches the element as `data-effect-<name>-<attribute>`,
 and the sanitizer allows exactly those properties. `targets.ts` counts the directives that accepted a
 target and the elements that still carry it in the final HTML. An effect with at least one host is bundled
-by `bundleEffect` (`src/extensions/effect-bundle.ts`) and placed after the runtime and the effect engine
-(`dist/browser/effects.js`): inline with its hash in the page policy in single-file output, as
+by `bundleEffect` (`src/extensions/effect-bundle.ts`) and placed after the page script, which carries the effect engine
+(the page feature `effects`): inline with its hash in the page policy in single-file output, as
 `assets/effect-<name>.<hash>.js` in directory output. A declared effect without hosts is not bundled.
 
 **Build report.** `build` returns `extensions` for a page that declares them: per extension its `kind`,

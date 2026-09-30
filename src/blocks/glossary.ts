@@ -53,7 +53,7 @@ export const glossary = defineBlock({
       runtime: 'none',
     },
   ),
-  styles: 'package',
+  feature: 'glossary',
   staticEquivalent:
     'A titled definition in place, or in the glossary appendix at the end of the page.',
   examples: [
@@ -63,7 +63,7 @@ export const glossary = defineBlock({
 
 export const term = defineBlock({
   definition: termDefinition(),
-  styles: 'package',
+  feature: 'popover',
   staticEquivalent:
     'The term as written, linked to its definition; the explanation panel needs the browser.',
   examples: [

@@ -53,7 +53,7 @@ export const filter = defineBlock({
   }),
   localizedDefaults: ['placeholder'],
   enhance: enhanceFilter,
-  styles: 'package',
+  feature: 'filter',
   staticEquivalent:
     'The full list; the search field needs the browser and filters nothing in print.',
   examples: [':::filter{title="Services"}\n- API\n- Worker\n- Scheduler\n:::\n'],

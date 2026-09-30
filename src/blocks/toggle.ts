@@ -53,7 +53,7 @@ export const toggle = defineBlock({
     },
   ),
   enhance: enhanceToggle,
-  styles: 'package',
+  feature: 'toggle',
   staticEquivalent:
     'The switch label with the content in its initial state; print shows the content.',
   examples: [

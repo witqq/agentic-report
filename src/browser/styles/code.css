@@ -1,0 +1,69 @@
+@layer components {
+  pre {
+    position: relative;
+    max-width: 100%;
+    overflow: auto;
+    padding: var(--space-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-small);
+    color: var(--shiki-foreground);
+    font-size: var(--text-sm);
+    line-height: 1.6;
+    --scroll-cue-surface: var(--shiki-background);
+    --scroll-cue-ink: var(--shiki-foreground);
+  }
+
+  /*
+ * Кнопка копирования стоит в своей полосе над кодом: первая строка начинается ниже кнопки, поэтому
+ * ни одна строка не уходит под неё — ни в покое, ни при прокрутке широкого кода внутри блока.
+ */
+  pre:has(> .copy-code) {
+    padding-top: calc(var(--control-height-sm) + 1.1rem);
+  }
+  @media (width > 48rem) {
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-section:is(
+        [data-width='standard'],
+        [data-width='wide']
+      )[data-composition='flow']:not([data-align='center'])
+      > pre:not([data-diff-block]) {
+      --code-need: calc(var(--code-columns, 0) * 0.528em + 2.2rem + 2px);
+
+      width: clamp(
+        min(var(--prose-measure), 100%),
+        (var(--code-need) - var(--prose-measure)) * 1000 + var(--prose-measure),
+        var(--code-track, 100%)
+      );
+      min-width: 0;
+      max-width: none;
+    }
+  }
+
+  :root[data-layout='mixed'] pre {
+    max-width: 100%;
+  }
+
+  @media (min-width: 57rem) {
+    :root[data-theme-landing='ledger'][data-layout='landing']
+      .report-content
+      article
+      > pre:first-of-type {
+      max-width: 46rem;
+      border-top: 0.2rem solid var(--color-marker);
+      border-radius: var(--radius-small);
+    }
+  }
+
+  /* Печать лога: блок кода с первого кадра занимает свою высоту, обрезка открывает строки по одной. */
+  .semantic-section[data-transition='log'] pre[data-log-live] > code {
+    display: block;
+    clip-path: inset(0 0 calc(100% - var(--log-shown, 0) * 1lh) 0);
+  }
+  @media print {
+    .semantic-section[data-transition='log'] pre[data-log-live] > code {
+      clip-path: none;
+    }
+  }
+}

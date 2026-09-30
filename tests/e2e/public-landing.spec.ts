@@ -71,7 +71,7 @@ const expectLoadedImages = async (page: Page): Promise<void> => {
   ).toBe(true);
 };
 
-test('landing presents the same navigable source-to-page proof in both output formats', async ({
+test('landing composes the public visual vocabulary identically in both output formats', async ({
   page,
 }, info) => {
   test.skip(info.project.name !== 'desktop-chromium');
@@ -80,82 +80,55 @@ test('landing presents the same navigable source-to-page proof in both output fo
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(artifact.url);
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(
-      'A finished page from Markdown.',
-    );
     await expect(
-      page.locator('.semantic-actions').first().getByRole('link', { name: 'Build a page' }),
+      page.getByRole('heading', { name: 'A page worth handing over. From Markdown.', level: 1 }),
     ).toBeInViewport();
-    await expect(page.locator('main pre').filter({ hasText: 'npx skills add' })).toBeVisible();
-    await expect(page.locator('#demo')).toContainText('18.4% peak failures');
-    await expect(page.locator('#demo img')).toHaveAttribute('alt', /18\.4 percent peak failures/u);
-    await expect(page.locator('#demo a[href="examples/incident-review/index.html"]')).toHaveCount(
-      1,
-    );
-    await expect(page.locator('#demo a[href="examples/incident-review/report.md"]')).toBeVisible();
-    await expect(page.locator('#demo')).toHaveAttribute('data-recipe', 'demo');
-    const sections = await page
-      .locator('section.semantic-section')
-      .evaluateAll((items) => items.map((item) => item.id));
-    expect(sections).toEqual([
-      'demo',
-      'styles',
-      'workflow',
-      'examples',
-      'review',
-      'reasons',
-      'agent-skill',
-      'boundaries',
-    ]);
+    await expect(page.getByRole('link', { name: 'Build the first page' }).first()).toBeInViewport();
+    // Первый экран — демо: исходник Markdown рядом с тем, что из него собрано.
+    await expect(page.locator('#demo pre')).toBeInViewport();
+    await expect(page.locator('#demo .semantic-card')).toHaveCount(2);
+    const expected = [
+      ['demo', 'demo'],
+      ['styles', 'rail'],
+      ['workflow', 'story'],
+      ['examples', 'evidence'],
+      ['review', 'evidence'],
+      ['reasons', 'metrics'],
+      ['agent-skill', 'evidence'],
+      ['boundaries', 'story'],
+    ] as const;
+    for (const [id, recipe] of expected) {
+      const section = page.locator(`#${id}`);
+      await expect(section).toHaveAttribute('data-recipe', recipe);
+    }
+    expect(
+      await page
+        .locator('section.semantic-section')
+        .evaluateAll((sections) => sections.map((section) => section.id)),
+    ).toEqual(expected.map(([id]) => id));
     expect(
       await page
         .locator('[data-navigation] a')
         .evaluateAll((links) => links.map((link) => link.getAttribute('href'))),
-    ).toEqual(sections.map((id) => `#${id}`));
-    await expect(page.locator('#examples a[href^="examples/"]')).not.toHaveCount(0);
+    ).toEqual(expected.map(([id]) => `#${id}`));
+
+    await expect(page.locator('.semantic-actions').first()).toHaveAttribute(
+      'data-placement-resolved',
+      'edge',
+    );
+    await expect(page.locator('#workflow > .semantic-actions')).toHaveAttribute(
+      'data-placement-resolved',
+      'inline',
+    );
+    await expect(page.locator('#boundaries > .semantic-actions')).toHaveAttribute(
+      'data-placement-resolved',
+      'bottom',
+    );
     await expectLoadedImages(page);
-    expect(
-      await page
-        .locator('#examples .semantic-card img')
-        .evaluateAll((images) =>
-          images.map((image) => (image instanceof HTMLImageElement ? image.naturalWidth : 0)),
-        ),
-    ).toEqual([390, 390, 390]);
     await expectNoOverflow(page);
     rendered.push(await page.locator('main').innerText());
   }
   expect(rendered[0]).toBe(rendered[1]);
-});
-
-test('the first screen exposes the promise, copyable install command, built proof, and primary action', async ({
-  page,
-}, info) => {
-  test.skip(info.project.name !== 'desktop-chromium');
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 });
-    await page.goto(landingArtifacts[0].url);
-    const heading = page.getByRole('heading', { level: 1 });
-    const install = page.locator('main pre').filter({ hasText: 'npx skills add' });
-    const source = page.locator('#demo code').filter({ hasText: '18.4% peak failures' });
-    const result = page.locator('#demo img').first();
-    const actions = page.locator('.semantic-actions').first();
-    const action = actions.getByRole('link', { name: 'Build a page' });
-    const examples = actions.getByRole('link', { name: 'See examples' });
-    for (const [name, element] of [
-      ['promise', heading],
-      ['install', install],
-      ['source', source],
-      ['result', result],
-      ['action', action],
-    ] as const) {
-      await expect(element, `${width}px: ${name}`).toBeInViewport({ ratio: 1 });
-    }
-    await expect(install.locator('[data-copy-code]')).toBeVisible();
-    await expect(action).toHaveAttribute('href', '#workflow');
-    await expect(examples).toBeInViewport();
-    await expect(examples).toHaveAttribute('href', '#examples');
-    await expectNoOverflow(page);
-  }
 });
 
 test('the staged public gallery opens every bilingual artifact and canonical source pair', async ({
@@ -224,18 +197,6 @@ test('the staged public gallery opens every bilingual artifact and canonical sou
     await expect(page.getByRole('combobox', { name: 'Язык' })).toHaveValue('ru');
     await expectNoOverflow(page);
     if (proof.page === 'index.html') {
-      await expectLoadedImages(page);
-      expect(
-        await page
-          .locator('#examples .semantic-card img')
-          .evaluateAll((images) =>
-            images.map((image) => (image instanceof HTMLImageElement ? image.naturalWidth : 0)),
-          ),
-      ).toEqual([390, 390, 390]);
-      await expect(page.locator('#examples .semantic-card img').first()).toHaveAttribute(
-        'alt',
-        /восстановления/u,
-      );
       await page.screenshot({ path: path.join(captureRoot, 'landing-ru-narrow.png') });
     }
     expect(
@@ -321,11 +282,36 @@ test('desktop stage keeps unrelated direct children in readable non-overlapping 
   }
 });
 
-test('a non-landing demo executes reusable scroll and choreography motion', async ({
+test('landing and a non-landing demo execute reusable scroll, pointer, and choreography motion', async ({
   page,
 }, info) => {
   test.skip(info.project.name !== 'desktop-chromium');
   await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(landingArtifacts[0].url);
+
+  const dataScene = page.locator('#workflow');
+  const initialProgress = Number(
+    await dataScene.evaluate((node) => node.style.getPropertyValue('--scene-progress')),
+  );
+  await dataScene.scrollIntoViewIfNeeded();
+  await expect
+    .poll(() =>
+      dataScene.evaluate((node) => Number(node.style.getPropertyValue('--scene-progress'))),
+    )
+    .not.toBe(initialProgress);
+  await expect(dataScene).toHaveAttribute('data-scene-active', '');
+
+  const pointerScene = page.locator('#review');
+  await pointerScene.scrollIntoViewIfNeeded();
+  const workflowImage = pointerScene.locator('img').first();
+  const imageBox = await workflowImage.boundingBox();
+  if (imageBox === null) throw new Error('Landing story image has no geometry.');
+  await page.mouse.move(imageBox.x + imageBox.width * 0.75, imageBox.y + imageBox.height * 0.35);
+  await expect(pointerScene).toHaveAttribute('data-pointer-active', '');
+  expect(await workflowImage.evaluate((image) => getComputedStyle(image).transform)).not.toBe(
+    'none',
+  );
+
   await page.goto(generatedUrl('launch-readiness.html'));
   const activation = page.locator('#activation');
   await activation.scrollIntoViewIfNeeded();
@@ -343,7 +329,7 @@ test('a non-landing demo executes reusable scroll and choreography motion', asyn
     page.locator('[data-scene-active], [data-choreography-motion], [data-pointer-active]'),
   ).toHaveCount(0);
   await expect(page.locator('#styles')).toBeVisible();
-  await expect(page.locator('#demo img')).toHaveCount(1);
+  await expect(page.locator('#workflow img')).toBeVisible();
   await mkdir(path.resolve('test-results/captures/public-motion'), { recursive: true });
   await page.screenshot({
     path: path.resolve('test-results/captures/public-motion/landing-reduced-motion.png'),
@@ -481,11 +467,11 @@ test('viewport matrix keeps content readable, mobile concise, and wide layouts o
   const captureRoot = path.resolve('test-results/captures/public-visual-language');
   await mkdir(captureRoot, { recursive: true });
   const profiles = [
-    { name: 'ultrawide', width: 2560, height: 1440 },
-    { name: 'tall', width: 1200, height: 1920 },
-    { name: 'desktop', width: 1440, height: 1000 },
-    { name: 'mobile', width: 390, height: 844 },
-    { name: 'narrow', width: 304, height: 844 },
+    { name: 'ultrawide', width: 2560, height: 1440, maxHeight: 13_000 },
+    { name: 'tall', width: 1200, height: 1920, maxHeight: 14_000 },
+    { name: 'desktop', width: 1440, height: 1000, maxHeight: 13_000 },
+    { name: 'mobile', width: 390, height: 844, maxHeight: 15_000 },
+    { name: 'narrow', width: 304, height: 844, maxHeight: 17_000 },
   ] as const;
 
   for (const profile of profiles) {
@@ -496,8 +482,9 @@ test('viewport matrix keeps content readable, mobile concise, and wide layouts o
     if (profile.name === 'tall') {
       expect(await page.evaluate(() => scrollY)).toBe(0);
       await expect(
-        page.locator('.semantic-actions').first().getByRole('link', { name: 'Build a page' }),
+        page.getByRole('link', { name: 'Build the first page' }).first(),
       ).toBeInViewport();
+      await expect(page.getByRole('link', { name: 'Choose a visual direction' })).toBeInViewport();
     }
     const geometry = await page.evaluate(() => {
       const shell = document.querySelector<HTMLElement>('.report-shell');
@@ -518,6 +505,7 @@ test('viewport matrix keeps content readable, mobile concise, and wide layouts o
         sectionHeights: sections.map((section) => section.getBoundingClientRect().height),
       };
     });
+    expect(geometry.height).toBeLessThan(profile.maxHeight);
     expect(geometry.height).toBeGreaterThan(profile.height * 2);
     expect(geometry.headingFits).toBe(true);
     expect(geometry.topbarContained).toBe(true);

@@ -118,6 +118,11 @@
       "description": "Shows the package-owned “Made with Agentic Report” footer link; set false to omit it.",
       "default": true
     },
+    "topbar": {
+      "type": "boolean",
+      "description": "Shows the package-owned top bar with the title, the contents button and the page controls; set false for a page filmed as a scene: the first section starts at the top edge, and review and themeSwitcher, which live in the bar, are refused.",
+      "default": true
+    },
     "schemeToggle": {
       "type": "boolean",
       "description": "Shows the package-owned light and dark control; set false for a page that must stay in the scheme it was built with.",

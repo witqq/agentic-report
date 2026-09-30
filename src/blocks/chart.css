@@ -1,0 +1,51 @@
+@layer components {
+  .visualization-bar,
+  .visualization-slice {
+    stroke: var(--visualization-surface);
+    stroke-width: 2;
+  }
+
+  .visualization-line {
+    fill: none;
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .visualization-point {
+    stroke: var(--visualization-surface);
+    stroke-width: 2;
+  }
+
+  /*
+   * График выбирает вариант по своей колонке, а не по окну: широкий рисунок в 720 единиц с подписями в
+   * 12 px держит их не мельче 11 px только на дорожке от 660 px, и в колонке рядом с оглавлением на
+   * экране в 1024 px он уже мельчит. Уже этой дорожки график показывает узкий вариант.
+   */
+  .semantic-chart {
+    container-type: inline-size;
+  }
+  @container (width < 41.25rem) {
+    .semantic-chart .visualization-svg-wide {
+      display: none;
+    }
+
+    .semantic-chart .visualization-svg-narrow {
+      display: block;
+      width: 100%;
+      min-width: 0;
+    }
+  }
+  @media (width <= 620px) {
+    /* На телефоне график показывает свой узкий вариант: он помещается в колонку без прокрутки вбок. */
+    .semantic-chart .visualization-svg-wide {
+      display: none;
+    }
+
+    .semantic-chart .visualization-svg-narrow {
+      display: block;
+      width: 100%;
+      min-width: 0;
+    }
+  }
+}

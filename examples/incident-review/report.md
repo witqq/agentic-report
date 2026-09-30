@@ -62,7 +62,7 @@ Two prevention items, one detection improvement, and one preparedness drill are 
 ::::
 :::::
 
-![Sample topology showing traffic entering checkout, billing, and the payment provider](assets/service-topology.svg)
+![Sample topology showing traffic entering checkout, billing, and the payment provider](assets/service-topology.svg){dark="assets/service-topology-dark.svg"}
 ::::::
 
 :::::section{title="What failed" id="cause" nav="Cause" width="wide" align="start" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="stagger" choreography="cascade"}

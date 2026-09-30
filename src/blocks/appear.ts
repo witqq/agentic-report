@@ -33,7 +33,7 @@ function appearDefinition(): DirectiveDefinition & { readonly name: 'appear' } {
 /** The section block numbers the steps of each slide, because slides are its sections. */
 export const appear = defineBlock({
   definition: appearDefinition(),
-  styles: 'package',
+  feature: 'slides',
   staticEquivalent: 'Content shown in place from the start, as if every step had been taken.',
   examples: [
     '::::section{title="Slide"}\n:::appear{effect="fade"}\nShown on the next step.\n:::\n::::\n',

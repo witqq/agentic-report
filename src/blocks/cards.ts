@@ -102,7 +102,7 @@ export const cards = defineBlock({
   definition: container('cards', 'Responsive grid, normally containing card directives.', {
     handoffs: ['semantic-document'],
   }),
-  styles: 'package',
+  feature: 'cards',
   staticEquivalent:
     'A titled grid of cards that wraps to one column on narrow screens and in print.',
   examples: ['::::cards{title="Options"}\n:::card{title="One"}\nFirst.\n:::\n::::\n'],
@@ -112,7 +112,7 @@ export const card = defineBlock({
   definition: cardDefinition(),
   validate: validateCard,
   enhance: enhanceCard,
-  styles: 'package',
+  feature: 'cards',
   staticEquivalent:
     'A bordered card with its status in words; a linked card is one ordinary link without hover motion.',
   examples: [

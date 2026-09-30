@@ -46,7 +46,7 @@ export function renderBriefTemplate(categoryId: PageCategoryId): string {
     '',
     '## Checks switched off',
     '',
-    'One line per design check deliberately switched off for this page, in the form `- DR-RULE: reason`.',
+    'One line per check deliberately switched off for this page, with its reason: `- DR-RULE: reason` for a design check, `- PR-RULE: reason` or `- PR-RULE file.md:line: reason` for a prose rule.',
     '',
   ].join('\n');
 }

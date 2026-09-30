@@ -155,13 +155,13 @@ describe('composing a brand theme', () => {
   });
 
   it('draws only the dark scheme over a dark-only theme', () => {
-    // Catches light colours written for `terminal`, whose light scheme is never drawn.
-    const composed = composeBrandTheme(
-      ['#0b5fff'],
+    // Catches light colours written for a `scheme: dark` theme, whose light scheme is never drawn.
+    const darkOnly = applyThemeInput(
       resolveBuiltInTheme('terminal'),
-      'terminal',
-      'brand',
+      { scheme: 'dark' },
+      'console',
     );
+    const composed = composeBrandTheme(['#0b5fff'], darkOnly, 'console', 'brand');
     expect(composed.schemes).toEqual(['dark']);
     expect(composed.input.colors?.light).toBeUndefined();
   });

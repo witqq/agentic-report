@@ -3,10 +3,12 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { PageLocaleChoice } from '../authoring/registry.js';
 import type { ResolvedTheme } from '../authoring/themes.js';
 import type { ReportManifest } from '../contracts.js';
-import { PACKAGE_ICON_PATHS, type PackageIconName } from '../iconography.js';
+import type { PackageIconName } from '../iconography.js';
+import { PACKAGE_ICON_PATHS } from './icon-paths.js';
 import { packageStrings, resolvePackageLocale, type PackageStrings } from '../localization.js';
 import type { ResolvedReviewArtifact } from '../review/binding.js';
 import type { ReviewArtifact, ReviewTargetManifest } from '../review/contract.js';
+import type { EditionLayer, EditionListEntry } from '../edition/decorate.js';
 import type { NavigationItem } from './navigation.js';
 import type { PublicPageMetadata } from './public-page.js';
 import { themeRootAttributes } from './theme-css.js';
@@ -25,6 +27,10 @@ export interface DocumentPageVariantOptions {
     readonly artifact: ReviewArtifact;
     readonly resolved: ResolvedReviewArtifact;
   };
+  /** JSON записи редакции; нет у публичной страницы. */
+  readonly editionRecordJson?: string;
+  /** Слой изменений с прошлой редакции: кнопка «Изменения», список и точки в оглавлении. */
+  readonly editionLayer?: EditionLayer;
 }
 
 export interface DocumentRenderOptions extends DocumentPageVariantOptions {
@@ -37,6 +43,7 @@ export interface DocumentRenderOptions extends DocumentPageVariantOptions {
     | 'attribution'
     | 'review'
     | 'schemeToggle'
+    | 'topbar'
     | 'motion'
   > & {
     readonly theme: ResolvedTheme;
@@ -74,6 +81,7 @@ export function renderDocument(options: DocumentRenderOptions): string {
       data-progress={options.page.progress === 'none' ? undefined : options.page.progress}
       data-opening={options.page.opening}
       data-motion-level={options.page.motion}
+      data-topbar={options.page.topbar ? undefined : 'none'}
       data-package-locale={resolvePackageLocale(options.language)}
       data-active-locale={options.locale}
     >
@@ -92,7 +100,7 @@ export function renderDocument(options: DocumentRenderOptions): string {
           />
         )}
         {options.styles.inline === undefined ? null : (
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: CSS is the package-owned Vite build artifact.
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: CSS is the package-owned page bundle (src/core/page-assets.ts).
           <style dangerouslySetInnerHTML={{ __html: options.styles.inline }} />
         )}
         {options.styles.href === undefined ? null : (
@@ -107,6 +115,7 @@ export function renderDocument(options: DocumentRenderOptions): string {
             attribution={options.page.attribution}
             review={options.page.review}
             schemeToggle={options.page.schemeToggle}
+            topbar={options.page.topbar}
             switchableThemes={options.page.switchableThemes}
             theme={options.page.theme.name}
           />
@@ -119,13 +128,14 @@ export function renderDocument(options: DocumentRenderOptions): string {
               attribution={options.page.attribution}
               review={options.page.review}
               schemeToggle={options.page.schemeToggle}
+              topbar={options.page.topbar}
               switchableThemes={options.page.switchableThemes}
               theme={options.page.theme.name}
             />
           </template>
         ))}
         {options.runtime.inline === undefined ? null : (
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: JavaScript is the package-owned Vite build artifact.
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: JavaScript is the package-owned page bundle (src/core/page-assets.ts).
           <script dangerouslySetInnerHTML={{ __html: options.runtime.inline }} />
         )}
         {options.runtime.src === undefined ? null : <script src={options.runtime.src} defer />}
@@ -191,6 +201,7 @@ function PageVariant({
   attribution,
   review,
   schemeToggle,
+  topbar,
   switchableThemes,
   theme,
 }: {
@@ -199,6 +210,8 @@ function PageVariant({
   readonly attribution: boolean;
   readonly review: boolean;
   readonly schemeToggle: boolean;
+  /** Без верхней панели страницу снимают как сцену: ни названия, ни кнопок над первым разделом. */
+  readonly topbar: boolean;
   readonly switchableThemes: readonly ResolvedTheme[];
   readonly theme: string;
 }) {
@@ -221,6 +234,10 @@ function PageVariant({
   const reviewPopoverId = allocateShellId('report-review-popover', usedIds);
   const reviewTargetTitleId = allocateShellId('report-review-target-title', usedIds);
   const reviewThreadTitleId = allocateShellId('report-review-thread-title', usedIds);
+  const editionDialogId = allocateShellId('report-edition-dialog', usedIds);
+  const editionDialogTitleId = allocateShellId('report-edition-dialog-title', usedIds);
+  const editionEntries = options.editionLayer?.entries ?? [];
+  const changedSections = options.editionLayer?.changedSections ?? new Set<string>();
   return (
     <div
       className="localized-page-variant"
@@ -230,140 +247,167 @@ function PageVariant({
       data-page-title={options.title}
       data-page-description={options.description ?? options.title}
       data-page-multilingual={variants.length > 1 ? 'true' : 'false'}
+      data-edition-layer={
+        options.editionLayer === undefined || options.editionLayer.unchanged ? undefined : 'on'
+      }
     >
       <a className="skip-link" href={`#${contentId}`}>
         {strings.skipToContent}
       </a>
-      <header className="topbar" data-nav-outside>
-        {hasNavigation ? (
-          <button
-            className="nav-toggle ui-button"
-            data-ui-variant="quiet"
-            data-ui-size="md"
-            data-ui-icon-only
-            data-ui-toolbar
-            type="button"
-            aria-controls={navigationId}
-            aria-expanded="true"
-            aria-label={strings.hideContents}
-            title={strings.hideContents}
-            data-nav-toggle
-          >
-            <PackageIcon name="three-bars" />
-            <span data-nav-toggle-label data-topbar-control-label>
-              {strings.hideContents}
-            </span>
-          </button>
-        ) : null}
-        <div className="topbar-context">
-          <a
-            className="topbar-title"
-            href={`#${contentId}`}
-            aria-label={options.title}
-            title={options.title}
-          >
-            <span className="topbar-title-full">{options.title}</span>
-            <span className="topbar-title-short">{documentIdentity}</span>
-          </a>
+      {topbar ? (
+        <header className="topbar" data-nav-outside>
           {hasNavigation ? (
-            <span className="topbar-current">
-              <span className="topbar-current-prefix">{strings.current}</span>
-              <span data-topbar-current>{options.navigation[0]?.label}</span>
-            </span>
-          ) : null}
-        </div>
-        <div className="topbar-tools">
-          {hasReviewTargets ? (
             <button
-              className="review-toggle ui-button"
+              className="nav-toggle ui-button"
               data-ui-variant="quiet"
               data-ui-size="md"
               data-ui-icon-only
               data-ui-toolbar
               type="button"
-              aria-controls={reviewDialogId}
-              aria-expanded="false"
-              aria-label={strings.review}
-              title={strings.review}
-              data-review-toggle
+              aria-controls={navigationId}
+              aria-expanded="true"
+              aria-label={strings.hideContents}
+              title={strings.hideContents}
+              data-nav-toggle
             >
-              <PackageIcon name="comment" size={20} />
-              <span data-review-toggle-label data-topbar-control-label>
-                {strings.review}
+              <PackageIcon name="three-bars" />
+              <span data-nav-toggle-label data-topbar-control-label>
+                {strings.hideContents}
               </span>
-              <span className="review-toggle-count" data-review-toggle-count hidden />
             </button>
           ) : null}
-          {variants.length > 1 ? (
-            <label
-              className="language-select ui-button"
-              data-ui-variant="quiet"
-              data-ui-size="md"
-              data-ui-icon-only
-              data-ui-toolbar
-              title={strings.language}
+          <div className="topbar-context">
+            <a
+              className="topbar-title"
+              href={`#${contentId}`}
+              aria-label={options.title}
+              title={options.title}
             >
-              <PackageIcon name="language" size={20} />
-              <span className="visually-hidden">{strings.language}</span>
-              <select
-                aria-label={strings.language}
+              <span className="topbar-title-full">{options.title}</span>
+              <span className="topbar-title-short">{documentIdentity}</span>
+            </a>
+            {hasNavigation ? (
+              <span className="topbar-current">
+                <span className="topbar-current-prefix">{strings.current}</span>
+                <span data-topbar-current>{options.navigation[0]?.label}</span>
+              </span>
+            ) : null}
+          </div>
+          <div className="topbar-tools">
+            {editionEntries.length > 0 ? (
+              <button
+                className="review-toggle edition-list-toggle ui-button"
+                data-ui-variant="quiet"
+                data-ui-size="md"
+                data-ui-icon-only
+                data-ui-toolbar
+                type="button"
+                aria-controls={editionDialogId}
+                aria-expanded="false"
+                aria-haspopup="dialog"
+                aria-label={`${strings.edition.button}: ${editionEntries.length}`}
+                title={strings.edition.button}
+                data-edition-list-toggle
+              >
+                <PackageIcon name="pencil" size={20} />
+                <span data-topbar-control-label>{strings.edition.button}</span>
+                <span className="review-toggle-count" aria-hidden="true">
+                  {editionEntries.length}
+                </span>
+              </button>
+            ) : null}
+            {hasReviewTargets ? (
+              <button
+                className="review-toggle ui-button"
+                data-ui-variant="quiet"
+                data-ui-size="md"
+                data-ui-icon-only
+                data-ui-toolbar
+                type="button"
+                aria-controls={reviewDialogId}
+                aria-expanded="false"
+                aria-label={strings.review}
+                title={strings.review}
+                data-review-toggle
+              >
+                <PackageIcon name="comment" size={20} />
+                <span data-review-toggle-label data-topbar-control-label>
+                  {strings.review}
+                </span>
+                <span className="review-toggle-count" data-review-toggle-count hidden />
+              </button>
+            ) : null}
+            {variants.length > 1 ? (
+              <label
+                className="language-select ui-button"
+                data-ui-variant="quiet"
+                data-ui-size="md"
+                data-ui-icon-only
+                data-ui-toolbar
                 title={strings.language}
-                defaultValue={options.locale}
-                data-language-select
               >
-                {variants.map((variant) => (
-                  <option key={variant.locale} value={variant.locale}>
-                    {strings.languageName(variant.locale)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          {switchableThemes.length > 0 ? (
-            <label
-              className="theme-select ui-button"
-              data-ui-variant="quiet"
-              data-ui-size="md"
-              data-ui-icon-only
-              data-ui-toolbar
-              title={strings.chooseTheme}
-            >
-              <PackageIcon name="palette" size={20} />
-              <span className="visually-hidden">{strings.theme}</span>
-              <select
-                aria-label={strings.chooseTheme}
+                <PackageIcon name="language" size={20} />
+                <span className="visually-hidden">{strings.language}</span>
+                <select
+                  aria-label={strings.language}
+                  title={strings.language}
+                  defaultValue={options.locale}
+                  data-language-select
+                >
+                  {variants.map((variant) => (
+                    <option key={variant.locale} value={variant.locale}>
+                      {strings.languageName(variant.locale)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            {switchableThemes.length > 0 ? (
+              <label
+                className="theme-select ui-button"
+                data-ui-variant="quiet"
+                data-ui-size="md"
+                data-ui-icon-only
+                data-ui-toolbar
                 title={strings.chooseTheme}
-                defaultValue={theme}
-                data-theme-select
               >
-                {switchableThemes.map((candidate) => (
-                  <option key={candidate.name} value={candidate.name}>
-                    {themeLabel(candidate.name)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          {schemeToggle ? (
-            <button
-              className="scheme-toggle ui-button"
-              data-ui-variant="quiet"
-              data-ui-size="md"
-              data-ui-icon-only
-              data-ui-toolbar
-              type="button"
-              aria-label={strings.toggleScheme}
-              title={strings.toggleScheme}
-              data-scheme-toggle
-            >
-              <PackageIcon name="sun" size={20} />
-              <span data-scheme-toggle-label data-topbar-control-label>
-                {strings.scheme}
-              </span>
-            </button>
-          ) : null}
-        </div>
-      </header>
+                <PackageIcon name="palette" size={20} />
+                <span className="visually-hidden">{strings.theme}</span>
+                <select
+                  aria-label={strings.chooseTheme}
+                  title={strings.chooseTheme}
+                  defaultValue={theme}
+                  data-theme-select
+                >
+                  {switchableThemes.map((candidate) => (
+                    <option key={candidate.name} value={candidate.name}>
+                      {themeLabel(candidate.name)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            {schemeToggle ? (
+              <button
+                className="scheme-toggle ui-button"
+                data-ui-variant="quiet"
+                data-ui-size="md"
+                data-ui-icon-only
+                data-ui-toolbar
+                type="button"
+                aria-label={strings.toggleScheme}
+                title={strings.toggleScheme}
+                data-scheme-toggle
+              >
+                <PackageIcon name="sun" size={20} />
+                <span data-scheme-toggle-label data-topbar-control-label>
+                  {strings.scheme}
+                </span>
+              </button>
+            ) : null}
+          </div>
+        </header>
+      ) : null}
       <div
         className="report-shell"
         data-has-navigation={hasNavigation ? 'true' : 'false'}
@@ -379,6 +423,11 @@ function PageVariant({
                     <a href={`#${item.id}`} aria-current={index === 0 ? 'location' : undefined}>
                       {item.label}
                     </a>
+                    {changedSections.has(item.id) ? (
+                      <span className="edition-dot" data-edition-removed>
+                        <span className="visually-hidden">{strings.edition.contentsMark}</span>
+                      </span>
+                    ) : null}
                   </li>
                 ))}
               </ol>
@@ -445,6 +494,17 @@ function PageVariant({
       {hasReviewTargets && options.priorReview !== undefined ? (
         <template data-prior-review>{JSON.stringify(options.priorReview)}</template>
       ) : null}
+      {editionEntries.length > 0 && options.editionLayer !== undefined ? (
+        <EditionMarkup
+          strings={strings}
+          summary={options.editionLayer.summary}
+          entries={editionEntries}
+          ids={{ dialog: editionDialogId, title: editionDialogTitleId }}
+        />
+      ) : null}
+      {options.editionRecordJson === undefined ? null : (
+        <template data-edition-record>{options.editionRecordJson}</template>
+      )}
     </div>
   );
 }
@@ -614,6 +674,86 @@ function ReviewMarkup({
         <span data-review-selection-action-label>{strings.createNote}</span>
       </button>
     </>
+  );
+}
+
+/**
+ * Список изменений с прошлой редакции: на компьютере — неблокирующая панель, как список ревью, на
+ * телефоне — нижний лист. Строки сгруппированы по разделам; выбор строки ведёт к блоку.
+ */
+function EditionMarkup({
+  strings,
+  summary,
+  entries,
+  ids,
+}: {
+  readonly strings: PackageStrings;
+  readonly summary: string;
+  readonly entries: readonly EditionListEntry[];
+  readonly ids: { readonly dialog: string; readonly title: string };
+}) {
+  const groups: { section: string; entries: EditionListEntry[] }[] = [];
+  for (const entry of entries) {
+    const last = groups.at(-1);
+    if (last !== undefined && last.section === entry.section) last.entries.push(entry);
+    else groups.push({ section: entry.section, entries: [entry] });
+  }
+  return (
+    <dialog
+      className="review-dialog edition-dialog"
+      id={ids.dialog}
+      aria-labelledby={ids.title}
+      data-edition-dialog
+    >
+      <div className="review-panel edition-panel">
+        <header className="review-panel-header">
+          <div>
+            <p className="review-eyebrow ui-label">{strings.edition.button}</p>
+            <h2 className="ui-title" id={ids.title}>
+              {strings.edition.panelTitle}
+            </h2>
+          </div>
+          <button
+            type="button"
+            className="review-close ui-button"
+            data-ui-variant="secondary"
+            data-ui-size="sm"
+            data-edition-close
+          >
+            <PackageIcon name="x" />
+            <span>{strings.close}</span>
+          </button>
+        </header>
+        <div className="review-panel-body edition-panel-body">
+          <p className="edition-panel-summary">{summary}</p>
+          {groups.map((group, groupIndex) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: groups follow the page order and never reorder.
+            <section className="edition-group" key={groupIndex}>
+              <h3 className="ui-label">{group.section || strings.edition.beforeSections}</h3>
+              <ol className="edition-list">
+                {group.entries.map((entry) => (
+                  <li key={entry.key}>
+                    <a className="edition-entry" href={entry.href} data-edition-jump>
+                      <span className="edition-entry-head">
+                        <span className="edition-entry-status" data-change={entry.status}>
+                          {entry.label}
+                        </span>
+                        {entry.detail === '' ? null : (
+                          <span className="edition-entry-detail">{entry.detail}</span>
+                        )}
+                      </span>
+                      {entry.excerpt === '' ? null : (
+                        <span className="edition-entry-excerpt">{entry.excerpt}</span>
+                      )}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ))}
+        </div>
+      </div>
+    </dialog>
   );
 }
 

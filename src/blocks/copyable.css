@@ -1,0 +1,6 @@
+@layer components {
+  .semantic-copyable [data-copyable-content] {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+}

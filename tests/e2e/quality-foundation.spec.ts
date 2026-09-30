@@ -146,13 +146,42 @@ test('localized landing keeps its heading and primary action in the compact open
   }
 });
 
+test('a disclosure summary reads left to right: its title on the left edge, one state sign on the right', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  // The landing example's theme re-shows package icons in its chrome; the other one does not.
+  for (const name of ['starter-landing-directory/index', 'interactive-catalog']) {
+    await page.goto(artifactUrl(name));
+    const rows = await page.locator('[data-disclosure] > summary').evaluateAll((summaries) =>
+      summaries.map((summary) => {
+        const box = summary.getBoundingClientRect();
+        const range = document.createRange();
+        range.selectNodeContents(summary);
+        const text = range.getClientRects()[0];
+        const shown = [...summary.children].filter((child) => child.getClientRects().length > 0);
+        return {
+          textOffset: Math.round((text?.left ?? -99) - box.left),
+          shownChildren: shown.length,
+          sign: getComputedStyle(summary, '::after').content,
+        };
+      }),
+    );
+    expect(rows.length, name).toBeGreaterThan(0);
+    for (const row of rows) {
+      // Ловит: стрелка слева и знак справа делят строку на три части и центрируют название.
+      expect(row, name).toMatchObject({ textOffset: 0, shownChildren: 0 });
+      expect(row.sign, name).not.toBe('none');
+    }
+  }
+});
+
 test('package-owned operations expose coherent icons without replacing their labels', async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium');
   await page.goto(artifactUrl('interactive-catalog'));
   const operations = [
-    ['[data-disclosure] > summary', 'arrow-down'],
     ['[data-modal-open]', 'window'],
     ['[data-modal-close]', 'x'],
     ['.semantic-popover > [data-popover-trigger]', 'info'],
@@ -400,49 +429,66 @@ test('story media remains inside its section when the authored prose is shorter 
   expect(geometry.nextTop).toBeGreaterThan(geometry.storyBottom);
 });
 
-test('the shared shell uses desktop space while prose keeps a readable measure', async ({
+test('the column stands on the window centre with the contents at the shell gap in its left rail, prose at the measure', async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium');
+  // Defects caught: the column centred in the space beside the docked contents floated hundreds of pixels
+  // away from them on a wide screen (the owner's «странная вёрстка»), the column stood right of the window
+  // centre together with the contents (the owner's «текст не посередине»), the page title ran wider than the
+  // column, and prose ran past the reading measure.
   for (const width of [1440, 1920, 2560]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto(artifactUrl('layout-mixed'));
     const geometry = await page.evaluate(() => {
-      const shell = document.querySelector<HTMLElement>('.report-shell');
+      const sidebar = document.querySelector<HTMLElement>('.sidebar');
+      const content = document.querySelector<HTMLElement>('.report-content');
+      const title = document.querySelector<HTMLElement>('main h1');
       const prose = document.querySelector<HTMLElement>('main article > p');
-      if (shell === null || prose === null) throw new Error('Expected shell and prose.');
+      if (sidebar === null || content === null || title === null || prose === null)
+        throw new Error('Expected contents, column, title and prose.');
       const readableMeasure = document.createElement('span');
       readableMeasure.style.cssText =
         'position:fixed;display:block;visibility:hidden;width:78ch;font:inherit;pointer-events:none';
       document.body.append(readableMeasure);
       const maximumProseWidth = readableMeasure.getBoundingClientRect().width;
       readableMeasure.remove();
+      const side = sidebar.getBoundingClientRect();
+      const column = content.getBoundingClientRect();
       return {
-        shellShare: shell.getBoundingClientRect().width / innerWidth,
+        gap: column.left - side.right,
+        shellGap: Number.parseFloat(
+          getComputedStyle(document.querySelector('.report-shell') as Element).columnGap,
+        ),
+        offCentre: Math.abs((column.left + column.right) / 2 - innerWidth / 2),
+        titleOverrun: title.getBoundingClientRect().right - column.right,
         proseWidth: prose.getBoundingClientRect().width,
         maximumProseWidth,
         rootOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
       };
     });
-    expect(geometry.shellShare, String(width)).toBeGreaterThan(width === 1440 ? 0.82 : 0.72);
+    expect(Math.abs(geometry.gap - geometry.shellGap), String(width)).toBeLessThanOrEqual(1);
+    if (width > 1440) expect(geometry.offCentre, String(width)).toBeLessThanOrEqual(2);
+    expect(geometry.titleOverrun, String(width)).toBeLessThanOrEqual(1);
     expect(geometry.proseWidth, String(width)).toBeLessThanOrEqual(geometry.maximumProseWidth + 1);
     expect(geometry.rootOverflow, String(width)).toBe(false);
   }
 
+  // With the contents collapsed the column alone is centred in the window.
   await page.setViewportSize({ width: 1920, height: 1000 });
   await page.goto(artifactUrl('layout-mixed'));
-  const expandedContentWidth = await page
-    .locator('.report-content')
-    .evaluate((element) => element.getBoundingClientRect().width);
   await page.locator('[data-nav-toggle]').click();
-  const collapsed = await page.evaluate(() => ({
-    contentWidth:
-      document.querySelector<HTMLElement>('.report-content')?.getBoundingClientRect().width ?? 0,
-    overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
-    collapsed: document.documentElement.hasAttribute('data-nav-collapsed'),
-  }));
+  const collapsed = await page.evaluate(() => {
+    const column = document.querySelector<HTMLElement>('.report-content')?.getBoundingClientRect();
+    return {
+      balance:
+        column === undefined ? Number.NaN : Math.abs(column.left - (innerWidth - column.right)),
+      overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      collapsed: document.documentElement.hasAttribute('data-nav-collapsed'),
+    };
+  });
   expect(collapsed.collapsed).toBe(true);
-  expect(collapsed.contentWidth).toBeGreaterThan(expandedContentWidth);
+  expect(collapsed.balance).toBeLessThanOrEqual(2);
   expect(collapsed.overflow).toBe(false);
 
   for (const width of [304, 390]) {
@@ -742,7 +788,9 @@ test('every registered public component stays contained and readable in real gen
                   contentBox !== undefined &&
                   rootBox.left >= Math.max(0, contentBox.left) - 1 &&
                   rootBox.right <= Math.min(innerWidth, contentBox.right) + 1 &&
-                  root.scrollWidth <= root.clientWidth + 1,
+                  // A `table{layout="scroll"}` scrolls inside its own frame by the author's choice.
+                  (root.scrollWidth <= root.clientWidth + 1 ||
+                    root.dataset.tableLayout === 'scroll'),
               });
             }
           }

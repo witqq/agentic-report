@@ -514,25 +514,31 @@ for (const artifact of diagramTourArtifacts) {
       });
     }
 
+    const phone = testInfo.project.name.startsWith('mobile');
     const flow = page.getByRole('img', { name: 'Code tour grouped flow' });
-    const sequence = page.getByRole('img', { name: 'Compile request sequence' });
+    const sequence = page.getByRole('img', {
+      name: 'Compile request sequence',
+      includeHidden: phone,
+    });
     await expect(flow).toBeVisible();
-    await expect(sequence).toBeVisible();
+    await expectSequenceForm(page, phone);
     await expect(flow).toHaveAccessibleDescription(
       /Groups: “Authentication and authorization services”: Step 1 detail, Step 2 detail.*“Reader artifact”: Step 13 detail.*Connections back against the flow: Step 18 detail → Step 3 detail: reverse feedback/u,
     );
     await expect(sequence).toHaveAccessibleDescription(
       /Participants from left to right: Authoring agent.*Messages in order: 1\. Authoring agent → Source loader: load source\. 2\. Source loader → Compiler: validated graph\. 3\. Compiler → Browser: write artifact\. 4\. Browser → Authoring agent: review result/u,
     );
-    await expect(
-      page.locator('[data-diagram-type="flow"] [data-layout-default] [data-group-id]'),
-    ).toHaveCount(3);
-    await expect(
-      page.locator('[data-diagram-type="flow"] [data-layout-default] [data-node-id]'),
-    ).toHaveCount(18);
+    // Вид автора несёт два рисунка — полный и узкий, сверху вниз (`data-diagram-compact`), — и показывает
+    // тот, что помещается; считается показанный рисунок.
+    const shownDrawing = page.locator(
+      '[data-diagram-type="flow"] [data-layout-default] svg.visualization-diagram:not([hidden])',
+    );
+    await expect(shownDrawing).toHaveCount(1);
+    await expect(shownDrawing.locator('[data-group-id]')).toHaveCount(3);
+    await expect(shownDrawing.locator('[data-node-id]')).toHaveCount(18);
     // Слои идут по потоку: цепочка шагов спускается слой за слоем, а связь назад описана отдельно.
-    const layers: [string, number][] = await page
-      .locator('[data-diagram-type="flow"] [data-layout-default] [data-node-id]')
+    const layers: [string, number][] = await shownDrawing
+      .locator('[data-node-id]')
       .evaluateAll((nodes) =>
         nodes.map((node): [string, number] => [
           node.getAttribute('data-node-id') ?? '',
@@ -556,7 +562,10 @@ for (const artifact of diagramTourArtifacts) {
     await page.emulateMedia({ media: 'screen' });
     await flowFigure.getByRole('tab', { name: 'Top to bottom' }).click();
     const transcript = page.locator('[data-diagram-type="flow"] .visualization-transcript');
-    await transcript.locator('summary').click();
+    // «Схема словами» открыта с самого начала на телефоне (`diagram-forms.ts`); на широком экране её
+    // открывает читатель.
+    if (phone) await expect(transcript).toHaveAttribute('open', '');
+    else await transcript.locator('summary').click();
     await expect(
       transcript.getByText('Step 18 detail → Step 3 detail: reverse feedback'),
     ).toBeVisible();
@@ -573,50 +582,48 @@ for (const artifact of diagramTourArtifacts) {
         ),
     ).toEqual(['1', '2', '3', '4']);
 
-    const groupContainment = await page
-      .locator('[data-diagram-type="flow"] [data-layout-default]')
-      .evaluate((root) => {
-        const groups = [...root.querySelectorAll<SVGGElement>('[data-group-id]')];
-        return groups.every((group) => {
-          const id = group.getAttribute('data-group-id');
-          const boundary = group.querySelector<SVGRectElement>('.visualization-group')?.getBBox();
-          if (boundary === undefined) return false;
-          const members = [...root.querySelectorAll<SVGGElement>(`[data-group="${id}"]`)];
-          const labels = [...group.querySelectorAll<SVGTextElement>('.visualization-group-label')];
-          return (
-            members.length > 0 &&
-            labels.length > 0 &&
-            // Заголовок стоит в своей группе и не заходит ни на один её узел.
-            labels.every((label) => {
-              const box = label.getBBox();
-              return (
-                box.x >= boundary.x &&
-                box.y >= boundary.y &&
-                box.x + box.width <= boundary.x + boundary.width &&
-                box.y + box.height <= boundary.y + boundary.height &&
-                members.every((member) => {
-                  const node = member.getBBox();
-                  return (
-                    box.x + box.width <= node.x ||
-                    node.x + node.width <= box.x ||
-                    box.y + box.height <= node.y ||
-                    node.y + node.height <= box.y
-                  );
-                })
-              );
-            }) &&
-            members.every((member) => {
-              const box = member.getBBox();
-              return (
-                box.x >= boundary.x &&
-                box.y >= boundary.y &&
-                box.x + box.width <= boundary.x + boundary.width &&
-                box.y + box.height <= boundary.y + boundary.height
-              );
-            })
-          );
-        });
+    const groupContainment = await shownDrawing.evaluate((root) => {
+      const groups = [...root.querySelectorAll<SVGGElement>('[data-group-id]')];
+      return groups.every((group) => {
+        const id = group.getAttribute('data-group-id');
+        const boundary = group.querySelector<SVGRectElement>('.visualization-group')?.getBBox();
+        if (boundary === undefined) return false;
+        const members = [...root.querySelectorAll<SVGGElement>(`[data-group="${id}"]`)];
+        const labels = [...group.querySelectorAll<SVGTextElement>('.visualization-group-label')];
+        return (
+          members.length > 0 &&
+          labels.length > 0 &&
+          // Заголовок стоит в своей группе и не заходит ни на один её узел.
+          labels.every((label) => {
+            const box = label.getBBox();
+            return (
+              box.x >= boundary.x &&
+              box.y >= boundary.y &&
+              box.x + box.width <= boundary.x + boundary.width &&
+              box.y + box.height <= boundary.y + boundary.height &&
+              members.every((member) => {
+                const node = member.getBBox();
+                return (
+                  box.x + box.width <= node.x ||
+                  node.x + node.width <= box.x ||
+                  box.y + box.height <= node.y ||
+                  node.y + node.height <= box.y
+                );
+              })
+            );
+          }) &&
+          members.every((member) => {
+            const box = member.getBBox();
+            return (
+              box.x >= boundary.x &&
+              box.y >= boundary.y &&
+              box.x + box.width <= boundary.x + boundary.width &&
+              box.y + box.height <= boundary.y + boundary.height
+            );
+          })
+        );
       });
+    });
     expect(groupContainment).toBe(true);
 
     const geometry = await page.locator('[data-visualization="diagram"]').evaluateAll((figures) =>
@@ -792,6 +799,49 @@ const CATEGORY_STARTERS: ReadonlySet<string> = new Set([
 ]);
 const pageArtifactUrl = (id: string): string =>
   CATEGORY_STARTERS.has(id) ? starterArtifactUrl(id) : layoutArtifactUrl(id);
+
+/**
+ * The compile-request sequence is drawn on a wide screen; on a phone it is shown as its list of steps
+ * (`src/browser/diagram-forms.ts`), because the drawing would have to shrink below readable text and it stays
+ * one tap away in the full-screen viewer. Catches a drawing squeezed on a phone, or the list shown in place of
+ * a drawing that fits.
+ */
+async function expectSequenceForm(page: Page, phone: boolean): Promise<void> {
+  const figure = page.locator('[data-diagram-type="sequence"]').first();
+  const drawing = figure.getByRole('img', {
+    name: /Compile request sequence/u,
+    includeHidden: true,
+  });
+  const list = figure.locator('[data-sequence-list]');
+  await expect(figure).toHaveAttribute('data-diagram-form', phone ? 'list' : 'drawing');
+  if (!phone) {
+    await expect(drawing).toBeVisible();
+    await expect(list).toBeHidden();
+    return;
+  }
+  await expect(drawing).toBeHidden();
+  await expect(list).toBeVisible();
+  await expect(list.locator('.visualization-sequence-step')).toHaveText([
+    'Authoring agent → Source loader: load source',
+    'Source loader → Compiler: validated graph',
+    'Compiler → Browser: write artifact',
+    'Browser → Authoring agent: review result',
+  ]);
+}
+
+/**
+ * On a phone a prose table that cannot fit readably is laid out as labelled cards (`src/render/tables.ts`,
+ * the table rules of `src/blocks/table.css`) instead of scrolling sideways. Catches a squeezed grid or a sideways
+ * scroll on a phone, and header text broken inside words.
+ */
+async function expectPhoneTableCards(table: Locator): Promise<void> {
+  const form = await table.evaluate((element) => ({
+    row: getComputedStyle(element.querySelector('tbody tr') as Element).display,
+    overflow: element.scrollWidth - element.clientWidth,
+    headerWrap: getComputedStyle(element.querySelector('th') as Element).overflowWrap,
+  }));
+  expect(form).toEqual({ row: 'block', overflow: 0, headerWrap: 'normal' });
+}
 
 async function expectCurrentNavigation(page: Page, targetId: string): Promise<void> {
   const current = page.locator('[data-navigation] a[aria-current="location"]');
@@ -2342,7 +2392,7 @@ test('declarative interactions preserve scoped state, focus, and responsive file
 for (const artifact of visualizationArtifacts) {
   test(`${artifact.format} declarative visualizations are labelled, themed, and responsive from file URL`, async ({
     page,
-  }) => {
+  }, testInfo) => {
     await page.goto(artifact.url);
     await expect(
       page.getByRole('heading', { name: 'Product signal atlas', level: 1 }),
@@ -2372,8 +2422,12 @@ for (const artifact of visualizationArtifacts) {
       page.locator('[data-layout-default] [data-from="source"][data-to="validate"]'),
     ).toBeAttached();
     await expectDiagramEdgesAvoidNodes(flowDiagram);
-    const sequenceDiagram = page.getByRole('img', { name: /Compile request sequence/u });
-    await expect(sequenceDiagram).toBeVisible();
+    const phone = testInfo.project.name.startsWith('mobile');
+    const sequenceDiagram = page.getByRole('img', {
+      name: /Compile request sequence/u,
+      includeHidden: phone,
+    });
+    await expectSequenceForm(page, phone);
     await expect(sequenceDiagram).toHaveAccessibleDescription(
       /Messages in order: 1\. Authoring agent → Source loader: load source.*4\. Browser → Authoring agent: review result/u,
     );
@@ -2604,9 +2658,8 @@ for (const artifact of launchReadinessArtifacts) {
     await expect(limits).toHaveAttribute('open', '');
 
     if (testInfo.project.name.startsWith('mobile')) {
-      const register = page.getByRole('table').filter({ hasText: 'Mandatory condition' });
-      expect(await register.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
-        true,
+      await expectPhoneTableCards(
+        page.getByRole('table').filter({ hasText: 'Mandatory condition' }),
       );
       const navigationToggle = page.locator('[data-nav-toggle]');
       await expect(navigationToggle).toHaveAccessibleName('Open contents');
@@ -2952,17 +3005,8 @@ for (const example of [
     const dialogNavigation =
       testInfo.project.name.startsWith('mobile') || example.layout === 'landing';
     if (dialogNavigation) {
-      if ('table' in example) {
-        const table = page.locator('table').first();
-        expect(await table.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
-          true,
-        );
-        expect(
-          await table
-            .locator('th')
-            .first()
-            .evaluate((element) => getComputedStyle(element).overflowWrap),
-        ).toBe('normal');
+      if ('table' in example && testInfo.project.name.startsWith('mobile')) {
+        await expectPhoneTableCards(page.locator('table').first());
       }
       const toggle = page.locator('[data-nav-toggle]');
       await expect(toggle).toHaveAccessibleName('Open contents');

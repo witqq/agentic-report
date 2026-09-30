@@ -262,7 +262,7 @@ function fillLabel(node: Element): undefined {
 export const decision = defineBlock({
   definition: decisionDefinition(),
   validate: validateReviewComponent,
-  styles: 'package',
+  feature: 'decision',
   staticEquivalent: 'The decision and its options as a titled list, nothing preselected.',
   examples: [
     ':::decision{title="Ship it?" id="ship" required=true}\n::decision-option{id="yes" label="Yes"}\n::decision-option{id="no" label="No"}\n:::\n',
@@ -272,7 +272,7 @@ export const decision = defineBlock({
 export const decisionOption = defineBlock({
   definition: decisionOptionDefinition(),
   prepare: fillLabel,
-  styles: 'package',
+  feature: 'decision',
   staticEquivalent: 'One option of the decision, named by its label.',
   examples: [
     ':::decision{title="Ship it?" id="ship"}\n::decision-option{id="yes" label="Yes"}\n:::\n',
@@ -282,7 +282,7 @@ export const decisionOption = defineBlock({
 export const checklist = defineBlock({
   definition: checklistDefinition(),
   validate: validateReviewComponent,
-  styles: 'package',
+  feature: 'decision',
   staticEquivalent: 'A titled list of items, each marked required or optional in words.',
   examples: [
     ':::checklist{title="Before release" id="release"}\n::check-item{id="tests" label="Tests pass" required=true}\n::check-item{id="notes" label="Notes written"}\n:::\n',
@@ -292,7 +292,7 @@ export const checklist = defineBlock({
 export const checkItem = defineBlock({
   definition: checkItemDefinition(),
   prepare: fillLabel,
-  styles: 'package',
+  feature: 'decision',
   staticEquivalent: 'One item of the checklist, named by its label.',
   examples: [
     ':::checklist{title="Before release" id="release"}\n::check-item{id="tests" label="Tests pass"}\n:::\n',

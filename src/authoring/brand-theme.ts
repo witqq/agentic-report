@@ -198,7 +198,8 @@ function fitRole(
   scheme: Scheme,
 ): string {
   const pairs = THEME_CONTRAST_PAIRS.filter(
-    (pair) => pair.foreground === role || pair.background === role,
+    (pair) =>
+      pair.foreground === role || pair.background === role || pair.backgroundTint?.role === role,
   );
   const failing = (l: number): { hex: string; failing: typeof pairs } => {
     const hex = oklchToHex({ ...seed, l });
@@ -207,8 +208,13 @@ function fitRole(
       hex,
       failing: pairs.filter(
         (pair) =>
-          contrastRatio(trial, pair.foreground, pair.background, pair.foregroundShare) <
-          pair.minimum,
+          contrastRatio(
+            trial,
+            pair.foreground,
+            pair.background,
+            pair.foregroundShare,
+            pair.backgroundTint,
+          ) < pair.minimum,
       ),
     };
   };

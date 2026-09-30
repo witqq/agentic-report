@@ -79,6 +79,11 @@ interface DirectiveEnhancementOptions {
   readonly shareTransform?: { neutralizedSourceLinks: number };
   readonly navigationTransform?: { items: NavigationItem[] };
   readonly vocabulary?: DirectiveVocabulary;
+  /**
+   * Collects the feature of every block an element is dispatched to: the page's rendered blocks decide
+   * which browser features the page carries (`src/page-features.ts`).
+   */
+  readonly renderedFeatures?: Set<string>;
 }
 
 const directiveByName: ReadonlyMap<string, DirectiveDefinition> = new Map(
@@ -322,8 +327,40 @@ export const remarkSemanticDirectives: Plugin<[DirectivePluginOptions], MdastRoo
     validateCodeTermBlocks(codeTermBlocks, glossaryByKey, refusedGlossaryKeys, options, violations);
     validateBlocks(tree, attributesByNode, vocabulary.blocks, options, violations);
     validateUnmarkedGlossaryTerms(tree, [...glossaryByKey.values()], options, violations);
+    validateStrayFences(tree, options, violations);
     if (violations.length > 0) throw aggregateViolations(violations);
   };
+
+/**
+ * A paragraph made only of fence colons (`:::`, `:::::` …) is a closing fence nothing opened, or one left
+ * over after its container closed early on a shorter fence: Markdown keeps it as text, and the page would
+ * show a row of colons where a block was meant to end. It is refused with its line.
+ */
+function validateStrayFences(
+  tree: MdastRoot,
+  options: DirectivePluginOptions,
+  violations: AgenticReportError[],
+): void {
+  visit(tree, 'paragraph', (node) => {
+    const text = node.children.every((child) => child.type === 'text')
+      ? node.children.map((child) => (child.type === 'text' ? child.value : '')).join('')
+      : undefined;
+    if (text === undefined || !/^:{3,}$/u.test(text.trim())) return;
+    violations.push(
+      attachNodeSource(
+        new AgenticReportError({
+          level: 'error',
+          code: 'UNBALANCED_DIRECTIVE_FENCE',
+          message: `A closing fence ${text.trim()} closes nothing: its container is already closed or was never opened.`,
+          remediation:
+            'Give each container a fence longer than every fence inside it (::::section around :::callout), and close it with the same number of colons; remove a fence left over.',
+        }),
+        node,
+        options,
+      ),
+    );
+  });
+}
 
 /**
  * Runs every block's own check on each of its nodes, in document order, after the directive pass.
@@ -1722,6 +1759,8 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
         enhanceCodeTerms(node, codeTermKeys.split(','), glossary, createGlossaryReference);
       }
       const semantic = stringProperty(node, 'dataSemantic');
+      const block = blockForElement(node, blocks);
+      if (block !== undefined) options.renderedFeatures?.add(block.feature);
       if (semantic === TERM_DIRECTIVE) {
         const key = stringProperty(node, 'dataKey');
         const definition = key === undefined ? undefined : glossary.get(key);
@@ -1747,7 +1786,7 @@ export const rehypeEnhanceDirectives: Plugin<[DirectiveEnhancementOptions], Hast
         delete node.properties.dataTerm;
         return;
       }
-      const enhance = blockForElement(node, blocks)?.enhance;
+      const enhance = block?.enhance;
       if (enhance === undefined) {
         prependDirectiveTitle(node);
         return;

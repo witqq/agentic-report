@@ -142,6 +142,61 @@
       "kind": "copy"
     },
     {
+      "id": "example-capability-tour",
+      "href": "examples/capability-tour/index.html",
+      "source": "../examples/capability-tour",
+      "kind": "page"
+    },
+    {
+      "id": "source-capability-tour",
+      "href": "examples/capability-tour/report.md",
+      "source": "../examples/capability-tour/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-capability-tour-ru",
+      "href": "examples/capability-tour/report.ru.md",
+      "source": "../examples/capability-tour/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "capability-tour-screens",
+      "href": "examples/capability-tour/screens/index.html",
+      "source": "../examples/capability-tour/screens.md",
+      "kind": "page"
+    },
+    {
+      "id": "source-capability-tour-screens",
+      "href": "examples/capability-tour/screens.md",
+      "source": "../examples/capability-tour/screens.md",
+      "kind": "copy"
+    },
+    {
+      "id": "capability-tour-edition-1",
+      "href": "examples/capability-tour/edition-1/index.html",
+      "source": "../examples/capability-tour/edition-1.md",
+      "kind": "page"
+    },
+    {
+      "id": "capability-tour-edition-2",
+      "href": "examples/capability-tour/edition-2/index.html",
+      "source": "../examples/capability-tour/edition-2.md",
+      "since": "../examples/capability-tour/edition-1.md",
+      "kind": "page"
+    },
+    {
+      "id": "source-capability-tour-edition-1",
+      "href": "examples/capability-tour/edition-1.md",
+      "source": "../examples/capability-tour/edition-1.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-capability-tour-edition-2",
+      "href": "examples/capability-tour/edition-2.md",
+      "source": "../examples/capability-tour/edition-2.md",
+      "kind": "copy"
+    },
+    {
       "id": "source-landing",
       "href": "source/landing/report.md",
       "source": "landing/report.md",
@@ -214,12 +269,6 @@
       "kind": "copy"
     },
     {
-      "id": "skill-reference-cli",
-      "href": "skills/agentic-report/references/cli.md",
-      "source": "../skills/agentic-report/references/cli.md",
-      "kind": "copy"
-    },
-    {
       "id": "skill-reference-compose",
       "href": "skills/agentic-report/references/compose.md",
       "source": "../skills/agentic-report/references/compose.md",
@@ -232,21 +281,9 @@
       "kind": "copy"
     },
     {
-      "id": "skill-reference-effect-api",
-      "href": "skills/agentic-report/references/effect-api.md",
-      "source": "../skills/agentic-report/references/effect-api.md",
-      "kind": "copy"
-    },
-    {
       "id": "skill-reference-extensions",
       "href": "skills/agentic-report/references/extensions.md",
       "source": "../skills/agentic-report/references/extensions.md",
-      "kind": "copy"
-    },
-    {
-      "id": "skill-reference-node-api",
-      "href": "skills/agentic-report/references/node-api.md",
-      "source": "../skills/agentic-report/references/node-api.md",
       "kind": "copy"
     },
     {
@@ -316,6 +353,30 @@
       "kind": "copy"
     },
     {
+      "id": "skill-script-prose-check",
+      "href": "skills/agentic-report/scripts/prose-check.mjs",
+      "source": "../skills/agentic-report/scripts/prose-check.mjs",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-script-source-files",
+      "href": "skills/agentic-report/scripts/source-files.mjs",
+      "source": "../skills/agentic-report/scripts/source-files.mjs",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-script-handover",
+      "href": "skills/agentic-report/scripts/handover.mjs",
+      "source": "../skills/agentic-report/scripts/handover.mjs",
+      "kind": "copy"
+    },
+    {
+      "id": "skill-script-craft",
+      "href": "skills/agentic-report/scripts/craft.mjs",
+      "source": "../skills/agentic-report/scripts/craft.mjs",
+      "kind": "copy"
+    },
+    {
       "id": "extension-key-figure",
       "href": "extensions/key-figure/README.md",
       "source": "../extensions/key-figure/README.md",
@@ -325,12 +386,6 @@
       "id": "extension-product-theatre",
       "href": "extensions/product-theatre/README.md",
       "source": "../extensions/product-theatre/README.md",
-      "kind": "copy"
-    },
-    {
-      "id": "extension-wall-thread",
-      "href": "extensions/wall-thread/README.md",
-      "source": "../extensions/wall-thread/README.md",
       "kind": "copy"
     },
     {
@@ -358,12 +413,6 @@
       "kind": "copy"
     },
     {
-      "id": "product-requirements",
-      "href": "PRODUCT-REQUIREMENTS.md",
-      "source": "../PRODUCT-REQUIREMENTS.md",
-      "kind": "copy"
-    },
-    {
       "id": "docs-architecture",
       "href": "docs/ARCHITECTURE.md",
       "source": "../docs/ARCHITECTURE.md",
@@ -379,18 +428,6 @@
       "id": "generated-source-contract",
       "href": "docs/generated/source-contract.json",
       "source": "../docs/generated/source-contract.json",
-      "kind": "copy"
-    },
-    {
-      "id": "generated-extension-schema",
-      "href": "docs/generated/extension-proposal.schema.json",
-      "source": "../docs/generated/extension-proposal.schema.json",
-      "kind": "copy"
-    },
-    {
-      "id": "generated-extension-template",
-      "href": "docs/generated/extension-proposal.template.json",
-      "source": "../docs/generated/extension-proposal.template.json",
       "kind": "copy"
     },
     {

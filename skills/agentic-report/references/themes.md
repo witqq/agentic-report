@@ -10,26 +10,26 @@ returns the complete schema; this file says how to decide what goes in it.
 Each built-in theme is a voice: its own display face over its own text face and code face, with its own
 weight, tracking and letter case for display headings, a signal accent and a quiet second one, and code
 colours for both schemes. Eight of them started as the themes of agentic-screencast; `neutral` and `frost` were added as themes without
-the fashionable clichés. The page themes have since been cleaned (one signal accent, lighter display weights, no
-Tailwind indigo, no scanlines or glow), and the film themes have not caught up yet, so the same name can still give
-a page and a film different looks.
+the fashionable clichés. The background, surfaces, text, borders, accents and the done and returned statuses of
+every built-in theme, in both schemes, come from one palette file shared with agentic-screencast, so a page and a
+film in the same theme and scheme wear the same colours.
 
-| Built-in     | Type (display / text / code)                      | Character                                                      | Extend it for                                | Do not take it for                                                    |
-| ------------ | ------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------- | --------------------------------------------------------------------- |
-| `neutral`    | Literata 600 / Onest / Martian Mono               | Grey paper, ink, one ochre accent; warm graphite dark; default | Reports, product pages, landings, docs       | A page whose subject asks for a strong mood                           |
-| `frost`      | Onest 600 / IBM Plex Sans / Geist Mono            | Stone and graphite; colour only in statuses                    | Dashboards, status pages, technical products | Pages that need a colourful brand                                     |
-| `calm-paper` | Playfair 600 / Literata / PT Mono                 | Warm paper, clay accent, numbered contents                     | Reports, guides, answers, decisions          | A product landing: cream, a serif and terracotta is the 2026 cliché   |
-| `daylight`   | Onest 680 / Golos Text / Geist Mono               | Bright cool page, cobalt and petrol                            | Product documentation, tutorials, briefs     | Pages that need a voice of their own; it is deliberately quiet        |
-| `midnight`   | Geologica 680 / IBM Plex Sans / JetBrains Mono    | Night blue, one blue signal, steel eyebrows, ruled cards       | Engineering stories, code reviews, decks     | A grid of dark feature cards: it becomes the Linear-style dark cliché |
-| `noir`       | Cormorant Garamond capital title / Jost / PT Mono | Black and bone, amber, image-first                             | Cinematic stories, portfolios, showcases     | Next to particles or star dust: capitals there read as a template     |
-| `aurora`     | Raleway 400 / Commissioner / Victor Mono          | Deep blue, one mint signal, sand eyebrows, calm                | Research, science, motion showcases          | Glows and background effects: together they are the "aurora" cliché   |
-| `blueprint`  | Tektur 700 / Fira Sans / Martian Mono             | Drafting blue, cyan and yellow, a faint grid                   | Architecture, dashboards, technical specs    | Dark scheme as a landing default: cyan on navy nears "dark + neon"    |
-| `ember`      | Oswald capital title / Rubik / JetBrains Mono     | Ember black, one orange signal, warm grey eyebrows             | Launches, incidents, announcements           | A product landing with particles: capitals there read as a template   |
-| `synthwave`  | Unbounded 700 / Exo 2 / JetBrains Mono            | Violet night, magenta and cyan                                 | Games and music only                         | Any product or report page: it is the synthwave cliché by design      |
-| `terminal`   | Martian Mono / JetBrains Mono / JetBrains Mono    | Graphite console: prompt, finite cursor, brackets; dark        | Developer tools, CLI products                | Acid green and phosphor glow: leave `scanlines` and `glow` off        |
+| Built-in     | Type (display / text / code)                      | Character                                                        | Extend it for                                | Do not take it for                                                    |
+| ------------ | ------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------- | --------------------------------------------------------------------- |
+| `neutral`    | Literata 600 / Onest / Martian Mono               | Grey paper, ink, one ochre accent; warm graphite dark; default   | Reports, product pages, landings, docs       | A page whose subject asks for a strong mood                           |
+| `frost`      | Onest 600 / IBM Plex Sans / Geist Mono            | Stone and graphite; colour only in statuses                      | Dashboards, status pages, technical products | Pages that need a colourful brand                                     |
+| `calm-paper` | Playfair 600 / Literata / PT Mono                 | Warm paper, clay accent, numbered contents                       | Reports, guides, answers, decisions          | A product landing: cream, a serif and terracotta is the 2026 cliché   |
+| `daylight`   | Onest 680 / Golos Text / Geist Mono               | Bright cool page, cobalt and petrol                              | Product documentation, tutorials, briefs     | Pages that need a voice of their own; it is deliberately quiet        |
+| `midnight`   | Geologica 680 / IBM Plex Sans / JetBrains Mono    | Night blue, one blue signal, steel eyebrows, ruled cards         | Engineering stories, code reviews, decks     | A grid of dark feature cards: it becomes the Linear-style dark cliché |
+| `noir`       | Cormorant Garamond capital title / Jost / PT Mono | Black and bone, amber, image-first                               | Cinematic stories, portfolios, showcases     | Next to particles or star dust: capitals there read as a template     |
+| `aurora`     | Raleway 400 / Commissioner / Victor Mono          | Deep blue, one mint signal, sand eyebrows, calm                  | Research, science, motion showcases          | Glows and background effects: together they are the "aurora" cliché   |
+| `blueprint`  | Tektur 700 / Fira Sans / Martian Mono             | Drafting blue, cyan and yellow, a faint grid                     | Architecture, dashboards, technical specs    | Dark scheme as a landing default: cyan on navy nears "dark + neon"    |
+| `ember`      | Oswald capital title / Rubik / JetBrains Mono     | Ember black, one orange signal, warm grey eyebrows               | Launches, incidents, announcements           | A product landing with particles: capitals there read as a template   |
+| `synthwave`  | Unbounded 700 / Exo 2 / JetBrains Mono            | Violet night, magenta and cyan                                   | Games and music only                         | Any product or report page: it is the synthwave cliché by design      |
+| `terminal`   | Martian Mono / JetBrains Mono / JetBrains Mono    | Graphite console or pale console paper: prompt, cursor, brackets | Developer tools, CLI products                | Acid green and phosphor glow: leave `scanlines` and `glow` off        |
 
-Every theme draws a light and a dark scheme except `terminal`; a dark-looking theme such as `midnight` has
-a matching light scheme with the same accents. `extends` names the theme; everything you leave out,
+Every built-in theme draws a light and a dark scheme; a dark-looking theme such as `midnight` or `terminal`
+has a matching light scheme with the same accents. `extends` names the theme; everything you leave out,
 including that theme's signature details, is inherited. Change only what the page needs: a theme with three
 fields is easier to judge than one with thirty:
 
@@ -56,10 +56,17 @@ belongs on pages whose subject is the look itself.
    violet, slate neutrals and its stock chart colours are what an averaging generator produces — a renamed
    copy of them is the same palette. Paper or bone, ink and one warm accent is a safe start; the dark scheme
    is a warm graphite, not a night blue.
-2. **Type.** `fonts.pair` takes the whole type trio of a built-in theme — `midnight`, `calm-paper`,
+2. **Type.** `fonts.pair` takes the whole type set of a built-in theme — `midnight`, `calm-paper`,
    `synthwave`, `noir`, `aurora`, `daylight`, `ember`, `blueprint`, `terminal`, `neutral`, `frost` — or
    `system`. Name a single
-   role (`fonts.heading`, `fonts.body`, `fonts.mono`) to refine it; every embedded family carries Cyrillic.
+   role (`fonts.heading`, `fonts.body`, `fonts.mono`, `fonts.code`) to refine it; every embedded family
+   carries Cyrillic. Code and labels are separate roles: `fonts.code` (`--font-code`) sets code blocks and
+   inline code and takes only a text-grade programming mono — `jetbrains-mono`, `geist-mono` or
+   `system-mono` — so code stays compact and `0`/`O`, `1`/`l`/`I` stay apart in every theme; `fonts.mono`
+   (`--font-mono`) sets meta lines and chapter numbers (field labels, column headers, «On this page» and
+   «Fig. 01» are labels in the body face), where a wide display mono such as `martian-mono` or a
+   stylised one such as `victor-mono` may give the theme its character. A local code font of your own goes
+   in with `::font{… role="code"}`.
    `typography.displayWeight`, `headingTracking` and `displayCase` (`none` or `uppercase`) set the display
    voice: capitals want positive tracking (`noir` uses 0.08em). Capitals set only the page title and
    display statements — chapter titles stay as written, because capitals on every chapter read as a
@@ -102,7 +109,13 @@ belongs on pages whose subject is the look itself.
    invalid fields. Left out, each follows its series (`chart2`, `chart4`, `chart3`); set them when the
    series colours are chosen for charts and the statuses need their own. The build refuses a status below
    3:1 against the background and the surface, and each status must keep its one meaning
-   (`DR-SIGNAL-COLOUR`).
+   (`DR-SIGNAL-COLOUR`). Code colours (`codeText`, `codeKeyword`, `codeString`, `codeNumber`,
+   `codeFunction`, `codeType`, `codeComment`, `codePunctuation`) must reach 4.5:1 on every surface code is
+   drawn on, not only on `codeBackground`: on added diff and edition lines (tinted with `statusDone`), on
+   removed diff lines and the ghost of a line an edition removed (tinted with `statusReturned`), on hunk
+   lines (tinted with `accent`), and on `accentSoft`, which lights the code line of a scene step. The tint
+   shares are stated once, in `docs/product/source-contract.md` (section «Themes»). So when an author theme changes the statuses, the accent or
+   `accentSoft`, build once and read the code pairs among the contrast diagnostics.
 
 ## A theme from brand colours
 
@@ -110,7 +123,7 @@ When the product has its own colours, let the package place them instead of gues
 contrast:
 
 ```sh
-npx --yes agentic-report@0.19.0 theme --colors "#0b5fff,#ff7a00" --extends neutral --output ./my-page/brand-theme.yaml
+npx --yes agentic-report@0.20.0 theme --colors "#0b5fff,#ff7a00" --extends neutral --output ./my-page/brand-theme.yaml
 ```
 
 `--colors` takes one or two colours written `#rgb` or `#rrggbb`. The first becomes the accent family —
@@ -148,8 +161,9 @@ the contrast check, like the status roles did.
 
 - Keep `headingTracking` at −0.03 or looser (`DR-TIGHT-TRACKING`); Cyrillic never goes tighter than −0.025
   whatever you write.
-- Draw both schemes (`scheme: both`) unless the page is always seen in the dark. A theme extending
-  `terminal` inherits its dark-only scheme; set `scheme: both` and both colour sets to change that.
+- Draw both schemes (`scheme: both`, the default) unless the page is always seen in the dark. A theme with
+  `scheme: dark` draws its dark colours in either reader scheme and hides the scheme button; to make a page
+  open dark but keep the button, set the page's `scheme: dark` instead.
 - Never use a backdrop to decorate content (`DR-BLOBS`); `backdrop` `dots`, `grid`, or `tint` is a quiet
   paper texture, `none` is often best. `grain` lays a faint noise in the text colour over the whole page;
   take it only under large fills beside real material — a photograph, a scan, a printed object — never as
@@ -185,9 +199,16 @@ graphite rather than a night blue. A dash marks a value that was not measured.
 | Igloo Inc | a monospace readout over the scene                                | —                    | Two inks, `#b6bac5` and `#383e4e`, one ice material   |
 | Hubtown   | a vertical contents beside the title                              | `rgb(2, 10, 24)`     | Night blue with sci-fi controls: the part not to copy |
 
-These observations were measured live by the Moira landing research on 2026-09-25. Use the recorded values
-as examples of scale and contrast, then measure current references for the page's own subject before
-choosing a direction; a named site's current appearance may differ from this record.
+What the table says in ratios: display tracking of the grotesque sites sits between −0.02em and −0.06em of
+the size (Linear −1.4 px at 64 px, Framer −2.16 px at 54 px, Vercel −3.84 px at 64 px — Vercel's is
+within what `headingTracking` accepts, −0.1em to 0.15em, but tighter than the −0.03em that
+`DR-TIGHT-TRACKING` advises, and works only because Geist is drawn for it; Cyrillic headings never go
+tighter than −0.025em whatever the theme says); the light displays are weight 300 at
+44–68 px; the dark backgrounds are within `rgb(8, 9, 10)` to `rgb(20, 20, 20)`, a neutral near-black, and
+the light ones are mostly an off-white such as `rgb(250, 250, 250)` or a warm `rgb(247, 247, 244)` rather than
+pure white.
+
+Sources: the home pages of the fourteen sites in the table, measured live in a browser on 2026-09-25.
 
 ## Example
 

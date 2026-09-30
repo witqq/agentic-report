@@ -43,7 +43,7 @@ language: ru
 :::
 ::::
 
-![Демонстрационный цикл обучения беты со связью ограниченной аудитории, совместной ценности, данных и управляемого запуска](assets/beta-learning-loop.ru.svg)
+![Демонстрационный цикл обучения беты со связью ограниченной аудитории, совместной ценности, данных и управляемого запуска](assets/beta-learning-loop.ru.svg){dark="assets/beta-learning-loop-dark.ru.svg"}
 :::::
 
 :::::section{title="Кто первым получает пользу" id="audience" nav="Аудитория" width="wide" align="start" tone="soft" composition="mosaic" viewport="bounded" section-density="compact" type="editorial" surface="grain" transition="stagger" choreography="cascade"}

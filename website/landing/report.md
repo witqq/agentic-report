@@ -1,65 +1,95 @@
 ---
 contractVersion: 1
-title: agentic-report — polished pages for agent handoff
-description: Give an agent declarative Markdown and get a finished responsive page without a frontend project.
+title: agentic-report — polished interactive pages from Markdown
+description: Give an agent declarative Markdown and get a finished local page for a human reader.
 language: en
 localizations:
   ru: report.ru.md
 layout: landing
-theme: neutral
+theme: midnight
 scheme: system
 themeSwitcher: true
 review: true
 progress: chapters
-motion: restrained
-opening: start
 image: assets/social-preview.png
 ---
 
-# A finished page from Markdown.
+# A page worth handing over. From Markdown.
 
-Install the skill, then give your agent the page task.
+Give your agent one declarative source. Get a finished interactive report, tutorial, dashboard, or visual story.
 
-::::actions{placement="inline"}
-::action[Build a page]{href="#workflow" kind="primary"}
-::action[See examples]{href="#examples" kind="secondary"}
+An ordinary page needs no frontend project, hosted editor, or author JavaScript. `agentic-report` compiles
+locally into one portable HTML file by default, with responsive composition, interactions, and localization built in.
+Selected-text review and a reader-side theme selector are one frontmatter flag each.
+
+::::actions{placement="edge"}
+::action[Build the first page]{href="#workflow" kind="primary"}
+::action[Choose a visual direction]{href="#styles" kind="secondary"}
+::action[Open live examples]{href="#examples" kind="quiet"}
 ::::
 
-```sh
-npx skills add \
-  witqq/agentic-report \
-  --skill agentic-report
+::::::section{title="Markdown in, page out" id="demo" nav="Demo" recipe="demo" place="opening"}
+
+```md
+::::cards
+:::card{title="Build" status="good"}
+One HTML file that opens from disk.
+:::
+:::card{title="Review" status="watch"}
+Two notes wait for an answer.
+:::
+::::
 ```
 
-::::::section{title="From source to a real report" id="demo" nav="Source to page" recipe="demo" place="opening" media-aspect="landscape" media-fit="cover"}
-
-Fictional incident · 18 July 2026 · [`18.4% peak failures`](examples/incident-review/report.md).
-
-![Customer impact card from the built fictional incident report, showing 18.4 percent peak failures and the checkout error period](assets/incident-impact-card.png)
-
-[Open the finished report](examples/incident-review/index.html)
-
+::::cards
+:::card{title="Build" status="good"}
+One HTML file that opens from disk.
+:::
+:::card{title="Review" status="watch"}
+Two notes wait for an answer.
+:::
+::::
 ::::::
 
-::::::section{title="The same source can speak in another voice." id="styles" nav="Change the look" recipe="statement" transition="none"}
+::::::section{title="Choose the result. Then choose its character." id="styles" nav="Choose a result" recipe="rail"}
 :::lead
-Try the theme selector in the top bar. It restyles this very page without changing its Markdown. Each theme
-coordinates type, surfaces, controls, and motion; a custom theme can carry a product's own identity.
+Start from the reader's job. A theme supplies coordinated type, surfaces, spacing, controls, media, and
+motion, and a page can extend it with a theme of its own; section recipes shape the story without a wall of
+visual attributes. This page ships the theme selector: switch it in the top bar and the same source
+restyles itself live.
 :::
 
-::::disclosure{title="Compare page styles and their live examples" open="false"}
+![Incident review with impact and causal evidence](assets/incident-review.png){dark="assets/incident-review-dark.png"}
 
-| Example                                                           | What its form serves                                                       |
-| ----------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| [Decision report · Calm paper](examples/document/index.html)      | Evidence, decisions, risks, and accountable next actions.                  |
-| [Research brief · Aurora](examples/research/index.html)           | Method, sources, comparison, uncertainty, and recommendation.              |
-| [Blueprint dashboard](examples/dashboard/index.html)              | Operational scanning with charts, filters, state, and compact controls.    |
-| [Terminal portfolio](examples/terminal-portfolio/index.html)      | Prompt rhythm, mono type, and linked work cards.                           |
-| [Cinematic story](examples/cinematic-story/index.html)            | Local imagery, a staged hero, scroll narrative, media rail, and close.     |
-| [Executive brief · Daylight](examples/executive-brief/index.html) | Evidence, an operating path, and a handoff in a bright theme.              |
-| [Motion and depth showcase](examples/motion-showcase/index.html)  | Scroll progress, reveal, depth, tilt, and reduced-motion fallback.         |
-| [Landing starter](examples/landing/index.html)                    | A product narrative, clear actions, portable proof, and explicit boundary. |
+![Vendor decision with hard gates and weighted evidence](assets/vendor-decision.png){dark="assets/vendor-decision-dark.png"}
 
+![Launch readiness with activation evidence and a reversible path](assets/launch-readiness.png){dark="assets/launch-readiness-dark.png"}
+
+::::cards
+:::card{title="Decision report · Calm paper" href="examples/document/index.html"}
+Large-scale hierarchy for evidence, decisions, risks, and accountable next actions.
+:::
+:::card{title="Research brief · Aurora" href="examples/research/index.html"}
+Editorial depth for method, sources, comparison, uncertainty, and recommendation.
+:::
+:::card{title="Blueprint dashboard" href="examples/dashboard/index.html"}
+High-contrast operational scanning with charts, filters, state, and compact controls.
+:::
+:::card{title="Terminal portfolio" href="examples/terminal-portfolio/index.html"}
+Mono type, prompt rhythm, scan texture, cursor, and clearly linked work cards.
+:::
+:::card{title="Cinematic story" href="examples/cinematic-story/index.html"}
+Local imagery drives a staged hero, scroll narrative, media rail, and measured close.
+:::
+:::card{title="Executive brief · Daylight" href="examples/executive-brief/index.html"}
+A decisive opening, broad evidence field, operating path, and finished handoff in bright Daylight.
+:::
+:::card{title="Motion and depth showcase" href="examples/motion-showcase/index.html"}
+Scroll progress, reveal, choreography, depth, tilt, and their complete reduced-motion fallback.
+:::
+:::card{title="Landing starter" href="examples/landing/index.html"}
+A focused product narrative with clear actions, a portable proof, and an explicit boundary.
+:::
 ::::
 
 ::::actions{placement="inline"}
@@ -68,15 +98,14 @@ coordinates type, surfaces, controls, and motion; a custom theme can carry a pro
 ::::
 ::::::
 
-::::::section{title="From brief to page in one local build." id="workflow" surface="plain" nav="Build a page" recipe="evidence"}
-An agent starts with the reader's job, edits the Markdown, and builds the artifact. The common path does not
-ask the agent to design a layout system or set up a frontend project.
+::::::section{title="Three steps from an empty folder to a finished page." id="workflow" surface="plain" nav="Build a page" recipe="story"}
+![A local incident page prepared for a direct browser handoff](assets/incident-review.png){dark="assets/incident-review-dark.png"}
 
 :::steps{title="The primary author path"}
 
-1. Initialize the page category closest to the reader's task.
-2. Replace the sample with real content and local assets that explain it.
-3. Build once; open the portable result through `file://` and inspect it.
+1. Initialize the page shape closest to the reader's task.
+2. Replace the sample Markdown and add confined local assets when they carry meaning.
+3. Build and open the real artifact through `file://`.
    :::
 
 ```sh
@@ -84,9 +113,8 @@ npx --yes agentic-report init ./my-page --starter document --json
 npx --yes agentic-report build ./my-page --output ./my-page.html --json
 ```
 
-:::callout{kind="info" title="The checks are part of the build"}
-`build` validates syntax, paths, and component contracts before writing. Use `validate` or `inspect` when an
-agent needs a focused diagnosis; look at the built page before handing it over.
+:::callout{kind="info" title="Advanced diagnostics stay optional"}
+`build` validates before writing. Use `validate` or `inspect` only when an agent needs a focused diagnosis.
 :::
 
 ::::actions{placement="inline"}
@@ -95,41 +123,50 @@ agent needs a focused diagnosis; look at the built page before handing it over.
 ::::
 ::::::
 
-::::::section{title="Different jobs. The same author path." id="examples" nav="Real page proofs" recipe="rail"}
-These are captured from pages built by the package, not design mockups. The scenarios and their people,
-organizations, incidents, metrics, and decisions are fictional; the rendered pages and interactions are real.
-Each live example has maintained English and Russian content.
+::::::section{title="Live pages for different reader jobs." id="examples" nav="Explore examples" recipe="evidence"}
+All people, organizations, incidents, metrics, and decisions in the showcases are fictional. Each page is
+compiled independently with equivalent English and Russian authored content.
 
 ::::cards
 :::card{title="Incident command review" href="examples/incident-review/index.html"}
-![Recovery card from the built fictional incident report: retry traffic was capped and the error budget stopped burning after 47 minutes](assets/incident-review.en.png)
-
-Fictional case · 18 July 2026. Impact, causal evidence, response timeline, and owned follow-up.
+Impact curve, causal topology, response timeline, and owned follow-up.
 :::
 :::card{title="Vendor decision" href="examples/vendor-decision/index.html"}
-![Vendor comparison card from the built fictional decision: Meridian Reply scored 89 out of 100 but remains disqualified by its regional telemetry](assets/vendor-decision.en.png)
-
-Fictional case · 6 August 2026. Hard gates, weighted evidence, a ranking exception, and conditional adoption.
+Hard procurement gates, weighted evidence, ranking exception, and conditional adoption.
 :::
 :::card{title="Launch readiness" href="examples/launch-readiness/index.html"}
-![Activation card from the built fictional launch review: 64 percent activated against a target of at least 60 percent](assets/launch-readiness.en.png)
-
-Fictional case · 19 August 2026. Audience value, activation evidence, operating gates, and a reversible rollout.
+Audience value, activation evidence, operating gates, and a reversible rollout.
 :::
-::::
-
-::::disclosure{title="Open more page types" open="false"}
-
-- [Architecture decision](examples/architecture/index.html): trust boundary, alternatives, diagram, review checklist, and rollout path.
-- [First-page tutorial](examples/tutorial/index.html): a build journey with tabs, progressive detail, and a practice control.
-- [Visualization atlas](examples/visualization-catalog/index.html): charts, flow and sequence diagrams, and a timeline.
-- [Executive decision brief](examples/executive-brief/index.html): evidence, operating path, and handoff in Daylight.
-- [Motion and depth](examples/motion-showcase/index.html): declarative motion with its reduced-motion fallback.
-- [Code review](examples/code-review/index.html): verdict, severity, and a unified diff with old and new line numbers.
-- [A question to answer](examples/answer/index.html): trade-offs and a form that exports one structured answer.
-- [Open questions](examples/question-review/index.html): migration questions with context and a shared answer form.
-- [A presentation](examples/presentation/index.html): slides, click steps, speaker notes, and a film view.
-
+:::card{title="Architecture decision" href="examples/architecture/index.html"}
+Trust boundary, alternatives, diagram, review checklist, and rollout path.
+:::
+:::card{title="First-page tutorial" href="examples/tutorial/index.html"}
+A practical build journey with tabs, progressive detail, and a bounded practice control.
+:::
+:::card{title="Every technique, with its source" href="examples/capability-tour/index.html"}
+One fictional station network through a season: each technique shown working, its Markdown underneath.
+:::
+:::card{title="Visualization atlas" href="examples/visualization-catalog/index.html"}
+Charts, a flow diagram, sequence, and timeline rendered from validated directives.
+:::
+:::card{title="Executive decision brief" href="examples/executive-brief/index.html"}
+The Daylight theme applied to an evidence-led decision and operating handoff.
+:::
+:::card{title="Motion and depth" href="examples/motion-showcase/index.html"}
+A direct tour of the visual effects available through ordinary declarative roles.
+:::
+:::card{title="Code review" href="examples/code-review/index.html"}
+A verdict, findings by severity, and the unified diff with old and new line numbers.
+:::
+:::card{title="A question to answer" href="examples/answer/index.html"}
+Three options with their trade-offs and a form that exports one structured answer.
+:::
+:::card{title="Open questions" href="examples/question-review/index.html"}
+Three undecided migration questions, each with its context, and one form for all the answers.
+:::
+:::card{title="A presentation" href="examples/presentation/index.html"}
+Slides with click steps, speaker notes and a film view addressable slide by slide.
+:::
 ::::
 
 [Report source](examples/document/report.md) · [Research](examples/research/report.md) ·
@@ -141,6 +178,7 @@ Fictional case · 19 August 2026. Audience value, activation evidence, operating
 [Executive brief](examples/executive-brief/report.md) ·
 [Motion showcase](examples/motion-showcase/report.md) ·
 [Run report from data](examples/run-report/report.md) ([page](examples/run-report/index.html)) ·
+[Technique tour](examples/capability-tour/report.md) ·
 [Incident review](examples/incident-review/report.md) ·
 [Vendor decision](examples/vendor-decision/report.md) ·
 [Launch readiness](examples/launch-readiness/report.md) ·
@@ -149,14 +187,16 @@ Fictional case · 19 August 2026. Audience value, activation evidence, operating
 [Questions](examples/question-review/report.md)
 ::::::
 
-::::::section{title="Feedback stays with the words." id="review" nav="Review in place"}
-Review is active on this page. Select eligible text and choose **Create note**: the selection stays marked,
-and the thread opens next to it. Readers can reply, edit, resolve, reopen, export, or jump to the discussion
-without moving the document into a separate editor.
+::::::section{title="Comment where the question lives." id="review" nav="Review in place" recipe="evidence" interaction="depth"}
+![A local review handoff with evidence and highlighted discussion](assets/incident-review.png){dark="assets/incident-review-dark.png"}
+
+Select eligible text on the normal page and choose **Create note**. The range remains highlighted; its
+popover carries the thread, reply, edit, resolve, reopen, and **View thread** actions. The document does not
+enter a review mode or move aside for a panel.
 
 :::callout{kind="success" title="Try it here"}
-Select any words in this sentence. The note opens by the selection; the top-bar Review control collects and
-exports the threads.
+Select any words in this sentence. The contextual surface stays with the selection while the topbar Review
+control remains a compact list and export surface.
 :::
 
 ::::actions{placement="inline"}
@@ -168,29 +208,35 @@ exports the threads.
 [Prior review example](examples/review-workspace/prior-review.json)
 ::::::
 
-::::::section{title="The layout work lives in the package." id="reasons" nav="How it works" recipe="blueprint"}
-The agent writes the reader's content and selects a theme or recipe when the task needs one. The compiler
-checks the declared source, then package-owned components produce the responsive page.
-
-::::diagram{title="From source to handoff" description="Declared Markdown is checked, composed with package-owned components, and built into a portable page." type="flow" direction="right"}
-::node{id="source" label="Markdown source"}
-::node{id="check" label="Contract checks"}
-::node{id="compose" label="Theme + components"}
-::node{id="output" label="Portable page"}
-::edge{from="source" to="check"}
-::edge{from="check" to="compose"}
-::edge{from="compose" to="output"}
+::::::section{title="Quality lives in the package." id="reasons" nav="Why it works" recipe="metrics"}
+::::cards
+:::card{title="Strong defaults"}
+Neutral is the default. Calm paper and Frost, alongside Daylight, Midnight, Noir, Aurora, Blueprint,
+Ember, Synthwave, and Terminal, each carry their own display, text and code faces, palette, and motion character.
+:::
+:::card{title="A small public vocabulary"}
+Authors choose a starter, a theme, and optional section recipes. Detailed overrides remain available for a
+specific need without becoming prerequisites.
+:::
+:::card{title="One runtime"}
+Both output formats share semantic HTML, responsive behavior, localization, Review, and Response.
+:::
+:::card{title="A narrow trust boundary"}
+Ordinary Markdown, frontmatter, confined partials, and local assets cannot run code. A page can explicitly
+declare an extension: local providers run at build time, while effects and isolated islands run in the browser.
+Raw HTML and remote fetching remain outside the source format.
+:::
 ::::
-
-Single-file output is the default; directory output serves larger published pages. Both preserve semantic
-HTML, localization, and any declared Review or Response behavior. Source truth and final visual inspection stay
-with the agent; build checks do not approve the meaning of authored content.
 ::::::
 
-::::::section{title="The skill knows the tool's whole vocabulary." id="agent-skill" nav="Set up an agent"}
-The install line is on the first screen. Give the agent a brief for an interactive research handoff, code
-tour, decision packet, tutorial, dashboard, or landing. The skill routes it to exact CLI, source, Node, and
-extension references when needed while keeping the ordinary init/edit/build/open path short.
+::::::section{title="Give the agent the short path." id="agent-skill" nav="Set up an agent" recipe="evidence"}
+
+```sh
+npx skills add witqq/agentic-report --skill agentic-report
+```
+
+Ask for an interactive research handoff, code tour, decision packet, tutorial, dashboard, or landing. The
+canonical skill teaches one init/edit/build/open loop and reaches advanced syntax only when needed.
 
 ::::actions{placement="inline"}
 ::action[Read the exact skill]{href="skills/agentic-report/SKILL.md" kind="primary"}
@@ -201,12 +247,14 @@ extension references when needed while keeping the ordinary init/edit/build/open
 [Open the packaged landing starter source](source/starter/landing/report.md)
 ::::::
 
-::::::section{title="A finished page, with a clear boundary." id="boundaries" surface="plain" nav="Start here" recipe="statement"}
-The ordinary source is Markdown, frontmatter, confined partials, theme data, and local assets. It can build
-one portable HTML file or a directory with content-addressed resources. Raw HTML, remote fetching, and
-implicit code execution are outside that source format; declared extensions have their own checks and trust
-boundary. Hosted collaboration, PDF export, pagination, and disabled-JavaScript parity are outside the
-product.
+::::::section{title="Portable by design. Explicit at the boundary." id="boundaries" surface="plain" nav="Know the boundary" recipe="story"}
+Included: declarative local sources, responsive layouts, local media, package-owned interactions,
+localization, Review and Response, one-file output, content-addressed directory output, and static print
+equivalents for supported components.
+
+Outside the ordinary source format: remote fetching, raw HTML, and implicit code execution. Explicit
+extensions run with their documented trust boundary. Hosted collaboration, PDF export, pagination, and
+disabled-JavaScript parity are outside the product.
 
 ::::actions{placement="bottom"}
 ::action[Build the first page]{href="docs/index.html" kind="primary"}

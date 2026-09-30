@@ -1,0 +1,245 @@
+{
+  "network": "Kestrel",
+  "exportedAt": "2026-09-20T09:00",
+  "zone": "Europe/Lisbon",
+  "stationCount": 6,
+  "reports": 106240,
+  "stations": [
+    {
+      "code": "K1",
+      "site": {
+        "en": "North mole",
+        "ru": "Северный мол"
+      },
+      "mast": 8,
+      "sensors": {
+        "en": "wind, gusts, pressure",
+        "ru": "ветер, порывы, давление"
+      },
+      "uptime": 99,
+      "card": "good",
+      "note": {
+        "en": "Reporting every ten minutes",
+        "ru": "Передаёт данные каждые десять минут"
+      }
+    },
+    {
+      "code": "K2",
+      "site": {
+        "en": "Lighthouse point",
+        "ru": "Маячный мыс"
+      },
+      "mast": 24,
+      "sensors": {
+        "en": "wind, gusts, visibility",
+        "ru": "ветер, порывы, видимость"
+      },
+      "uptime": 99,
+      "card": "good",
+      "note": {
+        "en": "Reporting every ten minutes",
+        "ru": "Передаёт данные каждые десять минут"
+      }
+    },
+    {
+      "code": "K3",
+      "site": {
+        "en": "Fish quay",
+        "ru": "Рыбный причал"
+      },
+      "mast": 6,
+      "sensors": {
+        "en": "wind, rain",
+        "ru": "ветер, осадки"
+      },
+      "uptime": 96,
+      "card": "watch",
+      "note": {
+        "en": "Salt in the anemometer bearing",
+        "ru": "Соль в подшипнике анемометра"
+      }
+    },
+    {
+      "code": "K4",
+      "site": {
+        "en": "Dune school",
+        "ru": "Школа у дюн"
+      },
+      "mast": 12,
+      "sensors": {
+        "en": "wind, rain, temperature",
+        "ru": "ветер, осадки, температура"
+      },
+      "uptime": 99,
+      "card": "good",
+      "note": {
+        "en": "Reporting every ten minutes",
+        "ru": "Передаёт данные каждые десять минут"
+      }
+    },
+    {
+      "code": "K5",
+      "site": {
+        "en": "Coastguard hut",
+        "ru": "Домик береговой охраны"
+      },
+      "mast": 18,
+      "sensors": {
+        "en": "wind, pressure",
+        "ru": "ветер, давление"
+      },
+      "uptime": 88,
+      "card": "risk",
+      "note": {
+        "en": "Silent since the storm of 14 September",
+        "ru": "Молчит со шторма 14 сентября"
+      }
+    },
+    {
+      "code": "K6",
+      "site": {
+        "en": "New breakwater",
+        "ru": "Новый волнолом"
+      },
+      "mast": 7,
+      "sensors": {
+        "en": "wind, swell",
+        "ru": "ветер, волнение"
+      },
+      "uptime": 100,
+      "card": "good",
+      "note": {
+        "en": "Joined on 12 September",
+        "ru": "Подключена 12 сентября"
+      }
+    }
+  ],
+  "months": [
+    {
+      "label": {
+        "en": "Apr",
+        "ru": "апр."
+      },
+      "reports": 11980
+    },
+    {
+      "label": {
+        "en": "May",
+        "ru": "май"
+      },
+      "reports": 16390
+    },
+    {
+      "label": {
+        "en": "Jun",
+        "ru": "июнь"
+      },
+      "reports": 20410
+    },
+    {
+      "label": {
+        "en": "Jul",
+        "ru": "июль"
+      },
+      "reports": 21480
+    },
+    {
+      "label": {
+        "en": "Aug",
+        "ru": "авг."
+      },
+      "reports": 21690
+    },
+    {
+      "label": {
+        "en": "Sep",
+        "ru": "сент."
+      },
+      "reports": 14290
+    }
+  ],
+  "day": {
+    "date": "2026-09-18",
+    "rows": [
+      {
+        "code": "K1",
+        "h00": 12,
+        "h02": 11,
+        "h04": 12,
+        "h06": 15,
+        "h08": 20,
+        "h10": 24,
+        "h12": 28,
+        "h14": 33,
+        "h16": 33,
+        "h18": 30,
+        "h20": 23,
+        "h22": 17
+      },
+      {
+        "code": "K2",
+        "h00": 16,
+        "h02": 15,
+        "h04": 16,
+        "h06": 19,
+        "h08": 24,
+        "h10": 29,
+        "h12": 33,
+        "h14": 38,
+        "h16": 38,
+        "h18": 35,
+        "h20": 28,
+        "h22": 21
+      },
+      {
+        "code": "K3",
+        "h00": 8,
+        "h02": 7,
+        "h04": 8,
+        "h06": 11,
+        "h08": 16,
+        "h10": 20,
+        "h12": 24,
+        "h14": 29,
+        "h16": 29,
+        "h18": 25,
+        "h20": 18,
+        "h22": 12
+      },
+      {
+        "code": "K4",
+        "h00": 10,
+        "h02": 9,
+        "h04": 10,
+        "h06": 13,
+        "h08": 18,
+        "h10": 22,
+        "h12": 26,
+        "h14": 29,
+        "h16": 30,
+        "h18": 27,
+        "h20": 20,
+        "h22": 15
+      },
+      {
+        "code": "K6",
+        "h00": 13,
+        "h02": 12,
+        "h04": 13,
+        "h06": 16,
+        "h08": 21,
+        "h10": 25,
+        "h12": 30,
+        "h14": 35,
+        "h16": 35,
+        "h18": 32,
+        "h20": 25,
+        "h22": 18
+      }
+    ]
+  },
+  "reportsText": {
+    "en": "106,240",
+    "ru": "106 240"
+  }
+}

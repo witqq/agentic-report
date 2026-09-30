@@ -20,6 +20,7 @@ export { initProject } from './authoring/init-project.js';
 export { createBrandTheme } from './authoring/brand-theme.js';
 export type {
   AppliedFix,
+  BuildManifestDefaults,
   BuildReportOptions,
   BuildReportResult,
   BrandThemeRole,
@@ -63,15 +64,6 @@ export {
   type ReviewTargetReference,
 } from './review/contract.js';
 export { AgenticReportError } from './diagnostics.js';
-export {
-  EXTENSION_PROPOSAL_CONTRACT_VERSION,
-  getExtensionProposalSchema,
-  getExtensionProposalTemplate,
-  validateExtensionProposal,
-  type ExtensionProposal,
-  type ExtensionTrustBoundary,
-  type ExtensionProposalValidation,
-} from './authoring/extension-gate.js';
 export {
   getAuthoringSchema,
   getSourceContract,

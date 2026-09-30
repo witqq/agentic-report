@@ -1,0 +1,11 @@
+@layer components {
+  .review-dialog::backdrop {
+    background: transparent;
+  }
+
+  @media (max-width: 56.99rem) {
+    .review-dialog::backdrop {
+      background: color-mix(in srgb, var(--color-bg) 72%, transparent);
+    }
+  }
+}

@@ -30,7 +30,7 @@ I turn ambiguous infrastructure work into small, observable changes. Each entry 
 the boundary, and the result a reviewer can reproduce.
 :::
 
-![A code review built with agentic-report: the diff of src/webhooks/handler.ts, 7 lines added and 2 removed](assets/review-diff.jpg)
+![A code review built with agentic-report: the diff of src/webhooks/handler.ts, 7 lines added and 2 removed](assets/review-diff.jpg){dark="assets/review-diff-dark.jpg"}
 
 _A review page I hand over: the diff view of agentic-report's `code-review` example, built and photographed from disk._
 ::::::

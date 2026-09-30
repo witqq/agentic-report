@@ -255,6 +255,7 @@ export function layoutNodeBox(
   label: string,
   detail?: string,
   maximumWidth = NODE_MAX_WIDTH,
+  minimumWidth = NODE_MIN_WIDTH,
 ): {
   readonly lines: readonly string[];
   readonly detailLines: readonly string[];
@@ -290,9 +291,9 @@ export function layoutNodeBox(
     lines: wrapped.lines,
     detailLines: explained.lines,
     width: Math.min(
-      maximumWidth,
+      inner + NODE_PADDING_X * 2,
       Math.max(
-        NODE_MIN_WIDTH,
+        minimumWidth,
         Math.ceil(Math.max(wrapped.width, explained.width)) + NODE_PADDING_X * 2,
       ),
     ),

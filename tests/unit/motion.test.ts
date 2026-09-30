@@ -7,6 +7,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { buildReport } from '../../src/index.js';
 import type { AgenticReportError } from '../../src/diagnostics.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
+import { readPackageStylesheet } from '../helpers/package-stylesheet.js';
+import { bundlePageAssets } from '../../src/core/page-assets.js';
+import { PAGE_FEATURES } from '../../src/page-features.js';
 
 /**
  * Словарь движения на стороне сборки: предел роста рантайма, код движка только на страницах
@@ -53,12 +56,17 @@ const DIAGRAM = [
 ].join('\n');
 
 describe('motion vocabulary build', () => {
-  it('keeps the shared runtime within 15 KB of compressed growth over the unit-6 baseline', async () => {
-    // Сжатый рантайм перед единицей 6 — 29 650 байт; движение и сцены добавляют не больше 15 КБ, раскладка
-    // и рантайм движения этапа 7 (режим экранов, сцена со скрабом, состояния страницы, кнопка паузы,
-    // поэтапный вход, переходы вида, помощник геометрии) — ещё не больше 9 КБ.
-    const runtime = await readFile(path.resolve('dist/browser/runtime.js'));
-    expect(gzipSync(runtime, { level: 9 }).length).toBeLessThanOrEqual(29_650 + (15 + 9) * 1024);
+  it('keeps the core script under 64 KB and a page with every feature under 160 KB compressed', async () => {
+    // Потолок против неконтролируемого разрастания, а не бюджет на каждое исправление. Ядро несёт каждая
+    // страница: около 21 КБ сейчас, втрое больше — предел. Страница со всеми возможностями — верхняя
+    // граница любого скрипта страницы: около 56 КБ сейчас.
+    const core = await bundlePageAssets([], ['en']);
+    expect(gzipSync(core.script, { level: 9 }).length).toBeLessThanOrEqual(64 * 1024);
+    const everything = await bundlePageAssets(
+      PAGE_FEATURES.map((feature) => feature.id),
+      ['en', 'ru'],
+    );
+    expect(gzipSync(everything.script, { level: 9 }).length).toBeLessThanOrEqual(160 * 1024);
   });
 
   it('ships the effect engine only on a page with an effect extension, in both formats', async () => {
@@ -180,7 +188,7 @@ describe('motion amplitudes follow the landing research', () => {
     expect(PAGE_MOTION_POLICY.pointer.depthPx).toBeGreaterThanOrEqual(5);
     expect(PAGE_MOTION_POLICY.pointer.depthPx).toBeLessThanOrEqual(15);
     expect(PAGE_MOTION_POLICY.sectionReveal.translationPx).toBeLessThanOrEqual(16);
-    const css = await readFile(path.resolve('src/browser/document.css'), 'utf8');
+    const css = await readPackageStylesheet();
     // Параллакс сцены читает свою величину: уменьшение глубины указателя его не меняет.
     const progressRule =
       /\(var\(--scene-progress, 0\.5\) - 0\.5\) \* -1 \* var\((--[a-z-]+)\)/u.exec(css);

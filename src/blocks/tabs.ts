@@ -88,7 +88,7 @@ export const tabs = defineBlock({
     runtime: 'package-owned-tabs',
   }),
   enhance: enhanceTabs,
-  styles: 'package',
+  feature: 'tabs',
   staticEquivalent: 'The first panel shown under its tab list; print shows every panel in order.',
   examples: [TABS_EXAMPLE, VERTICAL_TABS_EXAMPLE],
 });
@@ -100,7 +100,7 @@ export const tab = defineBlock({
     requiredParent: 'tabs',
     runtime: 'package-owned-tabs',
   }),
-  styles: 'package',
+  feature: 'tabs',
   staticEquivalent: 'One labelled panel of content.',
   examples: [TABS_EXAMPLE],
 });

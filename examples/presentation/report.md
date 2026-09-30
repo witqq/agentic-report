@@ -76,7 +76,7 @@ Each `appear` block is one click.
 :::
 :::::
 
-::::section{title="Your turn" id="question"}
+::::::section{title="Your turn" id="question"}
 :::::response{title="Room check" id="room-check"}
 ::::question{id="use" kind="single" title="Where would you use slides from a report?"}
 ::option{id="review" label="Team review"}
@@ -84,4 +84,4 @@ Each `appear` block is one click.
 ::option{id="lesson" label="Onboarding lesson"}
 ::::
 :::::
-::::
+::::::

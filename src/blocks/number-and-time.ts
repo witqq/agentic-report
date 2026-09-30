@@ -139,7 +139,7 @@ export const plural = defineBlock({
   definition: pluralDefinition(),
   validate: validatePlural,
   enhance: enhancePlural,
-  styles: 'package',
+  feature: 'core',
   staticEquivalent: 'Plain text: the number and its noun, settled when the page builds.',
   examples: ['The review found :plural[3]{forms="finding|findings"} in two files.\n'],
 });
@@ -410,7 +410,7 @@ export const time = defineBlock({
   definition: timeDefinition(),
   validate: validateTime,
   enhance: enhanceTime,
-  styles: 'package',
+  feature: 'core',
   staticEquivalent:
     'Plain text in a time element: the date or moment as the page language writes it, with its zone.',
   examples: [

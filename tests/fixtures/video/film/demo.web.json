@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "film": "demo",
+  "width": 16,
+  "height": 16,
+  "duration": 0.2,
+  "audio": true,
+  "lang": "en",
+  "poster": {
+    "jpg": "demo.poster.jpg",
+    "webp": "demo.poster.webp"
+  },
+  "sources": [
+    {
+      "src": "demo.av1.mp4",
+      "type": "video/mp4; codecs=\"av01.0.00M.08, mp4a.40.2\"",
+      "format": "av1",
+      "width": 16,
+      "height": 16,
+      "bytes": 1436
+    },
+    {
+      "src": "demo.vp9.webm",
+      "type": "video/webm; codecs=\"vp9, opus\"",
+      "format": "vp9",
+      "width": 16,
+      "height": 16,
+      "bytes": 761
+    },
+    {
+      "src": "demo.h264.mp4",
+      "type": "video/mp4; codecs=\"avc1.64000a, mp4a.40.2\"",
+      "format": "h264",
+      "width": 16,
+      "height": 16,
+      "bytes": 2135
+    }
+  ],
+  "chapters": "demo.chapters.vtt"
+}

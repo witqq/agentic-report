@@ -467,7 +467,11 @@ describe('providers', () => {
     const output = path.join(root, 'out.html');
     await buildReport({ input: root, output });
     expect(await readFile(path.join(root, 'data/calls.log'), 'utf8')).toBe('xx');
-    const html = await readFile(output, 'utf8');
+    // Запись редакции повторяет текст страницы; считаются вхождения в самой странице.
+    const html = (await readFile(output, 'utf8')).replace(
+      /<template data-edition-record[^>]*>[^<]*<\/template>/gu,
+      '',
+    );
     expect(html.match(/Rows 2\./gu)).toHaveLength(2);
     expect(html).toContain('Rows 3.');
   });
@@ -585,7 +589,7 @@ describe('composite block styles', () => {
   });
 
   // Catches a hand-written colour in block styles reaching the page: the build refuses it with the file
-  // and the line, as the unit test refuses it in document.css.
+  // and the line, as the unit test refuses it in the package stylesheet.
   it('refuses a planted colour literal with the styles file and line', async () => {
     const root = await styledPage(
       'ext-block-styles-literal',

@@ -36,7 +36,7 @@ locale. Single-language review export is version 3; multilingual export is versi
 - Generated authoring catalog: skills/agentic-report/references/catalog.md
 - Extending the vocabulary: skills/agentic-report/references/extensions.md
 - Reference extensions: extensions/key-figure/README.md, extensions/product-theatre/README.md,
-  extensions/wall-thread/README.md, extensions/loom/README.md,
+  extensions/loom/README.md,
   extensions/focus-frame/README.md, extensions/slo-budget/README.md
 - Selected-text Review Workspace demo: examples/review-workspace/index.html
 - Incident review demo: examples/incident-review/index.html
@@ -44,14 +44,15 @@ locale. Single-language review export is version 3; multilingual export is versi
 - Launch readiness demo: examples/launch-readiness/index.html
 - Executive brief demo: examples/executive-brief/index.html
 - Motion and depth demo: examples/motion-showcase/index.html
+- Every technique with its source, on one fictional station network: examples/capability-tour/index.html
 - Release identity and hashes: release.json
 - npm package: https://www.npmjs.com/package/agentic-report
 - Source repository: https://github.com/witqq/agentic-report
 
 Requires Node.js 24.18.0 or newer. The first npx run requires npm registry access. Start with:
 
-    npx --yes agentic-report@0.19.0 init ./my-page --starter landing --json
-    npx --yes agentic-report@0.19.0 build ./my-page --output ./my-page.html --json
+    npx --yes agentic-report@0.20.0 init ./my-page --starter landing --json
+    npx --yes agentic-report@0.20.0 build ./my-page --output ./my-page.html --json
 
 Edit `my-page/report.md` between the two commands and open `my-page.html` through `file://`. Build validates
 the complete source before publishing. Use `validate` for separate diagnostics, `inspect` for source/catalog

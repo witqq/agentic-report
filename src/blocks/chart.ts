@@ -51,7 +51,7 @@ export const chart = defineBlock({
   ),
   validate: validateVisualization,
   enhance: enhanceChart,
-  styles: 'package',
+  feature: 'chart',
   staticEquivalent:
     'The chart drawn in full as SVG at its final values with its description and data table; nothing animates.',
   examples: [CHART_EXAMPLE],
@@ -64,7 +64,7 @@ export const series = defineBlock({
     requiredParent: 'chart',
     tagName: 'section',
   }),
-  styles: 'package',
+  feature: 'chart',
   staticEquivalent: 'One named series of the chart, in its legend and data table.',
   examples: [CHART_EXAMPLE],
 });
@@ -80,7 +80,7 @@ export const point = defineBlock({
     tagName: 'span',
     forms: ['leaf'],
   }),
-  styles: 'package',
+  feature: 'chart',
   staticEquivalent: 'One value of a series, drawn and listed in the data table.',
   examples: [CHART_EXAMPLE],
 });

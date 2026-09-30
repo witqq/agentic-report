@@ -168,7 +168,7 @@ function refuseWithoutData(node: DirectiveNode, context: BlockValidationContext)
 export const dataEach = defineBlock({
   definition: eachDefinition(),
   validate: refuseWithoutData,
-  styles: 'package',
+  feature: 'core',
   staticEquivalent:
     'Nothing of its own: the Markdown it repeated is written out once per item when the page builds.',
   examples: [DATA_EXAMPLE],
@@ -177,7 +177,7 @@ export const dataEach = defineBlock({
 export const dataExpectation = defineBlock({
   definition: expectDefinition(),
   validate: refuseWithoutData,
-  styles: 'package',
+  feature: 'core',
   staticEquivalent: 'Nothing: it is checked when the page builds and never reaches the page.',
   examples: [DATA_EXAMPLE],
 });

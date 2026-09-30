@@ -8,12 +8,12 @@
 import type { PackageStrings } from '../localization.js';
 import { PAGE_MOTION_POLICY } from '../page-motion.js';
 import { installCurrentRows } from './current-row.js';
+import { feature } from './features.js';
 import { announceGeometryChange } from './geometry-rebuild.js';
 import { installOpeningEntrance } from './opening-entrance.js';
 import { installPageStates } from './page-states.js';
 import { installPauseControl } from './pause-control.js';
-import { installScrubScenes } from './scenes.js';
-import { installScreens } from './screens.js';
+import { installReadingPosition } from './reading-position.js';
 import { installThesisFill } from './thesis-fill.js';
 
 const root = document.documentElement;
@@ -67,12 +67,15 @@ export function installPageModules(
   listenForEntrances();
   const cleanups = [
     installPageStates(page, !still.matches),
-    installScreens(page, still, strings),
-    installScrubScenes(page, still, strings),
+    feature('screens')?.(page, still, strings),
+    feature('scrubScenes')?.(page, still, strings),
     installOpeningEntrance(page, still),
     installThesisFill(page, still),
     installCurrentRows(page),
     installPauseControl(page, still, strings),
+    feature('figureViewer')?.(page, strings),
+    feature('diagramForms')?.(page),
+    installReadingPosition(page, still),
   ];
   return () => {
     for (const cleanup of cleanups) cleanup?.();

@@ -17,6 +17,7 @@ import {
   type PreparedReport,
 } from './prepare-report.js';
 import { DEFAULT_MOTION_LEVEL } from '../page-motion.js';
+import { validateSinceOption } from './compiler.js';
 
 export async function validateReport(
   options: ValidateReportOptions,
@@ -55,6 +56,7 @@ export async function inspectReport(options: InspectReportOptions): Promise<Insp
     ...(prepared.source.extensions === undefined
       ? {}
       : { extensions: inspectedExtensions(prepared) }),
+    ...(prepared.changes === undefined ? {} : { changes: prepared.changes }),
     catalog: {
       commands: Object.fromEntries(
         authoringRegistry.commands.map((command) => [command.id, command.description]),
@@ -86,6 +88,7 @@ function validateAnalysisOptions(options: ValidateReportOptions | InspectReportO
   readonly format?: OutputFormat;
   readonly review?: string;
   readonly url?: string;
+  readonly since?: string;
 } {
   const value: unknown = options;
   if (!isRecord(value)) throw analysisOptionsError();
@@ -93,7 +96,7 @@ function validateAnalysisOptions(options: ValidateReportOptions | InspectReportO
     const keys = Reflect.ownKeys(value);
     if (
       !Object.hasOwn(value, 'input') ||
-      keys.some((key) => !['input', 'format', 'review', 'url'].includes(String(key)))
+      keys.some((key) => !['input', 'format', 'review', 'url', 'since'].includes(String(key)))
     ) {
       throw analysisOptionsError();
     }
@@ -101,6 +104,12 @@ function validateAnalysisOptions(options: ValidateReportOptions | InspectReportO
     const formatDescriptor = Object.getOwnPropertyDescriptor(value, 'format');
     const reviewDescriptor = Object.getOwnPropertyDescriptor(value, 'review');
     const urlDescriptor = Object.getOwnPropertyDescriptor(value, 'url');
+    const sinceDescriptor = Object.getOwnPropertyDescriptor(value, 'since');
+    if (
+      sinceDescriptor !== undefined &&
+      (!('value' in sinceDescriptor) || typeof sinceDescriptor.value !== 'string')
+    )
+      throw analysisOptionsError();
     if (
       inputDescriptor === undefined ||
       !('value' in inputDescriptor) ||
@@ -124,6 +133,9 @@ function validateAnalysisOptions(options: ValidateReportOptions | InspectReportO
       ...(format === undefined ? {} : { format }),
       ...(review === undefined ? {} : { review }),
       ...(url === undefined ? {} : { url }),
+      ...(sinceDescriptor === undefined
+        ? {}
+        : { since: validateSinceOption(sinceDescriptor.value) }),
     };
   } catch (error) {
     if (error instanceof AgenticReportError) throw error;
@@ -135,9 +147,10 @@ function analysisOptionsError(): AgenticReportError {
   return new AgenticReportError({
     level: 'error',
     code: 'ANALYSIS_OPTIONS_INVALID',
-    message: 'Analysis options must contain an input and optional format, review and url values.',
+    message:
+      'Analysis options must contain an input and optional format, review, url and since values.',
     remediation:
-      'Pass { input: string, format?: "single-file" | "directory", review?: string, url?: string }.',
+      'Pass { input: string, format?: "single-file" | "directory", review?: string, url?: string, since?: string }.',
     details: { supportedFormats: OUTPUT_FORMATS },
   });
 }

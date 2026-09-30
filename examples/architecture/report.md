@@ -19,7 +19,7 @@ This starter records one system decision in enough detail for implementation and
 the trust boundary visible instead of hiding it in framework code.
 
 ::::::section{title="System boundary" id="boundary" nav="Boundary" recipe="hero"}
-![The source, compiler, artifact, and browser boundary](assets/system-map.svg)
+![The source, compiler, artifact, and browser boundary](assets/system-map.svg){dark="assets/system-map-dark.svg"}
 
 {{include: partials/decision.md}}
 ::::::

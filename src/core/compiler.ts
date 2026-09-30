@@ -27,10 +27,14 @@ export async function buildReport(options: BuildReportOptions): Promise<BuildRep
   const url = validateRequestedUrl(options.url);
   const prepared = await prepareReport({
     input: options.input,
+    ...(options.manifestDefaults === undefined
+      ? {}
+      : { manifestDefaults: options.manifestDefaults }),
     ...(requestedFormat === undefined ? {} : { format: requestedFormat }),
     ...(options.output === undefined ? {} : { output: options.output }),
     ...(options.review === undefined ? {} : { review: options.review }),
     ...(url === undefined ? {} : { url }),
+    ...(options.since === undefined ? {} : { since: validateSinceOption(options.since) }),
     share,
     publication: true,
   });
@@ -113,7 +117,19 @@ function buildResult(
     neutralizedSourceLinks: prepared.neutralizedSourceLinks,
     warnings: prepared.warnings,
     ...(prepared.extensions === undefined ? {} : { extensions: prepared.extensions }),
+    ...(prepared.changes === undefined ? {} : { changes: prepared.changes }),
   };
+}
+
+export function validateSinceOption(value: unknown): string {
+  if (typeof value === 'string' && value.trim().length > 0 && !value.includes('\0')) return value;
+  throw new AgenticReportError({
+    level: 'error',
+    code: 'EDITION_SINCE_UNREADABLE',
+    message: 'The previous edition must be a non-empty path.',
+    remediation:
+      'Pass the previous page (.html or a directory with index.html) or its source (.md or a source directory).',
+  });
 }
 
 function validateShareOption(value: unknown): boolean {

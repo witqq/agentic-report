@@ -30,7 +30,8 @@ function codeSource(language: 'en' | 'ru', preset: string): string {
   ].join('\n');
 }
 
-// Широкие моноширинные гарнитуры — худший случай для кнопки над кодом: Martian Mono и Victor Mono.
+// Темы с широкой моноширинной гарнитурой меток (Martian Mono, Victor Mono): код набран гарнитурой кода темы,
+// а кнопка — гарнитурой интерфейса, так что проверка держит обе роли.
 const pages = {
   english: codeSource('en', 'blueprint'),
   russianEditorial: codeSource('ru', 'aurora'),

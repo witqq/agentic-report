@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+import { readPackageStylesheet } from '../helpers/package-stylesheet.js';
 
 /**
  * Все виды схем рисуются одним языком темы: правила схем и графиков в таблице стилей и рендереры SVG
@@ -22,7 +23,7 @@ function visualizationRules(css: string): { readonly selector: string; readonly 
 
 describe('diagram style', () => {
   it('takes every diagram and chart colour and typeface from theme variables', async () => {
-    const css = await readFile(path.resolve('src/browser/document.css'), 'utf8');
+    const css = await readPackageStylesheet();
     const rules = visualizationRules(css);
     expect(rules.length).toBeGreaterThan(40);
     for (const rule of rules) {

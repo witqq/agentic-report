@@ -229,7 +229,7 @@ export const diagram = defineBlock<PreparedFlow | undefined, DiagramMessages>({
   enhance: enhanceDiagram,
   finalize: enhanceDrawnDiagrams,
   strings: DIAGRAM_MESSAGES,
-  styles: 'package',
+  feature: 'diagram',
   staticEquivalent:
     'The diagram drawn complete as SVG in its first view, with every connection shown and the diagram written out in words; a zoom shows the whole diagram and the inside of its node as two figures side by side.',
   examples: [DIAGRAM_EXAMPLE, PROCESS_EXAMPLE, ZOOM_EXAMPLE],
@@ -250,7 +250,7 @@ export const group = defineBlock({
       forms: ['leaf'],
     },
   ),
-  styles: 'package',
+  feature: 'diagram',
   staticEquivalent: 'A labelled frame around its nodes in the drawn diagram.',
   examples: [DIAGRAM_EXAMPLE],
 });
@@ -299,7 +299,7 @@ export const node = defineBlock({
     tagName: 'span',
     forms: ['leaf'],
   }),
-  styles: 'package',
+  feature: 'diagram',
   staticEquivalent: 'One labelled box of the drawn diagram.',
   examples: [DIAGRAM_EXAMPLE],
 });
@@ -353,7 +353,7 @@ export const edge = defineBlock({
       forms: ['leaf'],
     },
   ),
-  styles: 'package',
+  feature: 'diagram',
   staticEquivalent: 'One drawn connection with its arrowhead and label.',
   examples: [DIAGRAM_EXAMPLE],
 });
@@ -377,7 +377,7 @@ export const legend = defineBlock({
       forms: ['leaf'],
     },
   ),
-  styles: 'package',
+  feature: 'diagram',
   staticEquivalent: 'The title of the legend printed under the diagram.',
   examples: [DIAGRAM_EXAMPLE],
 });
@@ -435,7 +435,7 @@ export const legendItem = defineBlock({
       forms: ['leaf'],
     },
   ),
-  styles: 'package',
+  feature: 'diagram',
   staticEquivalent: 'One legend entry: the drawn sample and its words.',
   examples: [DIAGRAM_EXAMPLE],
 });

@@ -12,6 +12,7 @@ import {
   type RuntimePlacement,
 } from '../authoring/registry.js';
 import type {
+  BuildManifestDefaults,
   Diagnostic,
   OutputFormat,
   SourceDocument,
@@ -49,15 +50,29 @@ import { ISLAND_STYLES } from '../extensions/island.js';
 import { createProviderCache, type ProviderCache } from '../extensions/provider.js';
 import type { ExtensionBuildReport, PageExtension } from '../extensions/types.js';
 import type { DocumentRuntime } from '../render/document.js';
+import type { EditionChanges, ReportManifest } from '../contracts.js';
+import type { EditionLayer, EditionPassOptions } from '../edition/decorate.js';
+import {
+  EDITION_RECORD_VERSION,
+  MAX_EDITION_RECORD_BYTES,
+  type EditionRecord,
+} from '../edition/record.js';
+import { readSinceEdition, type SinceEdition } from '../edition/read-since.js';
+import { type PageFeatureId, resolvePageFeatures } from '../page-features.js';
+import { bundlePageAssets } from './page-assets.js';
+import { resolvePackageLocale } from '../localization.js';
 
 export interface PrepareReportOptions {
   readonly input: string;
+  readonly manifestDefaults?: BuildManifestDefaults;
   readonly format?: OutputFormat;
   readonly output?: string;
   readonly publication?: true;
   readonly review?: string;
   readonly share?: boolean;
   readonly url?: string;
+  /** Прошлая редакция: собранная страница или её исходник. */
+  readonly since?: string;
 }
 
 export interface PreparedPageVariant {
@@ -70,6 +85,10 @@ export interface PreparedPageVariant {
     readonly artifact: ReviewArtifact;
     readonly resolved: ResolvedReviewArtifact;
   };
+  /** Запись редакции этой языковой версии; есть у каждой, кроме публичной страницы с `url`. */
+  readonly editionRecord: EditionRecord;
+  /** Слой изменений относительно прошлой редакции; есть только с `since`. */
+  readonly editionLayer?: EditionLayer;
 }
 
 export interface PreparedReport {
@@ -90,16 +109,20 @@ export interface PreparedReport {
   readonly observedResources: MarkdownRenderResult['observedResources'];
   readonly resourceSourceFiles: readonly string[];
   readonly reviewManifest: ReviewTargetManifest;
+  /** Возможности страницы, чьи скрипты и стили она несёт (`src/page-features.ts`), в порядке таблицы. */
+  readonly pageFeatures: readonly PageFeatureId[];
   readonly priorReview?: {
     readonly artifact: ReviewArtifact;
     readonly resolved: ResolvedReviewArtifact;
   };
   /** Отчёт о расширениях страницы; нет, когда страница их не объявила. */
   readonly extensions?: readonly ExtensionBuildReport[];
+  /** Что изменилось с прошлой редакции (основная языковая версия); есть только с `since`. */
+  readonly changes?: EditionChanges;
 }
 
 export async function prepareReport(options: PrepareReportOptions): Promise<PreparedReport> {
-  const source = await loadSource(options.input);
+  const source = await loadSource(options.input, options.manifestDefaults);
   const format = options.format ?? source.manifest.output.format;
   const runtimePlacement = runtimePlacementForFormat(format);
   const outputPath =
@@ -128,6 +151,12 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
   ];
   const declaredExtensions = source.extensions?.extensions ?? [];
   const providerCache = createProviderCache();
+  // Прошлая редакция читается до сборки и до записи новой страницы: путь может совпадать с `--output`.
+  const since =
+    options.since === undefined
+      ? undefined
+      : await readSinceEdition(options.since, source.sourceFiles, readSourceEditions);
+  const editionWarnings: Diagnostic[] = [];
   const preparedVariants: readonly PreparedPageVariant[] = await Promise.all(
     sourceVariants.map(async (variant) => ({
       ...variant,
@@ -139,6 +168,8 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
         sourceVariants.length > 1 ? variant.locale : undefined,
         declaredExtensions,
         providerCache,
+        variant.locale,
+        previousEditionFor(since, variant.locale, editionWarnings),
       )),
     })),
   );
@@ -161,6 +192,7 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
   const routedVariants =
     priorArtifact === undefined ? variants : routePriorReview(priorArtifact, variants);
   const routedPrior = routedVariants.find((variant) => variant.priorReview)?.priorReview;
+  assertTopbarControls(source.manifest, routedPrior !== undefined);
 
   const socialImage =
     source.manifest.image === undefined
@@ -186,21 +218,14 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
   // только туда, где стоит живой остров.
   const usesEffects = (extensionAssembly?.effects.length ?? 0) > 0;
   const usesIslands = extensionAssembly?.usesIslands === true;
-  const [baseRuntime, styles, effectsEngine, islandsController] = await Promise.all([
-    readBrowserAsset('runtime.js'),
-    readBrowserAsset('document.css'),
-    usesEffects ? readBrowserAsset('effects.js') : Promise.resolve(''),
-    usesIslands ? readBrowserAsset('islands.js') : Promise.resolve(''),
-  ]);
-  const runtime = [baseRuntime, effectsEngine, islandsController]
-    .filter((part) => part !== '')
-    .join('\n');
-  const inlineRuntime = escapeInlineScript(runtime);
-  const effectScripts = prepareEffectScripts(
-    extensionAssembly?.effects ?? [],
-    runtimePlacementForFormat(format),
+  // Слой изменений едет только на страницу, собранную с `--since`, у которой он запечён.
+  const usesEditionLayer = routedVariants.some(
+    (variant) => variant.editionLayer !== undefined && variant.editionLayer.entries.length > 0,
   );
-  const fontCss = unique(routedVariants.map((variant) => variant.markdown.fontCss).filter(Boolean));
+  // Рабочее место ревью есть только там, где оболочка выводит его кнопку: ревью включено и есть цели.
+  const usesReview =
+    (source.manifest.review || routedPrior !== undefined) &&
+    routedVariants.some((variant) => variant.reviewManifest.targets.length > 0);
   const switchableThemes = source.manifest.themeSwitcher
     ? [
         ...BUILT_IN_THEME_NAMES.map(resolveBuiltInTheme),
@@ -208,6 +233,37 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
       ]
     : [];
   const pageThemes = switchableThemes.length > 0 ? switchableThemes : [source.theme];
+  // A theme's own chrome ships only with a theme that uses it: every theme the reader may switch to counts.
+  const themeFeatures = [
+    ...(pageThemes.some((theme) => theme.ornaments.console === 'on') ? ['theme-console'] : []),
+    ...(pageThemes.some(
+      (theme) => theme.chrome.topbar === 'ledger' || theme.chrome.landing === 'ledger',
+    )
+      ? ['theme-ledger']
+      : []),
+  ];
+  const pageFeatures = resolvePageFeatures([
+    ...themeFeatures,
+    ...routedVariants.flatMap((variant) => variant.markdown.features),
+    ...(source.manifest.layout === 'slides' ? ['slides'] : []),
+    ...(source.manifest.layout === 'screens' ? ['screens'] : []),
+    ...(usesReview ? ['review'] : []),
+    ...(usesEditionLayer ? ['edition'] : []),
+    ...(usesIslands ? ['islands'] : []),
+    ...(usesEffects ? ['effects'] : []),
+  ]);
+  const pageAssets = await bundlePageAssets(
+    pageFeatures,
+    routedVariants.map((variant) => resolvePackageLocale(variant.source.manifest.language)),
+  );
+  const runtime = pageAssets.script;
+  const styles = pageAssets.styles;
+  const inlineRuntime = escapeInlineScript(runtime);
+  const effectScripts = prepareEffectScripts(
+    extensionAssembly?.effects ?? [],
+    runtimePlacementForFormat(format),
+  );
+  const fontCss = unique(routedVariants.map((variant) => variant.markdown.fontCss).filter(Boolean));
   const themeFonts = await prepareThemeFonts(pageThemes, format);
   const themeCss = themeStylesheet(pageThemes);
   const documentStyles = [
@@ -237,7 +293,29 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
           publishedImage === undefined ? undefined : new URL(publishedImage.url, publicUrl).href,
           routedVariants.map((variant) => variant.source.manifest.language),
         );
-  const documentVariants = routedVariants.map(toDocumentVariant);
+  // Публичную страницу по вопросам не пересобирают: её запись редакции была бы лишним текстом для
+  // поисковика, поэтому с `url` она не встраивается.
+  const embedEditionRecord = publicUrl === undefined;
+  const editionRecordJson = new Map<PageLocaleChoice, string>();
+  if (embedEditionRecord)
+    for (const variant of routedVariants) {
+      const json = JSON.stringify(variant.editionRecord);
+      if (Buffer.byteLength(json) > MAX_EDITION_RECORD_BYTES) {
+        editionWarnings.push({
+          level: 'warning',
+          code: 'EDITION_RECORD_OMITTED',
+          message: `The edition record of the ${variant.locale} page is ${Buffer.byteLength(json)} bytes, above the ${MAX_EDITION_RECORD_BYTES}-byte limit, so the page does not carry it.`,
+          remediation:
+            'Pass this page’s source instead of the page to --since when building the next edition.',
+          details: { locale: variant.locale, bytes: Buffer.byteLength(json) },
+        });
+        continue;
+      }
+      editionRecordJson.set(variant.locale, json);
+    }
+  const documentVariants = routedVariants.map((variant) =>
+    toDocumentVariant(variant, editionRecordJson.get(variant.locale)),
+  );
   const [primaryDocument, ...localizedDocuments] = documentVariants;
   if (primaryDocument === undefined) throw new Error('Prepared report has no primary locale.');
   const renderedHtml = renderDocument({
@@ -255,6 +333,7 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
       // молча и не давал ничего.
       review: source.manifest.review || routedPrior !== undefined,
       schemeToggle: source.manifest.schemeToggle,
+      topbar: source.manifest.topbar,
     },
     contentSecurityPolicy: createContentSecurityPolicy(runtimePlacement, inlineRuntime, [
       ...effectScripts.hashes,
@@ -282,9 +361,16 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
   const warnings: Diagnostic[] = [
     ...(source.extensions?.warnings ?? []),
     ...routedVariants.flatMap((variant) => variant.markdown.warnings),
+    ...editionWarnings,
+    ...editionLayerWarnings(routedVariants, options.share === true),
   ];
+  // Запись редакции и удалённый текст слоя изменений входят в бюджет веса одного файла.
+  const editionBytes =
+    [...editionRecordJson.values()].reduce((sum, json) => sum + Buffer.byteLength(json), 0) +
+    routedVariants.reduce((sum, variant) => sum + (variant.editionLayer?.removedTextBytes ?? 0), 0);
   const bundledBytes =
-    -shared.savedBytes +
+    editionBytes -
+    shared.savedBytes +
     routedVariants.reduce((sum, variant) => sum + variant.markdown.embeddedBytes, 0) +
     Buffer.byteLength(documentStyles) +
     (format === 'single-file' ? Buffer.byteLength(inlineRuntime) : 0) +
@@ -372,9 +458,100 @@ export async function prepareReport(options: PrepareReportOptions): Promise<Prep
         ? allResourceSourceFiles
         : unique([...allResourceSourceFiles, socialImage.sourcePath]),
     reviewManifest: primary.reviewManifest,
+    pageFeatures,
     ...(routedPrior === undefined ? {} : { priorReview: routedPrior }),
     ...(extensionAssembly === undefined ? {} : { extensions: extensionAssembly.report }),
+    ...(primary.editionLayer === undefined ? {} : { changes: primary.editionLayer.changes }),
   };
+}
+
+/**
+ * The review workspace and the theme selector open only from the top bar: on a page without it they
+ * would be switched on and unreachable, so the build refuses the combination instead of dropping one.
+ */
+function assertTopbarControls(
+  manifest: Pick<ReportManifest, 'topbar' | 'review' | 'themeSwitcher'>,
+  priorReview: boolean,
+): void {
+  if (manifest.topbar) return;
+  const controls = [
+    ...(manifest.review || priorReview ? ['review'] : []),
+    ...(manifest.themeSwitcher ? ['themeSwitcher'] : []),
+  ];
+  if (controls.length === 0) return;
+  throw new AgenticReportError({
+    level: 'error',
+    code: 'INVALID_MANIFEST',
+    message: `topbar: false removes the bar that ${controls.join(' and ')} open${controls.length === 1 ? 's' : ''} from.`,
+    remediation:
+      'A page filmed as a scene keeps topbar: false without review and themeSwitcher; a page for readers keeps the top bar.',
+    details: { controls },
+  });
+}
+
+/** Записи редакции прошлого исходника: он собирается в памяти текущей версией пакета. */
+async function readSourceEditions(
+  input: string,
+): Promise<ReadonlyMap<PageLocaleChoice, EditionRecord>> {
+  const prepared = await prepareReport({ input });
+  return new Map(prepared.variants.map((variant) => [variant.locale, variant.editionRecord]));
+}
+
+function previousEditionFor(
+  since: SinceEdition | undefined,
+  locale: PageLocaleChoice,
+  warnings: Diagnostic[],
+): EditionPassOptions['previous'] {
+  if (since === undefined) return undefined;
+  const record = since.records.get(locale);
+  if (record !== undefined) return { record };
+  const [first] = [...since.records.values()];
+  warnings.push({
+    level: 'warning',
+    code: 'EDITION_LOCALE_ADDED',
+    message: `The previous edition has no ${locale} version, so the whole ${locale} page is marked new.`,
+    remediation: 'Nothing to fix when the language is new; the next edition compares it normally.',
+    details: { locale },
+  });
+  return {
+    localeAdded: true,
+    edition: first?.edition ?? 1,
+    reportRevision: first?.reportRevision ?? `sha256:${'0'.repeat(64)}`,
+  };
+}
+
+function editionLayerWarnings(
+  variants: readonly PreparedPageVariant[],
+  share: boolean,
+): Diagnostic[] {
+  const warnings: Diagnostic[] = [];
+  const layers = variants.flatMap((variant) =>
+    variant.editionLayer === undefined
+      ? []
+      : [{ locale: variant.locale, layer: variant.editionLayer }],
+  );
+  for (const { locale, layer } of layers) {
+    if (layer.unchanged)
+      warnings.push({
+        level: 'warning',
+        code: 'EDITION_UNCHANGED',
+        message: `Nothing the reader sees changed since edition ${layer.edition} of the ${locale} page, so it carries no change layer.`,
+        remediation:
+          'Nothing to fix when the rebuild changed no text; otherwise check that --since names the page the reader saw.',
+        details: { locale, edition: layer.edition },
+      });
+  }
+  const removedBlocks = layers.reduce((sum, { layer }) => sum + layer.removedBlocks, 0);
+  if (share && removedBlocks > 0)
+    warnings.push({
+      level: 'warning',
+      code: 'EDITION_REMOVED_TEXT_SHARED',
+      message: `The shared page shows ${removedBlocks} removed block${removedBlocks === 1 ? '' : 's'} as ghosts: their old text travels with the page.`,
+      remediation:
+        'Build without --since when text was removed for privacy or because it was wrong.',
+      details: { removedBlocks },
+    });
+  return warnings;
 }
 
 async function preparePageVariant(
@@ -385,11 +562,16 @@ async function preparePageVariant(
   localeScope: PageLocaleChoice | undefined,
   extensions: readonly PageExtension[],
   providerCache: ProviderCache,
+  locale: PageLocaleChoice,
+  previous: EditionPassOptions['previous'],
 ): Promise<{
   readonly markdown: MarkdownRenderResult;
   readonly reviewManifest: ReviewTargetManifest;
+  readonly editionRecord: EditionRecord;
+  readonly editionLayer?: EditionLayer;
 }> {
   const markdown = await renderMarkdown(source.markdown, {
+    edition: { locale, ...(previous === undefined ? {} : { previous }) },
     language: source.manifest.language,
     layout: source.manifest.layout,
     motion: source.manifest.motion,
@@ -402,13 +584,25 @@ async function preparePageVariant(
     ...(extensions.length === 0 ? {} : { extensions: { declared: extensions, providerCache } }),
     ...(source.data === undefined ? {} : { data: source.data }),
   });
+  const reviewManifest = await createReviewTargetManifest(
+    source.sourceRoot,
+    [...source.sourceDigests, ...markdown.resourceDigests],
+    markdown.reviewTargets,
+  );
+  const layer = markdown.edition?.layer;
+  const editionRecord: EditionRecord = {
+    contractVersion: EDITION_RECORD_VERSION,
+    locale,
+    edition: layer?.edition ?? 1,
+    reportRevision: reviewManifest.reportRevision,
+    sections: markdown.edition?.body?.sections ?? [],
+    blocks: markdown.edition?.body?.blocks ?? [],
+  };
   return {
     markdown,
-    reviewManifest: await createReviewTargetManifest(
-      source.sourceRoot,
-      [...source.sourceDigests, ...markdown.resourceDigests],
-      markdown.reviewTargets,
-    ),
+    reviewManifest,
+    editionRecord,
+    ...(layer === undefined ? {} : { editionLayer: layer }),
   };
 }
 
@@ -507,8 +701,13 @@ export function validateRequestedUrl(value: unknown): string | undefined {
   });
 }
 
-function toDocumentVariant(variant: PreparedPageVariant): DocumentPageVariantOptions {
+function toDocumentVariant(
+  variant: PreparedPageVariant,
+  editionRecordJson: string | undefined,
+): DocumentPageVariantOptions {
   return {
+    ...(editionRecordJson === undefined ? {} : { editionRecordJson }),
+    ...(variant.editionLayer === undefined ? {} : { editionLayer: variant.editionLayer }),
     locale: variant.locale,
     title:
       variant.source.manifest.title ??
@@ -662,27 +861,6 @@ function outputCollisionError(outputPath: string, sourcePath: string): AgenticRe
     remediation: 'Choose an output path that is not an entry, manifest, partial, or local asset.',
     details: { output: outputPath, source: sourcePath },
   });
-}
-
-async function readBrowserAsset(fileName: string): Promise<string> {
-  const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
-  const assetPath =
-    path.basename(path.dirname(moduleDirectory)) === 'node'
-      ? path.resolve(moduleDirectory, '../../browser', fileName)
-      : path.resolve(moduleDirectory, '../../dist/browser', fileName);
-  try {
-    return await readFile(assetPath, 'utf8');
-  } catch (error) {
-    throw new AgenticReportError(
-      {
-        level: 'error',
-        code: 'PACKAGE_ASSET_MISSING',
-        message: `Bundled browser asset is missing: ${assetPath}`,
-        remediation: 'Reinstall agentic-report or rebuild the package before running the CLI.',
-      },
-      { cause: error },
-    );
-  }
 }
 
 /**

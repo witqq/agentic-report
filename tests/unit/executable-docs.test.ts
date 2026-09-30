@@ -7,7 +7,7 @@
  * that found nothing to check has proved nothing.
  */
 import { spawn } from 'node:child_process';
-import { cp, mkdir, readFile, readdir, symlink, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, readdir, rename, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { Code } from 'mdast';
@@ -119,9 +119,25 @@ async function materializeData(directory: string, source: string): Promise<void>
   }
 }
 
+/**
+ * A block that names an agentic-screencast film (`video` with `from`) gets the repository's fixture film,
+ * a version-1 manifest with its encodings, so the block is checked against a real manifest.
+ */
+async function materializeFilms(directory: string, source: string): Promise<void> {
+  for (const match of source.matchAll(/\bfrom="([\w./-]+)"/gu)) {
+    const relative = match[1] ?? '';
+    const manifest = relative.endsWith('.web.json');
+    const target = path.join(directory, manifest ? path.dirname(relative) : relative);
+    await cp(path.resolve('tests/fixtures/video/film'), target, { recursive: true, force: true });
+    if (manifest && path.basename(relative) !== 'demo.web.json')
+      await rename(path.join(target, 'demo.web.json'), path.join(directory, relative));
+  }
+}
+
 async function materializeReferences(directory: string, source: string): Promise<void> {
   await materializeExtensions(directory, source);
   await materializeData(directory, source);
+  await materializeFilms(directory, source);
   for (const match of source.matchAll(
     /(?:^|[\s"'(])((?:partials|assets|media)\/[\w./-]+\.(\w+))/gmu,
   )) {

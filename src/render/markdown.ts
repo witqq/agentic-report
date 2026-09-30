@@ -42,8 +42,11 @@ import { resolveLocalPath } from '../source/load-source.js';
 import { rehypeFigureNumbers } from './figure-numbers.js';
 import { rehypeHeadingFit } from './heading-fit.js';
 import { rehypeLinkTargets } from './link-targets.js';
+import { rehypePageFeatures } from './page-features.js';
+import { rehypeTables } from './tables.js';
 import { rehypeUiPrimitives } from './ui-primitives.js';
 import { resolveSourceLocation } from '../source/source-map.js';
+import { readScreencastFilm } from './screencast-film.js';
 import type { ReviewTargetReference } from '../review/contract.js';
 import { rehypeReviewTargets, remarkReviewTargets } from '../review/targets.js';
 import {
@@ -55,16 +58,19 @@ import type { NavigationItem } from './navigation.js';
 import { rehypePageStructure, type PageStructureCollector } from './page-structure.js';
 import {
   compatibilityRank,
-  detectVideoCodec,
   formatClock,
   parseChapters,
-  videoSourceType,
+  readVideoStreams,
+  sameSourceType,
+  sourceTypeOf,
   type VideoChapter,
-  type VideoCodec,
+  type VideoStreams,
 } from './video-media.js';
+import type { ScreencastFilm } from './screencast-film.js';
 import { packageStrings } from '../localization.js';
 import { remarkExtensionExpansions } from '../extensions/expand.js';
 import { remarkPageData } from './page-data.js';
+import { IMAGE_DARK_PROPERTY, remarkImageVariants } from './image-variants.js';
 import type { PageData } from '../source/load-data.js';
 import { createIslandCollector } from '../extensions/island.js';
 import type { ProviderCache } from '../extensions/provider.js';
@@ -75,6 +81,13 @@ import {
 } from '../extensions/targets.js';
 import type { PageExtension } from '../extensions/types.js';
 import { createPageVocabulary } from '../extensions/vocabulary.js';
+import {
+  rehypeEdition,
+  rehypeEditionCapture,
+  type EditionCollector,
+  type EditionPassOptions,
+} from '../edition/decorate.js';
+import { collectAuthoredSectionIds } from './section-identity.js';
 
 export interface MarkdownRenderOptions {
   readonly language?: string;
@@ -95,6 +108,11 @@ export interface MarkdownRenderOptions {
   };
   /** Data files the page declared; without them the data phase does not run. */
   readonly data?: PageData;
+  /** Языковая версия для записи редакции и прошлая редакция, с которой сравнивается страница. */
+  readonly edition?: {
+    readonly locale: PageLocaleChoice;
+    readonly previous?: EditionPassOptions['previous'];
+  };
 }
 
 /** Что расширения сделали в одном языковом варианте страницы. */
@@ -123,6 +141,8 @@ export interface MarkdownRenderResult {
   readonly sourceFiles: readonly string[];
   readonly resourceDigests: readonly SourceDigest[];
   readonly observedDirectives: readonly string[];
+  /** Page features the rendered blocks and the finished tree need (`src/page-features.ts`). */
+  readonly features: readonly string[];
   readonly structure: Omit<PageStructure, 'layout' | 'motion'>;
   readonly neutralizedSourceLinks: number;
   readonly navigation: readonly NavigationItem[];
@@ -135,6 +155,8 @@ export interface MarkdownRenderResult {
   };
   /** Есть, только когда страница объявила расширения. */
   readonly extensions?: MarkdownExtensionUsage;
+  /** Тело записи редакции и, со `--since`, слой изменений; нет без `edition` в опциях. */
+  readonly edition?: Pick<EditionCollector, 'body' | 'layer'>;
 }
 
 interface AssetCollector {
@@ -191,6 +213,8 @@ export function projectSemanticSanitizeSchema(
       ...semanticProperties,
     ];
   }
+  // The dark variant of a Markdown image (`src/render/image-variants.ts`).
+  attributes.img = [...(attributes.img ?? []), IMAGE_DARK_PROPERTY];
   // Телефон и SMS разрешены и в обычной ссылке текста — по тем же правилам номера, что у действий
   // (проверяет `rehypeLinkTargets`).
   const protocols = {
@@ -407,7 +431,36 @@ const rehypeHighlightCode: Plugin<[], Root> = () => async (tree, file) => {
     },
   });
   await highlight(tree, file, () => undefined);
+  markCodeColumns(tree);
 };
+
+/** Текст узла hast целиком, без разметки подсветки. */
+function nodeText(node: Root | Element): string {
+  let text = '';
+  for (const child of node.children)
+    if (child.type === 'text') text += child.value;
+    else if (child.type === 'element') text += nodeText(child);
+  return text;
+}
+
+/**
+ * Длина самой длинной строки блока кода в знаках кода — `--code-columns` на `pre`. По ней стиль решает, берёт
+ * ли блок меру чтения или широкий шаг колонки документа (правила собранной колонки в `src/browser/styles/core.css`), так
+ * что соседние блоки кода одного раздела стоят в одной из двух ширин, а не каждый в своей.
+ */
+function markCodeColumns(tree: Root): void {
+  visit(tree, 'element', (node: Element) => {
+    if (node.tagName !== 'pre') return;
+    const columns = Math.max(
+      0,
+      ...nodeText(node)
+        .split('\n')
+        .map((line) => [...line.replace(/\t/gu, '  ')].length),
+    );
+    const style = typeof node.properties.style === 'string' ? node.properties.style : '';
+    node.properties.style = `${style}${style === '' || style.endsWith(';') ? '' : ';'}--code-columns:${columns}`;
+  });
+}
 
 type AssetTargetKind = 'image' | 'video' | 'asset' | 'font';
 
@@ -422,7 +475,11 @@ const rehypeAssets: Plugin<[AssetPluginOptions], Root> = (options) => async (tre
       });
       return;
     }
-    if (node.tagName === 'figure' && typeof node.properties.dataVideoSource === 'string') {
+    if (
+      node.tagName === 'figure' &&
+      (typeof node.properties.dataVideoSource === 'string' ||
+        typeof node.properties.dataVideoFrom === 'string')
+    ) {
       targets.push({ node, kind: 'video' });
       return;
     }
@@ -487,6 +544,7 @@ export async function renderMarkdown(
     observedResources: { images: 0, videos: 0, downloads: 0, fonts: 0 },
   };
   const observedDirectives = new Set<string>();
+  const features = new Set<string>();
   const shareTransform = { neutralizedSourceLinks: 0 };
   const navigationTransform = { items: [] as NavigationItem[] };
   const reviewTargets: ReviewTargetReference[] = [];
@@ -498,6 +556,7 @@ export async function renderMarkdown(
   const expansionUses = new Map<string, number>();
   const effectHosts = new Map<string, EffectHostCount>();
   const effectHostOptions = { bindings: vocabulary?.effectTargets ?? [], counts: effectHosts };
+  const edition: EditionCollector = { captured: new Map(), authoredSectionIds: new Set() };
   const pipeline = unified().use(remarkParse).use(remarkGfm).use(remarkDirective);
   if (options.data !== undefined)
     pipeline.use(remarkPageData, {
@@ -519,6 +578,17 @@ export async function renderMarkdown(
       uses: expansionUses,
       ...(options.data === undefined ? {} : { data: options.data }),
     });
+  pipeline.use(remarkImageVariants, {
+    sourceMap: options.sourceMap,
+    violations: earlierViolations,
+  });
+  // Авторские `id` разделов: по ним разделы двух редакций спариваются раньше всего.
+  pipeline.use(() => (tree) => {
+    for (const id of collectAuthoredSectionIds(
+      tree as Parameters<typeof collectAuthoredSectionIds>[0],
+    ))
+      edition.authoredSectionIds.add(id);
+  });
   const result = await pipeline
     .use(remarkSemanticDirectives, {
       sourceMap: options.sourceMap,
@@ -544,11 +614,13 @@ export async function renderMarkdown(
       sourceMap: options.sourceMap,
       targets: reviewTargets,
     })
+    .use(rehypeEditionCapture, edition)
     .use(rehypeEnhanceDirectives, {
       sourceMap: options.sourceMap,
       share: options.share === true,
       shareTransform,
       navigationTransform,
+      renderedFeatures: features,
       ...(options.language === undefined ? {} : { language: options.language }),
       ...(options.layout === undefined ? {} : { layout: options.layout }),
       ...(vocabulary === undefined ? {} : { vocabulary }),
@@ -559,7 +631,20 @@ export async function renderMarkdown(
     .use(rehypeHeadingFit)
     .use(rehypeFigureNumbers)
     .use(rehypeLinkTargets, { sourceMap: options.sourceMap })
+    // Last before serialization: it splits inline code texts, which the passes above read whole.
+    .use(rehypeTables)
     .use(rehypeCountEffectHosts, effectHostOptions)
+    // Last: the edition record reads the finished page, and the change layer goes on top of it.
+    .use(rehypeEdition, {
+      collector: edition,
+      targets: reviewTargets,
+      sectionIds: () => navigationTransform.items.map((item) => item.id),
+      resourceBytes: collector.resourceFiles,
+      locale: options.edition?.locale ?? 'en',
+      ...(options.language === undefined ? {} : { language: options.language }),
+      ...(options.edition?.previous === undefined ? {} : { previous: options.edition.previous }),
+    })
+    .use(rehypePageFeatures, { features })
     .use(rehypeStringify)
     .process(markdown);
 
@@ -579,17 +664,28 @@ export async function renderMarkdown(
       .map(([file, sha256]) => ({ file, sha256 }))
       .sort((left, right) => compareNames(left.file, right.file)),
     observedDirectives: [...observedDirectives].sort(compareNames),
+    features: [...features].sort(compareNames),
     structure: structureCollector.structure ?? {
       beforeFirstSection: { images: 0, videos: 0, diagrams: 0, charts: 0, timelines: 0, code: 0 },
       sections: [],
       magneticActions: 0,
       movingElements: 0,
       cardGroups: [],
+      emojiHeadings: 0,
+      emptyBlocks: { sections: 0, tables: 0, cardGroups: 0 },
     },
     neutralizedSourceLinks: shareTransform.neutralizedSourceLinks,
     navigation: navigationTransform.items,
     reviewTargets,
     observedResources: collector.observedResources,
+    ...(options.edition === undefined
+      ? {}
+      : {
+          edition: {
+            ...(edition.body === undefined ? {} : { body: edition.body }),
+            ...(edition.layer === undefined ? {} : { layer: edition.layer }),
+          },
+        }),
     ...(vocabulary === undefined
       ? {}
       : {
@@ -624,6 +720,8 @@ async function processAssetTarget(
     });
   }
   if (isNonLocalReference(source)) {
+    if (target.kind === 'image')
+      await materializeDarkVariant(target.node, IMAGE_DARK_PROPERTY, options);
     return;
   }
   const reference = await materializeLocalAsset(source, options);
@@ -640,6 +738,7 @@ async function processAssetTarget(
   else options.collector.observedResources.fonts += 1;
   if (target.kind === 'image') {
     target.node.properties.src = reference.url;
+    await materializeDarkVariant(target.node, IMAGE_DARK_PROPERTY, options);
     return;
   }
   if (target.kind === 'asset') {
@@ -660,7 +759,7 @@ async function processAssetTarget(
   const cssUrl =
     options.format === 'directory' ? `./${path.basename(reference.url)}` : reference.url;
   const role = target.node.properties.dataFontRole;
-  const fontRole = role === 'heading' || role === 'mono' ? role : 'body';
+  const fontRole = role === 'heading' || role === 'mono' || role === 'code' ? role : 'body';
   // Первое объявление роли заменяет шрифт темы для этой роли; следующие только регистрируют шрифт.
   const activateFont = !options.collector.fontRoles.has(fontRole);
   options.collector.fontRoles.add(fontRole);
@@ -680,8 +779,9 @@ async function processAssetTarget(
 
 /**
  * Встраивает локальное видео как `<video>`: картинку Markdown с видеофайлом — плеером на её месте,
- * директиву `video` — плеером с подписью. Плеер беззвучный и зацикленный, с элементами управления;
- * запуск при появлении на экране и остановку по «меньше движения» делает runtime пакета по
+ * директиву `video` — плеером с подписью. Без `mode` ролик со звуком — ручной (со звуком, запускает
+ * читатель), беззвучный — клип: беззвучный и зацикленный, с элементами управления; запуск при
+ * появлении на экране и остановку по «меньше движения» делает runtime пакета по
  * `data-video-autoplay`, без скрипта видео запускают кнопкой.
  */
 async function processVideoTarget(
@@ -689,27 +789,41 @@ async function processVideoTarget(
   source: string,
   options: AssetPluginOptions,
 ): Promise<void> {
-  const authored = [
-    ...(typeof node.properties.dataVideoSources === 'string'
+  const listed =
+    typeof node.properties.dataVideoSources === 'string'
       ? node.properties.dataVideoSources
           .split(',')
           .map((value) => value.trim())
           .filter(Boolean)
-      : []),
-    source,
-  ];
-  // Источники — по порядку предпочтения автора, а `src` — последним, запасным.
+      : [];
+  // Фильм agentic-screencast разворачивается в ту же форму, что автор пишет руками: источники,
+  // постер и главы; написанное автором сильнее манифеста.
+  const film =
+    typeof node.properties.dataVideoFrom === 'string'
+      ? await readScreencastFilm(node.properties.dataVideoFrom, options.sourceRoot)
+      : undefined;
+  if (film !== undefined) {
+    options.collector.sourceFiles.add(film.manifestPath);
+    options.collector.resourceDigests.set(film.manifestPath, film.sha256);
+    node.properties.dataVideoPoster ??= film.poster;
+    node.properties.dataVideoChapters ??= film.chapters;
+  }
+  // Источники — по порядку предпочтения автора, а `src` — последним, запасным; у фильма — по порядку
+  // его манифеста.
+  const authored =
+    film === undefined ? [...listed, source] : listed.length > 0 ? listed : film.sources;
   const candidates = await Promise.all(authored.map((reference) => probeVideo(reference, options)));
-  const mode = node.tagName === 'img' ? 'clip' : String(node.properties.dataMode ?? 'clip');
   const chosen =
     options.format === 'single-file'
       ? [
           [...candidates].sort(
-            (left, right) => compatibilityRank(left.codec) - compatibilityRank(right.codec),
+            (left, right) =>
+              compatibilityRank(left.streams.codec) - compatibilityRank(right.streams.codec),
           )[0] as VideoCandidate,
         ]
       : candidates;
-  if (options.format === 'single-file' && candidates.length > 1) {
+  // Фильм всегда несёт несколько кодировок: один файл берёт совместимую молча, это не выбор автора.
+  if (options.format === 'single-file' && candidates.length > 1 && listed.length > 0) {
     const kept = chosen[0]?.reference ?? source;
     options.collector.warnings.push({
       level: 'warning',
@@ -732,10 +846,11 @@ async function processVideoTarget(
     sources.push({
       type: 'element',
       tagName: 'source',
-      properties: { src: video.url, type: videoSourceType(candidate.baseType, candidate.codec) },
+      properties: { src: video.url, type: sourceType(candidate, film, options) },
       children: [],
     });
   }
+  const mode = videoMode(node, chosen, film);
   const poster = node.properties.dataVideoPoster;
   let posterUrl: string | undefined;
   if (typeof poster === 'string') {
@@ -761,6 +876,19 @@ async function processVideoTarget(
         'Add poster="…" with a still frame; it is what readers who prefer less motion, print, and slow connections see.',
     });
   }
+  if (node.tagName === 'img' && node.properties[IMAGE_DARK_PROPERTY] !== undefined) {
+    throw new AgenticReportError({
+      level: 'error',
+      code: 'INVALID_IMAGE_DARK_VARIANT',
+      message: `A recording has no dark variant; {dark} belongs to still images: ${source}`,
+      remediation:
+        'Remove {dark="…"} from the recording, or write it as ::video with poster and dark-poster.',
+    });
+  }
+  const darkPoster =
+    posterUrl === undefined
+      ? undefined
+      : await materializeDarkVariant(node, 'dataVideoDarkPoster', options);
   options.collector.observedResources.videos += 1;
 
   const strings = packageStrings(options.language);
@@ -773,6 +901,11 @@ async function processVideoTarget(
         ? node.properties.dataVideoCaption
         : undefined;
   const chapters = await prepareChapters(node.properties.dataVideoChapters, options);
+  // Дорожку глав фильма называет язык фильма; главы, написанные автором, — язык страницы.
+  const chaptersLanguage =
+    film?.lang !== undefined && node.properties.dataVideoChapters === film.chapters
+      ? film.lang
+      : options.language;
   // Начало петли и мягкий стык ведёт рантайм пакета: он возвращает ролик к началу петли сам.
   const loopStart = Number(node.properties.dataVideoStart ?? '0');
   const loopShape =
@@ -795,7 +928,7 @@ async function processVideoTarget(
               src: chapters.url,
               label: strings.videoChapters,
               default: true,
-              ...(options.language === undefined ? {} : { srcLang: options.language }),
+              ...(chaptersLanguage === undefined ? {} : { srcLang: chaptersLanguage }),
             },
             children: [],
           },
@@ -817,6 +950,7 @@ async function processVideoTarget(
             ...loopShape,
           }),
       ...(posterUrl === undefined ? {} : { poster: posterUrl }),
+      ...(darkPoster === undefined ? {} : { dataDarkPoster: darkPoster }),
       ...(caption === undefined ? {} : { ariaLabel: caption }),
     },
     children: [...sources, ...tracks],
@@ -915,10 +1049,112 @@ async function processVideoTarget(
   ];
 }
 
+/** Still images a dark variant may be: the poster types and SVG. */
+const DARK_VARIANT_EXTENSIONS: ReadonlySet<string> = new Set([...STILL_IMAGE_EXTENSIONS, '.svg']);
+
+/**
+ * The dark variant of an image or a poster: a confined local image embedded or copied exactly like the
+ * light one and counted against the same budget. The property that named the source file is replaced by
+ * `data-dark-src` on an image and `data-dark-poster` on a video, which the runtime reads
+ * (`src/browser/scheme-media.ts`).
+ */
+async function materializeDarkVariant(
+  node: Element,
+  property: typeof IMAGE_DARK_PROPERTY | 'dataVideoDarkPoster',
+  options: AssetPluginOptions,
+): Promise<string | undefined> {
+  const reference = node.properties[property];
+  delete node.properties[property];
+  if (typeof reference !== 'string') return undefined;
+  const extension = path.extname(reference.split(/[?#]/, 1)[0] ?? '').toLowerCase();
+  // A poster's dark variant is a poster: the same still types; an image may also be SVG.
+  const allowed =
+    property === IMAGE_DARK_PROPERTY ? DARK_VARIANT_EXTENSIONS : STILL_IMAGE_EXTENSIONS;
+  if (
+    /^[a-z][a-z0-9+.-]*:/iu.test(reference) ||
+    reference.startsWith('//') ||
+    !allowed.has(extension)
+  ) {
+    throw new AgenticReportError({
+      level: 'error',
+      code: 'INVALID_IMAGE_DARK_VARIANT',
+      message: `A dark variant must be a local ${[...allowed].join(', ')} image: ${reference}`,
+      remediation:
+        'Put the dark image next to the light one in the source directory and name it by a relative path.',
+    });
+  }
+  const resource = await materializeLocalAsset(reference, options);
+  countEmbedded(resource, options);
+  options.collector.observedResources.images += 1;
+  if (property === IMAGE_DARK_PROPERTY) node.properties[IMAGE_DARK_PROPERTY] = resource.url;
+  return resource.url;
+}
+
 interface VideoCandidate {
   readonly reference: string;
   readonly baseType: string;
-  readonly codec: VideoCodec;
+  readonly streams: VideoStreams;
+}
+
+/**
+ * The `type` of a `<source>`: what the file's track list says. A film manifest's own type is kept when it
+ * names the same container and codecs, or when the file's tracks cannot be read; when the two disagree,
+ * the file wins and the build says so, because the browser picks a source by this string.
+ */
+function sourceType(
+  candidate: VideoCandidate,
+  film: ScreencastFilm | undefined,
+  options: AssetPluginOptions,
+): string {
+  const { streams } = candidate;
+  const fromFile = sourceTypeOf(candidate.baseType, streams.codecs);
+  const declared = film?.types[candidate.reference];
+  if (film === undefined || !streams.readable) return declared ?? fromFile;
+  const mismatches: { field: string; manifest: string | boolean; file: string | boolean }[] = [];
+  if (declared !== undefined && streams.codecs.length > 0 && !sameSourceType(declared, fromFile))
+    mismatches.push({ field: 'type', manifest: declared, file: fromFile });
+  if (film.audio !== undefined && film.audio !== streams.audio)
+    mismatches.push({ field: 'audio', manifest: film.audio, file: streams.audio });
+  for (const mismatch of mismatches) {
+    options.collector.warnings.push({
+      level: 'warning',
+      code: 'VIDEO_MANIFEST_MISMATCH',
+      message:
+        mismatch.field === 'type'
+          ? `The film manifest ${film.manifest} gives ${candidate.reference} the type ${mismatch.manifest}, and the file holds ${mismatch.file}; the page uses the file's type.`
+          : `The film manifest ${film.manifest} says audio: ${String(mismatch.manifest)}, and ${candidate.reference} ${mismatch.file ? 'has' : 'has no'} audio track; the page follows the file.`,
+      remediation:
+        'Rerun `agentic-screencast web` so the manifest describes its encodings; if it still disagrees, report it to agentic-screencast.',
+      details: { film: film.manifest, source: candidate.reference, ...mismatch },
+    });
+  }
+  return declared !== undefined && (streams.codecs.length === 0 || mismatches.length === 0)
+    ? declared
+    : fromFile;
+}
+
+/**
+ * The player mode. The author's `mode` wins; without it a recording that carries sound is manual — it
+ * plays with sound when the reader presses play — and a silent one is a muted looping clip. The sound is
+ * read from the files the page ships (a silent track does not count), and from the film manifest only when
+ * the files cannot be read. `start`, `seam="fade"` and `expand` shape a looping clip, so a video that
+ * uses one of them stays a clip. A Markdown image of a video file follows the same rule.
+ */
+function videoMode(
+  node: Element,
+  chosen: readonly VideoCandidate[],
+  film: ScreencastFilm | undefined,
+): string {
+  if (node.tagName !== 'img' && typeof node.properties.dataMode === 'string')
+    return node.properties.dataMode;
+  const clipShape =
+    Number(node.properties.dataVideoStart ?? '0') > 0 ||
+    node.properties.dataSeam === 'fade' ||
+    node.properties.dataExpand === 'true';
+  const sound = chosen.some(({ streams }) =>
+    streams.readable ? streams.sound : film?.audio === true,
+  );
+  return sound && !clipShape ? 'manual' : 'clip';
 }
 
 async function probeVideo(reference: string, options: AssetPluginOptions): Promise<VideoCandidate> {
@@ -941,8 +1177,8 @@ async function probeVideo(reference: string, options: AssetPluginOptions): Promi
     });
   }
   const resource = await resolveLocalResource(reference, { ...options, format: 'directory' });
-  const codec = detectVideoCodec(await readFile(resource.sourcePath), baseType);
-  return { reference, baseType, codec };
+  const streams = readVideoStreams(await readFile(resource.sourcePath), baseType);
+  return { reference, baseType, streams };
 }
 
 async function prepareChapters(
@@ -996,7 +1232,7 @@ function assetSource(target: {
     target.kind === 'image' || (target.kind === 'video' && target.node.tagName === 'img')
       ? target.node.properties.src
       : target.kind === 'video'
-        ? target.node.properties.dataVideoSource
+        ? (target.node.properties.dataVideoSource ?? target.node.properties.dataVideoFrom)
         : target.kind === 'asset'
           ? target.node.properties.dataLocalAsset
           : target.node.properties.dataFontSource;

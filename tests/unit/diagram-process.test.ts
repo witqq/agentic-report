@@ -190,7 +190,9 @@ describe('zoom into a node', () => {
       /class="visualization-zoom-inner" transform="translate\([\d. -]+\) scale\(0\.\d+\)"/u,
     );
     // Ловит: без движения видна только одна фигура.
-    expect(html.match(/class="visualization-svg visualization-zoom-still"/gu)).toHaveLength(2);
+    expect(
+      html.match(/class="visualization-svg visualization-diagram visualization-zoom-still"/gu),
+    ).toHaveLength(2);
     expect(html).toContain('Inside the API');
     expect(html).toContain('Inside “API”');
     // Схема с пролётом держит один вид: камере нужна одна геометрия.
@@ -270,7 +272,7 @@ describe('mini process', () => {
       'At :process[Plan > Build > Review]{current="Review" returns="Review>Plan×3"} now.',
     ]);
     expect(html).toContain('class="semantic-process"');
-    expect(html).toContain('<svg viewBox="0 0 50 26" class="visualization-process"');
+    expect(html).toContain('<svg viewBox="0 0 50 30" class="visualization-process"');
     expect(html).toContain('returned from Review to Plan 3 times');
     // Ловит: неверная мини-схема собирается в пустой знак вместо ошибки.
     await expect(render([':process[Plan > Build]{current="Ship"}'])).rejects.toMatchObject({

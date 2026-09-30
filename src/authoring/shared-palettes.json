@@ -1,0 +1,447 @@
+{
+  "version": 1,
+  "date": "2026-09-29",
+  "about": "Общие палитры agentic-report и agentic-screencast: 11 тем, у каждой светлая и тёмная схема, роли из docs/theme-tokens.md agentic-screencast. accent-soft — непрозрачный фон акцентной секции; волна клика ролика (--sc-accent-soft) берётся из _film. Значения выбраны по визуальному сравнению (compare.html) и проходят контраст страницы и `agentic-screencast check`.",
+  "themes": {
+    "neutral": {
+      "light": {
+        "bg": "#f5f5f3",
+        "surface": "#fbfbfa",
+        "surface-raised": "#fbfbfa",
+        "heading": "#16171a",
+        "text": "#2d2f33",
+        "text-muted": "#5b5e65",
+        "border": "#dededa",
+        "border-strong": "#aeafaa",
+        "accent": "#8a5c00",
+        "accent-2": "#4a5561",
+        "accent-soft": "#f3ead6",
+        "status-done": "#3f7a4f",
+        "status-returned": "#b3402a",
+        "_film": {
+          "sc-accent-soft": "rgba(138,92,0,0.42)"
+        }
+      },
+      "dark": {
+        "bg": "#151514",
+        "surface": "#1c1c1a",
+        "surface-raised": "#222220",
+        "heading": "#f2f1ed",
+        "text": "#d3d1cb",
+        "text-muted": "#9d9b94",
+        "border": "#32312e",
+        "border-strong": "#4d4b46",
+        "accent": "#e2b556",
+        "accent-2": "#aab3bd",
+        "accent-soft": "#3b2d0c",
+        "status-done": "#8fcfa6",
+        "status-returned": "#f0907a",
+        "_film": {
+          "sc-accent-soft": "rgba(226,181,86,0.42)"
+        }
+      }
+    },
+    "frost": {
+      "light": {
+        "bg": "#eef0f3",
+        "surface": "#f7f8fa",
+        "surface-raised": "#f7f8fa",
+        "heading": "#262b37",
+        "text": "#383e4e",
+        "text-muted": "#565d6e",
+        "border": "#d6dae1",
+        "border-strong": "#a3a9b6",
+        "accent": "#383e4e",
+        "accent-2": "#565d6e",
+        "accent-soft": "#dfe3ea",
+        "status-done": "#2f7250",
+        "status-returned": "#b2362f",
+        "_film": {
+          "sc-accent-soft": "rgba(56,62,78,0.42)"
+        }
+      },
+      "dark": {
+        "bg": "#1b1e25",
+        "surface": "#22262e",
+        "surface-raised": "#272b34",
+        "heading": "#eceef2",
+        "text": "#c9ccd4",
+        "text-muted": "#a3a8b3",
+        "border": "#343944",
+        "border-strong": "#4b515e",
+        "accent": "#b6bac5",
+        "accent-2": "#a3a8b3",
+        "accent-soft": "#2c313b",
+        "status-done": "#8fcfa6",
+        "status-returned": "#f0907a",
+        "_film": {
+          "sc-accent-soft": "rgba(182,186,197,0.42)"
+        }
+      }
+    },
+    "midnight": {
+      "light": {
+        "bg": "#f5f7fb",
+        "surface": "#ffffff",
+        "surface-raised": "#ffffff",
+        "heading": "#0b0e14",
+        "text": "#2a3446",
+        "text-muted": "#56627a",
+        "border": "#dfe5ef",
+        "border-strong": "#b3bdcf",
+        "accent": "#2f5bd3",
+        "accent-2": "#4a5f74",
+        "accent-soft": "#e6edfc",
+        "status-done": "#1f7a4d",
+        "status-returned": "#c2304a",
+        "_film": {
+          "sc-accent-soft": "rgba(47,91,211,0.42)"
+        }
+      },
+      "dark": {
+        "bg": "#0b0e14",
+        "surface": "#121826",
+        "surface-raised": "#141c2c",
+        "heading": "#f2f5fb",
+        "text": "#c7cfdd",
+        "text-muted": "#8b97ad",
+        "border": "#2a3446",
+        "border-strong": "#34405a",
+        "accent": "#7aa2ff",
+        "accent-2": "#9fb2c8",
+        "accent-soft": "#16203a",
+        "status-done": "#7ee0a7",
+        "status-returned": "#ff8a9b",
+        "_film": {
+          "sc-accent-soft": "rgba(122,162,255,0.42)"
+        }
+      }
+    },
+    "calm-paper": {
+      "light": {
+        "bg": "#f4f1ea",
+        "surface": "#fbf9f4",
+        "surface-raised": "#ffffff",
+        "heading": "#1b1a17",
+        "text": "#3c3a34",
+        "text-muted": "#67624f",
+        "border": "#ded7c8",
+        "border-strong": "#b7ad98",
+        "accent": "#ae522d",
+        "accent-2": "#3f6b5d",
+        "accent-soft": "#f5e3d8",
+        "status-done": "#3f7a57",
+        "status-returned": "#a8452f",
+        "_film": {
+          "sc-accent-soft": "rgba(174,82,45,0.42)"
+        }
+      },
+      "dark": {
+        "bg": "#1b1a17",
+        "surface": "#23211d",
+        "surface-raised": "#2a2823",
+        "heading": "#f4f1ea",
+        "text": "#d8d2c4",
+        "text-muted": "#a39d8c",
+        "border": "#3a362e",
+        "border-strong": "#57513f",
+        "accent": "#e08a64",
+        "accent-2": "#8fbfae",
+        "accent-soft": "#3a2619",
+        "status-done": "#8fcfa6",
+        "status-returned": "#f09a84",
+        "_film": {
+          "sc-accent-soft": "rgba(224,138,100,0.42)"
+        }
+      }
+    },
+    "daylight": {
+      "light": {
+        "bg": "#f7f8fa",
+        "surface": "#ffffff",
+        "surface-raised": "#ffffff",
+        "heading": "#121620",
+        "text": "#313846",
+        "text-muted": "#555d6c",
+        "border": "#e2e5ea",
+        "border-strong": "#b7bdc8",
+        "accent": "#1f5bb8",
+        "accent-2": "#0e6f82",
+        "accent-soft": "#e3ecfa",
+        "status-done": "#2f7a4f",
+        "status-returned": "#b8362f",
+        "_film": {
+          "sc-accent-soft": "rgba(31,91,184,0.42)"
+        }
+      },
+      "dark": {
+        "bg": "#111418",
+        "surface": "#171b21",
+        "surface-raised": "#1c2128",
+        "heading": "#eef1f5",
+        "text": "#cfd5de",
+        "text-muted": "#98a1ae",
+        "border": "#2a313c",
+        "border-strong": "#404a58",
+        "accent": "#86b4f5",
+        "accent-2": "#6fc3d3",
+        "accent-soft": "#172a47",
+        "status-done": "#8fcfa6",
+        "status-returned": "#f0907a",
+        "_film": {
+          "sc-accent-soft": "rgba(134,180,245,0.42)"
+        }
+      }
+    },
+    "noir": {
+      "light": {
+        "bg": "#f5f3ef",
+        "surface": "#fbfaf8",
+        "surface-raised": "#fbfaf8",
+        "heading": "#0a0a0b",
+        "text": "#2e2e33",
+        "text-muted": "#5c5c65",
+        "border": "#dedad2",
+        "border-strong": "#a9a59c",
+        "accent": "#99631f",
+        "accent-2": "#4a5f74",
+        "accent-soft": "#f3e7d6",
+        "status-done": "#3f6e48",
+        "status-returned": "#a8453d",
+        "_film": {
+          "sc-accent-soft": "rgba(153,99,31,0.42)"
+        }
+      },
+      "dark": {
+        "bg": "#0a0a0b",
+        "surface": "#121316",
+        "surface-raised": "#141518",
+        "heading": "#f4f4f5",
+        "text": "#bcbcc2",
+        "text-muted": "#8a8a93",
+        "border": "#26272c",
+        "border-strong": "#45464e",
+        "accent": "#e0a458",
+        "accent-2": "#9fb2c8",
+        "accent-soft": "#221a10",
+        "status-done": "#8fb996",
+        "status-returned": "#d4726a",
+        "_film": {
+          "sc-accent-soft": "rgba(224,164,88,0.42)"
+        }
+      }
+    },
+    "aurora": {
+      "light": {
+        "bg": "#f2f8f7",
+        "surface": "#ffffff",
+        "surface-raised": "#ffffff",
+        "heading": "#06141a",
+        "text": "#23393d",
+        "text-muted": "#4f6469",
+        "border": "#d3e4e2",
+        "border-strong": "#9dbcb9",
+        "accent": "#007f71",
+        "accent-2": "#7a5a20",
+        "accent-soft": "#d9f3ef",
+        "status-done": "#1f7a45",
+        "status-returned": "#be3455",
+        "_film": {
+          "sc-accent-soft": "rgba(0,127,113,0.42)"
+        }
+      },
+      "dark": {
+        "bg": "#070b16",
+        "surface": "#0c1622",
+        "surface-raised": "#0f1c2a",
+        "heading": "#eefaf7",
+        "text": "#c0d7d6",
+        "text-muted": "#819ea7",
+        "border": "#1d3340",
+        "border-strong": "#26445a",
+        "accent": "#6fd6c4",
+        "accent-2": "#d9c7a0",
+        "accent-soft": "#0f2a3a",
+        "status-done": "#8fcfa6",
+        "status-returned": "#f0907a",
+        "_film": {
+          "sc-accent-soft": "rgba(111,214,196,0.42)"
+        }
+      }
+    },
+    "ember": {
+      "light": {
+        "bg": "#fbf6f1",
+        "surface": "#ffffff",
+        "surface-raised": "#ffffff",
+        "heading": "#1c0f08",
+        "text": "#3d2a1f",
+        "text-muted": "#6a5242",
+        "border": "#ecdccf",
+        "border-strong": "#c4a58f",
+        "accent": "#c2410c",
+        "accent-2": "#7f5c20",
+        "accent-soft": "#fde5d6",
+        "status-done": "#3f7a2e",
+        "status-returned": "#b91c1c",
+        "_film": {
+          "sc-accent-soft": "rgba(194,65,12,0.42)"
+        }
+      },
+      "dark": {
+        "bg": "#0e0907",
+        "surface": "#170f0b",
+        "surface-raised": "#1c120d",
+        "heading": "#fff4ec",
+        "text": "#e3cdbf",
+        "text-muted": "#ad907f",
+        "border": "#3a2419",
+        "border-strong": "#5e3a28",
+        "accent": "#ff7a3d",
+        "accent-2": "#c9b8a8",
+        "accent-soft": "#2a120a",
+        "status-done": "#9be38b",
+        "status-returned": "#ff6b6b",
+        "_film": {
+          "sc-accent-soft": "rgba(255,122,61,0.42)"
+        }
+      }
+    },
+    "blueprint": {
+      "light": {
+        "bg": "#eef3fa",
+        "surface": "#f8fbff",
+        "surface-raised": "#f8fbff",
+        "heading": "#0a1a33",
+        "text": "#1f3656",
+        "text-muted": "#48607f",
+        "border": "#cfdced",
+        "border-strong": "#8fa9ca",
+        "accent": "#0b6f99",
+        "accent-2": "#7f5a00",
+        "accent-soft": "#d6ecf7",
+        "status-done": "#1f7a45",
+        "status-returned": "#b8324d",
+        "_film": {
+          "sc-accent-soft": "rgba(11,111,153,0.42)"
+        }
+      },
+      "dark": {
+        "bg": "#0a1a33",
+        "surface": "#0d2140",
+        "surface-raised": "#0f2548",
+        "heading": "#eaf4ff",
+        "text": "#b9d0ea",
+        "text-muted": "#8ca8ca",
+        "border": "#1f3f6b",
+        "border-strong": "#2c5690",
+        "accent": "#4cc9f0",
+        "accent-2": "#f9c74f",
+        "accent-soft": "#0f2d57",
+        "status-done": "#80ed99",
+        "status-returned": "#ff8fa3",
+        "_film": {
+          "sc-accent-soft": "rgba(76,201,240,0.42)"
+        }
+      }
+    },
+    "synthwave": {
+      "light": {
+        "bg": "#fbf6ff",
+        "surface": "#ffffff",
+        "surface-raised": "#ffffff",
+        "heading": "#1d0f33",
+        "text": "#3a2a55",
+        "text-muted": "#655485",
+        "border": "#e6d9f5",
+        "border-strong": "#b9a3d8",
+        "accent": "#c01aa0",
+        "accent-2": "#0a7390",
+        "accent-soft": "#fbe3f6",
+        "status-done": "#127a55",
+        "status-returned": "#c2304a",
+        "_film": {
+          "sc-accent-soft": "rgba(192,26,160,0.42)"
+        }
+      },
+      "dark": {
+        "bg": "#140b27",
+        "surface": "#1d1036",
+        "surface-raised": "#241443",
+        "heading": "#fdf4ff",
+        "text": "#d9c8f0",
+        "text-muted": "#a08bc9",
+        "border": "#3e2a63",
+        "border-strong": "#5a3597",
+        "accent": "#ff4fd8",
+        "accent-2": "#37e0ff",
+        "accent-soft": "#3c1266",
+        "status-done": "#6cf0c2",
+        "status-returned": "#ff6b8a",
+        "_film": {
+          "sc-accent-soft": "rgba(255,79,216,0.42)"
+        }
+      }
+    },
+    "terminal": {
+      "light": {
+        "bg": "#f3f5f1",
+        "surface": "#fafbf8",
+        "surface-raised": "#fafbf8",
+        "heading": "#0c0e0d",
+        "text": "#26302a",
+        "text-muted": "#55625a",
+        "border": "#d8ddd5",
+        "border-strong": "#9faaa2",
+        "accent": "#1d7a45",
+        "accent-2": "#8a5a00",
+        "accent-soft": "#dcefe2",
+        "status-done": "#2f7a4f",
+        "status-returned": "#b3402a",
+        "_film": {
+          "sc-accent-soft": "rgba(29,122,69,0.42)"
+        },
+        "_pageExtra": {
+          "muted": "#e2e6df",
+          "accentStrong": "#155c34",
+          "focus": "#8a5a00",
+          "chart1": "#1d7a45",
+          "chart2": "#2f7a4f",
+          "chart3": "#b3402a",
+          "chart4": "#8a5a00",
+          "chart5": "#2f5f8a",
+          "chart6": "#6b5a8e",
+          "marker": "#8a5a00",
+          "shadow": "#0c0e0d1f",
+          "codeBackground": "#eceee9",
+          "codeText": "#1b211d",
+          "codeKeyword": "#1a6e3e",
+          "codeString": "#7d5200",
+          "codeNumber": "#2f5f8a",
+          "codeFunction": "#0c0e0d",
+          "codeType": "#2a6644",
+          "codeComment": "#55625a",
+          "codePunctuation": "#3a443d"
+        }
+      },
+      "dark": {
+        "bg": "#0c0e0d",
+        "surface": "#121513",
+        "surface-raised": "#161a17",
+        "heading": "#eef3ef",
+        "text": "#c9d4cc",
+        "text-muted": "#8e9b92",
+        "border": "#253029",
+        "border-strong": "#3a4a3f",
+        "accent": "#5ccf8a",
+        "accent-2": "#e0a84a",
+        "accent-soft": "#15291c",
+        "status-done": "#8fe0ad",
+        "status-returned": "#f0907a",
+        "_film": {
+          "sc-accent-soft": "rgba(92,207,138,0.42)"
+        }
+      }
+    }
+  }
+}

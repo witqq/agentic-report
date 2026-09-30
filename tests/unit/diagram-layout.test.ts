@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { simplify } from '../../src/render/flow-layout.js';
 import { renderMarkdown } from '../../src/render/markdown.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
+import { readPackageStylesheet } from '../helpers/package-stylesheet.js';
 
 const workspaces: string[] = [];
 
@@ -13,14 +14,21 @@ afterEach(async () => {
   await Promise.all(workspaces.splice(0).map(removeTestWorkspace));
 });
 
-/** Разметка одного вида раскладки по его имени: `down`, `right` или `orthogonal`. */
+/** Узкий вид сверху вниз для телефона — отдельный рисунок внутри панели вида `down`. */
+const COMPACT_SVG = /<svg[^>]*data-diagram-compact[^>]*>[\s\S]*?<\/svg>/gu;
+
+/**
+ * Разметка одного вида раскладки по его имени: `down`, `right` или `orthogonal`; `compact` — узкий вид
+ * сверху вниз, который панель `down` несёт вторым рисунком.
+ */
 function layoutView(html: string, mode: string): string {
-  return (
+  const panel =
     new RegExp(
-      `<div id="[^"]*" role="tabpanel"[^>]*data-layout-view="${mode}"[^>]*>[\\s\\S]*?</svg></div></div>`,
+      `<div id="[^"]*" role="tabpanel"[^>]*data-layout-view="${mode === 'compact' ? 'down' : mode}"[^>]*>[\\s\\S]*?</svg></div></div>`,
       'u',
-    ).exec(html)?.[0] ?? ''
-  );
+    ).exec(html)?.[0] ?? '';
+  if (mode === 'compact') return panel.match(COMPACT_SVG)?.[0] ?? '';
+  return panel.replace(COMPACT_SVG, '');
 }
 
 /**
@@ -28,10 +36,12 @@ function layoutView(html: string, mode: string): string {
  * «прямые углы», а геометрию проверяет тот, что показан по умолчанию.
  */
 function defaultView(html: string): string {
-  return html.replace(
-    /<div id="[^"]*" role="tabpanel"[^>]*\bhidden\b[^>]*>[\s\S]*?<\/svg><\/div><\/div>/gu,
-    '',
-  );
+  return html
+    .replace(
+      /<div id="[^"]*" role="tabpanel"[^>]*\bhidden\b[^>]*>[\s\S]*?<\/svg><\/div><\/div>/gu,
+      '',
+    )
+    .replace(COMPACT_SVG, '');
 }
 
 async function renderDiagram(body: readonly string[]): Promise<string> {
@@ -408,7 +418,11 @@ describe('flow diagram layout', () => {
     for (const body of [REFERENCE_FLOW, lines.slice(start, end + 1), TALL_NEIGHBOURS]) {
       // Обе раскладки по слоям видны читателю через переключатель, поэтому проверяются обе.
       const all = await renderAllViews(body);
-      for (const html of [layoutView(all, 'down'), layoutView(all, 'right')]) {
+      // Узкий вид телефона — тоже раскладка по слоям, которую видит читатель.
+      const compact = layoutView(all, 'compact');
+      for (const html of [layoutView(all, 'down'), layoutView(all, 'right'), compact].filter(
+        (view) => view !== '',
+      )) {
         const boxes = nodeBoxesById(html);
         for (const route of edgePaths(html)) {
           for (const [id, box] of boxes) {
@@ -1161,7 +1175,7 @@ describe('right-angle view and group frames', () => {
   });
 
   it('lets a wide diagram shrink to three quarters of its width and no further', async () => {
-    const html = await renderAllViews(REFERENCE_FLOW);
+    const html = (await renderAllViews(REFERENCE_FLOW)).replace(COMPACT_SVG, '');
     const svgs = [
       ...html.matchAll(
         /<svg viewBox="0 0 ([0-9.]+) [0-9.]+" width="([0-9.]+)" style="--diagram-width: ([0-9.]+)px"/gu,
@@ -1172,8 +1186,8 @@ describe('right-angle view and group frames', () => {
       expect(svg[2]).toBe(svg[1]);
       expect(svg[3]).toBe(svg[1]);
     }
-    const css = await readFile(path.resolve('src/browser/document.css'), 'utf8');
-    expect(css).toContain('min-width: calc(var(--diagram-width, 0px) * 12 / 13);');
+    const css = await readPackageStylesheet();
+    expect(css).toContain('min-width: calc(var(--diagram-width, 0px) * 0.9);');
   });
 });
 
