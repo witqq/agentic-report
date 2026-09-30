@@ -1,0 +1,147 @@
+@layer components {
+  /*
+ * Режим экранов (`layout: screens`). Секция верхнего уровня — экран высотой с окно под верхней
+ * панелью; с рантаймом прокрутка прилипает к экранам (`scroll-snap-stop: always`: один жест — один
+ * экран), справа — переключатель экранов. При уменьшенном движении и `motion: none` прилипания нет,
+ * в печати экраны — обычные главы. Экран выше окна не обрезается: он прокручивается внутри себя.
+ */
+  :root[data-layout='screens'] .report-shell {
+    grid-template-columns: minmax(0, 1fr);
+    padding-block: 0;
+  }
+
+  :root[data-layout='screens'] .sidebar {
+    display: none;
+  }
+
+  :root[data-layout='screens'] .report-content {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :root[data-layout='screens'] .report-content article > section[data-screen] {
+    display: grid;
+    min-block-size: calc(100svh - var(--screen-offset, 3.5rem));
+    align-content: center;
+    margin: 0;
+    border-top: 0;
+    /* Экран встаёт своим верхним краем под панель, а не заголовком, как якорь главы документа. */
+    scroll-margin-top: 0;
+  }
+
+  :root[data-screens-active]:not([data-screens-still]) {
+    scroll-padding-top: var(--screen-offset, 3.5rem);
+    scroll-snap-type: y mandatory;
+  }
+
+  :root[data-screens-active]:not([data-screens-still]) article > section[data-screen] {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  .screen-switcher {
+    position: fixed;
+    z-index: 15;
+    top: 50%;
+    right: max(0.5rem, env(safe-area-inset-right));
+    transform: translateY(-50%);
+  }
+
+  .screen-switcher ol {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .screen-switcher-link {
+    display: grid;
+    width: var(--control-touch);
+    height: 1.75rem;
+    place-items: center;
+  }
+
+  .screen-switcher-link::before {
+    width: 0.5rem;
+    height: 0.5rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-pill);
+    background: var(--color-bg);
+    content: '';
+    transition:
+      background-color var(--duration-ui) var(--ease-ui),
+      transform var(--duration-ui) var(--ease-ui);
+  }
+
+  .screen-switcher-link[aria-current]::before {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    transform: scale(1.35);
+  }
+
+  .screen-switcher-link:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: -2px;
+  }
+
+  @media (max-width: 56.99rem) {
+    :root[data-screens-active] .report-shell {
+      padding-inline-end: calc(var(--shell-gutter) + 1.5rem);
+    }
+
+    .screen-switcher {
+      right: 0;
+    }
+
+    .screen-switcher-link {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  }
+
+  @media print {
+    :root[data-layout='screens'] .report-content article > section[data-screen] {
+      display: block;
+      min-block-size: 0;
+    }
+
+    .screen-switcher {
+      display: none;
+    }
+  }
+
+  @media (width <= 48rem) {
+    /*
+     * On a phone the switcher stands in the right gutter itself: a column of its own beside the gutter
+     * narrowed the reading column to 87 % of a 320 px screen. Its links are as wide as the gutter and
+     * 1.5rem tall, 1.75rem apart, so each keeps a 24 px target without touching the next.
+     */
+    :root[data-screens-active] .report-shell {
+      padding-inline-end: 0;
+    }
+
+    /* Undoes the narrow-screen rule above that drops this padding: on a phone the text keeps its gutter. */
+    :root[data-screens-active] .report-content {
+      padding-inline-end: var(--phone-gutter);
+    }
+
+    :root[data-screens-active] .screen-switcher-link {
+      width: var(--phone-gutter);
+    }
+
+    /* In screens mode the switcher stands in the right gutter, so wide blocks bleed only to the left edge
+       and no table, code block or picture runs under its links. */
+    :root[data-screens-active]
+      :is(
+        .report-content article,
+        .report-content article > .semantic-section,
+        .report-content article > .semantic-disclosure,
+        .report-content article > .semantic-section > .semantic-disclosure
+      )
+      > :is(.table-frame, pre, p:has(> img:only-child)) {
+      margin-inline-end: 0;
+    }
+  }
+}

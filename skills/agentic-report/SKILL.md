@@ -3,7 +3,7 @@ name: agentic-report
 description: Create and build polished local pages from declarative Markdown — landing pages, documents (reports, research, architecture, code reviews, incidents, guides), dashboards, answer forms, and presentations that can be shown or filmed — starting from a brief, with design advice and snapshots before handoff. Use for static agent-to-human page handoff; do not use for hosted apps, live collaboration, deployment, publication, or bespoke frontend development.
 license: MIT
 metadata:
-  version: '0.19.0'
+  version: '0.20.0'
   homepage: https://agentic-report.witqq.dev/
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run. Snapshots also need Playwright and its Chromium.
 ---
@@ -18,16 +18,24 @@ page. The detail is in `references/` and in the CLI's own output.
 
 ## The order of work
 
-Each step names what it produces, what to read first, and how you know it is done. Keep the page checklist
-from the first step: `node scripts/checklist.mjs init <page-directory>` writes `checklist.md` beside the
-page with these steps, the dimensions of the page's brief, and the design rules, all taken from the skill
-at that moment. Close an item with `- [x] item → evidence` or `- [n/a] item → reason`; a tick without a
-reason stays open. The script is [`scripts/checklist.mjs`](scripts/checklist.mjs).
+Each step names what it produces, what to read first, and how you know it is done. The page is checked by
+scripts, not by your memory of the references: `prose-check`, `design-check` and `snapshot --measure` name
+every rule they find broken, and [`handover.mjs`](scripts/handover.mjs) runs them all at the end. Before
+a decision, ask `node scripts/craft.mjs <topic>` ([`scripts/craft.mjs`](scripts/craft.mjs)) for the rules
+that decide it (`table`, `landing-first-screen`, `motion`, `prose-ru`, a directive name, or a rule id such
+as `DR-SURFACES` or `PR-DASH`).
+
+Keep the skill's scripts together: their shared
+[`source-files.mjs`](scripts/source-files.mjs) enforces the page file boundary before reads and writes.
 
 1. **Brief.** Run `init` with the category's starter (table below), fill `brief.md`, then start the
-   checklist. Read [`references/process.md`](references/process.md) («Start with the brief») and the
-   category in [`references/playbook.md`](references/playbook.md). Ask only what you cannot find out, in one
-   round. Done when every dimension row has an answer and a source (`request`, `asked`, `inferred`).
+   checklist: `node scripts/checklist.mjs init <page-directory>`
+   ([`scripts/checklist.mjs`](scripts/checklist.mjs)) writes `checklist.md` with these steps,
+   the brief's dimensions, the design rules and the hand-over gates. Close an item with
+   `- [x] item → evidence` or `- [n/a] item → reason`. Read [`references/process.md`](references/process.md)
+   («Start with the brief») and the category in [`references/playbook.md`](references/playbook.md). Ask
+   only what you cannot find out, in one round. Done when every dimension row has an answer and a source
+   (`request`, `asked`, `inferred`).
 2. **References.** For a landing or a showcase, study 5–10 real sites on the same subject and write what
    each teaches in the brief's `references` row, before any concept. Read
    [`references/art-direction.md`](references/art-direction.md). Done when the row names each site and its
@@ -49,28 +57,37 @@ reason stays open. The script is [`scripts/checklist.mjs`](scripts/checklist.mjs
    [`references/compose.md`](references/compose.md) and
    [`references/vocabulary-use.md`](references/vocabulary-use.md); exact names are in
    [`references/catalog.md`](references/catalog.md). Done when `validate` reports no diagnostic.
-7. **Prose.** Audit the text against the prose rules and fix it. Read
+7. **Prose.** Run `node scripts/prose-check.mjs <page-source>`
+   ([`scripts/prose-check.mjs`](scripts/prose-check.mjs)), then audit what it cannot see. Read
    [`references/prose.md`](references/prose.md), then [`references/prose-en.md`](references/prose-en.md)
    or [`references/prose-ru.md`](references/prose-ru.md) by the language of the text, and
-   [`references/typography-ru.md`](references/typography-ru.md) for Russian. A build before the audit to
-   check syntax is fine; the audit comes before the build you hand over. Done when the audit's findings are
-   treated and no fact was added or lost.
-8. **Build.** Run `build`. Done when it reports no diagnostic.
-9. **Design check.** Run [`scripts/design-check.mjs`](scripts/design-check.mjs) (its rules are
+   [`references/typography-ru.md`](references/typography-ru.md) for Russian. Done when the check exits 0 —
+   every finding fixed, or switched off in `brief.md` with its reason — and no fact was added or lost.
+8. **Build.** Run `build`; for a new edition of a page the person already saw, write `Previous edition:
+<path>` in `brief.md` and build with `--since` that page
+   ([`references/process.md`](references/process.md), «Show what changed since the last edition»). Done
+   when it reports no diagnostic.
+9. **Design check.** Run `node scripts/design-check.mjs <page-source>`
+   ([`scripts/design-check.mjs`](scripts/design-check.mjs), rules in
    [`scripts/design-rules.mjs`](scripts/design-rules.mjs)) and act on its advice. Read
    [`references/process.md`](references/process.md) («Check the design»). Done when `advice` is empty or
    each remaining rule is switched off in the brief with its reason.
-10. **Look.** Read the checks first, then measure the page with `snapshot --measure` and fix every
-    defect it counts, then photograph it with `snapshot` and look at it; judge motion in a browser. Read [`references/process.md`](references/process.md) («Look at the result»), and before
-    each round of fixes reread [`references/design-rules.md`](references/design-rules.md) and
+10. **Look.** Measure the page with `snapshot --measure` and fix every defect it counts, then photograph it
+    with `snapshot` and look at it; judge motion in a browser. Read
+    [`references/process.md`](references/process.md) («Look at the result»), and before each round of
+    fixes reread [`references/design-rules.md`](references/design-rules.md) and
     [`references/art-direction.md`](references/art-direction.md); fix what you see and repeat from step 8.
-    Done when the self-check questions there have answers you would show the person.
+    Done when `defects` is 0 everywhere and the self-check questions there have answers you would show the
+    person. Close the checklist item with the path of a frame you opened and what you saw on it
+    (`- [x] Look → shots/390-dark-normal-full.png: …`); the check refuses a look without a frame taken after
+    the last change of the page.
 11. **Review the result.** An independent reviewer checks the built page, including its look against the
     references in the brief. Done when no blocking or major finding is open.
-12. **Hand over.** Check that the brief describes what was built, and that
-    `node scripts/checklist.mjs check <page-directory>` reports no open items; then report the source path,
-    artifact path, starter, languages, warnings, advice you left in place and why, and unresolved content
-    facts. See [`references/process.md`](references/process.md) («Hand over»).
+12. **Hand over.** Run `node scripts/handover.mjs <page-source>`. It runs the design check, the prose
+    check, `snapshot --measure` and `checklist.mjs check`, stamps the gates in `checklist.md`, and prints
+    one verdict. **The page is not handed over until it passes.** Then report the source path, artifact
+    path, starter, languages, warnings, advice and prose rules you switched off and why, and unresolved
+    content facts. See [`references/process.md`](references/process.md) («Hand over»).
 
 Pick the category by what the reader must do. It is a recommendation, not a limit: any directive, mode, or
 effect works on any page.
@@ -90,18 +107,21 @@ Review Workspace (`review: true`) is a mode any page can switch on, not a catego
 Use the release pinned in this skill:
 
 ```sh
-npx --yes agentic-report@0.19.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.19.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.20.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.20.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.20.0 build ./my-page --output ./my-page.html --since ./my-page.html --json
+node scripts/prose-check.mjs ./my-page
 node scripts/design-check.mjs ./my-page
 npx --yes playwright@1.62.1 install chromium
-npx --yes -p agentic-report@0.19.0 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
+npx --yes -p agentic-report@0.20.0 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
+node scripts/handover.mjs ./my-page
+node scripts/craft.mjs table
 ```
 
 `--output` names the file `build` writes (a folder with `--format directory`). A source written by hand
 needs only a `title` in its frontmatter; `contractVersion` names the source-contract major it is written
-for — omit it for version 1. Arguments, result records, diagnostics, and delivery flags are in
-[`references/cli.md`](references/cli.md); building from a reviewed source checkout is in
-[`references/process.md`](references/process.md).
+for — omit it for version 1. What each command prints, delivery flags, and building from a reviewed source
+checkout instead of npm are in [`references/process.md`](references/process.md).
 
 ## Where the answer is
 
@@ -112,8 +132,6 @@ for — omit it for version 1. Arguments, result records, diagnostics, and deliv
 | Which directive answers the reader's question; where does a tool fit?   | [`references/vocabulary-use.md`](references/vocabulary-use.md)                                                                                       |
 | How are chapters, data, diagrams, recordings, slides, messages written? | [`references/compose.md`](references/compose.md)                                                                                                     |
 | What is the exact name or allowed value of a field or attribute?        | [`references/catalog.md`](references/catalog.md); `agentic-report schema --scope manifest\|directives\|source\|theme`                                |
-| How do I invoke a command and parse its agent result or diagnostics?    | [`references/cli.md`](references/cli.md)                                                                                                             |
-| How do I call the public Node ESM API from another program?             | [`references/node-api.md`](references/node-api.md)                                                                                                   |
 | What does the product support, and which rule depends on which?         | `agentic-report describe` (its `authoredRules`)                                                                                                      |
 | How is my source structured, what did each recipe resolve to?           | `agentic-report inspect ./my-page`                                                                                                                   |
 | Which complete page can I copy from?                                    | `agentic-report examples`; the exemplars at the end of [`references/playbook.md`](references/playbook.md)                                            |
@@ -122,10 +140,10 @@ for — omit it for version 1. Arguments, result records, diagnostics, and deliv
 | Why does a design rule exist, and how is it fixed?                      | [`references/design-rules.md`](references/design-rules.md)                                                                                           |
 | Where may a picture, clip, font, or effect code come from?              | [`references/assets.md`](references/assets.md)                                                                                                       |
 | The vocabulary lacks what the page needs: do I extend it, and how?      | [`references/extensions.md`](references/extensions.md); the reference extensions in `agentic-report examples`                                        |
-| How do I implement an effect with the complete public context API?      | [`references/effect-api.md`](references/effect-api.md)                                                                                               |
 | How do I audit the prose?                                               | [`references/prose.md`](references/prose.md), [`references/prose-en.md`](references/prose-en.md), [`references/prose-ru.md`](references/prose-ru.md) |
 | How is Russian text set?                                                | [`references/typography-ru.md`](references/typography-ru.md)                                                                                         |
 | How do I check the design, look at the result, review, and hand over?   | [`references/process.md`](references/process.md)                                                                                                     |
+| Which rules decide the choice in front of me?                           | `node scripts/craft.mjs <topic, directive or rule id>`                                                                                               |
 
 Against the installed package, `describe`, `schema`, and `examples` are the machine-readable runtime
 truth; the catalogue is generated from the same contract.
@@ -138,20 +156,22 @@ Only the top-level choices; every tool's row is in
 | Technique                            | Take it when                                                                                | Not when                                                  |
 | ------------------------------------ | ------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | `layout: slides`                     | something is shown one idea at a time, live or filmed                                       | people read the page alone and search in it               |
+| `deck` of `slide`s                   | a document needs a few slides to show in place and on the whole screen                      | the whole page is a talk — that is `layout: slides`       |
 | `layout: screens`                    | a page read alone should stop at one idea per screen, one per gesture                       | a document people search, scan or come back to            |
 | `recipe="demo"` on the first section | a landing must show its product working on the first screen                                 | any section but the first; a report                       |
 | `transition`, `scene`, `interaction` | `motion:` in the frontmatter (the brief's row) allows it and the movement says what changed | every chapter; decoration                                 |
-| `video`                              | a behaviour needs proof that it is real                                                     | a mechanism a diagram or `scene="steps"` explains better  |
+| `video`, a short screencast film     | a process, a live interface, a before/after over time — what the reader must see in motion  | what reads as a static diagram or table                   |
 | `diagram`                            | parts hand work to each other, or calls follow in time                                      | a picture the prose already says in one sentence          |
 | `response` (Response Workspace)      | the person must hand structured answers back                                                | discussion of the text — that is `review: true`           |
 | a theme of your own                  | no built-in theme fits the direction in the brief                                           | a built-in theme with one or two fields changed would do  |
 | `--format directory`                 | several clips, or a published site                                                          | a private page handed over as one file                    |
 | `localizations`                      | the page ships in English and Russian                                                       | a single-language page — delete the starter's other entry |
+| `build --since <page>`               | the person saw the previous edition and asked for changes                                   | a first edition, a new reader, text removed for privacy   |
 
 ## Rules for every page
 
-- Hand over only when `node scripts/checklist.mjs check <page-directory>` reports no open items, no
-  blocking or major review finding is open, and the brief describes what was built.
+- Hand over only when `node scripts/handover.mjs <page-source>` passes, no blocking or major review
+  finding is open, and the brief describes what was built.
 - Write only Markdown, frontmatter or the manifest, supported directives, confined partials, and local
   assets: never JSX, raw HTML, browser JavaScript, CSS, executable templates, plugins, or remote fetching.
   Code enters a page only as a declared extension, checked by its own rules
@@ -160,9 +180,28 @@ Only the top-level choices; every tool's row is in
   file and line that shows it or the person's approved wording; a gap is listed under «Unresolved content
   facts».
 - Show only safe fields; crop private text out of screenshots and clips (`DR-PRIVACY`).
-- Never switch a design check off in the source — only in `brief.md`, with the reason on the same line.
+- Never switch a design or prose check off in the source — only in `brief.md` under «Checks switched off»,
+  with the reason on the same line: `- DR-SURFACES: reason`, or `- PR-DASH report.ru.md:14: reason` for
+  one place.
 - Do not deploy, publish, use credentials, or mutate unrelated files.
-- Fix on sight, the first time you see it: `DR-NAV-ABOVE-TITLE`, `DR-LINE-LENGTH`, `DR-HEADING-HIERARCHY`,
-  `DR-BLOBS`, `DR-ONE-ACCENT`, `DR-CONTRAST`, `DR-TIGHT-TRACKING`, `DR-RU-TYPOGRAPHY`, `DR-REAL-MATERIAL`,
-  `DR-NUMBERS-UNITS`, `DR-CAPTIONS` — each with its reason and fix in
-  [`references/design-rules.md`](references/design-rules.md).
+
+## The costliest rules
+
+These cost a page the most when missed; keep them in mind while writing, before any check runs. The full
+rule, its counterexample and its fix are in `node scripts/craft.mjs <id>`.
+
+- `DR-REAL-MATERIAL` — real screenshots, numbers and diagrams, never stock or generated pictures.
+- `DR-OPENING-MEDIA` — a landing shows its product on the first screen.
+- `DR-NAV-ABOVE-TITLE` — no navigation frame above a landing title.
+- `DR-NUMBERS-UNITS` — every number carries its unit and its date.
+- `DR-DATA-SLICE` — every figure with data names its source and its moment.
+- `DR-EXAMPLE-SCOPE` — what is true of an example is said of that example.
+- `DR-HEADING-HIERARCHY` — one page title, then chapter titles; no bold line posing as a heading.
+- `DR-LINE-LENGTH` — reading lines stay between about 45 and 80 characters.
+- `DR-ONE-ACCENT` and `DR-CONTRAST` — one accent colour; every text meets WCAG AA.
+- `DR-BLOBS` — no blurred colour blobs, meshes or glows behind content.
+- `DR-MOTION-MEANING` — motion shows a change in meaning, or it goes.
+- `DR-RU-TYPOGRAPHY` and `DR-CAPTIONS` — Russian typography; every picture explains itself.
+- `PR-NOT-X-BUT-Y` — no staged contrast («не просто X, а Y», "not just X, it is Y"); state the claim.
+- `PR-DASH` — no dash where a full stop, comma or colon belongs.
+- `PR-MODEL-WORDS` and `PR-SALES` — no model vocabulary and no sales words; put the fact in their place.

@@ -1,0 +1,247 @@
+@layer components {
+  /*
+   * Колода слайдов в документе (`deck`). Без рантайма и в печати слайды идут подряд, каждый — карточка
+   * 16:9, которая растёт, если содержимому тесно. С рантаймом (`data-deck-active`) слайды лежат в одной
+   * ячейке сцены: сцена высотой с самый высокий слайд, смена слайда не двигает страницу. Кегль слайда
+   * считается от его ширины, поэтому слайд масштабируется целиком — в колонке и на весь экран; нижняя
+   * граница не даёт тексту стать мельче читаемого на телефоне. Цвета, линии и скругления — токены темы.
+   */
+  .semantic-deck {
+    margin-block: calc(1.75rem * var(--space-factor));
+  }
+
+  /* The deck is a wide block; its title starts on the edge the text starts on. */
+  .semantic-deck > .semantic-title {
+    max-width: min(100%, var(--prose-measure, 100%));
+    margin-inline: auto;
+  }
+
+  .deck-stage {
+    display: grid;
+    gap: calc(1.25rem * var(--space-factor));
+  }
+
+  .semantic-slide {
+    --slide-type: clamp(0.85rem, 2.2cqi, 2.6rem);
+
+    display: flex;
+    box-sizing: border-box;
+    min-width: 0;
+    aspect-ratio: 16 / 9;
+    flex-direction: column;
+    justify-content: center;
+    overflow-wrap: break-word;
+    container: deck-slide / inline-size;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    padding: 4.5% 6%;
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  .semantic-slide > * {
+    max-width: 100%;
+    margin-inline: 0;
+    font-size: var(--slide-type);
+  }
+
+  .semantic-slide > :first-child {
+    margin-top: 0;
+  }
+
+  .semantic-slide > :last-child {
+    margin-bottom: 0;
+  }
+
+  .semantic-slide :is(h1, h2) {
+    margin-block: 0 0.5em;
+    color: var(--color-heading);
+    font-size: calc(var(--slide-type) * 2);
+    line-height: 1.1;
+  }
+
+  .semantic-slide h3 {
+    margin-block: 0 0.45em;
+    color: var(--color-heading);
+    font-size: calc(var(--slide-type) * 1.45);
+    line-height: 1.2;
+  }
+
+  .semantic-slide :is(h4, h5, h6) {
+    margin-block: 0 0.4em;
+    font-size: calc(var(--slide-type) * 1.15);
+  }
+
+  /* A step keeps the spacing of the block it holds, not its own on top of it. */
+  .semantic-slide .semantic-appear > * {
+    margin-block: 0.25em;
+  }
+
+  .semantic-slide .semantic-notes {
+    display: none;
+  }
+
+  .semantic-slide[data-slide-transition='push'] {
+    --slide-enter: slide-push-in;
+    --slide-exit: slide-push-out;
+  }
+
+  .semantic-slide[data-slide-transition='wipe'] {
+    --slide-enter: slide-wipe-in;
+    --slide-exit: slide-hold;
+  }
+
+  .semantic-slide[data-slide-transition='zoom'] {
+    --slide-enter: slide-zoom-in;
+    --slide-exit: slide-fade-out;
+  }
+
+  .semantic-slide[data-slide-transition='none'] {
+    --slide-enter: slide-hold;
+    --slide-exit: slide-hold;
+  }
+
+  /* Одна ячейка сцены: показан текущий слайд, уходящий виден, пока идёт переход. */
+  .semantic-deck[data-deck-active] > .deck-stage {
+    gap: 0;
+    border-radius: var(--radius-card);
+  }
+
+  .semantic-deck[data-deck-active] > .deck-stage > .semantic-slide {
+    grid-area: 1 / 1;
+    visibility: hidden;
+  }
+
+  .semantic-deck[data-deck-active]
+    > .deck-stage
+    > .semantic-slide:is([data-slide-current], [data-slide-leaving]) {
+    visibility: visible;
+  }
+
+  .semantic-deck[data-deck-active] > .deck-stage > .semantic-slide[data-slide-current] {
+    z-index: 1;
+  }
+
+  .semantic-deck[data-slide-state='moving'] > .deck-stage > .semantic-slide[data-slide-current] {
+    animation: var(--slide-enter, slide-fade-in) var(--slide-duration) var(--motion-ease, ease-out)
+      both;
+  }
+
+  .semantic-deck[data-slide-state='moving'] > .deck-stage > .semantic-slide[data-slide-leaving] {
+    animation: var(--slide-exit, slide-fade-out) var(--slide-duration) var(--motion-ease, ease-out)
+      both;
+  }
+
+  .deck-stage:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 3px;
+  }
+
+  /* Шаг слайда: содержимое `appear` скрыто до своего шага и приходит выбранным способом. */
+  .semantic-deck[data-deck-active] .semantic-slide .semantic-appear:not([data-shown]) {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  .semantic-deck[data-slide-state='moving'] .semantic-slide .semantic-appear[data-shown] {
+    animation: var(--appear, appear-rise) var(--slide-duration) var(--motion-ease, ease-out) both;
+  }
+
+  .semantic-slide .semantic-appear[data-effect='fade'] {
+    --appear: slide-fade-in;
+  }
+
+  .semantic-slide .semantic-appear[data-effect='wipe'] {
+    --appear: slide-wipe-in;
+  }
+
+  .semantic-slide .semantic-appear[data-effect='pop'] {
+    --appear: appear-pop;
+  }
+
+  .deck-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .deck-counter {
+    min-width: 7.5rem;
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+
+  /*
+   * На весь экран: Fullscreen API или, где страница не может его взять, колода накрывает окно сама.
+   * Слайд вписывается в окно по 16:9 над строкой кнопок и растёт вместе с кеглем.
+   */
+  .semantic-deck:fullscreen,
+  .semantic-deck[data-deck-expanded] {
+    display: grid;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    margin: 0;
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: center;
+    justify-items: center;
+    padding: clamp(0.75rem, 2.5vmin, 2rem);
+    background: var(--color-bg);
+  }
+
+  .semantic-deck[data-deck-expanded] {
+    position: fixed;
+    z-index: 100;
+    inset: 0;
+    overflow: auto;
+    border: 0;
+    color: var(--color-text);
+  }
+
+  :root[data-deck-expanded] {
+    overflow: hidden;
+  }
+
+  .semantic-deck:is(:fullscreen, [data-deck-expanded]) > .semantic-title {
+    display: none;
+  }
+
+  .semantic-deck:is(:fullscreen, [data-deck-expanded]) > .deck-stage {
+    width: min(100%, calc((100dvh - 6rem) * 16 / 9));
+    max-height: 100%;
+    overflow: auto;
+  }
+
+  .semantic-deck:is(:fullscreen, [data-deck-expanded]) > .deck-controls {
+    width: min(100%, calc((100dvh - 6rem) * 16 / 9));
+  }
+
+  @media print {
+    .deck-controls {
+      display: none;
+    }
+
+    .semantic-deck[data-deck-active] > .deck-stage {
+      gap: 1rem;
+    }
+
+    .semantic-deck[data-deck-active] > .deck-stage > .semantic-slide {
+      grid-area: auto;
+      visibility: visible;
+      animation: none;
+    }
+
+    .semantic-slide {
+      break-inside: avoid;
+    }
+
+    .semantic-deck[data-deck-active] .semantic-slide .semantic-appear:not([data-shown]) {
+      visibility: visible;
+      opacity: 1;
+    }
+  }
+}

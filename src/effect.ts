@@ -64,7 +64,7 @@ export interface EffectObstacles {
 
 /** Контекст вёрстки на момент вызова. */
 export interface EffectLayout {
-  /** Режим вёрстки страницы из манифеста: `document`, `dashboard`, `landing`, `mixed`, `slides`, `screens`. */
+  /** Режим вёрстки страницы из манифеста: `document`, `dashboard`, `landing`, `mixed`, `slides`. */
   readonly mode: string;
   /** Узкий экран (не шире 720 CSS px): параметры эффекта берутся из пары `narrow`. */
   readonly narrow: boolean;

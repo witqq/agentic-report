@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { Ajv2020 } from 'ajv/dist/2020.js';
@@ -204,6 +204,11 @@ describe('registry-driven semantic directives', () => {
       'Second beat.',
       ':::',
       '::::::',
+      ':::table{layout="scroll"}',
+      '| Key | Value |',
+      '| --- | --- |',
+      '| mode | on |',
+      ':::',
       '::::findings{title="Findings"}',
       ':::finding{severity="major" title="Key is unstable" location="src/a.ts:2"}',
       'Finding body.',
@@ -213,6 +218,12 @@ describe('registry-driven semantic directives', () => {
       '::asset{src="data.json"}',
       '::video{src="clip.webm" caption="Recorded run"}',
       '::font{src="reader.woff" family="Reader Sans"}',
+      '',
+      '::::deck{title="Deck"}',
+      ':::slide',
+      'Slide body.',
+      ':::',
+      '::::',
     ].join('\n');
 
     const rendered = await render(markdown, workspace);
@@ -597,6 +608,9 @@ describe('registry-driven semantic directives', () => {
       path.join(workspace, 'local chapters.vtt'),
       'WEBVTT\n\n00:00.000 --> 00:01.000\nStart\n',
     );
+    await cp(path.resolve('tests/fixtures/video/film'), path.join(workspace, 'local film'), {
+      recursive: true,
+    });
 
     for (const directive of authoringRegistry.directives as readonly DirectiveDefinition[]) {
       if (BUILD_TIME_DIRECTIVES.has(directive.name)) continue;
@@ -715,7 +729,7 @@ describe('registry-driven semantic directives', () => {
     expect(rendered.html).toContain('id="glossary-shared-concept"');
     expect(rendered.html).toMatch(/<details[^>]*data-disclosure=""[^>]*open/u);
     expect(rendered.html).toMatch(
-      /<summary class="semantic-disclosure-summary ui-row" data-ui-size="md">[\s\S]*?data-package-icon="arrow-down"[\s\S]*?Native details[\s\S]*?<\/summary>/u,
+      /<summary class="semantic-disclosure-summary ui-row" data-ui-size="md">Native details<\/summary>/u,
     );
     expect(rendered.html).toContain('id="tabs-1-tab-1"');
     expect(rendered.html).toContain('id="tabs-2-tab-1"');
@@ -1561,6 +1575,12 @@ describe('registry-driven semantic directives', () => {
     expect(firstGrouped.html).toContain('data-diagram-type="flow"');
     const groupedView = defaultView(firstGrouped.html);
     expect(groupedView.match(/data-group-id=/gu)).toHaveLength(3);
+    // Поток шире телефонной дорожки несёт и узкую форму с теми же группами и узлами.
+    const compactForm = firstGrouped.html.match(
+      /<svg\b[^>]*\bdata-diagram-compact\b[^>]*>[\s\S]*?<\/svg>/u,
+    )?.[0];
+    expect(compactForm?.match(/data-group-id=/gu)).toHaveLength(3);
+    expect(compactForm?.match(/data-node-id=/gu)).toHaveLength(18);
     expect(groupedView.match(/data-node-id=/gu)).toHaveLength(18);
     // Слои идут по потоку: каждая прямая связь ведёт в более поздний слой, а обратная связь
     // описывается отдельно и в слоях ничего не ломает.
@@ -2607,7 +2627,8 @@ describe('six-class declarative registry corpus', () => {
     expect(allHtml).toContain('>Download private-data.json</a>');
     expect(allHtml).toContain('font-family:"Private Reader"');
     expect(allHtml).toContain('<table ');
-    expect(allHtml).toContain('<th class="ui-label">Задача</th>');
+    // Роли таблицы держат её смысл и тогда, когда узкая дорожка показывает строки карточками.
+    expect(allHtml).toContain('<th class="ui-label" role="columnheader">Задача</th>');
   });
 });
 
@@ -2664,12 +2685,17 @@ function sourceOffsetAt(source: string, line: number, column: number): number {
   return offset + column - 1;
 }
 
-/** Разметка без скрытых видов раскладки: геометрию и счёт узлов проверяет вид по умолчанию. */
+/**
+ * Разметка без скрытых видов раскладки и без узкой формы для телефона, которую показывает рантайм:
+ * геометрию и счёт узлов проверяет вид по умолчанию.
+ */
 function defaultView(html: string): string {
-  return html.replace(
-    /<div id="[^"]*" role="tabpanel"[^>]*\bhidden\b[^>]*>[\s\S]*?<\/svg><\/div><\/div>/gu,
-    '',
-  );
+  return html
+    .replace(
+      /<div id="[^"]*" role="tabpanel"[^>]*\bhidden\b[^>]*>[\s\S]*?<\/svg><\/div><\/div>/gu,
+      '',
+    )
+    .replace(/<svg\b[^>]*\bdata-diagram-compact\b[^>]*>[\s\S]*?<\/svg>/gu, '');
 }
 
 function diagramNodePosition(html: string, id: string): Readonly<{ x: number; y: number }> {
@@ -2686,6 +2712,7 @@ function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
   // Видео и постер проверяются по типу файла, поэтому им нужны свои расширения.
   if (attribute.renderProperty === 'dataVideoSource') return 'local%20video.webm';
   if (attribute.renderProperty === 'dataVideoPoster') return 'local%20poster.png';
+  if (attribute.renderProperty === 'dataVideoDarkPoster') return 'local%20poster.png';
   if (attribute.constraint.kind === 'boolean') return 'true';
   if (attribute.constraint.kind === 'integer') return boundedInteger(attribute.constraint, 2);
   if (attribute.constraint.kind === 'number') return '2.5';
@@ -2730,8 +2757,10 @@ function renderedAttributeValue(attribute: DirectiveAttributeDefinition): string
   // Видео и постер проверяются по типу файла, поэтому им нужны свои расширения.
   if (attribute.renderProperty === 'dataVideoSource') return 'local%20video.webm';
   if (attribute.renderProperty === 'dataVideoPoster') return 'local%20poster.png';
+  if (attribute.renderProperty === 'dataVideoDarkPoster') return 'local%20poster.png';
   if (attribute.renderProperty === 'dataVideoSources') return 'local%20video.webm';
   if (attribute.renderProperty === 'dataVideoChapters') return 'local%20chapters.vtt';
+  if (attribute.renderProperty === 'dataVideoFrom') return 'local%20film';
   if (attribute.constraint.kind === 'boolean') return 'true';
   if (attribute.constraint.kind === 'integer')
     return boundedInteger(attribute.constraint, -999_999);
@@ -2805,6 +2834,12 @@ function directiveInvocation(
       .map((attribute) => [attribute.name, renderedAttributeValue(attribute)]),
   );
   Object.assign(attributes, overrides);
+  // Видео называет запись одним из двух атрибутов: без `from` ему нужен `src`.
+  if (directive.name === 'video' && !('src' in attributes) && !('from' in attributes))
+    attributes.src = 'local%20video.webm';
+  // Тёмный постер заменяет светлый, поэтому без светлого постера видео его не принимает.
+  if (directive.name === 'video' && 'dark-poster' in attributes && !('poster' in attributes))
+    attributes.poster = 'local%20poster.png';
   const serialized = Object.entries(attributes)
     .map(([name, value]) => `${name}=${JSON.stringify(value)}`)
     .join(' ');
@@ -2858,6 +2893,9 @@ function directiveInvocation(
   }
   if (directive.name === 'checklist') {
     return `:::checklist${suffix}\n::check-item{id="gate" label="Gate"}\n:::`;
+  }
+  if (directive.name === 'deck') {
+    return `::::deck${suffix}\n:::slide\nBody\n:::\n::::`;
   }
   if (directive.name === 'source-link') return `:source-link${suffix}`;
   // Счётчик считает до записанного числа: его подпись — число.
@@ -2913,6 +2951,9 @@ function dataAndTextInvocation(
       return `:::message{${pairs({ from: 'T', ...overrides })}}\nBody\n:::`;
     case 'conversation':
       return `::::conversation{${pairs(overrides)}}\n:::message{from="A"}\nBody\n:::\n::::`;
+    // A table directive holds one Markdown table and nothing else.
+    case 'table':
+      return `:::table{${pairs(overrides)}}\n| Key | Value |\n| --- | --- |\n| mode | on |\n:::`;
     // Мини-схема читает шаги из подписи, текущий шаг и возвраты — имена этих шагов.
     case 'process':
       return `:process[Plan > Build > Review]{${pairs({
@@ -2931,6 +2972,7 @@ const DATA_AND_TEXT_PROJECTIONS: Readonly<Record<string, (value: string) => stri
   'time.show': () => 'datetime="2026-09-25T01:17:00Z"',
   'source-line.date': () => '<time datetime="2026-09-25T01:17:00Z">',
   'source-line.zone': () => '<time datetime="2026-09-25T01:17:00Z">',
+  'table.layout': (value) => `data-table-layout="${value}"`,
   'message.from': (value) => `class="semantic-message-from">${value}<`,
   'message.time': (value) => `class="semantic-message-time">${value}<`,
   'message.status': (value) => `class="semantic-message-status">${value}<`,
@@ -3432,6 +3474,18 @@ function assertRenderedAttribute(
     expect(rendered.html).toContain(`aria-checked="${serialized === 'on' ? 'true' : 'false'}"`);
     return;
   }
+  // A deck's id is its anchor: `#id/3` opens its third slide.
+  if (directive.name === 'deck' && attribute.name === 'id') {
+    expect(rendered.html, 'deck.id').toMatch(
+      new RegExp(`class="semantic-deck"[^>]*id="${serialized}"`, 'u'),
+    );
+    return;
+  }
+  // A slide's transition is the one a presentation slide takes.
+  if (directive.name === 'slide' && attribute.name === 'transition') {
+    expect(rendered.html, 'slide.transition').toContain(`data-slide-transition="${serialized}"`);
+    return;
+  }
   switch (attribute.renderProperty) {
     case 'dataDirectiveTitle':
       expect(rendered.html, `${directive.name}.${attribute.name}`).toContain(`>${serialized}<`);
@@ -3456,10 +3510,25 @@ function assertRenderedAttribute(
         'poster="data:image/png;base64,',
       );
       return;
+    case 'dataVideoFrom':
+      // Фильм отдаёт одному файлу самую совместимую кодировку и свой постер.
+      expect(rendered.html, `${directive.name}.${attribute.name}`).toContain(
+        '<source src="data:video/mp4;base64,',
+      );
+      expect(rendered.html, `${directive.name}.${attribute.name}`).toContain(
+        'poster="data:image/webp;base64,',
+      );
+      return;
     case 'dataVideoSources':
       // В одном файле остаётся один источник: дополнительная кодировка того же ролика не встраивается.
       expect(rendered.html, `${directive.name}.${attribute.name}`).toContain(
         '<source src="data:video/webm;base64,',
+      );
+      return;
+    case 'dataVideoDarkPoster':
+      // Тёмный постер встраивается, как светлый, и уходит рантайму схемы отдельным атрибутом.
+      expect(rendered.html, `${directive.name}.${attribute.name}`).toContain(
+        'data-dark-poster="data:image/png;base64,',
       );
       return;
     case 'dataVideoChapters':

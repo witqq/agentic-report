@@ -24,10 +24,12 @@ The category is a recommendation, not a limit: any directive, mode or effect of 
 
 One row per file under `assets/`: where it came from and under which licence. Origin is `build-screenshot`, `screencast`, `diagram`, `photo`, `drawn`, `placeholder` (a stand-in for real material still to come, marked as such on the page), or `generated` with its reason in Source.
 
-| File                | Origin | Source                                      | Licence       |
-| ------------------- | ------ | ------------------------------------------- | ------------- |
-| `page-model.svg`    | drawn  | drawn for this page: the layered page model | project (MIT) |
-| `page-model.ru.svg` | drawn  | Russian version of `page-model.svg`         | project (MIT) |
+| File                     | Origin | Source                                                                                  | Licence       |
+| ------------------------ | ------ | --------------------------------------------------------------------------------------- | ------------- |
+| `page-model.svg`         | drawn  | drawn for this page: the layered page model                                             | project (MIT) |
+| `page-model-dark.svg`    | drawn  | dark-scheme variant of `page-model.svg`, the same drawing in the page's dark colours    | project (MIT) |
+| `page-model.ru.svg`      | drawn  | Russian version of `page-model.svg`                                                     | project (MIT) |
+| `page-model-dark.ru.svg` | drawn  | dark-scheme variant of `page-model.ru.svg`, the same drawing in the page's dark colours | project (MIT) |
 
 ## Unresolved content facts
 

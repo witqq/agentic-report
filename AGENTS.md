@@ -14,15 +14,13 @@ commit, everything an agent reads about it:
 - the generated catalogue and schemas (`pnpm generate:authoring`; `pnpm check:authoring` fails when they are
   stale);
 - the user and agent documentation that states the fact (`README.md`, `docs/AGENT-REFERENCE.md`,
-  `docs/product/source-contract.md`, the public site under `website/`);
-- the backlog entry in [`docs/BACKLOG.md`](docs/BACKLOG.md), when the change closes one.
+  `docs/product/source-contract.md`, the public site under `website/`).
 
 Each fact lives in one place and the others link to it; a copied fact drifts.
 
-The skill knowledge must be usable without opening external links: state each lesson as an action, condition,
-measurement, or counterexample in the relevant reference. Keep an external address only when the address
-itself is an action target, a literal example, or a licence requirement. List every allowed address with
-its file and reason in `tests/unit/skill-self-contained.test.ts`; the test also rejects obsolete exceptions.
+The skill is self-contained: write a lesson as its content — the rule, the number — not as a link. An
+external address in `skills/agentic-report` comes only from the allowlist in
+`tests/unit/skill-self-contained.test.ts`.
 
 ## Where to look
 
@@ -31,7 +29,6 @@ its file and reason in `tests/unit/skill-self-contained.test.ts`; the test also 
 | How the compiler, runtime and output are built | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)                                                                           |
 | What an author may write                       | [`docs/product/source-contract.md`](docs/product/source-contract.md), `agentic-report schema`                            |
 | What agents are taught                         | [`skills/agentic-report/`](skills/agentic-report/)                                                                       |
-| What is planned and what the owner decided     | [`docs/BACKLOG.md`](docs/BACKLOG.md), [`docs/decisions.md`](docs/decisions.md)                                           |
 | How to test, build and release                 | [`docs/TESTING.md`](docs/TESTING.md), [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md), [`docs/RELEASE.md`](docs/RELEASE.md) |
 | How to contribute and report a vulnerability   | [`CONTRIBUTING.md`](CONTRIBUTING.md), [`SECURITY.md`](SECURITY.md)                                                       |
 
@@ -47,6 +44,9 @@ its file and reason in `tests/unit/skill-self-contained.test.ts`; the test also 
   page security policy, and checks it with the same checks as the built-in effects.
 - Preserve `single-file` as the default output and `directory` as the optional large-page output.
 - React and Vite are internal implementation details. Do not expose them as requirements for CLI users.
+- Do not add timed annotations over video (a `video-note` block): agentic-screencast draws annotations in
+  the frame itself, an overlay drifts on seeking and is invisible to a screen reader, and what a reader
+  needs without the video belongs in the caption and the chapters.
 - Keep CLI JSON/NDJSON output stable, structured, and free of file contents or credentials.
 
 ## Governing product principles
@@ -54,11 +54,6 @@ its file and reason in `tests/unit/skill-self-contained.test.ts`; the test also 
 Simplicity, visual quality, and usability are the primary product criteria. `agentic-report` must make a
 polished agent-to-human page materially easier and faster to produce than implementing an equivalent page
 from scratch.
-
-Optimize the agent's path from a brief to a finished, high-quality page. Common cases should need only
-declarative source and strong defaults: keep layout decisions and visual quality in the package, make the
-ordinary `init` → edit → `build` path short, and prefer existing universal primitives before introducing
-another author choice or using a custom extension for a design-specific need.
 
 - Guarantee quality by construction. Ordinary declarative content composed from package-owned components and
   blocks must produce a coherent, polished, responsive result by default.
@@ -112,9 +107,8 @@ tests.
 
 ## Verification
 
-- Run tests only through `pnpm test`, `pnpm test:ci`, `pnpm test:unit`, or `pnpm test:e2e`; these invoke
-  Testfold. The default `pnpm test` runs unit and E2E locally; pull-request and release automation use
-  browser-free `pnpm verify:ci`, and scheduled nightly automation runs E2E.
+- Run tests only through `pnpm test`, `pnpm test:unit`, `pnpm test:e2e`, or `pnpm test:perf` (timed budgets,
+  alone and never in parallel with another suite); these invoke Testfold.
 - Read `test-results/summary.json` and generated failure Markdown before rerunning failures.
 - Run `pnpm verify` before a commit when the environment supports browser tests.
 - Browser tests open normal generated artifacts through `file://`; do not introduce a test server or a

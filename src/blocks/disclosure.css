@@ -1,0 +1,55 @@
+@layer components {
+  @media (width > 48rem) {
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-section:is(
+        [data-width='standard'],
+        [data-width='wide']
+      )[data-composition='flow']:not([data-align='center'])
+      > .semantic-disclosure
+      > pre:not([data-diff-block]),
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-section:is(
+        [data-width='standard'],
+        [data-width='wide']
+      )[data-composition='flow']:not([data-align='center'])
+      > .semantic-tabs
+      > [data-tab-panel]
+      > pre:not([data-diff-block]) {
+      --code-need: calc(var(--code-columns, 0) * 0.528em + 2.2rem + 2px);
+      --code-width: clamp(
+        min(var(--prose-measure), 100%),
+        (var(--code-need) - var(--prose-measure)) * 1000 + var(--prose-measure),
+        var(--code-track, 100%)
+      );
+
+      /* Wider than its text container, the block would overhang it equally on both sides. */
+      width: var(--code-width);
+      min-width: 0;
+      max-width: none;
+      margin-inline: calc((100% - var(--code-width)) / 2);
+    }
+
+    /*
+     * A code block takes the reading measure when its longest line fits it and the column's widest step
+     * (`--code-track`) when it does not, and scrolls past that; while the column has one width both are the
+     * measure. The compiler writes the longest line in code characters as `--code-columns`; a code character
+     * is 0.6em of the code face, which is 0.88em of the block.
+     */
+
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-section:is([data-width='standard'], [data-width='wide'])[data-composition='flow']
+      > :is(.semantic-disclosure, .semantic-tabs) {
+      --code-track: var(--column-wide);
+    }
+  }
+
+  :root[data-theme-console='on'] .semantic-disclosure {
+    border-block-style: dashed;
+  }
+}

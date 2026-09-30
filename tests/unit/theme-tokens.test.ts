@@ -12,12 +12,13 @@ import {
 import { THEME_TOKENS } from '../../src/authoring/theme-tokens.js';
 import { BUILT_IN_THEME_NAMES, resolveBuiltInTheme } from '../../src/authoring/themes.js';
 import { themeStylesheet } from '../../src/render/theme-css.js';
+import { readPackageStylesheet } from '../helpers/package-stylesheet.js';
 
 /**
  * Облик страницы целиком приходит из темы и шкал пакета: статические стили не называют числом ни
  * цвета, ни гарнитуры, ни скругления, ни цвета тени, ни насыщенности, ни кегля. Правила живут в
  * `src/authoring/style-rules.ts` — те же проверяют стили составных блоков расширений при сборке; здесь
- * они читают каждое объявление `document.css` с поимённым списком исключений пакета.
+ * они читают каждое объявление таблиц стилей пакета (ядро и возможности страницы) с поимённым списком исключений пакета.
  */
 const ALLOWED = DOCUMENT_STYLE_ALLOWANCES.properties;
 const FONT_SIZE_ALLOWED = DOCUMENT_STYLE_ALLOWANCES.fontSizes;
@@ -31,7 +32,7 @@ function violations(css: string): readonly string[] {
 
 describe('theme tokens own the look', () => {
   it('keeps colour, typeface, weight and size literals out of the static stylesheet', async () => {
-    const css = await readFile(path.resolve('src/browser/document.css'), 'utf8');
+    const css = await readPackageStylesheet();
     expect(violations(css)).toEqual([]);
   });
 
@@ -60,6 +61,42 @@ describe('theme tokens own the look', () => {
       '9: font-weight is not a weight token: 800',
       '9: font-size is off the type scale: 13px',
     ]);
+  });
+});
+
+/**
+ * Шкала кегля на телефоне: метка и мета не мельче 12 px, подписи к рисункам, видео, диффам и источникам —
+ * не мельче 14 px. Кегль читается из переменных шкалы на корне и из их переопределения в окне телефона.
+ */
+describe('the phone type ramp', () => {
+  it('raises labels to 12 px and keeps captions at 14 px on a phone', async () => {
+    const css = await readPackageStylesheet();
+    const rem = (value: string | undefined): number =>
+      Number.parseFloat((value ?? '0rem').replace('rem', '')) * 16;
+    const scale = (text: string): Record<string, number> =>
+      Object.fromEntries(
+        [...text.matchAll(/(--text-[a-z]+):\s*([\d.]+rem)/gu)].map((match) => [
+          match[1] ?? '',
+          rem(match[2]),
+        ]),
+      );
+    const phoneBlock = /@media \(width <= 48rem\) \{\s*:root \{([^}]*)\}/u.exec(css)?.[1] ?? '';
+    const phone = { ...scale(css), ...scale(phoneBlock) };
+    // Ловит: метка 11 px и мета 12 px на телефоне (шкала без переопределения).
+    expect(phone['--text-label']).toBeGreaterThanOrEqual(12);
+    expect(phone['--text-xs']).toBeGreaterThanOrEqual(12);
+    const captionSizes = styleDeclarations(css)
+      .filter(
+        (declaration) =>
+          declaration.property === 'font-size' &&
+          /(?:^|[\s,])\.(?:semantic-(?:video|conversation|diff)-caption|semantic-source-line|visualization-description|visualization-zoom-caption)(?:[\s,:]|$)/u.test(
+            declaration.selector,
+          ),
+      )
+      .map((declaration) => `${declaration.selector}: ${declaration.value}`);
+    expect(captionSizes.length).toBeGreaterThanOrEqual(6);
+    // Ловит: подпись набрана мельче `--text-sm` (строка источника была `--text-xs`, 12 px).
+    for (const size of captionSizes) expect(size).toMatch(/var\(--text-(?:sm|md|lg)\)$/u);
   });
 });
 
@@ -133,7 +170,7 @@ describe('the theme token contract', () => {
   });
 
   it('reads every token of the vocabulary somewhere', async () => {
-    const css = await readFile(path.resolve('src/browser/document.css'), 'utf8');
+    const css = await readPackageStylesheet();
     const code = (await sourceFiles())
       .filter(({ file }) => !/theme-(?:tokens|css)\.ts$/u.test(file))
       .map(({ text }) => text)
@@ -151,7 +188,7 @@ describe('the theme token contract', () => {
   });
 
   it('reads no variable that nobody declares', async () => {
-    const css = await readFile(path.resolve('src/browser/document.css'), 'utf8');
+    const css = await readPackageStylesheet();
     const code = (await sourceFiles()).map(({ text }) => text).join('\n');
     const known = new Set<string>(THEME_TOKENS.map((token) => token.name));
     for (const match of css.matchAll(/(--[a-z][a-z0-9-]*)\s*:/gu)) known.add(match[1] ?? '');
@@ -189,7 +226,7 @@ describe('the theme token contract', () => {
   });
 
   it('drops a stylesheet exception that no declaration needs any more', async () => {
-    const found = declarations(await readFile(path.resolve('src/browser/document.css'), 'utf8'));
+    const found = declarations(await readPackageStylesheet());
     for (const allowed of ALLOWED)
       expect(
         found.some((declaration) => declaration.property === allowed.property),

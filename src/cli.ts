@@ -66,6 +66,7 @@ interface BuildCommandOptions {
   readonly review?: string;
   readonly share?: boolean;
   readonly url?: string;
+  readonly since?: string;
 }
 
 interface InitCommandOptions {
@@ -85,6 +86,7 @@ interface SnapshotCommandOptions {
   readonly schemes?: readonly SnapshotScheme[];
   readonly motion?: readonly SnapshotMotion[];
   readonly measure?: boolean;
+  readonly since?: string;
 }
 
 interface AnalysisCommandOptions {
@@ -92,6 +94,7 @@ interface AnalysisCommandOptions {
   readonly json?: boolean;
   readonly review?: string;
   readonly url?: string;
+  readonly since?: string;
 }
 
 const program = new Command();
@@ -170,6 +173,10 @@ program
   .option('--review <path>', 'Confined prior review JSON sidecar')
   .option('--share', 'Neutralize workstation source links for distribution')
   .option('--url <url>', 'Absolute public URL of the page; overrides the manifest url')
+  .option(
+    '--since <path>',
+    'Previous edition the reader saw: a built page (.html or directory) or its source; the page shows what changed',
+  )
   .option('--json', 'Accepted; agent NDJSON is the default output')
   .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
   .action(async (input: string, commandOptions: BuildCommandOptions) => {
@@ -180,6 +187,7 @@ program
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
         ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
         ...(commandOptions.url === undefined ? {} : { url: commandOptions.url }),
+        ...(commandOptions.since === undefined ? {} : { since: commandOptions.since }),
         share: commandOptions.share === true,
       });
       writeSuccess(result, invocationRunId, outputMode);
@@ -199,6 +207,10 @@ program
   .option('--format <format>', 'single-file or directory', parseFormat)
   .option('--review <path>', 'Confined prior review JSON sidecar')
   .option('--url <url>', 'Absolute public URL of the page; overrides the manifest url')
+  .option(
+    '--since <path>',
+    'Previous edition the reader saw: a built page (.html or directory) or its source; the page shows what changed',
+  )
   .option('--json', 'Accepted; agent NDJSON is the default output')
   .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
   .action(async (input: string, commandOptions: AnalysisCommandOptions) => {
@@ -208,6 +220,7 @@ program
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
         ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
         ...(commandOptions.url === undefined ? {} : { url: commandOptions.url }),
+        ...(commandOptions.since === undefined ? {} : { since: commandOptions.since }),
       });
       writeValidateSuccess(result, invocationRunId, outputMode);
     } catch (error) {
@@ -224,6 +237,10 @@ program
   .option('--format <format>', 'single-file or directory', parseFormat)
   .option('--review <path>', 'Confined prior review JSON sidecar')
   .option('--url <url>', 'Absolute public URL of the page; overrides the manifest url')
+  .option(
+    '--since <path>',
+    'Previous edition the reader saw: a built page (.html or directory) or its source; the page shows what changed',
+  )
   .option('--json', 'Accepted; agent NDJSON is the default output')
   .option('--human', 'Emit the indented catalog for a human reader instead of agent NDJSON')
   .action(async (input: string, commandOptions: AnalysisCommandOptions) => {
@@ -233,6 +250,7 @@ program
         ...(commandOptions.format === undefined ? {} : { format: commandOptions.format }),
         ...(commandOptions.review === undefined ? {} : { review: commandOptions.review }),
         ...(commandOptions.url === undefined ? {} : { url: commandOptions.url }),
+        ...(commandOptions.since === undefined ? {} : { since: commandOptions.since }),
       });
       writeInspectSuccess(result, invocationRunId, outputMode);
     } catch (error) {
@@ -295,6 +313,10 @@ program
     parseChoices(value, SNAPSHOT_MOTIONS, '--motion'),
   )
   .option(
+    '--since <path>',
+    'Previous edition the reader saw: a built page (.html or directory) or its source; the photographed page carries its change layer',
+  )
+  .option(
     '--measure',
     'Measure instead of photographing: sideways overflow, small text, contrast, covered text, empty bands, clipped headings, first screen and stops, one record per width, scheme and motion',
   )
@@ -308,6 +330,7 @@ program
         ...(commandOptions.widths === undefined ? {} : { widths: commandOptions.widths }),
         ...(commandOptions.schemes === undefined ? {} : { schemes: commandOptions.schemes }),
         ...(commandOptions.motion === undefined ? {} : { motions: commandOptions.motion }),
+        ...(commandOptions.since === undefined ? {} : { since: commandOptions.since }),
       };
       if (commandOptions.measure === true) {
         writeMeasureSuccess(await measureReport(options), invocationRunId, outputMode);
@@ -589,6 +612,12 @@ function writeMeasureSuccess(result: MeasureReportResult, runId: string, mode: O
     'scene',
     'cut',
     'errors',
+    'tables',
+    'column',
+    'code',
+    'labels',
+    'scheme-blocks',
+    'columns',
     'defects',
   ];
   const rows = sanitized.measurements.map((measurement) => [
@@ -606,6 +635,17 @@ function writeMeasureSuccess(result: MeasureReportResult, runId: string, mode: O
     `${Math.round(measurement.firstScreen.mainSceneShare * 100)}%`,
     String(measurement.stops.filter((stop) => !stop.fits).length),
     String(measurement.pageErrors.length + measurement.failedFonts.length),
+    String(
+      measurement.tables.wide.count +
+        measurement.tables.sparse.count +
+        measurement.tables.deadSurface.count +
+        measurement.tables.flushText.count,
+    ),
+    `${Math.round(measurement.readingColumn.share * 100)}%${measurement.readingColumn.narrow ? '!' : ''}`,
+    String(measurement.codeBreaks.count),
+    String(measurement.diagramLabels.count),
+    String(measurement.offSchemeBlocks.count),
+    String(measurement.sectionColumns.count),
     String(measurement.defects),
   ]);
   const widths = header.map((title, column) =>

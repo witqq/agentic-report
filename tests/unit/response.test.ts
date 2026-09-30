@@ -3,7 +3,6 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { validateExtensionProposal } from '../../src/authoring/extension-gate.js';
 import { buildReport } from '../../src/core/compiler.js';
 import {
   RESPONSE_CONTRACT_VERSION,
@@ -284,13 +283,6 @@ describe('response workspace contract', () => {
         },
       });
     }
-  });
-
-  it('ships an accepted trust-boundary proposal for the response workspace', async () => {
-    const proposal = JSON.parse(
-      await readFile(path.resolve('docs/product/response-workspace-extension.json'), 'utf8'),
-    ) as unknown;
-    expect(validateExtensionProposal(proposal)).toEqual({ accepted: true, issues: [] });
   });
 
   it('compiles the documented response workspace example', async () => {

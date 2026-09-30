@@ -4,14 +4,15 @@ import type { Root as MdastRoot } from 'mdast';
 import type { DirectiveDefinition } from '../authoring/directive-contract.js';
 import type { AgenticReportError } from '../diagnostics.js';
 import { type PackageLocale, type PackageStrings, resolvePackageLocale } from '../localization.js';
+import type { BlockFeature } from '../page-features.js';
 import type { AuthoredRule } from '../render/authored-rules.js';
 import type { DirectiveNode, LocatedNode } from './mdast.js';
 
 /**
  * A block is the unit the directive vocabulary is built from: one directive with everything the
  * package needs to know about it — its grammar, its own authored checks, how its element is
- * enhanced, its messages, its runtime controller, where its styles come from, what it is without
- * motion, and examples that must validate. The registry, the schemas and the sanitizer are built
+ * enhanced, its messages, the page feature that carries its browser controller and styles, what it
+ * is without motion, and examples that must validate. The registry, the schemas and the sanitizer are built
  * from the definitions of the registered blocks; the directive core dispatches to the hooks by
  * block name and never names a block itself.
  */
@@ -102,13 +103,6 @@ export interface BlockDocumentContext {
   readonly layout: string | undefined;
 }
 
-/**
- * Where the block's styles come from. Built-in blocks are styled by the package stylesheet; the
- * field exists so that a block shipped outside the package can bring styles written only in theme
- * tokens.
- */
-export type BlockStyles = 'package';
-
 interface BlockSpecificationFields<Prepared, Messages> {
   /** The grammar: name, forms, attributes, children, placement, behavior, sanitizer, security. */
   readonly definition: DirectiveDefinition;
@@ -149,11 +143,11 @@ interface BlockSpecificationFields<Prepared, Messages> {
   /** A pass over the whole enhanced document, in block order, before navigation is resolved. */
   readonly finalize?: (tree: HastRoot, context: BlockDocumentContext) => void;
   /**
-   * The runtime controller that brings the block to life in the browser. Metadata in this stage;
-   * by default the controller named by the definition's `behavior.runtime`.
+   * The page feature that brings the block to life: its browser module and its stylesheet
+   * (`src/page-features.ts`). A page carries a feature only when it renders a block that names it;
+   * `core` is the part every page carries.
    */
-  readonly runtime?: string;
-  readonly styles: BlockStyles;
+  readonly feature: BlockFeature;
   /** One sentence: what the block is without motion and in print. */
   readonly staticEquivalent: string;
   /** Source snippets that must validate as a whole page. */
@@ -184,8 +178,7 @@ export interface Block {
     ((element: Element, context: BlockPreparationContext) => Promise<void>) | undefined;
   readonly enhance: ((element: Element, context: BlockEnhancementServices) => void) | undefined;
   readonly finalize: ((tree: HastRoot, context: BlockDocumentContext) => void) | undefined;
-  readonly runtime: string | undefined;
-  readonly styles: BlockStyles;
+  readonly feature: BlockFeature;
   readonly staticEquivalent: string;
   readonly examples: readonly string[];
 }
@@ -231,10 +224,7 @@ export function defineBlock<Prepared = undefined, Messages = undefined>(
             enhance(element, { ...context, messages }, preparedByElement.get(element));
           },
     finalize: specification.finalize,
-    runtime:
-      specification.runtime ??
-      (definition.behavior.runtime === 'none' ? undefined : definition.behavior.runtime),
-    styles: specification.styles,
+    feature: specification.feature,
     staticEquivalent: specification.staticEquivalent,
     examples: specification.examples ?? [],
   };

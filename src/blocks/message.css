@@ -1,0 +1,18 @@
+@layer components {
+  .semantic-conversation-list > li:has(> .semantic-message[data-side='out']) {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  /* The text of a bubble has no outer margins: the bubble's padding is its only frame. */
+  .semantic-message-body {
+    display: grid;
+    gap: 0.5em;
+  }
+  @media print {
+    .semantic-message,
+    .semantic-conversation {
+      break-inside: avoid;
+    }
+  }
+}

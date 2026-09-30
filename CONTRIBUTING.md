@@ -1,8 +1,7 @@
 # Contributing to agentic-report
 
 Search existing issues before proposing a change. Report vulnerabilities privately through the process in
-[SECURITY.md](SECURITY.md). Project rules for agents and people are in [AGENTS.md](AGENTS.md); the planned work
-and the owner's decisions are in [docs/BACKLOG.md](docs/BACKLOG.md) and [docs/decisions.md](docs/decisions.md).
+[SECURITY.md](SECURITY.md). Project rules for agents and people are in [AGENTS.md](AGENTS.md).
 
 ## Development setup
 
@@ -15,10 +14,11 @@ pnpm exec playwright install chromium
 pnpm verify
 ```
 
-`pnpm verify` runs the full local unit and browser E2E suite, including installed-package `file://` checks.
-Pull-request and release workflows use browser-free `pnpm verify:ci`: generated authoring projections,
-strict types, lint, formatting, unit tests and the clean npm package consumer. The full Playwright suite
-also runs nightly at 03:00 UTC; it does not block a pull request or release. `pnpm check:history` refuses
+`pnpm verify` is the required pull-request and release gate: generated authoring projections, strict types,
+lint, formatting, unit tests, and the npm package consumer check. Chromium is needed for the installed-package
+`file://` smoke in that check. The full Playwright suite runs separately with `pnpm test:e2e`, nightly at
+03:00 UTC and by manual dispatch; it does not block a pull request or release. Timed budgets (long tasks and
+frame intervals at 4× CPU slowdown) run alone with `pnpm test:perf`, after it in the same nightly job. `pnpm check:history` refuses
 personal paths and credentials in tracked files.
 
 ## Changes
@@ -28,6 +28,16 @@ personal paths and credentials in tracked files.
   (`AGENTS.md`, «The one rule»). Run `pnpm generate:authoring` after touching the registry or the themes.
 - Reuse the registry, theme tokens, runtime controllers and interface primitives before adding a parallel
   mechanism. Every visual capability takes its look from theme tokens and has a reduced-motion state.
+- Keep the compiler invariants described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): single-file
+  output stays the default and directory output keeps working; every filesystem reference is confined to
+  the source root before it is read; author code runs only through declared extensions; output is
+  deterministic and reports its bytes, hashes and assets; a failed publication leaves the previous output
+  intact and removes compiler staging; output never aliases an entry, manifest, partial or asset; CLI
+  JSON/NDJSON records stay stable.
+- A new core capability — a directive or behavior every page may use — keeps the trust boundary: no author
+  code, callbacks, evaluation, dynamic imports or network access; source-root confinement; offline,
+  deterministic, CSP-compatible behavior with a bounded package-owned runtime. Its pull request shows
+  evidence for the grammar, accessibility, size budgets, and dependency licences.
 - Add a check that distinguishes the requested state from a plausible incorrect state, and show it failing on
   the counterexample before it passes.
 - Use imperative commit subjects with a `feat:`, `fix:`, `docs:`, `test:`, `build:`, or `chore:` prefix.
@@ -46,8 +56,8 @@ These cost review rounds, and none of them announce themselves:
   column; measure with `cqi` of the heading's own container.
 - A class or attribute that the runtime sets but no CSS rule reads silently does nothing; check both sides.
 - Browser tests that wait for "all animations" hang on an infinite animation: filter by a finite end time.
-- Under heavy machine load a few browser tests are timing-sensitive (see `docs/BACKLOG.md`, flaky tests); find
-  the source of nondeterminism instead of raising a timeout.
+- Under heavy machine load a few browser tests are timing-sensitive; find the source of nondeterminism instead of
+  raising a timeout.
 - The theme selector embeds the fonts of every theme; the unit test keeps it under 1.3 MB. A new pair that
   brings a new family spends that budget.
 - A string that a guard test plants as a counterexample must not appear literally in a tracked file, or the

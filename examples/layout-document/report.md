@@ -28,7 +28,7 @@ Accepted for the next implementation unit after local validation.
 The product turns declarative Markdown into a portable interactive browser page. Authors provide meaning;
 the package owns layout, tokens, navigation, and focus behavior.
 
-![A layered page model](page-model.svg)
+![A layered page model](page-model.svg){dark="page-model-dark.svg"}
 ::::::
 
 ::::::section{title="Options and decision" id="options" nav="Options" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal" scene="progress"}

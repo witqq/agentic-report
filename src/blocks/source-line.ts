@@ -154,7 +154,7 @@ export const sourceLine = defineBlock<undefined, SourceStrings>({
   validate: validateSource,
   enhance: enhanceSource,
   strings: SOURCE_STRINGS,
-  styles: 'package',
+  feature: 'source-line',
   staticEquivalent: 'One small line of text under the block it describes, the same in print.',
   examples: [
     '| Stage | Items |\n| --- | --- |\n| Review | 9 |\n\n::source-line[Moira export of run 96, 212 records]{date="2026-09-25T01:17" zone="Europe/Moscow"}\n',

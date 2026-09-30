@@ -86,7 +86,7 @@ export const copyable = defineBlock({
   ),
   validate: validateCopyable,
   enhance: enhanceCopyable,
-  styles: 'package',
+  feature: 'copyable',
   staticEquivalent: 'The prose itself; the copy control needs the browser and is not printed.',
   examples: [':::copyable\nRun the migration before the deploy, then restart the workers.\n:::\n'],
 });

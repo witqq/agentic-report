@@ -6,14 +6,76 @@ import type { ResolvedTheme, ThemeColorRole, ThemeColors } from './themes.js';
  * где пара ниже порога, не собирается: читатель получил бы страницу, которую нельзя прочитать, а агент
  * узнал бы об этом только глазами.
  */
-export const THEME_CONTRAST_PAIRS: readonly {
+export interface ThemeContrastPair {
   readonly foreground: ThemeColorRole;
   readonly background: ThemeColorRole;
   readonly minimum: number;
   readonly use: string;
   /** Цвет, который стили смешивают из роли и фона (`color-mix` в sRGB): доля роли в смеси. */
   readonly foregroundShare?: number;
-}[] = [
+  /**
+   * Подкраска фона: стили кладут поверх `background` роль `role` с долей `share`
+   * (`color-mix(in srgb, роль доля, transparent)`), и текст читается на этой смеси.
+   */
+  readonly backgroundTint?: { readonly role: ThemeColorRole; readonly share: number };
+}
+
+/**
+ * Роли кода и слова, которыми пара называет их в `use`. Каждая роль читается на каждой поверхности кода:
+ * на фоне блока, на подсвеченных строках диффа и редакции и на строке, которую зажёг такт сцены.
+ */
+const CODE_TOKEN_ROLES = [
+  ['codeText', 'code text'],
+  ['codeKeyword', 'code keywords'],
+  ['codeString', 'code strings'],
+  ['codeNumber', 'code numbers'],
+  ['codeFunction', 'code functions'],
+  ['codeType', 'code types'],
+  ['codeComment', 'code comments and line numbers'],
+  ['codePunctuation', 'code punctuation'],
+] as const satisfies readonly (readonly [ThemeColorRole, string])[];
+
+/**
+ * Поверхности кода, как их рисуют таблицы стилей пакета: строка «добавлено» (`.line[data-diff='add']` и строка
+ * редакции `[data-change='added']`) — «готово» 16 % поверх фона кода, строка «удалено» и призрак
+ * удалённой строки редакции — «вернули» 14 %, строка заголовка ханка — акцент 9 %, зажжённая тактом сцены
+ * строка (`.line[data-lit]`) — непрозрачный мягкий акцент. Доли здесь и в стилях меняются вместе.
+ */
+const CODE_SURFACES = [
+  { background: 'codeBackground', where: '' },
+  {
+    background: 'codeBackground',
+    where: ' on added diff and edition lines',
+    backgroundTint: { role: 'statusDone', share: 0.16 },
+  },
+  {
+    background: 'codeBackground',
+    where: ' on removed diff lines and removed-line ghosts of an edition',
+    backgroundTint: { role: 'statusReturned', share: 0.14 },
+  },
+  {
+    background: 'codeBackground',
+    where: ' on diff hunk lines',
+    backgroundTint: { role: 'accent', share: 0.09 },
+  },
+  { background: 'accentSoft', where: ' on lines lit by a scene step' },
+] as const satisfies readonly {
+  readonly background: ThemeColorRole;
+  readonly where: string;
+  readonly backgroundTint?: ThemeContrastPair['backgroundTint'];
+}[];
+
+const CODE_CONTRAST_PAIRS: readonly ThemeContrastPair[] = CODE_SURFACES.flatMap((surface) =>
+  CODE_TOKEN_ROLES.map(([foreground, name]) => ({
+    foreground,
+    background: surface.background,
+    minimum: 4.5,
+    use: `${name}${surface.where}`,
+    ...('backgroundTint' in surface ? { backgroundTint: surface.backgroundTint } : {}),
+  })),
+);
+
+export const THEME_CONTRAST_PAIRS: readonly ThemeContrastPair[] = [
   { foreground: 'heading', background: 'background', minimum: 4.5, use: 'headings on the page' },
   { foreground: 'text', background: 'background', minimum: 4.5, use: 'body text on the page' },
   { foreground: 'text', background: 'surface', minimum: 4.5, use: 'text inside components' },
@@ -29,7 +91,7 @@ export const THEME_CONTRAST_PAIRS: readonly {
     use: 'titles in accent sections',
   },
   { foreground: 'text', background: 'accentSoft', minimum: 4.5, use: 'text in accent sections' },
-  // Подпись в акцентной полосе — текст, растворённый в её фоне (`document.css`, тон `accent`).
+  // Подпись в акцентной полосе — текст, растворённый в её фоне (`src/browser/styles/core.css`, тон `accent`).
   {
     foreground: 'text',
     background: 'accentSoft',
@@ -71,13 +133,7 @@ export const THEME_CONTRAST_PAIRS: readonly {
     use: 'status «returned» in cards',
   },
   { foreground: 'focus', background: 'surface', minimum: 3, use: 'focus ring inside components' },
-  { foreground: 'codeText', background: 'codeBackground', minimum: 4.5, use: 'code text' },
-  { foreground: 'codeKeyword', background: 'codeBackground', minimum: 4.5, use: 'code keywords' },
-  { foreground: 'codeString', background: 'codeBackground', minimum: 4.5, use: 'code strings' },
-  { foreground: 'codeNumber', background: 'codeBackground', minimum: 4.5, use: 'code numbers' },
-  { foreground: 'codeFunction', background: 'codeBackground', minimum: 4.5, use: 'code functions' },
-  { foreground: 'codeType', background: 'codeBackground', minimum: 4.5, use: 'code types' },
-  { foreground: 'codeComment', background: 'codeBackground', minimum: 4.5, use: 'code comments' },
+  ...CODE_CONTRAST_PAIRS,
 ];
 
 export interface ThemeContrastProblem {
@@ -97,7 +153,13 @@ export function themeContrastProblems(theme: ResolvedTheme): readonly ThemeContr
     const colors = theme.colors[scheme];
     for (const pair of THEME_CONTRAST_PAIRS) {
       // Порог сравнивается с точным отношением: округлённое 4,495 выглядело бы как проходное 4,5.
-      const ratio = contrastRatio(colors, pair.foreground, pair.background, pair.foregroundShare);
+      const ratio = contrastRatio(
+        colors,
+        pair.foreground,
+        pair.background,
+        pair.foregroundShare,
+        pair.backgroundTint,
+      );
       if (ratio < pair.minimum)
         problems.push({
           scheme,
@@ -114,7 +176,7 @@ export function themeContrastProblems(theme: ResolvedTheme): readonly ThemeContr
 
 /**
  * Контраст одной пары ролей в схеме, как его считает проверка темы: роль накладывается на фон, фон — на
- * страницу. Команда `theme` подбирает светлоту цветов бренда этой же функцией, чтобы подобранное и
+ * страницу, подкраска фона (если она есть) — на фон. Команда `theme` подбирает светлоту цветов бренда этой же функцией, чтобы подобранное и
  * проверенное при сборке не расходились.
  */
 export function contrastRatio(
@@ -122,9 +184,15 @@ export function contrastRatio(
   foreground: ThemeColorRole,
   background: ThemeColorRole,
   share = 1,
+  tint?: ThemeContrastPair['backgroundTint'],
 ): number {
   const page = parseColor(colors.background) ?? { r: 255, g: 255, b: 255, a: 1 };
-  const back = composite(parseColor(colors[background]) ?? { ...page, a: 0 }, page);
+  const base = composite(parseColor(colors[background]) ?? { ...page, a: 0 }, page);
+  const tintColor = tint === undefined ? undefined : parseColor(colors[tint.role]);
+  const back =
+    tint === undefined || tintColor === undefined
+      ? base
+      : composite({ ...tintColor, a: tintColor.a * tint.share }, base);
   const pure = composite(parseColor(colors[foreground]) ?? { ...back, a: 0 }, back);
   const front = composite({ ...pure, a: share }, back);
   const lighter = Math.max(luminance(front), luminance(back));

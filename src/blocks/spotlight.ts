@@ -185,7 +185,7 @@ export const spotlight = defineBlock({
   definition: spotlightDefinition(),
   validate: validateSpotlight,
   enhance: enhanceSpotlight,
-  styles: 'package',
+  feature: 'spotlight',
   staticEquivalent:
     'The screenshot with the loupe over its detail and the rest dimmed, the explanation beside it; printed the same way.',
   examples: [

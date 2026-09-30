@@ -25,9 +25,10 @@ The category is a recommendation, not a limit: any directive, mode or effect of 
 
 One row per file under `assets/`: where it came from and under which licence. Origin is `build-screenshot`, `screencast`, `diagram`, `photo`, `drawn`, `placeholder` (a stand-in for real material still to come, marked as such on the page), or `generated` with its reason in Source.
 
-| File                     | Origin           | Source                                                                                                                                       | Licence       |
-| ------------------------ | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| `assets/review-diff.jpg` | build-screenshot | agentic-report's `code-review` example built with `agentic-report build` and photographed at 1440 px, dark scheme, 1.5×; cropped to the diff | project (MIT) |
+| File                          | Origin           | Source                                                                                                                                        | Licence       |
+| ----------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `assets/review-diff.jpg`      | build-screenshot | agentic-report's `code-review` example built with `agentic-report build` and photographed at 1440 px, 1.5×, light scheme; cropped to the diff | project (MIT) |
+| `assets/review-diff-dark.jpg` | build-screenshot | agentic-report's `code-review` example built with `agentic-report build` and photographed at 1440 px, 1.5×, dark scheme; cropped to the diff  | project (MIT) |
 
 ## Unresolved content facts
 

@@ -129,7 +129,7 @@ describe('page data', () => {
     expect(out).toContain('<strong>Review</strong>: 9 items');
     expect(out.match(/<table/gu)?.length).toBe(1);
     expect(out.match(/<tr/gu)?.length).toBe(3);
-    expect(out).toContain('<td>returned</td>');
+    expect(out).toMatch(/<td[^>]*>returned<\/td>/u);
     expect(out).toContain('Tag api.');
     expect(out).toContain('Tag web.');
     expect(out).not.toContain('semantic-each');

@@ -1,48 +1,28 @@
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import type { Browser } from '@playwright/test';
 
-import { effectCheck } from '../../dist/node/core/effect-check.js';
 import { buildReport } from '../../dist/node/index.js';
 import { MANUAL_CLOCK_INIT_SCRIPT } from '../../dist/node/page-clock.js';
 import { expect, test } from './fixtures.js';
 
 /**
- * The reference effects in `extensions/` — `wall-thread` and `loom` — stay whole when the engine
- * changes: each passes the eleven effect-check checks with either of its examples as the checked page,
- * and each actually draws. The drawing test catches what effect-check cannot: an effect that paints
- * nothing, or paints the same in `live` as in `still`, passes all eleven checks.
+ * The reference effect `loom` in `extensions/` stays whole when the engine changes: it actually draws,
+ * and draws less on the way than when finished. This catches what effect-check cannot: an effect that
+ * paints nothing, or paints the same in `live` as in `still`, passes all eleven checks. Its eleven
+ * effect-check checks, which include a timed budget, run in `tests/perf/reference-effect-checks.spec.ts`.
  */
 
-const EFFECTS = [
-  { name: 'wall-thread', attribute: 'thread', states: ['reached'] },
-  { name: 'loom', attribute: 'loom', states: ['weaving', 'woven'] },
-] as const;
+const EFFECTS = [{ name: 'loom', attribute: 'loom', states: ['weaving', 'woven'] }] as const;
 
-/** A copy of the extension folder whose manifest checks the examples in the given order. */
-async function copyWithOrder(
-  name: string,
-  reversed: boolean,
-  purpose: 'check' | 'drawing' = 'check',
-): Promise<string> {
-  const root = path.resolve(
-    'test-results/e2e-reference-effects',
-    `${name}-${reversed ? 'b' : 'a'}${purpose === 'drawing' ? '-drawing' : ''}`,
-  );
+/** A fresh copy of the extension folder to build its first example from. */
+async function copyExtension(name: string): Promise<string> {
+  const root = path.resolve('test-results/e2e-reference-effects', `${name}-drawing`);
   await rm(root, { recursive: true, force: true });
   await mkdir(root, { recursive: true });
-  const source = path.join(root, 'source');
-  await cp(path.resolve('extensions', name), source, { recursive: true });
-  const manifest = path.join(source, 'extension.yaml');
-  if (reversed) {
-    const text = await readFile(manifest, 'utf8');
-    await writeFile(
-      manifest,
-      text.replace(/examples: \[([^,\]]+), ([^\]]+)\]/u, 'examples: [$2, $1]'),
-    );
-  }
+  await cp(path.resolve('extensions', name), path.join(root, 'source'), { recursive: true });
   return root;
 }
 
@@ -96,32 +76,12 @@ async function opaquePixels(
 test.describe.configure({ timeout: 240_000 });
 
 for (const effect of EFFECTS)
-  for (const reversed of [false, true])
-    test(`${effect.name} passes all eleven checks with its ${reversed ? 'second' : 'first'} example checked`, async ({
-      browserName,
-    }, testInfo) => {
-      test.skip(testInfo.project.name !== 'desktop-chromium' || browserName !== 'chromium');
-      const root = await copyWithOrder(effect.name, reversed);
-      const result = await effectCheck({
-        manifest: path.join(root, 'source', 'extension.yaml'),
-        output: path.join(root, 'out'),
-      });
-      expect(
-        result.checks.filter((check) => !check.passed).map((check) => check.id),
-        JSON.stringify(result.checks, null, 2),
-      ).toEqual([]);
-      expect(result.summary).toBe('11 of 11 checks passed');
-      const states = result.checks.find((check) => check.id === 'states')?.details ?? [];
-      expect(states).toEqual([`states: ${effect.states.join(', ')}`]);
-    });
-
-for (const effect of EFFECTS)
   test(`${effect.name} draws, and draws less while the reader is on the way than when it is finished`, async ({
     browser,
     browserName,
   }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chromium' || browserName !== 'chromium');
-    const root = await copyWithOrder(effect.name, false, 'drawing');
+    const root = await copyExtension(effect.name);
     const manifest = await readFile(path.join(root, 'source', 'extension.yaml'), 'utf8');
     const first = /examples: \[([^,\]]+),/u.exec(manifest)?.[1];
     expect(first).toBeDefined();

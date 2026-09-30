@@ -1,129 +1,41 @@
 {
-  "contractVersion": 2,
+  "contractVersion": 3,
   "capture": {
-    "viewport": { "width": 390, "height": 800 },
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
     "theme": "source-authored",
+    "schemes": ["light", "dark"],
+    "motion": "reduce",
     "deviceScaleFactor": 1,
-    "source": "ordinary directory builds of the English and Russian examples opened through file://",
-    "locale": "per screenshot focus",
-    "reducedMotion": "reduce"
+    "source": "ordinary single-file build opened through file://, switched to each scheme as the scheme toggle does",
+    "script": "scripts/capture-site-screenshots.ts"
   },
   "screenshots": [
     {
-      "id": "incident-impact-card",
+      "id": "incident-review",
       "source": "../../../examples/incident-review/report.md",
       "liveRoute": "examples/incident-review/index.html",
       "publicSourceRoute": "examples/incident-review/report.md",
-      "file": "incident-impact-card.png",
-      "focus": {
-        "section": "#impact .semantic-card:first-of-type",
-        "locale": "en",
-        "viewportWidth": 390,
-        "viewportHeight": 800,
-        "imageWidth": 317,
-        "imageHeight": 209,
-        "visibleEvidence": "The built customer impact card shows 18.4 percent peak failures and the UTC error period"
-      }
+      "file": "incident-review.png",
+      "darkFile": "incident-review-dark.png"
     },
     {
-      "id": "incident-impact-card-ru",
-      "source": "../../../examples/incident-review/report.ru.md",
-      "liveRoute": "examples/incident-review/index.html",
-      "publicSourceRoute": "examples/incident-review/report.ru.md",
-      "file": "incident-impact-card.ru.png",
-      "focus": {
-        "section": "#impact .semantic-card:first-of-type",
-        "locale": "ru",
-        "viewportWidth": 390,
-        "viewportHeight": 800,
-        "imageWidth": 317,
-        "imageHeight": 235,
-        "visibleEvidence": "The Russian built customer impact card shows 18.4 percent peak failures and the UTC error period"
-      }
-    },
-    {
-      "id": "incident-review-en",
-      "source": "../../../examples/incident-review/report.md",
-      "liveRoute": "examples/incident-review/index.html",
-      "publicSourceRoute": "examples/incident-review/report.md",
-      "file": "incident-review.en.png",
-      "focus": {
-        "section": "#impact .semantic-card:nth-of-type(2)",
-        "locale": "en",
-        "imageWidth": 390,
-        "imageHeight": 235,
-        "visibleEvidence": "Recovery took 47 minutes and retry traffic was capped"
-      }
-    },
-    {
-      "id": "incident-review-ru",
-      "source": "../../../examples/incident-review/report.ru.md",
-      "liveRoute": "examples/incident-review/index.html",
-      "publicSourceRoute": "examples/incident-review/report.ru.md",
-      "file": "incident-review.ru.png",
-      "focus": {
-        "section": "#impact .semantic-card:nth-of-type(2)",
-        "locale": "ru",
-        "imageWidth": 390,
-        "imageHeight": 261,
-        "visibleEvidence": "Recovery took 47 minutes and retry traffic was capped, in Russian"
-      }
-    },
-    {
-      "id": "vendor-decision-en",
+      "id": "vendor-decision",
       "source": "../../../examples/vendor-decision/report.md",
       "liveRoute": "examples/vendor-decision/index.html",
       "publicSourceRoute": "examples/vendor-decision/report.md",
-      "file": "vendor-decision.en.png",
-      "focus": {
-        "section": "#decision-signal .semantic-card:nth-of-type(2)",
-        "locale": "en",
-        "imageWidth": 390,
-        "imageHeight": 245,
-        "visibleEvidence": "Meridian Reply's 89-point score does not override its regional-telemetry disqualification"
-      }
+      "file": "vendor-decision.png",
+      "darkFile": "vendor-decision-dark.png"
     },
     {
-      "id": "vendor-decision-ru",
-      "source": "../../../examples/vendor-decision/report.ru.md",
-      "liveRoute": "examples/vendor-decision/index.html",
-      "publicSourceRoute": "examples/vendor-decision/report.ru.md",
-      "file": "vendor-decision.ru.png",
-      "focus": {
-        "section": "#decision-signal .semantic-card:nth-of-type(2)",
-        "locale": "ru",
-        "imageWidth": 390,
-        "imageHeight": 245,
-        "visibleEvidence": "Meridian Reply's 89-point score does not override its regional-telemetry disqualification, in Russian"
-      }
-    },
-    {
-      "id": "launch-readiness-en",
+      "id": "launch-readiness",
       "source": "../../../examples/launch-readiness/report.md",
       "liveRoute": "examples/launch-readiness/index.html",
       "publicSourceRoute": "examples/launch-readiness/report.md",
-      "file": "launch-readiness.en.png",
-      "focus": {
-        "section": "#launch-signal .semantic-card:nth-of-type(2)",
-        "locale": "en",
-        "imageWidth": 390,
-        "imageHeight": 235,
-        "visibleEvidence": "Seven-day activation is 64 percent against a target of at least 60 percent"
-      }
-    },
-    {
-      "id": "launch-readiness-ru",
-      "source": "../../../examples/launch-readiness/report.ru.md",
-      "liveRoute": "examples/launch-readiness/index.html",
-      "publicSourceRoute": "examples/launch-readiness/report.ru.md",
-      "file": "launch-readiness.ru.png",
-      "focus": {
-        "section": "#launch-signal .semantic-card:nth-of-type(2)",
-        "locale": "ru",
-        "imageWidth": 390,
-        "imageHeight": 261,
-        "visibleEvidence": "Seven-day activation is 64 percent against a target of at least 60 percent, in Russian"
-      }
+      "file": "launch-readiness.png",
+      "darkFile": "launch-readiness-dark.png"
     }
   ]
 }

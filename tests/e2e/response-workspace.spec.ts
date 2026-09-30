@@ -391,7 +391,7 @@ for (const format of formats) {
     );
     if (format.name === 'directory') {
       await page.locator('html').evaluate((element) => {
-        element.dataset.theme = 'dark';
+        element.dataset.scheme = 'dark';
       });
     }
     await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));

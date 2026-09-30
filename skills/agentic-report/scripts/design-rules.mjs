@@ -1,4 +1,7 @@
 // Design advice from the structure of a built page. Pure functions: no file system, no process.
+// Every piece of advice has the shape prose-check's findings have: { rule, id, message, hint } — the
+// `DR-…` rule, the stable id of the check, what it found, and what to change with the craft.mjs command
+// that shows the rule.
 // The input is the `structure` field of `agentic-report inspect`, which carries section properties and
 // counts only, never the author's words. Each rule names its identifier in references/design-rules.md,
 // and the comment above it names the defect it catches; tests/unit/design-check.test.ts proves each rule
@@ -11,6 +14,8 @@ export const CHECKED_RULES = [
   'DR-UNIFORM-ENTRANCE',
   'DR-ONE-EFFECT',
   'DR-CARD-SAMENESS',
+  'DR-EMPTY-STATE',
+  'DR-HEADING-EMOJI',
   'DR-BRIEF',
   'DR-BRIEF-MATCH',
 ];
@@ -51,7 +56,7 @@ const RULES = {
     return {
       message:
         'The landing shows no image, video, diagram, chart, timeline, or code before its first section, and its first section is not a demo with one.',
-      fix: 'Add recipe="demo" to the first section and put the product in it, or place a picture, clip, diagram, or code block right after the introduction.',
+      hint: 'Add recipe="demo" to the first section and put the product in it, or place a picture, clip, diagram, or code block right after the introduction.',
     };
   },
   // Catches a landing that kept the starter's skeleton instead of ordering chapters by its own argument.
@@ -65,7 +70,7 @@ const RULES = {
     if (!same) return undefined;
     return {
       message: `The chapters use the landing starter's recipes in the starter's order: ${recipes.join(', ')}.`,
-      fix: 'Order the chapters by the argument in the brief and use the recipes that argument needs.',
+      hint: 'Order the chapters by the argument in the brief and use the recipes that argument needs.',
     };
   },
   // Catches a page where decorative surfaces are the norm, so none of them marks a change of mood.
@@ -76,7 +81,7 @@ const RULES = {
     if (decorated.length <= MAXIMUM_SURFACES) return undefined;
     return {
       message: `${decorated.length} sections have a decorative surface; at most ${MAXIMUM_SURFACES} stay different.`,
-      fix: 'Keep a surface on the one or two chapters that change the mood and set the rest to surface="plain".',
+      hint: 'Keep a surface on the one or two chapters that change the mood and set the rest to surface="plain".',
     };
   },
   // Catches the template tell of every chapter entering the same way.
@@ -88,7 +93,7 @@ const RULES = {
     if (transitions.size !== 1 || only === 'none') return undefined;
     return {
       message: `Every one of the ${sections.length} chapters enters with transition="${only}".`,
-      fix: 'Let most chapters simply be there (transition="none") and keep an entrance for the one or two where the story turns.',
+      hint: 'Let most chapters simply be there (transition="none") and keep an entrance for the one or two where the story turns.',
     };
   },
   // Catches effects competing for attention: more than one pointer or magnetic effect on a page.
@@ -98,7 +103,7 @@ const RULES = {
     if (effects <= MAXIMUM_EFFECTS) return undefined;
     return {
       message: `The page has ${effects} pointer effects (${pointer} section interactions, ${structure.magneticActions} magnetic actions).`,
-      fix: 'Keep the one effect that carries meaning, usually on the opening, and remove the rest.',
+      hint: 'Keep the one effect that carries meaning, usually on the opening, and remove the rest.',
     };
   },
   // Catches a wall of repeats: a long run of cards that all share one form, so nothing but the words tells
@@ -111,10 +116,47 @@ const RULES = {
         continue;
       return {
         message: `A group of ${group.cards} cards repeats one card form ${group.cards} times without grouping.`,
-        fix: 'Split the series into titled groups, a table, or a list, and keep cards for the few items that carry their own fact — a status, a number, a picture.',
+        hint: 'Split the series into titled groups, a table, or a list, and keep cards for the few items that carry their own fact — a status, a number, a picture.',
       };
     }
     return undefined;
+  },
+  // Catches a block that reached the page empty — usually a data `each` over an empty list: a chapter with
+  // only its title, a table with a header and no rows, a cards group without cards. An empty list leaves
+  // nothing on the page at all, so it has no count. The reader cannot tell «nothing there» from «broken». Reads counts only, never words.
+  'DR-EMPTY-STATE': ({ structure }) => {
+    const empty = structure.emptyBlocks;
+    if (empty === undefined) return undefined;
+    const parts = [
+      [
+        empty.sections,
+        'chapter',
+        'chapters',
+        'with nothing but its title',
+        'with nothing but their title',
+      ],
+      [empty.tables, 'table', 'tables', 'with a header and no rows', 'with a header and no rows'],
+      [empty.cardGroups, 'cards group', 'cards groups', 'without cards', 'without cards'],
+    ]
+      .filter(([count]) => count > 0)
+      .map(([count, one, many, tailOne, tailMany]) =>
+        count === 1 ? `1 ${one} ${tailOne}` : `${count} ${many} ${tailMany}`,
+      );
+    if (parts.length === 0) return undefined;
+    return {
+      message: `The page shows empty blocks: ${parts.join(', ')}.`,
+      hint: 'Where the data may be empty, write one sentence in place of the block — what is absent, as of when, what the reader does next — and leave the empty block out; where it must never be empty, add ::expect{data="…" min="1"} so the build fails.',
+    };
+  },
+  // Catches emoji used as heading icons: chat residue that renders differently on every system and is read
+  // aloud by name. Reads a count of headings that carry an emoji-style character, never the words.
+  'DR-HEADING-EMOJI': ({ structure }) => {
+    const count = structure.emojiHeadings ?? 0;
+    if (count === 0) return undefined;
+    return {
+      message: `${count === 1 ? '1 heading or title carries' : `${count} headings or titles carry`} an emoji.`,
+      hint: 'Remove the emoji; when a heading needs a marker, give the block the fact that makes it different — a status, a number, a picture.',
+    };
   },
   // Catches a page that moves although its brief decided it would not: the brief answers motion «none»
   // and a section still enters, reacts to the pointer, runs a scene or a choreography, or
@@ -135,7 +177,7 @@ const RULES = {
     if (moving === 0 && structure.magneticActions === 0 && elements === 0) return undefined;
     return {
       message: `brief.md decides no motion, but ${moving} sections move, ${structure.magneticActions} actions are magnetic and ${elements} other elements move (counts, count-up charts, drawn, pulsing or zooming diagrams, played scenes, swapped, typed or marked words, spotlights, soft video seams).`,
-      fix: "Write motion: none in the page manifest and drop the motion attributes, or change the brief's motion answer with its reason.",
+      hint: "Write motion: none in the page manifest and drop the motion attributes, or change the brief's motion answer with its reason.",
     };
   },
   // Catches a page built without a filled brief. A brief with no dimension rows is not filled: an empty
@@ -144,23 +186,39 @@ const RULES = {
     if (!brief.present) {
       return {
         message: 'There is no brief.md beside the page source.',
-        fix: "Copy brief.md from the starter of the page's category and fill every row with its answer and source.",
+        hint: "Copy brief.md from the starter of the page's category and fill every row with its answer and source.",
       };
     }
     if (dimensionIds(brief.text ?? '').length === 0) {
       return {
         message: 'brief.md has no dimension rows to answer.',
-        fix: "Copy brief.md from the starter of the page's category and fill every row with its answer and source.",
+        hint: "Copy brief.md from the starter of the page's category and fill every row with its answer and source.",
       };
     }
     const empty = unfilledDimensions(brief.text ?? '');
     if (empty.length === 0) return undefined;
     return {
       message: `brief.md leaves dimensions without an answer or a source: ${empty.join(', ')}.`,
-      fix: "Copy brief.md from the starter of the page's category and fill every row with its answer and source.",
+      hint: "Copy brief.md from the starter of the page's category and fill every row with its answer and source.",
     };
   },
 };
+
+/**
+ * The rules whose finding is a row of the cliché table in references/art-direction.md, with that row. The
+ * check counts them together: one cliché is a slip, several make the page average. Clichés of colour, type
+ * and texture are not in the structure and are counted by eye.
+ */
+const CLICHES = {
+  'DR-OPENING-MEDIA': 'A title and two pill buttons, no product',
+  'DR-LANDING-ORDER': 'Hero, three feature cards, testimonials, call to action',
+  'DR-SURFACES': 'Glassmorphism panels, glows, floating blobs',
+  'DR-UNIFORM-ENTRANCE': 'Every block fades up on scroll',
+  'DR-ONE-EFFECT': 'A particle or WebGL background «for depth»',
+  'DR-CARD-SAMENESS': 'A bento grid of feature cards',
+  'DR-HEADING-EMOJI': 'Emoji as feature icons',
+};
+const AVERAGE_PAGE_CLICHES = 3;
 
 const BRIEF_SOURCES = ['request', 'asked', 'inferred'];
 
@@ -191,6 +249,27 @@ export function unfilledDimensions(briefText) {
       empty.push(id);
   }
   return empty;
+}
+
+/**
+ * The previous edition the brief names: a line `Previous edition: <path>` (or `Предыдущая редакция: <path>`),
+ * as a paragraph or a list item, the path optionally in backticks. It is the page the reader saw last — a
+ * built `.html`, a directory build, or the previous source — and makes this page a new edition, built and
+ * checked with `--since`. «none» or «нет» names none. Returns the path as written, or undefined.
+ */
+export function previousEdition(briefText) {
+  if (typeof briefText !== 'string') return undefined;
+  for (const line of briefText.split(/\r?\n/u)) {
+    const match =
+      /^\s*(?:[-*]\s+)?(?:\*\*)?(?:previous edition|предыдущая редакция)(?:\*\*)?\s*:(?:\*\*)?\s*(.+?)\s*$/iu.exec(
+        line,
+      );
+    if (match === null) continue;
+    const value = match[1].replace(/^`(.*)`$/u, '$1').trim();
+    if (value.length === 0 || /^(?:none|no|нет|—|-)\.?$/iu.test(value)) return undefined;
+    return value;
+  }
+  return undefined;
 }
 
 /**
@@ -228,10 +307,29 @@ export function checkDesign(input) {
   const { switchedOff, rejected } = parseSwitchedOff(input.brief.text);
   const off = new Set(switchedOff.map((entry) => entry.rule));
   const advice = [];
+  const cliches = [];
   for (const rule of CHECKED_RULES) {
     const finding = RULES[rule](input);
     if (finding === undefined || off.has(rule)) continue;
-    advice.push({ rule, reference: 'references/design-rules.md', ...finding });
+    advice.push({
+      rule,
+      id: `design-check/${rule.slice(3).toLowerCase()}`,
+      message: finding.message,
+      hint: `${finding.hint} The rule: node scripts/craft.mjs ${rule}.`,
+    });
+    const cliche = CLICHES[rule];
+    if (cliche !== undefined) cliches.push({ rule, cliche });
   }
-  return { advice, switchedOff, rejectedSwitches: rejected };
+  return {
+    advice,
+    cliches: {
+      count: cliches.length,
+      found: cliches,
+      // The table in art-direction.md: four or more clichés make an average page. The structure shows only
+      // some of them, so three found here already put the page at that line with the visual ones unread.
+      average: cliches.length >= AVERAGE_PAGE_CLICHES,
+    },
+    switchedOff,
+    rejectedSwitches: rejected,
+  };
 }

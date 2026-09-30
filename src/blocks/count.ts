@@ -48,7 +48,7 @@ function validateCount(node: DirectiveNode, context: BlockValidationContext): Bl
 export const count = defineBlock({
   definition: countDefinition(),
   validate: validateCount,
-  styles: 'package',
+  feature: 'count',
   staticEquivalent: 'The written number itself, shown at once without counting up.',
   examples: ['Throughput reached :count[1,284] requests per second.\n'],
 });

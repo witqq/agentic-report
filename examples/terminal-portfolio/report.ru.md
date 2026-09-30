@@ -24,7 +24,7 @@ language: ru
 команда, граница и результат, который рецензент сможет воспроизвести.
 :::
 
-![Код-ревью, собранное agentic-report: дифф src/webhooks/handler.ts, 7 строк добавлено и 2 удалено](assets/review-diff.jpg)
+![Код-ревью, собранное agentic-report: дифф src/webhooks/handler.ts, 7 строк добавлено и 2 удалено](assets/review-diff.jpg){dark="assets/review-diff-dark.jpg"}
 
 _Страница ревью, которую я передаю: снимок диффа из примера `code-review` agentic-report после сборки и открытия с диска._
 ::::::

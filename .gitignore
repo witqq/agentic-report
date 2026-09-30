@@ -19,3 +19,6 @@ docs/product/initial-idea.md
 docs/product/production-roadmap.md
 docs/product/requirement-traceability.md
 docs/research/
+
+# Owner's local backlog: kept beside the code, not in the repository
+docs/BACKLOG.md

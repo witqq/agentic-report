@@ -4,7 +4,13 @@ import { pathToFileURL } from 'node:url';
 
 import type { Page } from '@playwright/test';
 
-import { snapshotReport } from '../../dist/node/core/snapshot.js';
+import {
+  photographStops,
+  settle,
+  type SnapshotPage,
+  snapshotReport,
+} from '../../dist/node/core/snapshot.js';
+import { MANUAL_CLOCK_INIT_SCRIPT } from '../../dist/node/page-clock.js';
 import { buildReport } from '../../dist/node/index.js';
 import { expect, test } from './fixtures.js';
 
@@ -97,6 +103,36 @@ const SCREENS = [
   '',
 ].join('\n');
 
+/**
+ * Жест колеса: серия событий, у каждой — своя метка времени с шагом `gapMs`, начиная не раньше `after`
+ * (мс по часам окна). Рантайм отличает жест от нового жеста по меткам событий, а у настоящего ввода их
+ * ставит система, а не скорость страницы. `mouse.wheel` ставит метку в миг отправки, и пауза самого теста
+ * (сборка мусора в процессе тестов, загруженная машина) делала хвост одного жеста новым жестом.
+ * Возвращает метку последнего события.
+ */
+async function wheelGesture(
+  page: Page,
+  options: { readonly deltaY: number; readonly events: number; readonly after?: number },
+): Promise<number> {
+  const session = await page.context().newCDPSession(page);
+  const now = await page.evaluate(() => performance.timeOrigin + performance.now());
+  const start = Math.max(now, options.after ?? 0);
+  let stamp = start;
+  for (let event = 0; event < options.events; event += 1) {
+    stamp = start + event * 20;
+    await session.send('Input.dispatchMouseEvent', {
+      type: 'mouseWheel',
+      x: 700,
+      y: 450,
+      deltaX: 0,
+      deltaY: options.deltaY,
+      timestamp: stamp / 1000,
+    });
+  }
+  await session.detach();
+  return stamp;
+}
+
 const current = (page: Page): Promise<number | undefined> =>
   page.evaluate(() => window.agenticScreens?.current());
 
@@ -116,18 +152,25 @@ test.describe('screens mode', () => {
     await expect(page.locator('.screen-switcher a')).toHaveCount(5);
     expect(await current(page)).toBe(1);
     await page.mouse.move(700, 450);
+    // Ловит: жест приходит, пока страница после загрузки ещё доводит первый экран до места, край экрана на
+    // пару пикселей за окном, и жест уходит в обычную прокрутку (так тест падал на загруженной машине: жест
+    // через 100 мс после загрузки при прокрутке 44 из 49 px).
+    // Прилипание прокрутки снято на время жеста, иначе браузер успевает довести страницу до места сам.
+    await page.evaluate(() => {
+      document.documentElement.style.scrollSnapType = 'none';
+      window.scrollTo({ top: 5, behavior: 'instant' });
+    });
     // Ловит: короткий жест тачпада оставляет страницу на месте (прилипание возвращает её назад).
-    await page.mouse.wheel(0, 120);
+    const first = await wheelGesture(page, { deltaY: 120, events: 1 });
     await expect.poll(() => current(page)).toBe(2);
     // Жест кончается, когда прокрутка дошла до экрана (`scrollend` пишет его в адрес), а не через
     // сколько-то миллисекунд: на загруженной машине плавная прокрутка идёт дольше.
     await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#arrive');
-    await page.waitForTimeout(250);
-    // Ловит: длинный жест с инерцией проносит через несколько экранов.
-    for (let event = 0; event < 12; event += 1) {
-      await page.mouse.wheel(0, 400);
-      await page.waitForTimeout(20);
-    }
+    await page.evaluate(() => document.documentElement.style.removeProperty('scroll-snap-type'));
+    // Ловит: длинный жест с инерцией проносит через несколько экранов. Его события идут через 20 мс, и
+    // он начинается через 250 мс после прошлого жеста — по меткам событий, какой бы медленной ни была
+    // отправка.
+    await wheelGesture(page, { deltaY: 400, events: 12, after: first + 250 });
     await expect.poll(() => current(page)).toBe(3);
     await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#walk');
     expect(
@@ -185,6 +228,55 @@ test.describe('screens mode', () => {
     }
   });
 
+  test('on a phone the switcher column is the right margin of the text, not a second one', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium');
+    const { url } = await buildPage(
+      testInfo.project.name,
+      'screens-gutter',
+      SCREENS.replace(
+        'Then walks.',
+        [
+          'Then walks.',
+          '',
+          '| Step | Where |',
+          '| ---- | ----- |',
+          '| One | Here |',
+          '',
+          '```text',
+          'walk --to there',
+          '```',
+          '',
+          '![A plane](plane.jpg)',
+        ].join('\n'),
+      ),
+      'layout: screens\n',
+    );
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(url);
+      const paragraph = await page.locator('#walk p').first().boundingBox();
+      const switcher = await page.locator('.screen-switcher').boundingBox();
+      // Ловит: колонка переключателя и поле текста складываются, и строка теряет ширину телефона —
+      // на 320 px колонка переключателя рядом с полем оставляла строке 87 % окна.
+      expect((paragraph?.width ?? 0) / width, `${width}`).toBeGreaterThanOrEqual(0.88);
+      // Ловит: переключатель, вставший в поле, накрывает конец строки.
+      expect(switcher?.x ?? 0, `${width}`).toBeGreaterThanOrEqual(
+        (paragraph?.x ?? 0) + (paragraph?.width ?? 0),
+      );
+      // Ловит: таблица, код и картинка, выпущенные на телефоне до края экрана, уходят под переключатель.
+      for (const selector of ['#walk .table-frame', '#walk pre', '#walk p:has(> img)']) {
+        const block = await page.locator(selector).first().boundingBox();
+        expect(block, `${selector} at ${width}`).not.toBeNull();
+        expect(
+          Math.round((block?.x ?? 0) + (block?.width ?? 0)),
+          `${selector} at ${width}`,
+        ).toBeLessThanOrEqual(Math.round(switcher?.x ?? 0));
+      }
+    }
+  });
+
   test('the check names a screen that is cut at the fold', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chromium');
     await page.setViewportSize({ width: 1440, height: 700 });
@@ -235,6 +327,57 @@ test.describe('screens mode', () => {
       await page.locator('#walk').evaluate((section) => getComputedStyle(section).minBlockSize),
     ).toBe('0px');
     await expect(page.locator('.screen-switcher')).toBeHidden();
+  });
+
+  test('snapshot frames of a scrub scene show the caption of their own step', async ({
+    page,
+  }, testInfo) => {
+    // Ловит: кадр такта снимался в том же моменте часов, в котором перемотка поставила новую подпись, —
+    // её переход только начинался, и на кадре стояла подпись прошлого такта, хотя браузер через долю
+    // секунды показывает свою.
+    test.skip(testInfo.project.name !== 'desktop-chromium');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const { url } = await buildPage(
+      testInfo.project.name,
+      'screens-scrub-frames',
+      SCREENS,
+      'layout: screens\n',
+    );
+    await page.addInitScript(MANUAL_CLOCK_INIT_SCRIPT);
+    await page.goto(url, { waitUntil: 'load' });
+    const framed: { readonly frame: string; readonly shown: number[]; readonly faded: boolean }[] =
+      [];
+    // Страница снимка — эта же страница, а кадр записывает, какая подпись видна в миг снимка.
+    const recording = new Proxy(page, {
+      get(target, key) {
+        if (key === 'screenshot')
+          return async (options: { readonly path: string }) => {
+            const beats = await target
+              .locator('#scene .semantic-beat[data-beat]')
+              .evaluateAll((elements) =>
+                elements.map((beat) => Number(getComputedStyle(beat).opacity)),
+              );
+            framed.push({
+              frame: path.basename(options.path),
+              shown: beats.flatMap((opacity, index) => (opacity >= 0.99 ? [index + 1] : [])),
+              faded: beats.every((opacity) => opacity >= 0.99 || opacity <= 0.01),
+            });
+          };
+        const value: unknown = Reflect.get(target, key);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    }) as unknown as SnapshotPage;
+    await settle(recording, 'normal');
+    await photographStops(
+      recording,
+      path.resolve('test-results/e2e-layout-runtime', testInfo.project.name, 'scrub-frames'),
+      'frame',
+    );
+    expect(framed.filter((entry) => entry.frame.includes('-scene-'))).toEqual([
+      { frame: 'frame-scene-scene-1.png', shown: [1], faded: true },
+      { frame: 'frame-scene-scene-2.png', shown: [2], faded: true },
+      { frame: 'frame-scene-scene-3.png', shown: [3], faded: true },
+    ]);
   });
 
   test('snapshot takes a frame per stop and warns about a stop cut at the fold', async ({
@@ -492,6 +635,35 @@ test.describe('scrub scene', () => {
         scene.locator('.scene-beats').boundingBox(),
       ]);
       expect((stage?.y ?? 0) + (stage?.height ?? 0)).toBeLessThanOrEqual((caption?.y ?? 0) + 1);
+    }
+  });
+
+  test('the pinned title leaves together with its frame and never lies over the leaving scene', async ({
+    page,
+  }, testInfo) => {
+    await manual(page);
+    const { url } = await buildPage(testInfo.project.name, 'scrub-release', SCRUB, '');
+    await page.goto(url);
+    const scene = page.locator('#scene');
+    await expect(scene).toHaveAttribute('data-scene-live', '');
+    const track = await scene
+      .locator('.scene-track')
+      .evaluate((element) => element.getBoundingClientRect().bottom + window.scrollY);
+    const viewport = page.viewportSize()?.height ?? 0;
+    // Ловит: заголовок стоит липким до конца главы, а рама уже уходит вверх и проходит под ним.
+    for (const past of [40, 200, viewport / 2]) {
+      await page.evaluate(
+        (top) => window.scrollTo({ top, behavior: 'instant' }),
+        track - viewport + past,
+      );
+      const [title, pin] = await Promise.all([
+        scene.locator('.semantic-section-title').boundingBox(),
+        scene.locator('.scene-pin').boundingBox(),
+      ]);
+      expect(
+        (title?.y ?? 0) + (title?.height ?? 0),
+        `${past}px past the track`,
+      ).toBeLessThanOrEqual((pin?.y ?? 0) + 1);
     }
   });
 
@@ -939,6 +1111,55 @@ test.describe('steps scene on a narrow screen and code lines', () => {
       expect(stage?.y ?? -1).toBeGreaterThanOrEqual(0);
       expect((stage?.y ?? 0) + (stage?.height ?? 0)).toBeLessThanOrEqual((beat?.y ?? 0) + 1);
     }
+  });
+
+  test('a diagram on the narrow stage shows its whole picture, not a strip of it', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile-chromium');
+    const diagram = [
+      '# Diagram',
+      '',
+      '::::::section{title="Run" id="run" scene="steps"}',
+      ':::diagram{title="Five panels" description="A long description of the five panels that the run touches, written to take several lines on a phone." layout="down"}',
+      ...['a', 'b', 'c', 'd', 'e'].map((id) => `::node{id="${id}" label="Panel ${id}"}`),
+      ...['ab', 'bc', 'cd', 'de'].map(
+        ([from, to]) => `::edge{from="${from ?? ''}" to="${to ?? ''}" label="calls"}`,
+      ),
+      ':::',
+      '',
+      ':::beat{title="First" focus="a"}\nThe first panel.\n:::',
+      '',
+      ':::beat{title="Second" focus="b"}\nThe second panel.\n:::',
+      '::::::',
+      '',
+      '::::section{title="After"}',
+      Array.from({ length: 12 }, () => 'Closing text.').join('\n\n'),
+      '::::',
+      '',
+    ].join('\n');
+    const { url } = await buildPage(testInfo.project.name, 'stage-diagram', diagram, '');
+    await page.goto(url);
+    const run = page.locator('#run');
+    await run
+      .locator('.semantic-beat')
+      .nth(1)
+      .evaluate((beat) => beat.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await expect(run).toHaveAttribute('data-scene-narrow', '');
+    const sizes = await run.evaluate((section) => {
+      const stage = section.querySelector('.scene-stage')?.getBoundingClientRect();
+      const svg = section
+        .querySelector('.visualization-layout-view:not([hidden]) .visualization-svg')
+        ?.getBoundingClientRect();
+      return { stage: stage?.height ?? 0, svg: svg?.height ?? 0, bottom: svg?.bottom ?? 0 };
+    });
+    // Ловит: подпись, переключатель, легенда и пересказ схемы занимают сцену, а рисунку остаётся полоса
+    // в несколько десятков пикселей (у product-theatre было ~55 px), или рисунок уходит под край сцены.
+    expect(sizes.svg).toBeGreaterThan(sizes.stage * 0.5);
+    const stageBottom = await run
+      .locator('.scene-stage')
+      .evaluate((stage) => stage.getBoundingClientRect().bottom);
+    expect(sizes.bottom).toBeLessThanOrEqual(stageBottom + 1);
   });
 
   test('a phone marks the row in the middle of the screen as current, a hover screen does not', async ({

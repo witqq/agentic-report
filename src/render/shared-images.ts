@@ -4,8 +4,8 @@
  * В одном файле картинка, ролик и постер — data URL, и каждое их появление несёт все байты заново:
  * картинка, показанная в первом экране и снова в галерее, да ещё в обеих языковых версиях, весит
  * вчетверо, ролик в двух режимах — вдвое. Здесь каждый data URL, встреченный в `src` или `poster` больше
- * одного раза, уходит в общий блок данных, а его появления получают ссылку `data-shared-src` или
- * `data-shared-poster`; рантайм подставляет медиа при загрузке и в каждую вставленную позже разметку
+ * одного раза, уходит в общий блок данных, а его появления получают ссылку `data-shared-src`,
+ * `data-shared-poster`, `data-shared-dark-src` или `data-shared-dark-poster` (тёмный вариант картинки и постера); рантайм подставляет медиа при загрузке и в каждую вставленную позже разметку
  * (смена языка). Медиа, встреченное один раз, остаётся на месте.
  */
 export interface SharedImages {
@@ -16,7 +16,8 @@ export interface SharedImages {
 
 export const SHARED_IMAGES_ELEMENT_ID = 'agentic-shared-images';
 
-const MEDIA_SOURCE = /\s(src|poster)="(data:(?:image|video|audio)\/[^"]+)"/gu;
+const MEDIA_SOURCE =
+  /\s(src|poster|data-dark-src|data-dark-poster)="(data:(?:image|video|audio)\/[^"]+)"/gu;
 
 export function shareRepeatedImages(html: string): SharedImages {
   const counts = new Map<string, number>();
@@ -33,7 +34,7 @@ export function shareRepeatedImages(html: string): SharedImages {
     const id = ids.get(url);
     if (id === undefined) return whole;
     savedBytes += Buffer.byteLength(url);
-    return ` data-shared-${attribute}="${id}"`;
+    return ` data-shared-${attribute.replace(/^data-/u, '')}="${id}"`;
   });
   const table = Object.fromEntries([...ids].map(([url, id]) => [id, url]));
   const block = `<script type="application/json" id="${SHARED_IMAGES_ELEMENT_ID}">${JSON.stringify(table)}</script>`;

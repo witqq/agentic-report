@@ -50,7 +50,7 @@ No unresolved severity-one issue or missing mandatory launch gate.
 :::
 ::::
 
-![Sample beta learning loop connecting a bounded audience, collaborative value, evidence, and a governed rollout](assets/beta-learning-loop.svg)
+![Sample beta learning loop connecting a bounded audience, collaborative value, evidence, and a governed rollout](assets/beta-learning-loop.svg){dark="assets/beta-learning-loop-dark.svg"}
 :::::
 
 :::::section{title="Who gets value first" id="audience" nav="Audience" width="wide" align="start" tone="soft" composition="mosaic" viewport="bounded" section-density="compact" type="editorial" surface="grain" transition="stagger" choreography="cascade"}

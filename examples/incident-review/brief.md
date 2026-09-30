@@ -24,10 +24,12 @@ The category is a recommendation, not a limit: any directive, mode or effect of 
 
 One row per file under `assets/`: where it came from and under which licence. Origin is `build-screenshot`, `screencast`, `diagram`, `photo`, `drawn`, `placeholder` (a stand-in for real material still to come, marked as such on the page), or `generated` with its reason in Source.
 
-| File                             | Origin | Source                                                                           | Licence       |
-| -------------------------------- | ------ | -------------------------------------------------------------------------------- | ------------- |
-| `assets/service-topology.svg`    | drawn  | drawn for this page: traffic through checkout, billing, and the payment provider | project (MIT) |
-| `assets/service-topology.ru.svg` | drawn  | Russian version of `service-topology.svg`                                        | project (MIT) |
+| File                                  | Origin | Source                                                                                        | Licence       |
+| ------------------------------------- | ------ | --------------------------------------------------------------------------------------------- | ------------- |
+| `assets/service-topology.svg`         | drawn  | drawn for this page: traffic through checkout, billing, and the payment provider              | project (MIT) |
+| `assets/service-topology-dark.svg`    | drawn  | dark-scheme variant of `service-topology.svg`, the same drawing in the page's dark colours    | project (MIT) |
+| `assets/service-topology.ru.svg`      | drawn  | Russian version of `service-topology.svg`                                                     | project (MIT) |
+| `assets/service-topology-dark.ru.svg` | drawn  | dark-scheme variant of `service-topology.ru.svg`, the same drawing in the page's dark colours | project (MIT) |
 
 ## Unresolved content facts
 

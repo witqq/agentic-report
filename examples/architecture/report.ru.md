@@ -14,7 +14,7 @@ language: ru
 Граница доверия остаётся видимой, а не скрывается в коде фреймворка.
 
 ::::::section{title="Граница системы" id="boundary" nav="Граница" recipe="hero"}
-![Граница источника, компилятора, артефакта и браузера](assets/system-map.ru.svg)
+![Граница источника, компилятора, артефакта и браузера](assets/system-map.ru.svg){dark="assets/system-map-dark.ru.svg"}
 
 {{include: partials/decision.ru.md}}
 ::::::

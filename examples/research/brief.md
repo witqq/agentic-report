@@ -24,10 +24,12 @@ The category is a recommendation, not a limit: any directive, mode or effect of 
 
 One row per file under `assets/`: where it came from and under which licence. Origin is `build-screenshot`, `screencast`, `diagram`, `photo`, `drawn`, `placeholder` (a stand-in for real material still to come, marked as such on the page), or `generated` with its reason in Source.
 
-| File                         | Origin | Source                                                | Licence       |
-| ---------------------------- | ------ | ----------------------------------------------------- | ------------- |
-| `assets/evidence-map.svg`    | drawn  | drawn for this page: the evidence behind each finding | project (MIT) |
-| `assets/evidence-map.ru.svg` | drawn  | Russian version of `evidence-map.svg`                 | project (MIT) |
+| File                              | Origin | Source                                                                                    | Licence       |
+| --------------------------------- | ------ | ----------------------------------------------------------------------------------------- | ------------- |
+| `assets/evidence-map.svg`         | drawn  | drawn for this page: the evidence behind each finding                                     | project (MIT) |
+| `assets/evidence-map-dark.svg`    | drawn  | dark-scheme variant of `evidence-map.svg`, the same drawing in the page's dark colours    | project (MIT) |
+| `assets/evidence-map.ru.svg`      | drawn  | Russian version of `evidence-map.svg`                                                     | project (MIT) |
+| `assets/evidence-map-dark.ru.svg` | drawn  | dark-scheme variant of `evidence-map.ru.svg`, the same drawing in the page's dark colours | project (MIT) |
 
 ## Unresolved content facts
 

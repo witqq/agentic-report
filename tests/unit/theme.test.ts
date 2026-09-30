@@ -1,9 +1,14 @@
-import { readFile, stat, writeFile } from 'node:fs/promises';
+import { stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { themeContrastProblems } from '../../src/authoring/theme-contrast.js';
+import {
+  contrastRatio,
+  THEME_CONTRAST_PAIRS,
+  themeContrastProblems,
+} from '../../src/authoring/theme-contrast.js';
+import { THEME_COLOR_TOKENS } from '../../src/authoring/theme-tokens.js';
 import {
   applyThemeInput,
   BASE_THEME,
@@ -11,6 +16,7 @@ import {
   BUILT_IN_THEMES,
   resolveBuiltInTheme,
   THEME_ACCENT_NAMES,
+  THEME_CODE_FONT_NAMES,
   THEME_COLOR_ROLES,
 } from '../../src/authoring/themes.js';
 import {
@@ -20,6 +26,7 @@ import {
 } from '../../src/render/theme-css.js';
 import { loadSource } from '../../src/source/load-source.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
+import { readPackageStylesheet } from '../helpers/package-stylesheet.js';
 
 const workspaces: string[] = [];
 
@@ -58,6 +65,92 @@ describe('theme data', () => {
     }
   });
 
+  it('checks every code colour on every surface the stylesheet paints under a code line', async () => {
+    // Catches a highlighted code line whose background the contrast check does not know: a diff or
+    // edition line tinted by a status or the accent, or a scene line lit with the soft accent. Each rule
+    // is read from the package stylesheet, so a changed tint share or a new tinted line fails here until the
+    // check covers it, and the check then holds every built-in theme to 4.5:1 on that surface.
+    const stylesheet = await readPackageStylesheet();
+    const roleOf = (variable: string): string => {
+      const entry = Object.entries(THEME_COLOR_TOKENS).find(([, token]) => token === variable);
+      if (entry === undefined) throw new Error(`No colour role for ${variable}`);
+      return entry[0];
+    };
+    const codeLineRules = [
+      ".semantic-diff .line[data-diff='add']",
+      ".semantic-diff .line[data-diff='remove']",
+      ".semantic-diff .line:is([data-diff='hunk'], [data-diff='header'])",
+      "[data-edition-layer='on'] .line[data-change='added']",
+      '.line.edition-ghost-line',
+      '.semantic-section[data-code-focus] .scene-stage pre code .line[data-lit]',
+    ];
+    const surfaces = codeLineRules.map((selector) => {
+      const start = stylesheet.indexOf(`  ${selector} {\n`);
+      expect(start, selector).toBeGreaterThan(-1);
+      const body = stylesheet.slice(start, stylesheet.indexOf('}', start));
+      const tint =
+        /background: color-mix\(in srgb, var\((--[a-z0-9-]+)\) (\d+)%, transparent\);/u.exec(body);
+      if (tint !== null) {
+        return {
+          selector,
+          background: 'codeBackground',
+          tint: { role: roleOf(tint[1] ?? ''), share: Number(tint[2]) / 100 },
+        };
+      }
+      const opaque = /background: var\((--[a-z0-9-]+)\);/u.exec(body);
+      if (opaque === null) throw new Error(`No background in ${selector}`);
+      return { selector, background: roleOf(opaque[1] ?? ''), tint: undefined };
+    });
+    const codeRoles = Object.keys(THEME_COLOR_TOKENS).filter(
+      (role) => role.startsWith('code') && role !== 'codeBackground',
+    );
+    expect(codeRoles).toHaveLength(8);
+    for (const surface of surfaces) {
+      for (const role of codeRoles) {
+        expect(
+          THEME_CONTRAST_PAIRS.some(
+            (pair) =>
+              pair.foreground === role &&
+              pair.background === surface.background &&
+              pair.minimum === 4.5 &&
+              pair.backgroundTint?.role === surface.tint?.role &&
+              pair.backgroundTint?.share === surface.tint?.share,
+          ),
+          `${role} under ${surface.selector}`,
+        ).toBe(true);
+      }
+    }
+    for (const name of BUILT_IN_THEME_NAMES) {
+      const codeProblems = themeContrastProblems(resolveBuiltInTheme(name)).filter((problem) =>
+        problem.foreground.startsWith('code'),
+      );
+      expect(codeProblems, name).toEqual([]);
+    }
+  });
+
+  it('keeps the media backing of every built-in theme in the scheme it sits on', () => {
+    // Catches a light paper behind transparent images on a dark page (and a dark one on a light page):
+    // the backing is transparent, or its luminance is within 3:1 of the scheme's background.
+    for (const name of BUILT_IN_THEME_NAMES) {
+      const theme = resolveBuiltInTheme(name);
+      for (const scheme of ['light', 'dark'] as const) {
+        const colors = theme.colors[scheme];
+        if (colors.mediaBacking === 'transparent') continue;
+        expect(
+          contrastRatio(colors, 'mediaBacking', 'background'),
+          `${name} ${scheme}`,
+        ).toBeLessThan(3);
+      }
+    }
+    expect(
+      contrastRatio(
+        { ...resolveBuiltInTheme('midnight').colors.dark, mediaBacking: '#f7f6f2' },
+        'mediaBacking',
+        'background',
+      ),
+    ).toBeGreaterThan(3);
+  });
+
   it('gives every built-in theme a description and a palette reason', () => {
     for (const theme of BUILT_IN_THEMES) {
       expect(theme.description.length, theme.name).toBeGreaterThan(20);
@@ -66,7 +159,7 @@ describe('theme data', () => {
   });
 
   it('stores the look of a theme in data: the static stylesheet never selects a theme by name', async () => {
-    const stylesheet = await readFile(path.resolve('src/browser/document.css'), 'utf8');
+    const stylesheet = await readPackageStylesheet();
     // Имя темы стоит только в сгенерированных правилах; в статических — лишь её приёмы.
     expect(stylesheet).not.toMatch(/data-theme=/u);
     expect(stylesheet).not.toMatch(/data-preset/u);
@@ -208,7 +301,25 @@ describe('built-in look without generated-site clichés', () => {
       heading: 'geologica',
       body: 'jost',
       mono: 'pt-mono',
+      code: 'jetbrains-mono',
     });
+  });
+
+  // Catches a theme that sets its code in a display or stylised mono (Martian Mono, Victor Mono, PT Mono):
+  // the code face is a separate role, and only a text-grade programming mono may fill it.
+  it('sets code in a text-grade programming mono in every built-in theme', () => {
+    const textGrade = ['jetbrains-mono', 'geist-mono', 'system-mono'];
+    for (const name of BUILT_IN_THEME_NAMES) {
+      const theme = resolveBuiltInTheme(name);
+      expect(textGrade, name).toContain(theme.fonts.code);
+      const stylesheet = themeStylesheet([theme]);
+      const family = theme.fonts.code === 'system-mono' ? 'ui-monospace' : theme.fonts.code;
+      expect(
+        /--font-code: ([^;]+);/u.exec(stylesheet)?.[1]?.toLowerCase().replace(/ /gu, '-'),
+        name,
+      ).toContain(family);
+    }
+    expect(THEME_CODE_FONT_NAMES).toEqual(textGrade);
   });
 
   // Бюджет поднят с 300 КБ и 1,3 МБ, когда Literata и Playfair стали встраиваться с осью оптического

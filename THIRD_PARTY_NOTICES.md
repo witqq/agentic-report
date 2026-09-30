@@ -26,7 +26,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ## humanizer-ru
 
-[`skills/agentic-report/references/prose-ru.md`](skills/agentic-report/references/prose-ru.md) is adapted from [smixs/humanizer-ru](https://github.com/smixs/humanizer-ru), used under the MIT License.
+[`skills/agentic-report/references/prose-ru.md`](skills/agentic-report/references/prose-ru.md) is adapted from [smixs/humanizer-ru](https://github.com/smixs/humanizer-ru), used under the MIT License. [`skills/agentic-report/scripts/prose-check.mjs`](skills/agentic-report/scripts/prose-check.mjs) ports the approach and expressions of its `scripts/lint.py`, whose chat-artifact expressions come from [Vladimir-Human/humanizer-ru](https://github.com/Vladimir-Human/humanizer-ru), also MIT.
 
 Copyright (c) 2026 Serge Shima
 

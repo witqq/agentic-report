@@ -350,6 +350,7 @@ function checkPageContract(registry: RegistryIntegrityInput, issues: string[]): 
   const review = registry.manifestFields.find((field) => field.name === 'review');
   const schemeToggle = registry.manifestFields.find((field) => field.name === 'schemeToggle');
   const themeSwitcher = registry.manifestFields.find((field) => field.name === 'themeSwitcher');
+  const topbar = registry.manifestFields.find((field) => field.name === 'topbar');
   if (
     theme?.constraint?.kind !== 'theme-reference' ||
     theme.default !== registry.page.defaultTheme
@@ -396,6 +397,9 @@ function checkPageContract(registry: RegistryIntegrityInput, issues: string[]): 
     themeSwitcher.default !== registry.page.defaultThemeSwitcher
   ) {
     issues.push('page theme switcher: field differs from registry default');
+  }
+  if (topbar?.constraint?.kind !== 'boolean' || topbar.default !== registry.page.defaultTopbar) {
+    issues.push('page top bar: field differs from registry default');
   }
 }
 

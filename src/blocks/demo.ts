@@ -395,7 +395,7 @@ export const demo = defineBlock<undefined, DemoMessages>({
   enhance: enhanceDemo,
   finalize: finalizeDemoScenes,
   strings: DEMO_MESSAGES,
-  styles: 'package',
+  feature: 'demo',
   staticEquivalent:
     'The titled content with a counter showing its start value; a playable scene shows its final frame — the stage with every beat beside it, in order, nothing pinned.',
   examples: [':::demo{title="Try it" start="2" step="3"}\nPress the button.\n:::\n', SCENE_EXAMPLE],

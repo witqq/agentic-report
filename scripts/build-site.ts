@@ -29,6 +29,8 @@ interface SiteRoute {
   readonly href: string;
   readonly source: string;
   readonly review?: string;
+  /** Предыдущая редакция страницы (её исходник): страница собирается со слоем изменений `--since`. */
+  readonly since?: string;
   readonly kind: RouteKind;
 }
 
@@ -152,19 +154,23 @@ const readRouteManifest = async (repositoryRoot: string): Promise<RouteManifest>
   }
   const routes = record.routes.map((value, index): SiteRoute => {
     const route = requireObject(value, `route ${index}`);
-    const allowedKeys = new Set(['id', 'href', 'source', 'review', 'kind']);
+    const allowedKeys = new Set(['id', 'href', 'source', 'review', 'since', 'kind']);
     if (
       Object.keys(route).some((key) => !allowedKeys.has(key)) ||
       typeof route.id !== 'string' ||
       typeof route.href !== 'string' ||
       typeof route.source !== 'string' ||
       (route.review !== undefined && typeof route.review !== 'string') ||
+      (route.since !== undefined && typeof route.since !== 'string') ||
       !['page', 'copy', 'generated'].includes(String(route.kind))
     ) {
       throw new Error(`Route ${index} is not a complete public route declaration.`);
     }
     if (route.review !== undefined && route.kind !== 'page') {
       throw new Error(`Route ${index} may use review only for a page build.`);
+    }
+    if (route.since !== undefined && route.kind !== 'page') {
+      throw new Error(`Route ${index} may use since only for a page build.`);
     }
     return route as unknown as SiteRoute;
   });
@@ -216,6 +222,7 @@ const stagePage = async (
   route: SiteRoute,
   input: string,
   origin: string,
+  since: string | undefined,
 ): Promise<void> => {
   const scratch = await mkdtemp(
     path.join(path.dirname(staging), `.${path.basename(staging)}-page-`),
@@ -228,6 +235,7 @@ const stagePage = async (
       format: 'directory',
       url: pageUrl(origin, route.href),
       ...(route.review === undefined ? {} : { review: route.review }),
+      ...(since === undefined ? {} : { since }),
     });
     const pageDirectory = path.dirname(target);
     for (const file of await listFiles(built)) {
@@ -374,7 +382,19 @@ export const stageSite = async (options: StageSiteOptions): Promise<StagedSiteRe
       );
       await mkdir(path.dirname(target), { recursive: true });
       if (route.kind === 'page') {
-        await stagePage(staging, target, route, canonicalSource, manifest.origin);
+        const since =
+          route.since === undefined
+            ? undefined
+            : await resolveCanonicalRepositorySource(
+                canonicalRepositoryRoot,
+                resolveRepositorySource(
+                  repositoryRoot,
+                  websiteRoot,
+                  route.since,
+                  `Route ${route.id} since`,
+                ),
+              );
+        await stagePage(staging, target, route, canonicalSource, manifest.origin, since);
       } else {
         await assertRegularDirectFile(repositoryRoot, source);
         await copyFile(canonicalSource, target);

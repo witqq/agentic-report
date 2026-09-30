@@ -61,7 +61,7 @@ The date after which a control claim must be re-tested or replaced before it can
 
 {{include: partials/gates.md}}
 
-![Sample evidence map connecting requirements, vendor evidence, gates, scoring, and a conditional decision](assets/evidence-map.svg)
+![Sample evidence map connecting requirements, vendor evidence, gates, scoring, and a conditional decision](assets/evidence-map.svg){dark="assets/evidence-map-dark.svg"}
 
 :::popover{title="Ranking exception" trigger="Why not the top score?"}
 Meridian's 89-point result measures preferences only. Its failed regional-processing gate is
@@ -79,6 +79,8 @@ non-compensating, so additional usability or price points cannot make the candid
 ::::
 :::::
 
+:::table{layout="scroll"}
+
 | Weighted criterion    |  Weight | Cedar Assist | Meridian Reply | Quill Support |
 | --------------------- | ------: | -----------: | -------------: | ------------: |
 | Agent workflow fit    |      30 |           27 |             29 |            21 |
@@ -87,6 +89,8 @@ non-compensating, so additional usability or price points cannot make the candid
 | Portability depth     |      15 |           12 |             13 |            14 |
 | Three-year cost       |      10 |            7 |             10 |             8 |
 | **Total**             | **100** |       **84** |         **89** |        **77** |
+
+:::
 
 ::::tabs{title="Review lenses"}
 :::tab{label="Scoring method"}

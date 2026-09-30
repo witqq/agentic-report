@@ -435,7 +435,7 @@ describe('CLI transport', () => {
     expect(human).toEqual({
       exitCode: 0,
       stderr: '',
-      stdout: `Created ${humanDestination} from starter document (7 files)\n`,
+      stdout: `Created ${humanDestination} from starter document (9 files)\n`,
     });
   });
 

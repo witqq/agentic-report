@@ -28,14 +28,12 @@ export const SECTION_RECIPES = [
   },
   {
     name: 'evidence',
-    description: 'Readable split evidence with bounded media beside its opening.',
+    description:
+      'Readable split evidence with bounded media beside its opening; the picture is proof, so it is shown whole, never masked or cropped.',
     attributes: {
       width: 'wide',
       composition: 'split',
       viewport: 'bounded',
-      media: 'mask',
-      'media-fit': 'cover',
-      'media-aspect': 'landscape',
     },
   },
   {
@@ -300,6 +298,7 @@ export interface DirectiveDefinition {
     | 'response-field-directives'
     | 'finding-directives'
     | 'message-directives'
+    | 'slide-directives'
     | 'label-or-generated-label'
     | 'none';
   readonly placement: {
@@ -392,6 +391,8 @@ export function allowedDirectiveChildren(
       return ['finding'];
     case 'message-directives':
       return ['message'];
+    case 'slide-directives':
+      return ['slide'];
     case 'markdown':
     case 'label-or-generated-label':
     case 'none':

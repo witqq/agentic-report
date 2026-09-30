@@ -17,6 +17,7 @@ import {
   smoothToward,
 } from '../../src/browser/timeline.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
+import { readPackageStylesheet } from '../helpers/package-stylesheet.js';
 
 /**
  * Раскладка и рантайм движения на стороне сборки и чистые функции рантайма: уровень движения из шапки,
@@ -366,7 +367,7 @@ describe('chapter progress as a row of nodes (SPEC 7.7)', () => {
 describe('role durations', () => {
   it('declares next to the easing curves the same durations the runtime writes from the policy', async () => {
     // Ловит: длительность роли в CSS разошлась с политикой, по которой рантайм считает вход.
-    const css = await readFile(path.resolve('src/browser/document.css'), 'utf8');
+    const css = await readPackageStylesheet();
     const roles = PAGE_MOTION_POLICY.roles;
     const declared = (name: string): string | undefined =>
       new RegExp(`${name}: ([^;]+);`, 'u').exec(css)?.[1];

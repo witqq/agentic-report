@@ -487,7 +487,7 @@ export const response = defineBlock({
   definition: responseDefinition,
   validate: validateResponse,
   enhance: enhanceResponse,
-  styles: 'package',
+  feature: 'response',
   staticEquivalent:
     'The questions with their options and items as text; answering and export need the browser.',
   examples: [RESPONSE_EXAMPLE],
@@ -495,14 +495,14 @@ export const response = defineBlock({
 
 export const question = defineBlock({
   definition: questionDefinition,
-  styles: 'package',
+  feature: 'response',
   staticEquivalent: 'One titled question with its prompt and choices listed.',
   examples: [RESPONSE_EXAMPLE],
 });
 
 export const bucket = defineBlock({
   definition: responseLeaf('bucket', 'One named assignment bucket.', bucketAttributes),
-  styles: 'package',
+  feature: 'response',
   staticEquivalent: 'A named group items can be assigned to, listed by its label.',
   examples: [
     ':::::response{title="Triage" id="triage"}\n::::question{id="scope" kind="bucket" title="Scope"}\n::bucket{id="do" label="Do"}\n::bucket{id="skip" label="Skip"}\n::item{id="task" label="Task" note="Why it matters" meta="Issue 1" href="https://example.com/1" bucket="do"}\n::::\n:::::\n',
@@ -511,14 +511,14 @@ export const bucket = defineBlock({
 
 export const option = defineBlock({
   definition: responseLeaf('option', 'One selectable answer option.', optionAttributes),
-  styles: 'package',
+  feature: 'response',
   staticEquivalent: 'One answer option, listed by its label.',
   examples: [RESPONSE_EXAMPLE],
 });
 
 export const item = defineBlock({
   definition: responseLeaf('item', 'One readable response item.', itemAttributes),
-  styles: 'package',
+  feature: 'response',
   staticEquivalent: 'One item with its note, metadata and link.',
   examples: [
     ':::::response{title="Review" id="review"}\n::::question{id="rank" kind="order" title="Order these"}\n::item{id="one" label="One" note="First" meta="A" href="https://example.com/1"}\n::item{id="two" label="Two" note="Second" meta="B" href="https://example.com/2"}\n::::\n:::::\n',

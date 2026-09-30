@@ -1,7 +1,6 @@
 import type { Element } from 'hast';
 
 import type { PackageStrings } from '../localization.js';
-import { decorativeIcon } from '../render/icons.js';
 import { enumAttribute, interactiveContainer, requiredTitleAttribute } from './definitions.js';
 import { defineBlock } from './define-block.js';
 import { takeStringProperty } from './hast.js';
@@ -16,7 +15,8 @@ function enhanceDisclosure(node: Element, context: { readonly strings: PackageSt
     type: 'element',
     tagName: 'summary',
     properties: { className: ['semantic-disclosure-summary'] },
-    children: [decorativeIcon('arrow-down'), { type: 'text', value: title }],
+    // The state sign (+ / −) is drawn by the row primitive; a second icon would split the row in three.
+    children: [{ type: 'text', value: title }],
   });
 }
 
@@ -29,7 +29,7 @@ export const disclosure = defineBlock({
     runtime: 'native-disclosure',
   }),
   enhance: enhanceDisclosure,
-  styles: 'package',
+  feature: 'disclosure',
   staticEquivalent: 'A native details element; its summary stays visible and print shows it open.',
   examples: [':::disclosure{title="Method"}\nWe sampled one week of traffic.\n:::\n'],
 });

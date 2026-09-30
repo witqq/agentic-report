@@ -44,15 +44,19 @@ point at [`design-rules.md`](design-rules.md).
 
 ### The title is a direct promise
 
-Say plainly what the reader gets: the owner of the Moira landing preferred the plain «Let an AI agent carry
-out your instructions» to every clever title of the first round («Spin, measure, cut», «Seven stations, four
-paths back»). A concept title or a fact about a launch goes to the second level, under the promise. The
+Say plainly what the reader gets: «Let an AI agent carry out your instructions» names an outcome,
+while «Spin, measure, cut» leaves the product unexplained. A concept title or a fact about a launch
+goes to the second level, under the promise. The
 template «The AI-powered [category] for modern [audience]» and a title that would fit any competitor are
 prose tells: cover the logo and check that the title still names this product.
 
-The first Moira landing round (2026-09-24) showed why a clever title can obscure the product. Check the
-promise against the first-screen demo: a reader should be able to match the noun and verb in the title to
-what the screenshot or clip actually shows.
+Write the promise for one reader and the outcome they want, and drop «AI-powered» and «modern»: they name a
+category, not a promise. The call to action says what the reader gets and in which form («Download for
+macOS», «Run it on your repository»), not a generic «Get started». When three candidate titles come to
+mind, set them side by side on the real first screen and keep the one a stranger understands first.
+
+Sources: Superdesign, «Fix a generic AI landing page» (the mad-lib title); Department of Product, «Deep
+homepage UX, explored» (title patterns and call-to-action wording of product homepages).
 
 ### The argument goes through a misconception
 
@@ -63,44 +67,50 @@ retellings. The same primitive repeated section after section — a card grid, t
 of a template, however good the words. A chapter «where the product stops: what it does not do» builds trust,
 and a dated change log is proof that the product is alive.
 
-Sources: the live Moira landing reviewed on 2026-09-25 (strong content in identical cards); the landing
-guide of the Moira product (`LANDING-PAGE.md`, «one home for each message»).
+Counterexample: a strong argument spread over identical card grids still has the rhythm of a template;
+repeating the thesis in three chapters makes the reader check whether any of them adds a fact.
 
 ### A tool for agents shows how to connect it on the first screen
 
 For a product an agent installs, the connection line — the server address, the install command — sits in the
-first screen beside the actions. Clerk's one-command install is a useful pattern for making the first step
-copyable; Vercel's terminal command beside an audience list connects the step to its intended reader.
-The connection chapter has two parts: the configuration the reader pastes, and what the server answers,
-so the reader sees that it worked. Show an example response with the command, not only an installation
-promise.
+first screen beside the actions, as Clerk puts its one-command install and Vercel its terminal command and
+the list of who it is for. The connection chapter has two parts: the configuration the reader pastes, and
+what the server answers, so the reader sees that it worked.
+
+Sources: the first screens of Clerk (a one-command install) and Vercel (a terminal command beside the
+actions), September 2026.
 
 ### Show the path through a refusal
 
 «Attempt → refusal → fix → acceptance» proves more than a green path: Temporal lets the reader press Play and
-watch a workflow survive a failure; Framer's scenario demonstrates the same beat-by-beat explanation for an
-agent action. Put the text of the refusal verbatim beside its step; tell the scenario in three or four beats
-rather than one screenshot. On the refusal, time can stop: the frame freezes and the steps walk around its
-details before the story moves on. Linear's product reconstruction shows another way to do this: real HTML
-states on a timeline, with readable text and selectable controls instead of a flattened video or canvas.
+watch a workflow survive a failure, Framer plays an agent's scenario. Put the text of the refusal verbatim
+beside its step; tell the scenario in three or four beats rather than one screenshot. On the refusal, time can
+stop: the frame freezes and the steps walk around its details before the story moves on.
+
+Sources: Temporal (a workflow the reader plays and watches recover from a failure), Framer (an agent's
+scenario played step by step) and Linear (an HTML reconstruction of the product on a timeline, with no
+video and no canvas), all seen in September 2026.
 
 ### The product at its real size
 
 Show the real interface at natural size, without a device frame, and let the product be larger than the
 title, as Cursor does; an interface can sit over the page's own or licensed painting with the text beside it.
 A screenshot in made-up browser chrome or a tilted dashboard is a prop (`art-direction.md`, clichés).
-Cursor's recorded first-screen lesson is the relative scale: let the actual interface take more area than
-the display title so the reader can inspect it before scrolling.
+
+Sources: Cursor (the editor at natural size over a painting, larger than the title) and Raycast (the real
+command window at size, one red light through the page), September 2026.
 
 ### The final screen is a scene
 
 The page ends in a designed scene — the main image resolved, one action inside it — not a framed button or a
 box with two buttons. The main image stays alive without scrolling only as a quiet exception: one continuous
-movement per page, calm, with a pause button in the flow and a still version under reduced motion. For
-moving, blinking or scrolling content that starts automatically, lasts more than five seconds and appears
-alongside other content, WCAG 2.2.2 requires a way to pause, stop or hide it unless the movement is
-essential. The owner's accepted Moira landing review (2026-09-26) also rejected a framed button as the
-finale: resolve the main scene around the action instead.
+movement per page, calm, with a pause button in the flow and a still version under reduced motion.
+
+WCAG 2.2.2 «Pause, Stop, Hide» sets the limit: anything that starts moving by itself, lasts more than five
+seconds and stands beside other content needs a way to pause, stop or hide it. The package adds that button
+for a live effect itself ([`vocabulary-use.md`](vocabulary-use.md), norms of motion).
+
+Source: WCAG 2.2, success criterion 2.2.2.
 
 ### Storyboard a directed page
 
@@ -113,10 +123,14 @@ proves»: a technique with nothing in the last column comes out.
 | First screen | `recipe="demo"` with the output | The product exists and does this                 |
 | The run      | `scene="steps"` over the flow   | The agent was refused, fixed its answer, went on |
 
-For a sticky explanation, keep one figure in view while short text steps pass it. Change only the labelled
-part the current step explains, and make the complete figure readable when scrolling and scripting are
-unavailable. This is the transferable layout pattern from The Pudding's sticky stories and Scrollama's
-sticky-side demonstration.
+The form behind it is sticky scrollytelling: the figure is pinned while the steps of text scroll past it,
+and each step that reaches the middle of the screen changes the figure. The pinning is plain CSS and the
+page scrolls normally — the reader keeps control of the speed, and scrolling back plays the story back;
+nothing hijacks the wheel. `scene="steps"` and `scene="scrub"` are this form; what each does on a phone is in the
+motion table of [`vocabulary-use.md`](vocabulary-use.md).
+
+Sources: The Pudding, «Sticky scrollytelling» (pinning with `position: sticky` instead of a scroll
+listener); the Scrollama «sticky side» demo.
 
 ### Recipe: an index of variants
 
@@ -125,8 +139,7 @@ its date, why it was made, what changed, and a link to the frozen artifact. Buil
 `cards` (one card per version, the date in its title, a link card to the file) or a `timeline` of versions.
 Every shown version stays as its own file; the index is how the person finds the one they liked.
 
-Sources: the navigator of the Moira prototypes (`dist/index.html` in that project), asked for by the owner
-on 2026-09-26.
+Keep the index beside the frozen artifacts and update it whenever another version is shown.
 
 ## Document — `report`, `research`, `architecture`, `code-review`, `incident`, `guide`
 
@@ -149,12 +162,11 @@ on 2026-09-26.
   findings without severity; code without the file it belongs to.
 - **Examples.** `document` (report), `research`, `architecture`, `code-review`, `incident-review`
   (incident), `tutorial` (guide).
-- **Figure composition.** For a stepwise explanation, keep the figure beside the moving text and change
-  one labelled part per step; also show its complete static state. An Activation Atlas-style comparison
-  keeps related images in a fixed grid with group labels. An attribution-graph-style explanation labels
-  nodes and directed connections, then highlights only the path supporting the current claim. Put the
-  figure's source, date, scale or units and caption directly beside it. The Moira landing reviews found
-  numbers without their source and moment to be uncheckable (`DR-DATA-SLICE`).
+- **Sources.** The Pudding's sticky scrollytelling for a figure that stays while the steps change (the
+  storyboard section above); Distill's «Activation Atlas» and the attribution-graphs methods paper as
+  research write-ups where the figure is the argument: each figure is interactive only where interaction
+  answers a question, carries a caption that states the finding, and sits beside the paragraph that uses
+  it. Every number needs its source and moment (`DR-DATA-SLICE`).
 
 ## Dashboard — `metrics`, `charts`, `filters`, `statuses`
 
@@ -173,9 +185,8 @@ on 2026-09-26.
   green for «unknown».
 - **Examples.** `dashboard` (metrics; its `filter` controls also show the `filters` subvariant),
   `visualization-catalog` (charts), `layout-dashboard` (statuses).
-- **Signal reference.** Linear's recorded example uses colour for status, leaving ordinary labels neutral.
-  The Moira landing's «Form» prototype put a red stamp on every status and made the whole column an alarm.
-  Assign one signal colour to one state and write that state in words too (`DR-SIGNAL-COLOUR`).
+- **Sources.** Linear, where the interface is grey and colour marks only statuses. A red stamp on every
+  status makes the whole column an alarm (`DR-SIGNAL-COLOUR`).
 
 ## Answer — `choice`, `questions`, `survey`, `brief`
 
@@ -215,15 +226,13 @@ on 2026-09-26.
 - **Typical mistakes.** A document pasted into slides; every block an `appear`; a different transition per
   slide; speaker notes on the slide.
 - **Examples.** `presentation` (demo); `pitch`, `update`, and `lesson` have no example of their own (below).
-- **Scenario reference.** Temporal's playable workflow failure and Framer's staged agent scenario both
-  show a sequence of actions and outcomes; copy the beat structure, with the refusal and recovery visible.
-  The recorded Personal Log 2024 reference used scene transitions of 1–1.5 seconds. Treat that as an
-  observed cinematic tempo, not a default for a task-oriented deck; check that the audience can read the
-  incoming slide and use the still version under reduced motion.
+- **Sources.** Temporal and Framer for a demo told as a scenario (the refusal section above); the «Personal
+  Log 2024» site of Jeremy Studio for scene transitions of 1–1.5 seconds between full screens — long enough
+  to read as a change of place, short enough not to make the viewer wait.
 
 ## Subvariants without an example of their own
 
-Four subvariants have no example of their own yet. Copy the nearest example and change what the subvariant
+Five subvariants have no example of their own yet. Copy the nearest example and change what the subvariant
 changes:
 
 | Subvariant            | Copy              | Change                                                                                                       |

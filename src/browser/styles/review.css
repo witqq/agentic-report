@@ -1,0 +1,23 @@
+@layer components {
+  .review-selection-action[data-review-action-kind='create'] [data-package-icon='pencil'],
+  .review-selection-action[data-review-action-kind='thread'] [data-package-icon='comment'] {
+    display: block;
+  }
+
+  .review-file-action:focus-within {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 0.18rem;
+  }
+
+  .review-component legend {
+    padding: 0;
+    color: var(--color-heading);
+    font-weight: var(--weight-medium);
+  }
+
+  @media (max-width: 56.99rem) {
+    .review-panel-footer {
+      padding-bottom: max(0.85rem, env(safe-area-inset-bottom));
+    }
+  }
+}

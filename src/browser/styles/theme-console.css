@@ -1,0 +1,161 @@
+/* Приёмы темы «консоль» (`ornaments.console: on`): только на странице такой темы. */
+@layer components {
+  :root[data-theme-console='on'] ::selection {
+    background: var(--color-accent);
+    color: var(--color-bg);
+  }
+}
+
+@layer components {
+  :root[data-theme-console='on']
+    .report-content
+    :is(article, .page-opening)
+    > .semantic-section
+    > h2.semantic-section-title[data-chapter-number]::before {
+    padding-left: 0;
+    background: none;
+    content: '[' attr(data-chapter-number) ']';
+    @supports (content: '' / '') {
+      content: '[' attr(data-chapter-number) ']' / '';
+    }
+  }
+}
+
+@layer components {
+  :root[data-theme-console='on']
+    :is(.sidebar-label, .review-eyebrow, .semantic-contents-title)::before {
+    content: '[ ';
+    @supports (content: '' / '') {
+      content: '[ ' / '';
+    }
+  }
+}
+
+@layer components {
+  :root[data-theme-console='on']
+    :is(.sidebar-label, .review-eyebrow, .semantic-contents-title)::after {
+    content: ' ]';
+    @supports (content: '' / '') {
+      content: ' ]' / '';
+    }
+  }
+}
+
+@layer components {
+  :root[data-theme-console='on'] [data-navigation] a::before {
+    top: 0.42rem;
+    width: auto;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    color: transparent;
+    font-family: var(--font-author-mono, var(--font-mono));
+    line-height: 1.35;
+    content: '>';
+    @supports (content: '' / '') {
+      content: '>' / '';
+    }
+  }
+}
+
+@layer components {
+  :root[data-theme-console='on'] [data-navigation] a[aria-current='location']::before {
+    background: none;
+    color: var(--color-accent);
+  }
+}
+
+@layer components {
+  :root[data-theme-console='on'] [data-navigation] ol::before {
+    border-left: 1px dashed var(--color-border-strong);
+    background: none;
+  }
+}
+
+@layer components {
+  :root[data-theme-console='on'] :is(.semantic-card, .semantic-demo, .visualization-frame, pre) {
+    border-style: dashed;
+  }
+}
+
+@layer components {
+  :root[data-theme-console='on'] .report-content article > .semantic-section + .semantic-section {
+    border-top-style: dashed;
+  }
+}
+
+@layer components {
+  :root[data-theme-console='on']
+    :is(.topbar, th, td, .semantic-contents a, .semantic-finding:last-child) {
+    border-bottom-style: dashed;
+  }
+}
+
+@layer components {
+  /* Ссылка текста в консоли — фосфорный акцент с пунктиром; ссылка пропуска и кнопки-ссылки — свои. */
+  :root[data-theme-console='on'] a:not(.semantic-action, .skip-link, .ui-button) {
+    color: var(--color-accent);
+    text-decoration-style: dashed;
+  }
+}
+
+@layer components {
+  :root[data-theme-console='on'] .semantic-section[data-tone='contrast'] {
+    --role-component-bg: var(--color-accent-soft);
+    --role-component-fg: var(--color-text);
+    --role-control-fg: var(--color-heading);
+    --role-muted-fg: var(--color-text-muted);
+
+    border: 1px solid var(--color-accent);
+    background: var(--color-accent-soft);
+    color: var(--color-text);
+  }
+}
+
+@layer treatments {
+  :root[data-theme-console='on'] .ui-button {
+    font-family: var(--font-author-mono, var(--font-mono));
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+}
+
+@layer treatments {
+  :root[data-theme-console='on'] .ui-button[data-ui-variant='primary'] {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    color: var(--color-bg);
+  }
+}
+
+@layer treatments {
+  :root[data-theme-console='on'] .ui-label::before {
+    content: '[ ';
+    @supports (content: '' / '') {
+      content: '[ ' / '';
+    }
+  }
+}
+
+@layer treatments {
+  :root[data-theme-console='on'] .ui-label::after {
+    content: ' ]';
+    @supports (content: '' / '') {
+      content: ' ]' / '';
+    }
+  }
+}
+
+@layer treatments {
+  /* Консоль: флажок и дорожка переключателя прямоугольные; радио остаётся кругом — один выбор. */
+  :root[data-theme-console='on'] .ui-switch::before {
+    border-radius: 0;
+  }
+}
+
+@layer treatments {
+  :root[data-theme-console='on'] .ui-field {
+    border-style: dashed;
+  }
+}

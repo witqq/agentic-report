@@ -1,0 +1,110 @@
+@layer components {
+  /* Замена слова: все слова стоят в одной ячейке, ширину держит самое широкое. */
+  .semantic-swap {
+    color: var(--color-accent-strong);
+  }
+
+  .semantic-swap:not([data-swap-live]) > .swap-word:not([data-swap-word='0']) {
+    display: none;
+  }
+
+  .semantic-swap[data-swap-live] {
+    display: inline-grid;
+    justify-items: start;
+  }
+
+  .semantic-swap[data-swap-live] > .swap-word[data-current] {
+    opacity: 1;
+    transform: none;
+    user-select: text;
+  }
+
+  /* Набор строки: строка целиком в разметке и держит свою ширину, открывает её обрезка до набранного. */
+  .semantic-typing[data-typing-live] {
+    display: inline-block;
+    position: relative;
+    white-space: nowrap;
+    clip-path: inset(-0.3em calc(100% - var(--typing-shown, 0px) - 0.2em) -0.3em -0.1em);
+  }
+
+  .semantic-typing[data-typing-live]::after {
+    position: absolute;
+    top: 0.12em;
+    bottom: 0.12em;
+    left: var(--typing-shown, 0px);
+    width: 0.08em;
+    min-width: 1px;
+    background: var(--color-accent);
+    content: '';
+  }
+
+  .semantic-typing[data-typing-done]::after {
+    opacity: 0;
+    transition: opacity calc(600ms * var(--motion-pace, 1)) var(--motion-ease, ease-out);
+  }
+
+  /* Пометка от руки: штрих цвета пометок темы, дрожание — из зерна в пути; прорисовка — смещение штриха. */
+  .semantic-mark {
+    display: inline-block;
+    position: relative;
+  }
+
+  .mark-drawing {
+    position: absolute;
+    top: -0.1em;
+    left: -0.2em;
+    width: calc(100% + 0.4em);
+    height: calc(100% + 0.2em);
+    overflow: visible;
+    fill: none;
+    stroke: var(--color-marker, var(--color-accent));
+    stroke-width: 2.25;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+  }
+
+  .semantic-mark[data-mark='circle'] {
+    margin-inline: 0.2em;
+  }
+
+  .semantic-mark[data-mark='circle'] .mark-drawing {
+    top: -0.3em;
+    left: -0.5em;
+    width: calc(100% + 1em);
+    height: calc(100% + 0.6em);
+  }
+
+  .mark-drawing path {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset calc(700ms * var(--motion-pace, 1)) var(--motion-ease, ease-out);
+  }
+
+  .semantic-mark[data-mark-pending] .mark-drawing path {
+    stroke-dashoffset: 1;
+  }
+
+  @media print {
+    .semantic-swap[data-swap-live] > .swap-word:not([data-swap-word='0']) {
+      display: none;
+    }
+
+    .semantic-swap[data-swap-live] > .swap-word[data-swap-word='0'] {
+      opacity: 1;
+      transform: none;
+    }
+
+    .semantic-typing[data-typing-live] {
+      clip-path: none;
+    }
+
+    .semantic-typing[data-typing-live]::after {
+      display: none;
+    }
+
+    .semantic-mark[data-mark-pending] .mark-drawing path {
+      stroke-dashoffset: 0;
+    }
+  }
+}

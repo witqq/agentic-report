@@ -30,20 +30,18 @@ test('system locale selects Russian and the visible switcher changes the complet
   for (const [index, url] of landingFormats.entries()) {
     await page.goto(url);
     await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
-    await expect(page).toHaveTitle(
-      'agentic-report — готовые страницы для передачи от агента человеку',
-    );
+    await expect(page).toHaveTitle('agentic-report — красивые интерактивные страницы из Markdown');
     await expect(
       page.getByRole('heading', {
-        name: 'Страница из Markdown.',
+        name: 'Страница, которую хочется передать. Из Markdown.',
         level: 1,
       }),
     ).toBeVisible();
-    await expect(page.locator('[data-navigation] a').first()).toHaveText('Из исходника в страницу');
+    await expect(page.locator('[data-navigation] a').first()).toHaveText('Демо');
     await expect(page.getByRole('combobox', { name: 'Язык' })).toHaveValue('ru');
     await expect(page.locator('meta[name="description"]')).toHaveAttribute(
       'content',
-      'Дайте агенту декларативный Markdown и получите готовую адаптивную страницу без фронтенд-проекта.',
+      'Дайте агенту декларативный Markdown и получите готовую локальную страницу для человека.',
     );
 
     if (index === 0) {
@@ -58,11 +56,11 @@ test('system locale selects Russian and the visible switcher changes the complet
 
     await page.getByRole('combobox', { name: 'Язык' }).selectOption('en');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-    await expect(page).toHaveTitle('agentic-report — polished pages for agent handoff');
+    await expect(page).toHaveTitle('agentic-report — polished interactive pages from Markdown');
     await expect(
-      page.getByRole('heading', { name: 'A finished page from Markdown.', level: 1 }),
+      page.getByRole('heading', { name: 'A page worth handing over. From Markdown.', level: 1 }),
     ).toBeVisible();
-    await expect(page.locator('[data-navigation] a').first()).toHaveText('Source to page');
+    await expect(page.locator('[data-navigation] a').first()).toHaveText('Demo');
     await expect(page.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
     await expect(page.getByRole('combobox', { name: 'Language' })).toBeFocused();
 

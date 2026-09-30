@@ -1,0 +1,669 @@
+@layer components {
+  table {
+    width: auto;
+    max-width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Таблица — строки с горизонтальными линиями; заголовки столбцов — моноширинные метки. */
+  table {
+    border-top: 1px solid var(--color-heading);
+  }
+
+  th,
+  td {
+    border: 0;
+    border-bottom: 1px solid var(--color-border);
+    padding: calc(0.7rem * var(--space-factor)) 1.25rem calc(0.7rem * var(--space-factor)) 0;
+    overflow-wrap: normal;
+    vertical-align: top;
+    word-break: normal;
+    text-align: left;
+  }
+
+  /* Table, card, and chip surfaces take the section's roles: in an accent or contrast section the plain page
+   surface would put section-coloured text on a background of the opposite lightness. */
+  th {
+    background: transparent;
+    vertical-align: bottom;
+  }
+  @container table-frame (width >= 24rem) {
+    [data-table-code='24'] :is(td, th) code {
+      white-space: nowrap;
+    }
+  }
+  @container table-frame (width >= 28rem) {
+    [data-table-code='28'] :is(td, th) code {
+      white-space: nowrap;
+    }
+  }
+  @container table-frame (width >= 32rem) {
+    [data-table-code='32'] :is(td, th) code {
+      white-space: nowrap;
+    }
+  }
+  @container table-frame (width >= 36rem) {
+    [data-table-code='36'] :is(td, th) code {
+      white-space: nowrap;
+    }
+  }
+  @container table-frame (width >= 40rem) {
+    [data-table-code='40'] :is(td, th) code {
+      white-space: nowrap;
+    }
+  }
+  @container table-frame (width >= 44rem) {
+    [data-table-code='44'] :is(td, th) code {
+      white-space: nowrap;
+    }
+  }
+  @container table-frame (width >= 48rem) {
+    [data-table-code='48'] :is(td, th) code {
+      white-space: nowrap;
+    }
+  }
+  @container table-frame (width >= 56rem) {
+    [data-table-code='56'] :is(td, th) code {
+      white-space: nowrap;
+    }
+  }
+  @container table-frame (width >= 64rem) {
+    [data-table-code='64'] :is(td, th) code {
+      white-space: nowrap;
+    }
+  }
+  @container table-frame (width >= 72rem) {
+    [data-table-code='72'] :is(td, th) code {
+      white-space: nowrap;
+    }
+  }
+  @container table-frame (width >= 80rem) {
+    [data-table-code='80'] :is(td, th) code {
+      white-space: nowrap;
+    }
+  }
+  @container table-frame (width >= 96rem) {
+    [data-table-code='96'] :is(td, th) code {
+      white-space: nowrap;
+    }
+  }
+
+  /*
+   * `layout="scroll"`: the grid is kept at every width. Short columns stay on one line, a prose column keeps
+   * a readable width, the frame scrolls sideways, and the first column stays in view with a rule at its edge.
+   */
+  [data-table-layout='scroll'] > table :is(th, td) {
+    white-space: nowrap;
+  }
+
+  [data-table-layout='scroll'] > table :is(th, td)[data-column='prose'] {
+    min-width: 16rem;
+    white-space: normal;
+  }
+
+  [data-table-layout='scroll'] > table :is(th, td):first-child {
+    padding-inline-start: var(--table-inset);
+  }
+
+  [data-table-layout='scroll'] > table :is(th, td):first-child {
+    position: sticky;
+    z-index: 1;
+    inset-inline-start: 0;
+    background: var(--scroll-cue-surface);
+    box-shadow: inset -1px 0 var(--color-border);
+  }
+
+  [data-table-layout='scroll'] > table :is(th, td):first-child + :is(th, td) {
+    padding-inline-start: 1rem;
+  }
+
+  /*
+   * Column widths set by the compiler. A short column (every cell up to 20 characters: an id, a date, a
+   * status) keeps each value on one line: «OPS-20076» must not wrap at its hyphen. A prose column whose
+   * longest cell is an outlier is capped at the width of its typical cell (`data-column-cap`, rem), so one
+   * long row wraps instead of stretching the column to the track and leaving the other rows as short lines
+   * in wide empty cells. A width on a cell sets the column's preferred width in the automatic table
+   * layout; the cap applies where the grid has room for it, and cards and print ignore it.
+   */
+  [data-table-layout='auto'] > table :is(th, td)[data-column='short'] {
+    white-space: nowrap;
+  }
+  @container table-frame (width >= 48rem) {
+    [data-table-layout='auto'] > table :is(th, td)[data-column-cap='12'] {
+      width: 12rem;
+    }
+
+    [data-table-layout='auto'] > table :is(th, td)[data-column-cap='16'] {
+      width: 16rem;
+    }
+
+    [data-table-layout='auto'] > table :is(th, td)[data-column-cap='20'] {
+      width: 20rem;
+    }
+
+    [data-table-layout='auto'] > table :is(th, td)[data-column-cap='24'] {
+      width: 24rem;
+    }
+
+    [data-table-layout='auto'] > table :is(th, td)[data-column-cap='28'] {
+      width: 28rem;
+    }
+
+    [data-table-layout='auto'] > table :is(th, td)[data-column-cap='32'] {
+      width: 32rem;
+    }
+
+    [data-table-layout='auto'] > table :is(th, td)[data-column-cap='36'] {
+      width: 36rem;
+    }
+
+    [data-table-layout='auto'] > table :is(th, td)[data-column-cap='40'] {
+      width: 40rem;
+    }
+  }
+  @media print {
+    [data-table-layout='scroll'] > table :is(th, td):first-child {
+      padding-inline-start: 0;
+    }
+
+    [data-table-layout='scroll'] > table :is(th, td) {
+      position: static;
+      min-width: 0;
+      white-space: normal;
+    }
+  }
+  /* Size queries apply each complete card layout directly: all declared browser targets support them. */
+  @media screen {
+    @container table-frame (width < 20rem) {
+      [data-table-layout='auto'][data-table-fit='20'] > table > thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      [data-table-layout='auto'][data-table-fit='20'] > table > tbody {
+        display: block;
+      }
+
+      [data-table-layout='auto'][data-table-fit='20'] > table tr {
+        display: block;
+        border-bottom: 1px solid var(--color-border);
+        padding-block: calc(0.6rem * var(--space-factor));
+      }
+
+      [data-table-layout='auto'][data-table-fit='20'] > table > tbody > tr:first-child {
+        border-top: 1px solid var(--color-heading);
+      }
+
+      [data-table-layout='auto'][data-table-fit='20'] > table :is(td, th) {
+        display: block;
+        border: 0;
+        padding: 0.3rem 0;
+        text-align: start;
+      }
+
+      [data-table-layout='auto'][data-table-fit='20'] > table :is(td, th):empty {
+        display: none;
+      }
+
+      [data-table-layout='auto'][data-table-fit='20'] > table :is(td, th)[data-label]::before {
+        display: block;
+        margin-bottom: 0.15rem;
+        color: var(--color-text-muted);
+        content: attr(data-label);
+        @supports (content: '' / '') {
+          content: attr(data-label) / '';
+        }
+        font-size: var(--text-label);
+        font-weight: var(--weight-medium);
+        line-height: 1.35;
+      }
+
+      [data-table-layout='auto'][data-table-fit='20'] > table > tbody > tr > :first-child {
+        color: var(--color-heading);
+        font-weight: var(--weight-medium);
+      }
+    }
+
+    @container table-frame (width < 24rem) {
+      [data-table-layout='auto'][data-table-fit='24'] > table > thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      [data-table-layout='auto'][data-table-fit='24'] > table > tbody {
+        display: block;
+      }
+
+      [data-table-layout='auto'][data-table-fit='24'] > table tr {
+        display: block;
+        border-bottom: 1px solid var(--color-border);
+        padding-block: calc(0.6rem * var(--space-factor));
+      }
+
+      [data-table-layout='auto'][data-table-fit='24'] > table > tbody > tr:first-child {
+        border-top: 1px solid var(--color-heading);
+      }
+
+      [data-table-layout='auto'][data-table-fit='24'] > table :is(td, th) {
+        display: block;
+        border: 0;
+        padding: 0.3rem 0;
+        text-align: start;
+      }
+
+      [data-table-layout='auto'][data-table-fit='24'] > table :is(td, th):empty {
+        display: none;
+      }
+
+      [data-table-layout='auto'][data-table-fit='24'] > table :is(td, th)[data-label]::before {
+        display: block;
+        margin-bottom: 0.15rem;
+        color: var(--color-text-muted);
+        content: attr(data-label);
+        @supports (content: '' / '') {
+          content: attr(data-label) / '';
+        }
+        font-size: var(--text-label);
+        font-weight: var(--weight-medium);
+        line-height: 1.35;
+      }
+
+      [data-table-layout='auto'][data-table-fit='24'] > table > tbody > tr > :first-child {
+        color: var(--color-heading);
+        font-weight: var(--weight-medium);
+      }
+    }
+
+    @container table-frame (width < 28rem) {
+      [data-table-layout='auto'][data-table-fit='28'] > table > thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      [data-table-layout='auto'][data-table-fit='28'] > table > tbody {
+        display: block;
+      }
+
+      [data-table-layout='auto'][data-table-fit='28'] > table tr {
+        display: block;
+        border-bottom: 1px solid var(--color-border);
+        padding-block: calc(0.6rem * var(--space-factor));
+      }
+
+      [data-table-layout='auto'][data-table-fit='28'] > table > tbody > tr:first-child {
+        border-top: 1px solid var(--color-heading);
+      }
+
+      [data-table-layout='auto'][data-table-fit='28'] > table :is(td, th) {
+        display: block;
+        border: 0;
+        padding: 0.3rem 0;
+        text-align: start;
+      }
+
+      [data-table-layout='auto'][data-table-fit='28'] > table :is(td, th):empty {
+        display: none;
+      }
+
+      [data-table-layout='auto'][data-table-fit='28'] > table :is(td, th)[data-label]::before {
+        display: block;
+        margin-bottom: 0.15rem;
+        color: var(--color-text-muted);
+        content: attr(data-label);
+        @supports (content: '' / '') {
+          content: attr(data-label) / '';
+        }
+        font-size: var(--text-label);
+        font-weight: var(--weight-medium);
+        line-height: 1.35;
+      }
+
+      [data-table-layout='auto'][data-table-fit='28'] > table > tbody > tr > :first-child {
+        color: var(--color-heading);
+        font-weight: var(--weight-medium);
+      }
+    }
+
+    @container table-frame (width < 32rem) {
+      [data-table-layout='auto'][data-table-fit='32'] > table > thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      [data-table-layout='auto'][data-table-fit='32'] > table > tbody {
+        display: block;
+      }
+
+      [data-table-layout='auto'][data-table-fit='32'] > table tr {
+        display: block;
+        border-bottom: 1px solid var(--color-border);
+        padding-block: calc(0.6rem * var(--space-factor));
+      }
+
+      [data-table-layout='auto'][data-table-fit='32'] > table > tbody > tr:first-child {
+        border-top: 1px solid var(--color-heading);
+      }
+
+      [data-table-layout='auto'][data-table-fit='32'] > table :is(td, th) {
+        display: block;
+        border: 0;
+        padding: 0.3rem 0;
+        text-align: start;
+      }
+
+      [data-table-layout='auto'][data-table-fit='32'] > table :is(td, th):empty {
+        display: none;
+      }
+
+      [data-table-layout='auto'][data-table-fit='32'] > table :is(td, th)[data-label]::before {
+        display: block;
+        margin-bottom: 0.15rem;
+        color: var(--color-text-muted);
+        content: attr(data-label);
+        @supports (content: '' / '') {
+          content: attr(data-label) / '';
+        }
+        font-size: var(--text-label);
+        font-weight: var(--weight-medium);
+        line-height: 1.35;
+      }
+
+      [data-table-layout='auto'][data-table-fit='32'] > table > tbody > tr > :first-child {
+        color: var(--color-heading);
+        font-weight: var(--weight-medium);
+      }
+    }
+
+    @container table-frame (width < 36rem) {
+      [data-table-layout='auto'][data-table-fit='36'] > table > thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      [data-table-layout='auto'][data-table-fit='36'] > table > tbody {
+        display: block;
+      }
+
+      [data-table-layout='auto'][data-table-fit='36'] > table tr {
+        display: block;
+        border-bottom: 1px solid var(--color-border);
+        padding-block: calc(0.6rem * var(--space-factor));
+      }
+
+      [data-table-layout='auto'][data-table-fit='36'] > table > tbody > tr:first-child {
+        border-top: 1px solid var(--color-heading);
+      }
+
+      [data-table-layout='auto'][data-table-fit='36'] > table :is(td, th) {
+        display: block;
+        border: 0;
+        padding: 0.3rem 0;
+        text-align: start;
+      }
+
+      [data-table-layout='auto'][data-table-fit='36'] > table :is(td, th):empty {
+        display: none;
+      }
+
+      [data-table-layout='auto'][data-table-fit='36'] > table :is(td, th)[data-label]::before {
+        display: block;
+        margin-bottom: 0.15rem;
+        color: var(--color-text-muted);
+        content: attr(data-label);
+        @supports (content: '' / '') {
+          content: attr(data-label) / '';
+        }
+        font-size: var(--text-label);
+        font-weight: var(--weight-medium);
+        line-height: 1.35;
+      }
+
+      [data-table-layout='auto'][data-table-fit='36'] > table > tbody > tr > :first-child {
+        color: var(--color-heading);
+        font-weight: var(--weight-medium);
+      }
+    }
+
+    @container table-frame (width < 40rem) {
+      :is([data-table-layout='auto'][data-table-fit='40'], .table-frame[data-table-layout='stack'])
+        > table
+        > thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      :is([data-table-layout='auto'][data-table-fit='40'], .table-frame[data-table-layout='stack'])
+        > table
+        > tbody {
+        display: block;
+      }
+
+      :is([data-table-layout='auto'][data-table-fit='40'], .table-frame[data-table-layout='stack'])
+        > table
+        tr {
+        display: block;
+        border-bottom: 1px solid var(--color-border);
+        padding-block: calc(0.6rem * var(--space-factor));
+      }
+
+      :is([data-table-layout='auto'][data-table-fit='40'], .table-frame[data-table-layout='stack'])
+        > table
+        > tbody
+        > tr:first-child {
+        border-top: 1px solid var(--color-heading);
+      }
+
+      :is([data-table-layout='auto'][data-table-fit='40'], .table-frame[data-table-layout='stack'])
+        > table
+        :is(td, th) {
+        display: block;
+        border: 0;
+        padding: 0.3rem 0;
+        text-align: start;
+      }
+
+      :is([data-table-layout='auto'][data-table-fit='40'], .table-frame[data-table-layout='stack'])
+        > table
+        :is(td, th):empty {
+        display: none;
+      }
+
+      :is([data-table-layout='auto'][data-table-fit='40'], .table-frame[data-table-layout='stack'])
+        > table
+        :is(td, th)[data-label]::before {
+        display: block;
+        margin-bottom: 0.15rem;
+        color: var(--color-text-muted);
+        content: attr(data-label);
+        @supports (content: '' / '') {
+          content: attr(data-label) / '';
+        }
+        font-size: var(--text-label);
+        font-weight: var(--weight-medium);
+        line-height: 1.35;
+      }
+
+      :is([data-table-layout='auto'][data-table-fit='40'], .table-frame[data-table-layout='stack'])
+        > table
+        > tbody
+        > tr
+        > :first-child {
+        color: var(--color-heading);
+        font-weight: var(--weight-medium);
+      }
+    }
+
+    @container table-frame (width < 44rem) {
+      [data-table-layout='auto'][data-table-fit='44'] > table > thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      [data-table-layout='auto'][data-table-fit='44'] > table > tbody {
+        display: block;
+      }
+
+      [data-table-layout='auto'][data-table-fit='44'] > table tr {
+        display: block;
+        border-bottom: 1px solid var(--color-border);
+        padding-block: calc(0.6rem * var(--space-factor));
+      }
+
+      [data-table-layout='auto'][data-table-fit='44'] > table > tbody > tr:first-child {
+        border-top: 1px solid var(--color-heading);
+      }
+
+      [data-table-layout='auto'][data-table-fit='44'] > table :is(td, th) {
+        display: block;
+        border: 0;
+        padding: 0.3rem 0;
+        text-align: start;
+      }
+
+      [data-table-layout='auto'][data-table-fit='44'] > table :is(td, th):empty {
+        display: none;
+      }
+
+      [data-table-layout='auto'][data-table-fit='44'] > table :is(td, th)[data-label]::before {
+        display: block;
+        margin-bottom: 0.15rem;
+        color: var(--color-text-muted);
+        content: attr(data-label);
+        @supports (content: '' / '') {
+          content: attr(data-label) / '';
+        }
+        font-size: var(--text-label);
+        font-weight: var(--weight-medium);
+        line-height: 1.35;
+      }
+
+      [data-table-layout='auto'][data-table-fit='44'] > table > tbody > tr > :first-child {
+        color: var(--color-heading);
+        font-weight: var(--weight-medium);
+      }
+    }
+
+    @container table-frame (width < 48rem) {
+      [data-table-layout='auto'][data-table-fit='48'] > table > thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      [data-table-layout='auto'][data-table-fit='48'] > table > tbody {
+        display: block;
+      }
+
+      [data-table-layout='auto'][data-table-fit='48'] > table tr {
+        display: block;
+        border-bottom: 1px solid var(--color-border);
+        padding-block: calc(0.6rem * var(--space-factor));
+      }
+
+      [data-table-layout='auto'][data-table-fit='48'] > table > tbody > tr:first-child {
+        border-top: 1px solid var(--color-heading);
+      }
+
+      [data-table-layout='auto'][data-table-fit='48'] > table :is(td, th) {
+        display: block;
+        border: 0;
+        padding: 0.3rem 0;
+        text-align: start;
+      }
+
+      [data-table-layout='auto'][data-table-fit='48'] > table :is(td, th):empty {
+        display: none;
+      }
+
+      [data-table-layout='auto'][data-table-fit='48'] > table :is(td, th)[data-label]::before {
+        display: block;
+        margin-bottom: 0.15rem;
+        color: var(--color-text-muted);
+        content: attr(data-label);
+        @supports (content: '' / '') {
+          content: attr(data-label) / '';
+        }
+        font-size: var(--text-label);
+        font-weight: var(--weight-medium);
+        line-height: 1.35;
+      }
+
+      [data-table-layout='auto'][data-table-fit='48'] > table > tbody > tr > :first-child {
+        color: var(--color-heading);
+        font-weight: var(--weight-medium);
+      }
+    }
+  }
+  @media print {
+    .table-frame > table {
+      background: none;
+    }
+  }
+
+  :root[data-layout='mixed'] table {
+    max-width: 100%;
+  }
+
+  @media (width <= 48rem) {
+    /* A table that scrolls sideways (`layout="scroll"`) spans the screen with its surface and keeps its text
+     on the prose edge: the frame gives up its padding, and the table takes the bleed as its inset and
+     scrolls edge to edge. A table that fits stays a panel of its own width on the prose edge, and cards
+     keep their text there. */
+    :is(
+        .report-content article,
+        .report-content article > .semantic-section,
+        .report-content article > .semantic-disclosure,
+        .report-content article > .semantic-section > .semantic-disclosure
+      )
+      > .table-frame[data-table-layout='scroll'] {
+      padding-inline: 0;
+    }
+
+    :is(
+        .report-content article,
+        .report-content article > .semantic-section,
+        .report-content article > .semantic-disclosure,
+        .report-content article > .semantic-section > .semantic-disclosure
+      )
+      > .table-frame[data-table-layout='scroll']
+      > table {
+      --table-inset: var(--bleed);
+
+      width: auto;
+      max-width: none;
+    }
+  }
+}

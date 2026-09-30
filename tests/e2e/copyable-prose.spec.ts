@@ -96,7 +96,9 @@ for (const fixture of cases) {
 
     if (fixture.name.includes('directory')) {
       await page.locator('html').evaluate((element) => {
-        element.dataset.theme = element.dataset.theme === 'dark' ? 'light' : 'dark';
+        // Светлая и тёмная схемы переключаются `data-scheme`; `data-theme` — имя темы страницы, и чужое
+        // имя снимает с неё все токены темы, включая меру строки.
+        element.dataset.scheme = element.dataset.scheme === 'dark' ? 'light' : 'dark';
       });
     }
     await copyable.screenshot({

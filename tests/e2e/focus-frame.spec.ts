@@ -3,14 +3,14 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { buildReport } from '../../dist/node/index.js';
-import { effectCheck } from '../../dist/node/core/effect-check.js';
 import { MANUAL_CLOCK_INIT_SCRIPT } from '../../dist/node/page-clock.js';
 import { expect, test } from './fixtures.js';
 
 /**
- * A reference WebGL effect must draw both variants, preserve the image under still/static/print,
- * and pass the same effect-check contract as an author's effect. A transparent canvas, a 2D-only
- * implementation, or two variants that paint the same marks fail the pixel and mode assertions.
+ * A reference WebGL effect must draw both variants and preserve the image under still/static/print. A
+ * transparent canvas, a 2D-only implementation, or two variants that paint the same marks fail the pixel
+ * and mode assertions. Its effect-check contract, which includes a timed budget, runs in
+ * `tests/perf/reference-effect-checks.spec.ts`.
  */
 const root = path.resolve('test-results/e2e-focus-frame');
 const extension = path.resolve('extensions/focus-frame');
@@ -60,24 +60,6 @@ async function pixels(page: import('@playwright/test').Page, progress: number) {
 }
 
 test.describe.configure({ timeout: 180_000 });
-
-test('focus-frame passes all eleven checks on two unlike examples', async ({
-  browserName,
-}, info) => {
-  test.skip(info.project.name !== 'desktop-chromium' || browserName !== 'chromium');
-  const out = path.join(root, 'effect-check');
-  await rm(out, { recursive: true, force: true });
-  await mkdir(root, { recursive: true });
-  const result = await effectCheck({
-    manifest: path.join(extension, 'extension.yaml'),
-    output: out,
-  });
-  expect(
-    result.checks.filter((check) => !check.passed).map((check) => check.id),
-    JSON.stringify(result.checks, null, 2),
-  ).toEqual([]);
-  expect(result.summary).toBe('11 of 11 checks passed');
-});
 
 test('trace and corners draw distinct WebGL marks from the page clock and theme', async ({
   page,

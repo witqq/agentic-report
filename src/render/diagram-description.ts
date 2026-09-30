@@ -151,6 +151,37 @@ export function describeSequence(
   };
 }
 
+/** Один шаг последовательности для списка «от → к: сообщение»: имена уже различены. */
+export interface SequenceStep {
+  readonly from: string;
+  readonly to: string;
+  readonly label?: string;
+  readonly kind?: string;
+  /** Сообщение участника самому себе. */
+  readonly self: boolean;
+}
+
+/**
+ * Последовательность списком шагов — её вид на узкой дорожке, где картинка не встаёт с читаемыми
+ * подписями: участники по именам и сообщения по порядку из тех же данных, что и рисунок.
+ */
+export function sequenceSteps(
+  participants: readonly DescribedNode[],
+  messages: readonly DescribedEdge[],
+): { readonly participants: readonly string[]; readonly steps: readonly SequenceStep[] } {
+  const name = namer(participants);
+  return {
+    participants: participants.map((participant) => nodeText(participant, name)),
+    steps: messages.map((message) => ({
+      from: name(message.from),
+      to: name(message.to),
+      ...(message.label === undefined ? {} : { label: message.label }),
+      ...(message.kind === undefined ? {} : { kind: message.kind }),
+      self: message.from === message.to,
+    })),
+  };
+}
+
 /**
  * Одна строка для `<desc>`: разделы подряд. Пункты списка идут через точку с запятой, нумерованные —
  * через точку: внутри слоя узлы уже разделены точкой с запятой.

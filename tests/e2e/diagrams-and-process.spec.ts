@@ -319,6 +319,55 @@ test('the camera flies into the node by progress and the nested labels grow read
   await expect(page.locator('.visualization-zoom-camera')).toBeInViewport();
 });
 
+test('a zoom whose outer labels would start under 11 px stands as two figures instead of flying', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const root = path.resolve(
+    'test-results/e2e-diagrams-and-process',
+    testInfo.project.name,
+    'zoom-labels',
+  );
+  await rm(root, { recursive: true, force: true });
+  await mkdir(root, { recursive: true });
+  await writeFile(
+    path.join(root, 'report.md'),
+    [
+      '---\ntitle: Zoom labels\nlanguage: en\n---\n\n# Zoom labels\n',
+      '::::::section{title="Server" id="server"}',
+      '::::diagram{title="Server" description="Readings travel to the server, which publishes and stores them."}',
+      '::node{id="stations" label="Six stations"}\n::node{id="gateway" label="Radio gateway"}',
+      '::node{id="server" label="Kestrel server"}\n::node{id="page" label="Harbour page"}\n::node{id="archive" label="Archive"}',
+      '::edge{from="stations" to="gateway" label="every ten minutes" kind="data"}',
+      '::edge{from="gateway" to="server" label="readings" kind="data"}',
+      '::edge{from="server" to="page" label="publishes"}\n::edge{from="server" to="archive" label="stores"}',
+      ':::zoom{node="server" title="Inside the server"}',
+      '::node{id="intake" label="Intake"}\n::node{id="check" label="Quality check"}',
+      '::edge{from="intake" to="check"}\n:::\n::::\n::::::\n',
+    ].join('\n'),
+  );
+  const output = path.join(root, 'page.html');
+  await buildReport({ input: root, output });
+  const figure = page.locator('figure[data-zoom]');
+  const edgeLabelPx = () =>
+    figure.evaluate((element) => {
+      const camera = element.querySelector<SVGSVGElement>('.visualization-zoom-camera');
+      const from = (camera?.dataset.zoomFrom ?? '').split(' ').map(Number);
+      return 13 * ((camera?.clientWidth ?? 0) / (from[2] ?? 1));
+    });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openManual(page, pathToFileURL(output).href);
+  await expect(figure).toHaveAttribute('data-zoom-live', '');
+  await page.setViewportSize({ width: 320, height: 800 });
+  await openManual(page, pathToFileURL(output).href);
+  // Ловит: на узкой дорожке камера стартует с подписями связей мельче 11 px, а пролёт всё равно идёт.
+  await expect(figure).not.toHaveAttribute('data-zoom-live', '');
+  await expect(page.locator('.visualization-zoom-still').first()).toBeVisible();
+  // Контрпример в той же фигуре: на этой ширине начало пролёта действительно мельче читаемого.
+  await figure.evaluate((element) => element.setAttribute('data-zoom-live', ''));
+  expect(await edgeLabelPx()).toBeLessThan(11);
+});
+
 test('pulses run the route three times on the page clock and stop', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium');
   const url = await buildPage(testInfo.project.name);
@@ -414,6 +463,9 @@ test('a mini process stands in its line of text with its steps said in words', a
   // Ловит: знак раздувается до размера картинки или сжимается до точки.
   expect(box?.height ?? 0).toBeGreaterThan(line);
   expect(box?.height ?? 0).toBeLessThan(line * 2.2);
+  // Ловит: кратность возврата «×2» набрана мельче 11 px, и её не прочесть.
+  const count = await process.locator('.visualization-process-count').boundingBox();
+  expect(count?.height ?? 0).toBeGreaterThanOrEqual(11);
   await expect(process.locator('.visually-hidden')).toHaveText(
     'Steps: Plan (done) → Build (done) → Review (in review) → Ship (not started); returned from Review to Build 2 times.',
   );

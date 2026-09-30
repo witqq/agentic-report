@@ -230,7 +230,8 @@ describe('unified diff', () => {
       await workspace('diff-render'),
       page('document', ['# Diff', DIFF].join('\n\n')),
     );
-    expect(html).toContain('<code class="semantic-diff-file">src/a.ts</code>');
+    // The path breaks only at its separators (`src/render/tables.ts`).
+    expect(html).toContain('<code class="semantic-diff-file">src/<wbr>a.<wbr>ts</code>');
     expect(html).toContain('2 lines added, 1 removed');
     expect(html).toMatch(/data-diff="remove" data-old="11" data-gutter="11 {3}"/u);
     expect(html).toMatch(/data-diff="add" data-new="12" data-gutter=" {3}12"/u);
@@ -274,7 +275,9 @@ describe('findings and card status', () => {
         (m) => m[1],
       ),
     ).toEqual(['Name', 'Key', 'Log']);
-    expect(html).toContain('<code class="semantic-finding-location ui-meta">src/a.ts:11</code>');
+    expect(html).toContain(
+      '<code class="semantic-finding-location ui-meta">src/<wbr>a.<wbr>ts:<wbr>11</code>',
+    );
   });
 
   it('refuses a finding outside findings and a severity outside the closed set', async () => {

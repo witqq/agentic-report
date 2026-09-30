@@ -44,6 +44,9 @@ all, including which directive answers which question of the reader and what eac
   space stay directives and fail on an unregistered name; write `\:` when such prose is not a directive.
 - A code block that shows directives inside a directive needs a longer outer colon fence than any fence
   line inside it: a `::::` line in a fenced example closes a four-colon container around it.
+- Close each container with the same number of colons it opened with, and give an outer container more
+  colons than any container inside it. A leftover fence line (`:::::` after its container already closed)
+  fails the build with `UNBALANCED_DIRECTIVE_FENCE` at its line instead of showing colons on the page.
 - Introduce a registered glossary term with `:term[...]{key="..."}` at its first occurrence in each
   `section`; later occurrences in the same section stay ordinary prose. Declare inflected spellings with
   `forms="…, …"` on the definition.
@@ -126,8 +129,19 @@ printed; the default `auto` picks the one with the fewest crossings that fits th
   flow-only.
 - **Keep a sequence to five participants or fewer,** and split a flow a reader must decode into two.
 
-Every diagram is also written out in words under the picture in a closed disclosure. Do not restate it in
-prose next to it; explain what it means.
+Every diagram is also written out in words under the picture in a disclosure, open from the start on a phone.
+Do not restate it in prose next to it; explain what it means.
+
+**What the reader gets on a phone.** A diagram shrinks to the column only while its smallest text stays at
+11 px; below that it changes form. A `sequence` becomes a numbered list of steps «from → to: message» with
+its participants above; a flow shows a narrow top-down view with wrapped labels; a `zoom` that would end
+with unreadable inner labels, or start with unreadable connection labels, stands as its two figures, one
+under the other. A chart shows its narrow drawing whenever its own column is too narrow for the wide one,
+beside the docked contents too. Every diagram, chart and table wider than the column has an **Open**
+control: the full drawing full screen, moved by dragging and zoomed by pinching, on desktop too. So write
+for the list as well as the picture: short participant names and message labels that read as a sentence
+(«Gateway → Auth: check the session token»). A flow with five or more sources side by side cannot narrow and
+scrolls on a phone: split it or give it fewer parallel nodes per layer.
 
 ### Draw a process
 
@@ -193,7 +207,8 @@ place. Without motion and in print the whole diagram and the inside stand side b
 
 One zoom per flow diagram, with no `draw="scroll"`: the zoom is the diagram's scroll scene. The zoomed
 diagram shows its default view only, without the view switcher. Keep the inside to a handful of nodes: the
-camera fits it into the node's box, and a wide inside ends small.
+camera fits it into the node's box, and a wide inside ends small — where its labels would stay under 11 px
+(a phone, usually) the page shows the two figures instead of the flight.
 
 ## Build a page from data
 
@@ -287,24 +302,48 @@ A mock with invented names, times or numbers takes `illustrative="true"`: the pa
 ## Show a recording
 
 ```markdown
-::video{src="assets/demo.h264.mp4" sources="assets/demo.av1.mp4, assets/demo.vp9.webm" poster="assets/demo.poster.jpg" chapters="assets/demo.chapters.vtt" caption="The page is built from its source in one command."}
+::video{from="assets/film" caption="The page is built from its source in one command."}
+::video{src="assets/demo.h264.mp4" sources="assets/demo.av1.mp4, assets/demo.vp9.webm" poster="assets/demo.poster.jpg" chapters="assets/demo.chapters.vtt" caption="The same clip, named file by file."}
 ```
 
-`mode` is `clip` (default: muted, looping, playing while visible, with controls), `background` (muted loop
-without controls, with a pause button; `poster` required), or `manual` (sound and controls, plays only when
-pressed). `sources` lists further encodings in order of preference; directory output offers them all,
-single-file output embeds only the most compatible one and warns. `chapters` is a WebVTT file shown as a
+A film made with agentic-screencast is named by `from` on `video`: the path of the `<film>.web.json`
+manifest that `agentic-screencast web` writes, or of the directory that holds exactly one. The film gives
+every encoding in the manifest's order, its WebP poster (JPEG when there is none), and its chapters, whose
+track takes the film's language; `poster`, `dark-poster`, `chapters`, `sources`, `caption`, `mode`, and
+the loop attributes written on the directive override the film. `from` replaces `src`: both together, or
+neither, fail. A manifest that is missing, not version 1, ambiguous (a directory with two manifests), or
+names a file that is missing or outside the source directory fails with `INVALID_VIDEO_MANIFEST` and says
+which file to fix.
+
+`mode` is `clip` (muted, looping, playing while visible, with controls), `background` (muted loop without
+controls, with a pause button; `poster` required), or `manual` (sound and controls, plays only when
+pressed). Without `mode`, the build listens to the file: a recording that carries sound — a voice-over — is
+`manual`, so the voice is heard, and a silent one is a `clip`. A silent audio track does not count, so a
+film without voice stays a clip; `start`, `seam="fade"`, or `expand` keep a video a clip; a `mode` you write
+always wins. `sources` lists further encodings in order of preference; directory output offers them all,
+single-file output embeds only the most compatible one and warns. Each source's `type` names the codecs the
+build reads from the file — profile, level, and the audio codec — so the browser picks one it can play; when
+a film manifest says otherwise, the file wins and the build warns `VIDEO_MANIFEST_MISMATCH`. `chapters` is a WebVTT file shown as a
 chapter list the reader can jump by. Clips count toward `output.maxInlineBytes`, the size budget of one file:
 above it the build fails (`INLINE_SIZE_BUDGET_EXCEEDED`), so build a page with several clips as a directory.
-Where each mode fits is in [`vocabulary-use.md`](vocabulary-use.md#video); encoding sizes are in
-[`assets.md`](assets.md#sizes).
+A poster that is a frame of a light or dark screen takes `dark-poster`, its frame in the other scheme
+([`assets.md`](assets.md#pictures-in-both-schemes)). Where each mode fits is in
+[`vocabulary-use.md`](vocabulary-use.md#video); encoding sizes are in [`assets.md`](assets.md#sizes).
 
 To film a product for the page, use agentic-screencast as a finished tool: install it
 (`npm install --global agentic-screencast`, then `npx playwright install chromium`), write its scenario in
 a working directory outside the page source, build the film, and run
-`agentic-screencast web film.mp4 --out web --formats av1,vp9,h264`. Copy the H.264 file into `src`, the AV1
-and VP9 files into `sources`, the poster, and the chapters file into the page's `assets/`, and record the
-run in the brief's «Media» table. Its own skill explains the scenario.
+`agentic-screencast web film.mp4 --out <page>/assets/film --formats av1,vp9,h264`; a film with a voice-over
+becomes a `manual` video with sound, a film without one a muted `clip` (`--mute` drops its silent track and
+makes the files smaller). Then write
+`::video{from="assets/film"}` and record the run in the brief's «Media» table. Its own skill explains the
+scenario.
+
+To film a page of your own as a scene of such a film, build it with `topbar: false` in the frontmatter:
+the page has no top bar, the first section starts at the top edge, and anchors, the contents sidebar and
+motion work as on any page. The scheme toggle and the language selector go with the bar, and `review` and
+`themeSwitcher`, whose controls live only there, are refused. A deck is filmed with `?view=film` instead
+([Make a presentation](#make-a-presentation)).
 
 ## Make a presentation
 
@@ -318,6 +357,43 @@ it with `window.agenticSlides.goto(slide, step)`, `next()`, `previous()`, and wa
 `window.agenticSlides.settled()` (or the `agentic-slides:settled` event, or `data-slide-state="settled"` on
 the root) before each frame, because every transition has a fixed duration published as
 `data-slide-duration`.
+
+### Slides inside a document
+
+When a document needs a few slides — a summary to show in a meeting, a short walk-through — put a `deck` in
+it instead of making the page a presentation. It holds only slides; a slide holds Markdown, `appear` steps
+and `notes`. Give each nested directive a longer fence than the one inside it:
+
+```markdown
+:::::deck{title="Quarter in review" id="quarter"}
+::::slide
+
+## Revenue grew 18%
+
+The quarter in one line.
+::::
+
+::::slide{transition="push"}
+
+## Three reasons
+
+:::appear
+New customers.
+:::
+
+:::notes
+Mention refunds.
+:::
+::::
+:::::
+```
+
+The reader pages it with the buttons under the slot or the arrow keys, opens it on the whole screen with
+the full-screen button and leaves with Escape; `#quarter/2` opens its second slide. Several decks on a page
+are independent. Print shows the slides one after another with every step; reduced motion opens every step
+and drops the transitions. Notes stay hidden on the page: a deck has no presenter view. A slide's
+type scales with its width, so keep it to a heading and a few short lines: a slide that needs scrolling is
+a section.
 
 ## Answer and review workspaces
 
@@ -334,3 +410,9 @@ as a deterministic `review.json` (version 3 for a single-language page, version 
 a multilingual one). For a follow-up build, pass the prior artifact with `build --review review.json`;
 stale bindings stay as prior revision segments. Never imply an account or signature, and never rewrite the
 Markdown from a review file. A report may contain at most 5,000 reviewable targets.
+
+### Show what changed since the previous edition
+
+A follow-up build with `--since` marks what changed since the page the person saw; the source needs nothing
+new. Notes still anchor to the new text: removed words and ghosts are not part of a note's quote. When and
+how to use it is in [`process.md`](process.md#show-what-changed-since-the-last-edition).

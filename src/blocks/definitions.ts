@@ -412,13 +412,15 @@ export function integerAttribute(
 }
 
 export function pathAttribute(
-  name: 'src' | 'poster' | 'chapters',
+  name: 'src' | 'from' | 'poster' | 'dark-poster' | 'chapters',
   description: string,
   renderProperty:
     | 'dataLocalAsset'
     | 'dataFontSource'
     | 'dataVideoSource'
+    | 'dataVideoFrom'
     | 'dataVideoPoster'
+    | 'dataVideoDarkPoster'
     | 'dataVideoChapters',
   required = true,
 ): DirectiveAttributeDefinition {

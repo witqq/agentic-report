@@ -20,7 +20,7 @@ language: ru
 
 :::steps{title="Путь первого использования"}
 
-1. Запустите `agentic-report init ./my-page --starter tutorial`.
+1. Запустите `agentic-report init ./my-page --starter document`.
 2. Откройте `./my-page/report.md` и замените примерный заголовок.
 3. Запустите `agentic-report build ./my-page --output ./my-page.html`.
 4. Откройте `./my-page.html` напрямую в браузере.

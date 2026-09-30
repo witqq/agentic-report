@@ -1,7 +1,7 @@
 /**
  * Правила литералов таблиц стилей: облик страницы приходит только из темы и шкал пакета, поэтому стиль
  * не называет числом ни цвета, ни гарнитуры, ни скругления, ни насыщенности, ни кегля. Одни и те же правила
- * проверяют `src/browser/document.css` (тест `tests/unit/theme-tokens.test.ts`, с поимённым списком
+ * проверяют таблицы стилей пакета (`src/browser/styles/*.css`, `src/blocks/*.css`) (тест `tests/unit/theme-tokens.test.ts`, с поимённым списком
  * исключений пакета) и стили составного блока расширения (`styles` в манифесте `kind: block`, загрузчик
  * `src/extensions/load.ts`, без исключений и с правилами изоляции поверх — `blockStyleViolations`).
  */
@@ -31,9 +31,9 @@ export interface StyleAllowances {
 }
 
 /**
- * Исключения `document.css`: маска, где чёрный — это непрозрачность, а не краска, нейтральная фактура и
- * форма пилюли, объявленные токенами пакета; подписи внутри SVG-схем в пикселях и три прозаических
- * элемента. У стилей расширения исключений нет.
+ * Исключения таблиц стилей пакета: маска, где чёрный — это непрозрачность, а не краска, нейтральная фактура и
+ * форма пилюли, объявленные токенами пакета; подписи внутри SVG-схем в пикселях, три прозаических
+ * элемента и кегль слайда колоды, который считается от ширины самого слайда. У стилей расширения исключений нет.
  */
 export const DOCUMENT_STYLE_ALLOWANCES: StyleAllowances = {
   properties: [
@@ -54,6 +54,11 @@ export const DOCUMENT_STYLE_ALLOWANCES: StyleAllowances = {
     },
     { selector: /^blockquote$/u, value: /^1\.12rem$/u, reason: 'prose pull quote' },
     { selector: /^code$/u, value: /^0\.88em$/u, reason: 'inline code follows its sentence' },
+    {
+      selector: /^\.semantic-slide\b/u,
+      value: /^(?:var\(--slide-type\)|calc\(var\(--slide-type\) \* [\d.]+\))$/u,
+      reason: 'a deck slide scales its type with its own width, like a slide',
+    },
   ],
 };
 

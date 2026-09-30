@@ -24,6 +24,7 @@ const baseOptions = {
     attribution: true,
     review: false,
     schemeToggle: true,
+    topbar: true,
     motion: 'expressive',
   },
   contentHtml: '<h1>Runtime contract</h1>',
@@ -263,6 +264,22 @@ describe('renderDocument runtime boundary', () => {
     });
     expect(withoutScheme).not.toContain('class="scheme-toggle ui-button"');
     expect(withoutScheme).not.toContain('data-scheme-toggle');
+  });
+
+  it('builds a page without the top bar for filming only when topbar is false', () => {
+    // Defect caught: the bar (or its title and controls) still rendered on a scene page, or removed
+    // from an ordinary one.
+    const ordinary = renderDocument(inlineOptions);
+    expect(ordinary).toContain('<header class="topbar"');
+    expect(ordinary).not.toContain('data-topbar=');
+    const scene = renderDocument({
+      ...inlineOptions,
+      page: { ...inlineOptions.page, topbar: false },
+    });
+    expect(scene).not.toContain('class="topbar');
+    expect(scene).not.toContain('data-scheme-toggle');
+    expect(scene).toContain('data-topbar="none"');
+    expect(scene).toContain('class="report-shell"');
   });
 
   it('keeps the review workspace out of an ordinary page even when targets exist', () => {

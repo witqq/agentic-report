@@ -87,8 +87,17 @@ test('every public page keeps surfaces inside their immediate layout owner', asy
           ),
         ]
           .filter(visible)
-          .filter((surface) => {
-            const owner = surface.parentElement;
+          .filter((element) => {
+            // A table scrolls inside its frame (`div.table-frame`), so the frame is the surface that
+            // must stay inside its owner. On a phone a frame or a code block in the text flow bleeds by
+            // the page gutter to the edges of the content column: its owner is then the column.
+            const frame = element.matches('table') ? element.parentElement : null;
+            const surface = frame?.matches('.table-frame') === true ? frame : element;
+            const bleeds =
+              surface.matches('pre, .table-frame') &&
+              Number.parseFloat(getComputedStyle(surface).marginLeft) < 0 &&
+              getComputedStyle(surface).getPropertyValue('--bleed').trim() !== '';
+            const owner = bleeds ? surface.closest('.report-content') : surface.parentElement;
             if (owner === null) return true;
             const rect = surface.getBoundingClientRect();
             const ownerRect = owner.getBoundingClientRect();

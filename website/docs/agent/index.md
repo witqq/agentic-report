@@ -14,9 +14,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the result:
 
 ```sh
-npx --yes agentic-report@0.19.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.20.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.19.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.20.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. Build validates the complete source before writing, so
@@ -67,14 +67,13 @@ When the user does not trust the published package, do not silently fall back to
 release tag, let the user inspect the repository, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.19.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.20.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
 
 # Pause for source, package.json, pnpm-lock.yaml, and lifecycle-script review.
 pnpm install --frozen-lockfile
-pnpm exec playwright install chromium
 pnpm verify
 pnpm build
 
@@ -121,7 +120,8 @@ The content remains ordinary Markdown and semantic directives.
 Use the installed `layout-mixed` example for the complete grammar, the landing starter for a smaller
 copyable narrative, `terminal-portfolio` for console-led composition, `cinematic-story` for image-first
 scroll storytelling, `executive-brief` for a Daylight decision narrative, and `motion-showcase` for a complete
-combination of depth, scrolling media, gallery, cascade and reduced motion. Use
+combination of depth, scrolling media, gallery, cascade and reduced motion. `capability-tour` shows every
+technique working on one page with the Markdown of each under its result. Use
 `schema --scope directives` for the exact closed domains and defaults.
 
 Motion remains declarative: a section takes closed `transition`, `scene`, `interaction`, and `choreography`
@@ -260,17 +260,25 @@ sources.
 
 ## Check and look before handing over
 
-The skill carries the craft: design rules, a playbook per category, and a design check that reads the page
-structure from `inspect` and the brief beside the source. Run it after a successful build, then photograph
-the page and look at the result:
+The skill carries the craft: design rules, prose rules for English and Russian, a playbook per category,
+and scripts that check a page against them. The prose check reads the page's authored text and names
+each pattern of the prose catalogues it finds; the design check reads the page structure from `inspect`
+and the brief beside the source; `snapshot --measure` counts what a reader on a phone or in the dark
+scheme would meet. The hand-over gate runs all three with the page's checklist and prints one verdict,
+and the page is handed over only when it passes:
 
 ```sh
+node skills/agentic-report/scripts/prose-check.mjs ./my-page
 node skills/agentic-report/scripts/design-check.mjs ./my-page
 npx --yes playwright@1.62.1 install chromium
-npx --yes -p agentic-report@0.19.0 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
+npx --yes -p agentic-report@0.20.0 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
+node skills/agentic-report/scripts/handover.mjs ./my-page
 ```
 
-The design check is advice on the skill's side; `build` and `validate` never run it. A rule that is wrong
+`node skills/agentic-report/scripts/craft.mjs <topic>` prints the rules that decide a choice — `table`,
+`landing-first-screen`, `motion`, a directive name, or a rule id — at the moment the agent makes it.
+
+These checks are advice on the skill's side; `build` and `validate` never run them. A rule that is wrong
 for one page is switched off by a line with its reason in that page's `brief.md`.
 
 ## Inspect the contract
@@ -278,18 +286,13 @@ for one page is switched off by a line with its reason in that page's `brief.md`
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.19.0 describe --json
-npx --yes agentic-report@0.19.0 schema --scope source
-npx --yes agentic-report@0.19.0 examples --json
+npx --yes agentic-report@0.20.0 describe --json
+npx --yes agentic-report@0.20.0 schema --scope source
+npx --yes agentic-report@0.20.0 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),
 or the [agentic-report skill](../../skills/agentic-report/SKILL.md) when more guidance is needed.
-
-For a Node.js integration that imports the package instead of invoking the CLI, use the
-[published root API guide](../../skills/agentic-report/references/node-api.md). When a page needs a
-declared visual effect extension, start with the [extension choice guide](../../skills/agentic-report/references/extensions.md)
-and use the [effect API guide](../../skills/agentic-report/references/effect-api.md) for its module contract.
 
 ## Boundaries
 

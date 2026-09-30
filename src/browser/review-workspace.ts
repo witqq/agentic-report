@@ -1,3 +1,4 @@
+import { COMMENT_ICON, PENCIL_ICON } from '../iconography.js';
 import { asUi, asUiButton } from './ui.js';
 import {
   MAX_REVIEW_FILE_BYTES,
@@ -21,6 +22,8 @@ import type { ResolvedReviewArtifact } from '../review/binding.js';
 import { packageStrings } from '../localization.js';
 import { pageClock } from './clock.js';
 import { browserIcon } from './icon.js';
+import { textWithoutEditionLayer } from './edition-text.js';
+import { openAround } from './reading-position.js';
 import { placeSurface, visualViewportBounds, type ViewportBounds } from './overlay-position.js';
 
 const mobileReview = window.matchMedia('(max-width: 56.99rem)');
@@ -289,6 +292,7 @@ function createController(
       const owner = targets.get(subject.target.id)?.element;
       const fallbackAnchor = button.getBoundingClientRect();
       closeDrawer(false);
+      if (owner !== undefined) openAround(owner);
       owner?.scrollIntoView({ behavior: 'instant', block: 'center' });
       const anchor = range ?? owner?.getBoundingClientRect() ?? fallbackAnchor;
       select(subject);
@@ -309,6 +313,7 @@ function createController(
         entry?.currentTarget === undefined ? undefined : targets.get(entry.currentTarget.id);
       if (!button || !entry || !target) return;
       closeDrawer(false);
+      openAround(target.element);
       target.element.scrollIntoView({ behavior: 'instant', block: 'center' });
       select({ target: target.target, label: target.label });
       openPopover(target.element.getBoundingClientRect(), el.toggle);
@@ -554,7 +559,7 @@ function createController(
           const edit = document.createElement('button');
           edit.type = 'button';
           asUiButton(edit, 'quiet', 'sm');
-          edit.append(browserIcon('pencil'), document.createTextNode(strings.edit));
+          edit.append(browserIcon(PENCIL_ICON), document.createTextNode(strings.edit));
           edit.dataset.reviewMessageEdit = message.id;
           li.append(edit);
         }
@@ -671,7 +676,7 @@ function createController(
       marker.dataset.reviewHighlightMarker = entry.thread.id;
       marker.dataset.reviewThreadState = entry.segment.resolved ? 'resolved' : 'open';
       marker.setAttribute('aria-label', strings.openNote(entry.subject.label));
-      marker.append(browserIcon('comment'));
+      marker.append(browserIcon(COMMENT_ICON));
       markerHost.append(marker);
       positionMarker(marker, entry.range);
     }
@@ -999,6 +1004,8 @@ function captureSelection(targets: ReadonlyMap<string, TargetDom>):
   if (selection?.rangeCount !== 1 || selection.isCollapsed) return;
   const range = selection.getRangeAt(0);
   if (rangeTouchesPackageControl(range)) return;
+  // Удалённый текст прошлой редакции заметкой не комментируется: его нет в новой.
+  if (insideEditionLayer(range.startContainer) || insideEditionLayer(range.endContainer)) return;
   const start = targetAt(range.startContainer, targets);
   const end = targetAt(range.endContainer, targets);
   const article = start?.element.closest('.report-content article');
@@ -1036,11 +1043,28 @@ function boundaryOffset(owner: HTMLElement, node: Node, offset: number): number 
   const prefix = document.createRange();
   prefix.selectNodeContents(owner);
   prefix.setEnd(node, offset);
-  return Array.from(prefix.toString()).length;
+  return Array.from(rangeText(prefix)).length;
 }
 
 function selectedQuote(range: Range): string {
-  return range.toString().normalize('NFC');
+  return rangeText(range).normalize('NFC');
+}
+
+/**
+ * Текст отрезка без узлов слоя изменений (`data-edition-removed`: удалённые слова, призраки, ярлыки).
+ * Смещения и цитата заметки считаются по тексту новой редакции, поэтому заметка, поставленная при
+ * включённом слое, восстанавливается и при выключенном, и на странице без `--since`.
+ */
+function rangeText(range: Range): string {
+  const fragment = range.cloneContents();
+  if (fragment.querySelector('[data-edition-removed]') === null) return range.toString();
+  for (const layer of fragment.querySelectorAll('[data-edition-removed]')) layer.remove();
+  return fragment.textContent ?? '';
+}
+
+function insideEditionLayer(node: Node): boolean {
+  const element = node instanceof Element ? node : node.parentElement;
+  return element?.closest('[data-edition-removed]') != null;
 }
 
 function rangeTouchesPackageControl(range: Range): boolean {
@@ -1252,7 +1276,11 @@ function pointAtCodePointOffset(
   owner: HTMLElement,
   offset: number,
 ): { readonly node: Text; readonly offset: number } | undefined {
-  const walker = document.createTreeWalker(owner, NodeFilter.SHOW_TEXT);
+  // Узлы слоя изменений не входят в смещения: они считаются по тексту новой редакции.
+  const walker = document.createTreeWalker(owner, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) =>
+      insideEditionLayer(node) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
+  });
   let remaining = offset;
   let last: Text | undefined;
   for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
@@ -1292,7 +1320,7 @@ function visibleLabel(
   element: HTMLElement,
   strings: ReturnType<typeof packageStrings>,
 ): string {
-  const excerpt = (element.textContent ?? '').replace(/\s+/gu, ' ').trim().slice(0, 80);
+  const excerpt = textWithoutEditionLayer(element).replace(/\s+/gu, ' ').trim().slice(0, 80);
   return excerpt || strings.reviewTargetFallback(target.kind);
 }
 

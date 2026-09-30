@@ -42,6 +42,11 @@ export interface ZoomSceneInput<View extends ZoomView> {
 const INSET = 5;
 /** Запас кадра вокруг вложенного потока в конце пролёта. */
 const FINAL_MARGIN = 1.08;
+/**
+ * Самый мелкий текст схемы — пояснение узла, 12.5 px; мельче 11 px на экране он не читается. Отсюда доля
+ * естественной ширины, мельче которой неподвижная фигура не ужимается.
+ */
+const READABLE_SHARE = 0.9;
 
 export interface ZoomGeometry {
   /** Масштаб вложенного потока внутри узла. */
@@ -138,9 +143,12 @@ export function renderZoomScene<View extends ZoomView>(input: ZoomSceneInput<Vie
           'svg',
           {
             viewBox: `0 0 ${round(view.width)} ${round(view.height)}`,
+            // Естественная ширина, как у схемы: фигура ужимается не мельче читаемого, остаток прокручивается.
+            width: round(view.width),
+            style: `--diagram-width: ${round(view.width)}px`,
             role: 'img',
             ariaLabelledBy: [stillTitle],
-            className: ['visualization-svg', 'visualization-zoom-still'],
+            className: ['visualization-svg', 'visualization-diagram', 'visualization-zoom-still'],
           },
           [
             element('title', { id: stillTitle }, [text(caption)]),
@@ -156,9 +164,14 @@ export function renderZoomScene<View extends ZoomView>(input: ZoomSceneInput<Vie
         element('div', { className: ['visualization-frame'] }, [camera]),
       ]),
     ]),
-    element('div', { className: ['visualization-zoom-static'] }, [
-      still(outer, input.outsideCaption, true),
-      still(inner, input.innerTitle, false),
-    ]),
+    element(
+      'div',
+      {
+        className: ['visualization-zoom-static'],
+        // Две фигуры встают рядом, только если обе помещаются в свою колонку с читаемыми подписями.
+        style: `--zoom-still-floor: ${Math.ceil(Math.max(outer.width, inner.width) * READABLE_SHARE)}px`,
+      },
+      [still(outer, input.outsideCaption, true), still(inner, input.innerTitle, false)],
+    ),
   ];
 }

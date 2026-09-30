@@ -65,7 +65,7 @@
             "frost",
             "system"
           ],
-          "description": "Coordinated heading, body and code families; a family named for a role in the same theme refines it."
+          "description": "Coordinated heading, body, label and code families; a family named for a role in the same theme refines it."
         },
         "heading": {
           "type": "string",
@@ -161,10 +161,15 @@
             "system-serif",
             "system-mono"
           ],
-          "description": "Code, commands and metadata."
+          "description": "Meta lines, chapter numbers and other monospaced interface text (not code); labels use the body face."
+        },
+        "code": {
+          "type": "string",
+          "enum": ["jetbrains-mono", "geist-mono", "system-mono"],
+          "description": "Code blocks and inline code: a text-grade programming face."
         }
       },
-      "description": "Type pair for the three text roles, or a family per role; the embedded families carry Latin and Cyrillic."
+      "description": "Type set for the four text roles, or a family per role; the embedded families carry Latin and Cyrillic."
     },
     "typography": {
       "type": "object",
@@ -429,7 +434,7 @@
             "statusDone": {
               "type": "string",
               "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
-              "description": "Status «done»: success callouts, good cards, added diff lines, finished process steps; follows chart2 unless set. (light scheme)"
+              "description": "Status «done»: success callouts, good cards, added diff and edition lines, finished process steps; follows chart2 unless set. (light scheme)"
             },
             "statusReview": {
               "type": "string",
@@ -439,7 +444,7 @@
             "statusReturned": {
               "type": "string",
               "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
-              "description": "Status «returned or failed»: danger callouts, risky cards, blocking findings, removed diff lines, invalid fields; follows chart3 unless set. (light scheme)"
+              "description": "Status «returned or failed»: danger callouts, risky cards, blocking findings, removed diff lines and edition ghosts, invalid fields; follows chart3 unless set. (light scheme)"
             },
             "marker": {
               "type": "string",
@@ -454,7 +459,7 @@
             "mediaBacking": {
               "type": "string",
               "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
-              "description": "Paper behind transparent images on the page surface. (light scheme)"
+              "description": "Paper behind transparent images; transparent lets the surface show through. Keep it in the scheme: a light paper on a dark page reads as a hole, so a dark-ink image ships a dark variant instead. (light scheme)"
             },
             "codeBackground": {
               "type": "string",
@@ -611,7 +616,7 @@
             "statusDone": {
               "type": "string",
               "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
-              "description": "Status «done»: success callouts, good cards, added diff lines, finished process steps; follows chart2 unless set. (dark scheme)"
+              "description": "Status «done»: success callouts, good cards, added diff and edition lines, finished process steps; follows chart2 unless set. (dark scheme)"
             },
             "statusReview": {
               "type": "string",
@@ -621,7 +626,7 @@
             "statusReturned": {
               "type": "string",
               "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
-              "description": "Status «returned or failed»: danger callouts, risky cards, blocking findings, removed diff lines, invalid fields; follows chart3 unless set. (dark scheme)"
+              "description": "Status «returned or failed»: danger callouts, risky cards, blocking findings, removed diff lines and edition ghosts, invalid fields; follows chart3 unless set. (dark scheme)"
             },
             "marker": {
               "type": "string",
@@ -636,7 +641,7 @@
             "mediaBacking": {
               "type": "string",
               "pattern": "^\\s*(?:(?=(?:(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|transparent))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,9}\\S))\\s*$",
-              "description": "Paper behind transparent images on the page surface. (dark scheme)"
+              "description": "Paper behind transparent images; transparent lets the surface show through. Keep it in the scheme: a light paper on a dark page reads as a hole, so a dark-ink image ships a dark variant instead. (dark scheme)"
             },
             "codeBackground": {
               "type": "string",
@@ -826,6 +831,7 @@
       { "name": "--font-body", "field": "fonts.body" },
       { "name": "--font-heading", "field": "fonts.heading" },
       { "name": "--font-mono", "field": "fonts.mono" },
+      { "name": "--font-code", "field": "fonts.code" },
       { "name": "--font-heading-small", "field": "fonts.heading" },
       { "name": "--heading-weight", "field": "typography.headingWeight" },
       { "name": "--display-weight", "field": "typography.displayWeight" },
@@ -842,6 +848,7 @@
     ],
     "space": [
       { "name": "--space-factor", "field": "spacing.density" },
+      { "name": "--phone-gutter", "field": "spacing.density" },
       { "name": "--section-rhythm", "field": "spacing.rhythm" },
       { "name": "--card-minimum", "field": "spacing.cardMinimum" },
       { "name": "--shell-gap", "field": "spacing.gap" }

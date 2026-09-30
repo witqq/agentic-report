@@ -1,0 +1,35 @@
+@layer components {
+  /* Заголовок события сам в контейнере-событии: запас — только на отступ линии. */
+  .visualization-timeline-title[style*='--heading-word'] {
+    --heading-reserve: 0.5rem;
+  }
+
+  .visualization-timeline-event::before {
+    position: absolute;
+    top: 0.3rem;
+    /* Середина точки на середине однопиксельной линии: отсчёт идёт от внутреннего края рамки. */
+    left: calc(-0.3125rem - 0.5px);
+    box-sizing: border-box;
+    width: 0.625rem;
+    height: 0.625rem;
+    border: 1px solid var(--color-bg);
+    border-radius: 50%;
+    background: var(--visualization-muted);
+    content: '';
+  }
+
+  .visualization-timeline-legend-dot.visualization-event-accent,
+  .visualization-event-accent::before {
+    background: var(--visual-1);
+  }
+
+  .visualization-timeline-legend-dot.visualization-event-success,
+  .visualization-event-success::before {
+    background: var(--status-done);
+  }
+
+  .visualization-timeline-legend-dot.visualization-event-warning,
+  .visualization-event-warning::before {
+    background: var(--status-review);
+  }
+}

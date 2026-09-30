@@ -85,7 +85,7 @@ export const eyebrow = defineBlock({
   definition: eyebrowDefinition(),
   enhance: enhanceEyebrow,
   finalize: placeEyebrows,
-  styles: 'package',
+  feature: 'core',
   staticEquivalent: 'A small line of capitals above the title, the same in print.',
   examples: [':::section{title="Results"}\n::eyebrow[Stage 7 · data]\n\nThe run passed.\n:::\n'],
 });
@@ -95,7 +95,7 @@ export const muted = defineBlock({
     'muted',
     'The quiet continuation of a paragraph in the muted text colour; the sentence before it reads bright: **The run passed.** :muted[Two retries, both on the network step.]',
   ),
-  styles: 'package',
+  feature: 'core',
   staticEquivalent: 'The same words in the muted text colour.',
   examples: ['The run passed. :muted[Two retries, both on the network step.]\n'],
 });
@@ -105,7 +105,7 @@ export const meta = defineBlock({
     'meta',
     'A short label in the mono face for identifiers and readings: :meta[run 96 · 01:17].',
   ),
-  styles: 'package',
+  feature: 'core',
   staticEquivalent: 'The same words in the mono face.',
   examples: ['Taken from :meta[run 96 · 01:17] of the nightly flow.\n'],
 });

@@ -1,8 +1,8 @@
 # Release runbook
 
-The release cycle has one full local gate and a separate browser-free gate bound to the release tag.
-Publication and deployment then validate their own effects. Run each gate once for unchanged bytes;
-do not repeat public downloads, route crawls, or registry journeys after they pass.
+The release cycle has one required local gate. Publication and deployment then validate their own effects.
+Do not repeat package installation, browser suites, public downloads, route crawls, or registry journeys
+after the same evidence has already passed.
 
 ## Prepare once
 
@@ -15,12 +15,12 @@ pnpm verify
 git status --short
 ```
 
-`pnpm verify` checks generated authoring projections, strict types, lint, formatting, unit tests, the npm
-inventory, and a clean installed-package consumer, then runs browser E2E against generated and installed
-`file://` artifacts. Install Playwright Chromium before running it locally. The automated release workflow
-uses `pnpm verify:ci`, which repeats the non-browser checks on the release tag and does not install
-Chromium. Scheduled nightly E2E is separate from the release gate. The package check writes tarball identity
-to `test-results/package/candidate-evidence.json`.
+`pnpm verify` is the required pre-release gate. It checks generated authoring projections, strict types,
+lint, formatting, unit tests, the npm inventory, sensitive-byte scans, and a clean installed-package consumer
+whose output is opened through `file://` in Chromium. The full Testfold E2E suite runs in the separate
+nightly workflow `.github/workflows/e2e.yml` or by manual dispatch; it does not block this release.
+The required gate writes the accepted tarball identity to
+`test-results/package/candidate-evidence.json`.
 
 If `verify` passes and the release commit does not change afterward, do not run its constituent checks again.
 Create the pull request, merge it, and bind the release to that exact merge commit. A documentation-only
@@ -42,14 +42,14 @@ Verify that `origin/main` points to the accepted merge commit. Create an annotat
 push it from a clean feature branch: the
 pre-push hook rejects pushes while `main` is checked out, including tag pushes. The `GitHub Release` workflow
 (`.github/workflows/release.yml`) checks that the tag matches the package version, refuses personal paths and
-credentials, runs `pnpm verify:ci`, refuses to replace an existing release, and creates one GitHub Release whose
+credentials, runs `pnpm verify`, refuses to replace an existing release, and creates one GitHub Release whose
 only binary asset is the accepted tarball, with a description ending in `[Made with Moira](https://moira-mcp.com/)`.
 
 ```sh
 git fetch origin main
 accepted_merge_commit="$(git rev-parse origin/main)"
-git tag -a v0.19.0 "$accepted_merge_commit" -m "agentic-report 0.19.0"
-git push origin v0.19.0
+git tag -a v0.20.0 "$accepted_merge_commit" -m "agentic-report 0.20.0"
+git push origin v0.20.0
 gh run watch "$(gh run list --workflow release.yml --limit 1 --json databaseId --jq '.[0].databaseId')" --exit-status
 ```
 
@@ -60,13 +60,13 @@ SHA-256 and package/tag identity, and publishes those exact bytes. A successful 
 gate; do not duplicate it with a second download or isolated install.
 
 ```sh
-gh workflow run publish-npm.yml --ref main -f tag=v0.19.0 -f sha256="$candidate_sha256"
+gh workflow run publish-npm.yml --ref main -f tag=v0.20.0 -f sha256="$candidate_sha256"
 gh run list --workflow publish-npm.yml --limit 1 --json databaseId,status,conclusion,headSha,url
 gh run watch "<databaseId>" --exit-status
 npm view agentic-report dist-tags version --json
 ```
 
-Continue only when the workflow succeeds and npm reports `latest` and `version` as `0.19.0`. Do not run
+Continue only when the workflow succeeds and npm reports `latest` and `version` as `0.20.0`. Do not run
 `npm publish` locally and do not move or overwrite a public tag or release asset.
 
 ## Deploy
@@ -80,8 +80,7 @@ infra-tools status agentic-report --server witqq.ru --remote-dir /opt/agentic-re
 
 The deployment command builds the staged site, records the package version and source revision in
 `release.json`, uploads the image, starts the Compose service, and owns its health check. If it fails, inspect
-that stage and repair its root cause; do not rerun the local `pnpm verify` unless the repair changes
-repository bytes.
+that stage and repair its root cause; do not rerun `pnpm verify` unless the repair changes repository bytes.
 
 After a healthy deploy, perform one public smoke test:
 
@@ -92,16 +91,16 @@ curl --fail --silent --show-error https://agentic-report.witqq.dev/robots.txt
 curl --fail --silent --show-error --output /dev/null https://agentic-report.witqq.dev/sitemap.xml
 ```
 
-Confirm `release.json` reports package `0.19.0` and the accepted merge commit, the landing returns HTML over
+Confirm `release.json` reports package `0.20.0` and the accepted merge commit, the landing returns HTML over
 trusted TLS, `robots.txt` names the absolute sitemap and `sitemap.xml` is served, and then record the
 deployment in the operator's deployment inventory, which lives outside this repository. This single smoke checks
-the public route and deployed identity; route construction was covered by both verification gates, while
-installed-package browser checks ran in the local full gate and the scheduled nightly suite.
+the public route and deployed identity; route construction and the installed-package browser smoke were
+already covered by `pnpm verify`, while the full browser suite runs nightly or by manual dispatch.
 
 ## Failure handling
 
 Stop at the failed stage, inspect its own logs or structured result, and fix the owning source or automation.
-Repeat only the affected gate and every later stage. Run the local full `pnpm verify` again only when repository
+Repeat only the affected gate and every later stage. Run the full `pnpm verify` again only when repository
 bytes changed. Never turn a failed release into a pass by moving a tag, replacing an immutable asset,
 weakening TLS, bypassing package identity, or editing evidence.
 

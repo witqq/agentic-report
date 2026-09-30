@@ -69,7 +69,7 @@ export function createPageVocabulary(
           extension,
           block: defineBlock({
             definition: expansionDefinition(extension),
-            styles: 'package',
+            feature: 'core',
             staticEquivalent: extension.staticEquivalent,
           }),
         });

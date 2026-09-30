@@ -16,6 +16,11 @@ progress: chapters
 **Fictional sample.** The company, the numbers, and the people on this page are invented to show a decision
 page; replace them with your own measured evidence.
 
+:::actions
+::action[Review the evidence]{href="#evidence" kind="primary"}
+::action[See the rollout]{href="#path" kind="secondary"}
+:::
+
 :::::section{title="Recommendation: switch on 3 November 2026" id="opening" nav="Decision" recipe="hero"}
 :::lead
 Nightly integration builds at Northwind take 118 minutes and finish after the European morning starts. On
@@ -30,10 +35,6 @@ pipelines on Tuesday 3 November 2026, with a one-command way back.
 :::
 ::::
 
-::::actions{placement="inline"}
-::action[Review the evidence]{href="#evidence" kind="primary"}
-::action[See the rollout]{href="#path" kind="secondary"}
-::::
 :::::
 
 :::::section{title="What the trial measured" id="evidence" nav="Evidence" recipe="metrics"}

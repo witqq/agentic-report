@@ -1,52 +1,19 @@
 /**
- * Что лежит внутри видеофайла и как его назвать браузеру. Кодек читается из самого файла — по
- * коду дорожки в контейнере, — а не угадывается по имени: так браузер выбирает первый источник,
- * который действительно умеет играть, а AV1 не отдаётся браузеру без его декодера.
+ * Что лежит внутри видеофайла и как его назвать браузеру. Дорожки и их кодеки читает
+ * `video-container.ts` из структуры контейнера — с профилем, уровнем и звуком, — а не угадывает по
+ * имени: так браузер выбирает первый источник, который действительно умеет играть, а AV1 не отдаётся
+ * браузеру без его декодера.
  */
-export type VideoCodec = 'av1' | 'h264' | 'hevc' | 'vp9' | 'vp8' | 'theora' | 'unknown';
+import type { VideoCodec } from './video-container.js';
 
-const MP4_CODECS: ReadonlyArray<readonly [string, VideoCodec]> = [
-  ['av01', 'av1'],
-  ['avc1', 'h264'],
-  ['avc3', 'h264'],
-  ['hvc1', 'hevc'],
-  ['hev1', 'hevc'],
-  ['vp09', 'vp9'],
-];
-const WEBM_CODECS: ReadonlyArray<readonly [string, VideoCodec]> = [
-  ['V_AV1', 'av1'],
-  ['V_VP9', 'vp9'],
-  ['V_VP8', 'vp8'],
-];
-
-export function detectVideoCodec(bytes: Buffer, baseType: string): VideoCodec {
-  // Заголовки дорожек стоят в начале файла у подготовленного для веба ролика и в конце у
-  // остальных: просматриваются оба края, а не весь файл.
-  const window = 1 << 20;
-  const head = bytes.subarray(0, window).toString('latin1');
-  const tail =
-    bytes.length > window ? bytes.subarray(bytes.length - window).toString('latin1') : '';
-  const text = `${head}${tail}`;
-  const table =
-    baseType === 'video/webm' ? WEBM_CODECS : baseType === 'video/mp4' ? MP4_CODECS : [];
-  for (const [marker, codec] of table) if (text.includes(marker)) return codec;
-  if (baseType === 'video/ogg') return 'theora';
-  return 'unknown';
-}
-
-/** MIME-тип с кодеком для `<source type>`; строки кодеков — общие профили, которые браузер проверяет. */
-export function videoSourceType(baseType: string, codec: VideoCodec): string {
-  const codecs: Partial<Record<VideoCodec, string>> = {
-    av1: 'av01.0.05M.08',
-    h264: 'avc1.640028',
-    hevc: 'hvc1.1.6.L93.B0',
-    vp9: 'vp9',
-    vp8: 'vp8',
-    theora: 'theora',
-  };
-  const value = codecs[codec];
-  return value === undefined ? baseType : `${baseType}; codecs="${value}"`;
-}
+export {
+  parseSourceType,
+  readVideoStreams,
+  sameSourceType,
+  sourceTypeOf,
+  type VideoCodec,
+  type VideoStreams,
+} from './video-container.js';
 
 /** Чем кодек совместимее, тем меньше число: одному файлу достаётся самый совместимый источник. */
 export function compatibilityRank(codec: VideoCodec): number {

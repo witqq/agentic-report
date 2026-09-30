@@ -47,7 +47,7 @@ function assetLabel(reference: string): string {
 export const asset = defineBlock({
   definition: assetDefinition(),
   enhance: enhanceAsset,
-  styles: 'package',
+  feature: 'core',
   staticEquivalent: 'A link to the file; in print, its label names the file.',
   examples: ['Download :asset[the data]{src="data.json"} for the raw numbers.\n'],
 });

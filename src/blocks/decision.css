@@ -1,0 +1,17 @@
+@layer components {
+  .semantic-decision-option::before {
+    border-radius: 50%;
+  }
+
+  .semantic-check-item::before {
+    border-radius: calc(var(--radius-small) * 0.6);
+  }
+
+  :root[data-layout='dashboard'] .semantic-decision {
+    max-width: 100%;
+  }
+
+  :root[data-layout='landing'] .semantic-decision {
+    max-width: 100%;
+  }
+}

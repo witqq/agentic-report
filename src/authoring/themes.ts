@@ -1,4 +1,5 @@
 import type { FieldDefinition, ScalarFieldDefinition } from './registry.js';
+import SHARED_PALETTES from './shared-palettes.json' with { type: 'json' };
 
 /**
  * Тема страницы — данные, а не правила CSS. Пакет превращает решённую тему в переменные и
@@ -34,7 +35,7 @@ export const THEME_COLOR_ROLES = [
   ['chart6', 'Sixth series colour.'],
   [
     'statusDone',
-    'Status «done»: success callouts, good cards, added diff lines, finished process steps; follows chart2 unless set.',
+    'Status «done»: success callouts, good cards, added diff and edition lines, finished process steps; follows chart2 unless set.',
   ],
   [
     'statusReview',
@@ -42,11 +43,14 @@ export const THEME_COLOR_ROLES = [
   ],
   [
     'statusReturned',
-    'Status «returned or failed»: danger callouts, risky cards, blocking findings, removed diff lines, invalid fields; follows chart3 unless set.',
+    'Status «returned or failed»: danger callouts, risky cards, blocking findings, removed diff lines and edition ghosts, invalid fields; follows chart3 unless set.',
   ],
   ['marker', 'Editorial marker: eyebrow lines and error rules.'],
   ['shadow', 'Colour of raised shadows, usually translucent.'],
-  ['mediaBacking', 'Paper behind transparent images on the page surface.'],
+  [
+    'mediaBacking',
+    'Paper behind transparent images; transparent lets the surface show through. Keep it in the scheme: a light paper on a dark page reads as a hole, so a dark-ink image ships a dark variant instead.',
+  ],
   ['codeBackground', 'Background of code blocks.'],
   ['codeText', 'Plain code text.'],
   ['codeKeyword', 'Keywords and operators in code.'],
@@ -73,16 +77,54 @@ export const THEME_STATUS_DEFAULTS = {
 } as const satisfies Readonly<Record<string, ThemeColorRole>>;
 type ThemeStatusRole = keyof typeof THEME_STATUS_DEFAULTS;
 
-/** Палитра встроенной темы: роли статуса она берёт из своих серий. */
-type PaletteColors = Readonly<Record<Exclude<ThemeColorRole, ThemeStatusRole>, string>>;
+/**
+ * Роли, общие с agentic-screencast: имя роли в общем файле палитр (`shared-palettes.json`, имена из
+ * `docs/theme-tokens.md` ролика) для каждой роли темы. Эти тринадцать цветов обеих схем всех встроенных
+ * тем берутся только из общего файла, поэтому страница и ролик в одной теме выглядят одинаково.
+ */
+const SHARED_PALETTE_ROLES = {
+  background: 'bg',
+  surface: 'surface',
+  raised: 'surface-raised',
+  heading: 'heading',
+  text: 'text',
+  textMuted: 'text-muted',
+  border: 'border',
+  borderStrong: 'border-strong',
+  accent: 'accent',
+  accent2: 'accent-2',
+  accentSoft: 'accent-soft',
+  statusDone: 'status-done',
+  statusReturned: 'status-returned',
+} as const satisfies Partial<Record<ThemeColorRole, string>>;
+type SharedPaletteRole = keyof typeof SHARED_PALETTE_ROLES;
+type SharedPaletteTheme = keyof typeof SHARED_PALETTES.themes;
+
+/** Палитра встроенной темы: «на проверке» она берёт из своей серии. */
+type PaletteColors = Readonly<Record<Exclude<ThemeColorRole, 'statusReview'>, string>>;
+/** Роли, которые встроенная тема задаёт сама: всё, кроме общих с роликом и «на проверке». */
+type OwnPaletteColors = Readonly<
+  Record<Exclude<ThemeColorRole, SharedPaletteRole | 'statusReview'>, string>
+>;
+
+/** Палитра одной схемы встроенной темы: общие роли из общего файла, остальные — свои. */
+function palette(
+  theme: SharedPaletteTheme,
+  scheme: 'light' | 'dark',
+  own: OwnPaletteColors,
+): PaletteColors {
+  const shared = SHARED_PALETTES.themes[theme][scheme];
+  const roles = {} as Record<SharedPaletteRole, string>;
+  for (const [role, key] of Object.entries(SHARED_PALETTE_ROLES) as [
+    SharedPaletteRole,
+    (typeof SHARED_PALETTE_ROLES)[SharedPaletteRole],
+  ][])
+    roles[role] = shared[key];
+  return { ...own, ...roles };
+}
 
 function withStatusRoles(colors: PaletteColors): ThemeColors {
-  return {
-    ...colors,
-    statusDone: colors[THEME_STATUS_DEFAULTS.statusDone],
-    statusReview: colors[THEME_STATUS_DEFAULTS.statusReview],
-    statusReturned: colors[THEME_STATUS_DEFAULTS.statusReturned],
-  };
+  return { ...colors, statusReview: colors[THEME_STATUS_DEFAULTS.statusReview] };
 }
 
 /**
@@ -395,26 +437,61 @@ export const THEME_FONT_FAMILY_NAMES = Object.keys(THEME_FONT_FAMILIES) as unkno
 ];
 
 /**
- * Тройки гарнитур — дисплей заголовков, текст и код, подобранные вместе; каждая названа по встроенной
- * теме, которая её носит. Тройка задаёт все три роли; гарнитура роли, названная в той же теме, её
- * уточняет.
+ * Text-grade programming faces: compact, with a distinct 0/O and 1/l/I and a full Cyrillic set. Only they
+ * set code blocks and inline code (`fonts.code`); a wide display mono such as Martian Mono or a stylised
+ * one such as Victor Mono may carry a theme's labels and metadata (`fonts.mono`), never its code.
+ */
+export const THEME_CODE_FONT_NAMES = [
+  'jetbrains-mono',
+  'geist-mono',
+  'system-mono',
+] as const satisfies readonly ThemeFontFamilyName[];
+export type ThemeCodeFontName = (typeof THEME_CODE_FONT_NAMES)[number];
+
+/** Гарнитуры ролей темы: дисплей заголовков, текст, метки и метаданные, код. */
+export type ThemeFontRoles = Readonly<
+  Record<'heading' | 'body' | 'mono', ThemeFontFamilyName> & { readonly code: ThemeCodeFontName }
+>;
+
+/**
+ * Наборы гарнитур — дисплей заголовков, текст, метки и код, подобранные вместе; каждый назван по
+ * встроенной теме, которая его носит. Набор задаёт все роли; гарнитура роли, названная в той же теме,
+ * его уточняет.
  */
 export const THEME_FONT_PAIRS = {
-  midnight: { heading: 'geologica', body: 'ibm-plex-sans', mono: 'jetbrains-mono' },
-  'calm-paper': { heading: 'playfair', body: 'literata', mono: 'pt-mono' },
-  synthwave: { heading: 'unbounded', body: 'exo-2', mono: 'jetbrains-mono' },
-  noir: { heading: 'cormorant-garamond', body: 'jost', mono: 'pt-mono' },
-  aurora: { heading: 'raleway', body: 'commissioner', mono: 'victor-mono' },
-  daylight: { heading: 'onest', body: 'golos-text', mono: 'geist-mono' },
-  ember: { heading: 'oswald', body: 'rubik', mono: 'jetbrains-mono' },
-  blueprint: { heading: 'tektur', body: 'fira-sans', mono: 'martian-mono' },
-  terminal: { heading: 'martian-mono', body: 'jetbrains-mono', mono: 'jetbrains-mono' },
-  neutral: { heading: 'literata', body: 'onest', mono: 'martian-mono' },
-  frost: { heading: 'onest', body: 'ibm-plex-sans', mono: 'geist-mono' },
-  system: { heading: 'system-sans', body: 'system-sans', mono: 'system-mono' },
-} as const satisfies Readonly<
-  Record<string, Readonly<Record<'heading' | 'body' | 'mono', ThemeFontFamilyName>>>
->;
+  midnight: {
+    heading: 'geologica',
+    body: 'ibm-plex-sans',
+    mono: 'jetbrains-mono',
+    code: 'jetbrains-mono',
+  },
+  'calm-paper': {
+    heading: 'playfair',
+    body: 'literata',
+    mono: 'jetbrains-mono',
+    code: 'jetbrains-mono',
+  },
+  synthwave: {
+    heading: 'unbounded',
+    body: 'exo-2',
+    mono: 'jetbrains-mono',
+    code: 'jetbrains-mono',
+  },
+  noir: { heading: 'cormorant-garamond', body: 'jost', mono: 'pt-mono', code: 'jetbrains-mono' },
+  aurora: { heading: 'raleway', body: 'commissioner', mono: 'victor-mono', code: 'geist-mono' },
+  daylight: { heading: 'onest', body: 'golos-text', mono: 'geist-mono', code: 'geist-mono' },
+  ember: { heading: 'oswald', body: 'rubik', mono: 'jetbrains-mono', code: 'jetbrains-mono' },
+  blueprint: { heading: 'tektur', body: 'fira-sans', mono: 'martian-mono', code: 'jetbrains-mono' },
+  terminal: {
+    heading: 'martian-mono',
+    body: 'jetbrains-mono',
+    mono: 'jetbrains-mono',
+    code: 'jetbrains-mono',
+  },
+  neutral: { heading: 'literata', body: 'onest', mono: 'martian-mono', code: 'jetbrains-mono' },
+  frost: { heading: 'onest', body: 'ibm-plex-sans', mono: 'geist-mono', code: 'geist-mono' },
+  system: { heading: 'system-sans', body: 'system-sans', mono: 'system-mono', code: 'system-mono' },
+} as const satisfies Readonly<Record<string, ThemeFontRoles>>;
 export type ThemeFontPairName = keyof typeof THEME_FONT_PAIRS;
 export const THEME_FONT_PAIR_NAMES = Object.keys(THEME_FONT_PAIRS) as unknown as readonly [
   ThemeFontPairName,
@@ -422,6 +499,16 @@ export const THEME_FONT_PAIR_NAMES = Object.keys(THEME_FONT_PAIRS) as unknown as
 ];
 
 export const THEME_DENSITY = { compact: 0.78, comfortable: 1, spacious: 1.28 } as const;
+/**
+ * The one page gutter on a phone (a track of 48rem or less), from the density: 16, 18 or 20 px. The shell
+ * alone holds it — the content column adds no padding of its own there — so prose gets the width of the
+ * screen minus two gutters, and a wide block can bleed to the screen edge by exactly one gutter.
+ */
+export const THEME_PHONE_GUTTER = {
+  compact: '1rem',
+  comfortable: '1.125rem',
+  spacious: '1.25rem',
+} as const;
 export const THEME_WIDTH = {
   narrow: { content: '82rem', measure: '62ch' },
   standard: { content: '108rem', measure: '72ch' },
@@ -434,7 +521,7 @@ export const THEME_RADIUS = {
 } as const;
 /**
  * Размер элементов управления темы: обычная и компактная высота кнопок, полей и вкладок. Система
- * интерфейса (`document.css`, слой `primitives`) берёт из них `--control-md` и `--control-sm`; при
+ * интерфейса (`src/browser/styles/core.css`, слой `primitives`) берёт из них `--control-md` и `--control-sm`; при
  * касании любой примитив всё равно не ниже 44 px.
  */
 /** Шаги шкалы скругления, которые роль может взять; `none` — прямой угол. */
@@ -509,7 +596,7 @@ export interface ResolvedTheme {
   readonly palette: string;
   readonly scheme: 'both' | 'dark';
   readonly accent: ThemeAccentName;
-  readonly fonts: Readonly<Record<'heading' | 'body' | 'mono', ThemeFontFamilyName>>;
+  readonly fonts: ThemeFontRoles;
   readonly typography: {
     readonly headingWeight: number;
     readonly displayWeight: number;
@@ -665,17 +752,26 @@ export const THEME_FIELDS = [
   {
     name: 'fonts',
     description:
-      'Type pair for the three text roles, or a family per role; the embedded families carry Latin and Cyrillic.',
+      'Type set for the four text roles, or a family per role; the embedded families carry Latin and Cyrillic.',
     required: false,
     fields: [
       enumField(
         'pair',
-        'Coordinated heading, body and code families; a family named for a role in the same theme refines it.',
+        'Coordinated heading, body, label and code families; a family named for a role in the same theme refines it.',
         THEME_FONT_PAIR_NAMES,
       ),
       enumField('heading', 'Headings and section titles.', THEME_FONT_FAMILY_NAMES),
       enumField('body', 'Body text and controls.', THEME_FONT_FAMILY_NAMES),
-      enumField('mono', 'Code, commands and metadata.', THEME_FONT_FAMILY_NAMES),
+      enumField(
+        'mono',
+        'Meta lines, chapter numbers and other monospaced interface text (not code); labels use the body face.',
+        THEME_FONT_FAMILY_NAMES,
+      ),
+      enumField(
+        'code',
+        'Code blocks and inline code: a text-grade programming face.',
+        THEME_CODE_FONT_NAMES,
+      ),
     ],
   },
   {
@@ -890,23 +986,14 @@ export const THEME_FIELDS = [
 ] as const satisfies readonly [FieldDefinition, ...FieldDefinition[]];
 
 /**
- * Палитры встроенных тем, обе схемы каждой. Цвета перенесены из тем agentic-screencast; вторая схема
- * темы, которой в ролике нет, подобрана к той же паре акцентов и проверена на контраст.
+ * Палитры встроенных тем, обе схемы каждой. Тринадцать общих ролей (фон, поверхности, текст, границы,
+ * акценты, «готово» и «вернули») приходят из общего с agentic-screencast файла `shared-palettes.json`;
+ * здесь — только роли страницы: приглушённая поверхность, сильный акцент, фокус, серии, маркер, тень и
+ * цвета кода, подобранные к общим и проверенные на контраст.
  */
-const MIDNIGHT_LIGHT: PaletteColors = {
-  background: '#f5f7fb',
-  surface: '#ffffff',
-  raised: '#eef2f8',
+const MIDNIGHT_LIGHT = palette('midnight', 'light', {
   muted: '#e4e9f2',
-  heading: '#0b0e14',
-  text: '#2a3446',
-  textMuted: '#56627a',
-  border: '#dfe5ef',
-  borderStrong: '#b3bdcf',
-  accent: '#2f5bd3',
   accentStrong: '#2447a8',
-  accentSoft: '#e6edfc',
-  accent2: '#4a5f74',
   focus: '#2f5bd3',
   chart1: '#2f5bd3',
   chart2: '#1f7a4d',
@@ -917,31 +1004,20 @@ const MIDNIGHT_LIGHT: PaletteColors = {
   marker: '#4a5f74',
   shadow: '#0b0e141f',
   mediaBacking: 'transparent',
-  codeBackground: '#f6f8fa',
-  codeText: '#1f2328',
-  codeKeyword: '#cf222e',
-  codeString: '#0a3069',
-  codeNumber: '#0550ae',
-  codeFunction: '#8250df',
-  codeType: '#953800',
-  codeComment: '#5f6873',
-  codePunctuation: '#24292f',
-};
+  codeBackground: '#eef2f9',
+  codeText: '#0b0e14',
+  codeKeyword: '#2447a8',
+  codeString: '#076d41',
+  codeNumber: '#006b64',
+  codeFunction: '#6f47b7',
+  codeType: '#825600',
+  codeComment: '#535f77',
+  codePunctuation: '#2a3446',
+});
 
-const MIDNIGHT_DARK: PaletteColors = {
-  background: '#0b0e14',
-  surface: '#121826',
-  raised: '#141c2c',
+const MIDNIGHT_DARK = palette('midnight', 'dark', {
   muted: '#1a2335',
-  heading: '#f2f5fb',
-  text: '#c7cfdd',
-  textMuted: '#8b97ad',
-  border: '#2a3446',
-  borderStrong: '#34405a',
-  accent: '#7aa2ff',
   accentStrong: '#a9c3ff',
-  accentSoft: '#16203a',
-  accent2: '#9fb2c8',
   focus: '#7aa2ff',
   chart1: '#7aa2ff',
   chart2: '#7ee0a7',
@@ -951,33 +1027,22 @@ const MIDNIGHT_DARK: PaletteColors = {
   chart6: '#c8a6ff',
   marker: '#9fb2c8',
   shadow: '#00000073',
-  mediaBacking: '#f7f6f2',
-  codeBackground: '#0d1117',
-  codeText: '#e6edf3',
-  codeKeyword: '#ff7b72',
-  codeString: '#a5d6ff',
-  codeNumber: '#79c0ff',
-  codeFunction: '#d2a8ff',
-  codeType: '#ffa657',
-  codeComment: '#8b949e',
-  codePunctuation: '#c9d1d9',
-};
+  mediaBacking: 'transparent',
+  codeBackground: '#070a10',
+  codeText: '#f2f5fb',
+  codeKeyword: '#a9c3ff',
+  codeString: '#7ee0a7',
+  codeNumber: '#4fd1c5',
+  codeFunction: '#c8a6ff',
+  codeType: '#ffd166',
+  codeComment: '#96a2b8',
+  codePunctuation: '#c7cfdd',
+});
 
-const CALM_PAPER_LIGHT: PaletteColors = {
-  background: '#f4f1ea',
-  surface: '#fbf9f4',
-  raised: '#efeadf',
+const CALM_PAPER_LIGHT = palette('calm-paper', 'light', {
   muted: '#e8e2d5',
-  heading: '#1b1a17',
-  text: '#3c3a34',
-  textMuted: '#67624f',
-  border: '#ded7c8',
-  borderStrong: '#b7ad98',
-  accent: '#c2643f',
   accentStrong: '#9c4a2a',
-  accentSoft: '#f5e3d8',
-  accent2: '#3f6b5d',
-  focus: '#c2643f',
+  focus: '#ae522d',
   chart1: '#b0552f',
   chart2: '#3f7a57',
   chart3: '#a8452f',
@@ -996,22 +1061,11 @@ const CALM_PAPER_LIGHT: PaletteColors = {
   codeType: '#8a5a00',
   codeComment: '#67624f',
   codePunctuation: '#3c3a34',
-};
+});
 
-const CALM_PAPER_DARK: PaletteColors = {
-  background: '#1b1a17',
-  surface: '#23211d',
-  raised: '#2a2823',
+const CALM_PAPER_DARK = palette('calm-paper', 'dark', {
   muted: '#312e28',
-  heading: '#f4f1ea',
-  text: '#d8d2c4',
-  textMuted: '#a39d8c',
-  border: '#3a362e',
-  borderStrong: '#57513f',
-  accent: '#e08a64',
   accentStrong: '#efae8f',
-  accentSoft: '#3a2619',
-  accent2: '#8fbfae',
   focus: '#e08a64',
   chart1: '#e08a64',
   chart2: '#8fcfa6',
@@ -1021,7 +1075,7 @@ const CALM_PAPER_DARK: PaletteColors = {
   chart6: '#8fb4de',
   marker: '#8fbfae',
   shadow: '#00000073',
-  mediaBacking: '#f7f6f2',
+  mediaBacking: 'transparent',
   codeBackground: '#151411',
   codeText: '#f4f1ea',
   codeKeyword: '#efae8f',
@@ -1029,24 +1083,13 @@ const CALM_PAPER_DARK: PaletteColors = {
   codeNumber: '#9cc0e4',
   codeFunction: '#cdb0e0',
   codeType: '#e8c27a',
-  codeComment: '#a39d8c',
+  codeComment: '#a7a190',
   codePunctuation: '#d8d2c4',
-};
+});
 
-const SYNTHWAVE_LIGHT: PaletteColors = {
-  background: '#fbf6ff',
-  surface: '#ffffff',
-  raised: '#f3eafc',
+const SYNTHWAVE_LIGHT = palette('synthwave', 'light', {
   muted: '#ebdff8',
-  heading: '#1d0f33',
-  text: '#3a2a55',
-  textMuted: '#655485',
-  border: '#e6d9f5',
-  borderStrong: '#b9a3d8',
-  accent: '#c01aa0',
   accentStrong: '#9c1583',
-  accentSoft: '#fbe3f6',
-  accent2: '#0a7390',
   focus: '#0a7390',
   chart1: '#c01aa0',
   chart2: '#127a55',
@@ -1060,28 +1103,17 @@ const SYNTHWAVE_LIGHT: PaletteColors = {
   codeBackground: '#faf5ff',
   codeText: '#1d0f33',
   codeKeyword: '#b0198f',
-  codeString: '#127a55',
-  codeNumber: '#0a6f8a',
+  codeString: '#00704c',
+  codeNumber: '#006a85',
   codeFunction: '#6a3fc0',
-  codeType: '#9a5b00',
+  codeType: '#8e5400',
   codeComment: '#655485',
   codePunctuation: '#3a2a55',
-};
+});
 
-const SYNTHWAVE_DARK: PaletteColors = {
-  background: '#140b27',
-  surface: '#1d1036',
-  raised: '#241443',
+const SYNTHWAVE_DARK = palette('synthwave', 'dark', {
   muted: '#2b1850',
-  heading: '#fdf4ff',
-  text: '#d9c8f0',
-  textMuted: '#a08bc9',
-  border: '#3e2a63',
-  borderStrong: '#5a3597',
-  accent: '#ff4fd8',
   accentStrong: '#ff8ae5',
-  accentSoft: '#3c1266',
-  accent2: '#37e0ff',
   focus: '#37e0ff',
   chart1: '#ff4fd8',
   chart2: '#6cf0c2',
@@ -1091,34 +1123,23 @@ const SYNTHWAVE_DARK: PaletteColors = {
   chart6: '#c8a6ff',
   marker: '#37e0ff',
   shadow: '#00000073',
-  mediaBacking: '#f7f6f2',
+  mediaBacking: 'transparent',
   codeBackground: '#0a0418',
   codeText: '#fdf4ff',
-  codeKeyword: '#ff4fd8',
+  codeKeyword: '#ff64da',
   codeString: '#6cf0c2',
   codeNumber: '#37e0ff',
   codeFunction: '#c8a6ff',
   codeType: '#ffb86b',
-  codeComment: '#a08bc9',
+  codeComment: '#ac97d5',
   codePunctuation: '#d9c8f0',
-};
+});
 
-const NOIR_LIGHT: PaletteColors = {
-  background: '#f5f3ef',
-  surface: '#fbfaf8',
-  raised: '#efece6',
+const NOIR_LIGHT = palette('noir', 'light', {
   muted: '#e6e2da',
-  heading: '#0a0a0b',
-  text: '#2e2e33',
-  textMuted: '#5c5c65',
-  border: '#dedad2',
-  borderStrong: '#a9a59c',
-  accent: '#9a6420',
   accentStrong: '#7d4f15',
-  accentSoft: '#f3e7d6',
-  accent2: '#4a5f74',
-  focus: '#9a6420',
-  chart1: '#9a6420',
+  focus: '#99631f',
+  chart1: '#99631f',
   chart2: '#3f6e48',
   chart3: '#a8453d',
   chart4: '#7d5a1e',
@@ -1129,29 +1150,18 @@ const NOIR_LIGHT: PaletteColors = {
   mediaBacking: 'transparent',
   codeBackground: '#f3f1ec',
   codeText: '#1a1a1d',
-  codeKeyword: '#8a5410',
-  codeString: '#3f6e48',
+  codeKeyword: '#88520d',
+  codeString: '#396843',
   codeNumber: '#3f5670',
   codeFunction: '#7a5a20',
-  codeType: '#a8453d',
+  codeType: '#a13e37',
   codeComment: '#5c5c65',
   codePunctuation: '#2e2e33',
-};
+});
 
-const NOIR_DARK: PaletteColors = {
-  background: '#0a0a0b',
-  surface: '#121316',
-  raised: '#141518',
+const NOIR_DARK = palette('noir', 'dark', {
   muted: '#1b1c20',
-  heading: '#f4f4f5',
-  text: '#bcbcc2',
-  textMuted: '#8a8a93',
-  border: '#26272c',
-  borderStrong: '#45464e',
-  accent: '#e0a458',
   accentStrong: '#ecc08a',
-  accentSoft: '#221a10',
-  accent2: '#9fb2c8',
   focus: '#e0a458',
   chart1: '#e0a458',
   chart2: '#8fb996',
@@ -1161,34 +1171,23 @@ const NOIR_DARK: PaletteColors = {
   chart6: '#b3a6d6',
   marker: '#9fb2c8',
   shadow: '#00000073',
-  mediaBacking: '#f7f6f2',
+  mediaBacking: 'transparent',
   codeBackground: '#000000',
   codeText: '#f4f4f5',
   codeKeyword: '#e0a458',
   codeString: '#8fb996',
   codeNumber: '#9fb2c8',
   codeFunction: '#e8c79a',
-  codeType: '#d4726a',
-  codeComment: '#8a8a93',
+  codeType: '#e9857c',
+  codeComment: '#a0a0a9',
   codePunctuation: '#bcbcc2',
-};
+});
 
-const AURORA_LIGHT: PaletteColors = {
-  background: '#f2f8f7',
-  surface: '#ffffff',
-  raised: '#e8f2f1',
+const AURORA_LIGHT = palette('aurora', 'light', {
   muted: '#dcebe9',
-  heading: '#06141a',
-  text: '#23393d',
-  textMuted: '#4f6469',
-  border: '#d3e4e2',
-  borderStrong: '#9dbcb9',
-  accent: '#0f8577',
   accentStrong: '#0b6b60',
-  accentSoft: '#d9f3ef',
-  accent2: '#7a5a20',
-  focus: '#0f8577',
-  chart1: '#0f8577',
+  focus: '#007f71',
+  chart1: '#007f71',
   chart2: '#1f7a45',
   chart3: '#be3455',
   chart4: '#946200',
@@ -1200,28 +1199,17 @@ const AURORA_LIGHT: PaletteColors = {
   codeBackground: '#eef6f5',
   codeText: '#06141a',
   codeKeyword: '#0b6b60',
-  codeString: '#1f7a45',
+  codeString: '#0d6f3b',
   codeNumber: '#5b40b5',
   codeFunction: '#1a6690',
   codeType: '#b03050',
   codeComment: '#4f6469',
   codePunctuation: '#23393d',
-};
+});
 
-const AURORA_DARK: PaletteColors = {
-  background: '#070b16',
-  surface: '#0c1622',
-  raised: '#0f1c2a',
+const AURORA_DARK = palette('aurora', 'dark', {
   muted: '#13223a',
-  heading: '#eefaf7',
-  text: '#c0d7d6',
-  textMuted: '#819ea7',
-  border: '#1d3340',
-  borderStrong: '#26445a',
-  accent: '#6fd6c4',
   accentStrong: '#a8ebe0',
-  accentSoft: '#0f2a3a',
-  accent2: '#d9c7a0',
   focus: '#6fd6c4',
   chart1: '#6fd6c4',
   chart2: '#8fcfa6',
@@ -1231,7 +1219,7 @@ const AURORA_DARK: PaletteColors = {
   chart6: '#8fb4de',
   marker: '#d9c7a0',
   shadow: '#00000073',
-  mediaBacking: '#f7f6f2',
+  mediaBacking: 'transparent',
   codeBackground: '#05080f',
   codeText: '#eefaf7',
   codeKeyword: '#6fd6c4',
@@ -1239,24 +1227,13 @@ const AURORA_DARK: PaletteColors = {
   codeNumber: '#d9c7a0',
   codeFunction: '#8fb4de',
   codeType: '#f0a08a',
-  codeComment: '#819ea7',
+  codeComment: '#89a6af',
   codePunctuation: '#c0d7d6',
-};
+});
 
-const DAYLIGHT_LIGHT: PaletteColors = {
-  background: '#f7f8fa',
-  surface: '#ffffff',
-  raised: '#f0f2f5',
+const DAYLIGHT_LIGHT = palette('daylight', 'light', {
   muted: '#e7eaef',
-  heading: '#121620',
-  text: '#313846',
-  textMuted: '#555d6c',
-  border: '#e2e5ea',
-  borderStrong: '#b7bdc8',
-  accent: '#1f5bb8',
   accentStrong: '#174a96',
-  accentSoft: '#e3ecfa',
-  accent2: '#0e6f82',
   focus: '#1f5bb8',
   chart1: '#1f5bb8',
   chart2: '#2f7a4f',
@@ -1273,25 +1250,14 @@ const DAYLIGHT_LIGHT: PaletteColors = {
   codeString: '#2f6b4f',
   codeNumber: '#1f5bb8',
   codeFunction: '#6b4a8c',
-  codeType: '#8a5c00',
+  codeType: '#855800',
   codeComment: '#5a6170',
   codePunctuation: '#2a303b',
-};
+});
 
-const DAYLIGHT_DARK: PaletteColors = {
-  background: '#111418',
-  surface: '#171b21',
-  raised: '#1c2128',
+const DAYLIGHT_DARK = palette('daylight', 'dark', {
   muted: '#232933',
-  heading: '#eef1f5',
-  text: '#cfd5de',
-  textMuted: '#98a1ae',
-  border: '#2a313c',
-  borderStrong: '#404a58',
-  accent: '#86b4f5',
   accentStrong: '#bcd5fb',
-  accentSoft: '#172a47',
-  accent2: '#6fc3d3',
   focus: '#9dc3f8',
   chart1: '#86b4f5',
   chart2: '#8fcfa6',
@@ -1301,7 +1267,7 @@ const DAYLIGHT_DARK: PaletteColors = {
   chart6: '#c0aee0',
   marker: '#6fc3d3',
   shadow: '#00000073',
-  mediaBacking: '#f7f6f2',
+  mediaBacking: 'transparent',
   codeBackground: '#0c0f13',
   codeText: '#e6e9ee',
   codeKeyword: '#f0a08a',
@@ -1311,22 +1277,11 @@ const DAYLIGHT_DARK: PaletteColors = {
   codeType: '#e8c27a',
   codeComment: '#98a1ae',
   codePunctuation: '#cfd5de',
-};
+});
 
-const EMBER_LIGHT: PaletteColors = {
-  background: '#fbf6f1',
-  surface: '#ffffff',
-  raised: '#f5ece4',
+const EMBER_LIGHT = palette('ember', 'light', {
   muted: '#efe2d6',
-  heading: '#1c0f08',
-  text: '#3d2a1f',
-  textMuted: '#6a5242',
-  border: '#ecdccf',
-  borderStrong: '#c4a58f',
-  accent: '#c2410c',
   accentStrong: '#9a3412',
-  accentSoft: '#fde5d6',
-  accent2: '#855a00',
   focus: '#c2410c',
   chart1: '#c2410c',
   chart2: '#3f7a2e',
@@ -1334,34 +1289,23 @@ const EMBER_LIGHT: PaletteColors = {
   chart4: '#855a00',
   chart5: '#9a5b3a',
   chart6: '#2f5f8a',
-  marker: '#855a00',
+  marker: '#7f5c20',
   shadow: '#1c0f081f',
   mediaBacking: 'transparent',
   codeBackground: '#faf3ec',
   codeText: '#1c0f08',
-  codeKeyword: '#b23a0a',
-  codeString: '#3f7a2e',
-  codeNumber: '#855a00',
+  codeKeyword: '#ad3501',
+  codeString: '#306b1e',
+  codeNumber: '#805600',
   codeFunction: '#7a4b2a',
   codeType: '#b91c1c',
   codeComment: '#6a5242',
   codePunctuation: '#3d2a1f',
-};
+});
 
-const EMBER_DARK: PaletteColors = {
-  background: '#0e0907',
-  surface: '#170f0b',
-  raised: '#1c120d',
+const EMBER_DARK = palette('ember', 'dark', {
   muted: '#24170f',
-  heading: '#fff4ec',
-  text: '#e3cdbf',
-  textMuted: '#ad907f',
-  border: '#3a2419',
-  borderStrong: '#5e3a28',
-  accent: '#ff7a3d',
   accentStrong: '#ffa577',
-  accentSoft: '#2a120a',
-  accent2: '#c9b8a8',
   focus: '#ff7a3d',
   chart1: '#ff7a3d',
   chart2: '#9be38b',
@@ -1371,32 +1315,21 @@ const EMBER_DARK: PaletteColors = {
   chart6: '#8fb4de',
   marker: '#c9b8a8',
   shadow: '#00000073',
-  mediaBacking: '#f7f6f2',
+  mediaBacking: 'transparent',
   codeBackground: '#070403',
   codeText: '#fff4ec',
   codeKeyword: '#ff7a3d',
   codeString: '#9be38b',
   codeNumber: '#ffc15e',
   codeFunction: '#ffd9b3',
-  codeType: '#ff6b6b',
-  codeComment: '#ad907f',
+  codeType: '#ff7674',
+  codeComment: '#b89b8a',
   codePunctuation: '#e3cdbf',
-};
+});
 
-const BLUEPRINT_LIGHT: PaletteColors = {
-  background: '#eef3fa',
-  surface: '#f8fbff',
-  raised: '#e4ecf7',
+const BLUEPRINT_LIGHT = palette('blueprint', 'light', {
   muted: '#d9e4f2',
-  heading: '#0a1a33',
-  text: '#1f3656',
-  textMuted: '#48607f',
-  border: '#cfdced',
-  borderStrong: '#8fa9ca',
-  accent: '#0b6f99',
   accentStrong: '#085a7d',
-  accentSoft: '#d6ecf7',
-  accent2: '#7f5a00',
   focus: '#0b6f99',
   chart1: '#0b6f99',
   chart2: '#1f7a45',
@@ -1409,29 +1342,18 @@ const BLUEPRINT_LIGHT: PaletteColors = {
   mediaBacking: 'transparent',
   codeBackground: '#e9f0f9',
   codeText: '#0a1a33',
-  codeKeyword: '#0b6f99',
-  codeString: '#1f7a45',
-  codeNumber: '#7f5a00',
+  codeKeyword: '#00648c',
+  codeString: '#066c38',
+  codeNumber: '#7b5700',
   codeFunction: '#2f5f9a',
-  codeType: '#b8324d',
+  codeType: '#af2846',
   codeComment: '#48607f',
   codePunctuation: '#1f3656',
-};
+});
 
-const BLUEPRINT_DARK: PaletteColors = {
-  background: '#0a1a33',
-  surface: '#0d2140',
-  raised: '#0f2548',
+const BLUEPRINT_DARK = palette('blueprint', 'dark', {
   muted: '#13305a',
-  heading: '#eaf4ff',
-  text: '#b9d0ea',
-  textMuted: '#8ca8ca',
-  border: '#1f3f6b',
-  borderStrong: '#2c5690',
-  accent: '#4cc9f0',
   accentStrong: '#8fdcf5',
-  accentSoft: '#0f2d57',
-  accent2: '#f9c74f',
   focus: '#f9c74f',
   chart1: '#4cc9f0',
   chart2: '#80ed99',
@@ -1441,7 +1363,7 @@ const BLUEPRINT_DARK: PaletteColors = {
   chart6: '#c8a6ff',
   marker: '#f9c74f',
   shadow: '#00000073',
-  mediaBacking: '#f7f6f2',
+  mediaBacking: 'transparent',
   codeBackground: '#06101f',
   codeText: '#eaf4ff',
   codeKeyword: '#4cc9f0',
@@ -1451,22 +1373,35 @@ const BLUEPRINT_DARK: PaletteColors = {
   codeType: '#ff8fa3',
   codeComment: '#8ca8ca',
   codePunctuation: '#b9d0ea',
-};
+});
 
-const TERMINAL_LIGHT: PaletteColors = {
-  background: '#0c0e0d',
-  surface: '#121513',
-  raised: '#161a17',
+const TERMINAL_LIGHT = palette('terminal', 'light', {
+  muted: '#e2e6df',
+  accentStrong: '#155c34',
+  focus: '#8a5a00',
+  chart1: '#1d7a45',
+  chart2: '#2f7a4f',
+  chart3: '#b3402a',
+  chart4: '#8a5a00',
+  chart5: '#2f5f8a',
+  chart6: '#6b5a8e',
+  marker: '#8a5a00',
+  shadow: '#0c0e0d1f',
+  mediaBacking: 'transparent',
+  codeBackground: '#eceee9',
+  codeText: '#1b211d',
+  codeKeyword: '#156a3b',
+  codeString: '#7d5200',
+  codeNumber: '#2f5f8a',
+  codeFunction: '#0c0e0d',
+  codeType: '#2a6644',
+  codeComment: '#536058',
+  codePunctuation: '#3a443d',
+});
+
+const TERMINAL_DARK = palette('terminal', 'dark', {
   muted: '#1b201c',
-  heading: '#eef3ef',
-  text: '#c9d4cc',
-  textMuted: '#8e9b92',
-  border: '#253029',
-  borderStrong: '#3a4a3f',
-  accent: '#5ccf8a',
   accentStrong: '#8fe0ad',
-  accentSoft: '#15291c',
-  accent2: '#e0a84a',
   focus: '#e0a84a',
   chart1: '#5ccf8a',
   chart2: '#8fe0ad',
@@ -1476,7 +1411,7 @@ const TERMINAL_LIGHT: PaletteColors = {
   chart6: '#b3a6d6',
   marker: '#e0a84a',
   shadow: '#00000099',
-  mediaBacking: '#f7f6f2',
+  mediaBacking: 'transparent',
   codeBackground: '#080a09',
   codeText: '#c9d4cc',
   codeKeyword: '#5ccf8a',
@@ -1484,63 +1419,17 @@ const TERMINAL_LIGHT: PaletteColors = {
   codeNumber: '#8fb4de',
   codeFunction: '#eef3ef',
   codeType: '#8fe0ad',
-  codeComment: '#8e9b92',
+  codeComment: '#97a49b',
   codePunctuation: '#a9b6ad',
-};
-
-const TERMINAL_DARK: PaletteColors = {
-  background: '#0c0e0d',
-  surface: '#121513',
-  raised: '#161a17',
-  muted: '#1b201c',
-  heading: '#eef3ef',
-  text: '#c9d4cc',
-  textMuted: '#8e9b92',
-  border: '#253029',
-  borderStrong: '#3a4a3f',
-  accent: '#5ccf8a',
-  accentStrong: '#8fe0ad',
-  accentSoft: '#15291c',
-  accent2: '#e0a84a',
-  focus: '#e0a84a',
-  chart1: '#5ccf8a',
-  chart2: '#8fe0ad',
-  chart3: '#f0907a',
-  chart4: '#e0a84a',
-  chart5: '#8fb4de',
-  chart6: '#b3a6d6',
-  marker: '#e0a84a',
-  shadow: '#00000099',
-  mediaBacking: '#f7f6f2',
-  codeBackground: '#080a09',
-  codeText: '#c9d4cc',
-  codeKeyword: '#5ccf8a',
-  codeString: '#e0a84a',
-  codeNumber: '#8fb4de',
-  codeFunction: '#eef3ef',
-  codeType: '#8fe0ad',
-  codeComment: '#8e9b92',
-  codePunctuation: '#a9b6ad',
-};
+});
 
 /**
  * Нейтральная бумага: серая, а не кремовая, тушь и один тёплый акцент; тёмная схема — тёплый графит, а не
  * ночной синий. Голос ей дают антиква в заголовках, острые углы и карточки с линейкой, а не цвет.
  */
-const NEUTRAL_LIGHT: PaletteColors = {
-  background: '#f5f5f3',
-  surface: '#fbfbfa',
-  raised: '#eeeeeb',
+const NEUTRAL_LIGHT = palette('neutral', 'light', {
   muted: '#e6e6e2',
-  heading: '#16171a',
-  text: '#2d2f33',
-  textMuted: '#5b5e65',
-  border: '#dededa',
-  borderStrong: '#aeafaa',
-  accent: '#8a5c00',
   accentStrong: '#6d4800',
-  accentSoft: '#f3ead6',
-  accent2: '#4a5561',
   focus: '#8a5c00',
   chart1: '#2f5f8a',
   chart2: '#3f7a4f',
@@ -1554,28 +1443,17 @@ const NEUTRAL_LIGHT: PaletteColors = {
   codeBackground: '#f0f0ed',
   codeText: '#1f2126',
   codeKeyword: '#6d4800',
-  codeString: '#3f6b4f',
+  codeString: '#3c684c',
   codeNumber: '#2f5f8a',
   codeFunction: '#6b4a8c',
   codeType: '#8a4a2a',
   codeComment: '#5b5e65',
   codePunctuation: '#2d2f33',
-};
+});
 
-const NEUTRAL_DARK: PaletteColors = {
-  background: '#151514',
-  surface: '#1c1c1a',
-  raised: '#222220',
+const NEUTRAL_DARK = palette('neutral', 'dark', {
   muted: '#292926',
-  heading: '#f2f1ed',
-  text: '#d3d1cb',
-  textMuted: '#9d9b94',
-  border: '#32312e',
-  borderStrong: '#4d4b46',
-  accent: '#e2b556',
   accentStrong: '#efd394',
-  accentSoft: '#3b2d0c',
-  accent2: '#aab3bd',
   focus: '#e8c26d',
   chart1: '#8fb4de',
   chart2: '#8fcfa6',
@@ -1585,7 +1463,7 @@ const NEUTRAL_DARK: PaletteColors = {
   chart6: '#c0aee0',
   marker: '#aab3bd',
   shadow: '#00000073',
-  mediaBacking: '#f7f6f2',
+  mediaBacking: 'transparent',
   codeBackground: '#10100f',
   codeText: '#f2f1ed',
   codeKeyword: '#efd394',
@@ -1593,28 +1471,17 @@ const NEUTRAL_DARK: PaletteColors = {
   codeNumber: '#9cc0e4',
   codeFunction: '#cdb0e0',
   codeType: '#e8c27a',
-  codeComment: '#9d9b94',
+  codeComment: '#a3a199',
   codePunctuation: '#d3d1cb',
-};
+});
 
 /**
  * Две краски и один материал: холодный серый камень и графит. Цвета нет ни у акцента, ни у меток — цвет
  * остаётся только статусам (успех, риск, внимание), поэтому он читается как сигнал, а не как украшение.
  */
-const FROST_LIGHT: PaletteColors = {
-  background: '#eef0f3',
-  surface: '#f7f8fa',
-  raised: '#e6e9ed',
+const FROST_LIGHT = palette('frost', 'light', {
   muted: '#dde1e7',
-  heading: '#262b37',
-  text: '#383e4e',
-  textMuted: '#565d6e',
-  border: '#d6dae1',
-  borderStrong: '#a3a9b6',
-  accent: '#383e4e',
   accentStrong: '#262b37',
-  accentSoft: '#dfe3ea',
-  accent2: '#565d6e',
   focus: '#383e4e',
   chart1: '#383e4e',
   chart2: '#2f7250',
@@ -1628,28 +1495,17 @@ const FROST_LIGHT: PaletteColors = {
   codeBackground: '#e8ebef',
   codeText: '#262b37',
   codeKeyword: '#8a3a2f',
-  codeString: '#2f6b4f',
+  codeString: '#2a664b',
   codeNumber: '#3f5670',
   codeFunction: '#5a4a7a',
   codeType: '#7a5200',
-  codeComment: '#565d6e',
+  codeComment: '#545b6c',
   codePunctuation: '#383e4e',
-};
+});
 
-const FROST_DARK: PaletteColors = {
-  background: '#1b1e25',
-  surface: '#22262e',
-  raised: '#272b34',
+const FROST_DARK = palette('frost', 'dark', {
   muted: '#2e333d',
-  heading: '#eceef2',
-  text: '#c9ccd4',
-  textMuted: '#a3a8b3',
-  border: '#343944',
-  borderStrong: '#4b515e',
-  accent: '#b6bac5',
   accentStrong: '#dfe1e6',
-  accentSoft: '#2c313b',
-  accent2: '#a3a8b3',
   focus: '#dfe1e6',
   chart1: '#b6bac5',
   chart2: '#8fcfa6',
@@ -1659,7 +1515,7 @@ const FROST_DARK: PaletteColors = {
   chart6: '#9fb2c8',
   marker: '#a3a8b3',
   shadow: '#00000073',
-  mediaBacking: '#f7f6f2',
+  mediaBacking: 'transparent',
   codeBackground: '#15181e',
   codeText: '#eceef2',
   codeKeyword: '#f0a08a',
@@ -1669,7 +1525,7 @@ const FROST_DARK: PaletteColors = {
   codeType: '#e2c46d',
   codeComment: '#a3a8b3',
   codePunctuation: '#c9ccd4',
-};
+});
 
 /** Основа всех встроенных тем: каждое поле задано, встроенные темы только переопределяют. */
 export const BASE_THEME: ResolvedTheme = {
@@ -1722,9 +1578,9 @@ export const BASE_THEME: ResolvedTheme = {
 /**
  * Встроенные темы в порядке переключателя; каждая — частичная тема поверх основы. Нейтральная `neutral`
  * и двухцветная `frost` заведены по исследованию лендинга как темы без модных клише. Восемь тем
- * перенесены из agentic-screencast: палитра, пара акцентов, тройка гарнитур с насыщенностью, трекингом и
- * регистром дисплея и цвета кода. У тем, которые в ролике только тёмные или только светлые, вторая
- * схема подобрана к ним с проверенным контрастом.
+ * перенесены из agentic-screencast: пара акцентов, тройка гарнитур с насыщенностью, трекингом и
+ * регистром дисплея и цвета кода. Все одиннадцать рисуют обе схемы, а их общие с роликом цвета лежат в
+ * `shared-palettes.json`.
  */
 export const BUILT_IN_THEMES = [
   {
@@ -1732,7 +1588,7 @@ export const BUILT_IN_THEMES = [
     description:
       'Long reading: warm paper, a Playfair display over Literata text, and one clay accent.',
     palette:
-      'Warm paper (#f4f1ea) and dark ink (#1b1a17) for text that reads like print; clay (#c2643f) marks rules and the current place, sage (#4b7a6a) the eyebrows.',
+      'Warm paper (#f4f1ea) and dark ink (#1b1a17) for text that reads like print; clay (#ae522d) marks rules and the current place, sage (#3f6b5d) the eyebrows.',
     fonts: { pair: 'calm-paper' },
     typography: {
       headingWeight: 600,
@@ -1749,7 +1605,7 @@ export const BUILT_IN_THEMES = [
   {
     name: 'neutral',
     description:
-      'Neutral reading and product pages: grey paper, a Literata display over Onest, Martian Mono, one ochre accent.',
+      'Neutral reading and product pages: grey paper, a Literata display over Onest, Martian Mono meta lines and JetBrains Mono code, one ochre accent.',
     palette:
       'Grey paper (#f5f5f3) and ink (#16171a) with one warm ochre accent (#8a5c00); the dark scheme is warm graphite (#151514), not night blue. No cream, no terracotta.',
     accent: 'ochre',
@@ -1853,7 +1709,7 @@ export const BUILT_IN_THEMES = [
   {
     name: 'blueprint',
     description:
-      'Dense technical evidence: a Tektur display over Fira Sans, Martian Mono labels, cyan and yellow on drafting blue.',
+      'Dense technical evidence: a Tektur display over Fira Sans, Martian Mono meta lines, cyan and yellow on drafting blue.',
     palette:
       'Drafting blue (#0a1a33) with cyan (#4cc9f0) and signal yellow (#f9c74f) and a faint grid; the light scheme is blueprint paper.',
     fonts: { pair: 'blueprint' },
@@ -1911,10 +1767,9 @@ export const BUILT_IN_THEMES = [
   {
     name: 'terminal',
     description:
-      'Developer console: Martian Mono and JetBrains Mono on graphite, a green prompt, amber labels and a cursor at the page heading.',
+      'Developer console: Martian Mono and JetBrains Mono on graphite or pale console paper, a green prompt, amber labels and a cursor at the page heading.',
     palette:
-      'Console graphite (#0c0e0d) with light grey text (#c9d4cc); one muted green (#5ccf8a) for the prompt and markers, amber (#e0a84a) for labels and focus. Dark scheme only; scanlines and glow are off unless the author turns them on.',
-    scheme: 'dark',
+      'Console graphite (#0c0e0d) with light grey text (#c9d4cc), one muted green (#5ccf8a) for the prompt and markers and amber (#e0a84a) for labels and focus; the light scheme is pale console paper (#f3f5f1) with deep green (#1d7a45) and dark amber (#8a5a00). Scanlines and glow are off unless the author turns them on.',
     fonts: { pair: 'terminal' },
     typography: {
       headingWeight: 600,
@@ -2000,7 +1855,7 @@ export function applyThemeInput(
   };
 }
 
-/** Пара задаёт все три роли; роль, названная в той же теме, уточняет пару. */
+/** Набор задаёт все роли; роль, названная в той же теме, уточняет набор. */
 function resolveFonts(
   base: ResolvedTheme['fonts'],
   input: ThemeInput['fonts'],

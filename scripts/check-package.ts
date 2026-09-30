@@ -22,13 +22,14 @@
  *   утечки учётных данных, validate и inspect не трогают вывод, CLI и ESM описывают проект одинаково;
  * - ревью: манифест целей, привязка `review.json`, прошлое ревью в validate, inspect и build;
  * - детерминизм: два независимых процесса дают одни байты single-file и одно дерево directory;
- * - браузерные E2E получают пути к собранным артефактам из свидетельства кандидата;
- * - ресурсы страницы берутся из пакета, а не из рабочего каталога потребителя;
+ * - Chromium: собранные кандидаты открываются через `file://` без ошибок, переключают схему и открывают
+ *   рабочее место ревью;
+ * - ресурсы браузера берутся из пакета, а не из рабочего каталога потребителя;
  * - договоры результата сборки, ссылки на исходники (сохраняются по умолчанию, `--share` их обезвреживает),
  *   directory-вывод с адресуемыми по содержимому ресурсами, ESM `buildReport`;
  * - отказы: неверный формат ESM без порчи соседних файлов, публичные типы под `tsc`, удалённая опция
  *   `--scripts`, диагностика отсутствующего входа;
- * - путь скилла вне репозитория: запуск стартера и проверки оформления скриптом из пакета.
+ * - путь скилла вне репозитория: проверка оформления скриптом из пакета и снимки командой из SKILL.md.
  */
 
 import { execFile, spawn } from 'node:child_process';
@@ -47,7 +48,10 @@ import {
 } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
+
+import { chromium } from '@playwright/test';
 
 import { EXTENSION_KINDS } from '../src/extensions/types.ts';
 import {
@@ -55,8 +59,13 @@ import {
   inspectExecutableSearch,
   readPackedRegularFile,
 } from './package-provenance.ts';
+import { browserModuleSources, browserStylesheets } from './build-browser.ts';
 
 const execFileAsync = promisify(execFile);
+const packageDirectory = path.resolve('test-results/package');
+const stableCandidateEvidencePath = path.join(packageDirectory, 'candidate-evidence.json');
+// A failed run must not leave a previous candidate looking accepted, even when preflight fails.
+await rm(stableCandidateEvidencePath, { force: true });
 const executableDirectory = path.dirname(process.execPath);
 const npmExecutable = path.join(
   executableDirectory,
@@ -98,11 +107,7 @@ const sourceThemeNames = requireArray(
   requireRecord(sourceContract.page, 'generated page contract').themes,
   'generated theme list',
 ).map((theme) => requireRecord(theme, 'generated theme').name);
-const packageDirectory = path.resolve('test-results/package');
 await mkdir(packageDirectory, { recursive: true });
-// A failed candidate must not leave a previous run's stable handoff looking accepted.
-const stableCandidateEvidencePath = path.join(packageDirectory, 'candidate-evidence.json');
-await rm(stableCandidateEvidencePath, { force: true });
 const packageRunDirectory = await mkdtemp(path.join(packageDirectory, 'candidate-'));
 const npmPackCacheDirectory = path.join(packageRunDirectory, '.npm-cache');
 const npmPackEnvironment: NodeJS.ProcessEnv = {
@@ -819,12 +824,37 @@ const starterSource = (await readFile(firstUseEntry, 'utf8')).replace(
   '---\nreview: true\n',
 );
 const editedSource = `${starterSource}\nAgent-authored edit.\n`;
-const credentialBearingSource = `${editedSource}\n![Broken](https://alice:secret@local.test/image.png?token=private&X-Amz-Credential=credential-sentinel&X-Amz-Signature=signature-sentinel&X-Amz-Security-Token=security-token-sentinel)\n`;
+// Каждое значение учётных данных — отдельное слово-метка, которого не бывает в путях машины: общие слова
+// вроде «private» совпадали с `/private/tmp` — реальным путём `/tmp` на macOS — и роняли проверку на
+// чистом выводе, когда репозиторий лежал во временном каталоге.
+const credentialValues = {
+  user: 'user-sentinel',
+  password: 'password-sentinel',
+  token: 'token-sentinel',
+  credential: 'credential-sentinel',
+  signature: 'signature-sentinel',
+  securityToken: 'security-token-sentinel',
+} as const;
+const credentialBearingSource = `${editedSource}\n![Broken](https://${credentialValues.user}:${credentialValues.password}@local.test/image.png?token=${credentialValues.token}&X-Amz-Credential=${credentialValues.credential}&X-Amz-Signature=${credentialValues.signature}&X-Amz-Security-Token=${credentialValues.securityToken})\n`;
 await writeFile(firstUseEntry, credentialBearingSource);
-// Любое из этих слов в выводе CLI означает, что учётные данные из источника или пути ушли наружу без
-// редактирования.
-const credentialSentinels =
-  /alice|secret|private|path-sentinel|credential-sentinel|signature-sentinel|security-token-sentinel/u;
+// Любая из этих меток в выводе CLI означает, что учётные данные из источника или путь проекта ушли
+// наружу без редактирования.
+const credentialSentinels = new RegExp(
+  [...Object.values(credentialValues), 'path-sentinel'].join('|'),
+  'u',
+);
+// Ловит проверку, которая ослепла: метка, которую регулярное выражение не узнаёт, пропустила бы утечку
+// своего значения. Путь временного каталога, наоборот, меткой не считается.
+for (const [name, value] of Object.entries(credentialValues)) {
+  if (!credentialBearingSource.includes(value) || !credentialSentinels.test(value)) {
+    throw new Error(`Credential sentinel ${name} is not planted or not detected.`);
+  }
+}
+if (
+  credentialSentinels.test(`${consumerDirectory} /private/tmp/agentic-report /private/var/folders`)
+) {
+  throw new Error('Credential sentinels match a machine path instead of a credential value.');
+}
 
 const firstUseOutput = path.join(firstUseProject, 'built.html');
 await writeFile(firstUseOutput, 'preserve first-use output sentinel');
@@ -1253,9 +1283,9 @@ if (
 ) {
   throw new Error('Independent installed CLI processes produced different directory trees.');
 }
-// Четыре собранных артефакта остаются в каталоге чистого потребителя для браузерного E2E.
-// Это входные данные, а не свидетельство успешного открытия страницы в браузере.
-const browserInputs = [
+// Ловит собранные у потребителя страницы, которые в Chromium падают, переполняются или теряют
+// переключатель схемы и рабочее место ревью (подробности — у inspectCandidateArtifacts).
+const candidateBrowserEvidence = await inspectCandidateArtifacts([
   { format: 'single-file', path: firstUseOutput },
   { format: 'directory', path: path.join(directoryJourneyOutput, 'index.html') },
   { format: 'single-file', path: installedPriorSingle, expectReviewThreads: true },
@@ -1264,19 +1294,21 @@ const browserInputs = [
     path: path.join(installedPriorDirectory, 'index.html'),
     expectReviewThreads: true,
   },
-] as const;
+]);
 
-// Ловит CLI, который читает рантайм и стили из `dist/browser` рабочего каталога, а не из своего пакета:
-// подложенные туда файлы не должны попасть в страницу.
+// Ловит CLI, который читает модули рантайма и стили из `dist/browser` рабочего каталога, а не из своего
+// пакета: подложенные туда файлы не должны попасть в страницу.
 const shadowDirectory = path.join(consumerDirectory, 'cwd-shadow');
-await mkdir(path.join(shadowDirectory, 'dist', 'browser'), { recursive: true });
+await mkdir(path.join(shadowDirectory, 'dist', 'browser', 'modules', 'browser', 'styles'), {
+  recursive: true,
+});
 await writeFile(path.join(shadowDirectory, 'report.md'), '# Package-owned assets\n');
 await writeFile(
-  path.join(shadowDirectory, 'dist', 'browser', 'runtime.js'),
+  path.join(shadowDirectory, 'dist', 'browser', 'modules', 'browser', 'runtime.js'),
   "document.documentElement.dataset.injectedFromConsumerCwd = 'true';\n",
 );
 await writeFile(
-  path.join(shadowDirectory, 'dist', 'browser', 'document.css'),
+  path.join(shadowDirectory, 'dist', 'browser', 'modules', 'browser', 'styles', 'core.css'),
   ':root { --injected-from-consumer-cwd: true; }\n',
 );
 await execFileAsync(binary, ['build', 'report.md', '--output', 'shadow.html'], {
@@ -1586,7 +1618,8 @@ if (
 }
 
 // Путь скилла от установленного тарбола во временном каталоге вне репозитория: стартер, проверка
-// оформления скриптом из пакета. Браузерные снимки проверяет E2E.
+// оформления скриптом из пакета и снимки ровно той командой, что описана в SKILL.md, — с Playwright,
+// поставленным рядом через `npx -p`, потому что пакет браузера не везёт.
 const skillJourneyRoot = await mkdtemp(path.join(os.tmpdir(), 'agentic-report-skill-journey-'));
 // Ловит прогон внутри репозитория, где скилл мог бы опереться на его файлы, а не на пакет.
 if (skillJourneyRoot.startsWith(`${path.resolve('.')}${path.sep}`)) {
@@ -1595,7 +1628,27 @@ if (skillJourneyRoot.startsWith(`${path.resolve('.')}${path.sep}`)) {
 const skillJourneyEnvironment: NodeJS.ProcessEnv = {
   ...candidateInstallEnvironment,
   ...(process.env.HOME === undefined ? {} : { HOME: process.env.HOME }),
+  ...(process.env.PLAYWRIGHT_BROWSERS_PATH === undefined
+    ? {}
+    : { PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH }),
 };
+const playwrightVersion = requireString(
+  requireRecord(sourcePackage.devDependencies, 'source devDependencies')['@playwright/test'],
+  '@playwright/test version',
+);
+// Ловит SKILL.md, где команда снимков не закрепляет Playwright или закрепляет не ту версию, что у проекта.
+const skillSourceText = await readFile(path.resolve('skills/agentic-report/SKILL.md'), 'utf8');
+const pinnedPlaywright = [...skillSourceText.matchAll(/\bplaywright@(\S+)/gu)].map(
+  (match) => match[1],
+);
+if (
+  pinnedPlaywright.length === 0 ||
+  pinnedPlaywright.some((version) => version !== playwrightVersion)
+) {
+  throw new Error(
+    `SKILL.md must pin playwright@${playwrightVersion} for snapshots; found ${pinnedPlaywright.join(', ')}.`,
+  );
+}
 const journeyPage = path.join(skillJourneyRoot, 'page');
 await execFileAsync(binary, ['init', journeyPage, '--starter', 'landing'], {
   cwd: skillJourneyRoot,
@@ -1617,6 +1670,40 @@ const designCheckOutcome = await execFileAsync(
 );
 const designCheck = requireRecord(JSON.parse(designCheckOutcome.stdout), 'design check result');
 if (!Array.isArray(designCheck.advice)) throw new Error('Design check returned no advice list.');
+// Ловит команду снимков из SKILL.md, которая с тарболом и закреплённым Playwright не снимает все сочетания
+// ширин, схем и движения (2 × 2 × 2) или не собирает PNG-лист.
+const snapshotArgv = [
+  '--yes',
+  '-p',
+  tarballPath,
+  '-p',
+  `playwright@${playwrightVersion}`,
+  'agentic-report',
+  'snapshot',
+  journeyPage,
+  '--out',
+  path.join(skillJourneyRoot, 'snapshots'),
+  '--widths',
+  '390,1440',
+] as const;
+const snapshotOutcome = await execFileAsync(npxExecutable, snapshotArgv, {
+  cwd: skillJourneyRoot,
+  env: skillJourneyEnvironment,
+  timeout: 300_000,
+  maxBuffer: 16 * 1024 * 1024,
+});
+const snapshotResult = requireSingleNdjsonRecord(snapshotOutcome, 'snapshot');
+const snapshotShots = snapshotResult.shots;
+if (!Array.isArray(snapshotShots) || snapshotShots.length !== 8) {
+  throw new Error(
+    'Snapshot from the installed tarball did not take 2 widths × 2 schemes × 2 motions.',
+  );
+}
+const contactSheet = requireRecord(snapshotResult.contactSheet, 'snapshot contact sheet');
+const contactSheetBytes = await readFile(requireString(contactSheet.image, 'contact sheet image'));
+if (contactSheetBytes.subarray(1, 4).toString('latin1') !== 'PNG') {
+  throw new Error('Snapshot contact sheet is not a PNG image.');
+}
 await rm(skillJourneyRoot, { recursive: true, force: true });
 
 // Запись о кандидате пишется только после всех проверок: на стабильном пути
@@ -1686,7 +1773,7 @@ const candidateEvidenceBytes = `${JSON.stringify(
       ...resolutionOutcome,
     },
     localOnlyNpxCommands: candidateNpxEvidence,
-    browserInputs,
+    chromium: candidateBrowserEvidence,
   },
   null,
   2,
@@ -1776,31 +1863,14 @@ async function expectedTarballFiles(): Promise<string[]> {
     'package/README.md',
     'package/LICENSE',
     'package/THIRD_PARTY_NOTICES.md',
-    'package/dist/browser/document.css',
-    'package/dist/browser/runtime.js',
-    'package/dist/browser/effects.js',
-    'package/dist/browser/islands.js',
     ...[
       'AGENT-REFERENCE.md',
       'ARCHITECTURE.md',
       'generated/directives.schema.json',
-      'generated/extension-proposal.schema.json',
-      'generated/extension-proposal.template.json',
       'generated/manifest.schema.json',
       'generated/source-contract.json',
       'generated/source.schema.json',
       'generated/theme.schema.json',
-      'product/code-glossary-extension.json',
-      'product/copyable-prose-extension.json',
-      'product/diagram-extension.json',
-      'product/in-flow-contents-extension.json',
-      'product/review-workspace-extension.json',
-      'product/response-workspace-extension.json',
-      'product/section-prose-extension.json',
-      'product/share-safe-build-extension.json',
-      'product/time-text-extension.json',
-      'product/source-link-extension.json',
-      'product/violation-inventory-extension.json',
       'product/source-contract.md',
     ].map((file) => `package/docs/${file}`),
   ]);
@@ -1814,18 +1884,29 @@ async function expectedTarballFiles(): Promise<string[]> {
     expected.add(`package/extensions/${file}`);
   }
 
+  // Модули рантайма и возможностей страницы с их замыканием и таблицы стилей — то, из чего компилятор
+  // собирает скрипт и стили каждой страницы (`scripts/build-browser.ts`).
+  for (const source of await browserModuleSources()) {
+    expected.add(`package/dist/browser/modules/${source.replace(/\.tsx?$/u, '.js')}`);
+  }
+  for (const stylesheet of browserStylesheets().keys()) {
+    expected.add(`package/dist/browser/modules/${stylesheet}`);
+  }
+
   // Встроенные гарнитуры едут в пакет целиком: файлы подмножеств, лицензия OFL и происхождение.
   for (const font of await recursiveRelativeFiles(path.resolve('src/fonts'))) {
     expected.add(`package/dist/browser/fonts/${font}`);
   }
 
   for (const source of await recursiveRelativeFiles(path.resolve('src'))) {
-    if (
-      source.startsWith('browser/') ||
-      source.startsWith('fonts/') ||
-      source.endsWith('.d.ts') ||
-      (!source.endsWith('.ts') && !source.endsWith('.tsx'))
-    ) {
+    if (source.startsWith('browser/') || source.startsWith('fonts/')) continue;
+    // Данные, которые модуль импортирует (`resolveJsonModule`), `tsc` копирует в `dist/node` как есть:
+    // без них установленный пакет не загрузил бы, например, общие палитры тем.
+    if (source.endsWith('.json')) {
+      expected.add(`package/dist/node/${source}`);
+      continue;
+    }
+    if (source.endsWith('.d.ts') || (!source.endsWith('.ts') && !source.endsWith('.tsx'))) {
       continue;
     }
     const stem = source.replace(/\.tsx?$/u, '');
@@ -1931,6 +2012,130 @@ async function pathExists(candidate: string): Promise<boolean> {
   } catch (error) {
     if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return false;
     throw error;
+  }
+}
+
+/**
+ * Открывает собранные у потребителя страницы в Chromium через `file://` и ловит: ошибки страницы и консоли,
+ * пустой заголовок, горизонтальное переполнение, переключатель схемы, который не меняет схему, отсутствие
+ * рабочего места ревью или его диалога, элементы `[data-review-target-control]` на блоках, выделение
+ * текста без действия и всплывающего окна, сдвиг макета при открытии ревью, потерю встроенных нитей
+ * прошлого ревью и модальность диалога не по формату (модальный — только в directory).
+ */
+async function inspectCandidateArtifacts(
+  artifacts: readonly {
+    readonly format: 'single-file' | 'directory';
+    readonly path: string;
+    readonly expectReviewThreads?: boolean;
+  }[],
+): Promise<readonly Readonly<Record<string, unknown>>[]> {
+  const browser = await chromium.launch();
+  try {
+    const evidence: Readonly<Record<string, unknown>>[] = [];
+    for (const artifact of artifacts) {
+      const context = await browser.newContext({
+        viewport:
+          artifact.format === 'single-file'
+            ? { width: 1440, height: 1000 }
+            : { width: 390, height: 844 },
+      });
+      const page = await context.newPage();
+      const errors: string[] = [];
+      page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
+      page.on('console', (message) => {
+        if (message.type() === 'error') errors.push(`console: ${message.text()}`);
+      });
+      await page.goto(pathToFileURL(artifact.path).href);
+      const themeToggle = page.locator('[data-scheme-toggle]');
+      const themeBefore = await page.locator('html').getAttribute('data-scheme');
+      if ((await themeToggle.count()) !== 1) {
+        throw new Error(`Installed ${artifact.format} candidate is missing its scheme control.`);
+      }
+      await themeToggle.click();
+      const themeAfter = await page.locator('html').getAttribute('data-scheme');
+      const reviewToggle = page.locator('[data-review-toggle]');
+      if ((await reviewToggle.count()) !== 1) {
+        throw new Error(`Installed ${artifact.format} candidate is missing Review Workspace.`);
+      }
+      const shellBefore = await page.locator('.report-shell').boundingBox();
+      await reviewToggle.click();
+      const reviewDialog = page.locator('[data-review-dialog]');
+      const reviewOpen = await reviewDialog.getAttribute('open');
+      const shellAfter = await page.locator('.report-shell').boundingBox();
+      const reviewOwners = await page.locator('[data-review-target]').count();
+      const blockControls = await page.locator('[data-review-target-control]').count();
+      const reviewThreads = await page
+        .locator('[data-review-current-list] [data-review-thread-open]')
+        .count();
+      const reviewModal = await reviewDialog.evaluate((element) => element.matches(':modal'));
+      await page.locator('[data-review-close]').click();
+      const selectionAction = await page
+        .locator('[data-review-target]')
+        .filter({ hasText: /\S/u })
+        .first()
+        .evaluate((owner) => {
+          const walker = document.createTreeWalker(owner, NodeFilter.SHOW_TEXT);
+          for (
+            let candidate = walker.nextNode();
+            candidate !== null;
+            candidate = walker.nextNode()
+          ) {
+            if (!(candidate instanceof Text) || candidate.data.trim().length === 0) continue;
+            const start = candidate.data.search(/\S/u);
+            const range = document.createRange();
+            range.setStart(candidate, start);
+            range.setEnd(candidate, Math.min(start + 4, candidate.data.length));
+            const selection = window.getSelection();
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+            document.dispatchEvent(new Event('selectionchange'));
+            return true;
+          }
+          return false;
+        });
+      if (selectionAction) await page.locator('[data-review-selection-action]').click();
+      const popoverOpen = await page.locator('[data-review-popover]').isVisible();
+      const observed = await page.evaluate(() => ({
+        title: document.title,
+        heading: document.querySelector('h1')?.textContent ?? '',
+        horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
+      }));
+      await context.close();
+      if (
+        errors.length > 0 ||
+        observed.heading === '' ||
+        observed.horizontalOverflow ||
+        themeBefore === themeAfter ||
+        reviewOpen === null ||
+        reviewOwners === 0 ||
+        blockControls !== 0 ||
+        !selectionAction ||
+        !popoverOpen ||
+        JSON.stringify(shellBefore) !== JSON.stringify(shellAfter) ||
+        (artifact.expectReviewThreads === true && reviewThreads === 0) ||
+        reviewModal !== (artifact.format === 'directory')
+      ) {
+        throw new Error(
+          `Installed ${artifact.format} candidate failed Chromium inspection: ${JSON.stringify({ errors, observed })}`,
+        );
+      }
+      evidence.push({
+        format: artifact.format,
+        path: artifact.path,
+        errors,
+        themeBefore,
+        themeAfter,
+        reviewOwners,
+        blockControls,
+        reviewResponses: reviewThreads,
+        reviewModal,
+        popoverOpen,
+        ...observed,
+      });
+    }
+    return evidence;
+  } finally {
+    await browser.close();
   }
 }
 

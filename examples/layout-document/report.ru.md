@@ -19,7 +19,7 @@ language: ru
 Продукт превращает декларативный Markdown в переносимую интерактивную браузерную страницу. Автор задаёт
 смысл, а пакет управляет компоновкой, токенами, навигацией и поведением фокуса.
 
-![Многоуровневая модель страницы](page-model.ru.svg)
+![Многоуровневая модель страницы](page-model.ru.svg){dark="page-model-dark.ru.svg"}
 ::::::
 
 ::::::section{title="Варианты и решение" id="options" nav="Варианты" width="wide" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="reveal" scene="progress"}

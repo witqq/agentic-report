@@ -38,3 +38,5 @@ One line per fact the page needs but nobody gave: a placeholder link, a missing 
 ## Checks switched off
 
 One line per design check deliberately switched off for this page, in the form `- DR-RULE: reason`.
+
+- PR-FORMAT-NOISE: the bold first sentence followed by `:muted[…]` is the typographic role «bright first sentence, quiet rest» from `vocabulary-use.md`, not decoration.

@@ -160,6 +160,8 @@ const UNREADABLE_PX = 7;
 const READABLE_PX = 11;
 /** Кегль подписи узла в единицах схемы. */
 const NODE_LABEL_UNITS = 14;
+/** Самый мелкий кегль внешнего рисунка — подпись связи — в единицах схемы. */
+const EDGE_LABEL_UNITS = 13;
 
 function readBox(value: string | undefined): Box | undefined {
   const numbers = (value ?? '').split(/\s+/u).map(Number);
@@ -194,10 +196,44 @@ function paintZoom(figure: HTMLElement): void {
   const pixels = camera.clientWidth / frame[2];
   const size = NODE_LABEL_UNITS * scale * pixels;
   const text = clamp((size - UNREADABLE_PX) / (READABLE_PX - UNREADABLE_PX));
-  const shape = clamp((size - UNREADABLE_PX / 2) / (UNREADABLE_PX / 2));
+  // Вложенный поток проступает от кегля в начале пролёта, а не от абсолютного: крупная камера показывает
+  // его крупнее уже в начале, и подпись узла гасла бы до того, как камера тронулась.
+  const floor = Math.max(
+    UNREADABLE_PX / 2,
+    NODE_LABEL_UNITS * scale * (camera.clientWidth / from[2]),
+  );
+  const shape = clamp((size - floor) / (UNREADABLE_PX / 2));
   camera.style.setProperty('--zoom-inner-text', text.toFixed(3));
   camera.style.setProperty('--zoom-inner-shape', shape.toFixed(3));
   figure.dataset.zoomProgress = share.toFixed(3);
+}
+
+/**
+ * Становятся ли подписи вложенного потока читаемыми к концу пролёта в кадре такой ширины. Нет —
+ * пролёт на этой дорожке ничего не покажет, и фигура остаётся двумя неподвижными рисунками друг под
+ * другом, каждый не мельче читаемого и открываемый во весь экран.
+ */
+function zoomReadable(figure: HTMLElement): boolean {
+  const camera = figure.querySelector<SVGSVGElement>('.visualization-zoom-camera');
+  const from = readBox(camera?.dataset.zoomFrom);
+  const to = readBox(camera?.dataset.zoomTo);
+  const scale = Number(camera?.dataset.zoomScale) || 0;
+  if (camera === null || from === undefined || to === undefined) return false;
+  figure.setAttribute('data-zoom-live', '');
+  const width = camera.clientWidth;
+  // И внешний рисунок в начале пролёта: на узкой дорожке камера сжимает его подписи связей мельче
+  // читаемого раньше, чем полетит внутрь.
+  return (
+    NODE_LABEL_UNITS * scale * (width / to[2]) >= READABLE_PX &&
+    EDGE_LABEL_UNITS * (width / from[2]) >= READABLE_PX
+  );
+}
+
+/** Ставит пролёт там, где он дойдёт до читаемых подписей, и снимает там, где не дойдёт. */
+function placeZoom(figure: HTMLElement): void {
+  const readable = zoomReadable(figure);
+  figure.toggleAttribute('data-zoom-live', readable);
+  figure.toggleAttribute('data-zoom-unreadable', !readable);
 }
 
 /* Рост графика от нуля ---------------------------------------------------------------------------- */
@@ -317,7 +353,7 @@ function installDiagramMotion(): void {
   if (reducedMotion.matches || typeof IntersectionObserver !== 'function') return;
   const drawn = [...document.querySelectorAll<HTMLElement>('figure[data-draw="scroll"]')];
   const zooms = [...document.querySelectorAll<HTMLElement>('figure[data-zoom]')];
-  for (const figure of zooms) figure.setAttribute('data-zoom-live', '');
+  for (const figure of zooms) placeZoom(figure);
   for (const figure of document.querySelectorAll<HTMLElement>('figure[data-pulse]'))
     installPulse(figure);
   for (const figure of document.querySelectorAll<HTMLElement>('figure[data-count-up]'))
@@ -333,7 +369,9 @@ function installDiagramMotion(): void {
     frame = 0;
     for (const figure of drawn)
       if (!visibleOnly || visibleOrOverridden(figure)) paintDrawing(figure);
-    for (const figure of zooms) if (!visibleOnly || visibleOrOverridden(figure)) paintZoom(figure);
+    for (const figure of zooms)
+      if (figure.hasAttribute('data-zoom-live') && (!visibleOnly || visibleOrOverridden(figure)))
+        paintZoom(figure);
   };
   const schedule = (): void => {
     // The initial pass and a clock seek still set every figure. Real scrolling updates only what can
@@ -344,7 +382,10 @@ function installDiagramMotion(): void {
   // Перемотка часов ставит прорисовку и камеру сразу: по положению на экране или по прогрессу записи.
   clock.register({ at: () => paint(false) });
   document.addEventListener('scroll', schedule, { passive: true });
-  window.addEventListener('resize', schedule);
+  window.addEventListener('resize', () => {
+    for (const figure of zooms) placeZoom(figure);
+    schedule();
+  });
 }
 
 if (document.readyState === 'loading') {

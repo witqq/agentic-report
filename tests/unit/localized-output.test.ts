@@ -29,8 +29,9 @@ describe('localized output', () => {
     });
 
     expect(single.embeddedAssets).toBe(4);
-    // Картинка, стили, runtime и шесть файлов шрифтов пары темы по умолчанию (латиница и кириллица).
-    expect(firstResult.externalAssets).toBe(9);
+    // Картинка, стили, runtime и восемь файлов шрифтов темы по умолчанию: заголовки, текст, метки и код,
+    // каждая гарнитура латиницей и кириллицей.
+    expect(firstResult.externalAssets).toBe(11);
     expect({ ...secondResult, outputPath: '<output>' }).toEqual({
       ...firstResult,
       outputPath: '<output>',

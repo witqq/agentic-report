@@ -181,11 +181,18 @@ function installScrub(section: HTMLElement, live: boolean, strings: PackageStrin
   });
   // Высота заголовка сцены: рама стоит под ним и занимает остаток окна.
   const title = section.querySelector<HTMLElement>(':scope > .semantic-section-title');
+  // Заголовок отпускается вместе с рамой: его нижнее поле длиннее на высоту рамы, дорожка поднята на
+  // столько же, и липкий заголовок уходит вверх в тот же миг, что рама, а не лежит поверх неё.
+  let release = 0;
   const measureTitle = (): void => {
     if (title === null) return;
     const style = getComputedStyle(title);
-    const height = title.offsetHeight + (Number.parseFloat(style.marginBottom) || 0);
+    const margin = (Number.parseFloat(style.marginBottom) || 0) - release;
+    const height = title.offsetHeight + margin;
     section.style.setProperty('--scene-title', `${Math.ceil(height)}px`);
+    release = pin?.offsetHeight ?? 0;
+    section.style.setProperty('--scene-release', `${release}px`);
+    section.style.setProperty('--scene-title-gap', `${margin}px`);
   };
   measureTitle();
   const geometry: GeometryWatch = watchGeometry(
@@ -210,6 +217,7 @@ function installScrub(section: HTMLElement, live: boolean, strings: PackageStrin
     position.remove();
     section.removeAttribute('data-scene-live');
     section.removeAttribute('data-scene-focus');
+    // Поля заголовка и дорожки читаются только живой сценой (`data-scene-live`), снимать их не нужно.
     section.style.removeProperty('--scene-title');
     section.removeAttribute('data-code-focus');
     for (const beat of beats) beat.removeAttribute('data-current');

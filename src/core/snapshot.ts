@@ -17,11 +17,7 @@ import type { Diagnostic } from '../contracts.js';
 import { AgenticReportError } from '../diagnostics.js';
 import { MANUAL_CLOCK_INIT_SCRIPT } from '../page-clock.js';
 import { buildReport } from './compiler.js';
-import {
-  MEASURE_EMPTY_BAND_SHARE,
-  MEASURE_MINIMUM_TEXT_PX,
-  measureInPage,
-} from './snapshot-measure.js';
+import { MEASURE_OPTIONS, measureInPage } from './snapshot-measure.js';
 
 export const SNAPSHOT_DEFAULT_WIDTHS = [390, 768, 1440] as const;
 /** Замеры дешевле кадров: по умолчанию и узкие телефоны, где чаще всего едет вбок, и планшет. */
@@ -54,7 +50,7 @@ interface SnapshotContext {
   newPage(): Promise<SnapshotPage>;
   close(): Promise<void>;
 }
-interface SnapshotPage {
+export interface SnapshotPage {
   on(event: 'pageerror', listener: (error: Error) => void): unknown;
   on(event: 'console', listener: (message: { type(): string; text(): string }) => void): unknown;
   addInitScript(script: string): Promise<unknown>;
@@ -88,7 +84,11 @@ export async function snapshotReport(
 
   await mkdir(outputDirectory, { recursive: true });
   const pagePath = path.join(outputDirectory, PAGE_FILE);
-  const build = await buildReport({ input: options.input, output: pagePath });
+  const build = await buildReport({
+    input: options.input,
+    output: pagePath,
+    ...(options.since === undefined ? {} : { since: options.since }),
+  });
   const pageUrl = pathToFileURL(pagePath).href;
 
   const browser = await launchChromium(chromium);
@@ -110,6 +110,7 @@ export async function snapshotReport(
             // Страница идёт по ручным часам: снимок показывает один и тот же момент при каждом запуске.
             await page.addInitScript(MANUAL_CLOCK_INIT_SCRIPT);
             await page.goto(pageUrl, { waitUntil: 'load' });
+            await page.evaluate(showScheme(scheme));
             await settle(page, motion);
             const firstScreen = path.join(outputDirectory, `${name}-first.png`);
             await page.screenshot({ path: firstScreen, fullPage: false });
@@ -231,7 +232,16 @@ export async function launchChromium(chromium: ChromiumLauncher): Promise<Snapsh
  * часы страницы перематываются в момент, когда всё движение закончено: снимок не зависит от того,
  * сколько настоящего времени заняли прокрутка и загрузка.
  */
-async function settle(page: SnapshotPage, motion: SnapshotMotion): Promise<void> {
+/**
+ * The page in the requested scheme whatever scheme its source names: `scheme: light` or `dark` is only
+ * where the page starts, and the reader switches it with the scheme toggle, so both are photographed and
+ * measured. A theme that has only a dark scheme stays dark.
+ */
+function showScheme(scheme: SnapshotScheme): string {
+  return `document.documentElement.dataset.scheme = ${JSON.stringify(scheme)}`;
+}
+
+export async function settle(page: SnapshotPage, motion: SnapshotMotion): Promise<void> {
   await page.evaluate('document.fonts.ready.then(() => true)');
   if (motion === 'normal') {
     await page.evaluate(`(async () => {
@@ -250,7 +260,43 @@ async function settle(page: SnapshotPage, motion: SnapshotMotion): Promise<void>
   await page.waitForTimeout(100);
   await page.evaluate(`window.__clock?.seek(${SETTLED_SECONDS})`);
   await page.waitForTimeout(100);
-  await page.evaluate(`window.__clock?.seek(${SETTLED_SECONDS + 1})`);
+  await seekSettled(page, SETTLED_SECONDS + 1);
+}
+
+/** Сколько миллисекунд часов осталось до конца самой долгой конечной анимации документа. */
+const PENDING_ANIMATION_MS = `(() => {
+  let longest = 0;
+  for (const animation of document.getAnimations()) {
+    if (animation.timeline !== document.timeline || animation.playState === 'finished') continue;
+    const timing = animation.effect?.getComputedTiming();
+    const end = Number(timing?.endTime);
+    const at = Number(timing?.localTime);
+    if (Number.isFinite(end) && Number.isFinite(at)) longest = Math.max(longest, end - at);
+  }
+  return longest;
+})()`;
+
+/**
+ * Перемотать часы к `seconds` и дальше, пока не кончатся переходы, начатые самой перемоткой. Перемотка
+ * ставит состояние момента (подпись такта, кадр сцены), и стили начинают переход к нему в тот же момент
+ * часов: без второй перемотки кадр снимал начало перехода — прежнюю подпись поверх новой, хотя браузер
+ * через долю секунды показывает новую. Вторая перемотка выполняет и кадры, запрошенные в первой.
+ * Возвращает момент, в котором страница встала.
+ */
+async function seekSettled(page: SnapshotPage, seconds: number): Promise<number> {
+  let moment = seconds;
+  await page.evaluate(`window.__clock?.seek(${moment})`);
+  // Переход, законченный одним шагом, может начать следующий (подпись уходит, потом входит новая).
+  // Приостановленная конечная анимация тоже считается незаконченной в каждом круге: перемотка её не
+  // двигает, и часы могут уйти вперёд до четырёх её остатков. Для кадра это безвредно — лишнее время лишь
+  // дальше от переходов, — а исключать приостановленные нельзя: часть их ведут сами часы страницы.
+  for (let round = 0; round < 4; round += 1) {
+    const pending = await page.evaluate<number>(PENDING_ANIMATION_MS);
+    if (pending <= 0) break;
+    moment += Math.ceil(pending) / 1000;
+    await page.evaluate(`window.__clock?.seek(${moment})`);
+  }
+  return moment;
 }
 
 interface StopPlan {
@@ -309,7 +355,7 @@ async function releaseStops(page: SnapshotPage): Promise<void> {
  * снимается окном. Для каждой остановки записано, помещается ли она в окно целиком: обрезанная по сгибу
  * остановка — предупреждение снимка.
  */
-async function photographStops(
+export async function photographStops(
   page: SnapshotPage,
   directory: string,
   name: string,
@@ -319,8 +365,7 @@ async function photographStops(
   for (const stop of await planStops(page)) {
     const fits = await standAtStop(page, stop);
     await page.waitForTimeout(80);
-    await page.evaluate(`window.__clock?.seek(${moment})`);
-    moment += 1;
+    moment = (await seekSettled(page, moment)) + 1;
     const frame = path.join(
       directory,
       stop.kind === 'screen'
@@ -339,7 +384,8 @@ async function photographStops(
  * схеме и с каждым движением по тем же ручным часам, что и снимки, доводится до конечного состояния всех
  * анимаций и меряется в самой странице (`snapshot-measure.ts`): прокрутка вбок, мелкий кегль, контраст с
  * учётом прозрачности, текст под фиксированными элементами, пустые полосы, обрезанные заголовки, первый
- * экран, остановки, ошибки страницы, заглушки и незагруженные шрифты. Кадров и листа нет.
+ * экран, остановки, ошибки страницы, заглушки, незагруженные шрифты, широкие и пустые таблицы, колонка
+ * чтения, разрывы кода внутри слова, подписи схем и блоки чужой схемы. Кадров и листа нет.
  */
 export async function measureReport(options: SnapshotReportOptions): Promise<MeasureReportResult> {
   const widths = options.widths ?? MEASURE_DEFAULT_WIDTHS;
@@ -350,12 +396,13 @@ export async function measureReport(options: SnapshotReportOptions): Promise<Mea
   const chromium = await loadChromium();
   await mkdir(outputDirectory, { recursive: true });
   const pagePath = path.join(outputDirectory, PAGE_FILE);
-  const build = await buildReport({ input: options.input, output: pagePath });
+  const build = await buildReport({
+    input: options.input,
+    output: pagePath,
+    ...(options.since === undefined ? {} : { since: options.since }),
+  });
   const pageUrl = pathToFileURL(pagePath).href;
-  const script = `(${measureInPage.toString()})(${JSON.stringify({
-    minimumTextPx: MEASURE_MINIMUM_TEXT_PX,
-    emptyBandShare: MEASURE_EMPTY_BAND_SHARE,
-  })})`;
+  const script = `(${measureInPage.toString()})(${JSON.stringify(MEASURE_OPTIONS)})`;
 
   const browser = await launchChromium(chromium);
   const measurements: SnapshotMeasurement[] = [];
@@ -379,6 +426,7 @@ export async function measureReport(options: SnapshotReportOptions): Promise<Mea
             });
             await page.addInitScript(MANUAL_CLOCK_INIT_SCRIPT);
             await page.goto(pageUrl, { waitUntil: 'load' });
+            await page.evaluate(showScheme(scheme));
             await settle(page, motion);
             const measures = await page.evaluate<SnapshotPageMeasures>(script);
             const stops: Array<Omit<SnapshotStop, 'frame'>> = [];
@@ -441,7 +489,17 @@ export function countDefects(
     (measures.firstScreen.heading ? 0 : 1) +
     (measures.firstScreen.actionOnPage && !measures.firstScreen.action ? 1 : 0) +
     pageErrors.length +
-    stops.filter((stop) => !stop.fits).length
+    stops.filter((stop) => !stop.fits).length +
+    measures.tables.wide.count +
+    measures.tables.sparse.count +
+    measures.tables.deadSurface.count +
+    measures.tables.flushText.count +
+    (measures.readingColumn.narrow ? 1 : 0) +
+    measures.codeBreaks.count +
+    // Мелкие подписи уже сосчитаны в `smallText`: сюда — только обрезанные, но не мелкие.
+    (measures.diagramLabels.count - measures.diagramLabels.small) +
+    measures.offSchemeBlocks.count +
+    measures.sectionColumns.count
   );
 }
 

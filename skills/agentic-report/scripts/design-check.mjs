@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Design advice for a page source, on the agent's side of the boundary: the compiler never runs it.
 //
-//   node scripts/design-check.mjs <page-source> [--cli "<command>"]
+//   node scripts/design-check.mjs <page-source> [--cli "<command>"] [--since <previous-edition>]
 //
 // <page-source> is what `build` accepts: a Markdown file or a directory with report.md or index.md.
 // The structure comes from `agentic-report inspect`; the brief is brief.md beside the entry file.
@@ -9,7 +9,12 @@
 // command line with quoted parts. Without it the check uses the agentic-report installed for the page —
 // the nearest node_modules/.bin above the page source — and only then the npx release pinned in SKILL.md,
 // so a project that builds with a local version is checked with the same version. Prints one JSON
-// document; exits 0 whether or not there is advice.
+// document whose `advice` lists findings as { rule, id, message, hint }; exits 0 whether or not there is
+// advice — the hand-over gate (scripts/handover.mjs) is what fails on it.
+// --since names the previous edition the reader saw (see editionSince); without it the check takes the
+// `Previous edition:` line of brief.md. It is passed to `inspect --since`, so the page is read as the new
+// edition with its change layer, and the document gains `edition`: the path, the edition number and the
+// totals of changed, added, removed and moved blocks — what to tell the person.
 
 import { execFile } from 'node:child_process';
 import { access, readFile, stat } from 'node:fs/promises';
@@ -17,20 +22,28 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
-import { checkDesign } from './design-rules.mjs';
+import { checkDesign, previousEdition } from './design-rules.mjs';
+import { pageSource, readPageMarkdown } from './source-files.mjs';
 
 const run = promisify(execFile);
 const skillRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
-async function pinnedCommand() {
+/** The release and the Playwright version pinned in SKILL.md. */
+export async function pinnedVersions() {
   const skill = await readFile(path.join(skillRoot, 'SKILL.md'), 'utf8');
   const version = /^\s+version:\s*'?(\d+\.\d+\.\d+)'?\s*$/mu.exec(skill)?.[1];
   if (version === undefined) throw new Error('SKILL.md does not pin a release version.');
+  const playwright = /\bplaywright@(\d+\.\d+\.\d+)/u.exec(skill)?.[1];
+  return { version, playwright };
+}
+
+async function pinnedCommand() {
+  const { version } = await pinnedVersions();
   return ['npx', '--yes', `agentic-report@${version}`];
 }
 
 /** The agentic-report installed for the page: the nearest node_modules/.bin above its source. */
-async function installedCommand(source) {
+export async function installedCommand(source) {
   let directory = path.resolve(source);
   if (
     !(await stat(directory)
@@ -52,7 +65,7 @@ async function installedCommand(source) {
   }
 }
 
-async function commandFrom(value) {
+export async function commandFrom(value) {
   // An existing file is one path even when it contains spaces.
   if (
     await stat(value)
@@ -97,22 +110,82 @@ async function starterOf(command, category) {
   };
 }
 
-async function main(argv) {
-  const cliIndex = argv.indexOf('--cli');
-  const positional = argv.filter(
-    (_, index) => cliIndex === -1 || (index !== cliIndex && index !== cliIndex + 1),
-  );
-  const source = positional[0] ?? '.';
-  const command =
-    cliIndex !== -1
-      ? await commandFrom(argv[cliIndex + 1] ?? '')
-      : ((await installedCommand(source)) ?? (await pinnedCommand()));
+/** The folder of a page source: the source itself when it is a folder, else the folder of the file. */
+export async function pageDirectory(source) {
+  return (await pageSource(source)).directory;
+}
 
-  const inspected = resultRecord(await agenticReport(command, ['inspect', source]));
+/**
+ * The previous edition to build against: `--since` when given (relative to the working folder, as every
+ * CLI path), else the `Previous edition:` line of brief.md (relative to the page folder), else none. A
+ * named edition that does not exist is an error, not a silent first edition: the reader would get a page
+ * without the changes they were promised.
+ */
+export async function editionSince(source, since) {
+  const directory = await pageDirectory(source);
+  const briefText = await readPageMarkdown(path.join(directory, 'brief.md'), directory, {
+    optional: true,
+  });
+  const fromBrief = previousEdition(briefText);
+  const target =
+    since !== undefined
+      ? path.resolve(since)
+      : fromBrief === undefined
+        ? undefined
+        : path.resolve(directory, fromBrief);
+  if (target === undefined) return undefined;
+  if (
+    !(await access(target)
+      .then(() => true)
+      .catch(() => false))
+  )
+    throw new Error(
+      `The previous edition ${since !== undefined ? 'passed with --since' : 'named in brief.md'} does not exist: ${target}.`,
+    );
+  return target;
+}
+
+/** The value after an option, and the arguments without the option and its value. */
+export function takeOption(argv, name) {
+  const index = argv.indexOf(name);
+  if (index === -1) return { value: undefined, rest: argv };
+  return {
+    value: argv[index + 1] ?? '',
+    rest: argv.filter((_, position) => position !== index && position !== index + 1),
+  };
+}
+
+async function main(argv) {
+  const cliOption = takeOption(argv, '--cli');
+  const sinceOption = takeOption(cliOption.rest, '--since');
+  const source = sinceOption.rest[0] ?? '.';
+  const command =
+    cliOption.value !== undefined
+      ? await commandFrom(cliOption.value)
+      : ((await installedCommand(source)) ?? (await pinnedCommand()));
+  const since = await editionSince(source, sinceOption.value);
+
+  const inspected = resultRecord(
+    await agenticReport(command, [
+      'inspect',
+      source,
+      ...(since === undefined ? [] : ['--since', since]),
+    ]),
+  );
   const structure = inspected.structure;
   const starter = structure.layout === 'landing' ? await starterOf(command, 'landing') : undefined;
-  const briefPath = path.join(path.dirname(inspected.entryPath), 'brief.md');
-  const briefText = await readFile(briefPath, 'utf8').catch(() => undefined);
+  const directory = await pageDirectory(inspected.entryPath);
+  const briefPath = path.join(directory, 'brief.md');
+  const briefText = await readPageMarkdown(briefPath, directory, { optional: true });
+  const edition =
+    since === undefined
+      ? null
+      : {
+          since,
+          edition: inspected.changes?.edition ?? null,
+          unchanged: inspected.changes?.unchanged ?? null,
+          totals: inspected.changes?.totals ?? null,
+        };
 
   const result = checkDesign({
     structure,
@@ -121,11 +194,15 @@ async function main(argv) {
     brief: { present: briefText !== undefined, text: briefText },
   });
   process.stdout.write(
-    `${JSON.stringify({ page: inspected.entryPath, brief: briefText === undefined ? null : briefPath, ...result }, null, 2)}\n`,
+    `${JSON.stringify({ page: inspected.entryPath, brief: briefText === undefined ? null : briefPath, edition, ...result }, null, 2)}\n`,
   );
 }
 
-main(process.argv.slice(2)).catch((error) => {
-  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-  process.exitCode = 2;
-});
+if (
+  process.argv[1] !== undefined &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+)
+  main(process.argv.slice(2)).catch((error) => {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 2;
+  });

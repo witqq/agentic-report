@@ -24,10 +24,12 @@ The category is a recommendation, not a limit: any directive, mode or effect of 
 
 One row per file under `assets/`: where it came from and under which licence. Origin is `build-screenshot`, `screencast`, `diagram`, `photo`, `drawn`, `placeholder` (a stand-in for real material still to come, marked as such on the page), or `generated` with its reason in Source.
 
-| File                       | Origin | Source                                                                    | Licence       |
-| -------------------------- | ------ | ------------------------------------------------------------------------- | ------------- |
-| `assets/system-map.svg`    | drawn  | drawn for this page: the source, compiler, artifact, and browser boundary | project (MIT) |
-| `assets/system-map.ru.svg` | drawn  | Russian version of `system-map.svg`                                       | project (MIT) |
+| File                            | Origin | Source                                                                                  | Licence       |
+| ------------------------------- | ------ | --------------------------------------------------------------------------------------- | ------------- |
+| `assets/system-map.svg`         | drawn  | drawn for this page: the source, compiler, artifact, and browser boundary               | project (MIT) |
+| `assets/system-map-dark.svg`    | drawn  | dark-scheme variant of `system-map.svg`, the same drawing in the page's dark colours    | project (MIT) |
+| `assets/system-map.ru.svg`      | drawn  | Russian version of `system-map.svg`                                                     | project (MIT) |
+| `assets/system-map-dark.ru.svg` | drawn  | dark-scheme variant of `system-map.ru.svg`, the same drawing in the page's dark colours | project (MIT) |
 
 ## Unresolved content facts
 

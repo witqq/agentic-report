@@ -25,7 +25,7 @@ Use Node.js in the supported engine range and install `agentic-report` in the wo
 
 :::steps{title="First-use path"}
 
-1. Run `agentic-report init ./my-page --starter tutorial`.
+1. Run `agentic-report init ./my-page --starter document`.
 2. Open `./my-page/report.md` and replace the sample title.
 3. Run `agentic-report build ./my-page --output ./my-page.html`.
 4. Open `./my-page.html` directly in a browser.

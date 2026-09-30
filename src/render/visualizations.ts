@@ -21,6 +21,7 @@ import {
   describeFlow,
   describeSequence,
   descriptionSentence,
+  sequenceSteps,
 } from './diagram-description.js';
 import {
   ARROW_LENGTH,
@@ -42,14 +43,17 @@ import {
   layoutNodeBox,
   NODE_DEFAULT_HEIGHT,
   NODE_DEFAULT_WIDTH,
+  NODE_MIN_WIDTH,
   round,
   text,
   wrapMeasured,
 } from './diagram-svg.js';
 import {
+  type FlowLayoutInput,
   type FlowViewKind,
   type FlowViews,
   type LayoutPoint,
+  layoutFlowDown,
   layoutFlowViews,
 } from './flow-layout.js';
 
@@ -84,12 +88,17 @@ const WIDE_CHART: ChartFrame = {
   labelLength: 14,
   semanticPoints: true,
 };
+/**
+ * Ширина узкого варианта — самая узкая дорожка графика на телефоне (колонка в 320 px с полями и рамкой,
+ * около 270 px): подпись оси в 12 px на ней не мельче 11 px, а на более широкой дорожке график
+ * растягивается.
+ */
 const NARROW_CHART: ChartFrame = {
-  width: 400,
-  height: 340,
-  plot: { left: 58, top: 24, width: 326, height: 222 },
-  axisTitleY: 330,
-  labelLength: 10,
+  width: 280,
+  height: 300,
+  plot: { left: 50, top: 22, width: 218, height: 196 },
+  axisTitleY: 290,
+  labelLength: 8,
   semanticPoints: false,
 };
 /** Узкий вариант круговой диаграммы — та же картинка, обрезанная по кругу. */
@@ -136,6 +145,33 @@ const EDGE_CORNER_RADIUS = 18;
 const ORTHOGONAL_CORNER_RADIUS = 8;
 /** Насколько связь тянет свои концы друг к другу: `direct` держит её короткой, `around` отпускает. */
 const ROUTE_WEIGHT: Readonly<Record<string, number>> = { auto: 1, direct: 4, around: 0.25 };
+/** Ширины, до которых переносятся подписи флоу: у страницы и у узкой дорожки телефона свои. */
+interface FlowSizing {
+  readonly node: number;
+  readonly nodeMin: number;
+  readonly label: number;
+  readonly group: number;
+  /** Доля обычных зазоров между узлами и слоями. */
+  readonly gaps: number;
+}
+const PAGE_SIZING: FlowSizing = {
+  node: FLOW_NODE_MAX_WIDTH,
+  nodeMin: NODE_MIN_WIDTH,
+  label: FLOW_LABEL_WIDTH,
+  group: GROUP_TITLE_MAX_WIDTH,
+  gaps: 1,
+};
+/**
+ * Узкий вид сверху вниз для телефона: коробки и подписи переносятся уже, чтобы схема вставала в колонку
+ * телефона, не мельча текст ниже 11 px.
+ */
+const COMPACT_SIZING: FlowSizing = { node: 108, nodeMin: 72, label: 72, group: 150, gaps: 0.5 };
+/**
+ * Колонка телефона в 390 px без полей страницы и рамки схемы. Флоу, чей вид сверху вниз шире неё,
+ * получает узкий вид: рантайм показывает его, когда ни один вид не встаёт в дорожку с подписями не
+ * мельче 11 px.
+ */
+const COMPACT_WIDTH_BUDGET = 330;
 const SPACING_SCALE: Readonly<Record<string, number>> = {
   compact: 0.78,
   comfortable: 1,
@@ -206,6 +242,10 @@ export interface PreparedFlow {
   readonly boxes: readonly FlowBox[];
   readonly edges: readonly FlowEdgeRecord[];
   readonly views: FlowViews;
+  /** Ширина, до которой переносится подпись связи этого флоу. */
+  readonly labelWidth: number;
+  /** Узкий вид сверху вниз для телефона; нет — вид сверху вниз и так встаёт в колонку телефона. */
+  readonly compact?: PreparedFlow;
   /** Вложенный поток одного узла, в который летит камера. */
   readonly zoom?: {
     readonly node: string;
@@ -264,19 +304,45 @@ async function prepareFlow(
   settings: Element,
   strings: PackageStrings,
 ): Promise<PreparedFlow> {
+  const page = measureFlow(parts, settings, strings, PAGE_SIZING);
+  const views = await layoutFlowViews(page.input);
+  const flow = { ...page.flow, views, labelWidth: PAGE_SIZING.label };
+  if (parts !== settings || views.down.width <= COMPACT_WIDTH_BUDGET) return flow;
+  const narrow = measureFlow(parts, settings, strings, COMPACT_SIZING);
+  const down = layoutFlowDown({
+    ...narrow.input,
+    direction: 'down',
+    widthBudget: COMPACT_WIDTH_BUDGET,
+  });
+  // Узкий вид нужен, только если он уже обычного вида сверху вниз.
+  if (down.width >= views.down.width) return flow;
+  return {
+    ...flow,
+    compact: {
+      ...narrow.flow,
+      views: { down, right: down, orthogonal: down, preferred: 'down' },
+      labelWidth: COMPACT_SIZING.label,
+    },
+  };
+}
+
+/** Измеряет узлы, группы и подписи флоу под ширины `sizing`; раскладку делает вызывающий. */
+function measureFlow(
+  parts: Element,
+  settings: Element,
+  strings: PackageStrings,
+  sizing: FlowSizing,
+): {
+  readonly flow: Omit<PreparedFlow, 'views' | 'labelWidth'>;
+  readonly input: FlowLayoutInput;
+} {
   const node = parts;
   const scale = SPACING_SCALE[peek(settings, 'dataSpacing') ?? 'comfortable'] ?? 1;
   const layout = parts === settings ? (peek(settings, 'dataLayout') ?? 'auto') : 'right';
   const direction = parts === settings ? (peek(settings, 'dataDirection') ?? 'auto') : 'auto';
   const groups = semanticChildren(node, 'group').map((child): FlowGroupRecord => {
     const label = peek(child, 'dataLabel') ?? '';
-    const wrapped = wrapMeasured(
-      label,
-      GROUP_TITLE_MAX_WIDTH,
-      2,
-      GROUP_FONT_SIZE,
-      GROUP_FONT_WEIGHT,
-    );
+    const wrapped = wrapMeasured(label, sizing.group, 2, GROUP_FONT_SIZE, GROUP_FONT_WEIGHT);
     return {
       id: peek(child, 'dataId') ?? '',
       label,
@@ -296,7 +362,7 @@ async function prepareFlow(
       label,
       kind: peek(child, 'dataKind') ?? 'neutral',
       ...(status === undefined ? {} : { status }),
-      ...layoutNodeBox(label, detail, FLOW_NODE_MAX_WIDTH),
+      ...layoutNodeBox(label, detail, sizing.node, sizing.nodeMin),
       ...(detail === undefined ? {} : { detail }),
       ...(group === undefined ? {} : { group }),
       ...(row === undefined ? {} : { row: Number.parseInt(row, 10) }),
@@ -326,7 +392,7 @@ async function prepareFlow(
       : direction === 'down' || direction === 'right'
         ? direction
         : 'auto';
-  const views = await layoutFlowViews({
+  const input: FlowLayoutInput = {
     nodes: boxes.map((box) => ({
       id: box.id,
       width: box.width,
@@ -342,7 +408,7 @@ async function prepareFlow(
     edges: edges.flatMap((edge) => {
       if (edge.layoutIndex === undefined) return [];
       const shown = shownEdgeLabel(edge);
-      const label = shown === undefined ? undefined : layoutEdgeLabel(shown, FLOW_LABEL_WIDTH);
+      const label = shown === undefined ? undefined : layoutEdgeLabel(shown, sizing.label);
       return {
         from: edge.from,
         to: edge.to,
@@ -355,11 +421,11 @@ async function prepareFlow(
     }),
     direction: layered,
     widthBudget: FLOW_WIDTH_BUDGET,
-    nodeGap: Math.round(24 * scale),
-    layerGap: Math.round(60 * scale),
+    nodeGap: Math.round(24 * scale * sizing.gaps),
+    layerGap: Math.round(60 * scale * sizing.gaps),
     margin: DIAGRAM_MARGIN,
-  });
-  return { groups, boxes, edges, views };
+  };
+  return { flow: { groups, boxes, edges }, input };
 }
 
 export function enhanceVisualization(
@@ -958,10 +1024,7 @@ function enhanceFlowDiagram(
       caption(title, description),
       ...renderZoomScene({
         outer,
-        inner: closestAspect(
-          zoom.flow,
-          outer.nodes.find((item) => item.id === zoom.node),
-        ),
+        inner: closestAspect(zoom.flow, outer.width / Math.max(1, outer.height)),
         target: zoom.node,
         title,
         summary,
@@ -978,13 +1041,11 @@ function enhanceFlowDiagram(
     return;
   }
 
-  const panels = views.map((view) => {
-    const selected = view.mode === defaultView;
-    const titleId = allocateId(`visual-${instance}-${view.mode}-title`);
-    const descriptionId = allocateId(`visual-${instance}-${view.mode}-description`);
-    const panelId = allocateId(`visual-${instance}-${view.mode}`);
-    const tabId = allocateId(`visual-${instance}-${view.mode}-tab`);
-    const svg = element(
+  const flowSvg = (view: FlowView, compact: boolean): Element => {
+    const suffix = compact ? `${view.mode}-compact` : view.mode;
+    const titleId = allocateId(`visual-${instance}-${suffix}-title`);
+    const descriptionId = allocateId(`visual-${instance}-${suffix}-description`);
+    return element(
       'svg',
       {
         viewBox: `0 0 ${round(view.width)} ${round(view.height)}`,
@@ -994,7 +1055,13 @@ function enhanceFlowDiagram(
         role: 'img',
         ariaLabelledBy: [titleId],
         ariaDescribedBy: [descriptionId],
-        className: ['visualization-svg', 'visualization-diagram'],
+        className: [
+          'visualization-svg',
+          'visualization-diagram',
+          ...(compact ? ['visualization-diagram-compact'] : []),
+        ],
+        // Узкий вид показывает рантайм, когда ни один вид не встаёт в дорожку с читаемыми подписями.
+        ...(compact ? { dataDiagramCompact: '', hidden: true } : {}),
       },
       [
         element('title', { id: titleId }, [text(title)]),
@@ -1014,6 +1081,16 @@ function enhanceFlowDiagram(
           : []),
       ],
     );
+  };
+  const compact =
+    prepared.compact === undefined ? undefined : drawFlow(prepared.compact, 'down', pulse);
+  const panels = views.map((view) => {
+    const selected = view.mode === defaultView;
+    const panelId = allocateId(`visual-${instance}-${view.mode}`);
+    const tabId = allocateId(`visual-${instance}-${view.mode}-tab`);
+    const svg = flowSvg(view, false);
+    const drawings =
+      view.mode === 'down' && compact !== undefined ? [svg, flowSvg(compact, true)] : [svg];
     return {
       button: element(
         'button',
@@ -1041,7 +1118,7 @@ function enhanceFlowDiagram(
           ...(selected ? { dataLayoutDefault: '' } : { hidden: true }),
           className: ['visualization-layout-view'],
         },
-        [element('div', { className: ['visualization-frame'] }, [svg])],
+        [element('div', { className: ['visualization-frame'] }, drawings)],
       ),
     };
   });
@@ -1097,11 +1174,12 @@ function flowNode(node: DiagramNode & { readonly status?: NodeStatus }): Element
 }
 
 /**
- * Вид вложенного потока, чьи пропорции ближе всего к коробке узла: камера вписывает его в узел, и
- * вытянутый поперёк узла вид вышел бы мельче.
+ * Вид вложенного потока, чьи пропорции ближе всего к кадру камеры, то есть ко всей схеме: в конце пролёта
+ * кадр сохраняет пропорции схемы и вписывает в себя вложенный поток. Вид поперёк кадра — широкий поток в
+ * высокой схеме сверху вниз — занял бы в нём полоску, и камера приблизила бы его всего в полтора раза, не
+ * дав подписям стать читаемыми.
  */
-function closestAspect(flow: PreparedFlow, box: DiagramNode | undefined): FlowView {
-  const aspect = (box?.width ?? NODE_DEFAULT_WIDTH) / (box?.height ?? NODE_DEFAULT_HEIGHT);
+function closestAspect(flow: PreparedFlow, aspect: number): FlowView {
   const candidates = (['right', 'down'] as const).map((mode) => drawFlow(flow, mode, []));
   return candidates.reduce((best, next) =>
     Math.abs(Math.log(next.width / next.height / aspect)) <
@@ -1189,7 +1267,7 @@ function drawFlow(prepared: PreparedFlow, mode: FlowViewKind, pulse: readonly st
     const point = placed.edges[edge.layoutIndex]?.label;
     return point === undefined
       ? []
-      : [edgeLabel(shown, point.x, point.y + 4, 'middle', FLOW_LABEL_WIDTH, 'center')];
+      : [edgeLabel(shown, point.x, point.y + 4, 'middle', prepared.labelWidth, 'center')];
   });
   return {
     mode,
@@ -1293,11 +1371,9 @@ function enhanceSequenceDiagram(
       : sequenceMessage(message, index),
   );
   const legend = readLegend(node, messages, strings);
-  const words = describeSequence(
-    participants.map((item) => describedNode(item, legend)),
-    messages.map((message) => describedEdge(message, legend)),
-    strings,
-  );
+  const describedParticipants = participants.map((item) => describedNode(item, legend));
+  const describedMessages = messages.map((message) => describedEdge(message, legend));
+  const words = describeSequence(describedParticipants, describedMessages, strings);
 
   node.tagName = 'figure';
   node.properties.dataVisualization = 'diagram';
@@ -1324,9 +1400,56 @@ function enhanceSequenceDiagram(
         ],
       ),
     ]),
+    sequenceList(sequenceSteps(describedParticipants, describedMessages), strings),
     ...diagramLegend(legend, strings),
     diagramTranscript(words, strings),
   ];
+}
+
+/**
+ * Последовательность списком: её вид на дорожке, где картинка не встаёт с подписями не мельче 11 px.
+ * Список собирается при сборке из тех же данных; показывает его рантайм, а картинка остаётся в
+ * просмотрщике во весь экран.
+ */
+function sequenceList(list: ReturnType<typeof sequenceSteps>, strings: PackageStrings): Element {
+  return element(
+    'div',
+    { className: ['visualization-sequence-list'], dataSequenceList: '', hidden: true },
+    [
+      element('p', { className: ['visualization-sequence-list-heading'] }, [
+        text(strings.diagramText.participantsList),
+      ]),
+      element(
+        'ul',
+        { className: ['visualization-sequence-participants'] },
+        list.participants.map((participant) => element('li', {}, [text(participant)])),
+      ),
+      element('p', { className: ['visualization-sequence-list-heading'] }, [
+        text(strings.messagesInOrder),
+      ]),
+      element(
+        'ol',
+        { className: ['visualization-sequence-steps'] },
+        list.steps.map((step) =>
+          element('li', { className: ['visualization-sequence-step'] }, [
+            element('span', { className: ['visualization-sequence-step-ends'] }, [
+              element('b', {}, [text(step.from)]),
+              text(step.self ? `, ${strings.diagramText.insideItself}` : ' → '),
+              ...(step.self ? [] : [element('b', {}, [text(step.to)])]),
+            ]),
+            ...(step.label === undefined ? [] : [text(`: ${step.label}`)]),
+            ...(step.kind === undefined
+              ? []
+              : [
+                  element('span', { className: ['visualization-sequence-step-kind'] }, [
+                    text(` (${step.kind})`),
+                  ]),
+                ]),
+          ]),
+        ),
+      ),
+    ],
+  );
 }
 
 /**

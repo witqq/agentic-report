@@ -1,5 +1,8 @@
 import type { ReviewBinding } from './review/contract.js';
 import type { PageLocaleChoice } from './authoring/registry.js';
+import { EN_STRINGS } from './localization/en.js';
+import { resolvePackageLocale } from './localization/locale.js';
+import { RU_STRINGS } from './localization/ru.js';
 
 export type PackageLocale = PageLocaleChoice;
 
@@ -46,6 +49,10 @@ export interface PackageStrings {
   readonly previousSlide: string;
   readonly nextSlide: string;
   readonly slides: string;
+  /** Колода слайдов в документе: роль слайда и полноэкранный просмотр. */
+  readonly slide: string;
+  readonly enterFullScreen: string;
+  readonly exitFullScreen: string;
   /** Режим экранов, сцена со скрабом и кнопка паузы движения (раскладка и рантайм страницы). */
   readonly titleScreen: string;
   readonly screens: string;
@@ -84,8 +91,21 @@ export interface PackageStrings {
     readonly forward: string;
     readonly backward: string;
     readonly participants: string;
+    /** Заголовок участников в последовательности, показанной списком шагов. */
+    readonly participantsList: string;
     readonly insideItself: string;
     readonly transcript: string;
+  };
+  /** Просмотр схемы, графика или широкой таблицы во весь экран. */
+  readonly figureViewer: {
+    readonly open: string;
+    readonly openLabel: (title: string) => string;
+    readonly dialog: (title: string) => string;
+    readonly table: string;
+    readonly zoomIn: string;
+    readonly zoomOut: string;
+    readonly fit: string;
+    readonly hint: string;
   };
   readonly diagramLayouts: {
     readonly switcher: string;
@@ -162,362 +182,63 @@ export interface PackageStrings {
   readonly moveUp: string;
   readonly moveDown: string;
   readonly assignTo: (label: string) => string;
+  /** Слой изменений с прошлой редакции (`--since`): полоса, список, пометки и призраки. */
+  readonly edition: EditionStrings;
 }
 
-const en: PackageStrings = {
-  formatNumber: (value) =>
-    new Intl.NumberFormat('en', { maximumFractionDigits: 6, useGrouping: true }).format(value),
-  skipToContent: 'Skip to content',
-  hideContents: 'Hide contents',
-  showContents: 'Show contents',
-  openContents: 'Open contents',
-  closeContents: 'Close contents',
-  contents: 'Contents',
-  current: 'Current / ',
-  language: 'Language',
-  languageName: (locale) => (locale === 'ru' ? 'Russian' : 'English'),
-  reportAttribution: 'Made with Agentic Report',
-  review: 'Review',
-  scheme: 'Light or dark',
-  theme: 'Theme',
-  chooseTheme: 'Choose theme',
-  toggleScheme: 'Switch light and dark scheme',
-  documentContents: 'Document contents',
-  onThisPage: 'On this page',
-  close: 'Close',
-  copy: 'Copy',
-  copied: 'Copied',
-  copyUnavailable: 'Copy unavailable',
-  glossary: 'Glossary',
-  viewFullDefinition: 'View full definition',
-  download: (label) => `Download ${label}`,
-  details: 'Details',
-  tab: (number) => `Tab ${number}`,
-  contentSections: 'Content sections',
-  dialog: 'Dialog',
-  openDialog: 'Open dialog',
-  showDetails: 'Show details',
-  scrollableGallery: 'Scrollable gallery',
-  compareBefore: 'Before',
-  pauseVideo: 'Pause video',
-  playVideo: 'Play video',
-  expandVideo: 'Expand',
-  videoChapters: 'Chapters',
-  titleSlide: 'Title slide',
-  slideCounter: (slide, total) => `Slide ${slide} of ${total}`,
-  previousSlide: 'Previous slide',
-  nextSlide: 'Next slide',
-  slides: 'Slides',
-  titleScreen: 'Title screen',
-  screens: 'Screens',
-  screenLabel: (screen, total, title) => `Screen ${screen} of ${total}: ${title}`,
-  sceneStep: (step, total) => `Step ${step} of ${total}`,
-  pauseMotion: 'Pause motion',
-  compareAfter: 'After',
-  comparePosition: (before, after) => `Divider between ${before} and ${after}`,
-  severity: { blocking: 'Blocking', major: 'Major', minor: 'Minor', note: 'Note' },
-  findingsSummary: 'Findings by severity',
-  cardStatus: { good: 'Good', watch: 'Watch', risk: 'At risk' },
-  diffSummary: (added, removed) =>
-    `${added} ${added === 1 ? 'line' : 'lines'} added, ${removed} removed`,
-  filterItems: 'Filter items',
-  filter: 'Filter',
-  toggleContent: 'Toggle content',
-  increment: 'Increment',
-  items: (count) => `${count} ${count === 1 ? 'item' : 'items'}`,
-  chart: 'Chart',
-  series: 'Series',
-  value: 'Value',
-  legend: 'Legend',
-  diagram: 'Diagram',
-  node: (n) => `Node ${n}`,
-  participant: (n) => `Participant ${n}`,
-  timeline: 'Timeline',
-  event: 'Event',
-  data: 'Data',
-  messagesInOrder: 'Messages in order',
-  none: 'none',
-  to: 'to',
-  diagramText: {
-    flowLead: (nodes, layers) => `Nodes: ${nodes}; flow layers: ${layers}.`,
-    sequenceLead: (participants, messages) =>
-      `Participants: ${participants}; messages: ${messages}.`,
-    groups: 'Groups',
-    group: (label, members) => `“${label}”: ${members.join(', ')}`,
-    layers: 'Layers along the flow',
-    forward: 'Connections along the flow',
-    backward: 'Connections back against the flow',
-    participants: 'Participants from left to right',
-    insideItself: 'inside itself',
-    transcript: 'Diagram in words',
-  },
-  diagramLayouts: {
-    switcher: 'Diagram layout',
-    down: 'Top to bottom',
-    right: 'Left to right',
-    orthogonal: 'Right angles',
-  },
-  edgeKinds: {
-    call: 'call',
-    data: 'data or values',
-    event: 'event or callback',
-    dependency: 'dependency or creation',
-  },
-  reviewWorkspace: 'Review workspace',
-  reviewThisReport: 'Review this report',
-  noThreads: 'No discussion threads yet',
-  discussionSelected: 'Discussion for selected block',
-  noteForSelection: 'Note for selected text',
-  createNote: 'Create note',
-  viewThread: 'View thread',
-  currentNotes: 'Notes in this report',
-  noMessages: 'No messages yet.',
-  newMessage: 'New message',
-  addMessage: 'Add message',
-  saveMessage: 'Save message',
-  cancelEdit: 'Cancel edit',
-  resolveThread: 'Resolve thread',
-  reopenThread: 'Reopen thread',
-  previousThreads: 'Threads from the previous revision',
-  importReview: 'Import review',
-  exportReview: 'Export review.json',
-  exitReview: 'Exit review',
-  openReview: 'Open review',
-  closeReview: 'Close review',
-  reviewUnavailable: 'Review unavailable',
-  enterMessage: 'Enter a message for the selected text.',
-  agent: 'Agent',
-  you: 'You',
-  edit: 'Edit',
-  resolved: 'resolved',
-  unresolved: 'unresolved',
-  prior: 'Prior',
-  historical: 'Historical',
-  threadsSummary: (total, open) =>
-    `${total} ${total === 1 ? 'thread' : 'threads'} · unresolved: ${open}`,
-  reviewBinding: (binding) =>
-    ({ exact: 'exact', changed: 'changed', missing: 'missing', ambiguous: 'ambiguous' })[binding],
-  reviewTargetFallback: (kind) =>
-    kind === 'markdown:thematic-break' ? 'Thematic break' : 'Report block',
-  openDiscussion: (label) => `Open discussion for ${label}`,
-  openNote: (label) => `Open note for “${label}”`,
-  resolveFor: (resolved, label) => `${resolved ? 'Reopen' : 'Resolve'} thread for ${label}`,
-  fileTooLarge: (bytes) => `Review files must be no larger than ${bytes} bytes.`,
-  differentRevision: 'This review belongs to a different report revision.',
-  unsupportedReview: 'Version 1 reviews are unsupported. Export a current review from this page.',
-  importFailed: 'Review import failed.',
-  multipleCurrentSegments: 'Imported review contains more than one current segment for a thread.',
-  unknownCurrentTarget:
-    'Imported review contains a current target that is not part of this report revision.',
-  invalidSelectionAnchor:
-    'Imported review contains a selected-text anchor that does not match this report revision.',
-  unanswered: 'Not answered',
-  answered: 'Answered',
-  copyResponse: 'Copy response',
-  downloadResponse: 'Download response.json',
-  importResponse: 'Import response',
-  responseCopied: 'Response copied',
-  responseCopyUnavailable: 'Clipboard unavailable; download the response file instead.',
-  responseImportFailed: 'Response import failed. Existing answers were preserved.',
-  responseDifferentForm: 'This response belongs to a different or outdated form.',
-  responseUnsupported: 'This response file uses an unsupported contract version.',
-  responseFileTooLarge: (bytes) => `Response files must be no larger than ${bytes} bytes.`,
-  responseInvalidValues: 'Correct invalid response values before exporting.',
-  responseReady: 'Response file imported.',
-  unassigned: 'Unassigned',
-  itemComment: 'Comment',
-  openOriginal: 'Open original',
-  moveUp: 'Move up',
-  moveDown: 'Move down',
-  assignTo: (label) => `Assign to ${label}`,
-};
-
-const ru: PackageStrings = {
-  formatNumber: (value) =>
-    new Intl.NumberFormat('ru', { maximumFractionDigits: 6, useGrouping: true }).format(value),
-  skipToContent: 'Перейти к содержимому',
-  hideContents: 'Скрыть содержание',
-  showContents: 'Показать содержание',
-  openContents: 'Открыть содержание',
-  closeContents: 'Закрыть содержание',
-  contents: 'Содержание',
-  current: 'Сейчас / ',
-  language: 'Язык',
-  languageName: (locale) => (locale === 'ru' ? 'Русский' : 'Английский'),
-  reportAttribution: 'Создано с Agentic Report',
-  review: 'Ревью',
-  scheme: 'Схема',
-  theme: 'Тема',
-  chooseTheme: 'Выбрать тему',
-  toggleScheme: 'Переключить светлую и тёмную схему',
-  documentContents: 'Содержание документа',
-  onThisPage: 'На этой странице',
-  close: 'Закрыть',
-  copy: 'Копировать',
-  copied: 'Скопировано',
-  copyUnavailable: 'Копирование недоступно',
-  glossary: 'Глоссарий',
-  viewFullDefinition: 'Открыть полное определение',
-  download: (label) => `Скачать ${label}`,
-  details: 'Подробности',
-  tab: (number) => `Вкладка ${number}`,
-  contentSections: 'Разделы содержимого',
-  dialog: 'Диалог',
-  openDialog: 'Открыть диалог',
-  showDetails: 'Показать подробности',
-  scrollableGallery: 'Прокручиваемая галерея',
-  compareBefore: 'До',
-  pauseVideo: 'Остановить видео',
-  playVideo: 'Запустить видео',
-  expandVideo: 'Развернуть',
-  videoChapters: 'Главы',
-  titleSlide: 'Титульный слайд',
-  slideCounter: (slide, total) => `Слайд ${slide} из ${total}`,
-  previousSlide: 'Предыдущий слайд',
-  nextSlide: 'Следующий слайд',
-  slides: 'Слайды',
-  titleScreen: 'Первый экран',
-  screens: 'Экраны',
-  screenLabel: (screen, total, title) => `Экран ${screen} из ${total}: ${title}`,
-  sceneStep: (step, total) => `Шаг ${step} из ${total}`,
-  pauseMotion: 'Остановить движение',
-  compareAfter: 'После',
-  comparePosition: (before, after) => `Граница между «${before}» и «${after}»`,
-  severity: { blocking: 'Блокирует', major: 'Существенно', minor: 'Мелочь', note: 'Заметка' },
-  findingsSummary: 'Находки по серьёзности',
-  cardStatus: { good: 'В норме', watch: 'Под наблюдением', risk: 'Под угрозой' },
-  diffSummary: (added, removed) => `Добавлено строк: ${added}, удалено: ${removed}`,
-  filterItems: 'Фильтровать элементы',
-  filter: 'Фильтр',
-  toggleContent: 'Переключить содержимое',
-  increment: 'Увеличить',
-  chart: 'Диаграмма',
-  series: 'Ряд',
-  value: 'Значение',
-  legend: 'Легенда',
-  diagram: 'Схема',
-  node: (n) => `Узел ${n}`,
-  participant: (n) => `Участник ${n}`,
-  timeline: 'Хронология',
-  event: 'Событие',
-  data: 'Данные',
-  messagesInOrder: 'Сообщения по порядку',
-  none: 'нет',
-  to: 'к',
-  diagramText: {
-    flowLead: (nodes, layers) => `Узлов: ${nodes}, слоёв потока: ${layers}.`,
-    sequenceLead: (participants, messages) =>
-      `Участников: ${participants}, сообщений: ${messages}.`,
-    groups: 'Группы',
-    group: (label, members) => `«${label}»: ${members.join(', ')}`,
-    layers: 'Слои по потоку',
-    forward: 'Связи по потоку',
-    backward: 'Обратные связи',
-    participants: 'Участники слева направо',
-    insideItself: 'внутри себя',
-    transcript: 'Схема словами',
-  },
-  diagramLayouts: {
-    switcher: 'Раскладка схемы',
-    down: 'Сверху вниз',
-    right: 'Слева направо',
-    orthogonal: 'Прямые углы',
-  },
-  edgeKinds: {
-    call: 'вызов',
-    data: 'данные или значения',
-    event: 'событие или обратный вызов',
-    dependency: 'зависимость или создание',
-  },
-  items: (count) => `${count} ${russianCountForm(count, 'элемент', 'элемента', 'элементов')}`,
-  reviewWorkspace: 'Пространство ревью',
-  reviewThisReport: 'Ревью отчёта',
-  noThreads: 'Обсуждений пока нет',
-  discussionSelected: 'Обсуждение выбранного блока',
-  noteForSelection: 'Заметка к выделенному тексту',
-  createNote: 'Создать заметку',
-  viewThread: 'Открыть тред',
-  currentNotes: 'Заметки в этом отчёте',
-  noMessages: 'Сообщений пока нет.',
-  newMessage: 'Новое сообщение',
-  addMessage: 'Добавить сообщение',
-  saveMessage: 'Сохранить сообщение',
-  cancelEdit: 'Отменить редактирование',
-  resolveThread: 'Закрыть обсуждение',
-  reopenThread: 'Возобновить обсуждение',
-  previousThreads: 'Обсуждения предыдущей редакции',
-  importReview: 'Импортировать ревью',
-  exportReview: 'Экспортировать review.json',
-  exitReview: 'Выйти из ревью',
-  openReview: 'Открыть ревью',
-  closeReview: 'Закрыть ревью',
-  reviewUnavailable: 'Ревью недоступно',
-  enterMessage: 'Введите сообщение для выделенного текста.',
-  agent: 'Агент',
-  you: 'Вы',
-  edit: 'Изменить',
-  resolved: 'закрыто',
-  unresolved: 'открыто',
-  prior: 'Предыдущее',
-  historical: 'Историческое',
-  threadsSummary: (total, open) =>
-    `${total} ${russianCountForm(total, 'обсуждение', 'обсуждения', 'обсуждений')} · открыто: ${open}`,
-  reviewBinding: (binding) =>
-    ({ exact: 'точно', changed: 'изменено', missing: 'не найдено', ambiguous: 'неоднозначно' })[
-      binding
-    ],
-  reviewTargetFallback: (kind) =>
-    kind === 'markdown:thematic-break' ? 'Разделитель' : 'Блок отчёта',
-  openDiscussion: (label) => `Открыть обсуждение: ${label}`,
-  openNote: (label) => `Открыть заметку к «${label}»`,
-  resolveFor: (resolved, label) => `${resolved ? 'Возобновить' : 'Закрыть'} обсуждение: ${label}`,
-  fileTooLarge: (bytes) => `Размер файла ревью не должен превышать ${bytes} байт.`,
-  differentRevision: 'Это ревью относится к другой редакции отчёта.',
-  unsupportedReview:
-    'Ревью версии 1 не поддерживаются. Экспортируйте актуальное ревью с этой страницы.',
-  importFailed: 'Не удалось импортировать ревью.',
-  multipleCurrentSegments:
-    'Импортированное ревью содержит несколько текущих сегментов одного обсуждения.',
-  unknownCurrentTarget:
-    'Импортированное ревью содержит текущую цель, которой нет в этой редакции отчёта.',
-  invalidSelectionAnchor:
-    'Импортированное ревью содержит привязку к выделенному тексту, которой нет в этой редакции отчёта.',
-  unanswered: 'Нет ответа',
-  answered: 'Есть ответ',
-  copyResponse: 'Копировать ответ',
-  downloadResponse: 'Скачать response.json',
-  importResponse: 'Импортировать ответ',
-  responseCopied: 'Ответ скопирован',
-  responseCopyUnavailable: 'Буфер недоступен; скачайте файл ответа.',
-  responseImportFailed: 'Не удалось импортировать ответ. Введённые ответы сохранены.',
-  responseDifferentForm: 'Ответ относится к другой или устаревшей форме.',
-  responseUnsupported: 'Версия файла ответа не поддерживается.',
-  responseFileTooLarge: (bytes) => `Размер файла ответа не должен превышать ${bytes} байт.`,
-  responseInvalidValues: 'Исправьте недопустимые значения ответа перед экспортом.',
-  responseReady: 'Файл ответа импортирован.',
-  unassigned: 'Не распределено',
-  itemComment: 'Комментарий',
-  openOriginal: 'Открыть оригинал',
-  moveUp: 'Поднять',
-  moveDown: 'Опустить',
-  assignTo: (label) => `Переместить в «${label}»`,
-};
-
-export function resolvePackageLocale(language: string | undefined): PackageLocale {
-  return supportedPackageLocale(language) ?? 'en';
+export interface EditionTotalsLabel {
+  readonly changed: number;
+  readonly added: number;
+  readonly removed: number;
+  readonly moved: number;
+  /** Разделы, в которых что-то изменилось. */
+  readonly sections: number;
 }
 
-export function supportedPackageLocale(language: string | undefined): PackageLocale | undefined {
-  const primary = language?.trim().toLowerCase().split(/[-_]/u, 1)[0];
-  return primary === 'en' || primary === 'ru' ? primary : undefined;
+export interface EditionStrings {
+  readonly region: string;
+  readonly summary: (edition: number, totals: EditionTotalsLabel) => string;
+  readonly unchanged: (edition: number) => string;
+  readonly localeAdded: (edition: number) => string;
+  readonly show: string;
+  readonly previous: string;
+  readonly next: string;
+  readonly list: string;
+  readonly button: string;
+  readonly panelTitle: string;
+  readonly beforeSections: string;
+  readonly empty: string;
+  readonly added: string;
+  readonly changed: string;
+  readonly rewritten: string;
+  readonly removed: string;
+  readonly moved: string;
+  readonly renamed: string;
+  readonly movedFrom: (section: string) => string;
+  readonly movedTo: (section: string) => string;
+  readonly movedHere: string;
+  readonly sectionAdded: string;
+  readonly sectionRemoved: (title: string) => string;
+  readonly sectionRenamed: (previous: string) => string;
+  readonly sectionMoved: string;
+  readonly contentsMark: string;
+  readonly containsChanges: string;
+  readonly previousText: string;
+  readonly removedBlock: (kind: string, excerpt: string) => string;
+  readonly kind: (kind: string) => string;
+  readonly node: (label: string) => string;
+  readonly edge: (from: string, to: string) => string;
+  readonly removedParts: (parts: readonly string[]) => string;
+  readonly point: (series: string, label: string) => string;
+  readonly pointChanged: (point: string, previous: string, value: string) => string;
+  readonly pointsChanged: (parts: readonly string[]) => string;
+  readonly pointsAdded: (parts: readonly string[]) => string;
+  readonly pointsRemoved: (parts: readonly string[]) => string;
+  readonly image: (alt: string) => string;
 }
+
+export { resolvePackageLocale, supportedPackageLocale } from './localization/locale.js';
 
 export function packageStrings(language: string | undefined): PackageStrings {
-  return resolvePackageLocale(language) === 'ru' ? ru : en;
-}
-
-function russianCountForm(count: number, singular: string, paucal: string, plural: string): string {
-  if (count % 10 === 1 && count % 100 !== 11) return singular;
-  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return paucal;
-  return plural;
+  return resolvePackageLocale(language) === 'ru' ? RU_STRINGS : EN_STRINGS;
 }

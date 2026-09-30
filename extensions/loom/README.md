@@ -6,7 +6,7 @@ free space beside the section. As the section passes through the window, weft ro
 over and under, the shuttle waits beside the last row, and when the section has been read the strip is
 finished cloth. A section being woven carries `data-state-weaving`, a finished one `data-state-woven`.
 
-Unlike `wall-thread`, nothing joins the sections: every loom is local to its host and driven by that host's
+Nothing joins the sections: every loom is local to its host and driven by that host's
 own progress through the window (`ctx.progress(host)`), and the geometry is a rectangle beside the text, not
 a route.
 

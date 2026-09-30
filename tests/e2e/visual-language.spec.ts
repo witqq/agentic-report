@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { buildReport } from '../../dist/node/index.js';
 import { expect, test } from './fixtures.js';
 
 const artifactUrl = pathToFileURL(
@@ -236,7 +237,10 @@ test('declarative visual families remain distinct, readable, and contained', asy
         .evaluate((card) => getComputedStyle(card).position),
     ).toBe('static');
   } else {
-    expect(visualState.mosaicColumns).toBe(2);
+    // A mosaic is a grid of several columns on a wide screen; how many depends on the section's width,
+    // which on a mixed page is the column's wide step (1.5 × the reading measure): three cards fit one row
+    // at 1440. Catches a mosaic that stays one column on a desktop.
+    expect(visualState.mosaicColumns).toBeGreaterThan(1);
     expect(visualState.storyPosition).toBe('sticky');
     expect(visualState.storyFloat).toBe('right');
     expect(visualState.layers.length).toBeGreaterThan(1);
@@ -332,4 +336,50 @@ test('declarative visual families remain distinct, readable, and contained', asy
   }
   expect(requestUrls.length).toBeGreaterThan(0);
   expect(requestUrls.every((url) => url.startsWith('file://'))).toBe(true);
+});
+
+test('a picture in an evidence section is shown whole at every desktop width', async ({
+  page,
+}, testInfo) => {
+  // Defect: the evidence recipe gave its media the photo art direction — a skewed quadrilateral mask and
+  // a 16:10 cover crop — so a diagram or a screenshot offered as proof was drawn tilted and lost its
+  // edges (the release document's evidence map lost «Markdown + assets» and «report.html»).
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const root = path.resolve('test-results/e2e-evidence-media');
+  await mkdir(root, { recursive: true });
+  const pages: string[] = [];
+  for (const source of ['examples/document', 'examples/research', 'website/landing']) {
+    const output = path.join(root, `${source.replaceAll('/', '-')}.html`);
+    await buildReport({ input: path.resolve(source), output });
+    pages.push(output);
+  }
+  for (const output of pages) {
+    for (const width of [1024, 1440, 1920]) {
+      await page.setViewportSize({ width, height: 1100 });
+      await page.goto(pathToFileURL(output).href);
+      const pictures = await page
+        .locator('.semantic-section[data-recipe="evidence"] img')
+        .evaluateAll((images) =>
+          images.map((image) => {
+            const picture = image as HTMLImageElement;
+            const box = picture.getBoundingClientRect();
+            const style = getComputedStyle(picture);
+            return {
+              clip: style.clipPath,
+              fit: style.objectFit,
+              drawn: box.width / box.height,
+              natural: picture.naturalWidth / picture.naturalHeight,
+            };
+          }),
+        );
+      const label = `${path.basename(output)} at ${width}`;
+      expect(pictures.length, label).toBeGreaterThan(0);
+      for (const picture of pictures) {
+        expect(picture.clip, label).toBe('none');
+        // Whole: either the box keeps the picture's proportions or the picture is contained in it.
+        if (picture.fit !== 'contain')
+          expect(Math.abs(picture.drawn / picture.natural - 1), label).toBeLessThan(0.02);
+      }
+    }
+  }
 });

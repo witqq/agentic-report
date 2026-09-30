@@ -1,0 +1,5308 @@
+@layer base, defaults, components, primitives, contexts, treatments;
+
+/*
+ * The reading measure is written in `ch` of the text face. Typed as a length, it resolves once on the body,
+ * so a code block (a smaller mono face, where `ch` differs) can take exactly the prose column's width.
+ */
+@property --prose-measure {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
+/*
+ * The widest step of a document's column (the composed-column rules; the reading measure while the column
+ * has one width): typed as a length, it resolves once on the article against the content track (`cqi` of
+ * `.report-content`), so a block inside a disclosure takes the same width as one outside it.
+ */
+@property --column-wide {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
+@layer components {
+  :root {
+    /*
+   * Цвета, шрифты, ширины, ритм и фон приходят из темы страницы: пакет пишет их переменными под
+   * именем темы (`src/render/theme-css.ts`). Здесь только то, что от темы не зависит.
+   */
+    --shadow-raised: var(--shadow-geometry) var(--shadow-color);
+    --space-section: calc(2.5rem * var(--space-factor));
+    --space-card: calc(1.1rem * var(--space-factor));
+    --shell-gutter: clamp(1rem, 3vw, 2rem);
+    --sidebar-width: 17rem;
+    /*
+   * Три кривые движения: интерфейс — быстрое оседание меток, кнопок и панелей; текст — строки,
+   * выходящие из своей маски; сцена — медленное ровное движение крупных предметов.
+   */
+    --ease-ui: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-text: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-scene: cubic-bezier(0.65, 0, 0.35, 1);
+    --duration-ui: 180ms;
+    /*
+   * Длительности по ролям рядом с кривыми: текст выходит из маски за 700 мс с шагом строк 70 мс и
+   * въезжает со 108 % своей высоты, сцена идёт 1200 мс, уход назад быстрее прихода. Значения — из
+   * `PAGE_MOTION_POLICY.roles` (`src/page-motion.ts`); рантайм пишет их на корень теми же числами.
+   */
+    --duration-text: 700ms;
+    --duration-text-step: 70ms;
+    --duration-scene: 1200ms;
+    --duration-back: 240ms;
+    --text-rise: 108%;
+    /*
+   * Шкалы системы интерфейса: кегль по ролям и высоты элементов управления. Тема меняет голос, а не
+   * иерархию: `--control-md`, `--control-sm`, `--control-pad-x` и `--control-gap` приходят из её
+   * `controls`, остальное одно на все темы. Элементы читают `--control-height-*`: это высоты темы,
+   * которые под палец (`pointer: coarse`) растут до `--control-touch`.
+   */
+    --text-label: 0.6875rem;
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-md: 1rem;
+    --text-lg: 1.125rem;
+    --weight-regular: 400;
+    --weight-medium: 500;
+    --weight-strong: 600;
+    --control-height-md: var(--control-md);
+    --control-height-sm: var(--control-sm);
+    --control-row: 2.75rem;
+    --control-touch: 2.75rem;
+    --control-toolbar: 2.5rem;
+    --icon-size: 1rem;
+    --label-tracking: 0.12em;
+    /* Пилюля и круг — формы, а не скругление темы: у них одно значение на все темы. */
+    --radius-pill: 999px;
+    /* Фактура — точки зерна и фона — нейтрально-серая при любой палитре: цветное зерно читается как пятно. */
+    --texture-ink: rgb(128 128 128 / 32%);
+    font-family: var(--font-author-body, var(--font-body));
+    /*
+     * Гарнитура с осью `opsz` (Literata, Playfair) берёт рисунок под кегль: текст — открытый, дисплей —
+     * тонкий и плотный. Свойство наследуется, поэтому одно объявление на корне ведёт и текст, и заголовки;
+     * замеры ширины буквы темы (`advance`) сняты именно в этом режиме.
+     */
+    font-optical-sizing: auto;
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  /*
+   * Шкала на телефоне. Метка и мета мельче 12 px и подпись мельче 14 px на телефоне не читаются с руки,
+   * поэтому окно уже 48rem поднимает низ шкалы: метка 12 px, мета 13 px. Подписи к рисункам, видео,
+   * диффам и источникам набраны `--text-sm` (14 px) и не опускаются ниже.
+   */
+  @media (width <= 48rem) {
+    :root {
+      --text-label: 0.75rem;
+      --text-xs: 0.8125rem;
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    --topbar-clearance: 4.4375rem;
+    scroll-padding-top: var(--topbar-clearance);
+  }
+
+  body {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+    background: var(--page-backdrop), var(--color-bg);
+    background-size: var(--page-backdrop-size);
+    color: var(--color-text);
+    font-family: var(--font-author-body, var(--font-body));
+    letter-spacing: var(--body-tracking);
+    line-height: var(--body-leading);
+  }
+
+  [data-localized-page-host],
+  .localized-page-variant {
+    display: contents;
+  }
+
+  /*
+   * Зерно фона: плитка шума 320 px как маска над краской текста темы, едва заметная. Это фактура крупной
+   * заливки, а не рисунок: слой не ловит указатель, не двигается и не печатается.
+   */
+  :root[data-theme-backdrop='grain'] body::before {
+    position: fixed;
+    z-index: -1;
+    inset: 0;
+    background-color: var(--color-text);
+    content: '';
+    opacity: 0.07;
+    pointer-events: none;
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mask-size: 320px 320px;
+  }
+
+  @media print {
+    :root[data-theme-backdrop='grain'] body::before {
+      display: none;
+    }
+  }
+
+  a {
+    color: var(--color-accent-strong);
+    text-decoration-color: color-mix(in srgb, currentcolor 40%, transparent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+    transition: text-decoration-color var(--duration-ui) var(--ease-ui);
+  }
+
+  a:hover {
+    text-decoration-color: currentcolor;
+  }
+
+  .skip-link {
+    position: fixed;
+    z-index: 40;
+    top: 0.75rem;
+    left: 0.75rem;
+    padding: 0.65rem 0.9rem;
+    border-radius: var(--radius-small);
+    background: var(--color-text);
+    color: var(--color-bg);
+    transform: translateY(-160%);
+  }
+
+  .skip-link:focus {
+    transform: translateY(0);
+  }
+
+  .topbar {
+    position: sticky;
+    z-index: 20;
+    top: 0;
+    display: flex;
+    min-height: 3.5rem;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+    padding: 0.4rem clamp(0.65rem, 2vw, 1.25rem);
+    background: color-mix(in srgb, var(--color-bg) 86%, transparent);
+    /*
+     * Размытие держит панель читаемой над прокручиваемым текстом — это работа, а не украшение, поэтому
+     * без усиления насыщенности: «стекло», которое играет цветом, — клише, а не приём.
+     */
+    backdrop-filter: blur(12px);
+  }
+
+  .topbar-context {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .topbar-title {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--color-heading);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    letter-spacing: -0.005em;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar-title-short,
+  .topbar-current {
+    display: none;
+  }
+
+  .topbar-tools {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.2rem;
+    margin-inline-start: auto;
+  }
+
+  .package-icon {
+    display: block;
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 auto;
+    fill: currentColor;
+    pointer-events: none;
+  }
+
+  .package-icon[data-icon-size='20'] {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  :is(.topbar, .semantic-actions, .review-popover, .review-panel, .nav-dialog-header)
+    .package-icon {
+    display: block;
+  }
+
+  .language-select,
+  .theme-select {
+    position: relative;
+    display: inline-flex;
+    min-width: 0;
+  }
+
+  .language-select select,
+  .theme-select select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    min-height: 0;
+    border: 0;
+    padding: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .topbar :is(.language-select, .theme-select):focus-within {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 0.08rem;
+  }
+
+  [data-topbar-control-label] {
+    display: none;
+  }
+
+  .report-shell {
+    display: grid;
+    width: min(100%, var(--content-width));
+    margin: 0 auto;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    gap: var(--shell-gap);
+    padding: calc(2rem * var(--space-factor)) var(--shell-gutter) 4rem;
+  }
+
+  .report-shell[data-has-navigation='false'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .report-attribution {
+    display: flex;
+    width: min(100%, var(--content-width));
+    justify-content: center;
+    margin: 0 auto;
+    border-top: 1px solid var(--color-border);
+    padding: 1.25rem var(--shell-gutter) 2rem;
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .report-attribution a {
+    color: inherit;
+    font-weight: var(--weight-medium);
+    text-decoration-thickness: 0.08em;
+  }
+
+  .report-attribution a:hover {
+    color: var(--color-accent-strong);
+  }
+
+  .report-attribution a:focus-visible {
+    border-radius: var(--radius-small);
+    outline: 2px solid var(--color-focus);
+    outline-offset: 0.25rem;
+  }
+
+  :root[data-nav-collapsed] .report-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :root[data-nav-collapsed] [data-nav-desktop-host] {
+    display: none;
+  }
+
+  /* After the reader toggles the contents, the docked panel slides in from the start edge when it returns.
+   The first render stays static so the page does not move on load. */
+  @media (min-width: 57rem) and (prefers-reduced-motion: no-preference) {
+    :root[data-nav-toggled] [data-nav-desktop-host] {
+      transition:
+        transform 240ms ease-out,
+        opacity 240ms ease-out;
+    }
+
+    @starting-style {
+      :root[data-nav-toggled] [data-nav-desktop-host] {
+        opacity: 0;
+        transform: translateX(-1.5rem);
+      }
+    }
+  }
+
+  /*
+ * Оглавление — не карточка, а линия: вертикальная волосяная черта и точка на каждый пункт. Текущий
+ * пункт заливает точку акцентом и набран цветом заголовков; фона и рамки у пункта нет.
+ */
+  .sidebar {
+    position: sticky;
+    top: 5.5rem;
+    align-self: start;
+    max-height: calc(100svh - 7rem);
+    overflow: auto;
+    padding: 0.25rem 0 1rem;
+  }
+
+  .sidebar-label,
+  .review-eyebrow {
+    margin: 0 0 0.9rem;
+  }
+
+  [data-navigation] ol {
+    position: relative;
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  [data-navigation] ol::before {
+    position: absolute;
+    top: 0.9rem;
+    bottom: 0.9rem;
+    left: 0.2rem;
+    width: 1px;
+    background: var(--color-border);
+    content: '';
+  }
+
+  [data-navigation] li[data-depth='3'] {
+    padding-left: 0.75rem;
+  }
+
+  [data-navigation] a {
+    position: relative;
+    display: block;
+    padding: 0.42rem 0 0.42rem 1.15rem;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.35;
+    text-decoration: none;
+  }
+
+  [data-navigation] a::before {
+    position: absolute;
+    top: calc(0.42rem + 0.675em - 0.25rem);
+    left: 0;
+    box-sizing: border-box;
+    width: 0.45rem;
+    height: 0.45rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 50%;
+    background: var(--color-bg);
+    content: '';
+    transition: border-color var(--duration-ui) var(--ease-ui);
+  }
+
+  [data-navigation] a:hover,
+  [data-navigation] a:focus-visible {
+    color: var(--color-heading);
+  }
+
+  [data-navigation] a[aria-current='location'] {
+    color: var(--color-heading);
+    font-weight: var(--weight-medium);
+  }
+
+  [data-navigation] a[aria-current='location']::before {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+  }
+
+  .nav-dialog {
+    display: none;
+  }
+
+  /* Тема только с тёмной схемой не переключается: кнопки схемы у неё нет. */
+  :root[data-theme-schemes='dark'] [data-scheme-toggle] {
+    display: none;
+  }
+
+  .review-toggle {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .review-toggle-count {
+    position: absolute;
+    top: 0.05rem;
+    right: -0.05rem;
+    min-width: 1.35rem;
+    border-radius: var(--radius-pill);
+    padding: 0 0.3rem;
+    background: var(--color-heading);
+    color: var(--color-bg);
+    font-family: var(--font-author-mono, var(--font-mono));
+    font-size: var(--text-label);
+    font-weight: var(--weight-medium);
+    line-height: 1.1rem;
+    text-align: center;
+  }
+
+  .review-selection-action {
+    position: fixed;
+    z-index: 40;
+    display: inline-flex;
+    width: max-content;
+    max-width: calc(100vw - 1rem);
+    box-shadow: var(--shadow-raised);
+    cursor: pointer;
+  }
+
+  .review-selection-action .package-icon {
+    display: none;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .review-selection-action ::highlight(agentic-review-open) {
+    background: color-mix(in srgb, var(--color-accent) 34%, transparent);
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: var(--color-accent-strong);
+    text-decoration-thickness: 0.12em;
+  }
+
+  ::highlight(agentic-review-resolved) {
+    background: color-mix(in srgb, var(--color-border-strong) 24%, transparent);
+    color: inherit;
+    text-decoration: underline dotted var(--color-text-muted);
+  }
+
+  .review-highlight-marker {
+    position: fixed;
+    z-index: 39;
+    width: 1.35rem;
+    height: 1.35rem;
+    border: 1px solid var(--color-bg);
+    border-radius: var(--radius-pill);
+    padding: 0;
+    background: var(--color-heading);
+    color: var(--color-bg);
+    box-shadow: var(--shadow-raised);
+    font-family: var(--font-author-mono, var(--font-mono));
+    font-size: var(--text-label);
+    cursor: pointer;
+    opacity: 0.84;
+    transform: translate(-50%, -50%);
+  }
+
+  .review-highlight-marker[hidden] {
+    display: none;
+  }
+
+  .review-highlight-marker:hover {
+    opacity: 1;
+  }
+
+  .review-highlight-marker[data-review-thread-state='resolved'] {
+    border-color: var(--color-border-strong);
+    background: var(--color-surface-muted);
+    color: var(--color-text-muted);
+  }
+
+  .review-highlight-marker:focus-visible {
+    opacity: 1;
+    outline: 2px solid var(--color-focus);
+    outline-offset: 0.12rem;
+  }
+
+  .review-popover {
+    position: fixed;
+    z-index: 41;
+    width: min(25rem, calc(100vw - 1rem));
+    max-height: min(34rem, calc(100dvh - 1rem));
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  .review-popover[hidden] {
+    display: none;
+  }
+
+  .review-popover-header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .review-thread-messages {
+    max-height: 12rem;
+    overflow: auto;
+  }
+
+  .review-popover .package-icon,
+  .review-panel .package-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .review-dialog[open] {
+    position: fixed;
+    z-index: 30;
+    top: 3.5rem;
+    right: 0;
+    bottom: 0;
+    left: auto;
+    display: block;
+    width: min(25rem, 100%);
+    height: calc(100dvh - 3.5rem);
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    overflow: hidden;
+    border: 0;
+    border-left: 1px solid var(--color-border);
+    padding: 0;
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: var(--shadow-raised);
+  }
+
+  .review-panel {
+    display: grid;
+    height: 100%;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .review-panel-header,
+  .review-panel-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-color: var(--color-border);
+    padding: 0.7rem 1rem;
+  }
+
+  .review-panel-header {
+    justify-content: space-between;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .review-panel-body {
+    min-height: 0;
+    overflow: auto;
+    padding: 1rem;
+    overscroll-behavior: contain;
+  }
+
+  .review-panel-footer {
+    flex-wrap: wrap;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .review-file-action {
+    display: inline-flex;
+  }
+
+  .review-file-action input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .review-form-section + .review-form-section {
+    margin-top: 1.25rem;
+    border-top: 1px solid var(--color-border);
+    padding-top: 1rem;
+  }
+
+  .review-summary,
+  .review-target-label {
+    display: block;
+    margin: 0 0 0.75rem;
+  }
+
+  .review-target-label {
+    overflow-wrap: anywhere;
+  }
+
+  /* Подпись поля — моноширинная метка; поле — волосяная рамка без заливки. */
+  .review-field,
+  .review-component label {
+    margin-top: 0.7rem;
+  }
+
+  .review-inline-actions,
+  .review-response-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .review-error {
+    margin: 0 0 1rem;
+    border: 0;
+    border-left: 2px solid var(--status-returned);
+    padding: 0.2rem 0 0.2rem 0.8rem;
+    color: var(--color-heading);
+  }
+
+  .review-response-list {
+    display: grid;
+    gap: 0.65rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .review-response {
+    display: grid;
+    gap: 0.4rem;
+    border-top: 1px solid var(--color-border);
+    padding: 0.65rem 0 0;
+  }
+
+  .review-response-kind {
+    color: var(--color-text-muted);
+    font-size: var(--text-label);
+    font-weight: var(--weight-medium);
+  }
+
+  .review-component-list,
+  [data-review-component-list] {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .review-component {
+    display: grid;
+    gap: 0.4rem;
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--color-border);
+    padding: 0.7rem 0 0;
+  }
+
+  .scroll-progress {
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    height: 2px;
+    background: var(--color-accent);
+    pointer-events: none;
+    transform: scaleX(0);
+    transform-origin: left center;
+  }
+
+  /* Главы страницы вдоль нижнего края верхней панели: отрезок на главу, заполнение — пройденная часть. */
+  .chapter-progress {
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    display: flex;
+    height: 2px;
+    gap: 3px;
+  }
+
+  .chapter-progress-segment {
+    --chapter-fill: 0;
+
+    position: relative;
+    flex: 1 1 0;
+    background: transparent;
+  }
+
+  .chapter-progress-segment::after {
+    position: absolute;
+    inset: 0;
+    background: var(--color-accent);
+    content: '';
+    transform: scaleX(var(--chapter-fill));
+    transform-origin: left center;
+  }
+
+  .chapter-progress-segment[data-current] {
+    background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+  }
+
+  .chapter-progress-segment:hover {
+    background: color-mix(in srgb, var(--color-accent) 36%, transparent);
+  }
+
+  /*
+   * Полоса глав «ряд узлов» (`progress: nodes`, SPEC 7.7): узел на главу на линии через все главы.
+   * Пройденная глава — залитый узел и линия до следующего, текущая — узел в кольце, будущие — пустые.
+   */
+  .chapter-progress[data-variant='nodes'] {
+    bottom: -0.3125rem;
+    height: 0.625rem;
+    gap: 0;
+    align-items: center;
+  }
+
+  .chapter-progress[data-variant='nodes'] .chapter-progress-segment {
+    display: flex;
+    height: 100%;
+    align-items: center;
+    background: transparent;
+  }
+
+  .chapter-progress[data-variant='nodes'] .chapter-progress-segment::before {
+    z-index: 1;
+    flex: none;
+    width: 0.5rem;
+    height: 0.5rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-pill);
+    background: var(--color-bg);
+    content: '';
+  }
+
+  .chapter-progress[data-variant='nodes'] .chapter-progress-segment::after {
+    position: static;
+    flex: 1 1 auto;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      var(--color-accent) calc(var(--chapter-fill) * 100%),
+      var(--color-border) calc(var(--chapter-fill) * 100%)
+    );
+    transform: none;
+  }
+
+  .chapter-progress[data-variant='nodes'] .chapter-progress-segment[data-passed]::before {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+  }
+
+  .chapter-progress[data-variant='nodes'] .chapter-progress-segment[data-current]::before {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 0.1875rem color-mix(in srgb, var(--color-accent) 28%, transparent);
+  }
+
+  .chapter-progress[data-variant='nodes'] .chapter-progress-segment:hover {
+    background: transparent;
+  }
+
+  [data-navigation-bottom] {
+    display: block;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+  }
+
+  [data-reveal-motion] {
+    transition:
+      opacity calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
+        var(--motion-ease, ease-out),
+      transform calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
+        var(--motion-ease, ease-out);
+  }
+
+  [data-reveal-pending] {
+    opacity: 0;
+    transform: translateY(var(--motion-reveal-translation));
+  }
+
+  /* Section anchors stay geometrically stable while their contents reveal. */
+  .semantic-section[data-reveal-motion]:not([data-transition='stagger']) {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .semantic-section[data-reveal-motion]:not([data-transition='stagger']) > * {
+    transition:
+      opacity calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
+        var(--motion-ease, ease-out),
+      transform calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
+        var(--motion-ease, ease-out);
+  }
+
+  /* Содержимое прячется уже по data-reveal-pending, до того как runtime включит переход атрибутом
+   data-reveal-motion: иначе включение перехода запускает видимое угасание с полной непрозрачности. */
+  .semantic-section[data-reveal-pending]:not([data-transition='stagger']) > * {
+    opacity: 0;
+    transform: translateY(var(--motion-reveal-translation));
+  }
+
+  [data-transition='stagger'][data-reveal-motion] {
+    transition: none;
+  }
+
+  [data-transition='stagger'][data-reveal-pending] {
+    opacity: 1;
+    transform: none;
+  }
+
+  [data-transition='stagger'][data-reveal-motion] > * {
+    transition:
+      opacity calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
+        var(--motion-ease, ease-out),
+      transform calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
+        var(--motion-ease, ease-out);
+    transition-delay: calc(var(--stagger-index, 0) * var(--motion-stagger-step));
+  }
+
+  [data-transition='stagger'][data-reveal-pending] > * {
+    opacity: 0;
+    transform: translateY(var(--motion-reveal-translation));
+  }
+
+  /*
+   * Появление маской (`transition="clip"`): глава открывается от нижнего края `clip-path: inset()`, без
+   * сдвига и без затухания — роль «сцена» по длительности и кривой.
+   */
+  .semantic-section[data-transition='clip'][data-reveal-pending] > * {
+    opacity: 1;
+    /* Поля маски за краем блока: выносные элементы крупного набора не срезаются и в конце. */
+    clip-path: inset(-0.5em -0.5em 100% -0.5em);
+    transform: none;
+  }
+
+  .semantic-section[data-transition='clip'][data-reveal-motion] > * {
+    transition: clip-path calc(var(--duration-scene) * var(--motion-pace, 1)) var(--ease-scene);
+  }
+
+  .semantic-section[data-transition='clip'][data-reveal-shown] > * {
+    clip-path: inset(-0.5em);
+  }
+
+  [data-scene='progress'] :is(img, .semantic-chart, .semantic-diagram) {
+    transform: translateY(calc((var(--scene-progress, 0.5) - 0.5) * -1 * var(--scene-parallax)));
+    transition: transform 80ms linear;
+  }
+
+  /* Прогресс, выставленный записью по часам страницы, показывается точно, без сглаживания прокрутки. */
+  [data-scene='progress'][data-clock-progress] :is(img, .semantic-chart, .semantic-diagram) {
+    transition: none;
+  }
+
+  /*
+   * Сцена `progress` на шкале прокрутки браузера: смещение — функция положения главы в окне, без
+   * рантайма и без кадров. Без `animation-timeline` и при прогрессе, выставленном записью, смещение
+   * ведёт рантайм (`--scene-progress`) — запасной путь.
+   */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      :root:not([data-motion-level='none']) [data-scene='progress']:not([data-clock-progress]) {
+        view-timeline-name: --scene-progress;
+      }
+
+      :root:not([data-motion-level='none'])
+        [data-scene='progress']:not([data-clock-progress])
+        :is(img, .semantic-chart, .semantic-diagram) {
+        transition: none;
+        animation: scene-progress linear both;
+        animation-timeline: --scene-progress;
+      }
+    }
+  }
+
+  @keyframes scene-progress {
+    from {
+      transform: translateY(calc(0.5 * var(--scene-parallax)));
+    }
+
+    to {
+      transform: translateY(calc(-0.5 * var(--scene-parallax)));
+    }
+  }
+
+  [data-scene='sticky'] > :has(img) {
+    position: sticky;
+    top: 5.25rem;
+  }
+
+  [data-choreography-motion]
+    :is(.semantic-card, .semantic-chart .semantic-point, .semantic-timeline > ol > li) {
+    opacity: 0;
+    transform: translateY(0.5rem);
+    transition:
+      opacity calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
+        var(--motion-ease, ease-out),
+      transform calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
+        var(--motion-ease, ease-out);
+    transition-delay: calc(var(--choreography-index, 0) * var(--motion-choreography-step));
+  }
+
+  [data-choreography-motion][data-choreography-active]
+    :is(.semantic-card, .semantic-chart .semantic-point, .semantic-timeline > ol > li) {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .report-content {
+    min-width: 0;
+    padding: clamp(1.15rem, 4vw, 3rem);
+    border: 0;
+    background: transparent;
+  }
+
+  .report-content article,
+  .report-content section,
+  .semantic-card,
+  .semantic-tab {
+    min-width: 0;
+  }
+
+  .report-content article > :first-child {
+    margin-top: 0;
+  }
+
+  h1,
+  h2,
+  h3 {
+    color: var(--color-heading);
+    font-family: var(--font-author-heading, var(--font-heading));
+    font-weight: var(--heading-weight);
+    line-height: 1.14;
+    text-wrap: balance;
+    /* Разрыв слова — лишь аварийный выход: слово, шире колонки, всё же не вылезает за край полосы. */
+    overflow-wrap: break-word;
+  }
+
+  /*
+   * Слово заголовка не рвётся и не делится по слогам: кегль подогнан под самое длинное слово (см.
+   * правило `--heading-fit`), а мера в `ch`, считанная по строчной цифре, не обрезает длинное слово
+   * прописными с разрядкой — заголовок не уже своего самого длинного слова.
+   */
+  :is(h1, h2, h3, .semantic-section-title, .semantic-title, .visualization-timeline-title) {
+    min-width: min-content;
+  }
+
+  /*
+   * Кегль заголовка не больше, чем позволяет его самое длинное слово в его колонке: ширина колонки
+   * (`100cqi` — ширина ближайшего контейнера: колонки содержания, текстовой колонки первого экрана или
+   * события ленты времени) без запаса на поля полос делится на число букв (`--heading-word`, его ставит
+   * компилятор) и на ширину буквы гарнитуры заголовков (`--display-advance` темы или
+   * `--display-advance-author` шрифта автора). Колонка, а не окно: на планшете и десктопе колонку сужают
+   * оглавление и двухколоночный первый экран. Контейнер ограничивает счётчики CSS своим поддеревом,
+   * поэтому номера глав и рисунков ставит компилятор, а счётчики остались только внутри одного списка
+   * (шаги, пункты порядка, оглавление).
+   */
+  :is(.report-content, .page-opening-copy, .visualization-timeline-event) {
+    container-type: inline-size;
+  }
+
+  [style*='--heading-word'] {
+    --heading-reserve: min(7.5rem, 20cqi);
+    --heading-fit: calc(
+      (100cqi - var(--heading-reserve)) /
+        (var(--heading-word) * var(--display-advance-author, var(--display-advance, 0.8)))
+    );
+  }
+
+  /* Заголовок блока стоит внутри карточки или панели: у него поля шире. */
+  :is(h3, .semantic-title)[style*='--heading-word'] {
+    --heading-reserve: min(9rem, 30cqi);
+  }
+
+  /* Мелкие заголовки меряются по своей гарнитуре: у дисплейной темы это может быть текстовая. */
+  :is(h3, .visualization-timeline-title)[style*='--heading-word'] {
+    --display-advance: var(--display-advance-small, 0.8);
+  }
+
+  /*
+ * Регистр дисплея — голос темы, и он звучит один раз: прописными набирается заголовок страницы и
+ * заголовок секции-заявления, а заголовки глав — как написаны. Прописные на каждой главе читаются
+ * как шаблон, а не как голос.
+ */
+  h1,
+  :where(.semantic-section[data-type='display']) > .semantic-section-title {
+    text-transform: var(--display-case, none);
+  }
+
+  /* Вес дисплея русского текста не выше предела кириллицы, который тема вычислила для себя. */
+  body:lang(ru) {
+    --display-weight: var(--display-weight-cyrillic, 720);
+  }
+
+  /*
+   * Мера заголовка страницы и заголовков секций-заявлений: `--heading-measure` темы
+   * (`typography.headingMeasure`) заменяет её везде, а без него у каждой раскладки своя мера пакета;
+   * заголовок статьи отчёта без меры темы держит меру чтения (правило `.report-content article > h1`).
+   */
+  h1 {
+    max-width: var(--heading-measure, 17ch);
+    margin-bottom: 0.5em;
+    font-size: min(
+      calc(clamp(2.25rem, 5vw, 4.4rem) * var(--display-scale, 1)),
+      var(--heading-fit, 100vw)
+    );
+    font-weight: var(--display-weight);
+    line-height: 1.02;
+    letter-spacing: var(--heading-tracking);
+  }
+
+  h2 {
+    margin-top: var(--space-section);
+    font-size: min(
+      calc(clamp(1.6rem, 3.4vw, 2.6rem) * var(--display-scale, 1)),
+      var(--heading-fit, 100vw)
+    );
+    line-height: 1.08;
+    letter-spacing: var(--heading-tracking);
+  }
+
+  /*
+ * Кириллица при латинском трекинге слипается: у неё шире буквы и уже межсловный пробел, и слова
+ * крупного заголовка сливаются в одно. Для русского текста трекинг не плотнее -0,025em.
+ */
+  :lang(ru) :is(h1, .semantic-section-title) {
+    letter-spacing: max(var(--heading-tracking), -0.025em);
+  }
+
+  /* Межсловный пробел кириллических заголовков не сжимается вместе с трекингом. */
+  :lang(ru) :is(h1, h2, h3, .semantic-section-title, .visualization-title) {
+    word-spacing: 0.06em;
+  }
+
+  p,
+  li {
+    text-wrap: pretty;
+  }
+
+  h3 {
+    margin-top: calc(1.8rem * var(--space-factor));
+    font-family: var(--font-author-heading, var(--font-heading-small, var(--font-heading)));
+    font-size: min(1.2rem, var(--heading-fit, 100vw));
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+    text-transform: none;
+  }
+
+  /* Текст держит меру чтения в любой главе: широкая глава расширяет таблицы, код и медиа, а не строку. */
+  p,
+  li {
+    max-width: min(100%, var(--reading-measure));
+  }
+
+  .review-panel-header h2,
+  .review-panel-header p,
+  .review-popover-header h2 {
+    margin: 0;
+  }
+
+  .review-form-section h3 {
+    margin: 0 0 0.75rem;
+  }
+
+  .review-response p {
+    margin: 0.25rem 0 0;
+    white-space: pre-wrap;
+  }
+
+  .report-content article > :is(h1, h2, h3, p, ul, ol, blockquote, hr) {
+    max-width: min(100%, var(--reading-measure));
+  }
+
+  /* Заголовок страницы в статье держит меру темы, если она задана, иначе — меру чтения, как текст. */
+  .report-content article > h1 {
+    max-width: min(100%, var(--heading-measure, var(--reading-measure)));
+  }
+
+  hr {
+    margin: var(--space-section) 0;
+    border: 0;
+    border-top: 1px solid var(--color-border);
+  }
+
+  img {
+    width: auto;
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: calc(1.5rem * var(--space-factor)) 0;
+    border-radius: var(--radius-media);
+  }
+
+  /* Media backing: the theme's paper behind the transparent parts of an image. Built-in themes keep it
+   transparent in both schemes, so the surface shows through and the image stays in the page's scheme; a
+   drawing in dark ink ships a dark variant ({dark="…"}), which the runtime shows on a dark surface
+   (scheme-media.ts). A contrast section takes the inverse value with the other colour roles. */
+  .report-content img {
+    background-color: var(--media-backing, transparent);
+  }
+
+  /* Запись проигрывания — такая же иллюстрация, как картинка: во всю ширину колонки, не шире себя. */
+  .semantic-video-player {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    margin: calc(1.5rem * var(--space-factor)) 0;
+    border-radius: var(--radius-media);
+    background: var(--color-surface-raised);
+  }
+
+  .semantic-video {
+    width: fit-content;
+    max-width: 100%;
+    margin: calc(1.5rem * var(--space-factor)) 0;
+  }
+
+  .semantic-video > .semantic-video-player {
+    margin-block: 0;
+  }
+
+  .semantic-video-caption {
+    margin-top: 0.5rem;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    text-align: start;
+  }
+
+  blockquote {
+    max-width: var(--reading-measure);
+    margin: calc(1.75rem * var(--space-factor)) 0;
+    border-left: 2px solid var(--color-accent);
+    padding: 0.1rem 0 0.1rem 1.25rem;
+    color: var(--color-heading);
+    font-size: 1.12rem;
+    line-height: 1.5;
+  }
+
+  .copy-code {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+
+  /*
+   * Wide blocks and the reading measure. Prose keeps the measure; a code block, a table, a diagram or a
+   * picture alone in its paragraph takes the track, in every container that does not box it (article,
+   * section, disclosure, tab panel). On a wide screen a code block is as wide as
+   * its longest line needs: never narrower than the prose column it follows, never wider than the track,
+   * left-aligned with the prose. It scrolls sideways only when its longest line is wider than the track. A
+   * table sizes itself the same way inside its frame (the table rules below). On a phone the block bleeds to
+   * the screen edges instead (the phone gutter rules).
+   */
+  body {
+    --prose-measure: var(--reading-measure);
+  }
+
+  @media (width > 48rem) {
+    pre:not([data-diff-block]) {
+      width: max-content;
+      min-width: min(100%, var(--prose-measure));
+    }
+  }
+
+  .report-content p:has(> img:only-child) {
+    max-width: 100%;
+  }
+
+  .semantic-copyable {
+    max-width: min(100%, var(--flow-measure, var(--reading-measure)));
+    margin: calc(1.5rem * var(--space-factor)) 0;
+  }
+
+  .copy-prose {
+    margin-top: calc(0.65rem * var(--space-factor));
+  }
+
+  /* Code takes the theme's code face, a text-grade programming mono, not the label face (`--font-mono`).
+   Ligatures are off: `!==` and `=>` read as the characters the reader copies. */
+  code {
+    font-family: var(--font-author-code, var(--font-code));
+    font-size: 0.88em;
+    font-variant-ligatures: none;
+  }
+
+  :not(pre) > code {
+    border-radius: calc(var(--radius-small) * 0.6);
+    padding: 0.08em 0.3em;
+    background: color-mix(in srgb, var(--color-heading) 7%, transparent);
+    color: var(--color-heading);
+  }
+
+  /*
+   * Tables, code breaks and wide blocks on narrow tracks (`src/render/tables.ts` shapes the markup).
+   *
+   * The frame spans the track and is the container its layouts query; it paints nothing. The table inside
+   * it owns its surface and scrolls itself: it is as wide as its content allows (`fit-content`, never
+   * wider than the track), prose columns wrap, and it scrolls only when its narrowest form is still wider
+   * than the track, so a short table is a short panel, not a track-wide one with empty space beside it. On
+   * its surface the outer cells keep an inset equal to the cell padding (`--table-inset`), so no text
+   * touches the surface edge. A table shown as cards has no surface and keeps its text on the prose edge.
+   * The shadow at a cut edge is the common scroll cue below.
+   */
+  .table-frame {
+    --scroll-cue-surface: var(--role-component-bg);
+    --scroll-cue-ink: var(--role-component-fg);
+    --table-inset: 1.25rem;
+
+    position: relative;
+    max-width: 100%;
+    margin-block: calc(1.25rem * var(--space-factor));
+    container: table-frame / inline-size;
+  }
+
+  .table-frame > table {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    padding-inline: var(--table-inset);
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  :is(th, td):last-child {
+    padding-right: 0;
+  }
+
+  /* A column the author aligned in Markdown (`---:`, `:---:`) keeps that alignment: numbers line up. */
+  :is(th, td)[align='right'] {
+    text-align: right;
+  }
+
+  :is(th, td)[align='center'] {
+    text-align: center;
+  }
+
+  /* A column header is a label, already small monospace type: code inside it takes the label size instead
+   of shrinking below the smallest readable size. */
+  :is(th, .ui-label) code {
+    font-size: var(--text-label);
+  }
+
+  /*
+   * Code breaks only between the parts of a path or identifier: the compiler puts a break opportunity after
+   * each `/ . _ - : ( ,`, and code does not take the page's break-anywhere rule, which would split a word
+   * mid-letter. A part longer than the line still breaks rather than overflow.
+   */
+  code {
+    overflow-wrap: break-word;
+  }
+
+  /* Where the track holds every code value of the table whole (the compiler's estimate, in rem), paths and
+   identifiers stay on one line and the prose column wraps instead; narrower, they break at separators. */
+
+  /* The first column carries the inset itself, so its text keeps it while the column is stuck at the edge. */
+  [data-table-layout='scroll'] > table {
+    padding-inline-start: 0;
+  }
+
+  /*
+   * On paper nothing scrolls: every table prints as a grid that wraps within the page width. The table box is
+   * a table again, not the block that scrolls on screen: a block at `width: auto` spans the whole track
+   * while its rows keep their own width, so its top rule and fill ran past the last column. The fill and the
+   * scroll cue are dropped after the scroll-cue rule below, which would otherwise paint them back.
+   */
+  @media print {
+    .table-frame > table {
+      display: table;
+      width: auto;
+      overflow: visible;
+      padding-inline: 0;
+    }
+  }
+
+  /*
+   * Cards: on a track narrower than the table reads (`auto`, the compiler's estimate in rem) or on any narrow
+   * track (`stack`, below 40rem), each row becomes a card and each cell shows its column header above the
+   * value. Size queries switch the table, rows and cells together. Only the display changes: the compiler
+   * put explicit table roles on the markup, so a screen reader still meets a table. Browsers supporting
+   * content alternatives hide the generated label from it (`/ ''`) because the header already names the
+   * cell; older browsers use the visual label fallback. Print always gets the grid. A browser without size
+   * queries keeps a wrapping table.
+   */
+  @media screen {
+    @container table-frame (width < 20rem) {
+      [data-table-layout='auto'][data-table-fit='20'] > table {
+        --table-inset: 0;
+
+        width: auto;
+        border-top: 0;
+        background: none;
+      }
+    }
+
+    @container table-frame (width < 24rem) {
+      [data-table-layout='auto'][data-table-fit='24'] > table {
+        --table-inset: 0;
+
+        width: auto;
+        border-top: 0;
+        background: none;
+      }
+    }
+
+    @container table-frame (width < 28rem) {
+      [data-table-layout='auto'][data-table-fit='28'] > table {
+        --table-inset: 0;
+
+        width: auto;
+        border-top: 0;
+        background: none;
+      }
+    }
+
+    @container table-frame (width < 32rem) {
+      [data-table-layout='auto'][data-table-fit='32'] > table {
+        --table-inset: 0;
+
+        width: auto;
+        border-top: 0;
+        background: none;
+      }
+    }
+
+    @container table-frame (width < 36rem) {
+      [data-table-layout='auto'][data-table-fit='36'] > table {
+        --table-inset: 0;
+
+        width: auto;
+        border-top: 0;
+        background: none;
+      }
+    }
+
+    @container table-frame (width < 40rem) {
+      [data-table-layout='auto'][data-table-fit='40'] > table,
+      .table-frame[data-table-layout='stack'] > table {
+        --table-inset: 0;
+
+        width: auto;
+        border-top: 0;
+        background: none;
+      }
+    }
+
+    @container table-frame (width < 44rem) {
+      [data-table-layout='auto'][data-table-fit='44'] > table {
+        --table-inset: 0;
+
+        width: auto;
+        border-top: 0;
+        background: none;
+      }
+    }
+
+    @container table-frame (width < 48rem) {
+      [data-table-layout='auto'][data-table-fit='48'] > table {
+        --table-inset: 0;
+
+        width: auto;
+        border-top: 0;
+        background: none;
+      }
+    }
+  }
+
+  /*
+ * Компоненты не коробки: у большинства нет ни рамки, ни заливки. Карточка и демо обведены волосяной
+ * линией, выноска и глоссарий держатся на боковой черте, решение — на линии сверху, раскрытие и
+ * вкладки — на горизонтальных линиях.
+ */
+  .semantic-callout,
+  .semantic-decision,
+  .semantic-checklist,
+  .semantic-demo,
+  .semantic-card,
+  .semantic-steps,
+  .semantic-glossary,
+  .semantic-disclosure,
+  .semantic-tabs,
+  .semantic-modal,
+  .semantic-popover,
+  .semantic-filter,
+  .semantic-toggle,
+  .semantic-response {
+    max-width: min(100%, var(--flow-measure, var(--reading-measure)));
+    margin: calc(1.5rem * var(--space-factor)) 0;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--color-text);
+  }
+
+  /* Containers that may hold tables, code, or pictures take the whole track like those blocks do; prose
+   containers above keep the reading measure. */
+  .semantic-disclosure,
+  .semantic-tabs,
+  .semantic-filter,
+  .semantic-toggle {
+    max-width: 100%;
+  }
+
+  .semantic-card,
+  .semantic-demo {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    padding: calc(1.15rem * var(--space-factor)) calc(1.25rem * var(--space-factor));
+    background: var(--color-surface);
+  }
+
+  .semantic-contents {
+    max-width: min(100%, var(--content-width));
+    margin: calc(1.75rem * var(--space-factor)) 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
+  }
+
+  .semantic-contents-title {
+    margin: 0 0 calc(0.8rem * var(--space-factor));
+  }
+
+  .semantic-contents ol {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: 0 1.5rem;
+    margin: 0;
+    border-top: 1px solid var(--color-heading);
+    padding: 0;
+    list-style: none;
+    counter-reset: in-flow-section;
+  }
+
+  .semantic-contents li {
+    min-width: 0;
+    counter-increment: in-flow-section;
+  }
+
+  .semantic-contents a {
+    display: flex;
+    min-height: 100%;
+    gap: 0.85rem;
+    align-items: baseline;
+    border-bottom: 1px solid var(--color-border);
+    padding: 0.8rem 0;
+    color: var(--color-heading);
+    font-weight: var(--weight-medium);
+    overflow-wrap: anywhere;
+    text-decoration: none;
+  }
+
+  /* Суть главы — крупнее текста, но обычным начертанием и без полосы: жирная строка с полосой читается как
+   фальшивый заголовок или статус. */
+  .semantic-lead {
+    max-width: min(100%, 58ch);
+    margin: calc(1.15rem * var(--space-factor)) 0 calc(1.6rem * var(--space-factor));
+    color: var(--color-heading);
+    font-size: clamp(1.1rem, 1.4vw, 1.3rem);
+    font-weight: var(--weight-regular);
+    line-height: 1.5;
+  }
+
+  /* A native jump to a section's anchor (no script, find in page) puts its heading on the line under the
+   top bar: the margin undoes the section's top padding (`--section-pad-top`, set beside every padding rule
+   of a section) and its chapter rule (`--section-rule-top`). */
+  .semantic-section {
+    --flow-measure: var(--section-measure, var(--content-width));
+    --section-pad-top: calc(2rem * var(--space-factor));
+
+    display: flow-root;
+    isolation: isolate;
+    width: 100%;
+    max-width: 100%;
+    margin-block: var(--section-rhythm);
+    scroll-margin-top: calc(-1 * var(--section-pad-top) - var(--section-rule-top, 0px));
+    padding-block: calc(2rem * var(--space-factor));
+  }
+
+  .semantic-section > * {
+    max-width: min(100%, var(--section-measure, var(--content-width)));
+    margin-inline: 0;
+  }
+
+  /* The section measure is the track of its blocks; its prose keeps the reading measure inside it (the
+   wide-block rule), so a paragraph in a standard section does not run the width of a wide screen. */
+  .semantic-section > :is(p, ul, ol, dl, blockquote, h3, h4, h5, h6) {
+    max-width: min(100%, var(--reading-measure), var(--section-measure, var(--content-width)));
+  }
+
+  /* The lead is a paragraph in a larger size: the reading measure in its own `ch` would carry it past the
+   column of the prose below, so it takes the column resolved on the body (`--prose-measure`). */
+  .semantic-section > .semantic-lead {
+    max-width: min(100%, 58ch, var(--prose-measure), var(--section-measure, var(--content-width)));
+  }
+
+  .semantic-section-title {
+    margin-top: 0;
+  }
+
+  /*
+   * The composed column of a document. On a screen wider than a phone a `document` or `mixed` page reads as
+   * one column of one width, the reading measure (`--prose-measure`): the page title, headings, the lead,
+   * paragraphs, lists, callouts, disclosures, tabs, tables, figures, diagrams, cards, code and islands all
+   * start on its left edge and none runs past its right one, so neither edge steps. A block that needs more
+   * room scrolls inside its own frame — a long code line, a wide table — or fits its view to the column and
+   * opens on the whole screen (the figure viewer). The machinery of a wider step (`--column-step`, the
+   * overhang of blocks in disclosures and tab panels, the band's own track) stays in place with the step set
+   * to the measure. The column stands on the window's centre line with the docked table of contents in a
+   * rail at its left and an equal empty rail at its right; the right rail gives way first on a narrower
+   * window, and the column keeps the shell gap (`--shell-gap`) from the contents. With the contents
+   * collapsed, in a dialog or absent, the column alone is centred. On a wide screen the type grows with the
+   * window (the fluid type rule below) and the column, measured in characters, with it. A band — tone, surface,
+   * panel — draws its box outside the column by its inset, so its text keeps the column's edges; a section of
+   * another composition lays out its grid inside the column. A narrower block — a short table, a small
+   * picture, an island that hugs its drawing — starts on the left edge. A phone keeps the phone gutter rules.
+   *
+   * Plain sections joined by the chapter rule share the section rhythm evenly around it — the same space
+   * above the rule as below it, and none added by the last block — so a section that ends in a collapsed
+   * disclosure does not leave an empty band before the next one.
+   */
+  /*
+   * On a wide screen the type of a document grows with the window — 16 px at 1440 px, 20 px from 2560 px
+   * (a fluid type scale) — and the column, measured in characters, grows with it: a line keeps its length
+   * in characters, the page stops looking narrow. Everything sized in rem follows, as with the reader's
+   * own zoom, and the reader's default font size stays the base.
+   */
+  @media (width > 90rem) {
+    :root:is([data-layout='document'], [data-layout='mixed']) {
+      font-size: clamp(1rem, 0.357vw + 0.679rem, 1.25rem);
+    }
+  }
+
+  @media (width > 48rem) {
+    :root:is([data-layout='document'], [data-layout='mixed']) .report-shell {
+      --column-step: var(--prose-measure);
+
+      width: min(100%, calc(var(--column-step) + 2 * var(--shell-gutter)));
+    }
+
+    :root:is([data-layout='document'], [data-layout='mixed']) .report-content {
+      padding-inline: 0;
+    }
+
+    :root:is([data-layout='document'], [data-layout='mixed']) .report-content article {
+      --column-wide: min(100cqi, var(--column-step));
+    }
+
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > :not(.semantic-section, h1, h2, h3, p, ul, ol, blockquote, hr) {
+      max-width: min(100%, var(--column-wide));
+    }
+
+    /* One edge: every block of the article and of a flow section starts on the column's left edge. */
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > :not(.semantic-section),
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-section:is(
+        [data-width='standard'],
+        [data-width='reading'],
+        [data-width='wide']
+      )[data-composition='flow']:not([data-align='center'])
+      > * {
+      margin-inline: 0;
+    }
+
+    /* The article's own text — a page written without sections — keeps the column resolved on the body: the
+     reading measure in a heading's larger `ch` would start it left of the paragraphs. */
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > :is(h2, h3, h4, h5, h6, p:not(:has(> img:only-child)), ul, ol, dl, blockquote, hr) {
+      max-width: min(100%, var(--prose-measure));
+    }
+
+    /*
+     * A section of another composition — split, stage, story, mosaic and the rest — lays out its own grid,
+     * and a centred section its own axis; either takes the text column as its track, so its title and text
+     * start on the edge every other text starts on. A band keeps its own inset when that is larger.
+     */
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-section:is(:not([data-composition='flow']), [data-align='center']) {
+      /* Its headings fit their words to this narrower track, not to the whole column. */
+      container-type: inline-size;
+      padding-inline: max(var(--section-inline-pad, 0px), (100% - var(--prose-measure)) / 2);
+    }
+
+    /* A picture of a `media="bleed"` section still reaches the section's edges. */
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-section[data-media='bleed'][data-composition='flow']:not([data-align='center'])
+      > :has(img) {
+      margin-inline: calc(-1 * var(--section-inline-pad, 0px));
+    }
+
+    /* The title's lines start with the text: it keeps its own measure inside the text column. */
+    :root:is([data-layout='document'], [data-layout='mixed']) .report-content article > h1 {
+      max-width: min(100%, var(--prose-measure), var(--heading-measure, var(--reading-measure)));
+    }
+
+    /*
+     * A band — a tone, a surface, a panel — draws its box outside the column by its own inset and its
+     * one-pixel border, so the text inside it keeps the column's width and edge.
+     */
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-section.semantic-section.semantic-section:is(
+        [data-surface]:not([data-surface='plain']),
+        [data-tone='soft'],
+        [data-tone='accent'],
+        [data-tone='contrast'],
+        [data-frame='panel']
+      ) {
+      /* The inset never outgrows the gutter the shell keeps beside the column: the band never scrolls the page. */
+      --section-inline-pad: min(clamp(1rem, 4vw, 3.5rem), var(--shell-gutter));
+
+      width: calc(100% + 2 * var(--section-inline-pad) + 2px);
+      max-width: none;
+      margin-inline: calc(-1 * var(--section-inline-pad) - 1px);
+    }
+
+    /* A wide band's own track is its step: the overhang of a block in its disclosure stays inside the band. */
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-section[data-width='wide'][data-composition='flow']:not([data-align='center']) {
+      container-type: inline-size;
+    }
+
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-section[data-width='wide'][data-composition='flow']:not([data-align='center'])
+      > * {
+      --column-wide: min(100cqi, var(--column-step));
+    }
+
+    /*
+     * Text containers — a disclosure, a tab panel — keep the measure; a wide block inside one overhangs it
+     * by the same amount on both sides and reaches the step, as outside it. Code takes its own width (the
+     * code rule).
+     */
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-disclosure
+      > :is(.table-frame, figure, p:has(> img:only-child), .semantic-cards),
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-tabs
+      > [data-tab-panel]
+      > :is(.table-frame, figure, p:has(> img:only-child), .semantic-cards),
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-section[data-composition='flow']:not([data-align='center'])
+      > .semantic-disclosure
+      > :is(.table-frame, figure, p:has(> img:only-child), .semantic-cards),
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-section[data-composition='flow']:not([data-align='center'])
+      > .semantic-tabs
+      > [data-tab-panel]
+      > :is(.table-frame, figure, p:has(> img:only-child), .semantic-cards) {
+      width: var(--column-wide);
+      max-width: none;
+      margin-inline: calc((100% - var(--column-wide)) / 2);
+    }
+
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-section:is(
+        [data-width='standard'],
+        [data-width='reading']
+      )[data-composition='flow']:not([data-align='center']) {
+      --section-measure: 100%;
+      --flow-measure: var(--prose-measure);
+
+      width: min(100%, var(--column-wide));
+      margin-inline: auto;
+    }
+
+    /* A reading-width section holds every block at the reading measure on the same axis. */
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-section[data-width='reading'][data-composition='flow']:not(
+        [data-align='center']
+      ) {
+      --section-measure: var(--prose-measure);
+    }
+
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-section:is(
+        [data-width='standard'],
+        [data-width='reading'],
+        [data-width='wide']
+      )[data-composition='flow']:not([data-align='center'])
+      > :is(
+        .semantic-tabs:not([data-orientation='vertical']),
+        .semantic-section-title,
+        .semantic-lead,
+        p:not(:has(> img:only-child)),
+        ul,
+        ol,
+        dl,
+        blockquote,
+        h3,
+        h4,
+        h5,
+        h6,
+        .semantic-disclosure,
+        .semantic-callout,
+        .semantic-decision,
+        .semantic-checklist,
+        .semantic-steps,
+        .semantic-glossary,
+        .semantic-copyable
+      ) {
+      max-width: min(100%, var(--prose-measure));
+    }
+  }
+
+  /* With the contents docked beside it, the shell holds both at the shell gap between two equal rails. */
+  @media (width >= 57rem) {
+    :root:is([data-layout='document'], [data-layout='mixed']):not(
+        [data-nav-collapsed],
+        [data-nav-mode='dialog']
+      )
+      .report-shell[data-has-navigation='true'] {
+      width: min(
+        100%,
+        calc(
+          2 * (var(--sidebar-width) + var(--shell-gap)) + var(--column-step) + 2 *
+            var(--shell-gutter)
+        )
+      );
+    }
+
+    /*
+     * The column sits on the window's centre line, the contents in the rail at its left and an equal empty
+     * rail at its right; where the window has no room for the right rail it gives way first, and the column
+     * keeps the shell gap from the contents.
+     */
+    :root:is([data-layout='document'], [data-layout='mixed']):not(
+        [data-nav-collapsed],
+        [data-nav-mode='dialog']
+      )
+      .report-shell[data-has-navigation='true']
+      > .report-content {
+      width: 100%;
+      max-width: var(--column-step);
+      justify-self: start;
+    }
+  }
+
+  /* Spacing around the chapter rule (the composed-column comment above); on every screen width. */
+  :root:is([data-layout='document'], [data-layout='mixed'])
+    .report-content
+    article
+    > .semantic-section:is(
+      [data-width='standard'],
+      [data-width='reading']
+    )[data-composition='flow'][data-tone='plain'][data-surface='plain'][data-frame='none'] {
+    --section-pad-top: calc(var(--section-rhythm) * 0.75);
+    padding-block: calc(var(--section-rhythm) * 0.75);
+  }
+
+  /* The context adds no specificity: the component rules that set the last block's own margin inside a
+   timeline, a disclosure or a finding stay stronger than this one. */
+  :where(
+      :root:is([data-layout='document'], [data-layout='mixed'])
+        .report-content
+        article
+        > .semantic-section:is(
+          [data-width='standard'],
+          [data-width='reading']
+        )[data-composition='flow'][data-tone='plain'][data-surface='plain'][data-frame='none']
+    )
+    > :last-child {
+    margin-bottom: 0;
+  }
+
+  :root:is([data-layout='document'], [data-layout='mixed'])
+    .report-content
+    article
+    > .semantic-section:is(
+      [data-width='standard'],
+      [data-width='reading']
+    )[data-composition='flow'][data-tone='plain'][data-surface='plain'][data-frame='none']:has(
+      + .semantic-section:is(
+          [data-width='standard'],
+          [data-width='reading']
+        )[data-composition='flow'][data-tone='plain'][data-surface='plain'][data-frame='none']
+    ) {
+    margin-bottom: 0;
+  }
+
+  :root:is([data-layout='document'], [data-layout='mixed'])
+    .report-content
+    article
+    > .semantic-section:is(
+      [data-width='standard'],
+      [data-width='reading']
+    )[data-composition='flow'][data-tone='plain'][data-surface='plain'][data-frame='none']
+    + .semantic-section:is(
+      [data-width='standard'],
+      [data-width='reading']
+    )[data-composition='flow'][data-tone='plain'][data-surface='plain'][data-frame='none'] {
+    margin-top: 0;
+  }
+
+  /*
+ * Главы страницы разделяет волосяная линия, а не фон или карточка. Над заголовком главы стоит её
+ * номер — моноширинная «бровь» вторым акцентом темы; в доступное имя заголовка номер не входит.
+ */
+
+  .report-content article > .semantic-section + .semantic-section:not([data-tone='contrast']) {
+    --section-rule-top: 1px;
+
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* Номер главы ставит компилятор (`navigation.ts`) по списку оглавления, и он совпадает с навигацией. */
+  .report-content
+    :is(article, .page-opening)
+    > .semantic-section
+    > h2.semantic-section-title[data-chapter-number]::before {
+    display: block;
+    margin-bottom: 0.9rem;
+    color: var(--color-accent-2);
+    font-family: var(--font-author-mono, var(--font-mono));
+    font-size: var(--text-label);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--label-tracking);
+    line-height: 1.3;
+    text-transform: uppercase;
+    width: fit-content;
+    padding-left: 1.6rem;
+    background: linear-gradient(currentcolor, currentcolor) left center / 1.05rem 1px no-repeat;
+    content: attr(data-chapter-number);
+    @supports (content: '' / '') {
+      content: attr(data-chapter-number) / '';
+    }
+  }
+
+  :root[data-theme-section-title='rule'] .semantic-section-title {
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 0.45em;
+  }
+
+  :root[data-theme-section-title='bar'] .semantic-section-title {
+    border-left: 2px solid var(--color-accent);
+    padding-left: 0.85rem;
+  }
+
+  .semantic-cards {
+    display: grid;
+    max-width: 100%;
+    gap: calc(1rem * var(--space-factor));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--card-minimum)), 1fr));
+  }
+
+  .semantic-cards > .semantic-card {
+    max-width: none;
+    height: 100%;
+    margin: 0;
+    background: var(--role-component-bg);
+  }
+
+  /* Visual authoring composes semantic sections; it never changes their DOM or reading order. */
+  .semantic-section[data-section-density='compact'] {
+    --section-local-space: 0.72;
+
+    margin-block: calc(var(--section-rhythm) * 0.72);
+    --section-pad-top: calc(1.25rem * var(--space-factor));
+    padding-block: calc(1.25rem * var(--space-factor));
+  }
+
+  .semantic-section[data-section-density='editorial'] {
+    --section-local-space: 1;
+  }
+
+  .semantic-section[data-section-density='immersive'] {
+    --section-local-space: 1.32;
+
+    margin-block: calc(var(--section-rhythm) * 1.2);
+    --section-pad-top: clamp(2rem, 5vw, 5rem);
+    padding-block: clamp(2rem, 5vw, 5rem);
+  }
+
+  .semantic-section[data-viewport='full'] {
+    min-block-size: min(68svh, 44rem);
+    align-content: center;
+  }
+
+  .semantic-section[data-viewport='bounded'] {
+    min-block-size: min(52svh, 38rem);
+    align-content: center;
+  }
+
+  .semantic-section[data-type='display'] > .semantic-section-title {
+    max-width: var(--heading-measure, 14ch);
+    font-size: min(
+      calc(clamp(2.6rem, 4.2vw, 4.6rem) * var(--display-scale, 1)),
+      var(--heading-fit, 100vw)
+    );
+    font-weight: var(--display-weight);
+    line-height: 0.98;
+    letter-spacing: var(--heading-tracking);
+    text-wrap: balance;
+  }
+
+  .semantic-section[data-type='display'] > .semantic-lead {
+    max-width: 34ch;
+    border-inline-start: 0;
+    padding-inline-start: 0;
+    font-size: clamp(1.2rem, 2.2vw, 1.8rem);
+  }
+
+  .semantic-section[data-type='editorial'] > .semantic-section-title {
+    max-width: var(--heading-measure, 17ch);
+    font-size: min(
+      calc(clamp(2.2rem, 3.8vw, 4rem) * var(--display-scale, 1)),
+      var(--heading-fit, 100vw)
+    );
+    font-weight: var(--heading-weight);
+    line-height: 1.02;
+    letter-spacing: var(--heading-tracking);
+    text-wrap: balance;
+  }
+
+  /*
+ * Поверхность секции — полоса во всю ширину её трека, без рамки и скругления: страница остаётся
+ * чередованием полос, а не стопкой карточек. Рамка-панель — отдельный выбор `frame="panel"`.
+ */
+  .semantic-section[data-surface]:not([data-surface='plain']) {
+    --section-inline-pad: clamp(1rem, 4vw, 3.5rem);
+
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 1px solid transparent;
+    padding-inline: var(--section-inline-pad);
+  }
+
+  .semantic-section[data-surface]:not([data-surface='plain'])::before {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    pointer-events: none;
+    content: '';
+  }
+
+  /* Одна краска, растворяющаяся к низу полосы: тон секции без цветного пятна. */
+  .semantic-section[data-surface='tint']::before {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-accent) 9%, transparent),
+      transparent 75%
+    );
+  }
+
+  .semantic-section[data-surface='grain']::before {
+    opacity: 0.42;
+    background-image: radial-gradient(circle, var(--texture-ink) 0.55px, transparent 0.75px);
+    background-size: 7px 7px;
+  }
+
+  .semantic-section[data-surface='grid']::before {
+    opacity: 0.46;
+    background-image:
+      linear-gradient(var(--color-border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
+    background-size: clamp(1.5rem, 4vw, 3rem) clamp(1.5rem, 4vw, 3rem);
+    mask-image: linear-gradient(to bottom, #000, transparent 92%);
+  }
+
+  /*
+ * Чертёж: мелкая и крупная сетка цветом акцента, как на кальке; подписи и заголовки блоков внутри
+ * набраны моноширинным шрифтом прописными — как выноски на чертеже.
+ */
+  .semantic-section[data-surface='blueprint']::before {
+    background-image:
+      linear-gradient(
+        color-mix(in srgb, var(--color-accent) 22%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--color-accent) 22%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(color-mix(in srgb, var(--color-accent) 9%, transparent) 1px, transparent 1px),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--color-accent) 9%, transparent) 1px,
+        transparent 1px
+      );
+    background-size:
+      5rem 5rem,
+      5rem 5rem,
+      1rem 1rem,
+      1rem 1rem;
+  }
+
+  .semantic-section[data-surface='blueprint'] :is(.semantic-title, dt) {
+    font-family: var(--font-author-mono, var(--font-mono));
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* В центрированной секции крупного набора подпись к цифре или цитате стоит под ней по той же оси. */
+  .semantic-section[data-type='display'][data-align='center'] > p {
+    max-width: 40ch;
+    margin-inline: auto;
+    font-size: clamp(1.1rem, 1.8vw, 1.4rem);
+    text-align: center;
+  }
+
+  /* Цитата на экран: в секции с крупным набором цитата становится самим высказыванием страницы. */
+  .semantic-section[data-type='display'] > blockquote {
+    max-width: 22ch;
+    margin-inline: auto;
+    border: 0;
+    padding: 0;
+    background: none;
+    font-family: var(--font-author-heading, var(--font-heading));
+    font-size: min(
+      calc(clamp(1.8rem, 3.6vw, 3.2rem) * var(--display-scale, 1)),
+      var(--heading-fit, 100vw)
+    );
+    font-weight: var(--heading-weight);
+    line-height: 1.12;
+    text-wrap: balance;
+  }
+
+  .semantic-section[data-type='display'][data-align='center'] > blockquote {
+    text-align: center;
+  }
+
+  .semantic-section[data-type='display'][data-align='start'] > blockquote {
+    margin-inline: 0;
+  }
+
+  /* Split and stage arrange only the opening the compiler marked with data-section-opening: the run of
+   half-track blocks right after the title, with at most one picture. Every later block spans the whole
+   track, so a long section keeps one left edge and one width instead of a crowded column beside an empty
+   one. */
+  .semantic-section[data-composition='split'] {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    column-gap: clamp(2rem, 7vw, 7rem);
+  }
+
+  .semantic-section[data-composition='split'] > *,
+  .semantic-section[data-composition='stage'] > * {
+    grid-column: 1 / -1;
+  }
+
+  .semantic-section[data-composition='split'][data-section-opening-layout]
+    > .semantic-section-title {
+    grid-column: 1;
+    grid-row: 1 / span var(--section-opening-rows, 1);
+    align-self: start;
+  }
+
+  .semantic-section[data-composition='split'][data-section-opening-layout]
+    > [data-section-opening] {
+    grid-column: 2;
+  }
+
+  .semantic-section[data-composition='stage'] {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    align-items: center;
+    column-gap: clamp(2rem, 6vw, 6rem);
+    row-gap: clamp(1.25rem, 3vw, 2.5rem);
+  }
+
+  .semantic-section[data-composition='stage'][data-section-opening-layout]
+    > [data-section-opening='text'] {
+    grid-column: 1;
+  }
+
+  .semantic-section[data-composition='stage'][data-section-opening-layout]
+    > [data-section-opening='media'] {
+    grid-column: 2;
+    grid-row: 2 / span var(--section-opening-rows, 1);
+    align-self: start;
+  }
+
+  /* A gallery rail sits beside the title itself; its text column starts at the first row. */
+  .semantic-section[data-composition='stage'][data-media='gallery'][data-section-opening-layout]
+    > .semantic-section-title {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .semantic-section[data-composition='stage'][data-media='gallery'][data-section-opening-layout]
+    > [data-section-opening='media'] {
+    grid-row: 1 / span calc(var(--section-opening-rows, 1) + 1);
+  }
+
+  .semantic-section[data-composition='mosaic'] > .semantic-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--card-minimum)), 1fr));
+    grid-auto-flow: dense;
+  }
+
+  .semantic-section[data-composition='mosaic'] > .semantic-cards > :first-child {
+    grid-row: auto;
+  }
+
+  .semantic-section[data-composition='story'] > :has(img) {
+    position: sticky;
+    top: 5.25rem;
+    float: right;
+    width: min(58%, 52rem);
+    margin: 0 0 2rem clamp(1.5rem, 5vw, 5rem);
+  }
+
+  .semantic-section[data-composition='stack'] > .semantic-cards {
+    display: block;
+  }
+
+  .semantic-section[data-composition='stack'] > .semantic-cards > .semantic-card {
+    position: sticky;
+    top: calc(5rem + var(--stack-index, 0) * 1rem);
+    min-height: 10rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow-raised);
+  }
+
+  .semantic-section[data-media='mask'] img,
+  .semantic-section[data-media='layers'] img,
+  .semantic-section[data-media='gallery'] img {
+    width: 100%;
+  }
+
+  /* Кадр секции — вписывание, пропорции и фокус — одинаково обрамляет картинки и записи. */
+  .semantic-section[data-media-fit='contain'] :is(img, video) {
+    object-fit: contain;
+  }
+
+  .semantic-section[data-media-fit='cover'] :is(img, video) {
+    object-fit: cover;
+  }
+
+  .semantic-section[data-media-aspect='landscape'] :is(img, video) {
+    aspect-ratio: 16 / 10;
+  }
+
+  .semantic-section[data-media-aspect='cinematic'] :is(img, video) {
+    aspect-ratio: 21 / 9;
+  }
+
+  .semantic-section[data-media-aspect='portrait'] :is(img, video) {
+    aspect-ratio: 4 / 5;
+  }
+
+  .semantic-section[data-media-aspect='square'] :is(img, video) {
+    aspect-ratio: 1;
+  }
+
+  /* `.report-content` outranks the rule that holds a picture alone in its paragraph to the track. */
+  .report-content .semantic-section[data-media='bleed'] > :has(img) {
+    width: auto;
+    max-width: none;
+    margin-inline: calc(-1 * var(--section-inline-pad, 0px));
+  }
+
+  .semantic-section[data-media='bleed'] > :has(img) img {
+    width: 100%;
+    border-radius: 0;
+  }
+
+  /* In a story the picture is a float beside the text: it bleeds only past the end edge and keeps the story
+   width. A float with an automatic width would take the whole line and leave the text a sliver. */
+  .semantic-section[data-composition='story'][data-media='bleed'] > :has(img) {
+    width: min(58%, 52rem);
+    margin-inline: clamp(1.5rem, 5vw, 5rem) calc(-1 * var(--section-inline-pad, 0px));
+  }
+
+  .semantic-section[data-focal='top'] :is(img, video) {
+    object-position: center top;
+  }
+
+  .semantic-section[data-focal='right'] :is(img, video) {
+    object-position: right center;
+  }
+
+  .semantic-section[data-focal='bottom'] :is(img, video) {
+    object-position: center bottom;
+  }
+
+  .semantic-section[data-focal='left'] :is(img, video) {
+    object-position: left center;
+  }
+
+  .semantic-section[data-media='mask'] img {
+    clip-path: polygon(0 8%, 88% 0, 100% 86%, 12% 100%);
+    border-radius: 0;
+  }
+
+  .semantic-section[data-media='layers'] > .semantic-cards {
+    display: grid;
+    min-height: clamp(22rem, 54vw, 46rem);
+    place-items: center;
+  }
+
+  .semantic-section[data-media='layers'] > .semantic-cards > .semantic-card {
+    width: min(82%, 48rem);
+    grid-area: 1 / 1;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .semantic-section[data-media='gallery'] > .semantic-cards {
+    display: grid;
+    max-width: 100%;
+    grid-auto-columns: min(100%, 48rem);
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    overflow-x: auto;
+    scroll-snap-type: inline mandatory;
+    overscroll-behavior-inline: contain;
+  }
+
+  .semantic-section[data-media='gallery'] > .semantic-cards[data-gallery-rail] {
+    grid-auto-columns: min(calc(100% - 2.5rem), 48rem);
+  }
+
+  @media (width > 80rem) {
+    .semantic-section[data-recipe='rail'][data-composition='stage'] {
+      grid-template-columns: minmax(18rem, 0.55fr) minmax(0, 1.45fr);
+    }
+  }
+
+  :is(
+    .table-frame > table,
+    pre,
+    .semantic-tab-list,
+    .visualization-frame,
+    .semantic-section[data-media='gallery'] > .semantic-cards
+  ) {
+    scrollbar-color: var(--color-border-strong) transparent;
+    scrollbar-width: thin;
+  }
+
+  /* A block that scrolls sideways shows a shadow at each edge that still has content beyond it: the covering
+   patches move with the content (local) and hide the shadow once scrolling reaches that edge. Overlay
+   scrollbars stay invisible until touched, so without the shadow a cut table, code block, or diagram looks
+   complete. The shadow is drawn in the block's own ink, so it shows on light and dark surfaces alike. */
+  :is(.table-frame > table, pre, .visualization-frame) {
+    background:
+      linear-gradient(to right, var(--scroll-cue-surface) 40%, transparent) left center / 2.5rem
+        100% no-repeat local,
+      linear-gradient(to left, var(--scroll-cue-surface) 40%, transparent) right center / 2.5rem
+        100% no-repeat local,
+      radial-gradient(
+          farthest-side at 0 50%,
+          color-mix(in srgb, var(--scroll-cue-ink) 40%, transparent),
+          transparent
+        )
+        left center / 1rem 100% no-repeat scroll,
+      radial-gradient(
+          farthest-side at 100% 50%,
+          color-mix(in srgb, var(--scroll-cue-ink) 40%, transparent),
+          transparent
+        )
+        right center / 1rem 100% no-repeat scroll,
+      var(--scroll-cue-surface);
+  }
+
+  /* A printed table sits on the paper: no fill, and no scroll cue at edges that cannot scroll. */
+
+  @media (width <= 80rem) {
+    .semantic-section[data-composition='split'] {
+      display: block;
+    }
+  }
+
+  @media (width <= 48rem) {
+    .semantic-section[data-viewport='full'],
+    .semantic-section[data-viewport='bounded'] {
+      min-block-size: auto;
+    }
+
+    .semantic-section[data-section-density='immersive'] {
+      margin-block: var(--section-rhythm);
+      --section-pad-top: calc(2.25rem * var(--space-factor));
+      padding-block: calc(2.25rem * var(--space-factor));
+    }
+
+    .semantic-section[data-type='display'] > .semantic-section-title,
+    .semantic-section[data-type='editorial'] > .semantic-section-title {
+      max-width: var(--heading-measure, 10ch);
+      font-size: min(
+        calc(clamp(2.35rem, 12vw, 4rem) * var(--display-scale, 1)),
+        var(--heading-fit, 100vw)
+      );
+      line-height: 1;
+    }
+
+    .semantic-section[data-composition='stage'] {
+      display: block;
+    }
+
+    .semantic-section[data-composition='story'] > :has(img) {
+      position: static;
+      float: none;
+      width: auto;
+      margin: calc(1.5rem * var(--space-factor)) 0;
+    }
+
+    .semantic-section[data-composition='story'][data-media='bleed'] > :has(img) {
+      width: auto;
+      margin-inline: calc(-1 * var(--section-inline-pad, 0px));
+    }
+
+    .semantic-section[data-composition='mosaic'] > .semantic-cards {
+      grid-template-columns: 1fr;
+    }
+
+    .semantic-section[data-composition='mosaic'] > .semantic-cards > :first-child {
+      grid-row: auto;
+    }
+
+    .semantic-section[data-media='layers'] > .semantic-cards > .semantic-card {
+      width: 100%;
+      grid-area: auto;
+    }
+  }
+
+  .semantic-section[data-width='reading'] {
+    --section-measure: var(--reading-measure);
+  }
+
+  .semantic-section[data-width='standard'] {
+    --section-measure: min(100%, 64rem);
+  }
+
+  .semantic-section[data-width='wide'] {
+    --section-measure: 100%;
+  }
+
+  /* Centering applies to the section heading only. The body keeps the start edge every other section uses,
+   so a centered section does not shift its blocks and wrap them to different widths. */
+  .semantic-section[data-align='center']
+    > :is(.semantic-section-title, .semantic-lead, p):not(
+      [data-section-opening-layout][data-composition='split'] > .semantic-section-title,
+      [data-section-opening]
+    ) {
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .semantic-section[data-align='center'] > .semantic-actions:not([data-section-opening]) {
+    justify-content: center;
+    margin-inline: auto;
+  }
+
+  /* A toned section uses the same inset as a decorated one, so every band starts its content at one left
+   edge whatever draws it. */
+  .semantic-section[data-tone='soft'],
+  .semantic-section[data-tone='accent'],
+  .semantic-section[data-tone='contrast'] {
+    --section-inline-pad: clamp(1rem, 4vw, 3.5rem);
+
+    border: 1px solid transparent;
+    padding-inline: var(--section-inline-pad);
+  }
+
+  /* Панель — явный выбор автора: рамка и скругление вокруг той же полосы. */
+  .semantic-section[data-frame='panel'] {
+    --section-inline-pad: clamp(1rem, 4vw, 3.5rem);
+
+    border: 1px solid color-mix(in srgb, var(--color-border) 76%, transparent);
+    border-radius: var(--radius-large);
+    padding-inline: var(--section-inline-pad);
+  }
+
+  .semantic-section[data-tone='soft'] {
+    background: var(--color-surface);
+  }
+
+  .semantic-section[data-tone='accent'] {
+    background: var(--color-accent-soft);
+  }
+
+  .semantic-section[data-tone='accent'][data-frame='panel'] {
+    border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  }
+
+  /*
+ * Инвертированная полоса: цвета противоположной схемы темы задаёт `theme-css.ts`; здесь полоса лишь
+ * закрашивается ими. У консоли своя полоса — подсвеченная рамка без инверсии.
+ */
+  :root:not([data-theme-console='on']) .semantic-section[data-tone='contrast'] {
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  .semantic-section[data-tone='contrast'] :is(h2, h3, p, li) {
+    color: inherit;
+  }
+
+  .semantic-actions {
+    display: flex;
+    max-width: 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.7rem;
+    margin-block: calc(1.5rem * var(--space-factor));
+  }
+
+  /* The edge is the end of the text column the group follows, not of the widest track. */
+  .semantic-actions[data-placement-resolved='edge'] {
+    max-width: min(100%, var(--prose-measure), var(--flow-measure, var(--reading-measure)));
+    justify-content: flex-end;
+  }
+
+  /* An edge group ends where the text ends, whatever width the composed column gives the article's blocks. */
+  @media (width > 48rem) {
+    :root:is([data-layout='document'], [data-layout='mixed'])
+      .report-content
+      article
+      > .semantic-actions[data-placement-resolved='edge'] {
+      max-width: min(100%, var(--prose-measure));
+    }
+  }
+
+  .semantic-actions[data-placement-resolved='inline'] {
+    justify-content: flex-start;
+  }
+
+  .semantic-actions[data-placement-resolved='bottom'] {
+    max-width: 100%;
+    width: fit-content;
+    margin-inline: 0;
+    border-top: 1px solid var(--color-border);
+    padding: 0.9rem 0 0;
+  }
+
+  .semantic-action[data-kind='primary']:not(:has(.package-icon))::after {
+    font-family: var(--font-author-mono, var(--font-mono));
+    content: '→';
+    @supports (content: '' / '') {
+      content: '→' / '';
+    }
+    transition: transform var(--duration-ui) var(--ease-ui);
+  }
+
+  .semantic-action[data-kind='primary']:hover::after {
+    transform: translateX(2px);
+  }
+
+  .semantic-action[data-kind='quiet'] {
+    text-decoration: underline;
+    text-decoration-color: var(--color-accent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.3em;
+  }
+
+  .semantic-source-link {
+    display: inline-flex;
+    max-width: 100%;
+    align-items: baseline;
+    gap: 0.3em;
+    color: var(--color-accent-strong);
+    font-family: var(--font-author-mono, var(--font-mono));
+    font-size: var(--text-sm);
+    font-weight: var(--weight-regular);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, currentcolor 40%, transparent);
+    text-underline-offset: 0.22em;
+  }
+
+  .semantic-source-link .package-icon {
+    display: block;
+    width: 0.85em;
+    height: 0.85em;
+    transform: rotate(-45deg);
+  }
+
+  @media (width <= 30rem) {
+    .semantic-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .semantic-actions[data-placement-resolved='bottom'] {
+      width: fit-content;
+      max-width: 100%;
+      margin-inline: 0;
+    }
+  }
+
+  @media (width <= 48rem) {
+    [data-scene='sticky'] > :has(img) {
+      position: static;
+    }
+  }
+
+  .semantic-chart,
+  .semantic-diagram,
+  .semantic-timeline {
+    --visualization-surface: var(--role-component-bg);
+    --visualization-foreground: var(--role-component-fg);
+    --visualization-muted: var(--role-muted-fg);
+    --visualization-control: var(--role-control-bg);
+    max-width: 100%;
+    margin: calc(2.25rem * var(--space-factor)) 0;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--color-text);
+  }
+
+  /*
+ * Фигура — как в технической документации: над полем рисунка номер «Fig. 01» обычной меткой, название и
+ * пояснение; рисунок лежит в рамке волосяной линией. Номер в доступное имя фигуры не входит.
+ */
+  .visualization-caption {
+    display: grid;
+    gap: 0.3rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .visualization-description {
+    max-width: var(--reading-measure);
+    color: var(--visualization-muted);
+    font-size: var(--text-sm);
+  }
+
+  .visualization-frame {
+    max-width: 100%;
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-small);
+    padding: clamp(0.75rem, 2vw, 1.25rem);
+    /* Тени по краям прокрутки — общее правило прокручиваемых блоков, здесь только цвета поверхности. */
+    --scroll-cue-surface: var(--visualization-surface);
+    --scroll-cue-ink: var(--visualization-foreground);
+  }
+
+  .visualization-svg {
+    display: block;
+    width: 100%;
+    min-width: 34rem;
+    height: auto;
+    max-height: 38rem;
+    color: var(--visualization-foreground);
+  }
+
+  /* Видов не больше трёх, и все они должны быть видны: узкий экран переносит их, а не прячет в прокрутку. */
+  .visualization-layout-switch {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    margin-bottom: 0.5rem;
+    font-size: var(--text-sm);
+  }
+
+  /* Схему шире колонки страница ужимает, но не мельче 0.9: самый мелкий текст, пояснение узла в
+   12.5 px, остаётся не меньше 11 px, а остаток прокручивается внутри рамки. Раньше этого предела схема меняет представление —
+   последовательность становится списком шагов, флоу встаёт узким видом сверху вниз (рантайм). */
+  .visualization-diagram {
+    width: auto;
+    max-width: 100%;
+    min-width: calc(var(--diagram-width, 0px) * 0.9);
+    margin-inline: auto;
+    /* Схема по слоям растёт вниз: потолок высоты ужал бы её вместе с текстом ниже читаемого. */
+    max-height: none;
+  }
+
+  /* На бумаге прокрутки нет: схема ужимается до ширины листа целиком. */
+  @media print {
+    .visualization-diagram {
+      min-width: 0;
+    }
+  }
+
+  /*
+ * Единый язык схем. Поток, прямые углы и последовательность рисуются одними толщинами линий, одной
+ * рамкой узла и группы и одним набором текста; цвета — только из темы. Размеры текста совпадают с
+ * константами раскладки в `src/render/diagram-svg.ts`.
+ */
+
+  .visualization-group {
+    fill: var(--visualization-control);
+    stroke: var(--diagram-frame);
+    stroke-width: var(--diagram-line);
+  }
+
+  .visualization-group-label {
+    fill: var(--visualization-foreground);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: 15px;
+    font-weight: var(--weight-strong);
+  }
+
+  .visualization-sequence-lifeline {
+    stroke: var(--diagram-guide);
+    stroke-width: var(--diagram-line-light);
+    stroke-dasharray: 7 6;
+  }
+
+  .visualization-grid {
+    stroke: var(--color-border);
+    stroke-width: 1;
+  }
+
+  .visualization-axis {
+    stroke: var(--visualization-muted);
+    stroke-width: 1.5;
+  }
+
+  .visualization-axis-label,
+  .visualization-axis-title,
+  .visualization-edge-label-text {
+    fill: var(--visualization-muted);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: 12px;
+  }
+
+  /* Подпись связи одна во всех видах: основным цветом текста, чтобы читалась и поверх чужой линии. */
+  .visualization-edge-label-text {
+    fill: var(--visualization-foreground);
+    font-size: 13px;
+    font-weight: var(--weight-medium);
+  }
+
+  /* Плашка под подписью: под ребром может проходить чужая линия, и текст обязан читаться. */
+  .visualization-edge-label-plate {
+    fill: var(--visualization-surface);
+  }
+
+  .visualization-axis-title {
+    font-size: 13px;
+    font-weight: var(--weight-strong);
+  }
+
+  .visualization-color-0 {
+    fill: var(--visual-1);
+    stroke: var(--visual-1);
+    background: var(--visual-1);
+  }
+
+  .visualization-color-1 {
+    fill: var(--visual-2);
+    stroke: var(--visual-2);
+    background: var(--visual-2);
+  }
+
+  .visualization-color-2 {
+    fill: var(--visual-3);
+    stroke: var(--visual-3);
+    background: var(--visual-3);
+  }
+
+  .visualization-color-3 {
+    fill: var(--visual-4);
+    stroke: var(--visual-4);
+    background: var(--visual-4);
+  }
+
+  .visualization-color-4 {
+    fill: var(--visual-5);
+    stroke: var(--visual-5);
+    background: var(--visual-5);
+  }
+
+  .visualization-color-5 {
+    fill: var(--visual-6);
+    stroke: var(--visual-6);
+    background: var(--visual-6);
+  }
+
+  /* Цвета долей в светлой схеме тёмные, а в тёмной — светлые, поэтому подпись берёт цвет фона схемы. */
+  .visualization-pie-label {
+    fill: var(--visualization-surface);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: 13px;
+    font-weight: var(--weight-strong);
+    paint-order: stroke;
+    stroke: color-mix(in srgb, var(--visualization-foreground) 45%, transparent);
+    stroke-width: 2px;
+  }
+
+  /*
+ * Легенда читается как текст страницы: основным цветом и не мельче мелкого текста, а образец линии
+ * крупнее самой линии на схеме, чтобы пунктир, точки и полый наконечник различались с первого взгляда.
+ * Элемент не разрывается посередине: на узком экране легенда переносится по элементам.
+ */
+  .visualization-legend {
+    display: flex;
+    max-width: 100%;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    margin: 0.9rem 0 0;
+    padding: 0;
+    color: var(--visualization-foreground);
+    font-size: var(--text-sm);
+    line-height: 1.35;
+    list-style: none;
+  }
+
+  .visualization-legend li {
+    display: inline-flex;
+    min-width: 0;
+    max-width: 100%;
+    align-items: center;
+    gap: 0.5rem;
+    overflow-wrap: anywhere;
+  }
+
+  .visualization-legend-swatch {
+    width: 0.8rem;
+    height: 0.8rem;
+    flex: 0 0 auto;
+    border-radius: calc(var(--radius-small) * 0.6);
+  }
+
+  .visualization-legend-sample {
+    height: 1.1rem;
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
+  .visualization-legend-title {
+    margin: 0.9rem 0 0;
+    color: var(--visualization-foreground);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-strong);
+  }
+
+  .visualization-legend-title + .visualization-legend {
+    margin-top: 0.4rem;
+  }
+
+  /* Схема словами: тот же текст, что в описании картинки, для читателя, которому картинка не помогает. */
+  .visualization-transcript {
+    margin-top: 0.75rem;
+    color: var(--visualization-muted);
+    font-size: var(--text-sm);
+  }
+
+  .visualization-transcript p,
+  .visualization-transcript ul,
+  .visualization-transcript ol {
+    margin: 0.4rem 0 0;
+  }
+
+  .visualization-transcript-heading {
+    color: var(--visualization-foreground);
+    font-weight: var(--weight-medium);
+  }
+
+  .visualization-node-label {
+    fill: var(--visualization-foreground);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: 14px;
+    font-weight: var(--weight-strong);
+  }
+
+  .visualization-node-detail {
+    fill: var(--visualization-muted);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: 12.5px;
+    font-weight: var(--weight-medium);
+  }
+
+  .visualization-timeline-list {
+    position: relative;
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .visualization-timeline-event {
+    position: relative;
+    max-width: none;
+    margin-left: 0.55rem;
+    border-left: 1px solid var(--color-border-strong);
+    padding: 0 0 calc(1.5rem * var(--space-factor)) 1.5rem;
+  }
+
+  .visualization-timeline-legend-dot {
+    display: inline-block;
+    width: 0.625rem;
+    height: 0.625rem;
+    margin-inline-end: 0.45rem;
+    border-radius: 50%;
+    background: var(--visualization-muted);
+    vertical-align: 0.05em;
+  }
+
+  .visualization-timeline-title {
+    margin: 0.25rem 0 0.35rem;
+    color: var(--color-heading);
+    font-family: var(--font-author-heading, var(--font-heading-small, var(--font-heading)));
+    font-size: min(var(--text-md), var(--heading-fit, 100vw));
+    font-weight: var(--heading-weight);
+  }
+
+  .visualization-timeline-event > :last-child {
+    margin-bottom: 0;
+  }
+
+  .visualization-timeline-title + * {
+    margin-top: 0;
+  }
+
+  @media (width <= 620px) {
+    .visualization-frame {
+      padding: 0.5rem;
+    }
+
+    .visualization-svg {
+      min-width: 31rem;
+    }
+
+    /* A diagram keeps its own floor: the chart floor above would stretch a narrow view past its natural
+     width and force scrolling where the view would fit. */
+    .visualization-diagram {
+      min-width: calc(var(--diagram-width, 0px) * 0.9);
+    }
+  }
+
+  .semantic-callout {
+    border: 0;
+    border-left: 2px solid var(--callout-signal, var(--color-accent));
+    padding: 0.15rem 0 0.15rem 1.1rem;
+    background: transparent;
+  }
+
+  /*
+   * Data and text (stage 7): the source line under a block, message mocks and the typographic roles.
+   * Source line: small muted text right under the block it describes, so it reads as that block's
+   * caption; its label and date keep the body face, the date in tabular figures.
+   */
+  .semantic-source-line {
+    max-width: min(100%, var(--reading-measure));
+    margin-top: calc(-0.35rem * var(--space-factor));
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+  }
+
+  .semantic-source-line-label {
+    font-weight: var(--weight-medium);
+  }
+
+  /*
+   * Message mocks: bordered bubbles on the raised surface, the reader's own turns at the end edge on the
+   * soft accent; sender and time above the text, status under it. An illustrative mock carries a
+   * visible mark in the eyebrow colour.
+   */
+  .semantic-conversation {
+    display: grid;
+    gap: calc(0.6rem * var(--space-factor));
+    max-width: min(100%, 40rem);
+    margin-inline: 0;
+  }
+
+  .semantic-conversation-caption {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+    color: var(--color-heading);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+
+  .semantic-conversation-list {
+    display: grid;
+    gap: calc(0.6rem * var(--space-factor));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .semantic-message {
+    max-width: min(88%, 34rem);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    padding: calc(0.6rem * var(--space-factor)) calc(0.85rem * var(--space-factor));
+    background: var(--color-surface-raised);
+    color: var(--color-text);
+  }
+
+  .semantic-message[data-side='out'] {
+    margin-inline-start: auto;
+    border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+    background: var(--color-accent-soft);
+    color: var(--color-heading);
+  }
+
+  .semantic-message-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.6rem;
+    margin-bottom: 0.2rem;
+    font-size: var(--text-xs);
+  }
+
+  .semantic-message-from {
+    color: var(--color-heading);
+    font-weight: var(--weight-strong);
+  }
+
+  .semantic-message-time,
+  .semantic-message-status {
+    color: var(--color-text-muted);
+    font-family: var(--font-author-mono, var(--font-mono));
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .semantic-message-status {
+    margin: 0.25rem 0 0;
+    text-align: end;
+  }
+
+  .semantic-message-body > * {
+    margin-block: 0;
+  }
+
+  .semantic-illustrative {
+    border: 1px dashed var(--color-accent-2);
+    border-radius: var(--radius-control);
+    padding: 0 0.4rem;
+    color: var(--color-accent-2);
+    font-size: var(--text-label);
+    font-weight: var(--weight-medium);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /*
+   * Typographic roles: the eyebrow is small capitals in the eyebrow colour above the title it
+   * precedes; muted continues a paragraph quietly after its bright first sentence; meta is a short
+   * label in the mono face. None changes the words, so copying keeps them as written.
+   */
+  .semantic-eyebrow {
+    margin: 0 0 0.35rem;
+    color: var(--color-accent-2);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+  }
+
+  .semantic-eyebrow + :is(h1, h2, h3, h4) {
+    margin-top: 0;
+  }
+
+  .semantic-muted {
+    color: var(--color-text-muted);
+  }
+
+  .semantic-meta {
+    color: var(--color-text-muted);
+    font-family: var(--font-author-mono, var(--font-mono));
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+
+  @media print {
+    .semantic-message {
+      background: none;
+    }
+  }
+
+  .semantic-decision {
+    border: 0;
+    border-top: 1px solid var(--color-heading);
+    padding-top: 0.9rem;
+    background: transparent;
+  }
+
+  /* Варианты решения и пункты списка — строки под волосяной линией с пустой отметкой впереди. */
+  :is(.semantic-decision-option, .semantic-check-item) {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    border-top: 1px solid var(--color-border);
+    padding-block: 0.45rem;
+  }
+
+  :is(.semantic-decision-option, .semantic-check-item)::before {
+    width: 0.75rem;
+    height: 0.75rem;
+    flex: 0 0 auto;
+    border: 1px solid var(--color-text-muted);
+    content: '';
+  }
+
+  :root[data-theme-components='edged'] .semantic-card {
+    border-left: 2px solid var(--callout-signal, var(--color-accent));
+  }
+
+  .semantic-title {
+    margin: 0 0 0.6rem;
+  }
+
+  .semantic-callout > .semantic-title,
+  .semantic-decision > .semantic-title {
+    margin-bottom: 0.45rem;
+  }
+
+  .semantic-term {
+    position: relative;
+    display: inline-block;
+  }
+
+  .semantic-code-term {
+    white-space: pre;
+  }
+
+  .semantic-glossary {
+    border-left: 2px solid var(--color-accent);
+    padding: 0.1rem 0 0.1rem 1.1rem;
+  }
+
+  .semantic-glossary-appendix {
+    max-width: min(100%, var(--reading-measure));
+    margin-top: calc(3rem * var(--space-factor));
+    border-top: 1px solid var(--color-border-strong);
+    padding-top: var(--space-card);
+  }
+
+  .semantic-glossary-appendix-title {
+    margin-top: 0;
+  }
+
+  /* The inset is the container's own padding: margins on the children would push a full-width table past
+   the border, where the section clips it. */
+  /* Раскрытие — строка между двумя линиями: название слева, знак «+» или «−» моноширинным справа. */
+  .semantic-disclosure {
+    border-block: 1px solid var(--color-border);
+    padding: 0;
+  }
+
+  .semantic-disclosure + .semantic-disclosure {
+    margin-top: calc(-1.5rem * var(--space-factor) - 1px);
+  }
+
+  /* Only the prose of an open disclosure keeps the reading measure: its code, tables and pictures take the
+   track like they do outside it (the wide-block rule). */
+  .semantic-disclosure > :is(h2, h3, h4, h5, h6, p, ul, ol, dl, blockquote, hr) {
+    max-width: min(100%, var(--reading-measure));
+  }
+
+  .semantic-disclosure[open] > :last-child {
+    margin-bottom: 1.1rem;
+  }
+
+  .semantic-tab {
+    margin-top: 1rem;
+  }
+
+  .semantic-popover {
+    position: relative;
+  }
+
+  .semantic-popover [data-popover-panel],
+  .semantic-term [data-glossary-panel],
+  [data-glossary-portal],
+  [data-popover-portal] {
+    position: absolute;
+    z-index: 15;
+    top: calc(100% - 0.5rem);
+    left: var(--space-card);
+    width: min(28rem, calc(100vw - 4rem));
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    padding: var(--space-card);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-raised);
+  }
+
+  .semantic-term [data-glossary-panel] {
+    top: calc(100% + 0.35rem);
+    left: 0;
+    display: block;
+    color: var(--color-text);
+    font-weight: var(--weight-regular);
+  }
+
+  .semantic-code-term [data-glossary-panel],
+  [data-glossary-portal] {
+    position: fixed;
+    inset: auto 1rem 1rem auto;
+    width: min(28rem, calc(100vw - 2rem));
+    max-height: min(50svh, 24rem);
+    overflow: auto;
+    color: var(--color-text);
+    font-family: var(--font-author-body, var(--font-body));
+    line-height: var(--body-leading);
+    white-space: normal;
+  }
+
+  [data-popover-portal] {
+    position: fixed;
+    z-index: 50;
+    max-width: none;
+    margin: 0;
+    overflow: auto;
+    background: var(--role-component-bg, var(--color-surface));
+    color: var(--role-component-fg, var(--color-text));
+    overscroll-behavior: contain;
+  }
+
+  .semantic-term [data-glossary-panel][hidden],
+  [data-glossary-portal][hidden] {
+    display: none;
+  }
+
+  .semantic-toggle [data-toggle-panel] {
+    margin-top: 0.9rem;
+  }
+
+  [hidden] {
+    display: none;
+  }
+
+  .semantic-demo output {
+    min-width: 3rem;
+    color: var(--color-heading);
+    font-family: var(--font-author-mono, var(--font-mono));
+    font-size: var(--text-lg);
+    font-weight: var(--weight-medium);
+  }
+
+  .semantic-asset {
+    display: inline-flex;
+    max-width: 100%;
+    text-decoration: none;
+  }
+
+  .semantic-response {
+    max-width: 100%;
+    border-top: 1px solid var(--color-heading);
+    padding-top: 0.9rem;
+  }
+
+  .response-question {
+    min-width: 0;
+    margin: 0;
+    border: 0;
+    border-bottom: 1px solid var(--color-border);
+    padding: 1rem 0 1.15rem;
+  }
+
+  .response-bucket-board {
+    display: grid;
+    max-width: 100%;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  }
+
+  .response-bucket-column {
+    min-width: 0;
+    min-height: 4rem;
+    border: 0;
+    border-top: 1px solid var(--color-border-strong);
+    padding: 0.55rem 0 0;
+    background: transparent;
+  }
+
+  .response-item {
+    display: grid;
+    min-width: 0;
+    gap: 0.35rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-small);
+    padding: 0.6rem 0.7rem;
+    background: var(--role-component-bg);
+  }
+
+  .response-number {
+    width: min(100%, 8rem);
+  }
+
+  [data-response-comment-toggle][aria-expanded='true'] .package-icon {
+    transform: rotate(45deg);
+  }
+
+  .response-order-list > li {
+    max-width: 100%;
+    counter-increment: response-order;
+  }
+
+  .response-status {
+    display: block;
+    min-height: 1.5rem;
+    margin-top: 0.75rem;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 0.18rem;
+  }
+
+  /* Layouts compose the same shell and primitives; they do not fork the component system. */
+  :root[data-layout='dashboard'] .report-shell,
+  :root[data-layout='landing'] .report-shell {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  :root[data-layout='dashboard'] .sidebar,
+  :root[data-layout='landing'] .sidebar {
+    position: static;
+    max-height: none;
+    padding: 0.75rem 1rem;
+  }
+
+  :root[data-layout='dashboard'] .sidebar-label,
+  :root[data-layout='landing'] .sidebar-label {
+    margin-bottom: 0.4rem;
+  }
+
+  :root[data-layout='dashboard'] .sidebar ol,
+  :root[data-layout='landing'] .sidebar ol {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  :root[data-layout='dashboard'] .sidebar li[data-depth='3'],
+  :root[data-layout='landing'] .sidebar li[data-depth='3'] {
+    padding-left: 0;
+  }
+
+  :root[data-layout='dashboard'] .report-content article > h1 {
+    max-width: none;
+    font-size: min(
+      calc(clamp(2rem, 5vw, 3.5rem) * var(--display-scale, 1)),
+      var(--heading-fit, 100vw)
+    );
+  }
+
+  :root[data-layout='dashboard'] .semantic-cards {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  }
+
+  :root[data-layout='landing'] .report-content {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :root[data-layout='landing'] .report-content article > h1 {
+    max-width: var(--heading-measure, 16ch);
+    margin-inline: auto;
+    font-size: min(
+      calc(clamp(3rem, 7vw, 6rem) * var(--display-scale, 1)),
+      var(--heading-fit, 100vw)
+    );
+    font-weight: var(--display-weight);
+    text-align: center;
+  }
+
+  /* Числа в метриках и данных стоят в колонку: табличные цифры одной ширины. */
+  :is(
+    .semantic-section[data-recipe='metrics'],
+    .semantic-chart,
+    .semantic-timeline,
+    .semantic-demo output
+  ) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /*
+   * Metric cards are one set of figures: every row of the grid has the height of the tallest one, so a row
+   * that wraps under a wider column is not shorter than the row above it.
+   */
+  .semantic-section[data-recipe='metrics'] .semantic-cards {
+    grid-auto-rows: 1fr;
+  }
+
+  /*
+ * Мера вводного абзаца центрированного начала лендинга — одна для абзаца и для группы действий под ним:
+ * явный `edge` ставит кнопки к концу абзаца, и этот конец не должен зависеть от ширины `ch` гарнитуры.
+ */
+  :root[data-layout='landing'] {
+    --landing-lead-measure: 48rem;
+  }
+
+  :root[data-layout='landing'] .report-content article > h1 + p {
+    max-width: var(--landing-lead-measure);
+    margin: 0 auto calc(3rem * var(--space-factor));
+    color: var(--color-text-muted);
+    font-size: clamp(1.15rem, 2.4vw, 1.55rem);
+    text-align: center;
+  }
+
+  /*
+ * Группа действий сразу под центрированным началом лендинга встаёт на его ось. Её рамка — мера чтения,
+ * уже колонки, поэтому центруется сама рамка при любом размещении: `auto` и `inline` ставят кнопки в
+ * её середину, явный `edge` — к её концу, то есть вровень с концом вводного абзаца, а не к краю
+ * колонки, где кнопки повисали бы отдельно от текста. Редакционный пресет держит начало слева, поэтому
+ * его группа эту ось не получает.
+ */
+  :root[data-layout='landing']:not([data-theme-landing='ledger'])
+    .report-content
+    article
+    > :is(h1, h1 + p)
+    + .semantic-actions {
+    max-width: min(100%, var(--landing-lead-measure));
+    margin-inline: auto;
+  }
+
+  :root[data-layout='landing']:not([data-theme-landing='ledger'])
+    .report-content
+    article
+    > :is(h1, h1 + p)
+    + .semantic-actions:is([data-placement='auto'], [data-placement='inline']) {
+    justify-content: center;
+  }
+
+  /* Начало лендинга у начального края: заголовок, вступление и действия выровнены по тексту страницы. */
+  :root[data-layout='landing'][data-opening='start'] .report-content article > :is(h1, h1 + p) {
+    margin-inline: 0;
+    text-align: start;
+  }
+
+  :root[data-layout='landing'][data-opening='start']
+    .report-content
+    article
+    > :is(h1, h1 + p)
+    + .semantic-actions {
+    justify-content: flex-start;
+    margin-inline: 0;
+  }
+
+  /*
+ * Первый экран с продуктом: заголовок, вступление и действия слева, сама секция — результат, код рядом
+ * с результатом, схема или ролик — справа. На узком экране секция идёт сразу под вступлением.
+ */
+  .page-opening {
+    display: grid;
+    gap: clamp(1.5rem, 4vw, 3rem);
+    align-items: center;
+    margin-block: 0 var(--section-rhythm);
+  }
+
+  .page-opening-copy > h1 {
+    max-width: var(--heading-measure, 14ch);
+    margin: 0 0 0.4em;
+    font-size: min(
+      calc(clamp(2.2rem, 3.6vw, 4rem) * var(--display-scale, 1)),
+      var(--heading-fit, 100vw)
+    );
+    font-weight: var(--display-weight);
+    line-height: 1;
+    text-align: start;
+  }
+
+  .page-opening-copy > h1 + p {
+    max-width: 36rem;
+    margin: 0 0 1.25rem;
+    color: var(--color-text-muted);
+    font-size: clamp(1.08rem, 1.6vw, 1.3rem);
+  }
+
+  .page-opening-copy > .semantic-actions {
+    justify-content: flex-start;
+    margin-inline: 0;
+  }
+
+  .page-opening > .semantic-section {
+    margin: 0;
+  }
+
+  .page-opening > .semantic-section > .semantic-section-title {
+    margin-bottom: 0.6rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: var(--text-xs);
+    font-weight: var(--weight-strong);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .page-opening > .semantic-section :is(img, video, pre, .visualization-frame) {
+    max-height: 62svh;
+  }
+
+  @media (min-width: 64rem) {
+    .page-opening {
+      min-block-size: min(calc(100svh - 7rem), 52rem);
+      grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    }
+  }
+
+  :root[data-theme-section-title='rule'] .semantic-section-title {
+    border-bottom: 1px solid var(--color-border-strong);
+    padding-bottom: 0.45em;
+    font-weight: var(--weight-medium);
+    letter-spacing: -0.035em;
+  }
+
+  :root[data-theme-navigation='numbered'] [data-navigation] ol {
+    counter-reset: field-section;
+  }
+
+  :root[data-theme-navigation='numbered'] [data-navigation] li {
+    counter-increment: field-section;
+  }
+
+  /* Номер главы — моноширинная метка перед названием; точка на линии остаётся. */
+  :root[data-theme-navigation='numbered'] [data-navigation] a {
+    display: grid;
+    grid-template-columns: 1.6rem minmax(0, 1fr);
+    align-items: baseline;
+  }
+
+  :root[data-theme-navigation='numbered'] [data-navigation] a > * {
+    grid-column: 2;
+  }
+
+  :root[data-theme-navigation='numbered'] [data-navigation] a::after {
+    grid-row: 1;
+    grid-column: 1;
+    color: var(--color-text-muted);
+    font-family: var(--font-author-mono, var(--font-mono));
+    font-size: var(--text-label);
+    letter-spacing: 0.04em;
+    content: counter(field-section, decimal-leading-zero);
+  }
+
+  :root[data-theme-navigation='numbered'] [data-navigation] a[aria-current='location']::after {
+    color: var(--color-accent-strong);
+  }
+
+  /*
+ * Навигация в диалоге: на узком экране и на лендинге при любой ширине, чтобы над первым экраном не стояла
+ * рамка навигации. Режим ставит рантайм атрибутом `data-nav-mode`. Оглавление выезжает от начального
+ * края панелью во всю высоту и уезжает обратно при закрытии; allow-discrete держит закрывающийся диалог
+ * отрисованным до конца движения.
+ */
+  :root[data-nav-mode='dialog'] .nav-dialog {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(22rem, 88vw);
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    overflow: hidden;
+    border: 0;
+    border-inline-end: 1px solid var(--color-border);
+    border-radius: 0;
+    padding: 0;
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: var(--shadow-raised);
+    transform: translateX(-100%);
+    transition:
+      transform 240ms ease-out,
+      display 240ms allow-discrete,
+      overlay 240ms allow-discrete;
+  }
+  :root[data-nav-mode='dialog'] .nav-dialog[open] {
+    display: block;
+    transform: none;
+  }
+  :root[data-nav-mode='dialog'] .nav-dialog::backdrop {
+    background: color-mix(in srgb, var(--color-bg) 72%, transparent);
+  }
+  :root[data-nav-mode='dialog'] .nav-dialog-panel {
+    display: grid;
+    height: 100%;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  :root[data-nav-mode='dialog'] .nav-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid var(--color-border);
+    padding: 0.75rem 1rem;
+  }
+  :root[data-nav-mode='dialog'] .nav-dialog-header p {
+    margin: 0;
+  }
+  :root[data-nav-mode='dialog'] .nav-dialog-close {
+    cursor: pointer;
+  }
+  :root[data-nav-mode='dialog'] .nav-dialog [data-nav-dialog-content] {
+    min-height: 0;
+    overflow: auto;
+    padding: 0.85rem 1rem 1rem;
+    overscroll-behavior: contain;
+  }
+  :root[data-nav-mode='dialog'] .nav-dialog [data-navigation] {
+    display: block;
+  }
+  :root[data-nav-mode='dialog'] .nav-dialog [data-navigation] ol,
+  :root[data-nav-mode='dialog'][data-layout='dashboard'] .nav-dialog [data-navigation] ol,
+  :root[data-nav-mode='dialog'][data-layout='landing'] .nav-dialog [data-navigation] ol {
+    display: grid;
+  }
+
+  @starting-style {
+    :root[data-nav-mode='dialog'] .nav-dialog[open] {
+      transform: translateX(-100%);
+    }
+  }
+
+  /* Без рантайма навигация лендинга не встаёт над первым экраном: её рамка скрыта и на широком экране. */
+  :root[data-layout='landing']:not([data-theme-landing='ledger']) .sidebar,
+  :root[data-nav-mode='dialog'] .sidebar {
+    display: none;
+  }
+
+  @media (max-width: 56.99rem) {
+    .report-shell,
+    :root[data-layout='dashboard'] .report-shell,
+    :root[data-layout='landing'] .report-shell {
+      display: block;
+      padding-top: 1rem;
+    }
+
+    .sidebar,
+    :root[data-layout='dashboard'] .sidebar,
+    :root[data-layout='landing'] .sidebar {
+      display: none;
+    }
+
+    .review-dialog[open] {
+      top: auto;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: min(48rem, calc(100dvh - 1rem));
+      max-height: min(48rem, calc(100dvh - 1rem));
+      margin: auto 0 0;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-large) var(--radius-large) 0 0;
+    }
+    .review-panel {
+      max-height: min(48rem, calc(100dvh - 1rem));
+    }
+
+    .report-content {
+      padding: clamp(1rem, 5vw, 1.6rem);
+    }
+
+    :root[data-layout='landing'] .report-content article > h1 {
+      max-width: var(--heading-measure, 15ch);
+      font-size: min(
+        calc(clamp(2.25rem, 8.5vw, 3rem) * var(--display-scale, 1)),
+        var(--heading-fit, 100vw)
+      );
+    }
+
+    :root[data-layout='landing'] .report-content article > h1 + p {
+      margin-bottom: calc(1.5rem * var(--space-factor));
+    }
+
+    @starting-style {
+      .review-dialog[open] {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+    }
+  }
+
+  @media (max-width: 56.99rem) {
+    :root[data-theme-navigation='numbered'] .nav-dialog [data-navigation] a {
+      min-height: 2.75rem;
+    }
+  }
+
+  @media (max-width: 26rem) {
+    .topbar {
+      gap: 0.2rem;
+      padding-inline: 0.4rem;
+    }
+  }
+
+  @media (max-width: 56.99rem) {
+    .topbar-context {
+      display: none;
+    }
+
+    .semantic-section {
+      margin-block: calc(2rem * var(--space-factor));
+      --section-pad-top: calc(1.5rem * var(--space-factor));
+      padding-block: calc(1.5rem * var(--space-factor));
+    }
+
+    .semantic-section[data-type='display'] > .semantic-section-title,
+    .semantic-section[data-type='editorial'] > .semantic-section-title {
+      max-width: var(--heading-measure, 14ch);
+      font-size: min(
+        calc(clamp(2rem, 7.5vw, 3rem) * var(--display-scale, 1)),
+        var(--heading-fit, 100vw)
+      );
+      line-height: 1.04;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --duration-ui: 0s;
+    }
+
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto;
+      /* Suppress motion without creating transitions on otherwise static geometry. */
+      transition: none;
+    }
+
+    /* Увеличение в лупе `spotlight` — её конечная картина, а не движение: оно остаётся. */
+    [data-transition] > *,
+    [data-scene] :is(img:not([data-spotlight-copy]), .semantic-chart, .semantic-diagram),
+    [data-interaction] img:not([data-spotlight-copy]),
+    .semantic-action[data-effect='magnetic'] {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    [data-interaction='depth'][data-pointer-active] img {
+      transform: translate(
+        calc(var(--pointer-x, 0) * var(--motion-depth)),
+        calc(var(--pointer-y, 0) * var(--motion-depth))
+      );
+    }
+
+    [data-interaction='tilt'][data-pointer-active] img {
+      transform: perspective(60rem) rotateX(calc(var(--pointer-y, 0) * -1 * var(--motion-tilt)))
+        rotateY(calc(var(--pointer-x, 0) * var(--motion-tilt)));
+    }
+
+    .semantic-action[data-effect='magnetic'][data-pointer-active] {
+      transform: translate(
+        calc(var(--pointer-x, 0) * var(--motion-magnetic)),
+        calc(var(--pointer-y, 0) * var(--motion-magnetic))
+      );
+    }
+  }
+
+  /* Quality-producing visual system: shared semantic roles, not component-specific palettes. */
+  :root {
+    --role-page-bg: var(--color-bg);
+    --role-page-fg: var(--color-text);
+    --role-section-bg: var(--color-surface);
+    --role-section-fg: var(--color-text);
+    --role-component-bg: var(--color-surface);
+    --role-component-fg: var(--color-text);
+    --role-control-bg: var(--color-surface-raised);
+    --role-control-fg: var(--color-heading);
+    --role-current-bg: var(--color-accent-soft);
+    --role-current-fg: var(--color-accent-strong);
+    --role-muted-bg: var(--color-surface-muted);
+    --role-muted-fg: var(--color-text-muted);
+    --role-inverse-bg: var(--color-text);
+    --role-inverse-fg: var(--color-bg);
+  }
+
+  body {
+    background-color: var(--role-page-bg);
+    color: var(--role-page-fg);
+  }
+
+  .semantic-section {
+    color: var(--role-section-fg);
+  }
+
+  .semantic-section[data-tone='soft'] {
+    background-color: var(--role-section-bg);
+  }
+
+  :is(
+    .sidebar-label,
+    .topbar-current,
+    .review-summary,
+    .review-target-label,
+    .semantic-filter output,
+    .response-status
+  ) {
+    color: var(--role-muted-fg);
+  }
+
+  :is(.semantic-card, .semantic-demo, .review-popover, .review-panel) {
+    background-color: var(--role-component-bg);
+    color: var(--role-component-fg);
+  }
+
+  :is(
+    .semantic-callout,
+    .semantic-decision,
+    .semantic-checklist,
+    .semantic-steps,
+    .semantic-glossary,
+    .semantic-disclosure,
+    .semantic-tabs,
+    .semantic-modal,
+    .semantic-popover,
+    .semantic-filter,
+    .semantic-toggle,
+    .semantic-response,
+    .semantic-chart,
+    .semantic-diagram,
+    .semantic-timeline
+  ) {
+    color: var(--role-component-fg);
+  }
+
+  /* Текущий и выбранный пункт узнаётся по цвету и метке своего компонента, а не по общей заливке. */
+  :is([aria-current='location'], [aria-selected='true'], [aria-checked='true']) {
+    background-color: transparent;
+    color: var(--color-heading);
+  }
+
+  :is(button, input, select, textarea, summary, a)[disabled],
+  :is(button, input, select, textarea, summary, a)[aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+
+  /* Роли вычисляются заново из цветов противоположной схемы, которые полоса получила от темы. */
+  :root:not([data-theme-console='on']) .semantic-section[data-tone='contrast'] {
+    --role-page-bg: var(--color-bg);
+    --role-page-fg: var(--color-text);
+    --role-section-bg: var(--color-surface);
+    --role-section-fg: var(--color-text);
+    --role-component-bg: var(--color-surface);
+    --role-component-fg: var(--color-text);
+    --role-control-bg: var(--color-surface-raised);
+    --role-control-fg: var(--color-heading);
+    --role-current-bg: var(--color-accent-soft);
+    --role-current-fg: var(--color-accent-strong);
+    --role-muted-bg: var(--color-surface-muted);
+    --role-muted-fg: var(--color-text-muted);
+    --role-inverse-bg: var(--color-text);
+    --role-inverse-fg: var(--color-bg);
+  }
+
+  /*
+   * Подпись в акцентной полосе — текст, растворённый в её фоне: приглушённый цвет страницы на
+   * насыщенном фоне полосы теряет контраст. Доля 80 % проверяется при сборке темы
+   * (пара «captions in accent sections» в `theme-contrast.ts`).
+   */
+  .semantic-section[data-tone='accent'] {
+    --color-text-muted: color-mix(in srgb, var(--color-text) 80%, var(--color-accent-soft));
+    --role-muted-fg: var(--color-text-muted);
+    --role-component-bg: color-mix(in srgb, var(--color-surface) 88%, var(--color-accent-soft));
+    --role-component-fg: var(--color-text);
+    --role-control-bg: color-mix(
+      in srgb,
+      var(--color-surface-raised) 84%,
+      var(--color-accent-soft)
+    );
+    --role-control-fg: var(--color-text);
+  }
+
+  .semantic-card[data-linked-card] {
+    position: relative;
+    display: block;
+    border-color: var(--color-border-strong);
+    color: var(--role-component-fg);
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+      border-color var(--duration-ui) var(--ease-ui),
+      transform var(--duration-ui) var(--ease-ui);
+  }
+
+  /* Карточка-ссылка отмечена стрелкой в углу; на наведении рамка темнеет до цвета заголовков. */
+  .semantic-card-link-signifier {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: inline-flex;
+    width: 1rem;
+    height: 1rem;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted);
+    transition: transform var(--duration-ui) var(--ease-ui);
+  }
+
+  .semantic-card[data-linked-card]:is(:hover, :focus-visible) {
+    border-color: var(--color-heading);
+  }
+
+  .semantic-card[data-linked-card]:active {
+    transform: scale(0.99);
+  }
+
+  /* Курсор и префикс — подпись темы у заголовка страницы, одна на страницу, а не у каждого раздела. */
+  :root[data-theme-title-cursor='on'] .report-content article > h1::after,
+  :root[data-theme-title-cursor='on'] .report-content .page-opening-copy > h1::after {
+    display: inline-block;
+    width: 0.08em;
+    height: 0.86em;
+    margin-inline-start: 0.12em;
+    background: var(--color-accent);
+    vertical-align: -0.04em;
+    content: '';
+    animation: agentic-cursor 1s steps(1, end) 6;
+  }
+
+  :root[data-theme-heading-prefix='on'] .report-content article > h1::before,
+  :root[data-theme-heading-prefix='on'] .report-content .page-opening-copy > h1::before {
+    margin-inline-end: 0.45em;
+    color: var(--color-accent);
+    content: var(--heading-prefix);
+  }
+
+  :root[data-theme-hero='shadow'] .semantic-section[data-recipe='hero'],
+  :root[data-theme-hero='shadow'] .semantic-section[data-recipe='story'] {
+    box-shadow: var(--shadow-raised);
+  }
+
+  :root[data-theme-hero='rule'] .semantic-section[data-recipe='hero'] {
+    border-top: 1px solid var(--color-accent);
+  }
+
+  :root[data-theme-components='edged'] .semantic-section[data-recipe='metrics'] {
+    border-radius: var(--radius-small);
+    box-shadow: inset 0.22rem 0 var(--color-accent);
+  }
+
+  :root[data-theme-media='vivid'] [data-media] img {
+    box-shadow: var(--shadow-raised);
+    filter: saturate(1.08) contrast(1.04);
+  }
+
+  @keyframes agentic-cursor {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @media (width >= 90rem) {
+    .report-shell {
+      width: min(calc(100% - 2rem), var(--content-width));
+    }
+
+    .report-content {
+      padding-inline: clamp(2rem, 4vw, 6rem);
+    }
+
+    .semantic-section[data-width='standard'] {
+      --section-measure: min(100%, 96rem);
+    }
+  }
+
+  @media (width <= 48rem) {
+    :root[data-layout='landing'] .report-content article > h1 {
+      max-width: var(--heading-measure, 13ch);
+      margin-inline: 0;
+      font-size: min(
+        calc(clamp(2rem, 7.4vw, 2.65rem) * var(--display-scale, 1)),
+        var(--heading-fit, 100vw)
+      );
+      line-height: 1;
+      text-align: start;
+    }
+
+    :root[data-layout='landing'] .report-content article > h1 + p {
+      max-width: 34rem;
+      margin-inline: 0;
+      font-size: clamp(1rem, 4.3vw, 1.2rem);
+      text-align: start;
+    }
+
+    /* Здесь заголовок выровнен по началу, и группа начала, в том числе нижняя панель, начинается там же. */
+    :root[data-layout='landing']:not([data-theme-landing='ledger'])
+      .report-content
+      article
+      > :is(h1, h1 + p)
+      + .semantic-actions:is([data-placement='auto'], [data-placement='inline']) {
+      justify-content: flex-start;
+      margin-inline: 0;
+    }
+
+    .semantic-section[data-type='display'] > .semantic-section-title,
+    .semantic-section[data-type='editorial'] > .semantic-section-title {
+      max-width: var(--heading-measure, 13ch);
+      font-size: min(
+        calc(clamp(1.85rem, 7.5vw, 2.65rem) * var(--display-scale, 1)),
+        var(--heading-fit, 100vw)
+      );
+    }
+
+    .semantic-section[data-media='gallery'] > .semantic-cards {
+      grid-auto-columns: min(100%, 28rem);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root[data-theme-title-cursor='on'] .report-content article > h1::after,
+    :root[data-theme-title-cursor='on'] .report-content .page-opening-copy > h1::after {
+      animation: none;
+    }
+  }
+
+  /*
+ * Дифф: строки размечены видом и номерами старой и новой строки. Номера рисуются из атрибутов и в
+ * копируемый текст не попадают; знак строки остаётся в тексте, поэтому вид читается не только
+ * цветом. Широкий дифф прокручивается внутри блока.
+ */
+  .semantic-diff {
+    max-width: 100%;
+    margin: calc(1.5rem * var(--space-factor)) 0;
+  }
+
+  /* Находки: серьёзность — слово на метке, цвет полосы только повторяет его. */
+  .semantic-findings {
+    max-width: min(100%, var(--flow-measure, var(--reading-measure)));
+    margin: calc(1.5rem * var(--space-factor)) 0;
+  }
+
+  .semantic-finding-head > .semantic-title {
+    flex: 1 1 14rem;
+    margin: 0;
+  }
+
+  .semantic-finding > :last-child {
+    margin-bottom: 0;
+  }
+
+  /* Состояние карточки: слово с маркером над содержимым; цвет маркера только повторяет слово. */
+  .semantic-card[data-status] > .semantic-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0 0 0.6rem;
+  }
+
+  /*
+ * «До и после»: картинка «после» лежит поверх и открыта от границы вправо; граница — вертикальная
+ * линия, её двигает ползунок под картинкой или указатель на самой картинке. Вид сравнения один и тот
+ * же при любом движении: смещается только граница, ничего не анимируется.
+ */
+  .semantic-compare {
+    max-width: 100%;
+    margin: calc(1.5rem * var(--space-factor)) 0;
+  }
+
+  .compare-stage img {
+    -webkit-touch-callout: none;
+    -webkit-user-drag: none;
+
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .compare-after img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .compare-divider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--compare-position, 50%);
+    width: 2px;
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 35%, transparent);
+    transform: translateX(-1px);
+    pointer-events: none;
+  }
+
+  .compare-range {
+    display: block;
+    width: 100%;
+    margin: 0.6rem 0 0;
+    accent-color: var(--color-accent);
+  }
+
+  .semantic-beat {
+    max-width: min(100%, var(--reading-measure));
+  }
+
+  @media (min-width: 57rem) and (prefers-reduced-motion: no-preference) {
+    .semantic-section[data-scene='steps'][data-scene-live] {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      column-gap: clamp(2rem, 5vw, 5rem);
+      align-items: start;
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-live] > .scene-stage {
+      /* Схема шире колонки прокручивается в своей рамке, а не наезжает на такты. */
+      min-width: 0;
+      position: sticky;
+      top: calc(var(--topbar-clearance, 4.5rem) + 1rem);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-live] > .scene-stage > * {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-live] .semantic-beat {
+      display: grid;
+      /*
+       * Такт — доля экрана, но не больше 24rem: на высоком или повёрнутом мониторе такты иначе
+       * разносятся на экраны пустоты, и колонка тактов уходит далеко ниже сцены.
+       */
+      min-block-size: min(62svh, 24rem);
+      align-content: center;
+      opacity: 0.42;
+      transition: opacity calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
+        var(--motion-ease, ease-out);
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-live] .semantic-beat[data-current] {
+      opacity: 1;
+    }
+
+    .semantic-section[data-scene='steps'][data-scene-focus] .semantic-node:not([data-lit]),
+    .semantic-section[data-scene='steps'][data-scene-focus] .semantic-edge:not([data-lit]) {
+      opacity: 0.28;
+    }
+
+    .semantic-section[data-scene='steps'] :is(.semantic-node, .semantic-edge) {
+      transition: opacity calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
+        var(--motion-ease, ease-out);
+    }
+  }
+
+  .demo-stage,
+  .demo-stage > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .demo-beats > .semantic-beat > :first-child {
+    margin-top: 0;
+  }
+
+  .demo-beats > .semantic-beat > :last-child {
+    margin-bottom: 0;
+  }
+
+  /* Сцена по прокрутке закреплена, пока читатель проходит её такты: такт — около половины экрана пути. */
+
+  .semantic-swap[data-swap-live] > .swap-word {
+    grid-area: 1 / 1;
+    opacity: 0;
+    transform: translateY(0.3em);
+    transition:
+      opacity calc(360ms * var(--motion-pace, 1)) var(--motion-ease, ease-out),
+      transform calc(360ms * var(--motion-pace, 1)) var(--motion-ease, ease-out);
+    user-select: none;
+  }
+
+  .spotlight-stage > img,
+  .spotlight-loupe > img {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .spotlight-loupe > img {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    transform: scale(var(--spot-zoom, 2));
+    transform-origin: calc(var(--spot-x, 50) * 1%) calc(var(--spot-y, 50) * 1%);
+  }
+
+  .semantic-spotlight[data-spotlight-pending] .spotlight-ring {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  /* Рамка браузера: полоса с настоящим адресом или меткой «Иллюстрация», без кнопок окна и вкладок. */
+  .browser-frame {
+    max-width: 100%;
+    margin: calc(1.5rem * var(--space-factor)) 0;
+    overflow: hidden;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-media);
+    background: var(--color-surface);
+  }
+
+  .browser-frame-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+    padding: 0.45rem 0.75rem;
+    background: var(--color-surface-muted);
+  }
+
+  .browser-frame-address {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: var(--radius-pill);
+    padding: 0.2rem 0.75rem;
+    background: var(--color-bg);
+    color: var(--color-text-muted);
+    font-family: var(--font-author-mono, var(--font-mono));
+    font-size: var(--text-xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .browser-frame-illustration {
+    margin-inline-start: auto;
+  }
+
+  .browser-frame > p {
+    width: 100%;
+    margin: 0;
+  }
+
+  .browser-frame img {
+    display: block;
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  /* Видео: мягкий стык гасит конец петли и проявляет начало; «Развернуть» открывает клип в диалоге. */
+  .semantic-video-player[data-video-seam] {
+    transition: opacity calc(450ms * var(--motion-pace, 1)) linear;
+  }
+
+  /* Вертикальные вкладки: на широком экране список стоит колонкой рядом с панелью. */
+  @media (min-width: 57rem) {
+    .semantic-tabs[data-orientation='vertical'] > .semantic-title {
+      grid-column: 1 / -1;
+    }
+
+    .semantic-tabs[data-orientation='vertical'] > [role='tablist'] {
+      grid-column: 1;
+    }
+
+    .semantic-tabs[data-orientation='vertical'] > [data-tab-panel] {
+      grid-column: 2;
+      margin-top: 0;
+    }
+  }
+
+  /* Липкое оглавление лендинга: на широком экране главы с номерами стоят у края статьи, текущая отмечена. */
+  @media (min-width: 75rem) {
+    :root[data-layout='landing'] .report-content article:has(> nav[data-sticky-live]) {
+      padding-inline-start: 13rem;
+    }
+  }
+
+  /* Подписи по краям экрана — моноширинная техническая разметка поля, только на широком экране. */
+  .edge-caption {
+    display: none;
+  }
+
+  @media (min-width: 72rem) {
+    :root[data-theme-edges='mono'] .edge-caption {
+      display: block;
+      position: fixed;
+      z-index: 3;
+      bottom: 1.25rem;
+      max-block-size: calc(100svh - var(--topbar-clearance, 4.5rem) - 3rem);
+      overflow: hidden;
+      color: var(--color-text-muted);
+      font-family: var(--font-author-mono, var(--font-mono));
+      font-size: var(--text-xs);
+      letter-spacing: var(--label-tracking);
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      white-space: nowrap;
+      writing-mode: vertical-rl;
+      pointer-events: none;
+    }
+
+    :root[data-theme-edges='mono'] .edge-caption[data-edge-caption='start'] {
+      left: 0.55rem;
+      transform: rotate(180deg);
+    }
+
+    :root[data-theme-edges='mono'] .edge-caption[data-edge-caption='end'] {
+      right: 0.55rem;
+    }
+  }
+
+  /* На бумаге каждый приём — в конечном кадре, без кнопок и подписей поля. */
+  @media print {
+    .edge-caption {
+      display: none;
+    }
+
+    .semantic-spotlight[data-spotlight-pending] .spotlight-ring {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /*
+   * Сцена по шагам на узком экране (SPEC 7.3): медиа стоит у верхнего края над текущим тактом — перед
+   * каждым шагом, а не один раз перед всеми; сцена не выше двух пятых экрана, такты идут под ней.
+   */
+
+  /*
+   * Сцена по шагам не длиннее четырёх экранов (SPEC 8.1): при многих тактах каждый такт короче, чтобы
+   * закреплённая часть уложилась в четыре высоты окна.
+   */
+
+  /* Поле заголовка тянется на высоту рамы, дорожка поднята на столько же: вёрстка та же, а липкий
+     заголовок отпускается в тот миг, что рама, и не ложится поверх уходящей сцены. */
+
+  .scene-segments > li {
+    --segment-fill: 0;
+
+    position: relative;
+    flex: 1 1 0;
+    block-size: 2px;
+    background: var(--color-border);
+  }
+
+  /*
+ * Заголовок по строкам: рантайм меряет число строк заголовка после загрузки шрифтов и при смене ширины,
+ * а маска открывает заголовок строка за строкой. Текст заголовка не меняется.
+ */
+  @property --title-reveal {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 1;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    [data-title-lines] > .semantic-section-title {
+      mask-image: linear-gradient(
+        to bottom,
+        #000 calc(var(--title-reveal) * 100%),
+        transparent calc(var(--title-reveal) * 100% + 0.3em)
+      );
+    }
+
+    [data-title-lines='pending'] > .semantic-section-title {
+      --title-reveal: 0;
+    }
+
+    [data-title-lines='shown'] > .semantic-section-title {
+      /* Роль «текст»: первая строка — за длительность текста, каждая следующая — на шаг строк позже. */
+      animation: title-lines
+        calc(
+          (var(--duration-text) + (var(--title-line-count, 1) - 1) * var(--duration-text-step)) *
+            var(--motion-pace, 1)
+        )
+        steps(var(--title-line-count, 1), end) both;
+    }
+  }
+
+  @keyframes title-lines {
+    from {
+      --title-reveal: 0;
+    }
+
+    to {
+      --title-reveal: 1;
+    }
+  }
+
+  /*
+ * Прорисовка схемы по прокрутке: связи рисуются по порядку потока, обратные — поздней фазой, пока
+ * схема проходит через экран. Браузер без временной шкалы прокрутки и запись с прогрессом по часам
+ * идут запасным путём: сценарий `diagram-motion.ts` ставит связи сам и помечает фигуру
+ * `data-draw-driven`. Уменьшенное движение и страница `motion: none` показывают схему целиком.
+ */
+
+  @keyframes diagram-draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes diagram-appear {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* Страница `motion: none` показывает две фигуры рядом так же, как при уменьшенном движении. */
+  @media screen and (prefers-reduced-motion: no-preference) {
+    .visualization-zoom-camera [data-zoom-target] :is(text, .visualization-status) {
+      opacity: calc(1 - var(--zoom-inner-shape, 0));
+    }
+  }
+
+  .figure-viewer-stage > svg,
+  .figure-viewer-stage > .figure-viewer-html {
+    position: absolute;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+  }
+
+  .figure-viewer-stage > .figure-viewer-html {
+    width: max-content;
+    transform-origin: 0 0;
+  }
+
+  /* На узком экране переключатель — узкая колонка у края, и текст экранов отступает от неё. */
+  @media (max-width: 56.99rem) {
+    /* Колонка переключателя и есть правое поле экрана: второе поле текста к нему не добавляется. */
+    :root[data-screens-active] .report-content {
+      padding-inline-end: 0;
+    }
+  }
+
+  /*
+ * Состояния страницы (W-STATES): блок с `when` приглушён, пока его состояние не встало, и загорается
+ * вместе с ним — карточка-станция получает линию акцента. Без движения, при `motion: none` и в печати
+ * все потребители горят: рантайм не ставит `data-page-states`.
+ */
+  :root[data-page-states] [data-when]:not([data-state-on]) {
+    opacity: 0.45;
+  }
+
+  :root[data-page-states] [data-when] {
+    transition:
+      opacity calc(var(--duration-text) * var(--motion-pace, 1)) var(--ease-text),
+      border-color calc(var(--duration-text) * var(--motion-pace, 1)) var(--ease-text);
+  }
+
+  /*
+ * Кнопка паузы движения — в потоке страницы сразу после блока, где идёт непрерывное движение, а не
+ * поверх текста. Знак паузы — две полосы цветом текста кнопки; нажатая кнопка показывает знак пуска.
+ */
+  .motion-pause {
+    display: flex;
+    justify-content: flex-end;
+    margin-block: 0.5rem;
+  }
+
+  .motion-pause-glyph {
+    display: inline-block;
+    width: 0.625rem;
+    height: 0.75rem;
+    border-inline: 0.1875rem solid currentColor;
+  }
+
+  .motion-pause-button[aria-pressed='true'] .motion-pause-glyph {
+    width: 0;
+    height: 0;
+    border-block: 0.375rem solid transparent;
+    border-inline-start: 0.625rem solid currentColor;
+    border-inline-end: 0;
+  }
+
+  :is(.semantic-steps, .semantic-timeline) > ol > li[data-current] {
+    color: var(--color-heading);
+  }
+
+  :is(.semantic-steps, .semantic-timeline) > ol > li[data-current]::marker {
+    color: var(--color-accent-strong);
+  }
+
+  /*
+ * Поэтапный вход первого экрана (`transition="staged"`): заголовок страницы открывается строками из
+ * маски, каждая строка въезжает со 108 % своей высоты; затем надзаголовок, подзаголовок, действия и
+ * сцена. Задержку каждой части ставит рантайм, длительности — роли движения.
+ */
+  /* Переход — только к конечному виду: скрытое состояние ставится сразу, без обратного перехода. */
+  [data-entrance='run'] [data-entrance-part] {
+    transition:
+      opacity calc(var(--duration-text) * var(--motion-pace, 1)) var(--ease-text)
+        var(--entrance-delay, 0ms),
+      transform calc(var(--duration-text) * var(--motion-pace, 1)) var(--ease-text)
+        var(--entrance-delay, 0ms);
+  }
+
+  [data-entrance='pending'] [data-entrance-part]:not([data-entrance-part='title']) {
+    opacity: 0;
+    transform: translateY(var(--motion-reveal-translation));
+  }
+
+  [data-entrance='run'] [data-entrance-part='scene'] {
+    transition-duration: calc(var(--duration-scene) * var(--motion-pace, 1));
+    transition-timing-function: var(--ease-scene);
+  }
+
+  [data-entrance='pending'] [data-entrance-part='title'] {
+    --title-reveal: 0;
+
+    transform: translateY(calc(var(--text-rise) * 0.12));
+  }
+
+  [data-entrance] [data-entrance-part='title'] {
+    mask-image: linear-gradient(
+      to bottom,
+      #000 calc(var(--title-reveal) * 100%),
+      transparent calc(var(--title-reveal) * 100% + 0.3em)
+    );
+  }
+
+  [data-entrance='run'] [data-entrance-part='title'] {
+    animation: title-lines
+      calc(
+        (var(--duration-text) + (var(--title-line-count, 1) - 1) * var(--duration-text-step)) *
+          var(--motion-pace, 1)
+      )
+      steps(var(--title-line-count, 1), end) both;
+  }
+
+  [data-entrance='done'] [data-entrance-part='title'] {
+    mask-image: none;
+  }
+
+  /*
+ * Тезис, заполняемый цветом по мере чтения (SPEC 7.1): цвет заголовков заливает вступление тезиса
+ * сверху вниз по `--thesis-fill`; незалитая часть — приглушённый текст темы. Без рантайма тезис залит.
+ */
+  .semantic-lead[data-thesis-fill] {
+    background-image: linear-gradient(
+      to bottom,
+      var(--color-heading) calc(var(--thesis-fill, 1) * 100%),
+      var(--color-text-muted) calc(var(--thesis-fill, 1) * 100% + 1.2em)
+    );
+    background-clip: text;
+    color: transparent;
+  }
+
+  /*
+ * Переходы вида для вкладок, вида схемы и «список → схема»: общий предмет переезжает на новое место,
+ * остальное сменяется затуханием, по роли «сцена» в половину её длительности.
+ */
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: calc(var(--duration-scene) * 0.5 * var(--motion-pace, 1));
+    animation-timing-function: var(--ease-scene);
+  }
+
+  @media print {
+    .motion-pause {
+      display: none;
+    }
+
+    :root[data-page-states] [data-when]:not([data-state-on]) {
+      opacity: 1;
+      transition: none;
+    }
+
+    .semantic-lead[data-thesis-fill] {
+      background: none;
+      color: inherit;
+    }
+
+    [data-entrance] [data-entrance-part]:is([data-entrance-part]) {
+      opacity: 1;
+      transform: none;
+      mask-image: none;
+    }
+  }
+
+  :root[data-slides-active] .report-content,
+  :root[data-slides-active] main {
+    padding: 0;
+  }
+
+  @keyframes slide-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes slide-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes slide-push-in {
+    from {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes slide-push-out {
+    to {
+      transform: translateX(-30%);
+      opacity: 0;
+    }
+  }
+
+  @keyframes slide-wipe-in {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+  }
+
+  @keyframes slide-zoom-in {
+    from {
+      opacity: 0;
+      transform: scale(0.94);
+    }
+  }
+
+  @keyframes slide-hold {
+    from,
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes appear-rise {
+    from {
+      opacity: 0;
+      transform: translateY(0.75em);
+    }
+  }
+
+  @keyframes appear-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+  }
+
+  /*
+ * Консоль: метки в квадратных скобках, пунктирные линии вместо сплошных и курсор «>» у текущего пункта
+ * оглавления. Строки развёртки и свечение люминофора — отдельные орнаменты, по умолчанию выключенные:
+ * текстура поверх текста читается как шаблон. Всё — оформление: текст страницы, доступные имена и цели
+ * ревью не меняются.
+ */
+  :root[data-theme-scanlines='on'] body::after {
+    position: fixed;
+    z-index: 60;
+    inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 2px,
+      color-mix(in srgb, var(--color-bg) 38%, transparent) 3px
+    );
+    content: '';
+    pointer-events: none;
+  }
+
+  :root[data-theme-glow='on'] :is(h1, h2, h3):not(.ui-title, .ui-item-title) {
+    text-shadow: 0 0 0.5em color-mix(in srgb, var(--color-accent) 42%, transparent);
+  }
+
+  :root[data-theme-glow='on'] .semantic-action[data-kind='primary'] {
+    box-shadow: 0 0 1.25rem color-mix(in srgb, var(--color-accent) 35%, transparent);
+  }
+
+  @media print {
+    :root[data-theme-scanlines='on'] body::after {
+      display: none;
+    }
+  }
+
+  /*
+   * Phone gutter and wide blocks. On a phone the page has one gutter from the theme (`--phone-gutter`,
+   * 16–20 px by density). The content column spans the screen and holds that gutter as its own padding —
+   * the shell adds none — so prose gets the screen minus two gutters, and a table or code block in the text
+   * flow bleeds by exactly that gutter to the screen edges while staying inside the column's box. It keeps
+   * its text on the prose edge with the same inline padding. Blocks inside cards, callouts and other boxed
+   * components stay in their box; a toned band bleeds its blocks to its own edges (`--section-inline-pad`).
+   */
+  @media (width <= 48rem) {
+    :root {
+      --shell-gutter: var(--phone-gutter);
+    }
+
+    .report-shell {
+      padding-inline: 0;
+    }
+
+    .report-content,
+    :root[data-theme-landing='ledger'][data-layout='landing'] .report-content {
+      padding-inline: var(--phone-gutter);
+    }
+
+    /* Resolved on the section itself: a toned band declares its own inset there. */
+    .report-content article,
+    .report-content article > .semantic-section {
+      --bleed: var(--section-inline-pad, var(--phone-gutter));
+    }
+
+    :is(
+        .report-content article,
+        .report-content article > .semantic-section,
+        .report-content article > .semantic-disclosure,
+        .report-content article > .semantic-section > .semantic-disclosure
+      )
+      > :is(.table-frame, pre) {
+      max-width: none;
+      margin-inline: calc(-1 * var(--bleed));
+      border-inline: 0;
+      border-radius: 0;
+      padding-inline: var(--bleed);
+    }
+
+    /* A picture alone in its paragraph: a wide one fills the screen, a narrow one is centred on it. */
+    :is(
+        .report-content article,
+        .report-content article > .semantic-section,
+        .report-content article > .semantic-disclosure,
+        .report-content article > .semantic-section > .semantic-disclosure
+      )
+      > p:has(> img:only-child) {
+      max-width: none;
+      margin-inline: calc(-1 * var(--bleed));
+      text-align: center;
+    }
+  }
+
+  /*
+   * A band on a phone spans the screen. A section with a tone, a surface or a panel frame draws a box around
+   * its prose; on a phone that box inside the page gutter doubles the inset, and prose gets the screen minus
+   * four gutters. So the band gives up the page gutter to the screen edges, takes the phone gutter as its own
+   * inset, and drops its side lines and rounding: its prose starts on the same edge as the prose outside it.
+   * A slide takes the same gutter.
+   */
+  @media (width <= 48rem) {
+    .report-content
+      article
+      > .semantic-section:is(
+        [data-tone='soft'],
+        [data-tone='accent'],
+        [data-tone='contrast'],
+        [data-surface]:not([data-surface='plain']),
+        [data-frame='panel']
+      ) {
+      --section-inline-pad: var(--phone-gutter);
+
+      width: auto;
+      max-width: none;
+      margin-inline: calc(-1 * var(--phone-gutter));
+      border-inline: 0;
+      border-radius: 0;
+    }
+  }
+}
+
+/*
+ * Система интерфейса. Каждый интерактивный и подписывающий элемент — примитив `ui-*` (класс ставят
+ * `src/render/ui-primitives.ts` и `src/browser/ui.ts`). Слой `primitives` выше слоя компонентов:
+ * компонент раскладывает примитивы, но не может перебить их высоту, кегль или отступы.
+ */
+@layer defaults {
+  /* Раскладка примитивов по умолчанию: компонент вправе переставить, растянуть или скрыть элемент. */
+  .ui-button {
+    display: inline-flex;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0;
+  }
+
+  .ui-field {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+  }
+
+  .ui-field-group {
+    display: grid;
+    min-width: 0;
+  }
+
+  .ui-chip {
+    display: inline-flex;
+  }
+
+  .ui-title {
+    margin: 0 0 0.6rem;
+  }
+
+  .ui-item-title {
+    margin: 0;
+  }
+
+  .ui-row {
+    display: flex;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  .ui-switch {
+    display: inline-flex;
+    margin: 0;
+  }
+}
+
+@layer primitives {
+  :is(button, input, select, textarea) {
+    font: inherit;
+    letter-spacing: inherit;
+  }
+
+  /* Кнопка: три вида и два размера; значок и подпись в одну строку. */
+  .ui-button {
+    box-sizing: border-box;
+    min-height: var(--control-height-md);
+    align-items: center;
+    justify-content: center;
+    gap: var(--control-gap);
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    padding: 0 var(--control-pad-x);
+    background: transparent;
+    color: var(--color-heading);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    letter-spacing: normal;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    text-align: center;
+    text-decoration: none;
+    text-transform: none;
+    cursor: pointer;
+    transition:
+      border-color var(--duration-ui) var(--ease-ui),
+      transform var(--duration-ui) var(--ease-ui);
+  }
+
+  .ui-button[data-ui-size='sm'] {
+    min-height: var(--control-height-sm);
+    padding-inline: calc(var(--control-pad-x) * 0.8);
+  }
+
+  .ui-button[data-ui-variant='primary'] {
+    border-color: var(--color-heading);
+    background: var(--color-heading);
+    color: var(--color-bg);
+  }
+
+  /* Контур вторичной кнопки того же цвета, что контур поля: на одной форме один вес рамки. */
+  .ui-button[data-ui-variant='secondary'] {
+    border-color: var(--color-text-muted);
+  }
+
+  .ui-button[data-ui-variant='quiet'] {
+    padding-inline: calc(var(--control-pad-x) * 0.5);
+  }
+
+  .ui-button[data-ui-icon-only] {
+    width: var(--control-height-md);
+    min-width: var(--control-height-md);
+    padding: 0;
+    border-radius: var(--radius-pill);
+  }
+
+  .ui-button[data-ui-icon-only][data-ui-size='sm'] {
+    width: var(--control-height-sm);
+    min-width: var(--control-height-sm);
+  }
+
+  .ui-button[data-ui-toolbar] {
+    width: var(--control-toolbar);
+    min-width: var(--control-toolbar);
+    height: var(--control-toolbar);
+    min-height: var(--control-toolbar);
+    color: var(--color-text-muted);
+  }
+
+  .ui-button .package-icon {
+    width: var(--icon-size);
+    height: var(--icon-size);
+    flex: 0 0 auto;
+  }
+
+  .ui-button[data-ui-toolbar] .package-icon[data-icon-size='20'] {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .ui-button:active {
+    transform: scale(0.98);
+  }
+
+  @media (hover: hover) {
+    .ui-button[data-ui-variant='secondary']:hover {
+      border-color: var(--color-heading);
+    }
+
+    .ui-button[data-ui-variant='quiet']:hover {
+      text-decoration: underline;
+      text-decoration-color: var(--color-accent);
+      text-underline-offset: 0.3em;
+    }
+
+    .ui-button[data-ui-variant='quiet'][data-ui-icon-only]:hover,
+    .ui-button[data-ui-toolbar]:hover {
+      background: color-mix(in srgb, var(--color-heading) 7%, transparent);
+      color: var(--color-heading);
+      text-decoration: none;
+    }
+
+    .ui-button[data-ui-variant='primary']:hover {
+      background: color-mix(in srgb, var(--color-heading) 86%, var(--color-accent));
+    }
+  }
+
+  .ui-button[aria-pressed='true'] {
+    border-color: var(--color-heading);
+    color: var(--color-heading);
+  }
+
+  /* Недоступная кнопка любого вида приглушена и не отвечает на наведение. */
+  .ui-button[data-ui-variant]:is(:disabled, [aria-disabled='true']) {
+    color: var(--color-text-muted);
+    text-decoration: none;
+    cursor: not-allowed;
+  }
+
+  .ui-button:is([data-ui-variant='secondary'], [data-ui-variant='primary']):is(
+      :disabled,
+      [aria-disabled='true']
+    ) {
+    border-style: dashed;
+    border-color: var(--color-border-strong);
+    background: transparent;
+    color: var(--color-text-muted);
+  }
+
+  /*
+   * Поле ввода, выпадающий список и многострочное поле. Контур поля, отметки, дорожки переключателя и
+   * признака раскрытия — цвет подписи: тема держит его не ниже 4,5 к фону и поверхности, так что граница
+   * интерактивного элемента заведомо выше 3:1 (WCAG 1.4.11), и в полосах он пересчитывается вместе с ними.
+   */
+  .ui-field {
+    box-sizing: border-box;
+    min-height: var(--control-height-md);
+    border: 1px solid var(--color-text-muted);
+    border-radius: var(--radius-control);
+    padding: 0 0.6rem;
+    background: var(--role-control-bg);
+    color: var(--color-heading);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: var(--text-sm);
+    font-weight: var(--weight-regular);
+    letter-spacing: normal;
+    line-height: 1.4;
+    text-transform: none;
+    transition: border-color var(--duration-ui) var(--ease-ui);
+  }
+
+  textarea.ui-field {
+    min-height: calc(var(--text-sm) * 1.4 * 3 + 0.9rem);
+    padding-block: 0.45rem;
+    resize: vertical;
+  }
+
+  select.ui-field {
+    padding-right: 1.8rem;
+    background-image:
+      linear-gradient(45deg, transparent 50%, currentcolor 50%),
+      linear-gradient(135deg, currentcolor 50%, transparent 50%);
+    background-position:
+      calc(100% - 0.95rem) 50%,
+      calc(100% - 0.65rem) 50%;
+    background-repeat: no-repeat;
+    background-size: 0.3rem 0.3rem;
+    appearance: none;
+  }
+
+  .ui-field::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  .ui-field:focus {
+    border-color: var(--color-heading);
+  }
+
+  .ui-field:disabled {
+    border-style: dashed;
+    color: var(--color-text-muted);
+  }
+
+  .ui-field[aria-invalid='true'] {
+    border-color: var(--status-returned);
+  }
+
+  /* Поле с подписью: метка над полем. */
+  .ui-field-group {
+    gap: 0.35rem;
+  }
+
+  /*
+   * Метка — подпись поля, статус, заголовок столбца, «На этой странице»: одна для всех, текстом страницы
+   * в её регистре. Моноширинные капители — только у номера главы: роль одна, иначе всё на странице
+   * говорит одним служебным голосом и ничего не выделяется.
+   */
+  .ui-label {
+    color: var(--color-text-muted);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: var(--text-label);
+    font-style: normal;
+    font-weight: var(--weight-medium);
+    letter-spacing: 0.01em;
+    line-height: 1.35;
+    text-transform: none;
+  }
+
+  /* Мета — служебная строка: время, путь, счётчик. */
+  .ui-meta {
+    color: var(--color-text-muted);
+    font-family: var(--font-author-mono, var(--font-mono));
+    font-size: var(--text-xs);
+    font-weight: var(--weight-regular);
+    letter-spacing: 0.01em;
+    line-height: 1.45;
+    text-transform: none;
+  }
+
+  /* Метка-пилюля: подписи сравнения, вид заметки. */
+  .ui-chip {
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-pill);
+    padding: 0.2rem 0.55rem;
+    background: color-mix(in srgb, var(--color-bg) 86%, transparent);
+    color: var(--color-heading);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: var(--text-label);
+    font-weight: var(--weight-medium);
+    letter-spacing: 0.01em;
+    line-height: 1.3;
+    text-transform: none;
+  }
+
+  /* Заголовок компонента и заголовок пункта. */
+  /* Заголовок компонента — голос текста, а не дисплея: дисплейная гарнитура остаётся заголовкам глав. */
+  .ui-title {
+    color: var(--color-heading);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: min(var(--text-md), var(--heading-fit, 100vw));
+    font-weight: var(--weight-strong);
+    letter-spacing: 0;
+    line-height: 1.3;
+    text-transform: none;
+  }
+
+  .ui-item-title {
+    padding: 0;
+    color: var(--color-heading);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: min(var(--text-md), var(--heading-fit, 100vw));
+    font-weight: var(--weight-medium);
+    letter-spacing: normal;
+    line-height: 1.35;
+    text-transform: none;
+  }
+
+  /* Строка: раскрытие, глава видео, обсуждение в панели ревью. Признак — справа. */
+  .ui-row {
+    box-sizing: border-box;
+    min-height: var(--control-row);
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1rem;
+    border: 0;
+    border-radius: 0;
+    padding: 0.6rem 0;
+    background: transparent;
+    color: var(--color-heading);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: normal;
+    line-height: 1.35;
+    text-align: start;
+    text-transform: none;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .ui-row[data-ui-size='sm'] {
+    min-height: var(--control-height-sm);
+    padding-block: 0.35rem;
+    font-size: var(--text-sm);
+  }
+
+  .ui-row::-webkit-details-marker {
+    display: none;
+  }
+
+  /* Признак раскрытия — знак в квадратной ячейке у правого края: его видно и на широкой карточке. */
+  summary.ui-row {
+    justify-content: space-between;
+  }
+
+  summary.ui-row::after {
+    display: inline-grid;
+    width: 1.25rem;
+    height: 1.25rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid var(--color-text-muted);
+    border-radius: var(--radius-small);
+    color: var(--color-heading);
+    font-family: var(--font-author-mono, var(--font-mono));
+    font-size: var(--text-md);
+    font-weight: var(--weight-regular);
+    line-height: 1;
+    content: '+';
+    @supports (content: '' / '') {
+      content: '+' / '';
+    }
+  }
+
+  details[open] > summary.ui-row::after {
+    border-color: var(--color-accent);
+    color: var(--color-accent-strong);
+    content: '−';
+    @supports (content: '' / '') {
+      content: '−' / '';
+    }
+  }
+
+  .ui-row[aria-current='true'] {
+    color: var(--color-accent-strong);
+  }
+
+  @media (hover: hover) {
+    .ui-row:hover {
+      color: var(--color-accent-strong);
+    }
+  }
+
+  /* Переключатель: дорожка с бегунком перед подписью. */
+  .ui-switch {
+    min-height: var(--control-height-md);
+    align-items: center;
+    gap: 0.6rem;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--color-heading);
+    font-family: var(--font-author-body, var(--font-body));
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    letter-spacing: normal;
+    text-transform: none;
+    cursor: pointer;
+  }
+
+  .ui-switch::before {
+    width: 2rem;
+    height: 1.125rem;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    border: 1px solid var(--color-text-muted);
+    border-radius: var(--radius-pill);
+    background: radial-gradient(
+        circle at 0.5rem 50%,
+        var(--color-text-muted) 0.3rem,
+        transparent 0.33rem
+      )
+      no-repeat;
+    content: '';
+    transition: background-position var(--duration-ui) var(--ease-ui);
+  }
+
+  .ui-switch[aria-checked='true']::before {
+    border-color: var(--color-heading);
+    background:
+      radial-gradient(circle at 1.44rem 50%, var(--color-bg) 0.3rem, transparent 0.33rem) no-repeat,
+      var(--color-heading);
+  }
+
+  .ui-switch .package-icon {
+    display: none;
+  }
+
+  /* Панель: всплывающее окно, модальное окно. */
+  .ui-panel {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    padding: 0.9rem;
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: var(--shadow-raised);
+    font-size: var(--text-sm);
+  }
+
+  :is(.ui-button, .ui-field, .ui-tab, .ui-row, .ui-switch, .ui-range):focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}
+
+/*
+ * Контексты перебивают примитивы сознательно: касание, печать, уменьшенное движение, узкое окно у
+ * значков модального окна, полоса над кодом под кнопкой копирования.
+ */
+@layer contexts {
+  /* Под палец растут сами высоты шкалы: их читают и примитивы, и всё, что под них отмеряет место. */
+  @media (pointer: coarse) {
+    :root {
+      --control-height-md: var(--control-touch);
+      --control-height-sm: var(--control-touch);
+      --control-toolbar: var(--control-touch);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --duration-ui: 0s;
+    }
+  }
+
+  /*
+   * Вертикальные вкладки (приёмы словаря): на широком экране примитив вкладок стоит колонкой, выбранная
+   * отмечена акцентом у внутреннего края, а не снизу.
+   */
+
+  /* На бумаге печатается вид схемы, выбранный автором, даже если читатель переключил другой. */
+}
+
+/* `hidden` сильнее любого слоя: скрытый элемент не показывает ни один примитив. */
+[hidden] {
+  /* biome-ignore lint/complexity/noImportantStyles: скрытый элемент не показывает ни один слой */
+  display: none !important;
+}
+
+/*
+ * Обработки темы меняют вариант примитива целиком, во всех местах сразу: ledger делает квадратными все
+ * кнопки-значки верхней панели, консоль набирает все кнопки моноширинным прописными, берёт все метки в
+ * скобки и рисует пунктиром поля и строки. Внутри поверхности blueprint заголовки компонентов —
+ * моноширинные прописные.
+ */
+@layer treatments {
+  /* Caption role of the theme (`typography.captions`): figure captions and source lines in the
+     heading face, italic — the serif italic caption of an editorial page. */
+  :root[data-theme-captions='italic']
+    :is(figcaption:not(.semantic-conversation-caption), .semantic-source-line) {
+    font-family: var(--font-author-heading, var(--font-heading-small));
+    font-style: italic;
+    letter-spacing: 0;
+  }
+
+  :root[data-theme-glow='on'] .ui-button[data-ui-variant='primary'] {
+    box-shadow: 0 0 1.25rem color-mix(in srgb, var(--color-accent) 35%, transparent);
+  }
+
+  .semantic-section[data-surface='blueprint'] .ui-title {
+    font-family: var(--font-author-mono, var(--font-mono));
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--label-tracking);
+    text-transform: uppercase;
+  }
+}
+
+/*
+ * ===== Слой изменений с прошлой редакции =====
+ * Сборка с `--since` запекает пометки (`src/edition/decorate.ts`), рантайм переключает их
+ * (`src/browser/edition-changes.ts`). Вариант страницы несёт `data-edition-layer`: `on` — пометки видны,
+ * `off` — узлы слоя (`data-edition-removed`: удалённые слова, призраки, ярлыки, полосы, точки) убраны
+ * `display: none`, у вставок и пометок нет оформления, и страница читается как сборка без `--since`.
+ * Цвета — только роли состояния темы: добавленное — `--status-done`, удалённое — `--status-returned`,
+ * изменённое и перемещённое — `--status-review`; смысл всегда дублирован формой: у вставки подчёркивание,
+ * у удаления зачёркивание, у блока ярлык словом.
+ */
+@layer treatments {
+  :is([data-navigation], nav.semantic-contents) li:has(> .edition-dot) {
+    position: relative;
+  }
+
+  :is([data-navigation], nav.semantic-contents) li:has(> .edition-dot) > a {
+    padding-inline-end: 1rem;
+  }
+
+  @keyframes edition-flash {
+    from {
+      outline: 3px solid var(--edition-signal, var(--status-review));
+      outline-offset: 4px;
+    }
+
+    to {
+      outline: 3px solid transparent;
+      outline-offset: 4px;
+    }
+  }
+
+  /* Печать повторяет переключатель: полосы печатаются рамкой, ярлыки текстом, призраки раскрытыми. */
+}
+
+/* Отдельным правилом: браузер без `::details-content` отбросил бы весь блок печати. */
+
+/*
+ * ===== A page without the top bar =====
+ * `topbar: false` (a page filmed as a scene) renders no `.topbar` and marks the root `data-topbar="none"`.
+ * Nothing is reserved above the content: the shell drops its top padding in every layout, theme and width
+ * (a context layer, so no layout or theme rule of the components layer puts the band back), and anchors,
+ * sticky and pinned elements measure from the top edge through `--topbar-clearance` — the runtime's
+ * 16 px gap less its 1 px hash overlap, the same value the runtime writes when it owns the contents.
+ */
+@layer contexts {
+  :root[data-topbar='none'] {
+    --topbar-clearance: 0.9375rem;
+  }
+
+  :root[data-topbar='none'] .report-shell {
+    padding-top: 0;
+  }
+}

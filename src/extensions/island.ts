@@ -44,16 +44,17 @@ export function createIslandCollector(): IslandCollector {
 /**
  * Мост острова: первый скрипт каждого документа острова. Он принимает сообщения страницы (`init`,
  * `theme`, `renderAt`, `resize`), кладёт токены темы переменными CSS на корень документа острова,
- * сам сообщает высоту содержимого и `ready`, а коду острова даёт `window.agenticReportIsland.on(type, cb)`.
+ * сам сообщает высоту содержимого, ширину его краски (`width`: правый край текста, картинок, холстов и полей
+ * плюс такой же отступ, как слева) и `ready`, а коду острова даёт `window.agenticReportIsland.on(type, cb)`.
  */
-export const ISLAND_BRIDGE = `(()=>{const P=${JSON.stringify(ISLAND_PROTOCOL)},V=${ISLAND_PROTOCOL_VERSION},h=new Map(),post=m=>parent.postMessage(Object.assign({protocol:P,version:V},m),"*"),r=document.documentElement,apply=m=>{if(m.tokens)for(const[k,v]of Object.entries(m.tokens))r.style.setProperty(k,String(v));if(m.scheme)r.dataset.scheme=m.scheme;if(m.language)r.lang=m.language;if(typeof m.reducedMotion==="boolean")r.dataset.reducedMotion=String(m.reducedMotion)};let last=-1;const measure=()=>{const px=Math.ceil(r.getBoundingClientRect().height);if(px!==last){last=px;post({type:"height",px})}};addEventListener("message",e=>{if(e.source!==parent)return;const m=e.data;if(!m||m.protocol!==P||m.version!==V)return;if(m.type==="init"||m.type==="theme")apply(m);for(const f of h.get(m.type)||[])f(m)});window.agenticReportIsland={on(t,f){const l=h.get(t)||[];l.push(f);h.set(t,l)},height(px){post({type:"height",px})}};addEventListener("DOMContentLoaded",()=>{new ResizeObserver(measure).observe(r);measure();post({type:"ready"})})})();`;
+export const ISLAND_BRIDGE = `(()=>{const P=${JSON.stringify(ISLAND_PROTOCOL)},V=${ISLAND_PROTOCOL_VERSION},h=new Map(),post=m=>parent.postMessage(Object.assign({protocol:P,version:V},m),"*"),r=document.documentElement,apply=m=>{if(m.tokens)for(const[k,v]of Object.entries(m.tokens))r.style.setProperty(k,String(v));if(m.scheme)r.dataset.scheme=m.scheme;if(m.language)r.lang=m.language;if(typeof m.reducedMotion==="boolean")r.dataset.reducedMotion=String(m.reducedMotion)};let last=-1,wide=-1,across=-1;const ink=()=>{const d=document.body;if(!d)return 0;let a=1/0,z=-1/0;const add=b=>{if(b.width>0&&b.height>0){a=Math.min(a,b.left);z=Math.max(z,b.right)}},g=document.createRange(),w=document.createTreeWalker(d,5);for(let n=w.nextNode();n;n=w.nextNode()){if(n.nodeType===3){if(n.textContent.trim()){g.selectNodeContents(n);for(const b of g.getClientRects())add(b)}}else if(n.matches("canvas,svg,img,video,input,select,textarea,button,iframe,hr")||(!n.firstElementChild&&!n.textContent.trim()))add(n.getBoundingClientRect())}return z>a?Math.ceil(z+Math.max(0,a))+2:0};const measure=()=>{const px=Math.ceil(r.getBoundingClientRect().height);if(px!==last){last=px;post({type:"height",px})}const iw=ink(),fw=r.clientWidth;if(iw!==wide||fw!==across){wide=iw;across=fw;post({type:"width",px:iw,frame:fw})}};addEventListener("message",e=>{if(e.source!==parent)return;const m=e.data;if(!m||m.protocol!==P||m.version!==V)return;if(m.type==="init"||m.type==="theme")apply(m);for(const f of h.get(m.type)||[])f(m);if(m.type==="resize"||m.type==="init")wide=-1;requestAnimationFrame(measure)});window.agenticReportIsland={on(t,f){const l=h.get(t)||[];l.push(f);h.set(t,l)},height(px){post({type:"height",px})}};addEventListener("DOMContentLoaded",()=>{new ResizeObserver(measure).observe(r);measure();post({type:"ready"})})})();`;
 
 /**
  * Стили острова на странице — только там, где остров есть. Живой остров прячет статичное тело на
  * экране; печать всегда показывает тело и никогда — рамку.
  */
 export const ISLAND_STYLES = [
-  '.semantic-island-frame{display:block;inline-size:100%;block-size:var(--island-height,auto);min-block-size:4rem;border:0;background:transparent;color-scheme:normal}',
+  '.semantic-island-frame{display:block;inline-size:100%;max-inline-size:100%;block-size:var(--island-height,auto);min-block-size:4rem;border:0;background:transparent;color-scheme:normal}',
   '.semantic-island[data-island-state="live"]>.semantic-island-static{display:none}',
   '@media print{.semantic-island-frame{display:none!important}.semantic-island>.semantic-island-static{display:block!important}}',
 ].join('\n');
@@ -198,7 +199,9 @@ export function islandBlock(
       ];
       if (title === undefined && hastText(body) === '') element.properties.ariaHidden = 'true';
     },
-    styles: 'package',
+    // The island controller is a page setting, not this block's: only a live island (a document to
+    // start) brings it, and an island with `hydrate="none"` stays its static body.
+    feature: 'core',
     staticEquivalent:
       'The Markdown body of the directive, shown in print, without scripts and before the island loads.',
   });

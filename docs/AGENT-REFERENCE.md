@@ -1,9 +1,7 @@
 # Agent reference
 
 This is the copyable reference for the implemented CLI and declarative source contract. Only syntax exposed
-by the commands, generated schemas, and source contract below is supported. For programmatic Node.js use,
-follow the published [Node ESM API reference](../skills/agentic-report/references/node-api.md); effect
-modules use the separate [effect API reference](../skills/agentic-report/references/effect-api.md).
+by the commands, generated schemas, and source contract below is supported.
 
 ## Build the first page
 
@@ -11,9 +9,9 @@ Use Node.js 24.18.0 or newer. Initialize a suitable packaged starter, replace it
 once, and open the result:
 
 ```bash
-npx --yes agentic-report@0.19.0 init ./my-report --starter document --json
+npx --yes agentic-report@0.20.0 init ./my-report --starter document --json
 # Edit ./my-report/report.md and its local assets.
-npx --yes agentic-report@0.19.0 build ./my-report --output ./my-report.html --json
+npx --yes agentic-report@0.20.0 build ./my-report --output ./my-report.html --json
 ```
 
 Open `my-report.html` through `file://`. Build runs the complete source and render preparation before
@@ -79,8 +77,7 @@ returns package-relative example identities and entry paths, while the CLI resol
 installed paths. The complete checked JSON projection is
 [`generated/source-contract.json`](generated/source-contract.json), and the hash-bound packaged inventory is
 [`../examples/manifest.json`](../examples/manifest.json). Agents should inspect these contracts instead of
-inferring unsupported fields. The [Node API reference](../skills/agentic-report/references/node-api.md)
-covers the other published root exports and their result shapes.
+inferring unsupported fields.
 
 ## Choose a page category and initialize its starter
 
@@ -135,7 +132,8 @@ starters is named after its category and contains `report.md`, its Russian alter
 `brief.md` holds one table row per dimension of the category — subvariant, audience, reader task,
 material, languages, art direction, motion, delivery, and the category's own dimensions — with columns for
 the answer and its source (`request`, `asked`, or `inferred`). The agent fills it before writing the page
-and records there, with a reason, any design check it deliberately switches off. The build ignores it.
+and records there, with a reason, any design check or prose rule it deliberately switches off. The build
+ignores it; the skill's checks and its hand-over gate read it.
 
 `examples --json` and `listExamples()` expose each example's `category`, `subvariant`, and, for each
 starter, `starter.default`. Other examples — research, architecture, tutorial, code review, incident,
@@ -200,7 +198,10 @@ plus:
   (`:count`, a `count-up` chart, a diagram with `draw="scroll"`, `pulse` or `zoom`, a `demo` with `play`,
   `:swap`, `:typing`, `:mark`, `spotlight`, a `video` with `seam="fade"`); and `cardGroups`, one entry per `cards` group with its number of `cards`, of distinct
   card forms (`shapes`: status, media, block count, list or table), of `plain` cards (a title and at most
-  one paragraph) and of `linked` cards. It carries no titles, text, or identifiers, so advice built on it cannot judge the
+  one paragraph) and of `linked` cards; `emojiHeadings`, how many headings and block titles carry an emoji;
+  and `emptyBlocks`, how many `sections` have nothing but their title, `tables` a header and no rows, and
+  `cardGroups` no cards — usually a data `each` over an empty list. These are data for the skill, not a
+  judgement of the content. It carries no titles, text, or identifiers, so advice built on it cannot judge the
   author's words; the skill's design check reads it;
 - sorted distinct `observed.directives` and image/download/font occurrence counts;
 - the registry-derived command, format, page, starter, and capability `catalog`;
@@ -327,6 +328,20 @@ These directives remain static report content; Review Workspace does not turn th
 For a repeat review, run `agentic-report build ./my-page --review review.json --output revised.html`.
 The sidecar is confined to the source root and read before publication. Invalid input preserves existing
 output. Exact state resumes; stale bindings remain prior evidence until the reviewer resolves the new revision.
+
+## Show what changed since the previous edition
+
+After the person reads a page and asks for changes, rebuild with the page they saw:
+
+```sh
+agentic-report build ./my-page --output ./my-page.html --since ./my-page.html
+agentic-report inspect ./my-page --since ./my-page.html
+```
+
+The new page marks what changed; the result's `changes` names sections, block kinds, statuses and source
+lines without any text. `--since` also takes the previous source, and `validate` and `snapshot` accept it.
+The contract is in [`source-contract.md`](product/source-contract.md#editions-and-changes); when to use it
+is in the skill's `references/process.md`.
 
 ## Collect a structured reader response
 
@@ -472,6 +487,10 @@ are in the generated [authoring catalog](../skills/agentic-report/references/cat
   must stay in the scheme it was built with;
 - `themeSwitcher`: boolean, default `false`; adds a reader theme selector that swaps between the built-in
   themes and the page's own live, without touching the scheme the reader chose;
+- `topbar`: boolean, default `true`; the package top bar with the title, the contents button and the page
+  controls. Set `false` to film the page as a scene: no bar, the first section at the top edge, anchors and
+  the contents sidebar measured from that edge. `review` or `themeSwitcher` with `topbar: false` fails
+  with `INVALID_MANIFEST`, because their controls live only in the bar;
 - `review`: boolean, default `false`; ships Review Workspace. A build given a prior sidecar through
   `--review` enables it automatically;
 - `progress`: `none` (default), `page`, or `chapters`. `page` is one decorative line at the bottom of the
@@ -515,13 +534,14 @@ only when the subject calls for it; explicit accent colours in `colors` override
 whose accent roles are those colours with their lightness shifted until every contrast pair passes; it cannot
 read a logo, because the package carries no image decoder. How the colours map to roles and when not to use
 it is in [`themes.md`](../skills/agentic-report/references/themes.md#a-theme-from-brand-colours). `fonts.pair` takes the
-type trio of any built-in theme or `system`. The accent families, the trio of each theme and the embedded
+type set (display, text, label and code faces) of any built-in theme or `system`. The accent families, the trio of each theme and the embedded
 families are listed under «Themes» in the [source contract](product/source-contract.md#themes). The
 package embeds the Latin and Cyrillic subsets of every
 family the theme uses, so the page looks the same on every machine. A local font of your own goes in with
-`::font{src="…" family="…" role="heading"}`: the role (`body`, `heading`, `mono`) says which text it sets. A theme file may itself extend a built-in theme or another theme file; the chain
+`::font{src="…" family="…" role="heading"}`: the role (`body`, `heading`, `mono` for labels and metadata, `code` for code blocks and inline code) says which text it sets. A theme file may itself extend a built-in theme or another theme file; the chain
 stays inside the source directory. The build checks every field and refuses a theme whose headings, text,
-captions, links, eyebrows, primary action label, code colours, accent marks or focus ring fall below WCAG AA
+captions, links, eyebrows, primary action label, code colours (on the code background, on highlighted diff
+lines and on a lit scene line), accent marks or focus ring fall below WCAG AA
 contrast in a scheme it draws; the diagnostic
 names the failing pair, its ratio, and the line of the field in the theme. `agentic-report schema --scope
 theme` returns the complete theme schema, and `describe --json` lists the fields, accents, font families
@@ -531,7 +551,7 @@ Neutral is the default: grey paper, a Literata display over Onest and one ochre 
 dark; frost is stone and graphite with colour left to statuses; calm-paper is warm paper for long reading; daylight is bright product documentation;
 midnight is the engineering story at night; noir sets image-first stories under a spaced capital title;
 aurora is calm research; blueprint is dense technical evidence with a ledger top bar and landing; ember is for
-launches and incidents; synthwave is for games and music only; terminal is a developer console on graphite with
+launches and incidents; synthwave is for games and music only; terminal is a developer console on graphite, or on pale console paper in the light scheme, with
 a prompt, a finite cursor and bracketed labels (scanlines and glow are opt-in ornaments, off by default).
 Eight of the eleven built-in themes come from the themes of agentic-screencast; neutral and frost were added
 as themes without the fashionable clichés, and terminal is this package's own. `document`
@@ -561,20 +581,21 @@ The same inventory also contains the five category starters. Starters are builda
 The registry also exposes non-starter public source trees. They are ordinary examples rather than templates
 or a separate showcase system:
 
-| ID                                                                     | Page shape  | Intended use                                                                                                               |
-| ---------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `layout-mixed`                                                         | `mixed`     | Complete visual grammar and component range; public source route: [`visual-catalog`](../examples/visual-catalog/report.md) |
-| [`interactive-catalog`](../examples/interactive-catalog/report.md)     | `mixed`     | Package-owned interactive primitives                                                                                       |
-| [`visualization-catalog`](../examples/visualization-catalog/report.md) | `dashboard` | Charts, a 15-node grouped subsystem flow, a compile-request sequence, timelines, and data controls                         |
-| [`terminal-portfolio`](../examples/terminal-portfolio/report.md)       | `mixed`     | Console-led systems portfolio with prompt rhythm and linked evidence                                                       |
-| [`cinematic-story`](../examples/cinematic-story/report.md)             | `landing`   | Image-first scroll story with staged media and gallery rail                                                                |
-| [`executive-brief`](../examples/executive-brief/report.md)             | `mixed`     | Daylight decision narrative with evidence cards, timeline, local media and handoff                                         |
-| [`motion-showcase`](../examples/motion-showcase/report.md)             | `landing`   | Pointer depth, scrolling media, gallery, cascade and reduced-motion behavior                                               |
-| [`incident-review`](../examples/incident-review/report.md)             | `mixed`     | Service impact, causal evidence, recovery, and owned follow-up                                                             |
-| [`vendor-decision`](../examples/vendor-decision/report.md)             | `document`  | Mandatory procurement gates, weighted evidence, and conditional adoption                                                   |
-| [`launch-readiness`](../examples/launch-readiness/report.md)           | `landing`   | Audience value, activation/funnel evidence, launch gates, and a reversible regional beta                                   |
-| [`review-workspace`](../examples/review-workspace/report.md)           | `document`  | Selected-text threads, prior feedback, and complete review export                                                          |
-| [`response-workspace`](../examples/response-workspace/report.md)       | `document`  | Typed triage, choices, ordering, scores, and comments                                                                      |
+| ID                                                                     | Page shape  | Intended use                                                                                                                                                    |
+| ---------------------------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layout-mixed`                                                         | `mixed`     | Complete visual grammar and component range; public source route: [`visual-catalog`](../examples/visual-catalog/report.md)                                      |
+| [`interactive-catalog`](../examples/interactive-catalog/report.md)     | `mixed`     | Package-owned interactive primitives                                                                                                                            |
+| [`visualization-catalog`](../examples/visualization-catalog/report.md) | `dashboard` | Charts, a 15-node grouped subsystem flow, a compile-request sequence, timelines, and data controls                                                              |
+| [`terminal-portfolio`](../examples/terminal-portfolio/report.md)       | `mixed`     | Console-led systems portfolio with prompt rhythm and linked evidence                                                                                            |
+| [`cinematic-story`](../examples/cinematic-story/report.md)             | `landing`   | Image-first scroll story with staged media and gallery rail                                                                                                     |
+| [`executive-brief`](../examples/executive-brief/report.md)             | `mixed`     | Daylight decision narrative with evidence cards, timeline, local media and handoff                                                                              |
+| [`motion-showcase`](../examples/motion-showcase/report.md)             | `landing`   | Pointer depth, scrolling media, gallery, cascade and reduced-motion behavior                                                                                    |
+| [`capability-tour`](../examples/capability-tour/report.md)             | `document`  | Every technique on one fictional station network, each with its Markdown under the result; a `layout: screens` companion and a `--since` edition pair beside it |
+| [`incident-review`](../examples/incident-review/report.md)             | `mixed`     | Service impact, causal evidence, recovery, and owned follow-up                                                                                                  |
+| [`vendor-decision`](../examples/vendor-decision/report.md)             | `document`  | Mandatory procurement gates, weighted evidence, and conditional adoption                                                                                        |
+| [`launch-readiness`](../examples/launch-readiness/report.md)           | `landing`   | Audience value, activation/funnel evidence, launch gates, and a reversible regional beta                                                                        |
+| [`review-workspace`](../examples/review-workspace/report.md)           | `document`  | Selected-text threads, prior feedback, and complete review export                                                                                               |
+| [`response-workspace`](../examples/response-workspace/report.md)       | `document`  | Typed triage, choices, ordering, scores, and comments                                                                                                           |
 
 Every starter, layout example, catalog, workspace example, and showcase declares its maintained Russian
 entry. Building any example produces one bilingual artifact; the initial variant follows the browser's
@@ -883,7 +904,9 @@ shortened to preserve layout, but accessible point values, group membership, nod
 participants, and ordered messages are not truncated. A diagram's description is written as text rather than
 a raw list: the node and layer count, groups with their members, layers in flow order, connections along the
 flow, and backward connections separately, each connection kind named in the legend's words. The same text
-appears under the picture in a closed «diagram in words» disclosure. Numeric output retains up to six
+appears under the picture in a «diagram in words» disclosure, closed on a wide screen and open on a phone. What
+a narrow track and the full-screen viewer do to a figure is stated in the
+[source contract](product/source-contract.md#semantic-primitives). Numeric output retains up to six
 fractional digits and uses the reader locale for decimal and grouping separators; authored numeric values
 and labels retain their meaning.
 
@@ -1011,17 +1034,31 @@ found 0 vulnerabilities
 
 ### Video and agentic-screencast
 
-`::video{src=… }` embeds a local clip. `mode` is `clip` (default: muted, looping, playing while visible,
-with controls), `background` (muted and looping without controls, with a pause button; `poster` is
-required, and a missing one fails with `VIDEO_POSTER_REQUIRED`), or `manual` (controls and sound, playing
-only when the reader presses play). `sources` lists further encodings of the same clip in order of
-preference; directory output offers all of them before `src`, each with a codec read from the file, so the
-browser plays the first one it can decode. One file embeds only the most compatible encoding and warns
+`::video{src=… }` embeds a local clip. `mode` is `clip` (muted, looping, playing while visible, with
+controls), `background` (muted and looping without controls, with a pause button; `poster` is required, and
+a missing one fails with `VIDEO_POSTER_REQUIRED`), or `manual` (controls and sound, playing only when the
+reader presses play). Without `mode`, a recording whose file carries sound is `manual` and a silent one —
+including a film whose audio track is silence — is `clip`; the exact rule is in the
+[source contract](product/source-contract.md#semantic-primitives). `sources` lists further encodings of the
+same clip in order of preference; directory output offers all of them before `src`, each typed with the
+codecs, profile, level, and audio codec read from the file, so the browser plays the first one it can
+decode. One file embeds only the most compatible encoding and warns
 with `VIDEO_SOURCES_SINGLE_FILE`, so give H.264 MP4 as `src`. `chapters` points at a WebVTT file; its
 chapters appear as buttons under the clip that jump to each one. Under reduced motion nothing plays by
 itself. A looping clip or background takes `start` (the second where the loop begins and returns) and
 `seam="fade"` (the end of the loop dims and its start brightens); `expand="true"` on a clip adds an Expand
-button that opens it large with full controls and sound.
+button that opens it large with full controls and sound. `dark-poster` is the poster's frame in the dark
+scheme, shown by the same rule as an image's dark variant below.
+
+`::video{from=…}` takes a film from `agentic-screencast web` instead of `src`: the path of its
+`<film>.web.json` manifest, or of a directory that holds exactly one. The film gives every encoding in the
+manifest's order (directory output offers them all, one file embeds the most compatible without a warning),
+its WebP poster (JPEG when there is none), and its chapters, whose track takes the film's `lang`. Attributes
+written on the directive — `poster`, `dark-poster`, `chapters`, `sources`, and the rest — override the film.
+`from` with `src`, or a video with neither, fails with `INVALID_DIRECTIVE_ATTRIBUTE`; a missing, ambiguous,
+non-version-1 manifest, or one naming a missing file or a file outside the source root, fails with
+`INVALID_VIDEO_MANIFEST`. When the manifest's `type` or `audio` for an encoding disagrees with the file, the
+page uses the file and the build warns `VIDEO_MANIFEST_MISMATCH`.
 
 When a page needs a clip of a product, a finding, or the page itself, film it with the agentic-screencast
 CLI as a finished tool, from a working directory of your own and never inside the tool's checkout:
@@ -1034,11 +1071,12 @@ agentic-screencast build --source story.md --out demo.mp4 \
 agentic-screencast web demo.mp4 --out web --formats av1,vp9,h264 --width 1280
 ```
 
-`web` writes `demo.av1.mp4`, `demo.vp9.webm`, `demo.h264.mp4`, `demo.poster.jpg`, and, when the film has
-them, `demo.chapters.vtt`. Copy them into the page source and embed them without re-encoding:
+`web` writes the encodings, the poster frames, the chapters when the film has them, and the manifest
+`demo.web.json` that names them all. Copy the `web` directory into the page source and name it, without
+re-encoding:
 
 ```markdown
-::video{src="media/demo.h264.mp4" sources="media/demo.av1.mp4, media/demo.vp9.webm" poster="media/demo.poster.jpg" chapters="media/demo.chapters.vtt" caption="What the clip shows."}
+::video{from="media/demo/web" caption="What the clip shows."}
 ```
 
 ### Presentations
@@ -1065,6 +1103,19 @@ a fixed duration (fade 420 ms, push and wipe 520 ms, zoom 460 ms, a step 320 ms,
 theme's `motion.pace`), published as `data-slide-duration` on the root; while it runs the root carries
 `data-slide-state="moving"`, then `settled`, and the document receives `agentic-slides:settled`. A recorder
 therefore opens an address or calls `next()`, waits for `settled()`, and takes the frame.
+
+A few slides inside an ordinary page are a `deck` block, not a presentation page. `::::deck{title id}` holds
+only `:::slide` directives (1–60); a slide is Markdown with the same `appear` steps and `notes`, and its
+`transition` takes the values of `slide-transition`. Nest fences by depth: a slide that holds `:::appear` is
+`::::slide` inside `:::::deck`. The deck stands in the column as a wide block — a 16:9 slot whose type scales
+with its width — with previous and next buttons, a counter and a full-screen button under it. The arrow keys,
+Page Up/Down, Home and End page it while focus is inside, and a horizontal swipe pages it; on the whole screen
+Space, Enter, Backspace and a click do too. Full screen is the browser's (Escape leaves it); where a page cannot take it, as on an
+iPhone, the deck covers the window itself, Escape leaves, and Tab stays inside. Focus returns to the button.
+`#<id>/<n>` opens slide `n` of that deck. Each deck on a page keeps its own place; it writes no address and has
+no global API. Without the runtime and in print the slides follow one another with every step shown; under
+reduced motion the deck still pages, with every step open and no transitions. Speaker notes are accepted in a
+slide but never shown on the page. A page carries the deck's script and styles only when it has a deck.
 
 ### First screen and dramaturgy
 
@@ -1143,7 +1194,8 @@ or `bottom`; `auto` resolves to edge alignment on desktop and a compact bottom g
 shares the opening's axis: it is centred while the heading is centred and starts where the heading starts on
 narrow screens. A theme with `chrome.landing: ledger` (such as `blueprint`) keeps its opening at the start,
 so its groups keep the ordinary placement. An explicit `edge` under a centred opening ends the group at the end of the opening's reading
-measure, level with its lead paragraph, rather than at the far edge of the column. Bottom
+measure, level with its lead paragraph, rather than at the far edge of the column. Everywhere else an edge group
+ends where the reading measure of the text above it ends, not at the far edge of a wide column or a wide section. Bottom
 placement remains at the authored position in normal flow and never becomes a sticky/fixed overlay. Every action requires `href`; valid targets
 are same-page anchors, relative paths, HTTP(S), `mailto:`, `tel:` (a phone number such as
 `tel:+1-201-555-0123`), and `sms:` (a number with an optional `?body=`). `javascript:`, `data:`, `file:`, absolute
@@ -1162,10 +1214,17 @@ remains workstation-specific. For distribution, add `--share`: the label becomes
 payload is absent from output bytes, and the result reports the exact neutralized count. The profile does not
 scan arbitrary prose or replace ordinary links.
 
-`asset.src`, `video.src`, `video.poster`, and `font.src` must resolve to existing files under the canonical
+`asset.src`, `video.src`, `video.poster`, `video.dark-poster`, and `font.src` must resolve to existing files
+under the canonical
 source root. A video is a `.webm`, `.mp4`, `.m4v`, or `.ogv` file (Playwright `recordVideo` writes WebM) and is
-drawn as a muted, looping `<video>` with controls; `![Alt](recording.webm)` gives the same player in place of the
-image. The player starts while on screen and waits for the reader under reduced motion. A section's `media-fit`,
+drawn as a muted, looping `<video>` with controls, or as a manual one with sound when its file carries sound;
+`![Alt](recording.webm)` gives the same player in place of the image. An image names its dark variant in an attribute block right after it,
+`![Alt](shot.png){dark="shot-dark.png"}`: a local PNG, JPEG, WebP, GIF, AVIF, or SVG file embedded or copied
+beside the light one; the runtime shows it while the image sits on a dark surface (a dark page, `system` under
+a dark system setting, a light page's `tone="contrast"` band), switches with the scheme toggle, and prints the
+light one. `dark` is the only image attribute (`IMAGE_ATTRIBUTE_UNKNOWN`, `IMAGE_DARK_VARIANT_EMPTY`,
+`INVALID_IMAGE_DARK_VARIANT`). The player starts while on screen and waits for the reader under reduced
+motion. A section's `media-fit`,
 `media-aspect`, and `focal` frame the player as they frame an image. Embedded video counts
 toward `output.maxInlineBytes`, so long recordings belong in `--format directory`. The first font
 directive becomes the document font; later directives register additional faces. The text form uses its
@@ -1250,7 +1309,9 @@ into one script (refused above `budgetBytes` with `EXTENSION_EFFECT_OVER_BUDGET`
 rendering failure, such as a lost WebGL context, call `ctx.fallback()` to enter the next safe mode;
 `ctx.rebuild(reason)` requests geometry recalculation. Check an effect with
 `agentic-report effect-check <extension.yaml> --out <directory>`, which builds both examples, opens them in Chromium (Playwright beside the package,
-as for `snapshot`) and prints `N of M checks passed`: the declaration, the reduced-motion final state, the
+as for `snapshot`), waits on each open until the page falls quiet — images decoded and a quarter of a second
+without a DOM change or a long task, at most four seconds — so the page's own late work is not counted
+against the effect, and prints `N of M checks passed`: the declaration, the reduced-motion final state, the
 page clock, a 50 ms budget per effect call at 4× CPU slowdown, colours from theme tokens, no decoration on
 text, four widths, content edits, states in every render mode, print and two unlike examples. By default it
 writes one `check` NDJSON record per check and a result record; a failed check exits with code `1`. The
@@ -1258,12 +1319,12 @@ output directory contains `performance-diagnostics.json` with numeric timings an
 phase labels; tasks outside those measured phases are recorded separately and do not affect the result.
 After a confirmed timing failure, a separate `effect-diagnostic` pass records advisory build-stage timings
 without changing the 50 ms verdict; if it fails or exceeds 20 seconds, `diagnosticUnavailable: true`
-marks the missing profile without exposing its browser error. The `wall-thread` reference writes those numeric timings under
-`phases[].builds`, including route search and path pulling; builds outside measured phases appear in
-`unassignedBuilds`.
-The file contains no authored text or paths; inspect it when the 50 ms check fails. The context the effect
-receives, including its render modes, canvas coordinates, services and lifecycle, is described in the
-[effect API reference](../skills/agentic-report/references/effect-api.md).
+marks the missing profile without exposing its browser error. An effect may push build timings with its own stage names to
+`window.__agenticReportBuildTimings`, in the shape given in the
+[extensions reference](../skills/agentic-report/references/extensions.md#build-timings); that pass records
+them under `phases[].builds`, and builds outside measured phases appear in `unassignedBuilds`.
+The file contains no authored text or paths beyond those validated stage names; inspect it when the 50 ms check fails. The context the effect
+receives is described in [the architecture](ARCHITECTURE.md#level-2--effects-and-the-effect-engine).
 `inspect` lists the extensions a page uses and `build` reports their uses and bundled bytes. The manifest
 format is in the source contract, [Extensions](product/source-contract.md#extensions); how each level
 is built and isolated is in [the architecture](ARCHITECTURE.md#extensions).
@@ -1273,14 +1334,13 @@ Start from a reference extension rather than a blank folder. The package ships t
 the installed paths of its `manifest`, `readme` and `examples`. Copy the folder beside your page and declare
 its manifest:
 
-| Extension                                                    | Level                                 | What it shows                                                    |
-| ------------------------------------------------------------ | ------------------------------------- | ---------------------------------------------------------------- |
-| [`key-figure`](../extensions/key-figure/README.md)           | block                                 | a figure that cannot lose its date and source                    |
-| [`product-theatre`](../extensions/product-theatre/README.md) | block and provider (`theatre-script`) | a product run from a JSON scenario, replayed as a steps scene    |
-| [`wall-thread`](../extensions/wall-thread/README.md)         | effect                                | a thread drawn from section to section in all three render modes |
-| [`loom`](../extensions/loom/README.md)                       | effect                                | cloth woven beside a section as the reader goes through it       |
-| [`focus-frame`](../extensions/focus-frame/README.md)         | effect                                | a small WebGL frame around an image with 2D and still fallbacks  |
-| [`slo-budget`](../extensions/slo-budget/README.md)           | island                                | an error-budget calculator with a static body for print          |
+| Extension                                                    | Level                                 | What it shows                                                   |
+| ------------------------------------------------------------ | ------------------------------------- | --------------------------------------------------------------- |
+| [`key-figure`](../extensions/key-figure/README.md)           | block                                 | a figure that cannot lose its date and source                   |
+| [`product-theatre`](../extensions/product-theatre/README.md) | block and provider (`theatre-script`) | a product run from a JSON scenario, replayed as a steps scene   |
+| [`loom`](../extensions/loom/README.md)                       | effect                                | cloth woven beside a section as the reader goes through it      |
+| [`focus-frame`](../extensions/focus-frame/README.md)         | effect                                | a small WebGL frame around an image with 2D and still fallbacks |
+| [`slo-budget`](../extensions/slo-budget/README.md)           | island                                | an error-budget calculator with a static body for print         |
 
 When to extend at all and how to choose the level is in the skill's
 [extensions reference](../skills/agentic-report/references/extensions.md).
@@ -1354,23 +1414,51 @@ Exit code `3` means an unexpected internal failure occurred.
   must be absent or empty (`SNAPSHOT_DESTINATION_EXISTS`). The package ships no browser: run the command
   with Playwright beside it, `npx --yes -p agentic-report -p playwright@<version> agentic-report snapshot …`,
   after `npx --yes playwright@<version> install chromium` once; without it the command fails with
-  `SNAPSHOT_BROWSER_MISSING` and those commands. A page that pins `scheme` shows that scheme in every shot.
+  `SNAPSHOT_BROWSER_MISSING` and those commands. Each shot and each measure switches the page to its
+  scheme, as the reader's scheme toggle does, whatever `scheme` the page starts in; a theme with only a dark
+  scheme stays dark.
 - `agentic-report snapshot <input> --out <directory> --measure` measures instead of photographing, at 320,
   360, 390, 768, 1024 and 1440 pixels unless `--widths` says otherwise, on the same stopped page clock. It
   writes only `page.html` and prints one NDJSON record `{"type":"measure", width, scheme, motion, …}` per
   combination, then the result with every `measurements` entry (`--human` prints a table): the pixels the
   page scrolls sideways (`horizontalOverflow`) and the outermost elements beyond the window
-  (`overflowing`); `smallText`, text under 11 px on screen, SVG text at its on-screen size; `lowContrast`,
+  (`overflowing`); `smallText`, text under 11 px on screen (page text on a window up to 480 px under 12 px), SVG text at its on-screen size, text the reader cannot see (opacity 0.01 or less) excepted; `lowContrast`,
   text below 4.5:1 (3:1 for large text) against its composited background with the `opacity` of its
   ancestors applied, and `unmeasuredContrast`, text over an image or gradient; `coveredText`, text lines
-  under a fixed or sticky element at some scroll position (a full-width top bar excepted); `emptyBands`
-  at least half a window high (not for `screens` and `slides`); `clippedHeadings`; `firstScreen` — the
+  (the lines themselves, not the element's box) under a fixed or sticky element at some scroll position (a full-width top bar excepted); `emptyBands`
+  at least half a window high (not for `screens` and `slides`); `clippedHeadings` (a heading past the window inside a sideways-scrolling rail is reachable and not
+  counted); `firstScreen` — the
   title and a primary action in the first window, `actionOnPage` (whether the page has a primary action at
   all) and `mainSceneShare`, the share of that window taken by
   its largest picture, clip, figure, code or scene; `stops` with `fits`; `pageErrors`, `placeholders`
-  (lorem ipsum, TODO, TBD, FIXME outside code) and `failedFonts`; and `defects`, their total, which also
-  counts a title outside the first window and a primary action the page has but not in it. Findings name
-  elements by tag, id and classes, never by their text.
+  (lorem ipsum, TODO, TBD, FIXME outside code) and `failedFonts`; `tables` — `wide`, tables more than
+  1.25 windows wide unless marked `data-table-layout="scroll"`, `sparse`, tables whose cells are more
+  than 70% empty (tables shown as cards excepted), `deadSurface`, a filled table surface wider than its
+  cells by more than a quarter of the track, `flushText`, outer-cell text within 4 px of a filled
+  surface edge, and per table `width`, `containerWidth`, `viewportShare`, `scrolls`, `emptyShare` and
+  `scrollLayout`; `readingColumn`, the width most prose paragraphs share, its `share` of the window and
+  `narrow` when a window of 480 px or less gives it under 88%; `codeBreaks`, inline code broken inside a
+  word rather than after a space, after `/ . _ - : ( ,` or at a compiler `<wbr>`; `diagramLabels`, SVG
+  text in a figure under 11 px (`small`) or cut with no way to reach it (`clipped`), and `scrolled`,
+  labels hidden only by the sideways scroll of a diagram that has the full-screen viewer (not a defect); `offSchemeBlocks`, images and surfaces of
+  at least 120×80 px of which a fifth or more is 7:1 or more in luminance from the page background, with
+  primary actions and `tone="contrast"` bands excluded; `sectionColumns`, on a window wider than 48rem,
+  flow-section blocks off their section's prose column — `misaligned` (a text block whose left edge is
+  more than 2 px off it, another block neither at that edge nor on the column's centre, or, on a `document` or
+  `mixed` page, a block wider than the column that does not overhang it equally on both sides or the title of a
+  section of another composition off the page title's left edge), `overrun` (a heading, lead, paragraph, list, quote or disclosure running more
+  than 24 px past its right edge) and `emptyTrack` (neither the column nor any block reaching 60% of the
+  section's track), `codeWidth` (a code block neither the column nor the track wide) and `hollow` (a
+  framed or filled block, or an island frame, whose content ends more than 48 px and a quarter of its width
+  before its right edge), `headWide` (a page-head block past the sections' right edge) and `tocGap` (a column —
+  on a `document` or `mixed` page the article's track — more than 96 px right of the docked contents),
+  counting blocks inside open disclosures and, on those pages, the article's own blocks as a column, with
+  `samples` of `element`, `kind`, `column` and `value`; and `defects`, their total, which also counts a
+  title outside the first window and a primary action the page has but not in it (small diagram labels
+  once, through `smallText`). `emptyBands` include the space below the last content and name the element
+  that ends each band (`next`); the scroll length of a pinned scene or a `zoom` flight is not a band. Findings name elements by tag, id and classes, with the nearest ancestor
+  that has an id, never by their text. What each finding means and how to fix it is in the skill's
+  `references/process.md`.
 - Add `--share` when the artifact leaves the source workstation. Source-link labels remain readable
   non-links derived as path-free filename/line from the validated helper, with `source:line` for an unsafe
   terminal. An already matching short label remains exact; directory-bearing and free-form labels are
@@ -1380,15 +1468,6 @@ Exit code `3` means an unexpected internal failure occurred.
 All source assets must be local and below the source directory after symlinks are resolved. Remote URLs,
 escaping paths, executable templates and raw HTML are outside the contract; author code enters only
 through the page's [extensions](#extend-the-vocabulary-for-one-page).
-
-A proposed new primitive of the core itself must first satisfy the closed
-[`generated extension gate`](generated/extension-proposal.schema.json); the copyable
-[`proposal template`](generated/extension-proposal.template.json) fixes the non-negotiable trust boundary
-to no author code, callbacks, evaluation, dynamic imports or network access, source-root confinement,
-offline and deterministic operation, CSP compatibility, and bounded package-owned runtime behavior. It
-also requires evidence for grammar, accessibility, budgets, dependencies/licenses, and compatibility.
-Passing that record is a design gate, not runtime plugin loading. The ESM API exposes the same template
-through `getExtensionProposalTemplate()`.
 
 On narrow screens the package runtime controls the responsive table of contents. The stylesheet provides
 one visible-focus system and shared typography, spacing, color, width, density, and surface tokens for

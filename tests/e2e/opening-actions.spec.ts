@@ -8,12 +8,12 @@ import { buildReport } from '../../dist/node/index.js';
 import { expect, test } from './fixtures.js';
 
 /** Начало лендинга: заголовок, вводный абзац и сразу под ними группа действий с заданным размещением. */
-function landingSource(placement: string, preset?: string): string {
+function landingSource(placement: string, preset?: string, layout = 'landing'): string {
   return [
     '---',
     'title: Opening actions',
     'language: en',
-    'layout: landing',
+    `layout: ${layout}`,
     ...(preset === undefined ? [] : [`theme: ${preset}`]),
     '---',
     '',
@@ -42,6 +42,7 @@ const pages = {
   inline: landingSource('inline'),
   edge: landingSource('edge'),
   editorial: landingSource('auto', 'blueprint'),
+  document: landingSource('edge', undefined, 'document'),
 } as const;
 
 type PageName = keyof typeof pages;
@@ -125,6 +126,20 @@ test.describe('landing opening actions', () => {
       await page.goto(urls.edge);
       const edge = await openingGeometry(page);
       expect(edge.actionsRight, String(width)).toBeGreaterThan(edge.headingCenter + 100);
+      expect(Math.abs(edge.leadRight - edge.actionsRight), String(width)).toBeLessThan(24);
+    }
+  });
+
+  test('end an edge group of a document opening at the prose column, not at the wide step', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium');
+    // Ловит: кнопки края уезжают к концу более широкой дорожки статьи, правее текста над ними (на 2000 px
+    // было на четыреста пикселей).
+    for (const width of [1440, 2000]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(urls.document);
+      const edge = await openingGeometry(page);
       expect(Math.abs(edge.leadRight - edge.actionsRight), String(width)).toBeLessThan(24);
     }
   });

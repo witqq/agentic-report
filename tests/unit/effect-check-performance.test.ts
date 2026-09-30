@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  BUILD_TIMING_LIMITS,
   boundedDiagnostic,
   confirmedPerformanceFailures,
   partitionMeasuredEntries,
   type PerformanceSample,
+  sanitizeBuildTimings,
 } from '../../src/core/effect-check.js';
 
 const sample = (
@@ -99,5 +101,58 @@ describe('effect-check performance evidence', () => {
       available: false,
     });
     expect(cancellations).toBe(2);
+  });
+
+  it('keeps the author stage names and drops junk from the build trace', () => {
+    // An effect names its stages freely; text, bad names, non-numbers and floods never reach the file.
+    const manyStages = Object.fromEntries(
+      Array.from({ length: BUILD_TIMING_LIMITS.stages + 5 }, (_, index) => [
+        `stage${index}`,
+        index,
+      ]),
+    );
+    const builds = sanitizeBuildTimings([
+      {
+        startMs: 10,
+        durationMs: 4,
+        width: 768,
+        stages: {
+          measure: 1.5,
+          'route-search': 2,
+          'has space': 1,
+          '9starts-with-digit': 1,
+          ['x'.repeat(33)]: 1,
+          text: 'CANARY_AUTHOR_TEXT',
+          negative: -1,
+          infinite: Number.POSITIVE_INFINITY,
+          nested: { deep: 1 },
+        },
+        untrustedText: 'CANARY_AUTHOR_TEXT',
+      },
+      { startMs: 20, durationMs: 1, width: 'wide', stages: manyStages },
+      { startMs: 'soon', durationMs: 1 },
+      { startMs: 1, durationMs: Number.NaN },
+      'CANARY_AUTHOR_TEXT',
+      null,
+    ]);
+    expect(builds).toEqual([
+      { startMs: 10, durationMs: 4, width: 768, stages: { measure: 1.5, 'route-search': 2 } },
+      {
+        startMs: 20,
+        durationMs: 1,
+        width: 0,
+        stages: Object.fromEntries(Object.entries(manyStages).slice(0, BUILD_TIMING_LIMITS.stages)),
+      },
+    ]);
+    expect(JSON.stringify(builds)).not.toContain('CANARY_AUTHOR_TEXT');
+    expect(
+      sanitizeBuildTimings(
+        Array.from({ length: BUILD_TIMING_LIMITS.builds + 1 }, () => ({
+          startMs: 0,
+          durationMs: 1,
+        })),
+      ),
+    ).toHaveLength(BUILD_TIMING_LIMITS.builds);
+    expect(sanitizeBuildTimings('CANARY_AUTHOR_TEXT')).toEqual([]);
   });
 });

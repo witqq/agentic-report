@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "film": "season",
+  "width": 1280,
+  "height": 720,
+  "duration": 8.033,
+  "audio": false,
+  "poster": {
+    "jpg": "season.poster.jpg",
+    "webp": "season.poster.webp"
+  },
+  "sources": [
+    {
+      "src": "season.av1.mp4",
+      "type": "video/mp4; codecs=\"av01.0.05M.08\"",
+      "format": "av1",
+      "width": 1280,
+      "height": 720,
+      "bytes": 155479
+    },
+    {
+      "src": "season.vp9.webm",
+      "type": "video/webm; codecs=\"vp9\"",
+      "format": "vp9",
+      "width": 1280,
+      "height": 720,
+      "bytes": 151702
+    },
+    {
+      "src": "season.h264.mp4",
+      "type": "video/mp4; codecs=\"avc1.64001f\"",
+      "format": "h264",
+      "width": 1280,
+      "height": 720,
+      "bytes": 113426
+    }
+  ],
+  "thumbnails": {
+    "sprite": "season.thumbs.jpg",
+    "vtt": "season.thumbs.vtt"
+  }
+}

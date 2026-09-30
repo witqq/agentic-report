@@ -167,7 +167,7 @@ function enhanceFinding(node: Element, context: { readonly strings: PackageStrin
 export const findings = defineBlock({
   definition: findingsDefinition(),
   enhance: enhanceFindings,
-  styles: 'package',
+  feature: 'findings',
   staticEquivalent: 'The findings in authored order under a count per severity.',
   examples: [
     '::::findings{title="Review"}\n:::finding{severity="major" title="Cache never expires" location="src/cache.ts:12"}\nEntries stay forever.\n:::\n::::\n',
@@ -177,7 +177,7 @@ export const findings = defineBlock({
 export const finding = defineBlock({
   definition: findingDefinition(),
   enhance: enhanceFinding,
-  styles: 'package',
+  feature: 'findings',
   staticEquivalent: 'One finding with its severity in words, its title, location and detail.',
   examples: [
     '::::findings\n:::finding{severity="note" title="Naming"}\nPrefer a verb.\n:::\n::::\n',

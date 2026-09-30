@@ -287,23 +287,59 @@ interface BrowserFrame extends BrowserTask {
   readonly layoutAndPaintTailMs: number;
 }
 
-/** Optional build trace emitted by the reference wall-thread; every field is a number. */
-interface BuildTiming extends BrowserTask {
+/**
+ * Optional build trace an effect pushes to `window.__agenticReportBuildTimings`: when the build started, how
+ * long it took, the page width, and the author's own stage names mapped to milliseconds. The extension is
+ * authored code, so only this shape passes into public output (see {@link sanitizeBuildTimings}).
+ */
+export interface BuildTiming extends BrowserTask {
   readonly width: number;
-  readonly measureMs: number;
-  readonly fieldMs: number;
-  readonly routeMs: number;
-  readonly routeWaypointsMs: number;
-  readonly routeSearchMs: number;
-  readonly routePullMs: number;
-  readonly routeLineMs: number;
-  readonly routeOtherMs: number;
-  readonly sampleMs: number;
-  readonly braidMs: number;
-  readonly stationsMs: number;
-  readonly ballsMs: number;
-  readonly nailsMs: number;
-  readonly chunksMs: number;
+  readonly stages: Readonly<Record<string, number>>;
+}
+
+/** Limits of the build trace: a hostile effect cannot inflate the diagnostics file or smuggle text into it. */
+export const BUILD_TIMING_LIMITS = {
+  /** Builds read from one pass; later ones are dropped. */
+  builds: 128,
+  /** Stages kept per build, in the order the effect wrote them; later ones are dropped. */
+  stages: 16,
+  /** A stage name is a short identifier: a letter, then letters, digits or hyphens, 32 characters at most. */
+  stageName: /^[A-Za-z][A-Za-z0-9-]{0,31}$/,
+} as const;
+
+/**
+ * Copies the build trace an effect reported into the public shape. A build without a finite `startMs` and
+ * `durationMs` is dropped; `width` falls back to 0; a stage survives only with a valid name and a finite,
+ * non-negative number, and anything else the effect wrote — text, nested objects, extra keys — is dropped.
+ */
+export function sanitizeBuildTimings(raw: unknown): BuildTiming[] {
+  if (!Array.isArray(raw)) return [];
+  const finite = (value: unknown): value is number =>
+    typeof value === 'number' && Number.isFinite(value) && value >= 0;
+  return raw.slice(0, BUILD_TIMING_LIMITS.builds).flatMap((item: unknown) => {
+    if (item === null || typeof item !== 'object') return [];
+    const record = item as Record<string, unknown>;
+    if (!finite(record.startMs) || !finite(record.durationMs)) return [];
+    const stages: Record<string, number> = {};
+    const rawStages = record.stages;
+    if (rawStages !== null && typeof rawStages === 'object' && !Array.isArray(rawStages)) {
+      let kept = 0;
+      for (const [name, value] of Object.entries(rawStages as Record<string, unknown>)) {
+        if (kept >= BUILD_TIMING_LIMITS.stages) break;
+        if (!BUILD_TIMING_LIMITS.stageName.test(name) || !finite(value)) continue;
+        stages[name] = value;
+        kept += 1;
+      }
+    }
+    return [
+      {
+        startMs: record.startMs,
+        durationMs: record.durationMs,
+        width: finite(record.width) ? record.width : 0,
+        stages,
+      },
+    ];
+  });
 }
 
 /** Browser work belongs to the phase in which it started; setup work stays outside the verdict. */
@@ -495,6 +531,66 @@ async function declarationProblems(extension: EffectExtension): Promise<string[]
 // ---------------------------------------------------------------------------------------------------
 // Страницы.
 
+/** Сколько настоящего времени страница должна молчать, чтобы замер начался, и предел ожидания. */
+export const QUIET_PAGE = { quietMs: 250, pollMs: 50, limitMs: 4000 } as const;
+
+/**
+ * Ждёт тихой страницы, а не фиксированную паузу: картинки декодированы, и страница четверть секунды не
+ * меняет разметку и не выполняет долгих задач. Под нагрузкой работа самой страницы после загрузки идёт
+ * дольше, и фиксированная пауза отдавала её хвост замеру — там её приписывали эффекту. Счёт ведут
+ * наблюдатели страницы, а время — процесс проверки: часы страницы в ручном режиме стоят.
+ */
+export async function waitForQuietPage(
+  page: Pick<CheckPage, 'evaluate' | 'waitForTimeout'>,
+  quiet: {
+    readonly quietMs: number;
+    readonly pollMs: number;
+    readonly limitMs: number;
+  } = QUIET_PAGE,
+): Promise<{ readonly quiet: boolean; readonly waitedMs: number }> {
+  await page.evaluate(
+    () =>
+      Promise.all([...document.images].map((image) => image.decode().catch(() => undefined))).then(
+        () => {
+          const holder = window as unknown as { __quietActivity?: number };
+          if (holder.__quietActivity !== undefined) return;
+          holder.__quietActivity = 0;
+          const bump = (): void => {
+            holder.__quietActivity = (holder.__quietActivity ?? 0) + 1;
+          };
+          new MutationObserver(bump).observe(document, {
+            subtree: true,
+            childList: true,
+            attributes: true,
+            characterData: true,
+          });
+          try {
+            new PerformanceObserver(bump).observe({ type: 'longtask' });
+          } catch {
+            // A browser without long-task entries is measured by its mutations alone.
+          }
+        },
+      ),
+    undefined,
+  );
+  const started = Date.now();
+  let last = -1;
+  let quietSince = started;
+  while (Date.now() - started < quiet.limitMs) {
+    const activity = await page.evaluate(
+      () => (window as unknown as { __quietActivity?: number }).__quietActivity ?? 0,
+      undefined,
+    );
+    if (activity !== last) {
+      last = activity;
+      quietSince = Date.now();
+    } else if (Date.now() - quietSince >= quiet.quietMs)
+      return { quiet: true, waitedMs: Date.now() - started };
+    await page.waitForTimeout(quiet.pollMs);
+  }
+  return { quiet: false, waitedMs: Date.now() - started };
+}
+
 type Mode = 'live' | 'still' | 'static';
 
 class Session {
@@ -532,8 +628,7 @@ class Session {
       await page.addInitScript('window.__agenticReportEffectsOff = true;');
     await page.goto(url, { waitUntil: 'load' });
     await page.evaluate(() => document.fonts.ready.then(() => true), undefined);
-    // Настоящая пауза даёт картинкам декодироваться, а наблюдателям — отозваться; время часов стоит.
-    await page.waitForTimeout(300);
+    await waitForQuietPage(page);
     return { page, context, errors };
   }
 
@@ -702,7 +797,7 @@ async function throttledPass(
       const holder = window as unknown as {
         __performanceTasks: BrowserTask[];
         __performanceFrames: BrowserFrame[];
-        __agenticReportBuildTimings?: BuildTiming[];
+        __agenticReportBuildTimings?: unknown[];
       };
       holder.__performanceTasks = [];
       holder.__performanceFrames = [];
@@ -800,48 +895,34 @@ async function throttledPass(
         __performanceFrames: BrowserFrame[];
         __agenticReportBuildTimings?: unknown;
       };
-      // The extension is authored code. Copy only finite numbers under fixed keys into public output.
-      const finite = (value: unknown): number =>
-        typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
+      // The extension is authored code. Hand over only a bounded copy of plain numbers; the Node side
+      // validates names and values (sanitizeBuildTimings) before anything reaches public output.
       const rawBuilds = holder.__agenticReportBuildTimings;
-      const builds: BuildTiming[] = Array.isArray(rawBuilds)
-        ? rawBuilds.slice(0, 128).flatMap((raw: unknown) => {
-            if (raw === null || typeof raw !== 'object') return [];
+      const builds = Array.isArray(rawBuilds)
+        ? rawBuilds.slice(0, 128).map((raw: unknown) => {
+            if (raw === null || typeof raw !== 'object') return null;
             const record = raw as Record<string, unknown>;
-            if (
-              typeof record.startMs !== 'number' ||
-              !Number.isFinite(record.startMs) ||
-              typeof record.durationMs !== 'number' ||
-              !Number.isFinite(record.durationMs)
-            )
-              return [];
-            return [
-              {
-                startMs: finite(record.startMs),
-                durationMs: finite(record.durationMs),
-                width: finite(record.width),
-                measureMs: finite(record.measureMs),
-                fieldMs: finite(record.fieldMs),
-                routeMs: finite(record.routeMs),
-                routeWaypointsMs: finite(record.routeWaypointsMs),
-                routeSearchMs: finite(record.routeSearchMs),
-                routePullMs: finite(record.routePullMs),
-                routeLineMs: finite(record.routeLineMs),
-                routeOtherMs: finite(record.routeOtherMs),
-                sampleMs: finite(record.sampleMs),
-                braidMs: finite(record.braidMs),
-                stationsMs: finite(record.stationsMs),
-                ballsMs: finite(record.ballsMs),
-                nailsMs: finite(record.nailsMs),
-                chunksMs: finite(record.chunksMs),
-              },
-            ];
+            const number = (value: unknown): number | null =>
+              typeof value === 'number' ? value : null;
+            const rawStages = record.stages;
+            const stages: Array<[string, number]> = [];
+            if (rawStages !== null && typeof rawStages === 'object' && !Array.isArray(rawStages))
+              for (const [name, value] of Object.entries(
+                rawStages as Record<string, unknown>,
+              ).slice(0, 64))
+                if (typeof value === 'number' && name.length <= 32) stages.push([name, value]);
+            return {
+              startMs: number(record.startMs),
+              durationMs: number(record.durationMs),
+              width: number(record.width),
+              stages: Object.fromEntries(stages),
+            };
           })
         : [];
       return {
         tasks: holder.__performanceTasks,
         frames: holder.__performanceFrames,
-        builds,
+        rawBuilds: builds,
         longAnimationFramesSupported:
           PerformanceObserver.supportedEntryTypes.includes('long-animation-frame'),
       };
@@ -849,7 +930,7 @@ async function throttledPass(
     const status = await session.status(page);
     const tasks = partitionMeasuredEntries(measurements.tasks, phases);
     const frames = partitionMeasuredEntries(measurements.frames, phases);
-    const builds = partitionMeasuredEntries(measurements.builds, phases);
+    const builds = partitionMeasuredEntries(sanitizeBuildTimings(measurements.rawBuilds), phases);
     const measuredPhases: PerformancePhase[] = phases.map((item, index) => ({
       ...item,
       longTasks: tasks.byPhase[index] ?? [],

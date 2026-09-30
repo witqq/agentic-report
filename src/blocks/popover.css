@@ -1,0 +1,57 @@
+@layer components {
+  .semantic-code-term [data-glossary-trigger] {
+    padding: 0 0.08em;
+    font-family: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+  }
+
+  .semantic-term [data-glossary-trigger] {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-decoration-color: var(--color-accent);
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.22em;
+    cursor: help;
+  }
+
+  .semantic-term [data-glossary-trigger]:hover {
+    color: var(--color-heading);
+    text-decoration-style: solid;
+  }
+
+  .semantic-term [data-glossary-panel] .semantic-title,
+  /* biome-ignore lint/style/noDescendingSpecificity: a panel in its place and a portalled panel are different elements */
+  [data-glossary-portal] .semantic-title {
+    display: block;
+  }
+
+  .semantic-glossary-explanation {
+    display: block;
+  }
+
+  .semantic-glossary-link {
+    display: inline-block;
+    margin-top: 0.75rem;
+    font-weight: var(--weight-strong);
+  }
+
+  @media (width <= 720px) {
+    .semantic-term [data-glossary-panel] {
+      position: fixed;
+      inset: auto 1rem 1rem;
+      width: auto;
+      max-height: min(50svh, 24rem);
+      overflow: auto;
+    }
+
+    .semantic-code-term [data-glossary-panel] {
+      inset: auto 1rem 1rem;
+    }
+  }
+}

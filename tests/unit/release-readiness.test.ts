@@ -1,5 +1,7 @@
-import { mkdir, readFile, symlink, writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { access, mkdir, readFile, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { promisify } from 'node:util';
 
 import matter from 'gray-matter';
 import remarkParse from 'remark-parse';
@@ -12,7 +14,6 @@ import {
   inspectExecutableSearch,
   readPackedRegularFile,
 } from '../../scripts/package-provenance.ts';
-import { validateExtensionProposal } from '../../src/authoring/extension-gate.js';
 import { buildReport } from '../../src/core/compiler.js';
 import { createTestWorkspace, removeTestWorkspace } from '../helpers/workspace.js';
 
@@ -25,23 +26,21 @@ afterEach(async () => {
 const REAL_MATERIAL_EXAMPLES = new Set(['cinematic-story']);
 
 describe('release readiness', () => {
-  it('ships accepted evidence for every product extension proposal', async () => {
-    for (const file of [
-      'docs/product/code-glossary-extension.json',
-      'docs/product/copyable-prose-extension.json',
-      'docs/product/diagram-extension.json',
-      'docs/product/in-flow-contents-extension.json',
-      'docs/product/review-workspace-extension.json',
-      'docs/product/response-workspace-extension.json',
-      'docs/product/section-prose-extension.json',
-      'docs/product/share-safe-build-extension.json',
-      'docs/product/time-text-extension.json',
-      'docs/product/source-link-extension.json',
-      'docs/product/violation-inventory-extension.json',
-    ]) {
-      const proposal = JSON.parse(await readFile(path.resolve(file), 'utf8')) as unknown;
-      expect(validateExtensionProposal(proposal), file).toEqual({ accepted: true, issues: [] });
-    }
+  it('invalidates old candidate evidence when the next package preflight fails', async () => {
+    const workspace = await createTestWorkspace('release-stale-candidate');
+    workspaces.push(workspace);
+    const evidence = path.join(workspace, 'test-results/package/candidate-evidence.json');
+    await mkdir(path.dirname(evidence), { recursive: true });
+    await writeFile(evidence, '{"evidenceKind":"previous-accepted-candidate"}');
+    // The workspace has no package metadata: a real checker failure must retire the old acceptance.
+    await expect(
+      promisify(execFile)(
+        process.execPath,
+        ['--experimental-strip-types', path.resolve('scripts/check-package.ts')],
+        { cwd: workspace },
+      ),
+    ).rejects.toThrow();
+    await expect(access(evidence)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('keeps the primary README source example buildable as written', async () => {

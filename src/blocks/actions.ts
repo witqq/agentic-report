@@ -150,7 +150,7 @@ function enhanceAction(node: Element): void {
 export const actions = defineBlock({
   definition: actionsDefinition(),
   validate: validateActions,
-  styles: 'package',
+  feature: 'core',
   staticEquivalent: 'A row of ordinary links that wraps on narrow screens.',
   examples: [
     ':::actions\n::action[Read the report]{href="https://example.com/report"}\n::action[Source]{href="https://example.com" kind="secondary"}\n:::\n',
@@ -167,7 +167,7 @@ export const action = defineBlock({
     },
   ],
   enhance: enhanceAction,
-  styles: 'package',
+  feature: 'core',
   staticEquivalent: 'An ordinary link with its label; the magnetic pull is off.',
   examples: [
     ':::actions\n::action[Start]{href="https://example.com/start" kind="primary" effect="magnetic"}\n:::\n',

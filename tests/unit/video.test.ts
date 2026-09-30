@@ -87,7 +87,7 @@ describe('embedded video', () => {
 
   it('counts the embedded video against the size budget of one file', async () => {
     // Порог выводится из веса самой страницы с коротким видео: рост стилей и рантайма пакета не должен
-    // ронять проверку, а сорокакратное видео обязано выйти за него. Системная пара не встраивает шрифтов.
+    // ронять проверку, а видео, повторённое до веса больше порога, обязано выйти за него. Системная пара не встраивает шрифтов.
     const measure = await videoWorkspace(
       '::video{src="playback.webm"}',
       'theme:\n  fonts:\n    pair: system\n',
@@ -101,9 +101,13 @@ describe('embedded video', () => {
     const result = await buildReport({ input: workspace, output: path.join(workspace, 'a.html') });
     expect(result.warnings).toEqual([]);
 
+    // The video is repeated until it alone outweighs the budget, whatever the page itself weighs.
     const video = await readFile(path.join(workspace, 'playback.webm'));
-    expect(video.length * 40).toBeGreaterThan(budget);
-    await writeFile(path.join(workspace, 'playback.webm'), Buffer.concat(Array(40).fill(video)));
+    const copies = Math.ceil(budget / video.length) + 1;
+    await writeFile(
+      path.join(workspace, 'playback.webm'),
+      Buffer.concat(Array(copies).fill(video)),
+    );
     await expect(
       buildReport({ input: workspace, output: path.join(workspace, 'b.html') }),
     ).rejects.toMatchObject({ diagnostic: { code: 'INLINE_SIZE_BUDGET_EXCEEDED' } });

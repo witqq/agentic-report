@@ -12,13 +12,20 @@ function videoDefinition(): DirectiveDefinition {
   return {
     name: 'video',
     description:
-      'Embedded local video (webm, mp4, m4v, or ogv) as a looping muted clip, a background with a pause control, or a manually started video with sound; directory output ships every source for the browser to choose from, one file ships the most compatible.',
+      'Embedded local video (webm, mp4, m4v, or ogv), or an agentic-screencast film named by from, as a looping muted clip, a background with a pause control, or a manually started video with sound (the default for a recording that carries sound); directory output ships every source for the browser to choose from, one file ships the most compatible; each source is typed with the codecs read from its file.',
     forms: ['leaf'],
     attributes: [
       pathAttribute(
         'src',
-        'Relative local video path: .webm, .mp4, .m4v, or .ogv. Give the most compatible encoding (H.264 MP4) here.',
+        'Relative local video path: .webm, .mp4, .m4v, or .ogv. Give the most compatible encoding (H.264 MP4) here. Required unless from names a film.',
         'dataVideoSource',
+        false,
+      ),
+      pathAttribute(
+        'from',
+        'A film made by agentic-screencast web: its <film>.web.json manifest, or the directory holding exactly one. The film gives every encoding in the manifest order, the poster, and the chapters; poster, dark-poster, chapters, and sources written here override the film. Use instead of src.',
+        'dataVideoFrom',
+        false,
       ),
       {
         name: 'sources',
@@ -29,12 +36,16 @@ function videoDefinition(): DirectiveDefinition {
         renderProperty: 'dataVideoSources',
         invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
       },
-      enumAttribute(
-        'mode',
-        'clip: muted, looping, plays while visible, with controls. background: muted and looping without controls, with a pause button; a poster is required. manual: starts only when the reader presses play, with sound.',
-        ['clip', 'background', 'manual'],
-        'clip',
-      ),
+      {
+        name: 'mode',
+        // No fixed default: it depends on whether the recording carries sound (see the description).
+        description:
+          'clip: muted, looping, plays while visible, with controls. background: muted and looping without controls, with a pause button; a poster is required. manual: starts only when the reader presses play, with sound. Without mode, a recording whose file carries sound (a voice-over; a silent audio track does not count) is manual and a silent one is clip; start, seam="fade", or expand keep it a clip.',
+        required: false,
+        constraint: { kind: 'enum', values: ['clip', 'background', 'manual'] },
+        renderProperty: 'dataMode',
+        invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
+      },
       pathAttribute(
         'chapters',
         'Relative WebVTT chapters file (.vtt), such as the one agentic-screencast web writes; the chapters appear as buttons under the video that jump to each chapter.',
@@ -45,6 +56,12 @@ function videoDefinition(): DirectiveDefinition {
         'poster',
         'Relative local image shown before playback and in print: .png, .jpg, .jpeg, .webp, .gif, or .avif.',
         'dataVideoPoster',
+        false,
+      ),
+      pathAttribute(
+        'dark-poster',
+        'Relative local image shown instead of the poster while the page scheme is dark; needs poster, same image types. Print shows the light poster.',
+        'dataVideoDarkPoster',
         false,
       ),
       {
@@ -93,10 +110,12 @@ function videoDefinition(): DirectiveDefinition {
       className: 'semantic-video',
       properties: [
         'dataVideoSource',
+        'dataVideoFrom',
         'dataVideoSources',
         'dataMode',
         'dataVideoChapters',
         'dataVideoPoster',
+        'dataVideoDarkPoster',
         'dataVideoCaption',
         'dataVideoStart',
         'dataSeam',
@@ -132,6 +151,17 @@ const videoLoopRules = declareAuthoredRules<VideoLoopSubject>({
       },
     },
     {
+      id: 'dark-poster-with-poster',
+      // A film named by from brings its own poster.
+      check: ({ authored, fail }) =>
+        !authored.has('dark-poster') || authored.has('poster') || authored.has('from')
+          ? undefined
+          : fail(
+              'dark-poster replaces the poster in the dark scheme, and this video has no poster.',
+              'Add poster="…" with the light frame, or remove dark-poster.',
+            ),
+    },
+    {
       id: 'expand-on-clip',
       check: ({ mode, expand, fail }) =>
         !expand || mode === 'clip'
@@ -144,18 +174,51 @@ const videoLoopRules = declareAuthoredRules<VideoLoopSubject>({
   ],
 });
 
+interface VideoSourceSubject {
+  readonly authored: ReadonlySet<string>;
+  readonly fail: (message: string, remediation: string) => AgenticReportError;
+}
+
+/** A video names its recording once: a file in src, or an agentic-screencast film in from. */
+const videoSourceRules = declareAuthoredRules<VideoSourceSubject>({
+  subject: 'video/source',
+  rules: [
+    {
+      id: 'src-or-from',
+      check: ({ authored, fail }) =>
+        authored.has('src') === authored.has('from')
+          ? authored.has('src')
+            ? fail(
+                'src and from both name the recording; a video takes one of them.',
+                'Keep from="film.web.json" for an agentic-screencast film, or src="…" for a single file.',
+              )
+            : fail(
+                'A video needs its recording: src="clip.mp4" or from="film.web.json".',
+                'Add src with a video file, or from with the manifest agentic-screencast web wrote.',
+              )
+          : undefined,
+    },
+  ],
+});
+
 function validateVideo(node: DirectiveNode, context: BlockValidationContext): BlockVerdict {
   const values = context.attributes(node);
   if (values === undefined) return 'accepted';
   const found: AgenticReportError[] = [];
+  const fail = (message: string, remediation: string): AgenticReportError =>
+    context.violation(node, 'INVALID_DIRECTIVE_ATTRIBUTE', message, remediation);
+  runAuthoredRules(
+    videoSourceRules,
+    { authored: new Set(Object.keys(node.attributes ?? {})), fail },
+    found,
+  );
   runAuthoredRules(
     videoLoopRules,
     {
       mode: String(values.mode ?? 'clip'),
       authored: new Set(Object.keys(node.attributes ?? {})),
       expand: values.expand === true,
-      fail: (message, remediation) =>
-        context.violation(node, 'INVALID_DIRECTIVE_ATTRIBUTE', message, remediation),
+      fail,
     },
     found,
   );
@@ -167,10 +230,11 @@ function validateVideo(node: DirectiveNode, context: BlockValidationContext): Bl
 export const video = defineBlock({
   definition: videoDefinition(),
   validate: validateVideo,
-  styles: 'package',
+  feature: 'video',
   staticEquivalent: 'The poster image with the caption; nothing plays until the reader asks.',
   examples: [
     '::video{src="clip.webm" poster="clip-poster.png" caption="The flow in motion."}\n',
     '::video{src="clip.webm" poster="clip-poster.png" caption="The run, from the first command." start="1.5" seam="fade" expand="true"}\n',
+    '::video{from="film/demo.web.json" caption="The review, from branch to merged page."}\n',
   ],
 });

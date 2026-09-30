@@ -612,9 +612,13 @@ function flowViolations(
  * общая: пересечения, размер поперёк страницы, выход за её ширину и связи, нарисованные против
  * потока.
  */
-export async function layoutFlowViews(input: FlowLayoutInput): Promise<FlowViews> {
-  const oriented = orientEdges(input.nodes, input.edges);
-  const layers = assignLayers(input.nodes, oriented);
+/** Лучшая раскладка по слоям в одном направлении: несколько порядков и выравниваний dagre. */
+function bestLayered(
+  input: FlowLayoutInput,
+  oriented: readonly OrientedEdge[],
+  layers: ReadonlyMap<string, number>,
+  direction: 'down' | 'right',
+): Candidate {
   const orders = [
     { nodes: input.nodes, edges: oriented.map((_, index) => index) },
     {
@@ -623,27 +627,41 @@ export async function layoutFlowViews(input: FlowLayoutInput): Promise<FlowViews
     },
     ...shuffledOrders(input.nodes, oriented.length, SHUFFLED_ORDERS),
   ];
-  const best = (direction: 'down' | 'right'): Candidate => {
-    let chosen: Candidate | undefined;
-    for (const [position, order] of orders.entries()) {
-      // Выравнивания пробуются на двух порядках автора; перемешанные порядки ищут другое
-      // упорядочивание слоёв и идут только со сбалансированным выравниванием: так прогонов вчетверо
-      // меньше, а находки те же.
-      const aligns = position < 2 ? ([undefined, 'UL', 'UR', 'DL', 'DR'] as const) : [undefined];
-      for (const align of aligns) {
-        const graph = runDagre(input, oriented, layers, direction, align, order);
-        const candidate = readCandidate(input, oriented, layers, direction, graph);
-        if (
-          chosen === undefined ||
-          score(candidate, input.widthBudget) < score(chosen, input.widthBudget)
-        ) {
-          chosen = candidate;
-        }
+  let chosen: Candidate | undefined;
+  for (const [position, order] of orders.entries()) {
+    // Выравнивания пробуются на двух порядках автора; перемешанные порядки ищут другое
+    // упорядочивание слоёв и идут только со сбалансированным выравниванием: так прогонов вчетверо
+    // меньше, а находки те же.
+    const aligns = position < 2 ? ([undefined, 'UL', 'UR', 'DL', 'DR'] as const) : [undefined];
+    for (const align of aligns) {
+      const graph = runDagre(input, oriented, layers, direction, align, order);
+      const candidate = readCandidate(input, oriented, layers, direction, graph);
+      if (
+        chosen === undefined ||
+        score(candidate, input.widthBudget) < score(chosen, input.widthBudget)
+      ) {
+        chosen = candidate;
       }
     }
-    if (chosen === undefined) throw new Error('Flow layout produced no candidate.');
-    return chosen;
-  };
+  }
+  if (chosen === undefined) throw new Error('Flow layout produced no candidate.');
+  return chosen;
+}
+
+/**
+ * Один вид сверху вниз — для узкой дорожки: схема, которая в своих видах не встаёт в колонку телефона
+ * с читаемыми подписями, раскладывается ещё раз из более узких коробок и подписей.
+ */
+export function layoutFlowDown(input: FlowLayoutInput): FlowLayout {
+  const oriented = orientEdges(input.nodes, input.edges);
+  return bestLayered(input, oriented, assignLayers(input.nodes, oriented), 'down').layout;
+}
+
+export async function layoutFlowViews(input: FlowLayoutInput): Promise<FlowViews> {
+  const oriented = orientEdges(input.nodes, input.edges);
+  const layers = assignLayers(input.nodes, oriented);
+  const best = (direction: 'down' | 'right'): Candidate =>
+    bestLayered(input, oriented, layers, direction);
   const down = best('down');
   const right = best('right');
   const layered: 'down' | 'right' =

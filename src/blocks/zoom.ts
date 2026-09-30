@@ -30,7 +30,7 @@ export const zoom = defineBlock({
       requiredParent: 'diagram',
     },
   ),
-  styles: 'package',
+  feature: 'diagram',
   staticEquivalent:
     'The whole diagram and the inside of the node drawn as two figures side by side, with the nested flow written out in words.',
   examples: [ZOOM_EXAMPLE],

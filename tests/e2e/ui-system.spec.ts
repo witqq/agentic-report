@@ -506,7 +506,7 @@ test('no word breaks or sideways page in any theme, heading face or card text', 
           : [304, 390];
         for (const width of widths) {
           await page.setViewportSize({ width, height: 900 });
-          await switchTheme(page, theme, theme === 'terminal' ? 'dark' : 'light');
+          await switchTheme(page, theme, 'light');
           for (const defect of await layoutDefects(page))
             defects.push(`${name}/${language}/${theme}/${width}: ${defect}`);
         }

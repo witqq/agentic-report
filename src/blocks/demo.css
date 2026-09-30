@@ -1,0 +1,134 @@
+@layer components {
+  .semantic-demo-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  :root[data-layout='dashboard'] .semantic-demo {
+    max-width: 100%;
+  }
+
+  /*
+ * Приёмы словаря: проигрываемая сцена `demo`, `:swap`, `:typing`, `:mark`, `spotlight`, рамка браузера,
+ * печать лога (`transition="log"`), «Развернуть» и мягкий стык видео, вертикальные вкладки, липкое
+ * нумерованное оглавление лендинга и моноширинные подписи по краям экрана (`chrome.edges: mono`). Живые
+ * состояния (`data-*-live`, `data-*-pending`) ставит рантайм (`src/browser/vocabulary-techniques.ts`) только
+ * при обычном движении; без них, при уменьшенном движении и в печати каждый приём — в конечном кадре.
+ */
+  .semantic-demo[data-demo-scene] {
+    max-width: 100%;
+  }
+
+  .demo-frame {
+    display: grid;
+    gap: calc(1.25rem * var(--space-factor));
+  }
+
+  .demo-stage > :is(p, pre, figure, section, div):first-child {
+    margin-top: 0;
+  }
+
+  .demo-beats {
+    display: grid;
+    align-content: start;
+    gap: calc(0.9rem * var(--space-factor));
+  }
+
+  .demo-beats > .semantic-beat {
+    max-width: 100%;
+    border-inline-start: 2px solid var(--color-border);
+    padding-inline-start: 0.85rem;
+  }
+
+  .demo-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: calc(1rem * var(--space-factor));
+  }
+
+  .demo-position {
+    color: var(--color-text-muted);
+    font-family: var(--font-author-mono, var(--font-mono));
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (min-width: 57rem) {
+    .demo-frame {
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+      column-gap: clamp(1.5rem, 4vw, 3.5rem);
+      align-items: start;
+    }
+  }
+
+  .semantic-demo[data-demo-live] .demo-beats > .semantic-beat {
+    transition:
+      opacity calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
+        var(--motion-ease, ease-out),
+      transform calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
+        var(--motion-ease, ease-out),
+      border-color calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
+        var(--motion-ease, ease-out);
+  }
+
+  .semantic-demo[data-play='time'][data-demo-live] .semantic-beat[data-demo-state='next'] {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+
+  .semantic-demo[data-demo-live] .semantic-beat[data-demo-state='passed'] {
+    opacity: 0.5;
+  }
+
+  .semantic-demo[data-demo-live] .semantic-beat[data-demo-state='current'] {
+    border-inline-start-color: var(--color-accent);
+  }
+
+  .demo-stage[data-demo-focus] :is(.semantic-node, .semantic-edge):not([data-lit]) {
+    opacity: 0.28;
+  }
+
+  .semantic-demo[data-demo-live] :is(.semantic-node, .semantic-edge) {
+    transition: opacity calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
+      var(--motion-ease, ease-out);
+  }
+
+  @media (min-width: 57rem) {
+    .semantic-demo[data-play='scroll'][data-demo-live] {
+      min-block-size: calc(var(--demo-beats, 3) * 55svh + 45svh);
+    }
+
+    .semantic-demo[data-play='scroll'][data-demo-live] > .demo-frame {
+      position: sticky;
+      top: calc(var(--topbar-clearance, 4.5rem) + 1rem);
+    }
+
+    .semantic-demo[data-play='scroll'][data-demo-live] .semantic-beat[data-demo-state='next'] {
+      opacity: 0.35;
+    }
+  }
+
+  @media print {
+    .semantic-demo[data-demo-live] .semantic-beat[data-demo-state] {
+      opacity: 1;
+      transform: none;
+    }
+
+    .semantic-demo[data-play='scroll'][data-demo-live] {
+      min-block-size: 0;
+    }
+
+    .demo-controls {
+      display: none;
+    }
+
+    .demo-stage[data-demo-focus] :is(.semantic-node, .semantic-edge):not([data-lit]) {
+      opacity: 1;
+    }
+  }
+}

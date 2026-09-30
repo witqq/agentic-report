@@ -1,7 +1,7 @@
 ---
 contractVersion: 1
 title: Nightly review run 96
-description: A run report built from one JSON export — values, repeated rows and control values settled when the page builds.
+description: A run report built from one JSON export, with values, repeated rows and control values settled when the page builds.
 language: en
 localizations:
   ru: report.ru.md

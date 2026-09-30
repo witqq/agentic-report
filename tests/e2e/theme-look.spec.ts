@@ -59,7 +59,7 @@ test('pages are set in the embedded families, not in whatever the reader has ins
       heading: 'Martian Mono',
       body: 'JetBrains Mono',
     },
-    { href: 'index.html', heading: 'Literata', body: 'Onest' },
+    { href: 'index.html', heading: 'Geologica', body: 'IBM Plex Sans' },
     { href: 'examples/cinematic-story/index.html', heading: 'Cormorant Garamond', body: 'Jost' },
   ] as const;
   for (const item of cases) {

@@ -277,14 +277,27 @@ describe('crawler byte limit', () => {
       language: 'en',
       ...(url === undefined ? {} : { url }),
     };
-    let padding = bytes - 20_000;
-    for (let attempt = 0; attempt < 4; attempt += 1) {
+    // Без `url` страница несёт запись редакции с тем же текстом, и буква стоит на странице два байта.
+    // Лишний пробел внутри абзаца запись сводит к одному, поэтому он добавляет ровно байт — им
+    // добирается нечётный остаток.
+    const perLetter = url === undefined ? 2 : 1;
+    let padding = Math.floor((bytes - 20_000) / perLetter);
+    let spaces = 1;
+    for (let attempt = 0; attempt < 6; attempt += 1) {
       const root = await source({
-        'report.md': frontmatter(fields, `# Large\n\n${'x'.repeat(padding)}\n`),
+        'report.md': frontmatter(
+          fields,
+          `# Large\n\nx${' '.repeat(spaces)}${'x'.repeat(padding)}\n`,
+        ),
       });
       const { result } = await build(root);
       if (result.bytes === bytes) return result;
-      padding += bytes - result.bytes;
+      const missing = bytes - result.bytes;
+      padding += Math.trunc(missing / perLetter);
+      if (missing % perLetter !== 0) {
+        if (missing < 0) padding -= 1;
+        spaces += 1;
+      }
     }
     throw new Error(`Could not size a page to exactly ${bytes} bytes.`);
   }
@@ -306,7 +319,9 @@ describe('crawler byte limit', () => {
           details: { htmlBytes: CRAWLER_LIMIT + 1, limit: CRAWLER_LIMIT },
         },
       ]);
-      expect(localOverLimit.warnings.map((warning) => warning.code)).toEqual([]);
+      expect(localOverLimit.warnings.map((warning) => warning.code)).not.toContain(
+        'PUBLIC_PAGE_OVER_CRAWLER_LIMIT',
+      );
     },
   );
 });

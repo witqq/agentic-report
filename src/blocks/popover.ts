@@ -53,7 +53,7 @@ export const popover = defineBlock({
   ),
   localizedDefaults: ['trigger'],
   enhance: enhancePopover,
-  styles: 'package',
+  feature: 'popover',
   staticEquivalent:
     'The panel content printed in place under its title; on screen a button shows it.',
   examples: [':::popover{title="Context"}\nMeasured on the staging cluster.\n:::\n'],

@@ -112,7 +112,7 @@ language: ru
 В исходнике записаны итоговые числа: при уменьшенном движении они сразу видны без отсчёта.
 :::::
 
-:::::section{title="Эффект не подменяет смысл" id="fallback" nav="Без движения" recipe="evidence" interaction="tilt"}
+:::::section{title="Эффект не подменяет смысл" id="fallback" nav="Без движения" recipe="evidence" media="mask" media-fit="cover" media-aspect="landscape" interaction="tilt"}
 ![Дым факела над скважиной тянется поперёк гряд дюн песчаного моря Каланшо, вид с орбиты](assets/sand-sea.jpg)
 
 :::decision{title="Сохранить всё содержание без движения"}

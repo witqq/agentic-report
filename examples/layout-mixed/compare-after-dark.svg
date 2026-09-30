@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <title>Built page: header, headline, chart and cards</title>
+  <rect width="960" height="540" fill="#211f15"/>
+  <rect x="60" y="48" width="840" height="56" rx="10" fill="#161616" stroke="#403e37" stroke-width="2"/>
+  <circle cx="96" cy="76" r="12" fill="#86c9cd"/>
+  <rect x="122" y="68" width="160" height="16" rx="4" fill="#c6d8d9"/>
+  <rect x="60" y="140" width="520" height="120" rx="10" fill="#161616" stroke="#403e37" stroke-width="2"/>
+  <rect x="84" y="166" width="400" height="30" rx="4" fill="#c6d8d9"/>
+  <rect x="84" y="210" width="320" height="14" rx="4" fill="#8a9393"/>
+  <rect x="84" y="232" width="120" height="16" rx="8" fill="#86c9cd"/>
+  <rect x="620" y="140" width="280" height="340" rx="10" fill="#86c9cd"/>
+  <path d="M650 420 L700 360 L750 390 L810 300 L870 330" fill="none" stroke="#1f2c2a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="650" y="170" width="150" height="18" rx="4" fill="#1f2c2a"/>
+  <rect x="60" y="296" width="250" height="184" rx="10" fill="#161616" stroke="#403e37" stroke-width="2"/>
+  <rect x="84" y="322" width="120" height="14" rx="4" fill="#c6d8d9"/>
+  <rect x="84" y="360" width="200" height="52" rx="6" fill="#252e2b"/>
+  <rect x="330" y="296" width="250" height="184" rx="10" fill="#161616" stroke="#403e37" stroke-width="2"/>
+  <rect x="354" y="322" width="120" height="14" rx="4" fill="#c6d8d9"/>
+  <rect x="354" y="360" width="60" height="96" rx="4" fill="#86c9cd"/>
+  <rect x="424" y="392" width="60" height="64" rx="4" fill="#4d7a75"/>
+  <rect x="494" y="376" width="60" height="80" rx="4" fill="#354240"/>
+</svg>

@@ -1,3 +1,12 @@
+import {
+  ARROW_DOWN_ICON,
+  ARROW_UP_ICON,
+  COPY_ICON,
+  DOWNLOAD_ICON,
+  PLUS_ICON,
+  UPLOAD_ICON,
+  WINDOW_ICON,
+} from '../iconography.js';
 import { asUi, asUiButton, type UiButtonVariant, type UiSize } from './ui.js';
 import {
   MAX_RESPONSE_FILE_BYTES,
@@ -78,17 +87,17 @@ function createController(
     questions.append(renderQuestion(manifest.id, question, strings));
   const actions = document.createElement('div');
   actions.className = 'response-actions';
-  const copy = button(strings.copyResponse, 'responseCopy', 'copy', 'secondary', 'md');
+  const copy = button(strings.copyResponse, 'responseCopy', COPY_ICON, 'secondary', 'md');
   const download = button(
     strings.downloadResponse,
     'responseDownload',
-    'download',
+    DOWNLOAD_ICON,
     'primary',
     'md',
   );
   const importLabel = asUiButton(document.createElement('label'), 'secondary', 'md');
   importLabel.classList.add('response-file-action');
-  importLabel.append(browserIcon('upload'), document.createTextNode(strings.importResponse));
+  importLabel.append(browserIcon(UPLOAD_ICON), document.createTextNode(strings.importResponse));
   const importInput = document.createElement('input');
   importInput.type = 'file';
   importInput.accept = 'application/json,.json';
@@ -463,9 +472,9 @@ function renderOrderQuestion(
     // значок рядом со словом, как у всех операций пакета.
     const move = document.createElement('div');
     move.className = 'response-item-move';
-    const up = button(strings.moveUp, 'responseOrderMove', 'arrow-up', 'quiet', 'sm');
+    const up = button(strings.moveUp, 'responseOrderMove', ARROW_UP_ICON, 'quiet', 'sm');
     up.dataset.responseOrderMove = 'up';
-    const down = button(strings.moveDown, 'responseOrderMove', 'arrow-down', 'quiet', 'sm');
+    const down = button(strings.moveDown, 'responseOrderMove', ARROW_DOWN_ICON, 'quiet', 'sm');
     down.dataset.responseOrderMove = 'down';
     move.append(up, down);
     card.querySelector(':scope > .response-item-footer')?.append(move);
@@ -581,7 +590,7 @@ function renderItemCard(
   link.target = '_blank';
   link.rel = 'noopener noreferrer';
   // Значок окна говорит, что оригинал откроется отдельно, как у остальных действий подвала — значок и слово.
-  link.append(browserIcon('window'), document.createTextNode(strings.openOriginal));
+  link.append(browserIcon(WINDOW_ICON), document.createTextNode(strings.openOriginal));
   link.dataset.responseOriginal = '';
   footer.append(link);
   card.append(footer);
@@ -595,7 +604,7 @@ function renderItemCard(
     // Комментарий нужен не к каждому пункту: поле скрыто за малой кнопкой в подвале и не растит форму.
     input.classList.add('response-comment');
     input.hidden = true;
-    const toggle = button(strings.itemComment, 'responseCommentToggle', 'plus', 'quiet', 'sm');
+    const toggle = button(strings.itemComment, 'responseCommentToggle', PLUS_ICON, 'quiet', 'sm');
     toggle.setAttribute('aria-expanded', 'false');
     footer.append(toggle);
     card.append(input);

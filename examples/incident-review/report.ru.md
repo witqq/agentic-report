@@ -55,7 +55,7 @@ language: ru
 ::::
 :::::
 
-![Демонстрационная топология трафика через оформление, оплату и платёжного провайдера](assets/service-topology.ru.svg)
+![Демонстрационная топология трафика через оформление, оплату и платёжного провайдера](assets/service-topology.ru.svg){dark="assets/service-topology-dark.ru.svg"}
 ::::::
 
 :::::section{title="Что отказало" id="cause" nav="Причина" width="wide" align="start" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="editorial" surface="grid" transition="stagger" choreography="cascade"}

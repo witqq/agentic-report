@@ -176,7 +176,7 @@ export const swap = defineBlock({
   ),
   validate: validateSwap,
   enhance: enhanceSwap,
-  styles: 'package',
+  feature: 'typography',
   staticEquivalent: 'The written word alone; the other words are not shown.',
   examples: ['Reviews become :swap[faster]{words="calmer, exact"} with a plan.\n'],
 });
@@ -231,7 +231,7 @@ export const typing = defineBlock({
     [],
   ),
   validate: validateType,
-  styles: 'package',
+  feature: 'typography',
   staticEquivalent: 'The whole line, already typed.',
   examples: ['Run :typing[agentic-report build page] and open the file.\n'],
 });
@@ -441,7 +441,7 @@ export const mark = defineBlock({
   ),
   validate: validateMark,
   enhance: enhanceMark,
-  styles: 'package',
+  feature: 'typography',
   staticEquivalent: 'The words with the mark drawn complete around them.',
   examples: ['The run returned :mark[three times]{shape="circle"} before it passed.\n'],
 });

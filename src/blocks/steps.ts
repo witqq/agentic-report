@@ -9,7 +9,7 @@ export const steps = defineBlock({
       handoffs: ['semantic-document'],
     },
   ),
-  styles: 'package',
+  feature: 'steps',
   staticEquivalent: 'A titled numbered procedure.',
   examples: [':::steps{title="Release"}\n1. Tag the commit.\n2. Publish the package.\n:::\n'],
 });

@@ -1,0 +1,205 @@
+@layer components {
+  /*
+ * Презентация (`layout: slides`). Без рантайма и в печати слайды идут подряд, каждый в свой экран или
+ * лист. С рантаймом показан один слайд на весь экран под верхней панелью; переход и шаги берут
+ * длительность из `--slide-duration`, которую рантайм объявляет для каждого перехода.
+ */
+  :root[data-layout='slides'] .report-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :root[data-layout='slides'] .sidebar,
+  :root[data-slides-active] .report-attribution {
+    display: none;
+  }
+
+  :root[data-layout='slides'] .report-content {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :root[data-layout='slides'] article > section[data-slide] {
+    display: grid;
+    min-block-size: calc(100svh - 4rem);
+    align-content: center;
+    margin: 0;
+    font-size: clamp(1.05rem, 1.1vw + 0.7rem, 1.45rem);
+    break-after: page;
+  }
+
+  :root[data-layout='slides'] article > section[data-slide] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Слайд занимает экран сам: волосяная линия между главами документа у слайда лишняя. */
+  :root[data-layout='slides'] .report-content article > section[data-slide] {
+    border-top: 0;
+  }
+
+  /* Широкое содержимое слайда — схема, таблица, код — прокручивается в своей рамке, а не весь слайд. */
+  :root[data-layout='slides'] article > section[data-slide] > * {
+    width: min(100%, 68rem);
+    min-width: 0;
+    margin-inline: auto;
+  }
+
+  :root[data-layout='slides'] .slide-cover > h1 {
+    font-size: min(
+      calc(clamp(2.6rem, 5vw, 5rem) * var(--display-scale, 1)),
+      var(--heading-fit, 100vw)
+    );
+    font-weight: var(--display-weight);
+    line-height: 1.02;
+  }
+
+  .semantic-notes {
+    display: none;
+  }
+
+  :root[data-slides-active] article > section[data-slide] {
+    position: fixed;
+    z-index: 1;
+    inset: var(--topbar-clearance, 3.5rem) 0 0;
+    visibility: hidden;
+    overflow: auto;
+    min-block-size: 0;
+    padding: clamp(1.25rem, 4vw, 4rem) clamp(1rem, 6vw, 6rem) 5rem;
+    background: var(--color-bg);
+  }
+
+  :root[data-slides-active] article > section[data-slide][data-slide-current],
+  :root[data-slides-active] article > section[data-slide][data-slide-leaving] {
+    visibility: visible;
+  }
+
+  :root[data-slides-active] article > section[data-slide][data-slide-current] {
+    z-index: 2;
+  }
+
+  :root[data-slides-active][data-slide-state='moving'] section[data-slide-current] {
+    animation: var(--slide-enter, slide-fade-in) var(--slide-duration) var(--motion-ease, ease-out)
+      both;
+  }
+
+  :root[data-slides-active][data-slide-state='moving'] section[data-slide-leaving] {
+    animation: var(--slide-exit, slide-fade-out) var(--slide-duration) var(--motion-ease, ease-out)
+      both;
+  }
+
+  section[data-slide-transition='push'] {
+    --slide-enter: slide-push-in;
+    --slide-exit: slide-push-out;
+  }
+
+  section[data-slide-transition='wipe'] {
+    --slide-enter: slide-wipe-in;
+    --slide-exit: slide-hold;
+  }
+
+  section[data-slide-transition='zoom'] {
+    --slide-enter: slide-zoom-in;
+    --slide-exit: slide-fade-out;
+  }
+
+  section[data-slide-transition='none'] {
+    --slide-enter: slide-hold;
+    --slide-exit: slide-hold;
+  }
+
+  /* Шаг слайда: содержимое `appear` скрыто до своего шага и приходит выбранным способом. */
+  :root[data-slides-active] section[data-slide] .semantic-appear:not([data-shown]) {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  :root[data-slides-active][data-slide-state='moving'] .semantic-appear[data-shown] {
+    animation: var(--appear, appear-rise) var(--slide-duration) var(--motion-ease, ease-out) both;
+  }
+
+  .semantic-appear[data-effect='fade'] {
+    --appear: slide-fade-in;
+  }
+
+  .semantic-appear[data-effect='wipe'] {
+    --appear: slide-wipe-in;
+  }
+
+  .semantic-appear[data-effect='pop'] {
+    --appear: appear-pop;
+  }
+
+  .slide-controls {
+    position: fixed;
+    z-index: 30;
+    right: 1rem;
+    bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-medium);
+    padding: 0.3rem;
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    box-shadow: var(--shadow-raised);
+  }
+
+  .slide-counter {
+    min-width: 7.5rem;
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+
+  /* Вид для записи: ни верхней панели, ни кнопок — только слайд. */
+  :root[data-view='film'] .topbar,
+  :root[data-view='film'] .slide-controls,
+  :root[data-view='film'] .skip-link,
+  :root[data-view='film'] .scroll-progress,
+  :root[data-view='film'] .chapter-progress {
+    display: none;
+  }
+
+  :root[data-view='film'][data-slides-active] article > section[data-slide] {
+    inset: 0;
+  }
+
+  /* Вид докладчика: заметки под слайдом, отдельной полосой. */
+  :root[data-view='presenter'] .semantic-notes {
+    display: block;
+    margin-top: 2rem;
+    border-top: 1px dashed var(--color-border-strong);
+    padding-top: 1rem;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+  @media print {
+    .slide-controls {
+      display: none;
+    }
+
+    :root[data-slides-active] article > section[data-slide] {
+      position: static;
+      visibility: visible;
+      overflow: visible;
+      min-block-size: auto;
+      break-after: page;
+    }
+
+    :root[data-slides-active] section[data-slide] .semantic-appear:not([data-shown]) {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    /* Заметки докладчика не печатаются и в его виде. */
+    .semantic-notes,
+    :root[data-view='presenter'] .semantic-notes {
+      display: none;
+    }
+  }
+  @media (width <= 48rem) {
+    :root[data-slides-active] article > section[data-slide] {
+      padding-inline: var(--phone-gutter);
+    }
+  }
+}
