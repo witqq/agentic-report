@@ -26,6 +26,15 @@ browser runtime.
 
 ::contents
 
+## Discuss and revise locally
+
+Launch the optional `serve` command from the author Codex session when the reader wants to continue that
+same conversation while the original Markdown changes. A separate agent requires `--agent standalone`. Follow the
+[live operating guide](../../skills/agentic-report/references/process.md#live-local-document) for startup,
+flags, questions beside selected passages, formatted chat, cancellable waiting questions, reader view
+controls and restart behavior. Hosting is also available through
+`serveReport()` from `agentic-report/live`; the root compiler API remains offline.
+
 ## Use it inside your own skill
 
 Ask for the work in ordinary language. Useful prompts include:
@@ -168,7 +177,7 @@ Every command already defaults to agent output: run commands emit NDJSON and ref
 compact JSON line; `--json` names that default, while `--human` selects prose or indented JSON. One refused
 directive pass reports its earliest authored violation plus the remaining independent violations in
 `related`, so fix the whole inventory together. When a diagnostic carries an exact `fix`, run
-`npx --yes agentic-report fix ./my-page`; this is the only command that writes authored Markdown, and it
+`npx --yes agentic-report fix ./my-page`; this applies compiler-computed source repairs, and it
 leaves all other bytes unchanged. `describe` exposes all registered commands and the declared directive rule
 dependencies as `commands` and `authoredRules`.
 
@@ -300,6 +309,8 @@ or the [agentic-report skill](../../skills/agentic-report/SKILL.md) when more gu
 
 ## Boundaries
 
-The tool reads local source and writes a static page. It does not deploy, publish, fetch remote source,
-use credentials, host an editor, or provide live collaboration. Remote assets, raw HTML, executable
+Ordinary builds read local source and write a static page. Explicit live hosting attaches the existing
+Codex conversation by default; its original client retains authentication, security and approvals.
+The tool does not deploy, publish, fetch remote source,
+or provide simultaneous multi-user editing. Remote assets, raw HTML, executable
 templates, and author JavaScript are not supported.

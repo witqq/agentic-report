@@ -1,6 +1,6 @@
 ---
 name: agentic-report
-description: Create and build polished local pages from declarative Markdown — landing pages, documents (reports, research, architecture, code reviews, incidents, guides), dashboards, answer forms, and presentations that can be shown or filmed — starting from a brief, with design advice and snapshots before handoff. Use for static agent-to-human page handoff; do not use for hosted apps, live collaboration, deployment, publication, or bespoke frontend development.
+description: Create and build polished local pages from declarative Markdown — landing pages, documents (reports, research, architecture, code reviews, incidents, guides), dashboards, answer forms, and presentations that can be shown or filmed — starting from a brief, with design advice and snapshots before handoff. Use for static agent-to-human handoff or a local living document with Codex discussion and source updates; do not use for remote hosted apps, simultaneous multi-user editing, deployment, publication, or bespoke frontend development.
 license: MIT
 metadata:
   version: '0.20.0'
@@ -15,6 +15,15 @@ real material, build it, check it, and look at it before you hand it over. The p
 declarative Markdown source into one interactive HTML file that opens from disk; this skill is the craft
 around it. This file is the route: the order of work, where each answer lives, and the rules for every
 page. The detail is in `references/` and in the CLI's own output.
+
+For a local living document, launch `serve` from the current author Codex session and read
+[`references/process.md`](references/process.md#live-local-document). It covers selecting text to ask Codex,
+streamed formatted replies, source watching, revision highlights, durable questions and local service lifecycle.
+Selection opens a question form beside the passage; replies stay in the main chat. Waiting questions have
+an ordered list and immediate cancellation; active replies cannot be cancelled there. The panel also owns
+reader theme, appearance, change visibility and bounded desktop width controls, with a reset action.
+The default attaches that existing conversation; a separate agent requires explicit `--agent standalone`.
+Ordinary `build` still produces the standalone offline handoff.
 
 ## The order of work
 

@@ -42,6 +42,17 @@ when a separate diagnostic or source-inventory result is useful.
 
 ::contents
 
+::::section{title="Discuss a living document locally" id="live-document" nav="Live document"}
+
+The optional `serve` command connects a local document to its existing author Codex session. Select text and choose
+**Ask agent** to write beside the passage, or ask a general chat question. Waiting questions show their
+order and can be cancelled; the chat panel also holds width and visual settings. Replies stream and valid source revisions appear with change
+marks. Read the [live operating guide](../skills/agentic-report/references/process.md#live-local-document)
+for source-checkout startup, Codex setup, persistent questions and recovery. This local mode uses the same
+declarative source; ordinary builds remain standalone offline artifacts.
+
+::::
+
 ::::section{title="Build from source" id="source-install" nav="From source" width="standard" align="start" tone="accent" reveal="true"}
 
 If you prefer to inspect the implementation instead of executing the published `agentic-report` npm
@@ -82,7 +93,7 @@ would rely on an already refused interpretation. Inspect those dependencies with
 `describe` → `authoredRules`.
 
 When a diagnostic contains an exact source-range `fix`, run `agentic-report fix ./my-page`. It is the only
-command that writes authored Markdown and changes only the computed ranges; `validate`, `inspect`, `build`,
+compiler repair command and changes only the computed ranges; `validate`, `inspect`, `build`,
 and `review` remain read-only. Glossary definitions may declare exact inflections with `forms`; the compiler
 does not guess morphology. `init` accepts a symbolic-link parent such as macOS `/tmp`, reports the resolved
 destination, and still refuses every existing destination.

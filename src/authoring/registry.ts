@@ -598,6 +598,11 @@ export const authoringRegistry = {
   directives: BLOCK_DIRECTIVES,
   capabilities: [
     {
+      id: 'live',
+      description:
+        'Explicit loopback hosting with watched source editions, contextual questions, a visible cancellable waiting queue and reader view controls; discussion streams to the existing author Codex session by default, separate agent mode is explicit and ordinary builds remain offline.',
+    },
+    {
       id: 'init',
       description: 'Initialize a packaged declarative starter without overwriting user content.',
     },
@@ -615,6 +620,11 @@ export const authoringRegistry = {
     },
   ],
   commands: [
+    {
+      id: 'serve',
+      description:
+        'Serve a local living document attached to the current Codex session; standalone explicitly starts a separate agent, and none watches manual source edits.',
+    },
     {
       id: 'init',
       description: 'Initialize a packaged declarative starter without overwriting user content.',

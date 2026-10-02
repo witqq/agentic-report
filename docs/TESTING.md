@@ -349,6 +349,9 @@ command; only the test runs of it moved.
   single-file bytes and directory trees across independent CLI processes.
   The accepted record is written beside the unique candidate and to the stable ignored
   `test-results/package/candidate-evidence.json` handoff used by the release runbook.
+  The installed watcher-only live host additionally bundles and serves its reader/document, detecting a
+  missing live subpath or contextual bridge dependency that static builds do not exercise. Its exact Node
+  inventory includes the shared overlay placement helper and still rejects unrelated browser output.
 
 The E2E setup also stages the same-origin public tree and builds directory-format documentation fixtures.
 Starter and non-starter artifact preparation derives from the example registry, so newly registered pages
@@ -436,6 +439,35 @@ names); builds outside a measured phase appear in `unassignedBuilds`. The record
 stage names are in the
 [extensions reference](../skills/agentic-report/references/extensions.md#build-timings); besides those
 validated names the file uses fixed labels, flags and numbers, with no authored text or paths.
+
+## Local living document coverage
+
+`tests/unit/live-server.test.ts` exercises the real loopback service and an executable JSONL Codex peer:
+source updates, failed builds, newly created partials, FIFO persistence and resume, interrupted sending
+without replay, selected subjects, streamed answers, unsupported approval refusal, idle child exit,
+duplicate entry ownership and foreign-origin/body/path boundaries. Run it through
+`pnpm test:unit -- --testNamePattern='living document'`; all files remain collected for the inventory
+guard while unrelated tests are skipped.
+
+`tests/unit/live-session.test.ts` adds a real Unix WebSocket control fixture for the current author:
+exact loaded identity, queued questions while outside work is active, FIFO reader turns, own pre-ack event
+filtering, original approval ownership, shared-server survival after reader close, missing/mismatched/
+unloaded/read-only refusals, startup queue recovery and uncertain delivery without replay. The source suite
+also distinguishes live markup outside an embedded island document from corrupting its attribute, and
+default live theme choices from explicit single-theme and topbar-free authored constraints. Native
+cancellation coverage holds delivery readiness open, cancels waiting work, observes only remaining FIFO
+answers and retains terminal cancellation across restart. Active cancellation, repeated/missing/foreign
+requests and real persistence refusal distinguish safe feedback from false acceptance or cancellation.
+
+`pnpm test:e2e --file tests/e2e/live-document.spec.ts` opens generated document frames and the reader shell
+through `file://`, using a mocked transport. It distinguishes direct contextual subjects and streamed replies,
+Enter/Shift+Enter/composition and native keyboard Close, current-conversation identity, stale drafts/focus and
+pending admission rejoin after frame replacement, readable safe Markdown and stable message identity,
+ordered waiting cancellation, synchronized theme/appearance/change controls and bounded keyboard width,
+dark-only theme availability, reading-position preservation, rapid stream following versus intentional
+scroll-up, visible change marks, compact containment and reduced motion including status pseudo-elements.
+Its captures supplement behavioral assertions; this browser
+suite does not make a real model request.
 
 ## Writing tests
 

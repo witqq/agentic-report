@@ -237,25 +237,15 @@ describe('authoring registry', () => {
       category: 'document',
       starter: { default: true },
     });
-    expect(authoringRegistry.capabilities).toEqual([
-      {
-        id: 'init',
-        description: 'Initialize a packaged declarative starter without overwriting user content.',
-      },
-      {
-        id: 'validate',
-        description: 'Validate a project through the production preparation pipeline.',
-      },
-      {
-        id: 'inspect',
-        description: 'Inspect a valid project through the production preparation pipeline.',
-      },
-      {
-        id: 'review',
-        description: 'Resolve a versioned review artifact to current Markdown source locations.',
-      },
+    expect(authoringRegistry.capabilities.map((capability) => capability.id)).toEqual([
+      'live',
+      'init',
+      'validate',
+      'inspect',
+      'review',
     ]);
     expect(authoringRegistry.commands.map((command) => command.id)).toEqual([
+      'serve',
       'init',
       'validate',
       'inspect',
@@ -362,7 +352,7 @@ describe('authoring registry', () => {
           capabilities: [authoringRegistry.capabilities[0], ...authoringRegistry.capabilities],
         }),
       ),
-    ).toContain('capability: duplicate init');
+    ).toContain('capability: duplicate live');
 
     const invalidOutput = {
       ...output,

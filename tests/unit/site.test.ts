@@ -515,10 +515,23 @@ describe('deterministic public site staging', () => {
   });
 
   it('contains no internal workflow paths, workstation paths, credential assignments, or authority claims', async () => {
+    // Public variable names explain attachment; assigning a concrete identity exposes a session.
+    const sessionAssignment = /\bCODEX_(?:THREAD|SESSION)_ID["'`]*\s*[:=]\s*["'`]*[^\s"'`]+/u;
+    expect('Use CODEX_THREAD_ID or CODEX_SESSION_ID from the current environment.').not.toMatch(
+      sessionAssignment,
+    );
+    for (const exposed of [
+      'CODEX_THREAD_ID=private-session',
+      '"CODEX_SESSION_ID": "private-session"',
+      '`CODEX_THREAD_ID` = `private-session`',
+    ]) {
+      expect(exposed).toMatch(sessionAssignment);
+    }
     const publicFiles = await listFiles(firstSite);
     for (const file of publicFiles) {
       const source = await readFile(path.join(firstSite, ...file.split('/')), 'utf8');
-      expect(source).not.toMatch(/(?:\/Users\/|moira-ws|agent_temp_files_local|CODEX_THREAD_ID)/u);
+      expect(source).not.toMatch(/(?:\/Users\/|moira-ws|agent_temp_files_local)/u);
+      expect(source).not.toMatch(sessionAssignment);
       expect(source).not.toMatch(/(?:api[_-]?key|token|password|secret)\s*[:=]\s*[^\s"']+/iu);
       expect(source).not.toMatch(
         /(?:official|curated|verified)\s+(?:OpenAI|Anthropic|skills\.sh)/iu,

@@ -238,7 +238,7 @@ describe('agent discovery contract', () => {
     expect(question?.rules.find((rule) => rule.id === 'numeric-domain')?.dependsOn).toEqual([]);
   });
 
-  it('exports exactly the root API and the effect authoring subpath', async () => {
+  it('exports exactly the offline root API, effects and opt-in local hosting', async () => {
     // Дефект: подпуть появился или пропал молча. Корень остаётся без исполняемых точек расширения
     // (проверка ниже), а договор эффекта уровня 2 — `defineEffect` и типы — живёт в своём подпути
     // `agentic-report/effect`: автор эффекта импортирует его, упаковщик подменяет его тождественной
@@ -246,7 +246,7 @@ describe('agent discovery contract', () => {
     const manifest = JSON.parse(await readFile(path.resolve('package.json'), 'utf8')) as {
       readonly exports: Readonly<Record<string, unknown>>;
     };
-    expect(Object.keys(manifest.exports)).toEqual(['.', './effect']);
+    expect(Object.keys(manifest.exports)).toEqual(['.', './effect', './live']);
     const effectModule = await import('../../src/effect.js');
     expect(Object.keys(effectModule).sort()).toEqual(['defineEffect']);
     const declaration = await readFile(path.resolve('dist/node/effect.d.ts'), 'utf8');

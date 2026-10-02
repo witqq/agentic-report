@@ -7,8 +7,41 @@ verification.
 ## System boundary
 
 `agentic-report` is a local offline compiler distributed as one npm package. It accepts a Markdown
-entry or source directory and writes a static artifact. It does not host files, listen on a port, fetch
-remote resources, deploy output, or publish itself.
+entry or source directory and writes a static artifact. The compiler does not fetch remote resources,
+deploy output, or publish itself. Explicit `serve` hosting is a separate local lifecycle described below.
+
+### Local living document host
+
+`src/live/server.ts` owns loopback HTTP, same-origin question admission and cancellation, SSE snapshots and reply deltas,
+source-graph watches and serialized rebuilds. It prepares directory editions with the existing compiler,
+retains the last valid revision on failure, and confines HTTP reads to each generated file inventory.
+`src/live/browser.ts` owns the discussion shell and swaps document frames after the new frame restores its
+reading state. `src/live/bridge.ts` transfers selection subjects, reading anchors and theme tokens between
+the generated frame and its owning shell without adding network access to the static document runtime.
+The bridge uses the shared overlay placement helper for a viewport-contained contextual question form;
+correlated admissions rejoin a replaced frame without resubmitting or clearing a newer draft. The shell
+keeps message nodes stable, uses `src/live/message.ts` for safe DOM Markdown, and preserves older-history
+reading while following streams at the end. `src/live/view.ts` defines the shared theme-token/settings
+contract; panel preferences and width use optional browser storage and change read-side attributes only.
+Live preparation supplies author-overridable theme choices when a topbar is available, without altering
+the offline compiler defaults. Live chrome styles reside in `src/live/shell-style.ts` and respect reduced motion.
+
+`src/live/agent.ts` is the hosting transport boundary. The default `src/live/session.ts` connects through
+`ws` to the existing author's Unix control socket, checks exact loaded/writable identity and rejoins for
+notifications without configuration overrides. It observes external activity, waits for idle before a
+reader turn, buffers bounded pre-ack events and streams only the acknowledged reader turn. It never answers
+original-client approvals or owns the agent process. Explicit standalone mode uses `src/live/codex.ts`,
+which owns a stdio JSONL app-server and declines unsupported requests. `src/live/state.ts` atomically
+persists the validated conversation from `src/live/contract.ts`; the server durably queues questions and
+sends one turn at a time. Cancellation and delivery claim share admission order and persist candidate
+state before memory effects; only queued work can become terminal `cancelled`, and a cancelled waiter
+cannot later start a turn. Save failures return safe action-specific feedback. Current-session destination intent is persisted before startup admission;
+populated conversation state cannot be reassigned to another thread. Interrupted sending state becomes
+uncertain rather than replayed. An exclusive
+entry lock prevents duplicate hosts. The public lifecycle is `serveReport()` from `agentic-report/live`,
+with `url`, `statePath`, `snapshot()` and asynchronous `close()`; it is absent from the root compiler API.
+The [operating guide](../skills/agentic-report/references/process.md#live-local-document) owns the options,
+storage limits, restart behavior and reader limitations. Hosting introduces no authored source syntax.
 
 Outside the product, and therefore not a source of tasks, budgets or release gates: PDF output, pagination
 and print-profile checks (print styles still show all content, one slide per sheet, and a static equivalent

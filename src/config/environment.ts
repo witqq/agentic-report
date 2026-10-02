@@ -1,3 +1,6 @@
+import { homedir } from 'node:os';
+import path from 'node:path';
+
 export interface RuntimeEnvironment {
   readonly ci: boolean;
   readonly noColor: boolean;
@@ -37,4 +40,24 @@ export function getProviderEnvironment(): Record<string, string> {
     if (value !== undefined) environment[name] = value;
   }
   return environment;
+}
+
+/** Codex is the user's installed agent and retains its authentication and managed configuration. */
+export function getAgentEnvironment(): NodeJS.ProcessEnv {
+  return { ...process.env };
+}
+
+/** Identity/endpoint of the existing author session; never starts a replacement agent. */
+export function getCodexSessionEnvironment(): { threadId?: string; socketPath: string } {
+  const threadId = process.env.CODEX_THREAD_ID ?? process.env.CODEX_SESSION_ID;
+  return {
+    ...(threadId ? { threadId } : {}),
+    socketPath:
+      process.env.CODEX_APP_SERVER_SOCKET ??
+      path.join(
+        process.env.CODEX_HOME ?? path.join(homedir(), '.codex'),
+        'app-server-control',
+        'app-server-control.sock',
+      ),
+  };
 }

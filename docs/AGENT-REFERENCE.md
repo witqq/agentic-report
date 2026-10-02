@@ -152,18 +152,27 @@ contains one NDJSON result record with `type`, `runId`, `starterId`, `starterTit
 
 ## Command output
 
-The CLI has thirteen commands; `describe` lists them under `commands`, and the generated
+`describe` lists every CLI command under `commands`, and the generated
 [authoring catalog](../skills/agentic-report/references/catalog.md#commands) prints the same list. Every
 command answers an agent without a flag, accepts `--json` as the name of that default, and offers
 `--human` for a person. The agent shape follows what the command returns: `init`, `build`, `validate`,
-`inspect`, `fix`, `review`, `sitemap`, `snapshot`, `effect-check` and `theme` report a run and write NDJSON records; `schema`, `describe` and `examples`
+`inspect`, `fix`, `review`, `sitemap`, `snapshot`, `effect-check`, `theme` and `serve` report a run and write NDJSON records; `schema`, `describe` and `examples`
 return one reference document and write it as a single compact JSON line. The human projection is prose
-wherever prose exists — `init`, `build`, `validate`, `fix`, `review`, `sitemap`, `snapshot`, `effect-check`, `theme` and `examples` — and the same
+wherever prose exists — `init`, `build`, `validate`, `fix`, `review`, `sitemap`, `snapshot`, `effect-check`, `theme`, `serve` and `examples` — and the same
 document indented for `inspect`, `schema` and `describe`, whose answer is a catalog or a schema that no
 summary line can carry.
 Both projections of a run carry the same facts — every
 independent violation, each with its `file:line:column` place — so choosing prose never hides a
 violation.
+
+## Discuss a living document locally
+
+Use `serve` from the author Codex session for a browser discussion with that existing agent and source
+revision updates. A separate agent requires explicit `--agent standalone`. This explicit
+host is separate from the offline compiler and available through the `agentic-report/live` ESM subpath.
+The [live operating guide](../skills/agentic-report/references/process.md#live-local-document) defines
+startup commands, every flag, contextual passage questions, formatted chat, cancellable waiting queues,
+reader visual/width controls and restart limitations.
 
 ## Validate and inspect without writing output
 
@@ -223,7 +232,7 @@ agentic-report fix ./my-report
 agentic-report fix ./my-report --human
 ```
 
-`fix` is the only command that writes to an authored source. It applies the `fix` field of the
+`fix` applies compiler-computed repairs to an authored source. It applies the `fix` field of the
 diagnostics a run produced — the replaced range and its replacement, both computed exactly — and touches
 no other byte. Diagnostics without that field are left alone and reported as `remaining`: their repair
 needs an author decision, and guessing it would be a different product. Running it twice changes nothing

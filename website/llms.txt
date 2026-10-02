@@ -1,5 +1,11 @@
 # agentic-report
 
+Local living documents: `serve` hosts a loopback reader attached to its existing author Codex session;
+`--agent standalone` explicitly starts a separate agent. Sources update as the author edits them.
+Questions open beside selected passages; formatted replies, ordered cancellable waiting questions and
+reader width/theme/change controls share the chat panel.
+Setup, flags, persistence and recovery: [Live operating guide](skills/agentic-report/references/process.md#live-local-document).
+
 > Local declarative compiler for polished interactive HTML pages authored by agents.
 
 Install the ready-made agent skill with:

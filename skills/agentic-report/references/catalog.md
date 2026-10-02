@@ -1103,6 +1103,7 @@ Forms: container. Children: zoom-part-directives. Required parent: `diagram`.
 
 ```json
 {
+  "serve": "Serve a local living document attached to the current Codex session; standalone explicitly starts a separate agent, and none watches manual source edits.",
   "init": "Initialize a packaged declarative starter without overwriting user content.",
   "validate": "Validate a project without writing an output artifact.",
   "inspect": "Inspect source usage and the available authoring catalog without writing output.",

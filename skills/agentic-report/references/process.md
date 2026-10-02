@@ -15,9 +15,123 @@ file and range, then rerun. Open the result through `file://`. Use `validate` fo
 is needed (several clips, a published site).
 
 Every command answers an agent without a flag and accepts `--json` as the name of that default: the run
-commands `init`, `build`, `validate`, `inspect`, `fix`, `review`, `sitemap`, `snapshot`, `effect-check`, and `theme` write NDJSON
+commands `serve`, `init`, `build`, `validate`, `inspect`, `fix`, `review`, `sitemap`, `snapshot`, `effect-check`, and `theme` write NDJSON
 records, while `schema`, `describe`, and `examples` write one compact JSON document. `--human` selects the
 form for a person. One failed run lists every independent violation it found, so fix them together.
+
+## Live local document
+
+Use `serve` when the reader wants to discuss and revise the original document with the agent that is
+already authoring it. Launch from that Codex session's shell so its identity is available in the environment.
+From a source checkout containing this command, build the package and start the local reader:
+
+```sh
+pnpm build
+node dist/node/cli.js serve ../my-page --human
+```
+
+Open the printed loopback URL. Select a passage and choose **Ask agent**: a small question form opens beside
+the text. Write there and send with its circular arrow button or Enter. General questions use the chat
+panel's composer. Shift+Enter adds a new line; composing input does not send. Escape or **Close question**
+closes the contextual form and keeps its draft. Answers appear in the main chat with their selected quote;
+an exact quote can be clicked to return to its source block.
+Codex receives the original entry
+and, for a selected passage, its quote, locale, revision and source-target coordinates. These coordinates
+identify source blocks; they are not Markdown character offsets. After the document changes, old subjects
+are labelled exact, changed, missing or ambiguous. Select again if an unsent subject belongs to an old
+revision. An open contextual draft survives a rebuilt document, but sending requires selecting the passage
+again in the current revision. A pending admission follows frame replacement without a second submission;
+its late acknowledgement cannot clear a newer draft. The live discussion controls currently use English;
+document language switching remains available.
+
+The default connects to the existing, loaded, writable Codex conversation; it never starts another agent
+or changes that conversation's configuration. `CODEX_THREAD_ID`, falling back to `CODEX_SESSION_ID`, selects
+the author. `CODEX_APP_SERVER_SOCKET` selects its local Unix control socket; otherwise the socket is
+`app-server-control/app-server-control.sock` under `CODEX_HOME` or `~/.codex`. This requires a Codex client
+that exposes that control endpoint. A session ID alone is insufficient without its reachable endpoint.
+For an ordinary terminal or Node host, provide `--thread <loaded-id>` and, when needed,
+`--codex-socket <absolute-path>`. Missing, mismatched, unloaded or read-only conversations fail explicitly;
+there is no fallback to another agent. The panel says **Current Codex conversation**, with its ID in the
+label's tooltip; the snapshot exposes `connection.mode` and `connection.threadId`.
+
+Questions are saved before sending and processed in arrival order, one reader turn at a time. While the
+author is busy elsewhere in Codex, questions stay queued; the reader does not steer or interrupt that work.
+The **waiting questions** list shows their order and the reason for waiting. Each waiting item has a
+**Cancel waiting question** button: successful cancellation is saved immediately and retained in history
+after reconnect or restart. A question already being answered appears separately and cannot be cancelled
+through this action. If saving fails, the interface explains that the question was not accepted or that
+cancellation failed and the question is still waiting; retry after checking conversation storage.
+Only the reader's own turn messages enter its streamed answer. Chat replies stream as Codex emits text. Codex
+edits the original Markdown and resources; the service watches the source graph, builds complete valid
+revisions and highlights their changes. A failed build leaves the last good document visible with an error.
+Updates preserve reading position, open disclosures, language, theme and scheme, plus the discussion draft
+and focus. File edits are not streamed character by character.
+
+The chat distinguishes user, agent and system messages. Agent replies render Markdown paragraphs, lists,
+emphasis, code and tables; raw HTML stays text, images do not load, and executable link schemes are inert.
+New messages and working status animate unless reduced motion is requested. Streaming follows the end
+while the reader stays there; scrolling into older messages preserves that place and exposes **Latest
+messages** to return.
+
+Open **View settings** in the panel to choose appearance, document theme or change-highlight
+visibility, and use **Reset view** to restore defaults. Live hosting offers theme choices by default when
+the source has a topbar; an explicit authored `themeSwitcher: false` or `topbar: false` keeps one theme.
+A dark-only theme disables appearance choices. Desktop chat width ranges from 320 to 720 pixels, bounded
+by available document space: drag the divider, use the width slider, or focus the divider and press left/right
+arrows (left widens and right narrows by 16 pixels), Home (minimum), or End (maximum). Compact screens show the chat as an overlay. These
+read-side preferences are saved in this browser and survive revision replacement without editing source;
+denied storage leaves the controls usable for the current view.
+
+`serve [input]` accepts `--port <number>` (default `0`, an available port),
+`--agent codex|standalone|none` (default `codex`), `--thread <id>` and `--codex-socket <path>` for the existing
+session. `--agent none` provides watching and document updates without sending questions to an agent.
+`--json` names the default NDJSON startup result; `--human` prints the URL for a person. Stop with Ctrl-C:
+the reader disconnects, but the current author session and any submitted turn continue. Approvals and
+human-input requests remain in the original Codex client; this observer never answers them. A broken
+connection makes the reader's agent unavailable; restore the same session and restart the service.
+
+Use `--agent standalone` only when the user explicitly wants a separate agent. It owns a signed-in
+`codex app-server`, inherits user authentication/security, and accepts `--codex-command <path>` (default
+`codex`) plus optional `--thread` to resume its saved conversation. Its panel says **Separate Codex
+conversation**. This mode declines unsupported human decisions, has no approval interface, and terminates
+its owned process when the reader stops. `--codex-command` is refused in current-session mode and
+`--codex-socket` is refused outside it; neither mode grants extra permissions.
+
+The source-root-local `.agentic-report/live-<entry-hash>/conversation.json` stores the thread and question
+history. Treat it as private document data and exclude `.agentic-report/` from source control. Reloading
+the browser or restarting the service against the same author restores this history. Destination identity
+is stored before accepting startup questions, even before connection succeeds. Populated history cannot
+silently move to another session: reconnect its existing author or copy the document into a fresh workspace
+without its private state. Queued questions resume; a question that was
+being sent at interruption becomes uncertain and is never automatically replayed. Inspect it before
+submitting a new question. The history accepts at most 200 questions, 8,000 characters per question or
+quote, 80,000 characters per reply and 4,000,000 serialized bytes overall. A request is bounded to 32,000
+bytes. Cancelled questions also count toward these history limits. The private live-state format is
+unreleased; a checkout predating the `cancelled` status cannot read a history containing it. Before
+downgrading, archive the private state and use a separate fresh history rather than rewriting old records.
+The service retains 20 generated editions during a run and clears its old generated editions at
+startup; the conversation persists. An exclusive `owner.lock` prevents two hosts for one entry. After a
+crash, inspect the PID in that lock and verify that its owner stopped before manually removing the lock.
+
+Hosting is a separate ESM subpath; the root compiler API remains offline:
+
+```js
+import { serveReport } from 'agentic-report/live';
+
+const live = await serveReport({ input: './my-page' }); // Current Codex identity from the host environment.
+console.log(live.url);
+// live.statePath identifies the private conversation; live.snapshot() returns current reader state.
+await live.close();
+```
+
+A host outside Codex supplies `threadId` and, if the default endpoint differs, `codexSocket` explicitly.
+`agent: 'standalone'` and `codexCommand` are the separate-agent alternative.
+
+The service listens only on `127.0.0.1`, serves its generated inventory and rejects foreign-origin
+question and cancellation requests. It is a local single-user reader, not a remote deployment or simultaneous editor.
+Review Workspace and Response Workspace remain separate current-tab controls; their state is not part
+of the durable live conversation and is not restored by live revision replacement. Use ordinary `build`
+to hand over a standalone offline artifact after editing, and use that artifact for printing.
 
 ### Build inside a Node host
 
@@ -41,8 +155,9 @@ option, not a CLI flag or a field to write into Markdown.
   (or declare `url`). Add a local `image` for a link preview. Report `PUBLIC_PAGE_OVER_CRAWLER_LIMIT` or
   `SOCIAL_IMAGE_NOT_PUBLISHED` if the result carries them. Do not invent an address. For a whole published
   tree, `agentic-report sitemap <published-directory>` writes `sitemap.xml` and `robots.txt`.
-- Do not deploy, publish, use credentials, or mutate unrelated files. This skill authorizes local
-  installation, source authoring, validation, inspection, build, snapshots, and artifact review.
+- Do not deploy, publish, collect credentials, or mutate unrelated files. This skill authorizes local
+  installation, source authoring, validation, inspection, build, snapshots, artifact review, and local
+  hosting when the reader asks for a living document. Existing Codex authentication stays with Codex.
 
 ## Start with the brief
 

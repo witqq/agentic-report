@@ -16,6 +16,17 @@ images, downloadable resources, and fonts. References are relative to the primar
 directory. The compiler resolves symbolic links before reading contents and rejects a canonical target
 outside that directory.
 
+## Local hosting
+
+The optional `serve` command and `serveReport()` from `agentic-report/live` host this same declarative
+source locally with the existing author Codex session by default; a separate agent is an explicit option.
+They add no metadata fields or directive syntax. The root ESM API
+and ordinary builds remain offline. The
+[live operating guide](../../skills/agentic-report/references/process.md#live-local-document) defines the
+host lifecycle, contextual questions, durable cancellable discussion and read-side visual controls; the
+static Review/Response contracts below remain separate. Live theme defaults follow that guide and do not
+change ordinary build defaults or rewrite source metadata.
+
 ## Metadata
 
 Metadata can be frontmatter or `agentic-report.yaml`, `agentic-report.yml`, or `agentic-report.json`.

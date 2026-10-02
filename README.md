@@ -11,7 +11,8 @@ Choose a notebook or live application for computation and per-user state, a docu
 a maintained multi-page site, a hosted document for simultaneous collaboration, or a bespoke web project
 when arbitrary layout control is the primary job.
 
-It is a local compiler, not a hosted or cloud service, and it does not start a server.
+Ordinary builds are local and offline. The optional `serve` command opens a living document on loopback
+with Codex discussion and source updates; it does not deploy a cloud service.
 
 ## Build your first page
 
@@ -84,6 +85,17 @@ review. It does not eliminate registry trust: `pnpm install` still downloads the
 in `pnpm-lock.yaml`. The project does not vendor those dependencies. Inspect the lockfile and lifecycle
 scripts before installation, use an isolated environment when appropriate, and keep the release tag pinned
 for reproducibility.
+
+## Local living document
+
+From a checkout containing the live mode, run `pnpm build`, then
+`node dist/node/cli.js serve ../my-page --human` from the author Codex session. Open the printed URL,
+select text and choose **Ask agent** to write beside the passage, or send a general chat question. Waiting
+questions show their order and can be cancelled immediately; the chat panel also offers width and visual
+settings. The same agent receives the questions,
+streams its reply and edits original sources; valid rebuilt
+editions highlight changes. The [live operating guide](skills/agentic-report/references/process.md#live-local-document)
+describes setup, recovery, storage and the separate `agentic-report/live` Node API.
 
 ## Document map
 
@@ -228,7 +240,7 @@ Open the HTML file or directory `index.html` directly through `file://`. In an i
 `agentic-report examples --json` returns each absolute installed entry path; use its containing directory as
 the build input. These examples remain discovery-only and do not change the five `init` starters.
 
-`agentic-report fix ./my-report` is the only command that writes to an authored source: it applies the
+`agentic-report fix ./my-report` applies compiler-computed repairs to an authored source: it applies the
 replacements the product computed exactly and leaves every other byte alone
 ([«Apply the repairs the product computed»](docs/AGENT-REFERENCE.md#apply-the-repairs-the-product-computed)).
 Every command answers an agent with JSON or NDJSON by default and a person with `--human`; which command
