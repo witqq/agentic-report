@@ -29,10 +29,18 @@ the offline compiler defaults. Live chrome styles reside in `src/live/shell-styl
 `src/live/agent.ts` is the hosting transport boundary. The default `src/live/session.ts` connects through
 `ws` to the existing author's Unix control socket, checks exact loaded/writable identity and rejoins for
 notifications without configuration overrides. It observes external activity, waits for idle before a
-reader turn, buffers bounded pre-ack events and streams only the acknowledged reader turn. It never answers
+reader turn and buffers bounded pre-ack events for the acknowledged reader answer. It also observes
+same-thread user/agent text through a separate ordered projection in `src/live/conversation.ts`.
+Summary turns and small item pages hydrate bounded recent history without whole tool-heavy turn bodies;
+completion refreshes the affected turn and retains known intermediate messages in unchanged turns.
+Stable item/turn identities reconcile events, history and newer streaming text. The host correlates
+browser client identity plus exact prompt, with conservative unique-prompt compatibility for saved legacy
+questions, so mirrored history cannot become another delivery. Incremental message events update known
+text; snapshots replace ordering or retention state. The transcript stays in memory and is recovered from
+Codex on attachment, independently of durable question records. It never answers
 original-client approvals or owns the agent process. Explicit standalone mode uses `src/live/codex.ts`,
 which owns a stdio JSONL app-server and declines unsupported requests. `src/live/state.ts` atomically
-persists the validated conversation from `src/live/contract.ts`; the server durably queues questions and
+persists validated browser delivery state from `src/live/contract.ts`; the server durably queues questions and
 sends one turn at a time. Cancellation and delivery claim share admission order and persist candidate
 state before memory effects; only queued work can become terminal `cancelled`, and a cancelled waiter
 cannot later start a turn. Save failures return safe action-specific feedback. Current-session destination intent is persisted before startup admission;

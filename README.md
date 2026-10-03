@@ -92,9 +92,10 @@ From a checkout containing the live mode, run `pnpm build`, then
 `node dist/node/cli.js serve ../my-page --human` from the author Codex session. Open the printed URL,
 select text and choose **Ask agent** to write beside the passage, or send a general chat question. Waiting
 questions show their order and can be cancelled immediately; the chat panel also offers width and visual
-settings. The same agent receives the questions,
-streams its reply and edits original sources; valid rebuilt
-editions highlight changes. The [live operating guide](skills/agentic-report/references/process.md#live-local-document)
+settings. The same agent receives the questions, streams its reply and edits original sources; valid rebuilt
+editions highlight changes. The chat mirrors human text sent from that Codex/terminal conversation
+alongside its other replies, with correlated browser questions appearing once. The
+[live operating guide](skills/agentic-report/references/process.md#live-local-document)
 describes setup, recovery, storage and the separate `agentic-report/live` Node API.
 
 ## Document map

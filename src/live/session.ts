@@ -1,5 +1,7 @@
 import WebSocket from 'ws';
 import type { LiveAgent } from './agent.js';
+import { LiveConversationProjection } from './conversation.js';
+import type { LiveConversation, LiveConversationMessage } from './contract.js';
 
 type RecordValue = Record<string, unknown>;
 const record = (value: unknown): RecordValue =>
@@ -34,6 +36,8 @@ export class LiveCodexSession implements LiveAgent {
   private refreshing: Promise<boolean> | undefined;
   private poll: NodeJS.Timeout | undefined;
   private working = true;
+  private readonly conversation: LiveConversationProjection;
+  private historyRead: Promise<void> | undefined;
   get busy(): boolean {
     return this.working;
   }
@@ -44,8 +48,12 @@ export class LiveCodexSession implements LiveAgent {
       threadId: string;
       onAvailability: (available: boolean) => void;
       onError: (message: string, terminal: boolean) => void;
+      questionForMessage: (clientId: unknown, text: string) => string | undefined;
+      onConversation: (conversation: LiveConversation, changed?: LiveConversationMessage) => void;
     },
-  ) {}
+  ) {
+    this.conversation = new LiveConversationProjection(options.questionForMessage);
+  }
 
   async start(): Promise<string> {
     const socket = new WebSocket(`ws+unix://${this.options.socketPath}:/rpc`, {
@@ -100,12 +108,121 @@ export class LiveCodexSession implements LiveAgent {
       throw new Error('Codex returned a different session; no question was sent.');
     // Recheck after subscription: external work may have changed between read and rejoin.
     await this.readStatus();
+    await this.readHistory();
     if (this.closed || this.failure)
       throw this.failure ?? new Error('The reader closed while attaching to Codex.');
     this.poll = setInterval(() => {
       void this.readyToSend().catch(() => {});
     }, 1000);
     return this.options.threadId;
+  }
+
+  private readHistory(completedTurnId?: string): Promise<void> {
+    this.historyRead ??= (async () => {
+      const readAt = this.conversation.generation;
+      try {
+        const page = await this.request(
+          'thread/turns/list',
+          {
+            threadId: this.options.threadId,
+            limit: 20,
+            sortDirection: 'desc',
+            itemsView: 'summary',
+          },
+          false,
+        );
+        if (!Array.isArray(page.data) || page.data.length > 20)
+          throw new Error('Invalid conversation turn history.');
+        const turns: RecordValue[] = [];
+        let pages = 0,
+          bytes = 0,
+          limited = Boolean(page.nextCursor);
+        // Summary supplies user context even when a long tool-heavy turn exhausts the item budget.
+        // Full item pages recover intervening messages without one unbounded full-turn response.
+        for (const value of page.data) {
+          const turn = record(value);
+          if (typeof turn.id !== 'string' || !Array.isArray(turn.items))
+            throw new Error('Invalid conversation turn history.');
+          if (
+            completedTurnId &&
+            completedTurnId !== turn.id &&
+            this.conversation.snapshot().messages.some((item) => item.turnId === turn.id)
+          ) {
+            turns.push({ ...turn, itemsView: 'summary' });
+            continue;
+          }
+          const recent: unknown[] = [];
+          const cursors = new Set<string>();
+          let cursor: string | undefined;
+          let more = false;
+          do {
+            if (pages >= 80 || bytes >= 8_000_000) {
+              limited = true;
+              more = true;
+              break;
+            }
+            const items = await this.request(
+              'thread/items/list',
+              {
+                threadId: this.options.threadId,
+                turnId: turn.id,
+                limit: 20,
+                sortDirection: 'desc',
+                ...(cursor ? { cursor } : {}),
+              },
+              false,
+            );
+            pages++;
+            bytes += Buffer.byteLength(JSON.stringify(items));
+            if (!Array.isArray(items.data) || items.data.length > 20)
+              throw new Error('Invalid conversation item history.');
+            for (const value of items.data) {
+              const entry = record(value);
+              if (entry.turnId !== turn.id) throw new Error('Different conversation turn history.');
+              const item = record(entry.item);
+              if (item.type === 'userMessage' || item.type === 'agentMessage') recent.push(item);
+            }
+            if (
+              items.nextCursor !== null &&
+              items.nextCursor !== undefined &&
+              (typeof items.nextCursor !== 'string' ||
+                !items.nextCursor ||
+                cursors.has(items.nextCursor))
+            )
+              throw new Error('Invalid conversation history cursor.');
+            cursor = typeof items.nextCursor === 'string' ? items.nextCursor : undefined;
+            if (cursor) cursors.add(cursor);
+            more = Boolean(cursor);
+          } while (cursor);
+          const full = recent.reverse();
+          const ids = new Set(full.map((value) => record(value).id));
+          const summary = more
+            ? turn.items.filter((value: unknown) => {
+                const item = record(value);
+                return (
+                  (item.type === 'userMessage' || item.type === 'agentMessage') && !ids.has(item.id)
+                );
+              })
+            : [];
+          turns.push({ ...turn, itemsView: 'full', items: [...summary, ...full] });
+          limited ||= more;
+        }
+        this.conversation.reconcile(
+          { data: turns, nextCursor: limited ? 'limited' : null },
+          readAt,
+        );
+        this.options.onConversation(this.conversation.snapshot());
+      } catch {
+        if (!this.closed && !this.failure)
+          this.options.onError(
+            'Conversation history could not synchronize. Known messages remain visible; no question was replayed.',
+            false,
+          );
+      }
+    })().finally(() => {
+      this.historyRead = undefined;
+    });
+    return this.historyRead;
   }
 
   readyToSend(): Promise<boolean> {
@@ -149,6 +266,7 @@ export class LiveCodexSession implements LiveAgent {
   async send(
     text: string,
     onText: (text: string, itemId: string, final: boolean) => void,
+    clientId?: string,
   ): Promise<void> {
     if (this.active || this.closed || this.failure)
       throw this.failure ?? new Error('The current session cannot accept another reader turn.');
@@ -166,6 +284,7 @@ export class LiveCodexSession implements LiveAgent {
       await Promise.all([
         this.request('turn/start', {
           threadId: this.options.threadId,
+          ...(clientId ? { clientUserMessageId: clientId } : {}),
           input: [{ type: 'text', text }],
         }).then((result) => {
           const id = record(result.turn).id;
@@ -202,6 +321,16 @@ export class LiveCodexSession implements LiveAgent {
     }
     const params = record(frame.params);
     if (params.threadId !== this.options.threadId) return;
+    let changed: LiveConversationMessage | undefined;
+    if (frame.method === 'item/started' || frame.method === 'item/completed')
+      changed = this.conversation.item(
+        params.turnId,
+        params.item,
+        frame.method === 'item/completed',
+      );
+    if (frame.method === 'item/agentMessage/delta')
+      changed = this.conversation.delta(params.turnId, params.itemId, params.delta);
+    if (changed) this.options.onConversation(this.conversation.snapshot(), changed);
     if (frame.method === 'thread/status/changed') {
       const status = record(params.status).type;
       if (status === 'idle' || status === 'active') this.availability(status === 'idle');
@@ -209,7 +338,11 @@ export class LiveCodexSession implements LiveAgent {
     }
     if (['thread/closed', 'thread/archived', 'thread/deleted'].includes(String(frame.method)))
       this.fail(new Error('The author conversation closed in Codex.'));
-    if (frame.method === 'turn/completed') void this.readyToSend().catch(() => {});
+    if (frame.method === 'turn/completed') {
+      void this.readyToSend().catch(() => {});
+      const id = record(params.turn).id;
+      void this.readHistory(typeof id === 'string' ? id : undefined);
+    }
     const active = this.active;
     if (!active) return;
     if (!active.id) {
@@ -255,15 +388,20 @@ export class LiveCodexSession implements LiveAgent {
     }
   }
 
-  private request(method: string, params: RecordValue): Promise<RecordValue> {
+  private request(method: string, params: RecordValue, fatalTimeout = true): Promise<RecordValue> {
     if (this.closed || this.failure)
       return Promise.reject(this.failure ?? new Error('The session connection is closed.'));
     const id = ++this.nextId;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
-        this.fail(
-          new Error('Codex did not confirm the session request; delivery may be uncertain.'),
+        const cause = new Error(
+          'Codex did not confirm the session request; delivery may be uncertain.',
         );
+        if (fatalTimeout) this.fail(cause);
+        else {
+          this.pending.delete(id);
+          reject(cause);
+        }
       }, 5000);
       this.pending.set(id, { resolve, reject, timer });
       try {

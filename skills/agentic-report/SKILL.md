@@ -23,6 +23,9 @@ Selection opens a question form beside the passage; replies stay in the main cha
 an ordered list and immediate cancellation; active replies cannot be cancelled there. The panel also owns
 reader theme, appearance, change visibility and bounded desktop width controls, with a reset action.
 The default attaches that existing conversation; a separate agent requires explicit `--agent standalone`.
+Current-session chat mirrors human text from the same Codex/terminal conversation and interleaves agent
+replies without replaying input. Correlated browser questions appear once. This is a bounded recent text
+history; tools, reasoning, approvals and non-text attachments are omitted, and limited history is labelled.
 Ordinary `build` still produces the standalone offline handoff.
 
 ## The order of work

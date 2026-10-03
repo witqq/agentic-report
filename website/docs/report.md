@@ -47,8 +47,9 @@ when a separate diagnostic or source-inventory result is useful.
 The optional `serve` command connects a local document to its existing author Codex session. Select text and choose
 **Ask agent** to write beside the passage, or ask a general chat question. Waiting questions show their
 order and can be cancelled; the chat panel also holds width and visual settings. Replies stream and valid source revisions appear with change
-marks. Read the [live operating guide](../skills/agentic-report/references/process.md#live-local-document)
-for source-checkout startup, Codex setup, persistent questions and recovery. This local mode uses the same
+marks. Human text from that Codex/terminal conversation appears alongside agent replies; correlated
+browser questions appear once. Read the [live operating guide](../skills/agentic-report/references/process.md#live-local-document)
+for source-checkout startup, Codex setup, bounded text history, persistent questions and recovery. This local mode uses the same
 declarative source; ordinary builds remain standalone offline artifacts.
 
 ::::

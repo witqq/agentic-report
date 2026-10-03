@@ -4,6 +4,7 @@ import {
   type LiveEvent,
   type LiveSnapshot,
   type LiveSubject,
+  type LiveConversationMessage,
 } from './contract.js';
 import { renderMessage } from './message.js';
 import { LIVE_THEME_TOKENS, type LiveViewSettings } from './view.js';
@@ -20,6 +21,7 @@ const title = find('[data-live-title]');
 const status = find('[data-live-status]');
 const session = find('[data-live-session]');
 const history = find('[data-live-history]');
+const historyNote = find('[data-live-history-note]');
 const empty = find('[data-live-empty]');
 const input = find<HTMLTextAreaElement>('[data-live-input]');
 const form = find<HTMLFormElement>('[data-live-form]');
@@ -223,6 +225,81 @@ interface QuestionElements {
   answerText?: string;
 }
 const messages = new Map<string, QuestionElements>();
+const sessionMessages = new Map<
+  string,
+  { article: HTMLElement; text: HTMLElement; value: string }
+>();
+const messageKey = (item: LiveConversationMessage): string => `${item.turnId}:${item.id}`;
+function projectedQuestions(snapshot: LiveSnapshot): Set<string> {
+  return new Set(
+    snapshot.conversation?.messages.flatMap((item) => (item.questionId ? [item.questionId] : [])) ??
+      [],
+  );
+}
+function renderConversation(snapshot: LiveSnapshot): void {
+  const projected = projectedQuestions(snapshot);
+  const wanted = new Set<string>();
+  const ordered: HTMLElement[] = [];
+  for (const q of snapshot.questions)
+    if (!projected.has(q.id) && q.status !== 'queued' && q.status !== 'sending') {
+      const node = messages.get(q.id)?.article;
+      if (node) ordered.push(node);
+    }
+  const represented = new Set<string>();
+  for (const item of snapshot.conversation?.messages ?? []) {
+    const q = item.questionId ? messages.get(item.questionId) : undefined;
+    if (q && item.questionId) {
+      if (!represented.has(item.questionId)) ordered.push(q.article);
+      represented.add(item.questionId);
+      continue;
+    }
+    const key = messageKey(item);
+    wanted.add(key);
+    let node = sessionMessages.get(key);
+    if (!node) {
+      const article = document.createElement('article');
+      article.className = 'live-question';
+      article.dataset.messageId = key;
+      const bubble = document.createElement('div');
+      bubble.className = `live-message ${item.role === 'user' ? 'live-user' : 'live-answer'}`;
+      bubble.dataset.liveRole = item.role;
+      const meta = document.createElement('div');
+      meta.className = 'live-message-meta';
+      const role = document.createElement('span');
+      role.className = 'live-role';
+      role.textContent = item.role === 'user' ? 'You' : 'Agent';
+      meta.append(role);
+      const text = document.createElement(item.role === 'user' ? 'p' : 'div');
+      text.className = item.role === 'user' ? 'live-text' : 'live-markdown';
+      bubble.append(meta, text);
+      article.append(bubble);
+      node = { article, text, value: '' };
+      sessionMessages.set(key, node);
+    }
+    if (node.value !== item.text) {
+      if (item.role === 'user') node.text.textContent = item.text;
+      else renderMessage(node.text, item.text);
+      node.value = item.text;
+    }
+    ordered.push(node.article);
+  }
+  for (const q of snapshot.questions)
+    if (!projected.has(q.id) && (q.status === 'queued' || q.status === 'sending')) {
+      const node = messages.get(q.id)?.article;
+      if (node) ordered.push(node);
+    }
+  for (const [id, node] of sessionMessages)
+    if (!wanted.has(id)) {
+      node.article.remove();
+      sessionMessages.delete(id);
+    }
+  let previous: Element = empty;
+  for (const article of ordered) {
+    if (previous.nextElementSibling !== article)
+      history.insertBefore(article, previous.nextSibling);
+    previous = article;
+  }
+}
 const cancelButtons = new Map<string, HTMLButtonElement>();
 const cancelling = new Set<string>();
 function atEnd(): boolean {
@@ -395,7 +472,13 @@ function renderQueue(snapshot: LiveSnapshot): void {
 }
 function render(snapshot: LiveSnapshot): void {
   const follow = atEnd();
-  const previousMessageCount = messages.size;
+  const previousMessageCount = messages.size + sessionMessages.size;
+  const anchor = follow
+    ? undefined
+    : [...history.children].find(
+        (node) => node.getBoundingClientRect().bottom > history.getBoundingClientRect().top,
+      );
+  const anchorTop = anchor?.getBoundingClientRect().top;
   current = snapshot;
   title.textContent = snapshot.document.title;
   document.title = `${snapshot.document.title} · Live`;
@@ -425,7 +508,9 @@ function render(snapshot: LiveSnapshot): void {
     if (frame) message(frame, 'capture');
     else loadDocument(latestUrl);
   }
-  empty.hidden = Boolean(snapshot.questions.length);
+  empty.hidden = Boolean(snapshot.questions.length || snapshot.conversation?.messages.length);
+  historyNote.hidden = !snapshot.conversation?.limited;
+  const projected = projectedQuestions(snapshot);
   for (const q of snapshot.questions) {
     const item = messages.get(q.id) ?? createQuestion(q.id);
     item.badge.textContent = {
@@ -444,7 +529,7 @@ function render(snapshot: LiveSnapshot): void {
     item.binding.textContent =
       q.subject && q.binding !== 'exact' ? `Selected text: ${q.binding ?? 'historical'}` : '';
     item.binding.hidden = !item.binding.textContent;
-    item.answer.hidden = !q.answer && q.status !== 'sending';
+    item.answer.hidden = projected.has(q.id) || (!q.answer && q.status !== 'sending');
     const response = q.answer || (q.status === 'sending' ? 'Working on it…' : '');
     if (item.answerText !== response) {
       renderMessage(item.response, response);
@@ -460,9 +545,14 @@ function render(snapshot: LiveSnapshot): void {
           : '');
     item.system.toggleAttribute('data-error', Boolean(q.error));
   }
+  renderConversation(snapshot);
   renderQueue(snapshot);
   if (follow) scrollLatest();
-  else if (messages.size > previousMessageCount) latest.hidden = false;
+  else {
+    if (anchor?.isConnected && anchorTop !== undefined)
+      history.scrollTop += anchor.getBoundingClientRect().top - anchorTop;
+    if (messages.size + sessionMessages.size > previousMessageCount) latest.hidden = false;
+  }
 }
 const admissions = new Map<
   string,
@@ -679,9 +769,24 @@ const events = new EventSource('/events');
 events.onmessage = (event: MessageEvent<string>) => {
   const data = JSON.parse(event.data) as LiveEvent;
   if (data.type === 'snapshot') render(data.snapshot);
-  else {
+  else if (data.type === 'session-message') {
+    if (!current?.conversation) return;
+    const follow = atEnd();
+    const key = messageKey(data.message);
+    render({
+      ...current,
+      conversation: {
+        ...current.conversation,
+        messages: current.conversation.messages.map((item) =>
+          messageKey(item) === key ? data.message : item,
+        ),
+      },
+    });
+    if (!follow) latest.hidden = false;
+  } else {
     const item = messages.get(data.id);
     if (!item) return;
+    if (current && projectedQuestions(current).has(data.id)) return;
     const follow = atEnd();
     item.answer.hidden = false;
     renderMessage(item.response, data.text);

@@ -22,6 +22,8 @@ async function control(): Promise<{
   root: string;
   socketPath: string;
   frames: Frame[];
+  turns: Array<{ id: string; items: Record<string, unknown>[] }>;
+  notify(method: string, params: Record<string, unknown>): void;
   idle(): void;
   disconnect(): void;
   releaseStatus(): void;
@@ -33,6 +35,7 @@ async function control(): Promise<{
     holdHandshake: boolean;
     holdStatus: boolean;
     waitingStatus: number;
+    invalidHistory: boolean;
   };
 }> {
   const root = await createTestWorkspace('session');
@@ -43,6 +46,7 @@ async function control(): Promise<{
   const ws = new WebSocketServer({ server, path: '/rpc' });
   const clients = new Set<WebSocket>();
   const frames: Frame[] = [];
+  const turns: Array<{ id: string; items: Record<string, unknown>[] }> = [];
   const identity = {
     id: 'author-thread',
     writable: true,
@@ -51,6 +55,7 @@ async function control(): Promise<{
     holdHandshake: false,
     holdStatus: false,
     waitingStatus: 0,
+    invalidHistory: false,
   };
   const statusReplies: Array<() => void> = [];
   let busy = true;
@@ -79,6 +84,37 @@ async function control(): Promise<{
       if (rpcId === undefined) return;
       const result = (value: unknown): void => emit(client, { id: rpcId, result: value });
       if (frame.method === 'initialize' && !identity.holdHandshake) result({});
+      if (frame.method === 'thread/turns/list')
+        result({
+          data: identity.invalidHistory
+            ? [{ id: 'invalid' }]
+            : turns
+                .slice(-Number(frame.params?.limit ?? 20))
+                .reverse()
+                .map((turn) => ({
+                  ...turn,
+                  items:
+                    frame.params?.itemsView === 'summary'
+                      ? [
+                          turn.items.find((item) => item.type === 'userMessage'),
+                          [...turn.items].reverse().find((item) => item.type === 'agentMessage'),
+                        ].filter((item) => item !== undefined)
+                      : turn.items,
+                })),
+          nextCursor: null,
+        });
+      if (frame.method === 'thread/items/list') {
+        const turn = turns.find((turn) => turn.id === frame.params?.turnId);
+        const offset = Number(frame.params?.cursor ?? 0);
+        const descending = [...(turn?.items ?? [])].reverse();
+        const limit = Number(frame.params?.limit ?? 20);
+        result({
+          data: descending
+            .slice(offset, offset + limit)
+            .map((item) => ({ turnId: turn?.id, item })),
+          nextCursor: offset + limit < descending.length ? String(offset + limit) : null,
+        });
+      }
       if (frame.method === 'thread/read' || frame.method === 'thread/resume') {
         const reply = (): void =>
           result({
@@ -99,6 +135,15 @@ async function control(): Promise<{
       const question = text.split("Reader's question:\n")[1];
       if (!question) throw new Error('The reader turn has no question prompt.');
       busy = true;
+      const user = {
+        type: 'userMessage',
+        id: `user-${id}`,
+        clientId: frame.params?.clientUserMessageId ?? null,
+        content: [{ type: 'text', text }],
+      };
+      const turn: { id: string; items: Record<string, unknown>[] } = { id, items: [user] };
+      turns.push(turn);
+      notify('item/completed', { threadId: 'author-thread', turnId: id, item: user });
       notify('thread/status/changed', { threadId: 'author-thread', status: { type: 'active' } });
       // Unrelated turns must not become ownership just because turn/start is awaiting acknowledgement.
       emit(client, {
@@ -129,6 +174,14 @@ async function control(): Promise<{
         params: { threadId: 'author-thread', turnId: id, itemId: 'original' },
       });
       emit(client, {
+        method: 'item/started',
+        params: {
+          threadId: 'author-thread',
+          turnId: id,
+          item: { type: 'agentMessage', id: 'answer', text: '' },
+        },
+      });
+      emit(client, {
         method: 'item/agentMessage/delta',
         params: { threadId: 'author-thread', turnId: id, itemId: 'answer', delta: 'Reader draft' },
       });
@@ -145,6 +198,7 @@ async function control(): Promise<{
           item: { type: 'agentMessage', id: 'answer', text: `Reader answer: ${question}` },
         },
       });
+      turn.items.push({ type: 'agentMessage', id: 'answer', text: `Reader answer: ${question}` });
       emit(client, {
         method: 'turn/completed',
         params: { threadId: 'author-thread', turn: { id, status: 'completed' } },
@@ -170,6 +224,8 @@ async function control(): Promise<{
     root,
     socketPath,
     frames,
+    turns,
+    notify,
     idle,
     disconnect,
     identity,
@@ -204,6 +260,256 @@ const submit = (service: LiveReportServer, id: string, text: string): Promise<Re
   });
 
 describe('current Codex living document', () => {
+  it('mirrors terminal steering and subsequent streaming while the acknowledged browser turn is still active', async () => {
+    const peer = await control();
+    peer.identity.hold = true;
+    peer.idle();
+    const service = await start(peer);
+    await wait(service, (s) => s.agent === 'ready');
+    await submit(service, 'active-browser', 'Active browser request');
+    await wait(service, (s) => s.questions[0]?.answer === 'Reader draft');
+    expect(service.snapshot().questions[0]?.status).toBe('sending');
+    const steering = {
+      type: 'userMessage',
+      id: 'active-steering',
+      clientId: 'terminal-input',
+      content: [{ type: 'text', text: 'Clarification during the reply' }],
+    };
+    peer.notify('item/completed', {
+      threadId: 'author-thread',
+      turnId: 'reader-1',
+      item: steering,
+    });
+    peer.notify('item/started', {
+      threadId: 'author-thread',
+      turnId: 'reader-1',
+      item: { type: 'agentMessage', id: 'after-steering', text: '' },
+    });
+    peer.notify('item/agentMessage/delta', {
+      threadId: 'author-thread',
+      turnId: 'reader-1',
+      itemId: 'after-steering',
+      delta: 'Stream after clarification',
+    });
+    await expect
+      .poll(() => service.snapshot().conversation?.messages.map((m) => m.text))
+      .toEqual([
+        'Active browser request',
+        'Reader draft',
+        'Clarification during the reply',
+        'Stream after clarification',
+      ]);
+    expect(service.snapshot().questions[0]?.status).toBe('sending');
+    const turn = peer.turns[0];
+    if (!turn) throw new Error('Missing active browser turn');
+    turn.items.push({ type: 'agentMessage', id: 'answer', text: 'First final reply' }, steering, {
+      type: 'agentMessage',
+      id: 'after-steering',
+      text: 'Final clarified reply',
+    });
+    for (const item of turn.items.slice(1))
+      peer.notify('item/completed', { threadId: 'author-thread', turnId: turn.id, item });
+    peer.notify('turn/completed', {
+      threadId: 'author-thread',
+      turn: { id: turn.id, status: 'completed' },
+    });
+    peer.idle();
+    await wait(service, (s) => s.questions[0]?.status === 'completed');
+    expect(service.snapshot().questions[0]?.answer).toBe(
+      'First final reply\n\nFinal clarified reply',
+    );
+    expect(service.snapshot().conversation?.messages.map((m) => m.text)).toEqual([
+      'Active browser request',
+      'First final reply',
+      'Clarification during the reply',
+      'Final clarified reply',
+    ]);
+    expect(peer.frames.filter((f) => f.method === 'turn/start')).toHaveLength(1);
+  });
+  it('loads intervening messages through small item pages instead of one full tool-heavy turn', async () => {
+    const peer = await control();
+    const user = (id: string, text: string): Record<string, unknown> => ({
+      type: 'userMessage',
+      id,
+      clientId: id,
+      content: [{ type: 'text', text }],
+    });
+    peer.turns.push({
+      id: 'long-turn',
+      items: [
+        user('first', 'Original terminal request'),
+        ...Array.from({ length: 75 }, (_, index) => ({
+          type: 'commandExecution',
+          id: `before-${index}`,
+          aggregatedOutput: 'TOOL LOG',
+        })),
+        { type: 'agentMessage', id: 'middle-answer', text: 'First answer' },
+        user('steer', 'Clarification in the middle'),
+        ...Array.from({ length: 75 }, (_, index) => ({
+          type: 'commandExecution',
+          id: `after-${index}`,
+          aggregatedOutput: 'TOOL LOG',
+        })),
+        { type: 'agentMessage', id: 'final-answer', text: 'Second answer' },
+      ],
+    });
+    peer.idle();
+    const service = await start(peer);
+    await wait(service, (s) => s.agent === 'ready');
+    expect(service.snapshot().conversation?.messages.map((m) => m.text)).toEqual([
+      'Original terminal request',
+      'First answer',
+      'Clarification in the middle',
+      'Second answer',
+    ]);
+    expect(peer.frames.filter((f) => f.method === 'thread/items/list').length).toBeGreaterThan(1);
+    expect(
+      peer.frames
+        .filter((f) => f.method === 'thread/items/list')
+        .every((f) => f.params?.limit === 20 && f.params?.threadId === 'author-thread'),
+    ).toBe(true);
+    expect(
+      peer.frames
+        .filter((f) => f.method === 'thread/turns/list')
+        .every((f) => f.params?.itemsView === 'summary'),
+    ).toBe(true);
+    expect(peer.frames.some((f) => f.method === 'turn/start')).toBe(false);
+  });
+  it('keeps browser delivery available when history is malformed and clears the warning after synchronization recovers', async () => {
+    const peer = await control();
+    peer.identity.invalidHistory = true;
+    peer.idle();
+    const service = await start(peer);
+    await wait(service, (s) => s.agent === 'ready');
+    expect(service.snapshot().error).toContain('history could not synchronize');
+    peer.identity.invalidHistory = false;
+    expect((await submit(service, 'after-history-error', 'Keep delivery available')).status).toBe(
+      202,
+    );
+    await wait(service, (s) => s.questions[0]?.status === 'completed' && !s.error);
+    expect(service.snapshot().conversation?.messages[0]?.text).toBe('Keep delivery available');
+    expect(peer.frames.filter((f) => f.method === 'turn/start')).toHaveLength(1);
+  });
+  it('mirrors terminal input between agent replies without resending it or duplicating browser questions', async () => {
+    const peer = await control();
+    const user = (id: string, text: string): Record<string, unknown> => ({
+      type: 'userMessage',
+      id,
+      clientId: id,
+      content: [{ type: 'text', text }],
+    });
+    peer.turns.push({
+      id: 'existing',
+      items: [
+        user('terminal-first', 'From terminal'),
+        { type: 'agentMessage', id: 'existing-answer', text: 'Initial answer' },
+      ],
+    });
+    peer.idle();
+    const service = await start(peer);
+    const conversation = (): Array<{
+      id: string;
+      role: string;
+      text: string;
+      questionId?: string;
+    }> =>
+      (
+        service.snapshot() as unknown as {
+          conversation?: {
+            messages: Array<{ id: string; role: string; text: string; questionId?: string }>;
+          };
+        }
+      ).conversation?.messages ?? [];
+    await expect
+      .poll(() => conversation().map((m) => m.text))
+      .toEqual(['From terminal', 'Initial answer']);
+    await submit(service, 'browser', 'From browser');
+    await wait(service, (s) => s.questions[0]?.status === 'completed');
+    const terminal = user('terminal-steer', 'My clarification');
+    peer.notify('item/completed', {
+      threadId: 'author-thread',
+      turnId: 'reader-1',
+      item: terminal,
+    });
+    peer.notify('item/completed', {
+      threadId: 'author-thread',
+      turnId: 'reader-1',
+      item: terminal,
+    });
+    peer.notify('item/completed', {
+      threadId: 'other-thread',
+      turnId: 'reader-1',
+      item: user('private', 'FOREIGN SECRET'),
+    });
+    peer.notify('item/completed', {
+      threadId: 'author-thread',
+      turnId: 'reader-1',
+      item: { type: 'commandExecution', id: 'tool', aggregatedOutput: 'TOOL SECRET' },
+    });
+    peer.notify('item/completed', {
+      threadId: 'author-thread',
+      turnId: 'reader-1',
+      item: { type: 'agentMessage', id: 'clarified-answer', text: 'Clarified answer' },
+    });
+    await expect
+      .poll(() => conversation().map((m) => m.text))
+      .toEqual([
+        'From terminal',
+        'Initial answer',
+        'From browser',
+        'Reader answer: From browser',
+        'My clarification',
+        'Clarified answer',
+      ]);
+    expect(conversation().filter((m) => m.questionId === 'browser')).toHaveLength(1);
+    expect(peer.frames.filter((f) => f.method === 'turn/start')).toHaveLength(1);
+    expect(peer.frames.find((f) => f.method === 'turn/start')?.params?.clientUserMessageId).toBe(
+      'agentic-report:browser',
+    );
+    peer.turns[1]?.items.push(terminal, {
+      type: 'agentMessage',
+      id: 'clarified-answer',
+      text: 'Clarified answer',
+    });
+    // Reconstruct the same protocol identities after reader restart; there is still one delivery.
+    await service.close();
+    const again = await start(peer);
+    await wait(again, (s) => s.agent === 'ready');
+    expect(again.snapshot().conversation?.messages.map((m) => m.text)).toEqual([
+      'From terminal',
+      'Initial answer',
+      'From browser',
+      'Reader answer: From browser',
+      'My clarification',
+      'Clarified answer',
+    ]);
+    expect(peer.frames.filter((f) => f.method === 'turn/start')).toHaveLength(1);
+  });
+
+  it('reconciles saved legacy browser prompts by exact unique content and preserves terminal input with identical text', async () => {
+    const peer = await control();
+    peer.idle();
+    let service = await start(peer);
+    await wait(service, (s) => s.agent === 'ready');
+    await submit(service, 'legacy', 'A legacy browser question');
+    await wait(service, (s) => s.questions[0]?.status === 'completed');
+    await service.close();
+    const turn = peer.turns[0];
+    if (!turn) throw new Error('Missing admitted turn');
+    const original = turn.items[0];
+    if (!original) throw new Error('Missing original user message');
+    original.clientId = null;
+    turn.items.push({ ...original, id: 'manual-copy', clientId: 'terminal-client' });
+    service = await start(peer);
+    await wait(service, (s) => s.agent === 'ready');
+    expect(
+      service.snapshot().conversation?.messages.filter((m) => m.questionId === 'legacy'),
+    ).toHaveLength(1);
+    const manual = service.snapshot().conversation?.messages.find((m) => m.id === 'manual-copy');
+    expect(manual?.questionId).toBeUndefined();
+    expect(manual?.text).toContain("Reader's question:");
+    expect(peer.frames.filter((f) => f.method === 'turn/start')).toHaveLength(1);
+  });
   const cancel = (
     service: LiveReportServer,
     id: string,

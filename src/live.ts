@@ -6,4 +6,6 @@ export type {
   LiveReportServer,
   LiveSnapshot,
   LiveSubject,
+  LiveConversation,
+  LiveConversationMessage,
 } from './live/contract.js';

@@ -132,6 +132,14 @@ async function open(page: Page): Promise<void> {
             new MessageEvent('message', { data: JSON.stringify({ type: 'delta', id, text }) }),
           );
       },
+      __liveSessionMessage: (message: unknown) => {
+        for (const stream of streams)
+          stream.onmessage?.(
+            new MessageEvent('message', {
+              data: JSON.stringify({ type: 'session-message', message }),
+            }),
+          );
+      },
       fetch: async (url: string, options: RequestInit) => {
         if (url === '/questions') {
           const state = window as unknown as { __liveSubmissionCount?: number };
@@ -252,6 +260,107 @@ test('rapid streaming follows the bottom and preserves a reader scrolling into h
     return { before, after: el.scrollTop };
   });
   expect(position.after).toBe(position.before);
+  await expect(page.locator('[data-live-new-messages]')).toBeVisible();
+});
+
+test('terminal messages interleave with agent replies while browser questions stay singular and drafts retain focus', async ({
+  page,
+}) => {
+  // Grouping the entire answer above a terminal clarification, duplicating its browser wrapper,
+  // or rebuilding focused controls fails these observable order/identity assertions.
+  await open(page);
+  if (test.info().project.name.startsWith('mobile'))
+    await page.locator('[data-live-toggle]').click();
+  const questions: LiveSnapshot['questions'] = [
+    {
+      id: 'browser',
+      text: 'A browser question',
+      status: 'sending',
+      answer: 'First answer\n\nSecond answer',
+    },
+    { id: 'waiting', text: 'Still waiting', status: 'queued', answer: '' },
+  ];
+  const messages: NonNullable<LiveSnapshot['conversation']>['messages'] = [
+    {
+      id: 'user-browser',
+      turnId: 'turn',
+      role: 'user',
+      text: 'A browser question',
+      questionId: 'browser',
+    },
+    { id: 'first-answer', turnId: 'turn', role: 'agent', text: 'First answer' },
+    {
+      id: 'terminal',
+      turnId: 'turn',
+      role: 'user',
+      text: '<img src=x onerror=alert(1)> My terminal clarification',
+    },
+    { id: 'second-answer', turnId: 'turn', role: 'agent', text: '**Second answer**' },
+  ];
+  await emit(page, {
+    ...initial,
+    agent: 'working',
+    questions,
+    conversation: { messages, limited: false },
+  });
+  const history = page.locator('[data-live-history]');
+  await expect(history.locator('[data-live-role]:visible')).toHaveText([
+    'YouSendingA browser question',
+    'AgentFirst answer',
+    'You<img src=x onerror=alert(1)> My terminal clarification',
+    'AgentSecond answer',
+    'YouWaitingStill waiting',
+  ]);
+  await expect(history.locator('[data-question-id="browser"]')).toHaveCount(1);
+  await expect(history.locator('img,script')).toHaveCount(0);
+  await expect(page.locator('[data-live-queue-list] li')).toHaveCount(1);
+  await page.locator('[data-live-input]').fill('My next unsent draft');
+  await history
+    .locator('[data-message-id="turn:terminal"]')
+    .evaluate((el) => Object.assign(window, { __terminalNode: el }));
+  await emit(page, {
+    ...updated,
+    agent: 'working',
+    questions,
+    conversation: {
+      messages: [
+        ...messages,
+        { id: 'next-user', turnId: 'next-turn', role: 'user', text: 'Another terminal request' },
+      ],
+      limited: false,
+    },
+  });
+  await expect(page.locator('[data-live-input]')).toHaveValue('My next unsent draft');
+  await expect(page.locator('[data-live-input]')).toBeFocused();
+  expect(
+    await history
+      .locator('[data-message-id="turn:terminal"]')
+      .evaluate((el) => (window as unknown as { __terminalNode: Element }).__terminalNode === el),
+  ).toBe(true);
+  expect(await page.evaluate(() => '__liveSubmitted' in window)).toBe(false);
+  const streaming = {
+    id: 'streaming',
+    turnId: 'next-turn',
+    role: 'agent' as const,
+    text: 'Streaming line\n'.repeat(170),
+  };
+  await emit(page, {
+    ...updated,
+    agent: 'working',
+    questions,
+    conversation: { messages: [...messages, streaming], limited: true },
+  });
+  await expect(page.locator('[data-live-history-note]')).toBeVisible();
+  const positions = await history.evaluate((el, message) => {
+    el.scrollTo({ top: 100, behavior: 'instant' });
+    const before = el.scrollTop;
+    (window as unknown as { __liveSessionMessage: (value: unknown) => void }).__liveSessionMessage({
+      ...message,
+      text: 'Streaming line\n'.repeat(190),
+    });
+    return { before, after: el.scrollTop };
+  }, streaming);
+  expect(positions.after).toBe(positions.before);
   await expect(page.locator('[data-live-new-messages]')).toBeVisible();
 });
 

@@ -4,6 +4,22 @@ import { parseReviewTargetManifest, type ReviewTargetReference } from '../review
 export const MAX_LIVE_STATE_BYTES = 4_000_000;
 export const MAX_LIVE_REQUEST_BYTES = 32_000;
 export const MAX_LIVE_QUESTIONS = 200;
+export const MAX_LIVE_MESSAGES = 400;
+export const MAX_LIVE_CONVERSATION_BYTES = 1_000_000;
+export const MAX_LIVE_MESSAGE_TEXT = 80_000;
+
+/** A bounded read-only projection of the existing author's conversation, never a delivery queue. */
+export interface LiveConversationMessage {
+  readonly id: string;
+  readonly turnId: string;
+  readonly role: 'user' | 'agent';
+  readonly text: string;
+  readonly questionId?: string;
+}
+export interface LiveConversation {
+  readonly messages: readonly LiveConversationMessage[];
+  readonly limited: boolean;
+}
 
 const target = z.unknown().transform((value, ctx): ReviewTargetReference => {
   try {
@@ -76,11 +92,13 @@ export interface LiveSnapshot {
   readonly questions: readonly (LiveQuestion & {
     readonly binding?: 'exact' | 'changed' | 'missing' | 'ambiguous';
   })[];
+  readonly conversation?: LiveConversation;
   readonly error?: string;
 }
 
 export type LiveEvent =
   | { readonly type: 'snapshot'; readonly snapshot: LiveSnapshot }
+  | { readonly type: 'session-message'; readonly message: LiveConversationMessage }
   | { readonly type: 'delta'; readonly id: string; readonly text: string };
 
 export interface ServeReportOptions {

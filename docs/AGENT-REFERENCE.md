@@ -171,7 +171,8 @@ Use `serve` from the author Codex session for a browser discussion with that exi
 revision updates. A separate agent requires explicit `--agent standalone`. This explicit
 host is separate from the offline compiler and available through the `agentic-report/live` ESM subpath.
 The [live operating guide](../skills/agentic-report/references/process.md#live-local-document) defines
-startup commands, every flag, contextual passage questions, formatted chat, cancellable waiting queues,
+startup commands, every flag, contextual passage questions, formatted chat with mirrored same-author
+terminal messages, bounded history without duplicate delivery, cancellable waiting queues,
 reader visual/width controls and restart limitations.
 
 ## Validate and inspect without writing output

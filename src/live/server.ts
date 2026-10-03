@@ -36,6 +36,7 @@ import {
   type LiveReportServer,
   type LiveSnapshot,
   type LiveState,
+  type LiveConversation,
   type ServeReportOptions,
 } from './contract.js';
 
@@ -159,6 +160,7 @@ export async function serveReport(options: ServeReportOptions): Promise<LiveRepo
   let agent: LiveSnapshot['agent'] = mode === 'none' ? 'offline' : 'starting';
   let serviceError: string | undefined;
   let buildError: string | undefined;
+  let historyError: string | undefined;
   let closing = false;
   let rebuilding = false;
   let changed = 0;
@@ -171,6 +173,7 @@ export async function serveReport(options: ServeReportOptions): Promise<LiveRepo
   let acceptance = Promise.resolve();
   let persistence = Promise.resolve();
   let url = '';
+  let conversation: LiveConversation | undefined;
 
   // Capture each state write only after the preceding admission has committed to memory.
   // This prevents completion/thread writes from overwriting a newly persisted question.
@@ -253,8 +256,9 @@ export async function serveReport(options: ServeReportOptions): Promise<LiveRepo
           ) ?? 'missing';
         return { ...question, binding: aggregate };
       }),
-      ...(serviceError || buildError
-        ? { error: [buildError, serviceError].filter(Boolean).join('\n') }
+      ...(conversation ? { conversation } : {}),
+      ...(serviceError || buildError || historyError
+        ? { error: [buildError, serviceError, historyError].filter(Boolean).join('\n') }
         : {}),
     };
   };
@@ -485,11 +489,15 @@ export async function serveReport(options: ServeReportOptions): Promise<LiveRepo
         announce();
         const parts = new Map<string, string>();
         try {
-          await client.send(questionPrompt(question), (text, itemId, final) => {
-            parts.set(itemId, (final ? text : (parts.get(itemId) ?? '') + text).slice(0, 80_000));
-            question.answer = [...parts.values()].join('\n\n').slice(0, 80_000);
-            publish({ type: 'delta', id: question.id, text: question.answer });
-          });
+          await client.send(
+            questionPrompt(question),
+            (text, itemId, final) => {
+              parts.set(itemId, (final ? text : (parts.get(itemId) ?? '') + text).slice(0, 80_000));
+              question.answer = [...parts.values()].join('\n\n').slice(0, 80_000);
+              publish({ type: 'delta', id: question.id, text: question.answer });
+            },
+            `agentic-report:${question.id}`,
+          );
           question.status = 'completed';
           agent = 'ready';
         } catch (cause) {
@@ -748,6 +756,11 @@ export async function serveReport(options: ServeReportOptions): Promise<LiveRepo
       const requestedThread = options.threadId ?? state.threadId;
       const onError = (message: string, terminal: boolean): void => {
         if (closing) return;
+        if (attachment && !terminal) {
+          historyError = message.slice(0, 2000);
+          announce();
+          return;
+        }
         if (terminal) agent = 'failed';
         setError(message);
       };
@@ -755,6 +768,42 @@ export async function serveReport(options: ServeReportOptions): Promise<LiveRepo
         ? new LiveCodexSession({
             ...attachment,
             onError,
+            questionForMessage: (clientId, text) => {
+              const eligible = state.questions.filter(
+                (q) => q.status !== 'queued' && q.status !== 'cancelled',
+              );
+              if (typeof clientId === 'string')
+                return eligible.find(
+                  (q) => clientId === `agentic-report:${q.id}` && questionPrompt(q) === text,
+                )?.id;
+              // Old reader turns have no client identity. Never hide an ambiguous or unrelated prompt.
+              const matches = eligible.filter((q) => questionPrompt(q) === text);
+              return matches.length === 1 ? matches[0]?.id : undefined;
+            },
+            onConversation: (next, changed) => {
+              if (closing) return;
+              if (!changed) historyError = undefined;
+              const normalize = (
+                item: (typeof next.messages)[number],
+              ): (typeof next.messages)[number] => {
+                const q = item.questionId
+                  ? state.questions.find((q) => q.id === item.questionId)
+                  : undefined;
+                return q ? { ...item, text: q.text } : item;
+              };
+              const unchangedOrder =
+                conversation?.limited === next.limited &&
+                conversation.messages.length === next.messages.length &&
+                conversation.messages.every(
+                  (item, index) =>
+                    item.id === next.messages[index]?.id &&
+                    item.turnId === next.messages[index]?.turnId,
+                );
+              conversation = { ...next, messages: next.messages.map(normalize) };
+              if (changed && unchangedOrder)
+                publish({ type: 'session-message', message: normalize(changed) });
+              else announce();
+            },
             onAvailability: (available) => {
               if (closing || processing || agent === 'starting' || agent === 'failed') return;
               agent = available ? 'ready' : 'working';

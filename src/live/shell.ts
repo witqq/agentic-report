@@ -27,6 +27,7 @@ export function renderLiveShell(script: string): string {
 <label class="live-setting">Highlight changes<input type="checkbox" data-live-highlights checked></label>
 <div class="live-settings-footer"><span>Saved in this browser</span><button type="button" data-live-reset>Reset view</button></div></section>
 <p class="live-error" data-live-error role="alert" hidden></p>
+<p class="live-system" data-live-history-note hidden style="padding:0 1rem">Recent conversation · older messages omitted</p>
 <div class="live-history" data-live-history aria-label="Conversation messages"><div class="live-empty" data-live-empty><strong>Let's work on this document</strong>Select a passage to ask right beside it, or send a question below. Replies and source changes appear here.</div></div>
 <button class="live-new-messages" type="button" data-live-new-messages hidden>Latest messages ↓</button>
 <p class="live-active" data-live-active role="status" hidden></p>

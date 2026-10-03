@@ -31,7 +31,8 @@ browser runtime.
 Launch the optional `serve` command from the author Codex session when the reader wants to continue that
 same conversation while the original Markdown changes. A separate agent requires `--agent standalone`. Follow the
 [live operating guide](../../skills/agentic-report/references/process.md#live-local-document) for startup,
-flags, questions beside selected passages, formatted chat, cancellable waiting questions, reader view
+flags, questions beside selected passages, formatted chat with same-author terminal messages, bounded
+history without replay, cancellable waiting questions, reader view
 controls and restart behavior. Hosting is also available through
 `serveReport()` from `agentic-report/live`; the root compiler API remains offline.
 

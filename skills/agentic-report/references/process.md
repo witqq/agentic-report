@@ -61,7 +61,12 @@ The **waiting questions** list shows their order and the reason for waiting. Eac
 after reconnect or restart. A question already being answered appears separately and cannot be cancelled
 through this action. If saving fails, the interface explains that the question was not accepted or that
 cancellation failed and the question is still waiting; retry after checking conversation storage.
-Only the reader's own turn messages enter its streamed answer. Chat replies stream as Codex emits text. Codex
+Each saved browser question records the agent text from its acknowledged reader turn. In current-session
+mode, the visible chat also mirrors human text sent from the same Codex/terminal conversation and the
+agent's other replies, in message order. A clarification during a reply appears between the surrounding
+agent messages. A correlated browser question appears once with its original short text and selected quote; its
+instruction wrapper is not another visible question. Mirrored history never creates a queued question
+or sends input to Codex again. Chat replies stream as Codex emits text. Codex
 edits the original Markdown and resources; the service watches the source graph, builds complete valid
 revisions and highlights their changes. A failed build leaves the last good document visible with an error.
 Updates preserve reading position, open disclosures, language, theme and scheme, plus the discussion draft
@@ -72,6 +77,17 @@ emphasis, code and tables; raw HTML stays text, images do not load, and executab
 New messages and working status animate unless reduced motion is requested. Streaming follows the end
 while the reader stays there; scrolling into older messages preserves that place and exposes **Latest
 messages** to return.
+
+Current-session history is a bounded recent view. Attachment reads the latest 20 turns and small pages of
+20 items, with at most 80 item pages per synchronization; scanning stops after accumulated item responses
+reach 8,000,000 bytes. Known unchanged turns stay available while the completed turn is refreshed. Only
+user/agent text enters chat: tool output, reasoning, approvals and non-text attachments are omitted.
+The retained projection holds at most 400 messages, 80,000 characters per message and 1,000,000 serialized
+message-array bytes. The panel marks limited history; older or oversized text may be omitted. A history
+read failure leaves known messages visible with a warning, while a broken control connection requires
+restarting against the same author. New browser questions correlate by client identity and exact prompt;
+saved questions without that identity use only a unique exact registered prompt. An ambiguous legacy match
+stays unclaimed instead of hiding another human message. Standalone mode keeps its own browser-question chat.
 
 Open **View settings** in the panel to choose appearance, document theme or change-highlight
 visibility, and use **Reset view** to restore defaults. Live hosting offers theme choices by default when
@@ -98,7 +114,9 @@ its owned process when the reader stops. `--codex-command` is refused in current
 `--codex-socket` is refused outside it; neither mode grants extra permissions.
 
 The source-root-local `.agentic-report/live-<entry-hash>/conversation.json` stores the thread and question
-history. Treat it as private document data and exclude `.agentic-report/` from source control. Reloading
+history. The mirrored author transcript is a read-only in-memory projection recovered from Codex at
+attachment; it is not copied into this file. Treat the file as private document data and exclude
+`.agentic-report/` from source control. Reloading
 the browser or restarting the service against the same author restores this history. Destination identity
 is stored before accepting startup questions, even before connection succeeds. Populated history cannot
 silently move to another session: reconnect its existing author or copy the document into a fresh workspace
@@ -120,12 +138,16 @@ import { serveReport } from 'agentic-report/live';
 
 const live = await serveReport({ input: './my-page' }); // Current Codex identity from the host environment.
 console.log(live.url);
-// live.statePath identifies the private conversation; live.snapshot() returns current reader state.
+// live.statePath identifies private delivery history; snapshot() also includes current conversation text.
 await live.close();
 ```
 
 A host outside Codex supplies `threadId` and, if the default endpoint differs, `codexSocket` explicitly.
 `agent: 'standalone'` and `codexCommand` are the separate-agent alternative.
+In current-session mode, `snapshot().conversation` contains ordered `messages` and a `limited` flag.
+Each message has `id`, `turnId`, `role` (`user` or `agent`), `text` and optional `questionId` for a
+correlated browser question. The exported `LiveConversation` and `LiveConversationMessage` types describe
+this projection; question statuses and cancellation remain in `snapshot().questions`.
 
 The service listens only on `127.0.0.1`, serves its generated inventory and rejects foreign-origin
 question and cancellation requests. It is a local single-user reader, not a remote deployment or simultaneous editor.

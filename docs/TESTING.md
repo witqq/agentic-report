@@ -459,10 +459,21 @@ cancellation coverage holds delivery readiness open, cancels waiting work, obser
 answers and retains terminal cancellation across restart. Active cancellation, repeated/missing/foreign
 requests and real persistence refusal distinguish safe feedback from false acceptance or cancellation.
 
+The same Unix fixture distinguishes terminal input during an acknowledged active reader turn, later
+streaming/final agent text, stable history/event identities, exact browser correlation, legacy prompt
+compatibility and restart without replay. Small item pages recover intervening messages from tool-heavy
+turns, and malformed history produces a recoverable warning while delivery remains available.
+`tests/unit/live-conversation.test.ts` protects authoritative ordering, newer-event precedence over a stale
+read, final-text precedence over late deltas, omitted tool/reasoning/asset fields and retained count/text/byte
+bounds. Run these cases through
+`pnpm test:unit -- --testNamePattern='live conversation projection|current Codex living document'`.
+
 `pnpm test:e2e --file tests/e2e/live-document.spec.ts` opens generated document frames and the reader shell
 through `file://`, using a mocked transport. It distinguishes direct contextual subjects and streamed replies,
 Enter/Shift+Enter/composition and native keyboard Close, current-conversation identity, stale drafts/focus and
 pending admission rejoin after frame replacement, readable safe Markdown and stable message identity,
+terminal user messages between agent replies, singular correlated browser questions, limited-history
+disclosure and incremental-message scrolling without losing focus or a draft,
 ordered waiting cancellation, synchronized theme/appearance/change controls and bounded keyboard width,
 dark-only theme availability, reading-position preservation, rapid stream following versus intentional
 scroll-up, visible change marks, compact containment and reduced motion including status pseudo-elements.

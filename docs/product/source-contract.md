@@ -23,7 +23,8 @@ source locally with the existing author Codex session by default; a separate age
 They add no metadata fields or directive syntax. The root ESM API
 and ordinary builds remain offline. The
 [live operating guide](../../skills/agentic-report/references/process.md#live-local-document) defines the
-host lifecycle, contextual questions, durable cancellable discussion and read-side visual controls; the
+host lifecycle, contextual questions, mirrored same-author text history, durable cancellable discussion
+and read-side visual controls; the
 static Review/Response contracts below remain separate. Live theme defaults follow that guide and do not
 change ordinary build defaults or rewrite source metadata.
 
