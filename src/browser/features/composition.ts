@@ -8,6 +8,7 @@ import {
 } from '../../composition.js';
 import { connectionRoute, overlaps, type SceneRect } from '../../composition-route.js';
 import { pageClock } from '../clock.js';
+import { hydrateSharedImages } from '../shared-media.js';
 import { provideFeature, type Cleanup } from '../features.js';
 import { timed, whenVisible } from '../technique-timing.js';
 
@@ -47,6 +48,7 @@ function cuesOf(scope: HTMLElement): CompositionCue[] {
 }
 function scopedClone(fragment: DocumentFragment, prefix?: string): DocumentFragment {
   const clone = fragment.cloneNode(true) as DocumentFragment;
+  hydrateSharedImages(clone);
   if (prefix === undefined) return clone;
   const ids = new Map([...clone.querySelectorAll('[id]')].map((n) => [n.id, `${prefix}-${n.id}`]));
   for (const node of clone.querySelectorAll('*')) {

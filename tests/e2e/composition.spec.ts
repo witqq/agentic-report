@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { buildReport } from '../../dist/node/index.js';
@@ -520,3 +520,84 @@ const output = transform(input);
     path: path.resolve('test-results/composition', `${info.project.name}-labels`, 'labels.png'),
   });
 });
+
+for (const format of ['single-file', 'directory'] as const) {
+  test(`composition originals keep PNG and SVG assets after copying and seeking (${format})`, async ({
+    page,
+  }, info) => {
+    const root = path.resolve('test-results/composition', `${info.project.name}-images-${format}`);
+    await rm(root, { recursive: true, force: true });
+    await mkdir(path.join(root, 'assets'), { recursive: true });
+    await page.screenshot({
+      path: path.join(root, 'assets/pixel.png'),
+      clip: { x: 0, y: 0, width: 8, height: 8 },
+    });
+    await writeFile(
+      path.join(root, 'assets/diagram.svg'),
+      '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="blue"/></svg>',
+    );
+    const input = path.join(root, 'report.md');
+    const output = path.join(root, format === 'directory' ? 'bundle' : 'page.html');
+    await writeFile(
+      input,
+      `---
+title: Portable images
+layout: dashboard
+motion: expressive
+---
+::::composition{id="images" kind="ownership"}
+:::object{id="source" role="source"}
+![PNG](assets/pixel.png)
+
+![SVG](assets/diagram.svg)
+:::
+:::object{id="result" role="result"}
+Waiting
+:::
+::cue{at="1" action="copy" target="source" to="result"}
+::::`,
+    );
+    await buildReport({ input, output, format });
+    await rm(path.join(root, 'assets'), { recursive: true });
+    await page.addInitScript(() => {
+      window.__agenticReportClock = 'manual';
+    });
+    await page.goto(
+      pathToFileURL(format === 'directory' ? path.join(output, 'index.html') : output).href,
+    );
+    const originals = await page.evaluate(() => {
+      const shared = JSON.parse(
+        document.getElementById('agentic-shared-images')?.textContent ?? '{}',
+      ) as Record<string, string>;
+      return [
+        ...document.querySelectorAll<HTMLTemplateElement>('template[data-composition-original]'),
+      ].flatMap((n) =>
+        [...n.content.querySelectorAll('img')].map(
+          (img) => img.getAttribute('src') ?? shared[img.dataset.sharedSrc ?? ''],
+        ),
+      );
+    });
+    expect(originals).toHaveLength(2);
+    expect(
+      originals.every((src) =>
+        format === 'single-file'
+          ? src?.startsWith('data:image/')
+          : /^assets\/.*\.[a-f0-9]{12}\.(png|svg)$/u.test(src ?? ''),
+      ),
+    ).toBe(true);
+    for (const time of [0, 2, 0, 2]) {
+      await page.evaluate((t) => window.__clock?.seek(t), time);
+      const images = page.locator('[data-composition-content] img');
+      await expect(images).toHaveCount(time === 0 ? 2 : 4);
+      await expect
+        .poll(() =>
+          images.evaluateAll((nodes) =>
+            nodes.every(
+              (n) => (n as HTMLImageElement).complete && (n as HTMLImageElement).naturalWidth > 0,
+            ),
+          ),
+        )
+        .toBe(true);
+    }
+  });
+}

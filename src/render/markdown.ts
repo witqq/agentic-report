@@ -466,31 +466,36 @@ type AssetTargetKind = 'image' | 'video' | 'asset' | 'font';
 
 const rehypeAssets: Plugin<[AssetPluginOptions], Root> = (options) => async (tree) => {
   const targets: Array<{ readonly node: Element; readonly kind: AssetTargetKind }> = [];
-  visit(tree, 'element', (node: Element) => {
-    if (node.tagName === 'img' && typeof node.properties.src === 'string') {
-      // Картинка Markdown с видеофайлом становится плеером: `<img>` видео не показывает.
-      targets.push({
-        node,
-        kind: videoType(node.properties.src) === undefined ? 'image' : 'video',
-      });
-      return;
-    }
-    if (
-      node.tagName === 'figure' &&
-      (typeof node.properties.dataVideoSource === 'string' ||
-        typeof node.properties.dataVideoFrom === 'string')
-    ) {
-      targets.push({ node, kind: 'video' });
-      return;
-    }
-    if (node.tagName === 'a' && typeof node.properties.dataLocalAsset === 'string') {
-      targets.push({ node, kind: 'asset' });
-      return;
-    }
-    if (node.tagName === 'span' && typeof node.properties.dataFontSource === 'string') {
-      targets.push({ node, kind: 'font' });
-    }
-  });
+  const collectTargets = (root: Root): void => {
+    visit(root, 'element', (node: Element) => {
+      // HAST templates keep their fragment in content, outside ordinary children.
+      if (node.tagName === 'template' && node.content !== undefined) collectTargets(node.content);
+      if (node.tagName === 'img' && typeof node.properties.src === 'string') {
+        // Картинка Markdown с видеофайлом становится плеером: `<img>` видео не показывает.
+        targets.push({
+          node,
+          kind: videoType(node.properties.src) === undefined ? 'image' : 'video',
+        });
+        return;
+      }
+      if (
+        node.tagName === 'figure' &&
+        (typeof node.properties.dataVideoSource === 'string' ||
+          typeof node.properties.dataVideoFrom === 'string')
+      ) {
+        targets.push({ node, kind: 'video' });
+        return;
+      }
+      if (node.tagName === 'a' && typeof node.properties.dataLocalAsset === 'string') {
+        targets.push({ node, kind: 'asset' });
+        return;
+      }
+      if (node.tagName === 'span' && typeof node.properties.dataFontSource === 'string') {
+        targets.push({ node, kind: 'font' });
+      }
+    });
+  };
+  collectTargets(tree);
   for (const target of targets) {
     try {
       await processAssetTarget(target, options);
