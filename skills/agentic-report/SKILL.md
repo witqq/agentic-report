@@ -30,11 +30,15 @@ Ordinary `build` still produces the standalone offline handoff.
 
 ## Pages and sources made for a film
 
-For a filmed explanation, read [directed scenes](references/directed-scenes.md) before choosing its arrangement. It maps a viewer's question to five ready compositions (`diagram-code`, `pipeline`, `before-after`, `overview-detail`, `ownership`), eight named-object actions and complete examples. Let a value change, travel or cross an ownership boundary while the narration names it; focus the code that performs that operation. Combine these actions with existing diagram draw/pulse, section entrances, code-line focus, typing, marks and the film's camera or 3D effects where they explain the subject.
+Start from the material and the viewer: [knowledge map](references/knowledge.md) routes to the accumulated references; [directing](references/directing.md) helps choose what the viewer should understand or feel, how that develops, and how it is staged. [Combinations](references/combinations.md) coordinates several actions into one event. Then use the [atlas](references/atlas.md) to discover tools and complete examples. These are conditional choices, not a common structure for every page or film.
+
+For a filmed explanation, read [directed scenes](references/directed-scenes.md) for the supported syntax. It offers five compositions (`diagram-code`, `pipeline`, `before-after`, `overview-detail`, `ownership`), eight named-object actions and complete examples. Let a value change, travel or cross an ownership boundary while the narration names it; focus the code that performs that operation. Combine these actions with existing diagram draw/pulse, section entrances, code-line focus, typing, marks and the film's camera or 3D effects where they explain the subject.
 
 Whenever a system interface is shown, first show its complete application screen in every format, then focus or zoom into a named part. A detail must have an established location. A page can keep the full screenshot beside its detail; a film reserves an opening beat for the whole viewport. Re-establish a substantially different screen after navigation. Read the same reference for still-page, presentation and vertical-film recipes.
 
 When a Report source is only material inside a Screencast film, follow the film's workflow: build that source and inspect its actual film frames. The full page-handoff route below applies when the page itself is a deliverable; do not add it as a second workflow to every filmed scene. Use a coordinated local compiler and Screencast build for the new composition syntax, as the directed-scenes reference explains.
+
+The [atlas builder](scripts/build-atlas.mjs) renders a browsable gallery of native examples, companion pages and reference extensions: `node <skill>/scripts/build-atlas.mjs --out ./report-atlas`. Build it when discovering or comparing tools; it adds no handoff gate.
 
 ## The order of work
 
@@ -149,6 +153,8 @@ For a Node host that supplies author-overridable page-control defaults, use `bui
 
 | Question                                                                                                    | Where                                                                                                                                                |
 | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| What material, viewer question, development or staging should guide the page or film?                       | [knowledge](references/knowledge.md), [directing](references/directing.md), [combinations](references/combinations.md)                               |
+| What tools and complete examples exist, and how do they look?                                               | [atlas](references/atlas.md), [gallery builder](scripts/build-atlas.mjs); `describe`, `schema`, `examples` for exact installed support               |
 | What must the brief answer, and how do I ask the person?                                                    | [`references/process.md`](references/process.md) («Start with the brief»)                                                                            |
 | What does this category need: form, first screen, mistakes, examples?                                       | [`references/playbook.md`](references/playbook.md)                                                                                                   |
 | How do I compose a filmed mechanism, time actions to speech, and establish a whole interface before detail? | [`references/directed-scenes.md`](references/directed-scenes.md)                                                                                     |
@@ -228,3 +234,9 @@ rule, its counterexample and its fix are in `node scripts/craft.mjs <id>`.
 - `PR-NOT-X-BUT-Y` — no staged contrast («не просто X, а Y», "not just X, it is Y"); state the claim.
 - `PR-DASH` — no dash where a full stop, comma or colon belongs.
 - `PR-MODEL-WORDS` and `PR-SALES` — no model vocabulary and no sales words; put the fact in their place.
+
+For a directed filmed mechanism, use the live directional connections and coordinated content changes described in [directed scenes](references/directed-scenes.md). Stable owner titles, concrete changing values and the corresponding code focus make the relation understandable; a highlighted generic card under several paragraphs does not.
+
+For filmed architecture/code explanations, read [architecture films](references/architecture-films.md) and the [real-code example route](references/architecture-films.md#buildable-real-code-example). Start with `midnight`, `scheme: dark` unless the material or requested look calls for another choice. Show concrete inputs, stored forms, owners, reads, mutations, calls and events, with the matching real code and file/function locator. Let content develop with measured speech; diagrams explain relations, lists enumerate, and a right-hand detail panel is only one arrangement. Use the existing draft to judge what the viewer learned; do not add another gate.
+
+Build the actual packaged examples gallery with the [atlas helper](scripts/build-atlas.mjs); its output is a local preview, not a publication.

@@ -1,6 +1,6 @@
 # Directed explanations and interface orientation
 
-Use a directed composition when the viewer must see an object change, move between owners, or produce a result beside code. The page supplies the layout, named objects and actions; Agentic Screencast supplies measured narration time and the film's camera, entrances and transitions. A sequence of identical diagrams with a different highlighted paragraph rarely shows the mechanism. Start from the visible change: what exists before the spoken line, what happens while it is spoken, and what remains afterward.
+Use a directed composition when the viewer must see an object change, move between owners, or produce a result beside code. The page supplies the layout, named objects and actions; Agentic Screencast supplies measured narration time and the film's camera, entrances and transitions. A sequence of identical diagrams with a different highlighted paragraph rarely shows the mechanism. Choose the development with [directing](directing.md) and coordinate it with [combinations](combinations.md). Start from the visible change: what exists before the spoken line, what happens while it is spoken, and what remains afterward.
 
 This reference covers composition choice, source syntax, action semantics, speech timing, existing effects and interface orientation. The exact field domains are in [the generated catalog](catalog.md#composition). The full sources to adapt are [first edit](../../../examples/directed-first-edit/report.md), [theme color](../../../examples/directed-theme-color/report.md) and [change event](../../../examples/directed-change-event/report.md).
 
@@ -15,6 +15,8 @@ This reference covers composition choice, source syntax, action semantics, speec
 | Who owns a value at each step             | `ownership`       | Named owners with stable titles                                               | `copy` for an independent value, `transfer` for a handoff |
 
 Objects hold ordinary Markdown, local images, diagrams and code fences. `role` selects a place in the package layout, not a class or CSS rule. Keep object titles stable when values change: the viewer should recognize the same owner throughout. Use a short title stating the claim, concise object labels and one readable value per object. Prefer a useful arrangement and visible causal action over decoration behind small text.
+
+Code objects in `pipeline`, `before-after` and `ownership` receive a full-width row below the other objects; `diagram-code` gives shorter code its dedicated column. Connections and moving objects use stage-local coordinates and stay aligned when a film fits the scene.
 
 ## Write a scene without layout code
 
@@ -60,26 +62,26 @@ The objects are arranged together from the beginning. The second paragraph copie
 
 ## Give each action a purpose
 
-| Action     | Required fields beyond `at`, `action`, `target`    | What the viewer sees                                                             |
-| ---------- | -------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `reveal`   | —                                                  | An object enters; an object with a reveal cue is hidden before its first reveal  |
-| `focus`    | Optional `lines="2-4,7"` on a code object          | This object is emphasized; other objects are dimmed and earlier focus is cleared |
-| `connect`  | `to`; optional `value` as a short connection label | A connection draws between object boundaries; its marker follows the path        |
-| `copy`     | `to`                                               | A moving copy arrives with the source content; the source keeps its value        |
-| `transfer` | `to`                                               | The value moves to its destination; the source content becomes empty on arrival  |
-| `replace`  | `value`                                            | The object's body becomes escaped plain text; its title stays in place           |
-| `compare`  | `to`                                               | Both named objects are emphasized together; earlier focus is cleared             |
-| `camera`   | —                                                  | A restrained move toward the object, bounded by the visible stage                |
+| Action     | Required fields beyond `at`, `action`, `target`    | What the viewer sees                                                                        |
+| ---------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `reveal`   | —                                                  | An object enters; an object with a reveal cue is hidden before its first reveal             |
+| `focus`    | Optional `lines="2-4,7"` on a code object          | This object is emphasized; other objects are dimmed and earlier focus is cleared            |
+| `connect`  | `to`; optional `value` as a short connection label | A directed connection draws between live object boundaries; its arrowhead follows the route |
+| `copy`     | `to`                                               | A moving copy arrives with the source content; the source keeps its value                   |
+| `transfer` | `to`                                               | The value moves to its destination; the source content becomes empty on arrival             |
+| `replace`  | `value`                                            | The object's body becomes escaped plain text; its title stays in place                      |
+| `compare`  | `to`                                               | Both named objects are emphasized together; earlier focus is cleared                        |
+| `camera`   | —                                                  | A restrained move toward the object, bounded by the visible stage                           |
 
-`to` must name another object in the same stage and is allowed only for pair actions. `value` belongs to replacement or a connection label. `lines` belongs only to code focus; use line numbers or comma-separated ranges from 1 through 999. `duration` is movement time in seconds, 0.1–3, default 0.6. Replacement and focus take effect at their anchor; movement duration controls reveal, connection, travel and camera interpolation. A copied or transferred value arrives at the end of its movement, so schedule a dependent edit after that duration. Cues on the same anchor are applied in source order.
+`to` must name another object in the same stage and is allowed only for pair actions. `value` belongs to replacement or a connection label. `focus` without `lines` leaves every code line fully readable. Selecting ranges dims only other lines, and a subsequent focus clears that selection. `lines` belongs only to code focus; use line numbers or comma-separated ranges from 1 through 999. `duration` is movement time in seconds, 0.1–3, default 0.6. Replacement and focus take effect at their anchor; movement duration controls reveal, connection, travel and camera interpolation. A copied or transferred value arrives at the end of its movement, so schedule a dependent edit after that duration. Cues on the same anchor are applied in source order.
 
-`replace` accepts text, not Markdown, HTML or executable code. To show two complex code or diagram states, author both as named objects and reveal/focus/compare them. Copy and transfer copy the object's body, keeping the destination title. Connections remain visible after they draw; a later focus replaces the previous emphasis. The camera cue is a small directing gesture, not a full-screen magnifier; use Screencast's camera or loupe for readable close-ups.
+`replace` accepts text, not Markdown, HTML or executable code. To show two complex code or diagram states, author both as named objects and reveal/focus/compare them. Copy and transfer copy the object's body, keeping the destination title. Connections use live boundary ports and rounded routes around visible objects; their arrowheads preserve direction after drawing. Labels occupy free space along the route, and moving copies follow the same boundary route between their owners. Entrance motion, replaced body sizes, fitting and camera movement update these attachments. Keep owners separate: overlapping rectangles have no unambiguous external route. A compact moving body preserves the full source content; use short values for a readable transfer rather than flying a whole code listing. Connections remain visible after they draw; a later focus replaces the previous emphasis. The camera cue is a small directing gesture, not a full-screen magnifier; use Screencast's camera or loupe for readable close-ups.
 
 ## Time actions to narration
 
 `at` accepts non-negative seconds (`0`, `1.5`, `1.5s`) or a speech paragraph anchor (`b2`, `b2.end`, `b2+0.3`, `b3.end-0.2`). In a standalone Report, paragraphs are illustrative three-second beats. When a Report scene is filmed by a compatible Agentic Screencast build, its anchors are bound to measured starts and ends of the scene's narration. Changing voice or paragraph length moves the action with the words. No authored JavaScript, manual animation loop or duplicated timestamp schedule is needed.
 
-Use one paragraph for each visible change, and enough time between dependent actions for the value to arrive. The stage state is reconstructed from the authored source on each clock seek, so a frame rendered directly from the middle has the same state as a continuous recording. A source with missing speech paragraphs is an error in a film rather than a guessed schedule.
+A paragraph may coordinate several related visible actions. Use separate paragraphs when the viewer needs distinct discoveries or reading moments, and enough time between dependent actions for the value to arrive. The stage state is reconstructed from the authored source on each clock seek, so a frame rendered directly from the middle has the same state as a continuous recording. A source with missing speech paragraphs is an error in a film rather than a guessed schedule.
 
 The compiled page contains final values before the runtime starts. Reduced motion, `motion: none`, printing and a page without scripts show that final static result. They omit moving overlays and camera transforms. Do not rely on a reveal to hide factual qualifications in the final page.
 

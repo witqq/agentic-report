@@ -801,6 +801,1002 @@
       "href": "examples/directed-change-event/report.ru.md",
       "source": "../examples/directed-change-event/report.ru.md",
       "kind": "copy"
+    },
+    {
+      "id": "source-skills-agentic-report-references-architecture-films-md",
+      "href": "skills/agentic-report/references/architecture-films.md",
+      "source": "../skills/agentic-report/references/architecture-films.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-skills-agentic-report-references-atlas-md",
+      "href": "skills/agentic-report/references/atlas.md",
+      "source": "../skills/agentic-report/references/atlas.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-skills-agentic-report-references-combinations-md",
+      "href": "skills/agentic-report/references/combinations.md",
+      "source": "../skills/agentic-report/references/combinations.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-skills-agentic-report-references-directing-md",
+      "href": "skills/agentic-report/references/directing.md",
+      "source": "../skills/agentic-report/references/directing.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-skills-agentic-report-references-knowledge-md",
+      "href": "skills/agentic-report/references/knowledge.md",
+      "source": "../skills/agentic-report/references/knowledge.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-skills-agentic-report-scripts-build-atlas-mjs",
+      "href": "skills/agentic-report/scripts/build-atlas.mjs",
+      "source": "../skills/agentic-report/scripts/build-atlas.mjs",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-answer-brief-md",
+      "href": "examples/answer/brief.md",
+      "source": "../examples/answer/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-architecture-assets-system-map-dark-ru-svg",
+      "href": "examples/architecture/assets/system-map-dark.ru.svg",
+      "source": "../examples/architecture/assets/system-map-dark.ru.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-architecture-assets-system-map-dark-svg",
+      "href": "examples/architecture/assets/system-map-dark.svg",
+      "source": "../examples/architecture/assets/system-map-dark.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-architecture-assets-system-map-ru-svg",
+      "href": "examples/architecture/assets/system-map.ru.svg",
+      "source": "../examples/architecture/assets/system-map.ru.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-architecture-assets-system-map-svg",
+      "href": "examples/architecture/assets/system-map.svg",
+      "source": "../examples/architecture/assets/system-map.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-architecture-brief-md",
+      "href": "examples/architecture/brief.md",
+      "source": "../examples/architecture/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-architecture-partials-decision-md",
+      "href": "examples/architecture/partials/decision.md",
+      "source": "../examples/architecture/partials/decision.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-architecture-partials-decision-ru-md",
+      "href": "examples/architecture/partials/decision.ru.md",
+      "source": "../examples/architecture/partials/decision.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-coast-dark-svg",
+      "href": "examples/capability-tour/assets/coast-dark.svg",
+      "source": "../examples/capability-tour/assets/coast-dark.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-coast-svg",
+      "href": "examples/capability-tour/assets/coast.svg",
+      "source": "../examples/capability-tour/assets/coast.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-film-season-av1-mp4",
+      "href": "examples/capability-tour/assets/film/season.av1.mp4",
+      "source": "../examples/capability-tour/assets/film/season.av1.mp4",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-film-season-h264-mp4",
+      "href": "examples/capability-tour/assets/film/season.h264.mp4",
+      "source": "../examples/capability-tour/assets/film/season.h264.mp4",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-film-season-poster-jpg",
+      "href": "examples/capability-tour/assets/film/season.poster.jpg",
+      "source": "../examples/capability-tour/assets/film/season.poster.jpg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-film-season-poster-webp",
+      "href": "examples/capability-tour/assets/film/season.poster.webp",
+      "source": "../examples/capability-tour/assets/film/season.poster.webp",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-film-season-thumbs-jpg",
+      "href": "examples/capability-tour/assets/film/season.thumbs.jpg",
+      "source": "../examples/capability-tour/assets/film/season.thumbs.jpg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-film-season-thumbs-vtt",
+      "href": "examples/capability-tour/assets/film/season.thumbs.vtt",
+      "source": "../examples/capability-tour/assets/film/season.thumbs.vtt",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-film-season-vp9-webm",
+      "href": "examples/capability-tour/assets/film/season.vp9.webm",
+      "source": "../examples/capability-tour/assets/film/season.vp9.webm",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-film-season-web-json",
+      "href": "examples/capability-tour/assets/film/season.web.json",
+      "source": "../examples/capability-tour/assets/film/season.web.json",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-film-ru-season-av1-mp4",
+      "href": "examples/capability-tour/assets/film-ru/season.av1.mp4",
+      "source": "../examples/capability-tour/assets/film-ru/season.av1.mp4",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-film-ru-season-h264-mp4",
+      "href": "examples/capability-tour/assets/film-ru/season.h264.mp4",
+      "source": "../examples/capability-tour/assets/film-ru/season.h264.mp4",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-film-ru-season-poster-jpg",
+      "href": "examples/capability-tour/assets/film-ru/season.poster.jpg",
+      "source": "../examples/capability-tour/assets/film-ru/season.poster.jpg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-film-ru-season-poster-webp",
+      "href": "examples/capability-tour/assets/film-ru/season.poster.webp",
+      "source": "../examples/capability-tour/assets/film-ru/season.poster.webp",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-film-ru-season-thumbs-jpg",
+      "href": "examples/capability-tour/assets/film-ru/season.thumbs.jpg",
+      "source": "../examples/capability-tour/assets/film-ru/season.thumbs.jpg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-film-ru-season-thumbs-vtt",
+      "href": "examples/capability-tour/assets/film-ru/season.thumbs.vtt",
+      "source": "../examples/capability-tour/assets/film-ru/season.thumbs.vtt",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-film-ru-season-vp9-webm",
+      "href": "examples/capability-tour/assets/film-ru/season.vp9.webm",
+      "source": "../examples/capability-tour/assets/film-ru/season.vp9.webm",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-film-ru-season-web-json",
+      "href": "examples/capability-tour/assets/film-ru/season.web.json",
+      "source": "../examples/capability-tour/assets/film-ru/season.web.json",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-season-poster-dark-ru-webp",
+      "href": "examples/capability-tour/assets/season-poster-dark.ru.webp",
+      "source": "../examples/capability-tour/assets/season-poster-dark.ru.webp",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-assets-season-poster-dark-webp",
+      "href": "examples/capability-tour/assets/season-poster-dark.webp",
+      "source": "../examples/capability-tour/assets/season-poster-dark.webp",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-brief-md",
+      "href": "examples/capability-tour/brief.md",
+      "source": "../examples/capability-tour/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-data-network-json",
+      "href": "examples/capability-tour/data/network.json",
+      "source": "../examples/capability-tour/data/network.json",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-edition-1-ru-md",
+      "href": "examples/capability-tour/edition-1.ru.md",
+      "source": "../examples/capability-tour/edition-1.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-edition-2-ru-md",
+      "href": "examples/capability-tour/edition-2.ru.md",
+      "source": "../examples/capability-tour/edition-2.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-kestrel-theme-yaml",
+      "href": "examples/capability-tour/kestrel-theme.yaml",
+      "source": "../examples/capability-tour/kestrel-theme.yaml",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-capability-tour-screens-ru-md",
+      "href": "examples/capability-tour/screens.ru.md",
+      "source": "../examples/capability-tour/screens.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-cinematic-story-assets-aurora-australis-jpg",
+      "href": "examples/cinematic-story/assets/aurora-australis.jpg",
+      "source": "../examples/cinematic-story/assets/aurora-australis.jpg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-cinematic-story-assets-aurora-station-jpg",
+      "href": "examples/cinematic-story/assets/aurora-station.jpg",
+      "source": "../examples/cinematic-story/assets/aurora-station.jpg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-cinematic-story-assets-night-moscow-jpg",
+      "href": "examples/cinematic-story/assets/night-moscow.jpg",
+      "source": "../examples/cinematic-story/assets/night-moscow.jpg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-cinematic-story-assets-richat-jpg",
+      "href": "examples/cinematic-story/assets/richat.jpg",
+      "source": "../examples/cinematic-story/assets/richat.jpg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-cinematic-story-assets-sand-sea-jpg",
+      "href": "examples/cinematic-story/assets/sand-sea.jpg",
+      "source": "../examples/cinematic-story/assets/sand-sea.jpg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-cinematic-story-brief-md",
+      "href": "examples/cinematic-story/brief.md",
+      "source": "../examples/cinematic-story/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-code-review-brief-md",
+      "href": "examples/code-review/brief.md",
+      "source": "../examples/code-review/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-dashboard-brief-md",
+      "href": "examples/dashboard/brief.md",
+      "source": "../examples/dashboard/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-directed-change-event-SOURCE-MAP-md",
+      "href": "examples/directed-change-event/SOURCE-MAP.md",
+      "source": "../examples/directed-change-event/SOURCE-MAP.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-directed-change-event-architecture-walkthrough-md",
+      "href": "examples/directed-change-event/architecture-walkthrough.md",
+      "source": "../examples/directed-change-event/architecture-walkthrough.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-directed-change-event-brief-md",
+      "href": "examples/directed-change-event/brief.md",
+      "source": "../examples/directed-change-event/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-directed-first-edit-brief-md",
+      "href": "examples/directed-first-edit/brief.md",
+      "source": "../examples/directed-first-edit/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-directed-theme-color-brief-md",
+      "href": "examples/directed-theme-color/brief.md",
+      "source": "../examples/directed-theme-color/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-document-assets-architecture-dark-ru-svg",
+      "href": "examples/document/assets/architecture-dark.ru.svg",
+      "source": "../examples/document/assets/architecture-dark.ru.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-document-assets-architecture-dark-svg",
+      "href": "examples/document/assets/architecture-dark.svg",
+      "source": "../examples/document/assets/architecture-dark.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-document-assets-architecture-ru-svg",
+      "href": "examples/document/assets/architecture.ru.svg",
+      "source": "../examples/document/assets/architecture.ru.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-document-assets-architecture-svg",
+      "href": "examples/document/assets/architecture.svg",
+      "source": "../examples/document/assets/architecture.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-document-brief-md",
+      "href": "examples/document/brief.md",
+      "source": "../examples/document/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-document-partials-findings-md",
+      "href": "examples/document/partials/findings.md",
+      "source": "../examples/document/partials/findings.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-document-partials-findings-ru-md",
+      "href": "examples/document/partials/findings.ru.md",
+      "source": "../examples/document/partials/findings.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-executive-brief-brief-md",
+      "href": "examples/executive-brief/brief.md",
+      "source": "../examples/executive-brief/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-incident-review-assets-service-topology-dark-ru-svg",
+      "href": "examples/incident-review/assets/service-topology-dark.ru.svg",
+      "source": "../examples/incident-review/assets/service-topology-dark.ru.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-incident-review-assets-service-topology-dark-svg",
+      "href": "examples/incident-review/assets/service-topology-dark.svg",
+      "source": "../examples/incident-review/assets/service-topology-dark.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-incident-review-assets-service-topology-ru-svg",
+      "href": "examples/incident-review/assets/service-topology.ru.svg",
+      "source": "../examples/incident-review/assets/service-topology.ru.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-incident-review-assets-service-topology-svg",
+      "href": "examples/incident-review/assets/service-topology.svg",
+      "source": "../examples/incident-review/assets/service-topology.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-incident-review-brief-md",
+      "href": "examples/incident-review/brief.md",
+      "source": "../examples/incident-review/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-incident-review-partials-actions-md",
+      "href": "examples/incident-review/partials/actions.md",
+      "source": "../examples/incident-review/partials/actions.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-incident-review-partials-actions-ru-md",
+      "href": "examples/incident-review/partials/actions.ru.md",
+      "source": "../examples/incident-review/partials/actions.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-interactive-catalog-brief-md",
+      "href": "examples/interactive-catalog/brief.md",
+      "source": "../examples/interactive-catalog/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-landing-brief-md",
+      "href": "examples/landing/brief.md",
+      "source": "../examples/landing/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-launch-readiness-assets-beta-learning-loop-dark-ru-svg",
+      "href": "examples/launch-readiness/assets/beta-learning-loop-dark.ru.svg",
+      "source": "../examples/launch-readiness/assets/beta-learning-loop-dark.ru.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-launch-readiness-assets-beta-learning-loop-dark-svg",
+      "href": "examples/launch-readiness/assets/beta-learning-loop-dark.svg",
+      "source": "../examples/launch-readiness/assets/beta-learning-loop-dark.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-launch-readiness-assets-beta-learning-loop-ru-svg",
+      "href": "examples/launch-readiness/assets/beta-learning-loop.ru.svg",
+      "source": "../examples/launch-readiness/assets/beta-learning-loop.ru.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-launch-readiness-assets-beta-learning-loop-svg",
+      "href": "examples/launch-readiness/assets/beta-learning-loop.svg",
+      "source": "../examples/launch-readiness/assets/beta-learning-loop.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-launch-readiness-brief-md",
+      "href": "examples/launch-readiness/brief.md",
+      "source": "../examples/launch-readiness/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-launch-readiness-partials-readiness-register-md",
+      "href": "examples/launch-readiness/partials/readiness-register.md",
+      "source": "../examples/launch-readiness/partials/readiness-register.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-launch-readiness-partials-readiness-register-ru-md",
+      "href": "examples/launch-readiness/partials/readiness-register.ru.md",
+      "source": "../examples/launch-readiness/partials/readiness-register.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-dashboard-brief-md",
+      "href": "examples/layout-dashboard/brief.md",
+      "source": "../examples/layout-dashboard/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-dashboard-report-md",
+      "href": "examples/layout-dashboard/report.md",
+      "source": "../examples/layout-dashboard/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-dashboard-report-ru-md",
+      "href": "examples/layout-dashboard/report.ru.md",
+      "source": "../examples/layout-dashboard/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-document-brief-md",
+      "href": "examples/layout-document/brief.md",
+      "source": "../examples/layout-document/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-document-page-model-dark-ru-svg",
+      "href": "examples/layout-document/page-model-dark.ru.svg",
+      "source": "../examples/layout-document/page-model-dark.ru.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-document-page-model-dark-svg",
+      "href": "examples/layout-document/page-model-dark.svg",
+      "source": "../examples/layout-document/page-model-dark.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-document-page-model-ru-svg",
+      "href": "examples/layout-document/page-model.ru.svg",
+      "source": "../examples/layout-document/page-model.ru.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-document-page-model-svg",
+      "href": "examples/layout-document/page-model.svg",
+      "source": "../examples/layout-document/page-model.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-document-report-md",
+      "href": "examples/layout-document/report.md",
+      "source": "../examples/layout-document/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-document-report-ru-md",
+      "href": "examples/layout-document/report.ru.md",
+      "source": "../examples/layout-document/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-landing-brief-md",
+      "href": "examples/layout-landing/brief.md",
+      "source": "../examples/layout-landing/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-landing-report-md",
+      "href": "examples/layout-landing/report.md",
+      "source": "../examples/layout-landing/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-landing-report-ru-md",
+      "href": "examples/layout-landing/report.ru.md",
+      "source": "../examples/layout-landing/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-mixed-brief-md",
+      "href": "examples/layout-mixed/brief.md",
+      "source": "../examples/layout-mixed/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-mixed-compare-after-dark-svg",
+      "href": "examples/layout-mixed/compare-after-dark.svg",
+      "source": "../examples/layout-mixed/compare-after-dark.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-mixed-compare-after-svg",
+      "href": "examples/layout-mixed/compare-after.svg",
+      "source": "../examples/layout-mixed/compare-after.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-mixed-compare-before-dark-svg",
+      "href": "examples/layout-mixed/compare-before-dark.svg",
+      "source": "../examples/layout-mixed/compare-before-dark.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-mixed-compare-before-svg",
+      "href": "examples/layout-mixed/compare-before.svg",
+      "source": "../examples/layout-mixed/compare-before.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-mixed-layout-map-dark-ru-svg",
+      "href": "examples/layout-mixed/layout-map-dark.ru.svg",
+      "source": "../examples/layout-mixed/layout-map-dark.ru.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-mixed-layout-map-dark-svg",
+      "href": "examples/layout-mixed/layout-map-dark.svg",
+      "source": "../examples/layout-mixed/layout-map-dark.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-mixed-layout-map-ru-svg",
+      "href": "examples/layout-mixed/layout-map.ru.svg",
+      "source": "../examples/layout-mixed/layout-map.ru.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-mixed-layout-map-svg",
+      "href": "examples/layout-mixed/layout-map.svg",
+      "source": "../examples/layout-mixed/layout-map.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-mixed-report-md",
+      "href": "examples/layout-mixed/report.md",
+      "source": "../examples/layout-mixed/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-layout-mixed-report-ru-md",
+      "href": "examples/layout-mixed/report.ru.md",
+      "source": "../examples/layout-mixed/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-motion-showcase-assets-aurora-station-jpg",
+      "href": "examples/motion-showcase/assets/aurora-station.jpg",
+      "source": "../examples/motion-showcase/assets/aurora-station.jpg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-motion-showcase-assets-night-moscow-jpg",
+      "href": "examples/motion-showcase/assets/night-moscow.jpg",
+      "source": "../examples/motion-showcase/assets/night-moscow.jpg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-motion-showcase-assets-richat-jpg",
+      "href": "examples/motion-showcase/assets/richat.jpg",
+      "source": "../examples/motion-showcase/assets/richat.jpg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-motion-showcase-assets-sand-sea-jpg",
+      "href": "examples/motion-showcase/assets/sand-sea.jpg",
+      "source": "../examples/motion-showcase/assets/sand-sea.jpg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-motion-showcase-brief-md",
+      "href": "examples/motion-showcase/brief.md",
+      "source": "../examples/motion-showcase/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-presentation-assets-demo-av1-mp4",
+      "href": "examples/presentation/assets/demo.av1.mp4",
+      "source": "../examples/presentation/assets/demo.av1.mp4",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-presentation-assets-demo-chapters-vtt",
+      "href": "examples/presentation/assets/demo.chapters.vtt",
+      "source": "../examples/presentation/assets/demo.chapters.vtt",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-presentation-assets-demo-h264-mp4",
+      "href": "examples/presentation/assets/demo.h264.mp4",
+      "source": "../examples/presentation/assets/demo.h264.mp4",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-presentation-assets-demo-poster-jpg",
+      "href": "examples/presentation/assets/demo.poster.jpg",
+      "source": "../examples/presentation/assets/demo.poster.jpg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-presentation-assets-demo-vp9-webm",
+      "href": "examples/presentation/assets/demo.vp9.webm",
+      "source": "../examples/presentation/assets/demo.vp9.webm",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-presentation-brief-md",
+      "href": "examples/presentation/brief.md",
+      "source": "../examples/presentation/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-question-review-brief-md",
+      "href": "examples/question-review/brief.md",
+      "source": "../examples/question-review/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-research-assets-evidence-map-dark-ru-svg",
+      "href": "examples/research/assets/evidence-map-dark.ru.svg",
+      "source": "../examples/research/assets/evidence-map-dark.ru.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-research-assets-evidence-map-dark-svg",
+      "href": "examples/research/assets/evidence-map-dark.svg",
+      "source": "../examples/research/assets/evidence-map-dark.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-research-assets-evidence-map-ru-svg",
+      "href": "examples/research/assets/evidence-map.ru.svg",
+      "source": "../examples/research/assets/evidence-map.ru.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-research-assets-evidence-map-svg",
+      "href": "examples/research/assets/evidence-map.svg",
+      "source": "../examples/research/assets/evidence-map.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-research-brief-md",
+      "href": "examples/research/brief.md",
+      "source": "../examples/research/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-research-partials-method-md",
+      "href": "examples/research/partials/method.md",
+      "source": "../examples/research/partials/method.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-research-partials-method-ru-md",
+      "href": "examples/research/partials/method.ru.md",
+      "source": "../examples/research/partials/method.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-response-workspace-brief-md",
+      "href": "examples/response-workspace/brief.md",
+      "source": "../examples/response-workspace/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-review-workspace-brief-md",
+      "href": "examples/review-workspace/brief.md",
+      "source": "../examples/review-workspace/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-run-report-brief-md",
+      "href": "examples/run-report/brief.md",
+      "source": "../examples/run-report/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-run-report-data-run-json",
+      "href": "examples/run-report/data/run.json",
+      "source": "../examples/run-report/data/run.json",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-showcase-contract-json",
+      "href": "examples/showcase-contract.json",
+      "source": "../examples/showcase-contract.json",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-terminal-portfolio-assets-review-diff-dark-jpg",
+      "href": "examples/terminal-portfolio/assets/review-diff-dark.jpg",
+      "source": "../examples/terminal-portfolio/assets/review-diff-dark.jpg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-terminal-portfolio-assets-review-diff-jpg",
+      "href": "examples/terminal-portfolio/assets/review-diff.jpg",
+      "source": "../examples/terminal-portfolio/assets/review-diff.jpg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-terminal-portfolio-brief-md",
+      "href": "examples/terminal-portfolio/brief.md",
+      "source": "../examples/terminal-portfolio/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-tutorial-brief-md",
+      "href": "examples/tutorial/brief.md",
+      "source": "../examples/tutorial/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-vendor-decision-assets-evidence-map-dark-ru-svg",
+      "href": "examples/vendor-decision/assets/evidence-map-dark.ru.svg",
+      "source": "../examples/vendor-decision/assets/evidence-map-dark.ru.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-vendor-decision-assets-evidence-map-dark-svg",
+      "href": "examples/vendor-decision/assets/evidence-map-dark.svg",
+      "source": "../examples/vendor-decision/assets/evidence-map-dark.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-vendor-decision-assets-evidence-map-ru-svg",
+      "href": "examples/vendor-decision/assets/evidence-map.ru.svg",
+      "source": "../examples/vendor-decision/assets/evidence-map.ru.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-vendor-decision-assets-evidence-map-svg",
+      "href": "examples/vendor-decision/assets/evidence-map.svg",
+      "source": "../examples/vendor-decision/assets/evidence-map.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-vendor-decision-brief-md",
+      "href": "examples/vendor-decision/brief.md",
+      "source": "../examples/vendor-decision/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-vendor-decision-partials-gates-md",
+      "href": "examples/vendor-decision/partials/gates.md",
+      "source": "../examples/vendor-decision/partials/gates.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-vendor-decision-partials-gates-ru-md",
+      "href": "examples/vendor-decision/partials/gates.ru.md",
+      "source": "../examples/vendor-decision/partials/gates.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-examples-visualization-catalog-brief-md",
+      "href": "examples/visualization-catalog/brief.md",
+      "source": "../examples/visualization-catalog/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-focus-frame-assets-bench-svg",
+      "href": "extensions/focus-frame/assets/bench.svg",
+      "source": "../extensions/focus-frame/assets/bench.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-focus-frame-assets-shoreline-svg",
+      "href": "extensions/focus-frame/assets/shoreline.svg",
+      "source": "../extensions/focus-frame/assets/shoreline.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-focus-frame-effect-mjs",
+      "href": "extensions/focus-frame/effect.mjs",
+      "source": "../extensions/focus-frame/effect.mjs",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-focus-frame-example-field-md",
+      "href": "extensions/focus-frame/example-field.md",
+      "source": "../extensions/focus-frame/example-field.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-focus-frame-example-workshop-md",
+      "href": "extensions/focus-frame/example-workshop.md",
+      "source": "../extensions/focus-frame/example-workshop.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-focus-frame-extension-yaml",
+      "href": "extensions/focus-frame/extension.yaml",
+      "source": "../extensions/focus-frame/extension.yaml",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-key-figure-block-css",
+      "href": "extensions/key-figure/block.css",
+      "source": "../extensions/key-figure/block.css",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-key-figure-example-benchmark-md",
+      "href": "extensions/key-figure/example-benchmark.md",
+      "source": "../extensions/key-figure/example-benchmark.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-key-figure-example-quarterly-md",
+      "href": "extensions/key-figure/example-quarterly.md",
+      "source": "../extensions/key-figure/example-quarterly.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-key-figure-extension-yaml",
+      "href": "extensions/key-figure/extension.yaml",
+      "source": "../extensions/key-figure/extension.yaml",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-key-figure-template-md",
+      "href": "extensions/key-figure/template.md",
+      "source": "../extensions/key-figure/template.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-loom-effect-mjs",
+      "href": "extensions/loom/effect.mjs",
+      "source": "../extensions/loom/effect.mjs",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-loom-example-craft-md",
+      "href": "extensions/loom/example-craft.md",
+      "source": "../extensions/loom/example-craft.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-loom-example-release-md",
+      "href": "extensions/loom/example-release.md",
+      "source": "../extensions/loom/example-release.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-loom-extension-yaml",
+      "href": "extensions/loom/extension.yaml",
+      "source": "../extensions/loom/extension.yaml",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-product-theatre-example-cli-md",
+      "href": "extensions/product-theatre/example-cli.md",
+      "source": "../extensions/product-theatre/example-cli.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-product-theatre-example-dashboard-md",
+      "href": "extensions/product-theatre/example-dashboard.md",
+      "source": "../extensions/product-theatre/example-dashboard.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-product-theatre-extension-yaml",
+      "href": "extensions/product-theatre/extension.yaml",
+      "source": "../extensions/product-theatre/extension.yaml",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-product-theatre-scenario-cli-json",
+      "href": "extensions/product-theatre/scenario-cli.json",
+      "source": "../extensions/product-theatre/scenario-cli.json",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-product-theatre-scenario-dashboard-json",
+      "href": "extensions/product-theatre/scenario-dashboard.json",
+      "source": "../extensions/product-theatre/scenario-dashboard.json",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-product-theatre-script-mjs",
+      "href": "extensions/product-theatre/script.mjs",
+      "source": "../extensions/product-theatre/script.mjs",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-product-theatre-script-yaml",
+      "href": "extensions/product-theatre/script.yaml",
+      "source": "../extensions/product-theatre/script.yaml",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-product-theatre-template-md",
+      "href": "extensions/product-theatre/template.md",
+      "source": "../extensions/product-theatre/template.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-slo-budget-app-js",
+      "href": "extensions/slo-budget/app.js",
+      "source": "../extensions/slo-budget/app.js",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-slo-budget-example-guide-md",
+      "href": "extensions/slo-budget/example-guide.md",
+      "source": "../extensions/slo-budget/example-guide.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-slo-budget-example-incident-md",
+      "href": "extensions/slo-budget/example-incident.md",
+      "source": "../extensions/slo-budget/example-incident.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-slo-budget-extension-yaml",
+      "href": "extensions/slo-budget/extension.yaml",
+      "source": "../extensions/slo-budget/extension.yaml",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-slo-budget-index-html",
+      "href": "extensions/slo-budget/index.html",
+      "source": "../extensions/slo-budget/index.html",
+      "kind": "copy"
+    },
+    {
+      "id": "source-extensions-slo-budget-style-css",
+      "href": "extensions/slo-budget/style.css",
+      "source": "../extensions/slo-budget/style.css",
+      "kind": "copy"
     }
   ]
 }

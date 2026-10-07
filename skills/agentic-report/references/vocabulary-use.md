@@ -238,6 +238,8 @@ The cargo is aboard.
 
 ### Norms of motion
 
+These norms protect a page under reader control. For timed filmed explanations, see [directing](directing.md) and [combinations](combinations.md): several coordinated actions may express one event while the page still retains its static and reduced-motion equivalents.
+
 - **An entrance comes from somewhere and travels little.** At most 16 pixels toward its source, a scale only
   from 0.97 to 1 (a slide's `slide-transition="zoom"` from 0.94 and `appear` with `effect="pop"` from 0.9 are named
   accents that start lower on purpose); a meaningful gesture — a jerk, a cut, a recoil — is a different class, around 40 pixels,

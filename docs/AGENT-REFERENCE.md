@@ -46,6 +46,12 @@ output. After removing the broken Markdown line, the direct build creates `repor
 test executes this installed build-first recovery route with credential redaction and output sentinels, then
 exercises optional validation and inspection independently.
 
+## Choose staging and discover examples
+
+Start with the skill's [knowledge map](../skills/agentic-report/references/knowledge.md), [directing](../skills/agentic-report/references/directing.md) and [combinations](../skills/agentic-report/references/combinations.md) for material, viewer task, development and coordinated actions. The [generated atlas](../skills/agentic-report/references/atlas.md) relates every directive to complete native examples and reference extensions.
+
+From an installed package or compiled checkout, `node skills/agentic-report/scripts/build-atlas.mjs --out ./report-atlas` builds a browsable native gallery. The gallery is optional discovery, without an extra handoff gate. The contract commands below remain the authority for exact support.
+
 ## Discover the contract
 
 ```bash
@@ -951,7 +957,7 @@ write `recipe="rail" scene="progress"` with image cards. The complete
 
 ### Directed compositions and filmed explanations
 
-Use `::::composition{id="edit" title="First edit" kind="diagram-code"}` with direct `:::object{id="source" title="Source" role="source"}` containers and leaf `::cue{at="b2" action="copy" target="source" to="result"}` actions. The five kinds are `diagram-code`, `pipeline`, `before-after`, `overview-detail` and `ownership`; the eight actions are `reveal`, `focus`, `connect`, `copy`, `transfer`, `replace`, `compare` and `camera`. Objects contain ordinary Markdown, local pictures, diagrams or code. `copy` preserves the source, `transfer` empties it on arrival, and `replace` writes plain text while retaining the title. `focus` can name code `lines="2-4"`.
+Use `::::composition{id="edit" title="First edit" kind="diagram-code"}` with direct `:::object{id="source" title="Source" role="source"}` containers and leaf `::cue{at="b2" action="copy" target="source" to="result"}` actions. The five kinds are `diagram-code`, `pipeline`, `before-after`, `overview-detail` and `ownership`; the eight actions are `reveal`, `focus`, `connect`, `copy`, `transfer`, `replace`, `compare` and `camera`. Objects contain ordinary Markdown, local pictures, diagrams or code. `copy` preserves the source, `transfer` empties it on arrival, and `replace` writes plain text while retaining the title. `focus` can name code `lines="2-4"`; omitting lines leaves the whole code readable. Pipeline, before-after and ownership compositions give code a full row beneath their visual objects. Connections and traveling values use stage coordinates even when its owner scales the page.
 
 The [directed-scenes reference](../skills/agentic-report/references/directed-scenes.md) gives complete syntax, action semantics, movement durations, three worked examples and routes to existing effects. The [source contract](product/source-contract.md#directed-compositions) defines the bounds. Standalone `bN` anchors use three-second preview beats; a compatible Screencast `report` scene binds them to measured speech starts and ends. Reduced motion, print and static output contain final values. Use this checkout's compiled CLI for the new vocabulary rather than the older pinned npm commands above.
 

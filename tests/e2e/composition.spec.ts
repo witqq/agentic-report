@@ -170,6 +170,7 @@ ${sources}`,
         ).length;
     });
     expect(overlaps).toBe(0);
+    await expect(scene.locator('.composition-connections polygon')).toHaveCount(2);
   }
 });
 
@@ -248,4 +249,211 @@ Waiting
   await expect(
     page.locator('[data-composition-object="result"] [data-composition-content]'),
   ).toHaveText('Waiting');
+});
+
+async function customBuild(name: string, body: string) {
+  const root = path.resolve('test-results/composition', name);
+  await mkdir(root, { recursive: true });
+  const input = path.join(root, 'report.md'),
+    output = path.join(root, 'page.html');
+  await writeFile(
+    input,
+    `---\ntitle: Regression scene\nlayout: dashboard\nmotion: expressive\ntopbar: false\n---\n${body}`,
+  );
+  await buildReport({ input, output });
+  return pathToFileURL(output).href;
+}
+
+// Empty lines used to dim every line, and stale selection could survive seeking.
+test('code focus selects only explicit lines and restores them on clear and backward seek', async ({
+  page,
+}, info) => {
+  await page.addInitScript(() => {
+    window.__agenticReportClock = 'manual';
+  });
+  await page.goto(
+    await customBuild(
+      `${info.project.name}-code-focus`,
+      `::::composition{id="focus"}
+:::object{id="code" role="code"}
+\`\`\`ts
+const before = 1;
+const after = 2;
+const result = before + after;
+\`\`\`
+:::
+:::object{id="result" role="result"}
+The result
+:::
+::cue{at="1" action="focus" target="code"}
+::cue{at="2" action="focus" target="code" lines="2"}
+::cue{at="3" action="focus" target="result"}
+::::`,
+    ),
+  );
+  const opacity = () =>
+    page.locator('pre .line').evaluateAll((ns) => ns.map((n) => getComputedStyle(n).opacity));
+  for (const [time, values] of [
+    [0, ['1', '1', '1']],
+    [1.8, ['1', '1', '1']],
+    [2.8, ['0.35', '1', '0.35']],
+    [3.8, ['1', '1', '1']],
+    [1.8, ['1', '1', '1']],
+    [2.8, ['0.35', '1', '0.35']],
+  ] as const) {
+    await page.evaluate((t) => window.__clock?.seek(t), time);
+    expect(await opacity()).toEqual([...values]);
+  }
+});
+
+// A full-width code row distinguishes readable code from a tall narrow cell.
+test('pipeline and before-after give code a complete row below the objects', async ({
+  page,
+}, info) => {
+  const body = ['pipeline', 'before-after', 'ownership']
+    .map(
+      (kind, i) => `::::composition{id="long-${i}" kind="${kind}"}
+:::object{id="source" role="source"}
+Source
+:::
+:::object{id="a" role="result"}
+First result
+:::
+:::object{id="b" role="result"}
+Second result
+:::
+:::object{id="code" role="code"}
+\`\`\`ts
+const resolvedValue = resolveInheritedResource(localObject, layoutResources, requestedProperty);
+\`\`\`
+:::
+::::`,
+    )
+    .join('\n');
+  await page.goto(await customBuild(`${info.project.name}-long-code`, body));
+  await page.evaluate(() => document.fonts.ready);
+  for (const scene of await page.locator('[data-composition]').all()) {
+    const widths = await scene.evaluate((s) => {
+      const code = s.querySelector<HTMLElement>('[data-role="code"]');
+      const stage = s.querySelector<HTMLElement>('.composition-stage');
+      const others = [...s.querySelectorAll('[data-composition-object]:not([data-role="code"])')];
+      if (code === null || stage === null) throw new Error('Code or stage is absent.');
+      const c = code.getBoundingClientRect();
+      return {
+        code: c.width,
+        track: stage.clientWidth - 40,
+        below: others.every((n) => n.getBoundingClientRect().bottom <= c.top),
+        overflow: code.scrollWidth > code.clientWidth,
+      };
+    });
+    expect(widths.code).toBeGreaterThan(widths.track * 0.95);
+    expect(widths.below).toBe(true);
+    expect(widths.overflow).toBe(false);
+  }
+  await page.locator('[data-composition="before-after"]').scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: path.resolve('test-results/composition', `${info.project.name}-long-code`, 'layout.png'),
+  });
+});
+
+// Filming transforms used to multiply connector and travel geometry twice.
+test('connections and travelling objects align in fitted stages with camera focus', async ({
+  page,
+}, info) => {
+  await page.addInitScript(() => {
+    window.__agenticReportClock = 'manual';
+  });
+  await page.goto(
+    await customBuild(
+      `${info.project.name}-fitted`,
+      ['copy', 'transfer']
+        .map(
+          (action, i) => `::::composition{id="fit-${i}" kind="ownership"}
+:::object{id="source" role="source"}
+A portable resource
+:::
+:::object{id="result" role="result"}
+Waiting
+:::
+::cue{at="0" action="connect" target="source" to="result"}
+::cue{at="2" action="${action}" target="source" to="result" duration="1"}
+::cue{at="2" action="camera" target="result" duration="1"}
+::::`,
+        )
+        .join('\n'),
+    ),
+  );
+  await page.evaluate(() => {
+    for (const s of document.querySelectorAll<HTMLElement>('[data-composition]')) {
+      s.style.transform = 'scale(0.57, 0.63)';
+      s.style.transformOrigin = 'top left';
+    }
+    window.__clock?.seek(2.5);
+  });
+  for (const scene of await page.locator('[data-composition]').all()) {
+    const geometry = await scene.evaluate((s) => {
+      const stage = s.querySelector<HTMLElement>('.composition-stage');
+      const source = s.querySelector<HTMLElement>('[data-composition-object="source"]');
+      const result = s.querySelector<HTMLElement>('[data-composition-object="result"]');
+      const path = s.querySelector<SVGPathElement>('.composition-connections path');
+      const traveller = s.querySelector<HTMLElement>('.composition-travel');
+      if (
+        stage === null ||
+        source === null ||
+        result === null ||
+        path === null ||
+        traveller === null
+      )
+        throw new Error('The fitted scene is incomplete.');
+      const a = source.getBoundingClientRect(),
+        b = result.getBoundingClientRect();
+      const matrix = path.getScreenCTM();
+      if (matrix === null) throw new Error('The connector has no screen matrix.');
+      const start = path.getPointAtLength(0).matrixTransform(matrix);
+      const end = path.getPointAtLength(path.getTotalLength()).matrixTransform(matrix);
+      const horizontal = b.left >= a.right || a.left >= b.right;
+      const travel = traveller.getBoundingClientRect();
+      const trajectory = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const stageBox = stage.getBoundingClientRect();
+      const sx = stageBox.width / stage.offsetWidth,
+        sy = stageBox.height / stage.offsetHeight;
+      const ax = (a.left + a.width / 2 - stageBox.left) / sx;
+      const ay = (a.top + a.height / 2 - stageBox.top) / sy;
+      const bx = (b.left + b.width / 2 - stageBox.left) / sx;
+      const by = (b.top + b.height / 2 - stageBox.top) / sy;
+      const route = path.getAttribute('d');
+      if (route === null) throw new Error('The connector has no route.');
+      trajectory.setAttribute('d', `${route.replace(/^M/, `M${ax},${ay} L`)} L${bx},${by}`);
+      const midpoint = trajectory
+        .getPointAtLength(trajectory.getTotalLength() / 2)
+        .matrixTransform(matrix);
+      return {
+        startX: start.x,
+        startY: start.y,
+        endX: end.x,
+        endY: end.y,
+        ax: horizontal ? a.right : a.left + a.width / 2,
+        ay: horizontal ? a.top + a.height / 2 : a.bottom,
+        bx: horizontal ? b.left : b.left + b.width / 2,
+        by: horizontal ? b.top + b.height / 2 : b.top,
+        travelX: travel.left,
+        travelY: travel.top,
+        travelW: travel.width,
+        expectedX: midpoint.x - travel.width / 2,
+        expectedY: midpoint.y - travel.height / 2,
+        expectedW: Math.min(280 * sx, a.width, b.width),
+      };
+    });
+    for (const [actual, expected] of [
+      [geometry.startX, geometry.ax],
+      [geometry.startY, geometry.ay],
+      [geometry.endX, geometry.bx],
+      [geometry.endY, geometry.by],
+      [geometry.travelX, geometry.expectedX],
+      [geometry.travelY, geometry.expectedY],
+      [geometry.travelW, geometry.expectedW],
+    ] as const) {
+      expect(Math.abs(actual - expected)).toBeLessThan(1.5);
+    }
+  }
 });

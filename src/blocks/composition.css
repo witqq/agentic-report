@@ -45,8 +45,7 @@
   }
   .semantic-object > .semantic-title {
     font-size: clamp(0.9rem, 1.3vw, 1.2rem);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.02em;
     color: var(--color-text-muted);
   }
   .composition-content > p {
@@ -72,8 +71,10 @@
     fill: none;
     stroke: var(--color-accent);
     stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
-  .composition-connections circle {
+  .composition-connections polygon {
     fill: var(--color-accent);
   }
   .composition-connections text {
@@ -105,6 +106,15 @@
   }
   [data-composition='pipeline'] .semantic-object {
     border-block-start: 3px solid var(--color-accent);
+  }
+  :is(
+      [data-composition='pipeline'],
+      [data-composition='before-after'],
+      [data-composition='ownership']
+    )
+    [data-role='code'] {
+    grid-column: 1 / -1;
+    order: 1;
   }
   [data-composition='before-after'] [data-role='source'] {
     grid-column: 1 / -1;

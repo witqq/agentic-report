@@ -1090,6 +1090,10 @@
       "subvariant": "guide",
       "files": [
         {
+          "path": "architecture-walkthrough.md",
+          "sha256": "9a430ba3acf96365717ad2aeca8fba725d7613ed7f42926deb6a8202c6095111"
+        },
+        {
           "path": "brief.md",
           "sha256": "374f2f84856034043f39be7df20303e257cbc34b6f1d98a1d0e28c565c1549db"
         },
@@ -1100,6 +1104,10 @@
         {
           "path": "report.ru.md",
           "sha256": "212f93d6139e9f4354f79234664c1d7947256ec5f2c5561f0f81fe40735d0f06"
+        },
+        {
+          "path": "SOURCE-MAP.md",
+          "sha256": "87383f0df819066149b8db7160369d2017de4685dd0edc82d3748d71f8e45b70"
         }
       ]
     }

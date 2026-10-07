@@ -86,6 +86,18 @@ in `pnpm-lock.yaml`. The project does not vendor those dependencies. Inspect the
 scripts before installation, use an isolated environment when appropriate, and keep the release tag pinned
 for reproducibility.
 
+## Discover staging and tools
+
+The skill's [knowledge map](skills/agentic-report/references/knowledge.md), [directing guide](skills/agentic-report/references/directing.md) and [combinations](skills/agentic-report/references/combinations.md) connect the material and viewer's task to development, staging and coordinated actions. The [generated atlas](skills/agentic-report/references/atlas.md) covers the complete directive vocabulary, native examples and reference extensions. Existing research and craft references remain available through the map.
+
+From a compiled checkout or installed package, render the native gallery:
+
+```sh
+node skills/agentic-report/scripts/build-atlas.mjs --out ./report-atlas
+```
+
+Open `report-atlas/index.html` to compare actual pages. The gallery is for discovery; it adds no page or film handoff gate.
+
 ## Directed explanations for a film
 
 A `composition` arranges named Markdown objects as `diagram-code`, `pipeline`, `before-after`, `overview-detail` or `ownership`. Its cues reveal and focus objects, draw connections, copy or transfer values, replace text, compare results and move the camera. Agentic Screencast report scenes bind those cues to measured speech paragraphs; standalone pages use preview beats and keep final values in static or reduced-motion views. Read the [directing guide](skills/agentic-report/references/directed-scenes.md) for syntax, existing effects and the three complete examples. Use the compiled local checkout for this composition vocabulary.

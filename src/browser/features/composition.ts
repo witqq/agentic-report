@@ -6,6 +6,7 @@ import {
   type CompositionContent,
   type CompositionCue,
 } from '../../composition.js';
+import { connectionRoute, overlaps, type SceneRect } from '../../composition-route.js';
 import { pageClock } from '../clock.js';
 import { provideFeature, type Cleanup } from '../features.js';
 import { timed, whenVisible } from '../technique-timing.js';
@@ -110,7 +111,16 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
     const rect = (id: string) => {
       const box = required(objects.get(id)).getBoundingClientRect(),
         parent = stage.getBoundingClientRect();
-      return { x: box.left - parent.left, y: box.top - parent.top, w: box.width, h: box.height };
+      // SVG and absolute travel positions use stage CSS pixels. Ancestor fitting
+      // transforms change viewport rectangles, so convert both axes back once.
+      const sx = parent.width / Math.max(1, stage.offsetWidth);
+      const sy = parent.height / Math.max(1, stage.offsetHeight);
+      return {
+        x: (box.left - parent.left) / sx,
+        y: (box.top - parent.top) / sy,
+        w: box.width / sx,
+        h: box.height / sy,
+      };
     };
     const render = (time: number): void => {
       const staticFrame = still.matches || printing.matches;
@@ -153,44 +163,18 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
       }
       overlay.replaceChildren();
       overlay.setAttribute('viewBox', `0 0 ${stage.clientWidth} ${stage.clientHeight}`);
+      const visibleRects = [...objects.keys()]
+        .filter((id) => frame.objects.get(id)?.visible)
+        .map(rect);
+      const labels: SceneRect[] = [];
       for (const edge of frame.connections) {
         const a = rect(edge.from),
           b = rect(edge.to);
-        const horizontal = b.x >= a.x + a.w || a.x >= b.x + b.w;
-        const forward = horizontal ? b.x >= a.x : b.y >= a.y;
-        const x1 = horizontal ? a.x + (forward ? a.w : 0) : a.x + a.w / 2;
-        const y1 = horizontal ? a.y + a.h / 2 : a.y + (forward ? a.h : 0);
-        const x2 = horizontal ? b.x + (forward ? 0 : b.w) : b.x + b.w / 2;
-        const y2 = horizontal ? b.y + b.h / 2 : b.y + (forward ? 0 : b.h);
         const blockers = [...objects.keys()]
-          .filter((id) => id !== edge.from && id !== edge.to)
+          .filter((id) => id !== edge.from && id !== edge.to && frame.objects.get(id)?.visible)
           .map(rect);
-        const blocked = horizontal
-          ? blockers.some(
-              (r) =>
-                r.x < Math.max(x1, x2) &&
-                r.x + r.w > Math.min(x1, x2) &&
-                r.y < Math.max(y1, y2) + 1 &&
-                r.y + r.h > Math.min(y1, y2) - 1,
-            )
-          : blockers.some(
-              (r) =>
-                r.y < Math.max(y1, y2) &&
-                r.y + r.h > Math.min(y1, y2) &&
-                r.x < Math.max(x1, x2) + 1 &&
-                r.x + r.w > Math.min(x1, x2) - 1,
-            );
-        const aisle = horizontal
-          ? Math.min(a.y, b.y, ...blockers.map((r) => r.y)) - 20
-          : Math.min(a.x, b.x, ...blockers.map((r) => r.x)) - 20;
-        const sign = forward ? 1 : -1;
-        const d = blocked
-          ? horizontal
-            ? `M${x1},${y1} L${x1 + sign * 12},${y1} L${x1 + sign * 12},${aisle} L${x2 - sign * 12},${aisle} L${x2 - sign * 12},${y2} L${x2},${y2}`
-            : `M${x1},${y1} L${x1},${y1 + sign * 12} L${aisle},${y1 + sign * 12} L${aisle},${y2 - sign * 12} L${x2},${y2 - sign * 12} L${x2},${y2}`
-          : horizontal
-            ? `M${x1},${y1} C${(x1 + x2) / 2},${y1} ${(x1 + x2) / 2},${y2} ${x2},${y2}`
-            : `M${x1},${y1} C${x1},${(y1 + y2) / 2} ${x2},${(y1 + y2) / 2} ${x2},${y2}`;
+        const d = connectionRoute(a, b, blockers);
+        if (!d) continue;
         const path = svg('path', {
           d,
           pathLength: '1',
@@ -198,17 +182,56 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
           'stroke-dashoffset': String(1 - edge.progress),
         });
         overlay.append(path);
-        const point = path.getPointAtLength(path.getTotalLength() * edge.progress);
-        const dot = svg('circle', { cx: String(point.x), cy: String(point.y), r: '4' });
-        overlay.append(dot);
+        const length = path.getTotalLength();
+        const tip = path.getPointAtLength(length * edge.progress);
+        const before = path.getPointAtLength(Math.max(0, length * edge.progress - 2));
+        const angle = Math.atan2(tip.y - before.y, tip.x - before.x);
+        const backX = tip.x - Math.cos(angle) * 9,
+          backY = tip.y - Math.sin(angle) * 9;
+        overlay.append(
+          svg('polygon', {
+            points: `${tip.x},${tip.y} ${backX - Math.sin(angle) * 4},${backY + Math.cos(angle) * 4} ${backX + Math.sin(angle) * 4},${backY - Math.cos(angle) * 4}`,
+            opacity: String(Math.min(1, edge.progress * 8)),
+          }),
+        );
         if (edge.label) {
-          const text = svg('text', {
-            x: String((x1 + x2) / 2),
-            y: String(blocked && horizontal ? aisle - 8 : (y1 + y2) / 2 - 10),
-            'text-anchor': 'middle',
-          });
+          const text = svg('text', { 'text-anchor': 'middle' });
           text.textContent = edge.label;
           overlay.append(text);
+          const metrics = text.getBBox();
+          let placed = false;
+          for (const fraction of [0.5, 0.35, 0.65, 0.2, 0.8]) {
+            const p = path.getPointAtLength(length * fraction);
+            for (const dy of [-10, metrics.height + 10]) {
+              const bounds = {
+                x: p.x - metrics.width / 2 - 4,
+                y: p.y + dy - metrics.height,
+                w: metrics.width + 8,
+                h: metrics.height + 4,
+              };
+              if ([...visibleRects, ...labels].some((r) => overlaps(bounds, r))) continue;
+              text.setAttribute('x', String(p.x));
+              text.setAttribute('y', String(p.y + dy));
+              labels.push(bounds);
+              placed = true;
+              break;
+            }
+            if (placed) break;
+          }
+          if (!placed) {
+            const y =
+              Math.min(...visibleRects.map((r) => r.y), ...labels.map((r) => r.y)) -
+              metrics.height -
+              8;
+            text.setAttribute('x', String(stage.clientWidth / 2));
+            text.setAttribute('y', String(y));
+            labels.push({
+              x: stage.clientWidth / 2 - metrics.width / 2,
+              y: y - metrics.height,
+              w: metrics.width,
+              h: metrics.height,
+            });
+          }
         }
       }
       for (const previous of stage.querySelectorAll(':scope > .composition-travel'))
@@ -221,11 +244,22 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         node.setAttribute('aria-hidden', 'true');
         node.append(content(travel.content, `travel-${travel.from}-${travel.to}`));
         const q = travel.progress;
-        node.style.left = `${a.x + (b.x - a.x) * q}px`;
-        node.style.top = `${a.y + (b.y - a.y) * q - Math.sin(Math.PI * q) * 24}px`;
-        node.style.width = `${a.w + (b.w - a.w) * q}px`;
+        const blockers = [...objects.keys()]
+          .filter((id) => id !== travel.from && id !== travel.to && frame.objects.get(id)?.visible)
+          .map(rect);
+        const route = connectionRoute(a, b, blockers);
+        const trajectory = svg('path', {
+          d: route
+            ? route.replace(/^M/, `M${a.x + a.w / 2},${a.y + a.h / 2} L`) +
+              ` L${b.x + b.w / 2},${b.y + b.h / 2}`
+            : `M${a.x + a.w / 2},${a.y + a.h / 2} L${b.x + b.w / 2},${b.y + b.h / 2}`,
+        });
+        node.style.width = `${Math.min(280, a.w, b.w)}px`;
         node.style.opacity = String(Math.sin(Math.PI * q));
         stage.append(node);
+        const position = trajectory.getPointAtLength(trajectory.getTotalLength() * q);
+        node.style.left = `${position.x - node.offsetWidth / 2}px`;
+        node.style.top = `${position.y - node.offsetHeight / 2}px`;
       }
       if (!staticFrame && frame.camera !== undefined) {
         const b = rect(frame.camera.target),
@@ -246,18 +280,12 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         const desiredX =
           Math.max(
             -stage.clientWidth * 0.04,
-            Math.min(
-              stage.clientWidth * 0.04,
-              stage.clientWidth / 2 - b.x / ratio - b.w / ratio / 2,
-            ),
+            Math.min(stage.clientWidth * 0.04, stage.clientWidth / 2 - b.x - b.w / 2),
           ) * p;
         const desiredY =
           Math.max(
             -stage.clientHeight * 0.04,
-            Math.min(
-              stage.clientHeight * 0.04,
-              stage.clientHeight / 2 - b.y / ratio - b.h / ratio / 2,
-            ),
+            Math.min(stage.clientHeight * 0.04, stage.clientHeight / 2 - b.y - b.h / 2),
           ) * p;
         const extraX = (bounds.width * (scale - 1)) / 2,
           extraY = (bounds.height * (scale - 1)) / 2;

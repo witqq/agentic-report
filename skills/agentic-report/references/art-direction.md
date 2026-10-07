@@ -28,17 +28,17 @@ identical cards or emoji can pass the «cover the logo» test and still lack a c
 material. A premium page is control and hundreds of small decisions, «a
 single point of view executed with discipline», not a rare effect. Build the concept from these practices:
 
-| Practice                       | What it means on the page                                                                                                     |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| The product is the demo        | The real interface, a reconstruction of it, or a clip on the first screen, at natural size; the product larger than the title |
-| One metaphor as material       | One object carries the idea through the page and changes state; it is what the page is made of, not a caption (below)         |
-| A through-line                 | One element passes through every chapter — a line, a light, a sticky contents — and the colour of a cause matches its effect  |
-| Directed motion                | Every movement has an origin and says what changed; while the main gesture plays, everything else stands still                |
-| Type as the signal             | A deliberate pair, a large contrast of sizes, light weights at display size, «the key sentence bright, the explanation muted» |
-| The language of a drawing      | Figure captions («FIG 0.2»), numbered sections in brackets, a monospace readout — where the product is technical              |
-| Real numbers                   | Figures from the source with their date and unit; a live figure beats a static one; an unknown figure is called unknown       |
-| Restraint                      | One accent, one effect, calm and fast; the cheap page shows itself by inconsistent spacing, not by a missing effect           |
-| Reduced motion for every scene | Each scene has a still version drawn directly in its final state, a narrow-screen version, and a printed equivalent           |
+| Practice                       | What it means on the page                                                                                                                                         |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The product is the demo        | The real interface, a reconstruction of it, or a clip on the first screen, at natural size; the product larger than the title                                     |
+| One metaphor as material       | One object carries the idea through the page and changes state; it is what the page is made of, not a caption (below)                                             |
+| A through-line                 | One element passes through every chapter — a line, a light, a sticky contents — and the colour of a cause matches its effect                                      |
+| Directed motion                | Every movement has an origin and says what changed; supporting motion shares the main gesture's meaning; unrelated movements settle while the reader processes it |
+| Type as the signal             | A deliberate pair, a large contrast of sizes, light weights at display size, «the key sentence bright, the explanation muted»                                     |
+| The language of a drawing      | Figure captions («FIG 0.2»), numbered sections in brackets, a monospace readout — where the product is technical                                                  |
+| Real numbers                   | Figures from the source with their date and unit; a live figure beats a static one; an unknown figure is called unknown                                           |
+| Restraint                      | One accent, one effect, calm and fast; the cheap page shows itself by inconsistent spacing, not by a missing effect                                               |
+| Reduced motion for every scene | Each scene has a still version drawn directly in its final state, a narrow-screen version, and a printed equivalent                                               |
 
 Four shifts turn a concept from average to considered, and each concept should answer them: the product as
 demo, the metaphor as material, direction of motion, type as a decision — with the palette and the faces
@@ -195,7 +195,7 @@ artifact before changing it, and list them on an index of variants ([`playbook.m
 | The default palette of a CSS framework (indigo-500, slate)          | What an averaging generator produces                              | A named accent from the subject; own neutrals                                                                                    |
 | A tilted dashboard, a screenshot in made-up browser chrome          | The product shown as a prop, not as it is                         | The real interface flat and at size; `frame="browser"` only with the page's real `address`, a mock-up with `illustration="true"` |
 
-Four or more of these on one page mean an average page, not a distinctive one.
+The original four-or-more heuristic is a prompt to examine the choices, not a quality verdict. A page about these effects may deliberately contain them; judge their purpose, hierarchy, real evidence and readability. Do not remove useful tools merely to reduce a count.
 
 Why the table holds:
 

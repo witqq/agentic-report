@@ -252,6 +252,8 @@ describe('deterministic public site staging', () => {
           (route) =>
             route.kind === 'page' ||
             route.href.startsWith('docs/') ||
+            (route.href.startsWith('skills/agentic-report/references/') &&
+              route.href.endsWith('.md')) ||
             ['llms.txt', 'skills/agentic-report/SKILL.md'].includes(route.href),
         )
         .map((route) => route.href),

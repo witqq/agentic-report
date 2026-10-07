@@ -100,6 +100,10 @@ npm, but `pnpm install` still downloads the dependencies pinned in `pnpm-lock.ya
 Do not claim a registry-free or fully audited installation. Keep the tag pinned, report the checked commit,
 and use an isolated environment when the user's threat model calls for one.
 
+## Discover staging and examples
+
+Read the [knowledge map](../../skills/agentic-report/references/knowledge.md), [directing](../../skills/agentic-report/references/directing.md) and [combinations](../../skills/agentic-report/references/combinations.md) to choose development and staging for the actual material and viewer. The [complete atlas](../../skills/agentic-report/references/atlas.md) connects the directive vocabulary to native examples and reference extensions. From a compiled checkout or installed package, `node skills/agentic-report/scripts/build-atlas.mjs --out ./report-atlas` builds their interactive gallery. Use it for discovery; it adds no handoff gate and prescribes no common story structure.
+
 ## Compose a filmed explanation
 
 For a value changing beside code, traveling along a pipeline or passing between owners, use `composition` with named `object` values and speech-ready `cue` actions. The [directing reference](../../skills/agentic-report/references/directed-scenes.md) maps the five composition kinds and eight actions to complete examples, measured Screencast narration and existing effects. Use a local compiler exposing this vocabulary and a coordinated Screencast build. The pinned npm commands above cover the earlier page vocabulary.
