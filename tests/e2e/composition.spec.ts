@@ -457,3 +457,66 @@ Waiting
     }
   }
 });
+
+test('connector labels stay inside the stage and clear of cards and other labels', async ({
+  page,
+}, info) => {
+  await page.addInitScript(() => {
+    window.__agenticReportClock = 'manual';
+  });
+  await page.goto(
+    await customBuild(
+      `${info.project.name}-labels`,
+      `::::composition{id="labels" title="The place where state changes" kind="pipeline"}
+:::object{id="a" title="Input" role="source"}
+A concrete input with enough content to make the card tall.
+:::
+:::object{id="b" title="Transform" role="detail"}
+A transformation with enough content to make the card tall.
+:::
+:::object{id="c" title="Output" role="result"}
+A concrete output with enough content to make the card tall.
+:::
+:::object{id="code" role="code"}
+\`\`\`ts
+const output = transform(input);
+\`\`\`
+:::
+::cue{at="0" action="connect" target="a" to="b" value="yield* update"}
+::cue{at="0" action="connect" target="b" to="c" value="value wrappers"}
+::::`,
+    ),
+  );
+  await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(() => window.__clock?.seek(1));
+  const state = await page.locator('[data-composition-stage]').evaluate((stage) => {
+    const bounds = stage.getBoundingClientRect();
+    const texts = [...stage.querySelectorAll('.composition-connections text')];
+    const labels = texts.map((n) => n.getBoundingClientRect());
+    const cards = [...stage.querySelectorAll('[data-composition-object]')].map((n) =>
+      n.getBoundingClientRect(),
+    );
+    const overlap = (a: DOMRect, b: DOMRect) =>
+      a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    return {
+      content: texts.map(
+        (n) =>
+          [...n.querySelectorAll('tspan')].map((n) => n.textContent).join(' ') || n.textContent,
+      ),
+      contained: labels.every(
+        (r) =>
+          r.left >= bounds.left &&
+          r.right <= bounds.right &&
+          r.top >= bounds.top &&
+          r.bottom <= bounds.bottom,
+      ),
+      clear: labels.every((r, i) => [...cards, ...labels.slice(0, i)].every((b) => !overlap(r, b))),
+    };
+  });
+  expect(state.content).toEqual(['yield* update', 'value wrappers']);
+  expect(state.contained).toBe(true);
+  expect(state.clear).toBe(true);
+  await page.screenshot({
+    path: path.resolve('test-results/composition', `${info.project.name}-labels`, 'labels.png'),
+  });
+});

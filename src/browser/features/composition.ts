@@ -125,6 +125,8 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
     const render = (time: number): void => {
       const staticFrame = still.matches || printing.matches;
       stage.style.transform = '';
+      stage.style.paddingBottom = '';
+      stage.style.columnGap = '';
       const frame = compositionFrame(
         [...objects.keys()],
         cues,
@@ -163,6 +165,21 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
       }
       overlay.replaceChildren();
       overlay.setAttribute('viewBox', `0 0 ${stage.clientWidth} ${stage.clientHeight}`);
+      const columns = getComputedStyle(stage).gridTemplateColumns.split(' ').length;
+      if (columns > 1 && frame.connections.some((edge) => edge.label)) {
+        const probe = svg('text', {});
+        overlay.append(probe);
+        let gap = Number.parseFloat(getComputedStyle(stage).columnGap);
+        for (const edge of frame.connections) {
+          probe.textContent = edge.label ?? '';
+          gap = Math.max(
+            gap,
+            Math.min(probe.getComputedTextLength() + 16, stage.clientWidth / (columns * 2)),
+          );
+        }
+        probe.remove();
+        stage.style.columnGap = `${gap}px`;
+      }
       const visibleRects = [...objects.keys()]
         .filter((id) => frame.objects.get(id)?.visible)
         .map(rect);
@@ -198,42 +215,103 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
           const text = svg('text', { 'text-anchor': 'middle' });
           text.textContent = edge.label;
           overlay.append(text);
-          const metrics = text.getBBox();
           let placed = false;
-          for (const fraction of [0.5, 0.35, 0.65, 0.2, 0.8]) {
-            const p = path.getPointAtLength(length * fraction);
-            for (const dy of [-10, metrics.height + 10]) {
-              const bounds = {
-                x: p.x - metrics.width / 2 - 4,
-                y: p.y + dy - metrics.height,
-                w: metrics.width + 8,
-                h: metrics.height + 4,
-              };
-              if ([...visibleRects, ...labels].some((r) => overlaps(bounds, r))) continue;
-              text.setAttribute('x', String(p.x));
-              text.setAttribute('y', String(p.y + dy));
-              labels.push(bounds);
-              placed = true;
-              break;
+          const horizontalGap = Math.max(b.x - a.x - a.w, a.x - b.x - b.w);
+          const widths = [Number.POSITIVE_INFINITY];
+          if (horizontalGap > 12) widths.push(horizontalGap - 12);
+          for (const width of widths) {
+            const lines: string[] = [];
+            let line = '';
+            for (const word of edge.label.split(/\s+/u)) {
+              const candidate = line ? `${line} ${word}` : word;
+              text.textContent = candidate;
+              if (line && text.getComputedTextLength() > width) {
+                lines.push(line);
+                line = word;
+              } else line = candidate;
+            }
+            lines.push(line);
+            text.replaceChildren(
+              ...lines.map((value, i) => {
+                const span = svg('tspan', { x: '0', dy: i === 0 ? '0' : '1.2em' });
+                span.textContent = value;
+                return span;
+              }),
+            );
+            const metrics = text.getBBox();
+            for (const fraction of [0.5, 0.35, 0.65, 0.2, 0.8]) {
+              const p = path.getPointAtLength(length * fraction);
+              for (const [x, y] of [
+                [p.x - metrics.width / 2, p.y - metrics.height - 10],
+                [p.x - metrics.width / 2, p.y + 10],
+                [p.x + 10, p.y - metrics.height / 2],
+                [p.x - metrics.width - 10, p.y - metrics.height / 2],
+              ] as const) {
+                const bounds = { x: x - 3, y: y - 3, w: metrics.width + 6, h: metrics.height + 6 };
+                if (
+                  bounds.x < 0 ||
+                  bounds.y < 0 ||
+                  bounds.x + bounds.w > stage.clientWidth ||
+                  bounds.y + bounds.h > stage.clientHeight ||
+                  [...visibleRects, ...labels].some((r) => overlaps(bounds, r))
+                )
+                  continue;
+                text.setAttribute('transform', `translate(${x - metrics.x},${y - metrics.y})`);
+                labels.push(bounds);
+                placed = true;
+                break;
+              }
+              if (placed) break;
             }
             if (placed) break;
           }
           if (!placed) {
+            // Reserve real stage space instead of letting successive labels climb
+            // into the title. A routed leader keeps the label attached to its edge.
+            const metrics = text.getBBox();
             const y =
-              Math.min(...visibleRects.map((r) => r.y), ...labels.map((r) => r.y)) -
-              metrics.height -
-              8;
-            text.setAttribute('x', String(stage.clientWidth / 2));
-            text.setAttribute('y', String(y));
-            labels.push({
-              x: stage.clientWidth / 2 - metrics.width / 2,
-              y: y - metrics.height,
-              w: metrics.width,
-              h: metrics.height,
-            });
+              Math.max(...visibleRects.map((r) => r.y + r.h), ...labels.map((r) => r.y + r.h)) + 12;
+            const x = (stage.clientWidth - metrics.width) / 2;
+            const bounds = { x, y, w: metrics.width, h: metrics.height };
+            const extra = y + metrics.height + 8 - stage.clientHeight;
+            stage.style.paddingBottom = `${Number.parseFloat(getComputedStyle(stage).paddingBottom) + Math.max(0, extra)}px`;
+            text.setAttribute('transform', `translate(${x - metrics.x},${y - metrics.y})`);
+            const midpoint = path.getPointAtLength(length / 2);
+            let leader = connectionRoute(
+              bounds,
+              { x: midpoint.x, y: midpoint.y, w: 0, h: 0 },
+              visibleRects,
+            );
+            if (!leader) {
+              // Two simple routes meet in a free gutter when a full-width code
+              // row needs more bends than the main connector router.
+              for (const obstacle of visibleRects) {
+                for (const y of [obstacle.y - 12, obstacle.y + obstacle.h + 12]) {
+                  const via = { x: midpoint.x, y, w: 0, h: 0 };
+                  const first = connectionRoute(bounds, via, visibleRects);
+                  const second = connectionRoute(
+                    via,
+                    { x: midpoint.x, y: midpoint.y, w: 0, h: 0 },
+                    visibleRects,
+                  );
+                  if (first && second) {
+                    leader = `${first} ${second}`;
+                    break;
+                  }
+                }
+                if (leader) break;
+              }
+            }
+            if (leader)
+              overlay.insertBefore(
+                svg('path', { d: leader, 'stroke-dasharray': '3 4', opacity: '0.45' }),
+                text,
+              );
+            labels.push(bounds);
           }
         }
       }
+      overlay.setAttribute('viewBox', `0 0 ${stage.clientWidth} ${stage.clientHeight}`);
       for (const previous of stage.querySelectorAll(':scope > .composition-travel'))
         previous.remove();
       for (const travel of frame.travels) {
@@ -331,6 +409,8 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         still.removeEventListener('change', reduced);
         printing.removeEventListener('change', reduced);
         overlay.remove();
+        stage.style.paddingBottom = '';
+        stage.style.columnGap = '';
         for (const n of objects.values()) {
           n.style.opacity = '';
           n.style.transform = '';
