@@ -22,13 +22,13 @@ Start engineering/code films with `midnight` and an explicit dark scheme unless 
 
 Do not reduce “avoid decoration” to “avoid effects.” Existing entrances, depth, transitions, waves, marks, loupes, action glides, thinking states and numerical animation give meaningful changes weight. A moving switch followed by its result explains an interaction. A queue losing its payload on delivery explains a boundary. Depth can separate layers, then settle for reading. Repeated drift behind unrelated narration explains nothing.
 
-Useful alternatives from actual built films are:
+Useful staging alternatives are:
 
 - **Action → response:** a pointer reaches the control, a click coincides with `overlay.actions`, its knob or list moves through `glide`, then a toast or changed result confirms the action. Use a real capture for actual product behavior; saved-page actions reconstruct an illustration.
 - **Same object before and after:** open on the concrete result or defect, indicate its cause with a local mark and return to that same object after the operation. Keep its identity, rather than cutting from a generic problem card to a generic success card.
 - **One cause, several representations:** reveal the common input and show the different outputs together or sequentially, with matching changes. The source remains recognizable while the viewer learns the distinction.
 
-These observations come from the retained Claude-authored wow, three-format teaser and defect/fix reel; the combinations are transferable, their entire film structures are not prescriptions. Keep the accumulated genre/research guidance and its counterexamples in the knowledge map.
+Adapt these combinations to the operation and audience. A combination illustrates a relationship; it does not prescribe the structure of the entire film.
 
 ## Buildable real-code example
 

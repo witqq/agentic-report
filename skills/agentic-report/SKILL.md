@@ -30,7 +30,7 @@ Ordinary `build` still produces the standalone offline handoff.
 
 ## Pages and sources made for a film
 
-Start from the material and the viewer: [knowledge map](references/knowledge.md) routes to the accumulated references; [directing](references/directing.md) helps choose what the viewer should understand or feel, how that develops, and how it is staged. [Combinations](references/combinations.md) coordinates several actions into one event. Then use the [atlas](references/atlas.md) to discover tools and complete examples. These are conditional choices, not a common structure for every page or film.
+Start from the material and the viewer: [knowledge map](references/knowledge.md) routes to the relevant references; [directing](references/directing.md) helps choose what the viewer should understand or feel, how that develops, and how it is staged. [Combinations](references/combinations.md) coordinates several actions into one event. Then use the [atlas](references/atlas.md) to discover tools and complete examples. These are conditional choices, not a common structure for every page or film.
 
 For a filmed explanation, read [directed scenes](references/directed-scenes.md) for the supported syntax. It offers five compositions (`diagram-code`, `pipeline`, `before-after`, `overview-detail`, `ownership`), eight named-object actions and complete examples. Let a value change, travel or cross an ownership boundary while the narration names it; focus the code that performs that operation. Combine these actions with existing diagram draw/pulse, section entrances, code-line focus, typing, marks and the film's camera or 3D effects where they explain the subject.
 
