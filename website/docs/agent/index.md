@@ -100,6 +100,12 @@ npm, but `pnpm install` still downloads the dependencies pinned in `pnpm-lock.ya
 Do not claim a registry-free or fully audited installation. Keep the tag pinned, report the checked commit,
 and use an isolated environment when the user's threat model calls for one.
 
+## Compose a filmed explanation
+
+For a value changing beside code, traveling along a pipeline or passing between owners, use `composition` with named `object` values and speech-ready `cue` actions. The [directing reference](../../skills/agentic-report/references/directed-scenes.md) maps the five composition kinds and eight actions to complete examples, measured Screencast narration and existing effects. Use a local compiler exposing this vocabulary and a coordinated Screencast build. The pinned npm commands above cover the earlier page vocabulary.
+
+For every system interface, first show the complete application screen, then focus or zoom into a part whose location has been established. Apply this to still pages, slides and any film aspect ratio; a full image can remain beside a detail. When a Report source is only film material, use the film's workflow and inspect its frames rather than adding the standalone-page handoff process.
+
 ## Compose the artifact
 
 Edit only the declarative source created by the first route: Markdown, YAML frontmatter or the optional

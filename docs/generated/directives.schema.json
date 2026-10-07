@@ -79,6 +79,9 @@
     { "$ref": "#/$defs/timeline" },
     { "$ref": "#/$defs/event" },
     { "$ref": "#/$defs/demo" },
+    { "$ref": "#/$defs/composition" },
+    { "$ref": "#/$defs/object" },
+    { "$ref": "#/$defs/cue" },
     { "$ref": "#/$defs/asset" },
     { "$ref": "#/$defs/video" },
     { "$ref": "#/$defs/font" },
@@ -2929,6 +2932,132 @@
               "default": 3
             }
           }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "composition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "composition" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Composition id for film selection."
+            },
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "kind": {
+              "type": "string",
+              "enum": ["diagram-code", "pipeline", "before-after", "overview-detail", "ownership"],
+              "description": "Meaning of the composition; layout is package-owned.",
+              "default": "diagram-code"
+            }
+          },
+          "required": ["id"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "object": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "object" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Local object name."
+            },
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "role": {
+              "type": "string",
+              "enum": ["visual", "code", "source", "result", "detail"],
+              "description": "Semantic place in the layout.",
+              "default": "visual"
+            }
+          },
+          "required": ["id"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "cue": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "cue" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "at": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:\\d+(?:\\.\\d+)?s?|b[1-9]\\d*(?:\\.end)?(?:[+-]\\d+(?:\\.\\d+)?)?))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,38}\\S))\\s*$",
+              "description": "Seconds or speech anchor b2, b2.end, b2+0.3; standalone beats use three seconds."
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "reveal",
+                "focus",
+                "connect",
+                "transfer",
+                "copy",
+                "replace",
+                "compare",
+                "camera"
+              ],
+              "description": "Directed operation."
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Local object name."
+            },
+            "to": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Destination object for pair actions."
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Replacement text or connection label."
+            },
+            "lines": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[1-9][0-9]{0,2}(?:-[1-9][0-9]{0,2})?(?:\\s*,\\s*[1-9][0-9]{0,2}(?:-[1-9][0-9]{0,2})?)*)(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,78}\\S))\\s*$",
+              "description": "Code line ranges, such as 2-4,7 (1–999)."
+            },
+            "duration": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 3,
+              "description": "Movement duration in seconds (default 0.6).",
+              "default": 0.6
+            }
+          },
+          "required": ["at", "action", "target"]
         }
       },
       "required": ["name", "form", "attributes"]

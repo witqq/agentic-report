@@ -67,6 +67,7 @@ export function installPageModules(
   listenForEntrances();
   const cleanups = [
     installPageStates(page, !still.matches),
+    feature('composition')?.(page, still),
     feature('screens')?.(page, still, strings),
     feature('scrubScenes')?.(page, still, strings),
     installOpeningEntrance(page, still),

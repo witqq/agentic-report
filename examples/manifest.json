@@ -1030,6 +1030,78 @@
           "sha256": "7cb876dd3496822e30480499bdfa91766a479b1f307cdc922f352024956c1226"
         }
       ]
+    },
+    {
+      "id": "directed-first-edit",
+      "path": "directed-first-edit",
+      "entry": "report.md",
+      "title": "Directed first-edit",
+      "description": "A directed explanation with named objects and speech-ready cues; illustrative values and pseudocode.",
+      "classes": ["directed-composition"],
+      "category": "document",
+      "subvariant": "guide",
+      "files": [
+        {
+          "path": "brief.md",
+          "sha256": "c202911a0a4c26920df757b19b36bdc75476a5b89f3c0a8cf5a5ae2d870e949f"
+        },
+        {
+          "path": "report.md",
+          "sha256": "cf4d1ca8305dec1609861be6455cc67963f2178e6f5e7d60ed73438deb6a58a7"
+        },
+        {
+          "path": "report.ru.md",
+          "sha256": "00458852b8b55f5a038b14ec993c7c633a8abe2cdabfa6e70a0bca4c03c4051f"
+        }
+      ]
+    },
+    {
+      "id": "directed-theme-color",
+      "path": "directed-theme-color",
+      "entry": "report.md",
+      "title": "Directed theme-color",
+      "description": "A directed explanation with named objects and speech-ready cues; illustrative values and pseudocode.",
+      "classes": ["directed-composition"],
+      "category": "document",
+      "subvariant": "guide",
+      "files": [
+        {
+          "path": "brief.md",
+          "sha256": "11b6fc78ff877d6adefdcf4c59c908b0480dd34fb8bfc8815186e48c115e1eff"
+        },
+        {
+          "path": "report.md",
+          "sha256": "dfec9d9b0d9b6140a583c6b18e0c44754160d8b2dc4262dcf76ff6532b0b7eae"
+        },
+        {
+          "path": "report.ru.md",
+          "sha256": "c04a520e50c20b5fd3b29f0ac4fddef3360e8a76c4fc371ee0cf4d58474dece5"
+        }
+      ]
+    },
+    {
+      "id": "directed-change-event",
+      "path": "directed-change-event",
+      "entry": "report.md",
+      "title": "Directed change-event",
+      "description": "A directed explanation with named objects and speech-ready cues; illustrative values and pseudocode.",
+      "classes": ["directed-composition"],
+      "category": "document",
+      "subvariant": "guide",
+      "files": [
+        {
+          "path": "brief.md",
+          "sha256": "374f2f84856034043f39be7df20303e257cbc34b6f1d98a1d0e28c565c1549db"
+        },
+        {
+          "path": "report.md",
+          "sha256": "10985f08d778c294f0d6ad194fb9b41d75cf840d62c146ffae74ac3bbab304fb"
+        },
+        {
+          "path": "report.ru.md",
+          "sha256": "212f93d6139e9f4354f79234664c1d7947256ec5f2c5561f0f81fe40735d0f06"
+        }
+      ]
     }
   ],
   "status": "complete",

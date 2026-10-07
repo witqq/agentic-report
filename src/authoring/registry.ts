@@ -225,6 +225,7 @@ export type SchemeChoice = (typeof PAGE_CONTRACT.schemes)[number];
 
 export const REVIEW_TARGET_OWNERSHIP_CONTRACT = {
   parentOwnedDirectives: ['lead', 'series', 'question', 'bucket', 'option', 'item'],
+  scopedDirectiveIds: { object: 'composition' },
 } as const;
 
 export interface CodeFenceMetadataDefinition {
@@ -981,6 +982,39 @@ export const authoringRegistry = {
       description:
         'Bilingual guide that follows a fictional weather-station network through a season, one technique per chapter with its Markdown under the result: data from JSON, tables as cards, full-screen viewer, statuses and returns, zoom, a played scene, a scroll scene, a loupe, a film, a brand theme, a companion page in layout screens and an edition pair built with --since.',
       classes: ['tutorial-with-code-and-bounded-demo', 'capability-tour'],
+      category: 'document',
+      subvariant: 'guide',
+    },
+    {
+      id: 'directed-first-edit',
+      path: 'directed-first-edit',
+      entry: 'report.md',
+      title: 'Directed first-edit',
+      description:
+        'A directed explanation with named objects and speech-ready cues; illustrative values and pseudocode.',
+      classes: ['directed-composition'],
+      category: 'document',
+      subvariant: 'guide',
+    },
+    {
+      id: 'directed-theme-color',
+      path: 'directed-theme-color',
+      entry: 'report.md',
+      title: 'Directed theme-color',
+      description:
+        'A directed explanation with named objects and speech-ready cues; illustrative values and pseudocode.',
+      classes: ['directed-composition'],
+      category: 'document',
+      subvariant: 'guide',
+    },
+    {
+      id: 'directed-change-event',
+      path: 'directed-change-event',
+      entry: 'report.md',
+      title: 'Directed change-event',
+      description:
+        'A directed explanation with named objects and speech-ready cues; illustrative values and pseudocode.',
+      classes: ['directed-composition'],
       category: 'document',
       subvariant: 'guide',
     },

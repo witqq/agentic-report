@@ -25,3 +25,19 @@ const portable: boolean = true;
 :::demo{title="Bounded counter" start="2" step="3"}
 The authored content remains useful without executing author code.
 :::
+
+::::composition{id="directed" title="A value beside code" kind="diagram-code"}
+:::object{id="source" title="Source" role="code"}
+
+```ts
+const value = 1;
+consume(value);
+```
+
+:::
+:::object{id="result" title="Result" role="result"}
+A value arrives here.
+:::
+::cue{at="b1" action="focus" target="source" lines="1-2" duration="0.6"}
+::cue{at="b2" action="connect" target="source" to="result" value="data"}
+::::

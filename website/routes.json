@@ -741,6 +741,66 @@
       "href": "release.json",
       "source": "generated",
       "kind": "generated"
+    },
+    {
+      "id": "skill-reference-directed-scenes",
+      "href": "skills/agentic-report/references/directed-scenes.md",
+      "source": "../skills/agentic-report/references/directed-scenes.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-directed-first-edit",
+      "href": "examples/directed-first-edit/index.html",
+      "source": "../examples/directed-first-edit",
+      "kind": "page"
+    },
+    {
+      "id": "source-directed-first-edit",
+      "href": "examples/directed-first-edit/report.md",
+      "source": "../examples/directed-first-edit/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-directed-first-edit-ru",
+      "href": "examples/directed-first-edit/report.ru.md",
+      "source": "../examples/directed-first-edit/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-directed-theme-color",
+      "href": "examples/directed-theme-color/index.html",
+      "source": "../examples/directed-theme-color",
+      "kind": "page"
+    },
+    {
+      "id": "source-directed-theme-color",
+      "href": "examples/directed-theme-color/report.md",
+      "source": "../examples/directed-theme-color/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-directed-theme-color-ru",
+      "href": "examples/directed-theme-color/report.ru.md",
+      "source": "../examples/directed-theme-color/report.ru.md",
+      "kind": "copy"
+    },
+    {
+      "id": "example-directed-change-event",
+      "href": "examples/directed-change-event/index.html",
+      "source": "../examples/directed-change-event",
+      "kind": "page"
+    },
+    {
+      "id": "source-directed-change-event",
+      "href": "examples/directed-change-event/report.md",
+      "source": "../examples/directed-change-event/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-directed-change-event-ru",
+      "href": "examples/directed-change-event/report.ru.md",
+      "source": "../examples/directed-change-event/report.ru.md",
+      "kind": "copy"
     }
   ]
 }

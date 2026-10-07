@@ -28,6 +28,14 @@ replies without replaying input. Correlated browser questions appear once. This 
 history; tools, reasoning, approvals and non-text attachments are omitted, and limited history is labelled.
 Ordinary `build` still produces the standalone offline handoff.
 
+## Pages and sources made for a film
+
+For a filmed explanation, read [directed scenes](references/directed-scenes.md) before choosing its arrangement. It maps a viewer's question to five ready compositions (`diagram-code`, `pipeline`, `before-after`, `overview-detail`, `ownership`), eight named-object actions and complete examples. Let a value change, travel or cross an ownership boundary while the narration names it; focus the code that performs that operation. Combine these actions with existing diagram draw/pulse, section entrances, code-line focus, typing, marks and the film's camera or 3D effects where they explain the subject.
+
+Whenever a system interface is shown, first show its complete application screen in every format, then focus or zoom into a named part. A detail must have an established location. A page can keep the full screenshot beside its detail; a film reserves an opening beat for the whole viewport. Re-establish a substantially different screen after navigation. Read the same reference for still-page, presentation and vertical-film recipes.
+
+When a Report source is only material inside a Screencast film, follow the film's workflow: build that source and inspect its actual film frames. The full page-handoff route below applies when the page itself is a deliverable; do not add it as a second workflow to every filmed scene. Use a coordinated local compiler and Screencast build for the new composition syntax, as the directed-scenes reference explains.
+
 ## The order of work
 
 Each step names what it produces, what to read first, and how you know it is done. The page is checked by
@@ -139,25 +147,26 @@ For a Node host that supplies author-overridable page-control defaults, use `bui
 
 ## Where the answer is
 
-| Question                                                                | Where                                                                                                                                                |
-| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| What must the brief answer, and how do I ask the person?                | [`references/process.md`](references/process.md) («Start with the brief»)                                                                            |
-| What does this category need: form, first screen, mistakes, examples?   | [`references/playbook.md`](references/playbook.md)                                                                                                   |
-| Which directive answers the reader's question; where does a tool fit?   | [`references/vocabulary-use.md`](references/vocabulary-use.md)                                                                                       |
-| How are chapters, data, diagrams, recordings, slides, messages written? | [`references/compose.md`](references/compose.md)                                                                                                     |
-| What is the exact name or allowed value of a field or attribute?        | [`references/catalog.md`](references/catalog.md); `agentic-report schema --scope manifest\|directives\|source\|theme`                                |
-| What does the product support, and which rule depends on which?         | `agentic-report describe` (its `authoredRules`)                                                                                                      |
-| How is my source structured, what did each recipe resolve to?           | `agentic-report inspect ./my-page`                                                                                                                   |
-| Which complete page can I copy from?                                    | `agentic-report examples`; the exemplars at the end of [`references/playbook.md`](references/playbook.md)                                            |
-| How should the page look; which concept; which clichés to avoid?        | [`references/art-direction.md`](references/art-direction.md)                                                                                         |
-| Which theme, or how do I make my own?                                   | [`references/themes.md`](references/themes.md); `agentic-report schema --scope theme`                                                                |
-| Why does a design rule exist, and how is it fixed?                      | [`references/design-rules.md`](references/design-rules.md)                                                                                           |
-| Where may a picture, clip, font, or effect code come from?              | [`references/assets.md`](references/assets.md)                                                                                                       |
-| The vocabulary lacks what the page needs: do I extend it, and how?      | [`references/extensions.md`](references/extensions.md); the reference extensions in `agentic-report examples`                                        |
-| How do I audit the prose?                                               | [`references/prose.md`](references/prose.md), [`references/prose-en.md`](references/prose-en.md), [`references/prose-ru.md`](references/prose-ru.md) |
-| How is Russian text set?                                                | [`references/typography-ru.md`](references/typography-ru.md)                                                                                         |
-| How do I check the design, look at the result, review, and hand over?   | [`references/process.md`](references/process.md)                                                                                                     |
-| Which rules decide the choice in front of me?                           | `node scripts/craft.mjs <topic, directive or rule id>`                                                                                               |
+| Question                                                                                                    | Where                                                                                                                                                |
+| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| What must the brief answer, and how do I ask the person?                                                    | [`references/process.md`](references/process.md) («Start with the brief»)                                                                            |
+| What does this category need: form, first screen, mistakes, examples?                                       | [`references/playbook.md`](references/playbook.md)                                                                                                   |
+| How do I compose a filmed mechanism, time actions to speech, and establish a whole interface before detail? | [`references/directed-scenes.md`](references/directed-scenes.md)                                                                                     |
+| Which directive answers the reader's question; where does a tool fit?                                       | [`references/vocabulary-use.md`](references/vocabulary-use.md)                                                                                       |
+| How are chapters, data, diagrams, recordings, slides, messages written?                                     | [`references/compose.md`](references/compose.md)                                                                                                     |
+| What is the exact name or allowed value of a field or attribute?                                            | [`references/catalog.md`](references/catalog.md); `agentic-report schema --scope manifest\|directives\|source\|theme`                                |
+| What does the product support, and which rule depends on which?                                             | `agentic-report describe` (its `authoredRules`)                                                                                                      |
+| How is my source structured, what did each recipe resolve to?                                               | `agentic-report inspect ./my-page`                                                                                                                   |
+| Which complete page can I copy from?                                                                        | `agentic-report examples`; the exemplars at the end of [`references/playbook.md`](references/playbook.md)                                            |
+| How should the page look; which concept; which clichés to avoid?                                            | [`references/art-direction.md`](references/art-direction.md)                                                                                         |
+| Which theme, or how do I make my own?                                                                       | [`references/themes.md`](references/themes.md); `agentic-report schema --scope theme`                                                                |
+| Why does a design rule exist, and how is it fixed?                                                          | [`references/design-rules.md`](references/design-rules.md)                                                                                           |
+| Where may a picture, clip, font, or effect code come from?                                                  | [`references/assets.md`](references/assets.md)                                                                                                       |
+| The vocabulary lacks what the page needs: do I extend it, and how?                                          | [`references/extensions.md`](references/extensions.md); the reference extensions in `agentic-report examples`                                        |
+| How do I audit the prose?                                                                                   | [`references/prose.md`](references/prose.md), [`references/prose-en.md`](references/prose-en.md), [`references/prose-ru.md`](references/prose-ru.md) |
+| How is Russian text set?                                                                                    | [`references/typography-ru.md`](references/typography-ru.md)                                                                                         |
+| How do I check the design, look at the result, review, and hand over?                                       | [`references/process.md`](references/process.md)                                                                                                     |
+| Which rules decide the choice in front of me?                                                               | `node scripts/craft.mjs <topic, directive or rule id>`                                                                                               |
 
 Against the installed package, `describe`, `schema`, and `examples` are the machine-readable runtime
 truth; the catalogue is generated from the same contract.

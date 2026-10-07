@@ -188,6 +188,14 @@ runtime truth.
 
 :::::
 
+::::section{title="Compose a filmed explanation" id="directed-scenes" nav="Directed scenes"}
+
+A `composition` arranges named Markdown objects as a diagram beside code, a pipeline, before/after, an overview with detail, or owners passing a value. Cues reveal, focus, connect, copy, transfer, replace, compare and move the camera. A compatible Screencast report scene binds them to measured narration. Read the [directing guide](../skills/agentic-report/references/directed-scenes.md) for complete source and existing effects, or open the [first-edit example](../examples/directed-first-edit/index.html), [two color paths](../examples/directed-theme-color/index.html) and [event delivery](../examples/directed-change-event/index.html). Use a local compiler exposing the new vocabulary.
+
+Every system interface first appears as its complete application screen, then the reader or viewer moves into a detail. Preserve the detail's location in a still page, presentation or film of any format. The guide provides the recipes.
+
+::::
+
 ::::section{title="Review and return feedback" id="review" nav="Review" width="standard" align="start" tone="accent" reveal="true"}
 
 Set `review: true` in the frontmatter to ship local Review Workspace annotations; an ordinary page is a plain

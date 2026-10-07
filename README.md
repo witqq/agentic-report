@@ -86,6 +86,12 @@ in `pnpm-lock.yaml`. The project does not vendor those dependencies. Inspect the
 scripts before installation, use an isolated environment when appropriate, and keep the release tag pinned
 for reproducibility.
 
+## Directed explanations for a film
+
+A `composition` arranges named Markdown objects as `diagram-code`, `pipeline`, `before-after`, `overview-detail` or `ownership`. Its cues reveal and focus objects, draw connections, copy or transfer values, replace text, compare results and move the camera. Agentic Screencast report scenes bind those cues to measured speech paragraphs; standalone pages use preview beats and keep final values in static or reduced-motion views. Read the [directing guide](skills/agentic-report/references/directed-scenes.md) for syntax, existing effects and the three complete examples. Use the compiled local checkout for this composition vocabulary.
+
+Whenever showing a system interface, first show its complete application screen, then move to a detail. The same guide gives page, presentation and vertical-film recipes that preserve the detail's location.
+
 ## Local living document
 
 From a checkout containing the live mode, run `pnpm build`, then

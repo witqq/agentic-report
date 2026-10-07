@@ -779,6 +779,7 @@ rewriting their historical targets. Invalid sidecars fail before authoritative o
   direct `beat` containers are played in order by the page clock (`seconds` per beat, 1–10, default 3,
   `play="time"` only) or by the scroll while the scene is pinned; `start` and `step` are refused on a scene,
   and a beat's `focus` names nodes or connections of a diagram on the stage. It never evaluates author code;
+- `composition`, `object` and `cue`: a named-object stage with timed actions; see [Directed compositions](#directed-compositions);
 - `swap` (text): a plain written word and `words` — one to three other words, comma separated, each at most
   40 characters and all different — that replace it in turn and return to it;
 - `typing` (text): a plain line of at most 80 characters typed in place when it comes into view;
@@ -1225,6 +1226,16 @@ name the film, the source, the field (`type` or `audio`), and both values. The m
 page's source files. `from` is confined like every local path (`ASSET_OUTSIDE_SOURCE`); a missing target, a
 directory with no or several manifests, a file that is not JSON or not version 1, a malformed manifest, or an
 entry that is missing or leaves the source root fails with `INVALID_VIDEO_MANIFEST` naming the file to fix.
+
+## Directed compositions
+
+`composition`, `object` and `cue` are a package-owned timed scene family. A composition requires a stable `id`, accepts an optional `title`, and selects `kind="diagram-code|pipeline|before-after|overview-detail|ownership"`, default `diagram-code`. It holds 1–16 direct objects and at most 64 direct cues; put explanatory blocks inside objects. Each object requires a locally unique `id`, accepts an optional `title` and `role="visual|code|source|result|detail"` (default `visual`), and holds ordinary Markdown. Object review identities are scoped by their composition id, so two compositions can reuse the same local object name.
+
+A leaf cue requires `at`, `action` and `target`. `at` is a non-negative decimal second with optional `s`, or `bN`, `bN.end` and a signed decimal offset with N beginning at 1. The actions are `reveal`, `focus`, `connect`, `copy`, `transfer`, `replace`, `compare` and `camera`. All targets belong to the same composition. `connect`, `copy`, `transfer` and `compare` require `to` naming a distinct object; other actions refuse it. `replace` requires plain-text `value`; `connect` may use it as a label, and other actions refuse it. Optional `lines` belongs only to `focus` on a code object and accepts comma-separated line numbers/ranges from 1 through 999. `duration` is a decimal from 0.1 to 3 seconds, default 0.6.
+
+Copy/transfer show content traveling and assign the destination body on arrival; transfer then empties the source body, while copy preserves it. Titles are unchanged. Replacement is escaped text rather than parsed Markdown. Focus and compare clear previous focus. Cues at the same time apply in source order; dependent edits should follow the travel duration. A reveal object is initially hidden until its first reveal. Connections persist after drawing and a camera cue supplies a restrained movement bounded by the stage viewport.
+
+The scene state is reconstructed from authored values at each clock seek. Standalone speech anchors use three-second preview beats. `window.__reportComposition.anchors()` returns authored anchors and `bind(resolve, id?)` binds them to a host clock; Agentic Screencast resolves them through measured narration starts and ends. Reduced motion, `motion: none`, print and static compiled markup show final values without moving overlays or camera transforms. The author writes no JavaScript or CSS. The [directing reference](../../skills/agentic-report/references/directed-scenes.md) has copyable source and worked examples, and the generated directive schema defines exact lexical bounds.
 
 ## Interactive reader contract
 

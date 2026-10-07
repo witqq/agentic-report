@@ -949,6 +949,14 @@ write `recipe="hero" scene="none" interaction="depth"` and add a local image. Fo
 write `recipe="rail" scene="progress"` with image cards. The complete
 [`motion-showcase`](../examples/motion-showcase/report.md) demonstrates both without custom runtime code.
 
+### Directed compositions and filmed explanations
+
+Use `::::composition{id="edit" title="First edit" kind="diagram-code"}` with direct `:::object{id="source" title="Source" role="source"}` containers and leaf `::cue{at="b2" action="copy" target="source" to="result"}` actions. The five kinds are `diagram-code`, `pipeline`, `before-after`, `overview-detail` and `ownership`; the eight actions are `reveal`, `focus`, `connect`, `copy`, `transfer`, `replace`, `compare` and `camera`. Objects contain ordinary Markdown, local pictures, diagrams or code. `copy` preserves the source, `transfer` empties it on arrival, and `replace` writes plain text while retaining the title. `focus` can name code `lines="2-4"`.
+
+The [directed-scenes reference](../skills/agentic-report/references/directed-scenes.md) gives complete syntax, action semantics, movement durations, three worked examples and routes to existing effects. The [source contract](product/source-contract.md#directed-compositions) defines the bounds. Standalone `bN` anchors use three-second preview beats; a compatible Screencast `report` scene binds them to measured speech starts and ends. Reduced motion, print and static output contain final values. Use this checkout's compiled CLI for the new vocabulary rather than the older pinned npm commands above.
+
+For every system interface, first show the complete application screen and establish the location of the detail before a zoom, crop or spotlight. Apply this to still pages, slides and films of every format. A page may keep the full screenshot beside its detail; a film can hold the overview during its first paragraph and approach the detail at `b2`. Report used only as film material follows the film's workflow, without a second standalone-page handoff process.
+
 ### Directed motion
 
 Motion is part of the closed vocabulary and always has a still end state: under reduced motion every
@@ -1288,8 +1296,7 @@ diagram views switch through a View Transition where the browser has one. On a s
 `interaction`, or `choreography` role; each defaults to `none` unless a recipe supplies it, and legacy
 `reveal="true"` remains supported. The package owns every duration, distance and item cap of these roles,
 their reduced-motion and coarse-pointer behavior, and the fallback without `IntersectionObserver`; the
-numbers are in the [source contract](product/source-contract.md#page-navigation-and-motion). Authors cannot
-supply timing, coordinates, easing, JavaScript, or custom runtime code.
+numbers are in the [source contract](product/source-contract.md#page-navigation-and-motion). These section roles accept no arbitrary timing, coordinates, easing, JavaScript, or custom runtime code. Directed composition cues have their own bounded time and duration fields.
 
 ## Extend the vocabulary for one page
 

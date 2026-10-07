@@ -874,6 +874,12 @@ hidden pending content; coarse pointers receive no pointer effects. An absent or
 `IntersectionObserver` leaves sections visible while navigation retains hash, activation-line, equal-top,
 resize, short-final and document-bottom ownership through bounded terminal geometry selection.
 
+## Directed composition scenes
+
+`src/blocks/composition.ts` declares the composition/object/cue grammar as one block family, validates local object references and action-specific fields, and prepares static final content plus inert original templates. `src/composition.ts` owns the five composition identities, eight actions, speech-anchor syntax and pure frame reconstruction. Copy and transfer commit on arrival, transfer empties its source, and replacing a value never rewrites its owner's title. Object review identities are scoped through the registry ownership contract before HAST enhancement.
+
+The `composition` page feature bundles `src/browser/features/composition.ts` and `src/blocks/composition.css` only where used. The controller reads the existing page clock, reconstructs values on seeks, reuses original fragments, draws connections between object boundaries and moves transfer ghosts along their routes. Camera transforms are bounded by the actual visible stage. Static/reduced-motion/print use the same final state, with no moving overlays. The runtime exposes `window.__reportComposition.anchors()` and `bind(resolve, id?)`; Screencast's composition bridge supplies measured speech-anchor resolution without an authored script or a second clock. The directive schema/catalog and packaged examples are generated from this same block registry.
+
 ## Page assets
 
 A page receives only the scripts and styles it needs. `pnpm build` does not ship one runtime and one

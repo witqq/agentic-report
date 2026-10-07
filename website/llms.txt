@@ -42,6 +42,7 @@ locale. Single-language review export is version 3; multilingual export is versi
 - Declarative source contract: docs/product/source-contract.md
 - Agent skill: skills/agentic-report/SKILL.md
 - Generated authoring catalog: skills/agentic-report/references/catalog.md
+- Directed compositions, speech timing and whole-interface orientation: skills/agentic-report/references/directed-scenes.md
 - Extending the vocabulary: skills/agentic-report/references/extensions.md
 - Reference extensions: extensions/key-figure/README.md, extensions/product-theatre/README.md,
   extensions/loom/README.md,

@@ -1,0 +1,251 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { buildReport } from '../../dist/node/index.js';
+import { expect, test } from './fixtures.js';
+const source = `---
+title: Directed example
+layout: dashboard
+motion: expressive
+topbar: false
+---
+
+:::::section{title="An ordinary chapter"}
+::::composition{id="edit" title="A value changes owner" kind="ownership"}
+:::object{id="source" title="Layout" role="source"}
+Glow + shadow
+:::
+:::object{id="result" title="Shape" role="result"}
+Inherited
+:::
+::cue{at="1" action="reveal" target="source"}
+::cue{at="2" action="connect" target="source" to="result" value="inherits"}
+::cue{at="3" action="copy" target="source" to="result"}
+::cue{at="5" action="replace" target="result" value="Glow + new shadow"}
+::cue{at="6" action="camera" target="result"}
+::::
+:::::
+`;
+async function build(name: string) {
+  const root = path.resolve('test-results/composition', name);
+  await mkdir(root, { recursive: true });
+  const input = path.join(root, 'report.md'),
+    output = path.join(root, 'page.html');
+  await writeFile(input, source);
+  await buildReport({ input, output });
+  return pathToFileURL(output).href;
+}
+test('composition moves content, restores earlier frames and stays contained', async ({
+  page,
+}, info) => {
+  await page.addInitScript(() => {
+    window.__agenticReportClock = 'manual';
+  });
+  await page.goto(await build(info.project.name));
+  await page.evaluate(() => document.fonts.ready);
+  const seek = async (t: number) => page.evaluate((t) => window.__clock?.seek(t), t);
+  const result = page.locator('[data-composition-object="result"] [data-composition-content]');
+  await seek(4);
+  await expect(result).toContainText('Glow + shadow');
+  await seek(5.8);
+  await expect(result).toHaveText('Glow + new shadow');
+  await seek(0);
+  await expect(result).toContainText('Inherited');
+  expect(
+    await page
+      .locator('[data-composition-object="source"]')
+      .evaluate((n) => getComputedStyle(n).opacity),
+  ).toBe('0');
+  await seek(3.3);
+  await expect(page.locator('.composition-travel')).toHaveCount(1);
+  await seek(7);
+  await page.screenshot({
+    path: path.resolve('test-results/composition', info.project.name, 'final.png'),
+  });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const boxes = await page.locator('[data-composition-object]').evaluateAll((nodes) =>
+    nodes.map((n) => {
+      const r = n.getBoundingClientRect();
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+    }),
+  );
+  for (const box of boxes) {
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.right).toBeLessThanOrEqual(page.viewportSize()?.width ?? 0);
+  }
+});
+test('reduced motion and print expose final values without moving overlays', async ({
+  page,
+}, info) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(await build(`${info.project.name}-still`));
+  await expect(
+    page.locator('[data-composition-object="result"] [data-composition-content]'),
+  ).toHaveText('Glow + new shadow');
+  await expect(page.locator('.composition-travel')).toHaveCount(0);
+  await page.emulateMedia({ media: 'print' });
+  expect(
+    await page.locator('.composition-stage').evaluate((n) => getComputedStyle(n).transform),
+  ).toBe('none');
+});
+
+test('all five layouts keep named objects readable and connectors outside their content', async ({
+  page,
+}, info) => {
+  const kinds = ['diagram-code', 'pipeline', 'before-after', 'overview-detail', 'ownership'];
+  const root = path.resolve('test-results/composition', `${info.project.name}-layouts`);
+  await mkdir(root, { recursive: true });
+  const input = path.join(root, 'report.md'),
+    output = path.join(root, 'page.html');
+  const sources = kinds
+    .map(
+      (kind, i) => `::::composition{id="stage-${i}" title="${kind}" kind="${kind}"}
+:::object{id="a" title="Source" role="source"}
+A concrete value
+:::
+:::object{id="b" title="Result" role="result"}
+The resulting value
+:::
+:::object{id="c" title="Detail" role="${kind === 'diagram-code' ? 'code' : 'detail'}"}
+A stable explanation
+:::
+::cue{at="0" action="connect" target="a" to="b"}
+::cue{at="0" action="connect" target="a" to="c"}
+::::
+`,
+    )
+    .join('\n');
+  await writeFile(
+    input,
+    `---
+title: Layout examples
+motion: expressive
+layout: dashboard
+---
+${sources}`,
+  );
+  await buildReport({ input, output });
+  await page.addInitScript(() => {
+    window.__agenticReportClock = 'manual';
+  });
+  await page.goto(pathToFileURL(output).href);
+  await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(() => window.__clock?.seek(1));
+  for (const kind of kinds) {
+    const scene = page.locator(`[data-composition="${kind}"]`);
+    await scene.scrollIntoViewIfNeeded();
+    const boxes = await scene.locator('[data-composition-object]').evaluateAll((ns) =>
+      ns.map((n) => ({
+        width: n.getBoundingClientRect().width,
+        left: n.getBoundingClientRect().left,
+        right: n.getBoundingClientRect().right,
+      })),
+    );
+    for (const box of boxes) {
+      expect(box.width).toBeGreaterThan(100);
+      expect(box.left).toBeGreaterThanOrEqual(0);
+      expect(box.right).toBeLessThanOrEqual(page.viewportSize()?.width ?? 0);
+    }
+    const overlaps = await scene.evaluate((s) => {
+      const svg = s.querySelector<SVGSVGElement>('.composition-connections');
+      if (svg === null) throw new Error('Connection overlay is absent.');
+      const base = svg.getBoundingClientRect();
+      const boxes = [...s.querySelectorAll('[data-composition-object]')].map((n) =>
+        n.getBoundingClientRect(),
+      );
+      return [...svg.querySelectorAll('path')]
+        .flatMap((path) =>
+          Array.from({ length: 19 }, (_, i) =>
+            path.getPointAtLength((path.getTotalLength() * (i + 1)) / 20),
+          ),
+        )
+        .filter((p) =>
+          boxes.some(
+            (b) =>
+              p.x + base.left > b.left + 1 &&
+              p.x + base.left < b.right - 1 &&
+              p.y + base.top > b.top + 1 &&
+              p.y + base.top < b.bottom - 1,
+          ),
+        ).length;
+    });
+    expect(overlaps).toBe(0);
+  }
+});
+
+// A copy must own its diagram's accessibility and local links.
+test('copied diagrams retain local SVG references in static and seeked frames', async ({
+  page,
+}, info) => {
+  const root = path.resolve('test-results/composition', `${info.project.name}-svg`);
+  await mkdir(root, { recursive: true });
+  const input = path.join(root, 'report.md'),
+    output = path.join(root, 'page.html');
+  await writeFile(
+    input,
+    `---
+title: Copied diagram
+motion: expressive
+---
+:::::composition{id="svg-copy" kind="before-after"}
+::::object{id="source" title="Source" role="source"}
+:::diagram{title="Input to result" description="Input passes through the process to a result." direction="right"}
+::node{id="input" label="Input"}
+::node{id="output" label="Result"}
+::edge{from="input" to="output" label="process"}
+:::
+::::
+::::object{id="result" title="Copy" role="result"}
+Waiting
+::::
+::cue{at="1" action="copy" target="source" to="result"}
+:::::
+`,
+  );
+  await buildReport({ input, output });
+  const inspect = () =>
+    page.evaluate(() => {
+      const bodies = [...document.querySelectorAll('[data-composition-content]')];
+      const ids = bodies.flatMap((n) => [...n.querySelectorAll('[id]')].map((e) => e.id));
+      const links = bodies.flatMap((body) =>
+        [...body.querySelectorAll('*')].flatMap((n) =>
+          [...n.attributes].flatMap((a) =>
+            (a.name.startsWith('aria-') &&
+            ['aria-labelledby', 'aria-describedby', 'aria-controls'].includes(a.name)
+              ? a.value.split(/\s+/u)
+              : [...a.value.matchAll(/url\(#([^)]*)\)/g)].map((m) => m[1])
+            ).map((id) => ({
+              id,
+              found: [...body.querySelectorAll('[id]')].some((e) => e.id === id),
+            })),
+          ),
+        ),
+      );
+      return {
+        unique: ids.length === new Set(ids).size,
+        links,
+        diagrams: bodies.map((n) => n.querySelectorAll('svg').length),
+      };
+    });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(pathToFileURL(output).href);
+  let state = await inspect();
+  expect(state.unique).toBe(true);
+  expect(state.links.length).toBeGreaterThan(0);
+  expect(state.links.every((l) => l.found)).toBe(true);
+  expect(state.diagrams.every((n) => n > 0)).toBe(true);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.addInitScript(() => {
+    window.__agenticReportClock = 'manual';
+  });
+  await page.reload();
+  await page.evaluate(() => window.__clock?.seek(2));
+  state = await inspect();
+  expect(state.unique).toBe(true);
+  expect(state.links.every((l) => l.found)).toBe(true);
+  expect(state.diagrams.every((n) => n > 0)).toBe(true);
+  await page.evaluate(() => window.__clock?.seek(0));
+  await expect(
+    page.locator('[data-composition-object="result"] [data-composition-content]'),
+  ).toHaveText('Waiting');
+});

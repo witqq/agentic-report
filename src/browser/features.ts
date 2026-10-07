@@ -19,6 +19,7 @@ export interface Destroyable {
 
 /** What each slot holds. The runtime reads `strings` at call time: the page language may change. */
 export interface FeatureSlots {
+  readonly composition: (page: HTMLElement, still: MediaQueryList) => Cleanup;
   readonly gallery: {
     readonly create: (page: HTMLElement, strings: () => PackageStrings) => Destroyable | undefined;
     readonly keydown: (event: KeyboardEvent, target: Element) => boolean;

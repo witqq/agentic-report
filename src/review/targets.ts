@@ -88,7 +88,7 @@ export const remarkReviewTargets: Plugin<[ReviewTargetPluginOptions], Root> =
       const sourceStart = segment.sourceStart + (start - segment.generatedStart);
       const sourceEnd = segment.sourceStart + (end - segment.generatedStart);
       const fingerprint = sha256(segment.sourceText.slice(sourceStart, sourceEnd));
-      const explicitId = directiveExplicitId(node);
+      const explicitId = directiveExplicitId(node, parent as unknown as PositionedNode | undefined);
       const stableKey = explicitId === undefined ? undefined : `${kind}:${explicitId}`;
       if (stableKey !== undefined && stableKeys.has(stableKey)) {
         throw reviewTargetError(
@@ -275,9 +275,17 @@ function reviewableElementKind(node: Element): string | undefined {
   )[node.tagName];
 }
 
-function directiveExplicitId(node: PositionedNode): string | undefined {
+function directiveExplicitId(
+  node: PositionedNode,
+  parent: PositionedNode | undefined,
+): string | undefined {
+  const scopes: Readonly<Record<string, string>> =
+    REVIEW_TARGET_OWNERSHIP_CONTRACT.scopedDirectiveIds;
+  const owner = node.name === undefined ? undefined : scopes[node.name];
   const value = node.type === 'containerDirective' ? node.attributes?.id : undefined;
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+  if (typeof value !== 'string' || value.trim().length === 0) return undefined;
+  const scope = owner !== undefined && parent?.name === owner ? parent.attributes?.id : undefined;
+  return typeof scope === 'string' ? `${scope}/${value.trim()}` : value.trim();
 }
 
 function sourceSegment(

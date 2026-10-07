@@ -1666,7 +1666,7 @@
         [data-frame='panel']
       ) {
       /* The inset never outgrows the gutter the shell keeps beside the column: the band never scrolls the page. */
-      --section-inline-pad: min(clamp(1rem, 4vw, 3.5rem), var(--shell-gutter));
+      --section-inline-pad: min(clamp(1rem, 4vw, 3.5rem), calc(var(--shell-gutter) - 1px));
 
       width: calc(100% + 2 * var(--section-inline-pad) + 2px);
       max-width: none;
