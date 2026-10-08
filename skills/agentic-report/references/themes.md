@@ -5,6 +5,10 @@ the eleven themes has, write a theme before you build the page. A theme is data:
 field, checks its contrast, and points at the line of a wrong field. `agentic-report schema --scope theme`
 returns the complete schema; this file says how to decide what goes in it.
 
+Choose the composition before refining theme fields: main visual, hierarchy, scale and chapter rhythm
+come first. A theme supports that idea. The table's cautions identify likely mismatches, not universal
+bans on a palette, typeface or genre; judge the combination against the brief and real material.
+
 ## Start from the closest theme
 
 Each built-in theme is a voice: its own display face over its own text face and code face, with its own
@@ -14,19 +18,19 @@ the fashionable clichés. The background, surfaces, text, borders, accents and t
 every built-in theme, in both schemes, come from one palette file shared with agentic-screencast, so a page and a
 film in the same theme and scheme wear the same colours.
 
-| Built-in     | Type (display / text / code)                      | Character                                                        | Extend it for                                | Do not take it for                                                    |
-| ------------ | ------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------- | --------------------------------------------------------------------- |
-| `neutral`    | Literata 600 / Onest / Martian Mono               | Grey paper, ink, one ochre accent; warm graphite dark; default   | Reports, product pages, landings, docs       | A page whose subject asks for a strong mood                           |
-| `frost`      | Onest 600 / IBM Plex Sans / Geist Mono            | Stone and graphite; colour only in statuses                      | Dashboards, status pages, technical products | Pages that need a colourful brand                                     |
-| `calm-paper` | Playfair 600 / Literata / PT Mono                 | Warm paper, clay accent, numbered contents                       | Reports, guides, answers, decisions          | A product landing: cream, a serif and terracotta is the 2026 cliché   |
-| `daylight`   | Onest 680 / Golos Text / Geist Mono               | Bright cool page, cobalt and petrol                              | Product documentation, tutorials, briefs     | Pages that need a voice of their own; it is deliberately quiet        |
-| `midnight`   | Geologica 680 / IBM Plex Sans / JetBrains Mono    | Night blue, one blue signal, steel eyebrows, ruled cards         | Engineering stories, code reviews, decks     | A grid of dark feature cards: it becomes the Linear-style dark cliché |
-| `noir`       | Cormorant Garamond capital title / Jost / PT Mono | Black and bone, amber, image-first                               | Cinematic stories, portfolios, showcases     | Next to particles or star dust: capitals there read as a template     |
-| `aurora`     | Raleway 400 / Commissioner / Victor Mono          | Deep blue, one mint signal, sand eyebrows, calm                  | Research, science, motion showcases          | Glows and background effects: together they are the "aurora" cliché   |
-| `blueprint`  | Tektur 700 / Fira Sans / Martian Mono             | Drafting blue, cyan and yellow, a faint grid                     | Architecture, dashboards, technical specs    | Dark scheme as a landing default: cyan on navy nears "dark + neon"    |
-| `ember`      | Oswald capital title / Rubik / JetBrains Mono     | Ember black, one orange signal, warm grey eyebrows               | Launches, incidents, announcements           | A product landing with particles: capitals there read as a template   |
-| `synthwave`  | Unbounded 700 / Exo 2 / JetBrains Mono            | Violet night, magenta and cyan                                   | Games and music only                         | Any product or report page: it is the synthwave cliché by design      |
-| `terminal`   | Martian Mono / JetBrains Mono / JetBrains Mono    | Graphite console or pale console paper: prompt, cursor, brackets | Developer tools, CLI products                | Acid green and phosphor glow: leave `scanlines` and `glow` off        |
+| Built-in     | Type (display / text / code)                      | Character                                                        | Extend it for                                            | Do not take it for                                                                      |
+| ------------ | ------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `neutral`    | Literata 600 / Onest / Martian Mono               | Grey paper, ink, one ochre accent; warm graphite dark; default   | Reports, product pages, landings, docs                   | A page whose subject asks for a strong mood                                             |
+| `frost`      | Onest 600 / IBM Plex Sans / Geist Mono            | Stone and graphite; colour only in statuses                      | Dashboards, status pages, technical products             | Pages that need a colourful brand                                                       |
+| `calm-paper` | Playfair 600 / Literata / PT Mono                 | Warm paper, clay accent, numbered contents                       | Reports, guides, answers, decisions                      | A product landing: cream, serif and terracotta chosen without a subject-specific reason |
+| `daylight`   | Onest 680 / Golos Text / Geist Mono               | Bright cool page, cobalt and petrol                              | Product documentation, tutorials, briefs                 | Pages that need a voice of their own; it is deliberately quiet                          |
+| `midnight`   | Geologica 680 / IBM Plex Sans / JetBrains Mono    | Night blue, one blue signal, steel eyebrows, ruled cards         | Engineering stories, code reviews, decks                 | A grid of dark feature cards: it becomes the Linear-style dark cliché                   |
+| `noir`       | Cormorant Garamond capital title / Jost / PT Mono | Black and bone, amber, image-first                               | Cinematic stories, portfolios, showcases                 | Next to particles or star dust: capitals there read as a template                       |
+| `aurora`     | Raleway 400 / Commissioner / Victor Mono          | Deep blue, one mint signal, sand eyebrows, calm                  | Research, science, motion showcases                      | Glows and background effects: together they are the "aurora" cliché                     |
+| `blueprint`  | Tektur 700 / Fira Sans / Martian Mono             | Drafting blue, cyan and yellow, a faint grid                     | Architecture, dashboards, technical specs                | Dark scheme as a landing default: cyan on navy nears "dark + neon"                      |
+| `ember`      | Oswald capital title / Rubik / JetBrains Mono     | Ember black, one orange signal, warm grey eyebrows               | Launches, incidents, announcements                       | A product landing with particles: capitals there read as a template                     |
+| `synthwave`  | Unbounded 700 / Exo 2 / JetBrains Mono            | Violet night, magenta and cyan                                   | Games, music, deliberate retro or vivid brand directions | Quiet evidence-heavy pages where its display voice competes with reading                |
+| `terminal`   | Martian Mono / JetBrains Mono / JetBrains Mono    | Graphite console or pale console paper: prompt, cursor, brackets | Developer tools, CLI products                            | Acid green and phosphor glow: leave `scanlines` and `glow` off                          |
 
 Every built-in theme draws a light and a dark scheme; a dark-looking theme such as `midnight` or `terminal`
 has a matching light scheme with the same accents. `extends` names the theme; everything you leave out,
@@ -49,13 +53,12 @@ belongs on pages whose subject is the look itself.
 
 ## Decide in this order
 
-1. **Accent.** One family for action and emphasis (`DR-ONE-ACCENT`); the second accent is a quiet neutral for
-   eyebrows, not a second signal. The restrained `graphite`, `cobalt`, `rust`, `moss`, `ochre`, `ink` suit
-   most pages; `indigo`, `teal`, `coral` only when the subject is loud by nature. Take it from the product's
-   own colour when there is one. Never the default palette of a CSS framework: Tailwind indigo-500 and
-   violet, slate neutrals and its stock chart colours are what an averaging generator produces — a renamed
-   copy of them is the same palette. Paper or bone, ink and one warm accent is a safe start; the dark scheme
-   is a warm graphite, not a night blue.
+1. **Accent.** Start with one family for action and emphasis (`DR-ONE-ACCENT`); coordinate additional colours
+   by role so they do not compete with the primary action or confuse statuses. The restrained `graphite`, `cobalt`, `rust`, `moss`, `ochre`, `ink` suit
+   many restrained pages; `indigo`, `teal` and `coral` can fit a brand or a stronger visual direction. Take it from the product's
+   own colour when there is one. A familiar framework palette needs a compositional reason too; renaming a shade does not make
+   the decision. Paper, ink and a warm accent suit editorial pages; graphite or night blue can fit a
+   darker direction. Keep contrast valid in both schemes.
 2. **Type.** `fonts.pair` takes the whole type set of a built-in theme — `midnight`, `calm-paper`,
    `synthwave`, `noir`, `aurora`, `daylight`, `ember`, `blueprint`, `terminal`, `neutral`, `frost` — or
    `system`. Name a single
@@ -92,7 +95,7 @@ belongs on pages whose subject is the look itself.
    when the theme draws rules instead of shadows. `radii.control`, `radii.card` and `radii.media` pick a
    step of that scale per role (`none`, `small`, `medium`, `large`; defaults `small`, `medium`, `medium`):
    square controls with soft cards reads engineered, square media in a round theme keeps photographs from
-   looking like stickers. Do not make every role the same step — equal corners everywhere is a cliché.
+   looking like stickers. Equal corners can unify a restrained page; vary them only when the roles need a visible distinction.
 5. **Motion character.** `motion.easing` `standard`, `gentle`, or `decisive`; `motion.pace` `brisk`,
    `calm`, or `slow`. A calm product and a slow pace agree; a developer tool and a decisive, brisk pace
    agree.
@@ -146,7 +149,8 @@ deciding type, density and shell as above. Read the result record before you bui
 Do not use it when the brief asks for a restrained page and the brand colour is loud (a saturated yellow or
 magenta): an accent family such as `ochre` or `coral` near the brand reads better than the brand colour
 darkened into olive. Do not pass a second colour just because the brand guide lists one: the second accent
-is a quiet eyebrow colour, and two loud colours break the one-accent rule (`DR-ONE-ACCENT`).
+serves eyebrows, so check that it supports hierarchy rather than competing with the action
+(`DR-ONE-ACCENT`).
 
 ## Tokens: what a theme gives the page
 
@@ -164,14 +168,15 @@ the contrast check, like the status roles did.
 - Draw both schemes (`scheme: both`, the default) unless the page is always seen in the dark. A theme with
   `scheme: dark` draws its dark colours in either reader scheme and hides the scheme button; to make a page
   open dark but keep the button, set the page's `scheme: dark` instead.
-- Never use a backdrop to decorate content (`DR-BLOBS`); `backdrop` `dots`, `grid`, or `tint` is a quiet
+- Choose a backdrop for its role in the composition (`DR-BLOBS`); `backdrop` `dots`, `grid`, or `tint` is a quiet
   paper texture, `none` is often best. `grain` lays a faint noise in the text colour over the whole page;
-  take it only under large fills beside real material — a photograph, a scan, a printed object — never as
-  the page's idea.
+  use it to support material or atmosphere, without putting texture over reading. It cannot supply
+  the page's main idea by itself.
 - Write `description`: one sentence saying what kind of page the theme is for. The next agent picks themes
   by it.
-- No glow, no scanlines, no neon on black, no cream with terracotta for a product page: each is a look the
-  reader has already seen on a thousand generated sites (`art-direction.md`, clichés).
+- Glow, scanlines, neon on black and cream with terracotta need a reason grounded in the subject.
+  They can support a deliberate direction; keep textures away from reading and preserve contrast.
+  Their presence alone does not make the page good or bad (`art-direction.md`, clichés).
 - A display face made only for large sizes (Cormorant Garamond) sets the page and chapter titles; smaller
   headings and timeline event titles fall back to the text face, where its thin strokes would clog.
 - The `glass` top bar blurs what scrolls under it only to keep the bar readable; `ledger` is solid.

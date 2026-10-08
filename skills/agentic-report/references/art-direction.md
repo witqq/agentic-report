@@ -5,6 +5,20 @@ before any directive is written. On a page where the look decides the result —
 portfolio, a presentation — study references first, offer the person two or three concepts, and let the
 person choose. On a report or a dashboard, pick one yourself and write it in the brief.
 
+## Compose before choosing components
+
+Decide what the reader notices first, what makes it worth looking at, and how the next chapters develop
+it. Name the main visual, the hierarchy of title, material and action, the contrast of scales, and the
+rhythm of dense and quiet sections in the existing art-direction row of the brief. A report may center
+its conclusion and evidence; a landing may give most of the opening to the product or a material image.
+Then choose recipes, cards and effects that realize that composition. The starter supplies syntax;
+its component sequence does not supply the idea.
+
+Aesthetic advice is contextual. A gradient can carry brand colour or light, a grid can compare distinct
+facts, and quiet movement can establish atmosphere. Keep a technique when it serves the concept and
+stays subordinate to the reading path. Accessibility, truthful evidence, privacy, both schemes, reduced
+motion and print remain binding. Use only supported fields and declared extensions.
+
 ## Study references before the concepts
 
 For a landing or a showcase, look at 5–10 real sites on the same subject before writing a single concept,
@@ -37,23 +51,24 @@ single point of view executed with discipline», not a rare effect. Build the co
 | Type as the signal             | A deliberate pair, a large contrast of sizes, light weights at display size, «the key sentence bright, the explanation muted»                                     |
 | The language of a drawing      | Figure captions («FIG 0.2»), numbered sections in brackets, a monospace readout — where the product is technical                                                  |
 | Real numbers                   | Figures from the source with their date and unit; a live figure beats a static one; an unknown figure is called unknown                                           |
-| Restraint                      | One accent, one effect, calm and fast; the cheap page shows itself by inconsistent spacing, not by a missing effect                                               |
+| Restraint                      | A clear focus, coordinated colour and movement; restraint follows the concept rather than a fixed look                                                            |
 | Reduced motion for every scene | Each scene has a still version drawn directly in its final state, a narrow-screen version, and a printed equivalent                                               |
 
-Four shifts turn a concept from average to considered, and each concept should answer them: the product as
+For an expressive product page, consider four useful shifts: the product as
 demo, the metaphor as material, direction of motion, type as a decision — with the palette and the faces
 taken from the subject.
 
 Control is measurable. Use these numbers to judge a page, a theme of your own, or an extension effect; the
 package's own blocks already keep them:
 
-- **Spacing repeats.** One section padding on the whole page, not 48 px in one chapter and 73 px in the
-  next; the gap between a heading and its paragraph is smaller than the gap between two chapters. Too
+- **Spacing has a rhythm.** Repeat gaps within the same role; use a deliberate larger pause when the
+  argument changes, rather than accidental differences between chapters; the gap between a heading and its paragraph is smaller than the gap between two chapters. Too
   tight looks cheap, uncontrolled empty space looks unfinished.
 - **Type is a scale, not a set of sizes.** Neighbouring sizes step by a ratio of 1.25 to 1.5; body text
   keeps a line height of 1.6–1.8 and a line of 45–80 characters; at most two families besides code.
-- **Colour is two or three values used everywhere.** The same accent on every action and the same neutrals
-  on every surface; a bright default of the web (pure `#0000ff`, a framework's indigo) reads as unchosen.
+- **Colour has consistent roles.** One action accent is a useful starting point. A broader brand palette
+  can work when hierarchy stays clear and each status keeps its meaning; a default colour needs the same
+  reason as an unusual one.
 - **Cards share one frame.** The same aspect ratio for every picture in a row, the same inner padding, the
   same radius per role.
 - **Interface motion is short.** A state change under the pointer takes 150–200 ms, an opening panel or
@@ -73,20 +88,20 @@ expensive» (spacing, scale ratios, line height, hover timing); Emil Kowalski, �
 
 ## One metaphor, one object
 
-- **One metaphor, one object, two inks and one material.** Igloo Inc builds its page from one ice object in
+- **When a metaphor carries the concept, keep its material coherent.** Igloo Inc builds its page from one ice object in
   two colours (`#b6bac5` and `#383e4e`) that changes state as the reader scrolls; Oryzo shows one object
-  revealing its properties. A second metaphor on the same page dilutes the first.
+  revealing its properties. Competing metaphors can dilute the first; a product demo or a clear editorial page needs no metaphor.
 - **The metaphor is the material, not a caption.** A flat line of constant width on paper reads as a
   diagram. A thread used as the page's material needs visible volume, light, sag, tension and recoil,
   with fibres that respond together. A metaphor expressed as a table stays a table.
-- **The deletion test.** Remove the main scene in your head: if the page loses none of its numbers, its
-  refusal and its path, the scene is decoration (`DR-SCENE-CARRIES` in [`design-rules.md`](design-rules.md)).
+- **The deletion test for an explanatory scene.** Remove it in your head: if the mechanism or finding
+  is no harder to understand, it is supporting atmosphere rather than the explanation (`DR-SCENE-CARRIES` in [`design-rules.md`](design-rules.md)).
 - **Chaos grows only inside a frame.** Organic, generative or tangled material lives inside a disciplined
   layout: the grid, the type and the controls stay calm around it. Three hundred exact threads say more than
   a million particles.
-- **One solved element per screen.** Every screen has one element that is not a stock component — a stamp
+- **A distinctive element where it matters.** An opening or turning point can have one element shaped for this subject — a stamp
   turned across a ruled frame, a number set in place, a line that leaves the column — and it is the one
-  thing the concept names as its solved element. Everything symmetric on the grid is a template.
+  thing the concept names as its solved element. Quiet chapters can use the ordinary grid; asymmetry needs a reason too.
 - **Traces of authorship.** A real author's name, real dates, a dated change log: a page that could only be
   about this product and by these people.
 - **Check the metaphor against the thesis.** A glowing brain for a product whose point is that the model is
@@ -107,18 +122,18 @@ Oryzo (one object revealing its properties); Tyler Hobbs, «Flow fields».
 
 A concept is ten lines, each of which could be wrong for another page:
 
-| Line           | Says                                                           | Example                                                      |
-| -------------- | -------------------------------------------------------------- | ------------------------------------------------------------ |
-| Name           | A short handle the person can choose by                        | «Lab notebook»                                               |
-| Idea           | What the page is like, taken from the subject                  | Field notes of an engineer, measured and dated               |
-| Main object    | The one object or metaphor that carries the page               | The oscilloscope trace, redrawn from the lab's own data      |
-| Theme          | A built-in theme or your own ([`themes.md`](themes.md))        | `neutral` with `accent: moss`, `fonts.pair: blueprint`       |
-| First screen   | What the reader sees before scrolling                          | The title beside a real oscilloscope screenshot              |
-| Order          | The recipes in the order of the argument                       | `demo`, `evidence`, `blueprint`, `statement`, actions        |
-| Motion         | How much and where, or none                                    | `draw="scroll"` on the one wiring diagram; nothing else      |
-| Solved element | The one element per screen that is not a stock component       | Measurements set in the margin like a lab stamp              |
-| At 400 px      | What the phone reader sees and what changes from the wide page | The trace above the title; the diagram in its `down` view    |
-| Cliché check   | The clichés nearest to this concept and why it avoids them     | «Cream + serif»: grey paper and a moss accent, no terracotta |
+| Line           | Says                                                           | Example                                                           |
+| -------------- | -------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Name           | A short handle the person can choose by                        | «Lab notebook»                                                    |
+| Idea           | What the page is like, taken from the subject                  | Field notes of an engineer, measured and dated                    |
+| Main object    | The one object or metaphor that carries the page               | The oscilloscope trace, redrawn from the lab's own data           |
+| Theme          | A built-in theme or your own ([`themes.md`](themes.md))        | `neutral` with `accent: moss`, `fonts.pair: blueprint`            |
+| First screen   | What the reader sees before scrolling                          | The title beside a real oscilloscope screenshot                   |
+| Order          | The sequence of claims, proof, pauses and action               | Show the result, inspect its mechanism, pause on the finding, act |
+| Motion         | How much and where, or none                                    | `draw="scroll"` on the one wiring diagram; nothing else           |
+| Solved element | The subject-specific detail at an opening or turning point     | Measurements set in the margin like a lab stamp                   |
+| At 400 px      | What the phone reader sees and what changes from the wide page | The trace above the title; the diagram in its `down` view         |
+| Cliché check   | The clichés nearest to this concept and why it avoids them     | «Cream + serif»: grey paper and a moss accent, no terracotta      |
 
 Two concepts differ when they differ in at least three of theme, first screen, order, and motion. «Dark»
 and «light» versions of the same page are one concept.
@@ -155,6 +170,12 @@ artifact before changing it, and list them on an index of variants ([`playbook.m
 
 ## Clichés and their fixes
 
+These rows diagnose unconsidered combinations, not forbidden styles. Apply a fix when the named failure
+is present. A centred title, bento grid, serif, neon palette or glow may suit the subject; its presence
+alone is no reason to remove it. Keep readable contrast and clear attention, and use the existing brief
+to explain a deliberate exception to checked advice. The alternatives below are examples, not a new
+default template.
+
 | Cliché                                                              | Why it fails                                                      | Fix                                                                                                                              |
 | ------------------------------------------------------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | Violet-to-blue gradient behind a centred title                      | The signature of a generated page; says nothing about the subject | One accent from the subject, a plain surface (`DR-BLOBS`)                                                                        |
@@ -163,7 +184,7 @@ artifact before changing it, and list them on an index of variants ([`playbook.m
 | A bento grid of feature cards                                       | The same three cards in a fashionable box                         | One claim with its proof, or ruled cards that each carry a different fact                                                        |
 | Glassmorphism panels, glows, floating blobs                         | Decoration standing in for content                                | Real material on a quiet surface                                                                                                 |
 | A glow on anything                                                  | Light without a source reads as a filter                          | A matte, lit material, or a thin ink line                                                                                        |
-| Every block fades up on scroll                                      | The reader waits instead of reading (`DR-UNIFORM-ENTRANCE`)       | Motion only where it shows a change                                                                                              |
+| Every block fades up on scroll                                      | The reader waits instead of reading (`DR-UNIFORM-ENTRANCE`)       | Motion for explanation, attention or atmosphere; keep supporting motion quiet                                                    |
 | Every heading animated letter by letter                             | Noise, and screen readers read the letters apart                  | One or two titles by line or by word, where the movement says something                                                          |
 | A custom cursor; a preloader or a 0–100 % counter                   | The reader waits for, or chases, an effect                        | The system cursor; content that is there on arrival                                                                              |
 | Abstract generated art as the hero                                  | Proves nothing (`DR-REAL-MATERIAL`)                               | A screenshot, a clip, a diagram of the real thing                                                                                |
@@ -171,16 +192,16 @@ artifact before changing it, and list them on an index of variants ([`playbook.m
 | Emoji as feature icons                                              | Looks like a chat, renders differently (the prose rules)          | No icon, or the fact that makes the card different                                                                               |
 | Numbers counting up everywhere                                      | Animation replaces the value                                      | `:count` on one figure that is new; plain numbers elsewhere                                                                      |
 | Tight, heavy display type on every heading                          | Fuses words, shouts (`DR-TIGHT-TRACKING`)                         | Display type on the title only; default tracking                                                                                 |
-| A particle or WebGL background «for depth»                          | Costs battery, means nothing (`DR-ONE-EFFECT`)                    | A WebGL effect only where its motion is the subject                                                                              |
-| A shader background with no meaning                                 | The mesh gradient of 2026                                         | A real picture, a plain surface, or the effect where its motion is the subject                                                   |
+| A particle or WebGL background «for depth»                          | Costs battery, means nothing (`DR-ONE-EFFECT`)                    | A declared effect for the subject or a purposeful atmosphere, with a complete still page                                         |
+| A shader background with no meaning                                 | The mesh gradient of 2026                                         | A real picture, a plain surface, or a declared effect that supports the subject or atmosphere                                    |
 | Dark + neon + shader + bento grid                                   | One of the two fashionable looks of 2026: seen everywhere         | Palette and type taken from the subject                                                                                          |
 | Cream paper + serif display + terracotta (+ mascots)                | The other fashionable look of 2026, an imitation of one AI lab    | Neutral paper, ink, one accent from the subject                                                                                  |
 | Acid green on black, phosphor glow, scanlines                       | A costume of a terminal, not a terminal                           | Graphite, grey text, one muted green; no texture over text                                                                       |
-| Magenta and cyan on violet night, a synthwave grid                  | A genre poster, not a product                                     | Only for games and music, and then on purpose                                                                                    |
+| Magenta and cyan on violet night, a synthwave grid                  | A genre poster, not a product                                     | Games, music, deliberate retro or a vivid brand direction; keep the reading hierarchy clear                                      |
 | Near-black page, grotesque, grey subtitles, a bento of dark cards   | The Linear-style dark template                                    | Ruled cards, one signal colour, a real product shot                                                                              |
 | Neutral palette + grotesque + 0.5rem radius + bordered cards        | The stock component-kit look                                      | A voice: a serif display, sharp corners, ruled cards                                                                             |
 | Beams, a spotlight behind the cursor, aurora, glowing cards         | The AI-startup look                                               | Real material on a plain surface                                                                                                 |
-| Spaced capitals over star dust or particles                         | A template of a «premium» launch                                  | Capitals on the page title only, no particles                                                                                    |
+| Spaced capitals over star dust or particles                         | A template of a «premium» launch                                  | Use capitals or particles where the subject calls for them; preserve reading and a clear main visual                             |
 | An eyebrow in capitals joined by dots («ENGINE · MCP · APACHE-2.0») | The first line of every generated launch page                     | A plain eyebrow in the text face, or none                                                                                        |
 | A title and two pill buttons, no product                            | The reader learns nothing before scrolling                        | Title on the left, one action, the secondary one as a link, the product beside them (`recipe="demo"`)                            |
 | A call-to-action box with two buttons at the end                    | A closing template; a framed button reads as an afterthought      | A final scene: the main image resolved, one action inside it                                                                     |
@@ -190,7 +211,7 @@ artifact before changing it, and list them on an index of variants ([`playbook.m
 | White marble as «eternal classic»                                   | A texture pasted on a plane                                       | A scan or photograph with light, large, monochrome, as a fragment                                                                |
 | Paper and one ink, no material, light, or depth                     | A diagram where the concept needs a visible material              | Two inks and one material with light                                                                                             |
 | Newspaper hairlines with dense columns                              | The ruled template of an «editorial» page                         | Fewer, wider columns; rules only where they separate meaning                                                                     |
-| The same radius on everything; everything symmetric on the grid     | Nothing was decided                                               | Radii by role; asymmetry and one solved element per screen                                                                       |
+| The same radius on everything; everything symmetric on the grid     | Uniformity without a role can flatten hierarchy                   | Keep symmetry and equal radii when they unify the page; vary roles or add asymmetry where the argument benefits                  |
 | Pathos in the text («the fabric of destiny»)                        | Theme as costume                                                  | Say what the product does; at most three verbs of the metaphor                                                                   |
 | The default palette of a CSS framework (indigo-500, slate)          | What an averaging generator produces                              | A named accent from the subject; own neutrals                                                                                    |
 | A tilted dashboard, a screenshot in made-up browser chrome          | The product shown as a prop, not as it is                         | The real interface flat and at size; `frame="browser"` only with the page's real `address`, a mock-up with `illustration="true"` |
@@ -225,23 +246,26 @@ of the custom cursor».
 
 ## A synonym is not a fix
 
+When a technique has no purpose, changing its colour or fashionable name does not give it one. If the
+original technique already serves the composition, keep it.
+
 These substitutions look like changes and leave the cliché in place:
 
-| Found                                | Not this                                                         | Fix                                                     |
-| ------------------------------------ | ---------------------------------------------------------------- | ------------------------------------------------------- |
-| Violet gradient hero                 | Teal gradient hero, orange gradient hero                         | No gradient; a real picture on a plain surface          |
-| Three feature cards with icons       | Three feature cards with numbers 01, 02, 03; four cards; a bento | One claim with its proof, or a paragraph                |
-| Blurred colour blob behind the title | A glow, a blurred image behind text                              | `plain`, `grain`, or `blueprint`                        |
-| Fade-up on every section             | Slide-in on every section                                        | Most sections still; one entrance where the story turns |
-| Stock photo of people at a laptop    | A generated picture of people at a laptop                        | A screenshot of what they would see on that laptop      |
-| Starter order with new words         | Starter order with sections renamed                              | Order written from the brief's argument                 |
-| Tailwind indigo accent               | Tailwind violet-500 or blue-600                                  | A named accent from the subject                         |
-| Neon green on black                  | Neon cyan on black                                               | Graphite, grey text, one muted signal                   |
-| Inter everywhere                     | Neue Montreal, Geist or Manrope everywhere                       | A pair chosen for the subject: display voice + text     |
-| A fashionable serif display          | Instrument Serif or Bricolage Grotesque (no Cyrillic at all)     | An embedded face with Cyrillic, chosen for the subject  |
-| Mesh gradient                        | Dither, ASCII art, a shader gradient                             | A real picture, or a plain surface                      |
-| Letter-by-letter title animation     | A text scramble, a typewriter on every heading                   | A still title, or one title by line                     |
-| A glowing neural network             | A plexus of lines and dots without the glow                      | The real material: named nodes from the real data       |
+| Found                                | Not this                                                         | Fix                                                                         |
+| ------------------------------------ | ---------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Violet gradient hero                 | Teal gradient hero, orange gradient hero                         | A purposeful light or brand treatment, or a real picture on a plain surface |
+| Three feature cards with icons       | Three feature cards with numbers 01, 02, 03; four cards; a bento | One claim with its proof, or a paragraph                                    |
+| Blurred colour blob behind the title | A glow, a blurred image behind text                              | `plain`, `grain`, or `blueprint`                                            |
+| Fade-up on every section             | Slide-in on every section                                        | Most sections still; one entrance where the story turns                     |
+| Stock photo of people at a laptop    | A generated picture of people at a laptop                        | A screenshot of what they would see on that laptop                          |
+| Starter order with new words         | Starter order with sections renamed                              | Order written from the brief's argument                                     |
+| Tailwind indigo accent               | Tailwind violet-500 or blue-600                                  | A named accent from the subject                                             |
+| Neon green on black                  | Neon cyan on black                                               | Graphite, grey text, one muted signal                                       |
+| Inter everywhere                     | Neue Montreal, Geist or Manrope everywhere                       | A pair chosen for the subject: display voice + text                         |
+| A fashionable serif display          | Instrument Serif or Bricolage Grotesque (no Cyrillic at all)     | An embedded face with Cyrillic, chosen for the subject                      |
+| Mesh gradient                        | Dither, ASCII art, a shader gradient                             | A real picture, or a plain surface                                          |
+| Letter-by-letter title animation     | A text scramble, a typewriter on every heading                   | A still title, or one title by line                                         |
+| A glowing neural network             | A plexus of lines and dots without the glow                      | The real material: named nodes from the real data                           |
 
 Sources: a Codrops tutorial of January 2026 on real-time ASCII and dithering shaders, which shows dither and
 ASCII becoming the next mesh gradient; the character sets of Instrument Serif and Bricolage Grotesque,
@@ -249,10 +273,12 @@ neither of which has Cyrillic.
 
 ## What makes a palette look considered
 
-- Paper or bone, ink, one warm accent; the dark scheme a warm graphite rather than a night blue.
-- One accent carries action and the current place; everything else is neutral or a status colour. One
+- Paper, ink and one warm accent suit an editorial direction; cool surfaces or night blue can suit a
+  technical or cinematic one. Choose from the subject and material.
+- Start with one accent for action and the current place; add colour when its role is clear. One
   signal colour stands for one status only (`DR-SIGNAL-COLOUR`).
-- AI labs themselves moved away from neon to warm palettes and texture; a neon page now dates itself.
+- Neon can suit games, music or a deliberate retro direction; warm texture can suit editorial material.
+  Neither palette establishes quality by itself.
 - Colour and motion come from the data when there is data: a status colour where the status is, a speed
   from the measured time, not from taste.
 
@@ -282,9 +308,10 @@ A theme lives in the name, the verbs and the material, not in an illustration of
 - **Myth.** Palantir, Anduril, Nike and Hermes Agent carry the myth in the name and show data on the screen.
   Craft at scale works as material: Loewe Weaves, Anni Albers and the Jacquard punched card as weaving that
   programs. Do: the myth in the name and at most three verbs of the mechanism; the material with light, in
-  two inks; one large serif; motion tied to the product; no generated pictures. Do not: antique decor,
+  a coherent palette; type chosen for the subject; motion tied to the concept. Illustrations follow the
+  provenance rules in `assets.md`. Avoid unrelated antique decor,
   neon statues, vaporwave, literal goddesses, stock «threads of fate»; decor that can be removed without
-  losing meaning is costume.
+  supporting the concept is costume.
 - **Neural networks.** Show the real material with its physics and data: Anthropic's «Mapping the mind»
   and attribution graphs, the Activation Atlas, the FlyWire and H01 connectomes, Ramón y Cajal's drawings,
   Brendan Bycroft's LLM visualisation. Clichés: the plexus, the glowing blue brain, the Matrix rain of
@@ -325,7 +352,9 @@ wide display face — spaced capitals, a wide sans, a monospace — usually look
 ## Check the direction with snapshots
 
 Build, take snapshots at 390, 768, and 1440 pixels in both schemes, and look at them as a stranger would:
-does the first screen say what the page is about, and could the same screen belong to a different product?
-If it could, the direction is not done. Then judge it against the references in the brief, not only
-against the clichés: which of them does this page beat, and in what? Before each further iteration, reread
+does the first screen say what the page is about, and does its composition belong to this subject?
+Judge hierarchy, main visual scale, chapter rhythm and visual coherence separately from readability
+and defects. Explain what makes this page distinctive, whether bold or quiet, using visible choices.
+Compare those choices with the references in the brief; passing checks or counting fewer clichés does
+not settle this judgement. Before each further iteration, reread
 this file and [`design-rules.md`](design-rules.md).

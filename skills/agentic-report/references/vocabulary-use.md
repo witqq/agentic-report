@@ -4,6 +4,10 @@ Every recipe, motion technique, video mode, review tool, and presentation capabi
 place where it helps the reader and a place where it only decorates. Read the row before you reach for the
 tool. The rule identifiers such as `DR-UNIFORM-ENTRANCE` point at [`design-rules.md`](design-rules.md).
 
+Before choosing directives, establish the composition in the brief: main visual, hierarchy, scale and
+chapter rhythm. Then select the components that realize it. These tables describe useful defaults;
+contextual aesthetic cautions do not replace the concept or the binding grammar and accessibility rules.
+
 ## Choose the directive by the question the reader is asking
 
 | The reader wants                                              | Reach for                                                                                                |
@@ -162,7 +166,8 @@ the whole vocabulary (`expressive`).
 | `expressive` | Directed motion: `scene` `progress`, `steps` or `scrub`, `transition="staged"`, `draw="scroll"`, `pulse` and `zoom` on a `diagram`, `demo` with `play` (`time` or `scroll`), and extension effects; below this level extension effects draw their still state |
 
 For each moving element, say in one sentence what the
-reader learns from the movement; remove the ones without an answer (`DR-MOTION-MEANING`); an entrance
+movement explains, directs attention to or contributes to the chosen atmosphere (`DR-MOTION-MEANING`);
+remove competing or purposeless motion. An entrance
 travels at most 16 pixels toward its source, and a meaningful gesture is large enough to see
 (`DR-MOTION-ORIGIN`). Most chapters simply are there (`DR-UNIFORM-ENTRANCE`); at most one pointer or magnetic
 effect per page (`DR-ONE-EFFECT`). Use the package fields rather than inventing CSS or browser code; directed composition cues accept their documented anchors and bounded durations.
@@ -270,7 +275,8 @@ slides` or `layout: screens`); on a scrolling page it is decoration.
   at once.
 - **On a phone, the current row replaces hover.** A linked card, a step or a timeline row at the middle of
   the screen takes the look it has under the pointer; nothing is hidden behind hover.
-- **Grain only under a large fill beside real material.** Grain on an empty gradient is a cliché.
+- **Grain supports material.** Use it where texture contributes to the chosen atmosphere; on a plain
+  gradient it still needs a reason, and it must not interfere with reading.
 
 Why these norms, so you can judge a case they do not name:
 
@@ -291,7 +297,7 @@ Why these norms, so you can judge a case they do not name:
   control that caused it ([`art-direction.md`](art-direction.md), what makes a page premium).
 - **Grain is a faint noise over a fill, not a decoration of its own.** The general technique is a fine
   fractal noise laid over a fill, often pushed to black and white by high contrast and brightness; over an
-  empty gradient it is still the gradient cliché. The package's own texture, the theme's `backdrop: grain`,
+  empty gradient it adds texture but does not supply a subject or hierarchy. The package's own texture, the theme's `backdrop: grain`,
   is a 320 px tile of fractal noise (base frequency 0.85, three octaves) used as a mask over the theme's
   text colour at 7 % opacity, with no contrast or brightness filter; it does not move, ignores the pointer,
   and is not printed.
@@ -423,9 +429,10 @@ variants and matching 2D rendering.
   shader: Linear's home page has no `<canvas>` and no `<video>`, only SVG and HTML on a timeline.
 - **Fewer exact elements beat a million particles.** Draw only the marks that explain the subject or guide
   the reader; more marks do not make the point clearer.
-- **Outdated tricks of 2018–2024:** a photo that distorts under the cursor, an RGB split, «liquid»
+- **Treat these as genre choices, not automatic upgrades:** a photo that distorts under the cursor, an RGB split, «liquid»
   transitions, tilt from scroll speed, particles that gather into a logo, cube, whip and zoom-blur
-  transitions, bloom as a filter.
+  transitions, bloom as a filter. Keep them only when the effect supports the subject and the reading
+  path remains stable; recognizability or age alone is not a verdict.
 - **Pre-render the heavy.** Procedural scenes that only play are cheaper as a clip with the live interface
   beside it; keep live only what answers the reader or shows the steps.
 - **At rest the effect matches its still picture,** and every state it shows exists without WebGL

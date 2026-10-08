@@ -13,7 +13,12 @@ metadata:
 Make a page a person will want to read: find out what it is for, choose how it should look, write it from
 real material, build it, check it, and look at it before you hand it over. The package compiles a
 declarative Markdown source into one interactive HTML file that opens from disk; this skill is the craft
-around it. This file is the route: the order of work, where each answer lives, and the rules for every
+around it. Start with the composition: the main visual, the order of attention, the contrast of scales
+and the rhythm of chapters. Choose components to realize that direction. Aesthetic recommendations need
+context; accessibility, honest evidence and the source contract remain requirements. Judge the finished
+page's coherence and expression separately from its technical checks.
+
+This file is the route: the order of work, where each answer lives, and the rules for every
 page. The detail is in `references/` and in the CLI's own output.
 
 For a local living document, launch `serve` from the current author Codex session and read
@@ -42,8 +47,7 @@ The [atlas builder](scripts/build-atlas.mjs) renders a browsable gallery of nati
 
 ## The order of work
 
-Each step names what it produces, what to read first, and how you know it is done. The page is checked by
-scripts, not by your memory of the references: `prose-check`, `design-check` and `snapshot --measure` name
+Each step names what it produces, what to read first, and how you know it is done. Scripts check observable defects; they do not judge the composition or prove that a page is compelling: `prose-check`, `design-check` and `snapshot --measure` name
 every rule they find broken, and [`handover.mjs`](scripts/handover.mjs) runs them all at the end. Before
 a decision, ask `node scripts/craft.mjs <topic>` ([`scripts/craft.mjs`](scripts/craft.mjs)) for the rules
 that decide it (`table`, `landing-first-screen`, `motion`, `prose-ru`, a directive name, or a rule id such
@@ -68,7 +72,8 @@ Keep the skill's scripts together: their shared
    and let the person choose; otherwise choose one and write it in the brief. Read
    [`references/art-direction.md`](references/art-direction.md) and
    [`references/themes.md`](references/themes.md). Done when the brief's `art-direction` row holds the
-   chosen concept and every shown version is frozen as its own artifact.
+   chosen concept, including the main visual, hierarchy, scale and chapter rhythm before recipe selection,
+   and every shown version is frozen as its own artifact.
 4. **Material.** Collect real screenshots, numbers, code, clips into `assets/`. Record where each file came
    from, keep only safe fields, and take copy verbatim from the source the person named, marking your own
    headings in the brief. Read [`references/assets.md`](references/assets.md). Done when the brief's
@@ -77,7 +82,8 @@ Keep the skill's scripts together: their shared
    the material: numbers against their source, claims about the product against the code. Read
    [`references/process.md`](references/process.md) («Review before you hand over»). Done when no blocking
    or major finding is open.
-6. **Source.** Start from the category's starter, then write chapters in the order of the argument. Read
+6. **Source.** Use the starter as syntax scaffolding; select recipes and write chapters from the chosen
+   composition and argument, rather than inheriting its component sequence. Read
    [`references/compose.md`](references/compose.md) and
    [`references/vocabulary-use.md`](references/vocabulary-use.md); exact names are in
    [`references/catalog.md`](references/catalog.md). Done when `validate` reports no diagnostic.
@@ -101,12 +107,14 @@ Keep the skill's scripts together: their shared
     [`references/process.md`](references/process.md) («Look at the result»), and before each round of
     fixes reread [`references/design-rules.md`](references/design-rules.md) and
     [`references/art-direction.md`](references/art-direction.md); fix what you see and repeat from step 8.
-    Done when `defects` is 0 everywhere and the self-check questions there have answers you would show the
-    person. Close the checklist item with the path of a frame you opened and what you saw on it
+    Done when `defects` is 0 everywhere and the page also has a clear hierarchy, deliberate scale,
+    varied chapter rhythm and a coherent visual idea suited to its subject. Answer the self-check
+    questions there with what you actually saw; passing measurements alone is insufficient. Close the checklist item with the path of a frame you opened and what you saw on it
     (`- [x] Look → shots/390-dark-normal-full.png: …`); the check refuses a look without a frame taken after
     the last change of the page.
 11. **Review the result.** An independent reviewer checks the built page, including its look against the
-    references in the brief. Done when no blocking or major finding is open.
+    references in the brief. Assess visual coherence and expression separately from readability and
+    correctness. Done when no blocking or major finding is open.
 12. **Hand over.** Run `node scripts/handover.mjs <page-source>`. It runs the design check, the prose
     check, `snapshot --measure` and `checklist.mjs check`, stamps the gates in `checklist.md`, and prints
     one verdict. **The page is not handed over until it passes.** Then report the source path, artifact
@@ -188,7 +196,7 @@ Only the top-level choices; every tool's row is in
 | `deck` of `slide`s                   | a document needs a few slides to show in place and on the whole screen                      | the whole page is a talk — that is `layout: slides`       |
 | `layout: screens`                    | a page read alone should stop at one idea per screen, one per gesture                       | a document people search, scan or come back to            |
 | `recipe="demo"` on the first section | a landing must show its product working on the first screen                                 | any section but the first; a report                       |
-| `transition`, `scene`, `interaction` | `motion:` in the frontmatter (the brief's row) allows it and the movement says what changed | every chapter; decoration                                 |
+| `transition`, `scene`, `interaction` | `motion:` in the frontmatter (the brief's row) allows it and the movement says what changed | competing movement; motion that delays reading            |
 | `video`, a short screencast film     | a process, a live interface, a before/after over time — what the reader must see in motion  | what reads as a static diagram or table                   |
 | `diagram`                            | parts hand work to each other, or calls follow in time                                      | a picture the prose already says in one sentence          |
 | `response` (Response Workspace)      | the person must hand structured answers back                                                | discussion of the text — that is `review: true`           |
@@ -219,7 +227,8 @@ Only the top-level choices; every tool's row is in
 These cost a page the most when missed; keep them in mind while writing, before any check runs. The full
 rule, its counterexample and its fix are in `node scripts/craft.mjs <id>`.
 
-- `DR-REAL-MATERIAL` — real screenshots, numbers and diagrams, never stock or generated pictures.
+- `DR-REAL-MATERIAL` — real screenshots, numbers and diagrams for evidence; illustration follows the
+  provenance and exception rules in the assets reference.
 - `DR-OPENING-MEDIA` — a landing shows its product on the first screen.
 - `DR-NAV-ABOVE-TITLE` — no navigation frame above a landing title.
 - `DR-NUMBERS-UNITS` — every number carries its unit and its date.
@@ -227,9 +236,11 @@ rule, its counterexample and its fix are in `node scripts/craft.mjs <id>`.
 - `DR-EXAMPLE-SCOPE` — what is true of an example is said of that example.
 - `DR-HEADING-HIERARCHY` — one page title, then chapter titles; no bold line posing as a heading.
 - `DR-LINE-LENGTH` — reading lines stay between about 45 and 80 characters.
-- `DR-ONE-ACCENT` and `DR-CONTRAST` — one accent colour; every text meets WCAG AA.
-- `DR-BLOBS` — no blurred colour blobs, meshes or glows behind content.
-- `DR-MOTION-MEANING` — motion shows a change in meaning, or it goes.
+- `DR-ONE-ACCENT` — give colour consistent roles; one accent is a useful default, not a universal palette.
+- `DR-CONTRAST` — every text meets WCAG AA.
+- `DR-BLOBS` — gradients and light need a compositional purpose and readable text.
+- `DR-MOTION-MEANING` — motion explains, directs attention or supports the chosen atmosphere; keep
+  supporting movement subordinate and preserve the still reading path.
 - `DR-RU-TYPOGRAPHY` and `DR-CAPTIONS` — Russian typography; every picture explains itself.
 - `PR-NOT-X-BUT-Y` — no staged contrast («не просто X, а Y», "not just X, it is Y"); state the claim.
 - `PR-DASH` — no dash where a full stop, comma or colon belongs.

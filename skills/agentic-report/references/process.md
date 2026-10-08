@@ -234,6 +234,8 @@ For a landing or a showcase, study 5–10 real sites on the same subject and wri
 brief's `references` row, before any concept. On a page where the look decides the result, offer two or
 three concepts and let the person choose; for other pages choose yourself and say so in the brief. How to
 study references, write a concept, and show concepts is in [`art-direction.md`](art-direction.md).
+Name the main visual, hierarchy, scale and rhythm of chapters in the existing art-direction row before
+selecting recipes. The starter is syntax scaffolding; composition determines the component sequence.
 
 ## Collect the material
 
@@ -404,7 +406,9 @@ table in [`art-direction.md`](art-direction.md) (a title with buttons and no pro
 order, decorative surfaces everywhere, every block fading up, competing effects, a wall of identical cards,
 emoji as icons), which rows, and `average: true` from three of them — with the clichés of colour, type and
 texture that only your eye counts, that is the table's four. The design check itself exits 0 with advice; the
-hand-over gate is what fails on it.
+hand-over gate is what fails on it. The field `average` is a structural heuristic, not a quality
+verdict. Inspect the actual composition and purpose of the findings; for a deliberate exception use
+the existing reasoned switch in the brief rather than deleting a useful technique to lower the count.
 
 Act on the advice. When a rule is wrong for this page, switch it off in `brief.md`, never in the source,
 with the reason on the same line:
@@ -521,15 +525,22 @@ the scroll length of a pinned scene or a `zoom` flight; a full-page frame taken 
 still show it blank. Text the reader cannot see, such as the inside of a zoomed node before the camera
 flies in, is not counted as small text.
 
+Measurements establish readability and observable correctness; they do not establish visual quality.
+In the same look, judge coherence and expression separately: can you identify the main visual and the
+order of attention, do scale and chapter rhythm develop the argument, and do colour, type and motion
+belong to one concept? A quiet document can have a strong point of view. Do not add effects merely to
+appear expressive, or remove purposeful ones merely to pass a cliché count. Record concrete visible
+choices in the existing Look evidence; no extra check or artifact is needed.
+
 Open `contact-sheet.png` and each `*-full.png` and look as a stranger would:
 
 - Does the first screen say what the page is about and show it, or could it belong to a different product?
-- Is any half of the first screen empty?
+- Does empty space direct attention or leave the opening without a main visual?
 - Is the main effect noticeable at a normal scrolling speed, and does the main visual asset survive on a
   phone?
 - Does anything overlap, overflow, or read badly at 390 pixels; does the dark scheme hold?
-- How many clichés from [`art-direction.md`](art-direction.md) does it carry, and in what is this page
-  better than the median page on its subject?
+- Which choices from [`art-direction.md`](art-direction.md) serve this subject, and what visible
+  decisions make the page coherent and distinctive compared with its references?
 
 A page with motion is judged in a browser, not from frames: open it and scroll at a normal speed. Before
 each round of fixes, reread [`design-rules.md`](design-rules.md) and [`art-direction.md`](art-direction.md).
@@ -545,7 +556,9 @@ second, give the reviewer the files, the brief with its references, and a fixed 
 frame: what the frame shows, whether each number has its unit, date and source, what overlaps or is cut
 off, and whether this beats the references in the brief. The reviewer returns the findings as text by
 severity — blocking, major, minor — with the checksums of the files read. Besides correctness, the review
-judges the look against the references in the brief. Hand over only when no blocking or major finding is
+judges hierarchy, main visual scale, chapter rhythm and visual coherence against the brief and its
+references, separately from readability and factual correctness. A green gate or a small cliché count
+does not answer that judgement. Hand over only when no blocking or major finding is
 open.
 
 A check proves something only if it tells apart the two states you care about: a check that would stay
@@ -589,7 +602,8 @@ measure run with `--since` the previous edition, and the record names it as `sin
 "<reason>"` skips it, and the reason is written into the checklist and the verdict so the person sees the
 page was not measured.
 
-Hand over only when the gate passes and no blocking or major review finding is open. Check that the brief
+Hand over only when the gate passes, the composition has been judged for coherence and expression,
+and no blocking or major review finding is open. Check that the brief
 describes what was built, then report the source path, artifact path, starter, languages, warnings, the
 advice and prose rules you switched off and why, and unresolved content facts. For a page with Response
 Workspace, tell the user to copy or download `response.json` after completing the page.
