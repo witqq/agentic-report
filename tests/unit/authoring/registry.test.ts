@@ -94,6 +94,8 @@ describe('authoring registry', () => {
       'composition',
       'object',
       'cue',
+      'scene-group',
+      'slot',
       'asset',
       'video',
       'font',

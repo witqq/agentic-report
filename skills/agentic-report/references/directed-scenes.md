@@ -6,14 +6,13 @@ This reference covers composition choice, source syntax, action semantics, speec
 
 ## Choose the picture that explains the claim
 
-| The viewer must understand                   | Composition       | Put on the stage                                                              | Useful actions                                            |
-| -------------------------------------------- | ----------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Which operation changes the model            | `diagram-code`    | Visual/source/result objects beside one `role="code"` object                  | `trace`                                                   | `to`; optional `effect="beam | pulse | packet"` | A transient directional signal follows the connection route without changing object content |
-| `copy`, `replace`, then `focus` with `lines` |
-| Where a value travels                        | `pipeline`        | Stages in their processing order                                              | `connect`, `transfer`, then `focus`                       |
-| What changed, or which two results differ    | `before-after`    | An optional source above result objects                                       | `replace`, `compare`; connect each result to its source   |
-| Where a detail belongs                       | `overview-detail` | The complete visual on the left and one `role="detail"` explanation beside it | `focus`, `camera`; keep the whole visual available        |
-| Who owns a value at each step                | `ownership`       | Named owners with stable titles                                               | `copy` for an independent value, `transfer` for a handoff |
+| The viewer must understand                | Composition       | Put on the stage                                                              | Useful actions                                            |
+| ----------------------------------------- | ----------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Which operation changes the model         | `diagram-code`    | Visual/source/result objects beside one `role="code"` object                  | `copy`, `replace`, then `focus` with `lines`              |
+| Where a value travels                     | `pipeline`        | Stages in their processing order                                              | `connect`, `transfer`, then `focus`                       |
+| What changed, or which two results differ | `before-after`    | An optional source above result objects                                       | `replace`, `compare`; connect each result to its source   |
+| Where a detail belongs                    | `overview-detail` | The complete visual on the left and one `role="detail"` explanation beside it | `focus`, `camera`; keep the whole visual available        |
+| Who owns a value at each step             | `ownership`       | Named owners with stable titles                                               | `copy` for an independent value, `transfer` for a handoff |
 
 Objects hold ordinary Markdown, local images, diagrams and code fences. Their original bodies and runtime copies use the same resource handling as the visible page: `single-file` embeds local images, while `directory` writes content-addressed files into its `assets/` folder. Keep authored paths relative to the source; no manual asset copying or CSP change is needed for composition replay. `role` selects a place in the package layout, not a class or CSS rule. Keep object titles stable when values change: the viewer should recognize the same owner throughout. Use a short title stating the claim, concise object labels and one readable value per object. Prefer a useful arrangement and visible causal action over decoration behind small text.
 
@@ -122,6 +121,8 @@ Sources for these recommendations: Aurora Harley, NN/g, _Proximity Principle in 
 | `reveal`   | —                                                  | An object enters; an object with a reveal cue is hidden before its first reveal             |
 | `focus`    | Optional `lines="2-4,7"` on a code object          | This object is emphasized; context stays readable and earlier attention moves to the target |
 | `connect`  | `to`; optional `value` as a short connection label | A directed connection draws between live object boundaries; its arrowhead follows the route |
+| `trace`    | `to`; optional `effect`                            | A transient beam, pulse or packet travels along the relation                                |
+| `annotate` | `value`; optional `lines`, `to`, `until`           | A short explanation appears beside the unchanged code                                       |
 | `copy`     | `to`                                               | A moving copy arrives with the source content; the source keeps its value                   |
 | `transfer` | `to`                                               | The value moves to its destination; the source content becomes empty on arrival             |
 | `replace`  | `value`                                            | The object's body becomes escaped plain text; its title stays in place                      |
@@ -195,7 +196,9 @@ A paragraph may coordinate several related visible actions. Use separate paragra
 
 The compiled page contains final values before the runtime starts. Reduced motion, `motion: none`, printing and a page without scripts show that final static result. They omit moving overlays and camera transforms. Do not rely on a reveal to hide factual qualifications in the final page.
 
-For this source checkout, use its compiled CLI, `node <checkout>/dist/node/cli.js`, and a Screencast build containing the composition bridge. Check `schema --scope directives` for `composition` when selecting the compiler; the skill's pinned npm release is for its existing page vocabulary. Build one Report example locally, then let the report scene rebuild its Markdown directly. Select it with `target: [data-composition-id="edit"]`; a compatible Screencast build fits that complete stage with a caption lane and excludes surrounding page prose from the shot.
+For this source checkout, use its compiled CLI, `node <checkout>/dist/node/cli.js`, and a Screencast build containing the composition bridge. Check `schema --scope directives` for `composition` when selecting the compiler; the skill's pinned npm release is for its existing page vocabulary. Build one Report example locally, then let the report scene rebuild its Markdown directly. When a page contains several compositions, a filmed target selects that stage's anchors and binding; unrelated stages may use other beat counts. The runtime host API provides `anchors(id?)` and `bind(resolve, id?)`; omit the id only when intentionally binding the whole page to one shared clock.
+
+Select it with `target: [data-composition-id="edit"]`; a compatible Screencast build fits that complete stage with a caption lane and excludes surrounding page prose from the shot.
 
 ## Compose with existing effects
 

@@ -947,7 +947,7 @@ function validAttributeValue(attribute: DirectiveAttributeDefinition): string | 
   if (attribute.invalidDiagnostic === 'INVALID_SOURCE_LINK') {
     return 'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42';
   }
-  if (attribute.name === 'at') return 'b2';
+  if (attribute.name === 'at' || attribute.name === 'until') return 'b2';
   const kind = attribute.constraint.kind;
   if (kind === 'integer' || kind === 'number') return 1;
   if (kind === 'boolean') return true;
@@ -974,7 +974,7 @@ function attributeCases(
       ['x'.repeat(1001), false],
     ];
   }
-  if (attribute.name === 'at')
+  if (attribute.name === 'at' || attribute.name === 'until')
     return [
       ['b2', true],
       ['  b2.end+0.3  ', true],

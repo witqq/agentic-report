@@ -68,4 +68,5 @@ export function compositionLineLabel(lines: string, lineStart = 1): string {
 ::cue{at="b3" action="connect" target="code" to="result" relation="data" value="return value"}
 ::cue{at="b3" action="trace" target="code" to="result" effect="beam" duration="1"}
 ::cue{at="b3+1" action="focus" target="result" emphasis="halo"}
+::cue{at="b4" action="focus" target="result" emphasis="none"}
 :::::

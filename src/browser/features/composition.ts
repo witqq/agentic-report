@@ -15,7 +15,7 @@ import { timed, whenVisible } from '../technique-timing.js';
 
 export interface ReportCompositionControl {
   bind(resolve: (anchor: string) => number, id?: string): void;
-  anchors(): string[];
+  anchors(id?: string): string[];
 }
 declare global {
   interface Window {
@@ -669,14 +669,17 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
       },
     };
   });
+  const selectedControllers = (id?: string) => {
+    const selected = id === undefined ? controllers : controllers.filter((c) => c.id === id);
+    if (selected.length === 0) throw new Error(`Unknown report composition: ${id}`);
+    return selected;
+  };
   const control: ReportCompositionControl = {
     bind(resolve, id) {
-      const selected = id === undefined ? controllers : controllers.filter((c) => c.id === id);
-      if (selected.length === 0) throw new Error(`Unknown report composition: ${id}`);
-      for (const controller of selected) controller.bind(resolve);
+      for (const controller of selectedControllers(id)) controller.bind(resolve);
     },
-    anchors: () =>
-      controllers.flatMap((c) =>
+    anchors: (id) =>
+      selectedControllers(id).flatMap((c) =>
         c.cues.flatMap((cue) => (cue.until === undefined ? [cue.at] : [cue.at, cue.until])),
       ),
   };

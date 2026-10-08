@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { readFile, writeFile, access } from 'node:fs/promises';
 import { compositionAddress, compositionLineLabel } from '../../dist/node/composition.js';
 const source = new URL('../../src/composition.ts', import.meta.url);
@@ -47,7 +48,7 @@ ${code.text}
 ::cue{at="b3" action="connect" target="code" to="result" relation="data" value="return value"}
 ::cue{at="b3" action="trace" target="code" to="result" effect="beam" duration="1"}
 ::cue{at="b3+1" action="focus" target="result" emphasis="halo"}
-:::::
+${id === 'source-lines' ? '::cue{at="b4" action="focus" target="result" emphasis="none"}\n' : ''}:::::
 `;
 const markdown = `---
 title: Real functions with directed presentation notes
@@ -63,4 +64,7 @@ attribution: false
 ${scene('address', 'An owner and its named value form one address', address, 'The returned address keeps the owner and value region together.', result)}
 ${scene('source-lines', 'An excerpt keeps the original source line numbers', label, 'The source offset locates this operation in its original file.', lineLabel)}
 `;
-await writeFile(new URL('./report.md', import.meta.url), markdown);
+await writeFile(
+  process.argv[2] ? resolve(process.argv[2]) : new URL('./report.md', import.meta.url),
+  markdown,
+);
