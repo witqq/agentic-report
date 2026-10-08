@@ -1110,6 +1110,22 @@
           "sha256": "87383f0df819066149b8db7160369d2017de4685dd0edc82d3748d71f8e45b70"
         }
       ]
+    },
+    {
+      "id": "directed-stable-map",
+      "path": "directed-stable-map",
+      "entry": "report.md",
+      "title": "Stable owners and changing value regions",
+      "description": "Grouped independent owners retain their map while named values copy and change; a real address helper is shown beside illustrative data.",
+      "classes": ["directed-composition"],
+      "category": "document",
+      "subvariant": "guide",
+      "files": [
+        {
+          "path": "report.md",
+          "sha256": "d8e010ae4597981328cec0d2a11b40f1f0d54323de9975390d5f9cbdf8a7941e"
+        }
+      ]
     }
   ],
   "status": "complete",

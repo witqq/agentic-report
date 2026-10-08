@@ -60,6 +60,60 @@ shape.effects = next;
 
 The objects are arranged together from the beginning. The second paragraph copies a value, the third changes it, and the fourth compares the owners. This explains inheritance and a local edit through state changes. The pseudocode and values must be labelled illustrative unless they are taken verbatim from inspected product evidence.
 
+## Keep the map stable while the example develops
+
+An architecture object identifies a component and its responsibility. Keep that text, its title and its position stable. Put changing values inside a named `slot`, or give the evolving example a separate object. Do not replace a familiar component's definition with each new explanatory paragraph. Replacement remains useful for a genuinely changing value; it is not a substitute for moving attention.
+
+```markdown
+:::::composition{id="values" kind="ownership" layout="row" align="start"}
+::::object{id="source" title="Original owner"}
+Keeps the shared original.
+:::slot{id="value" title="Example value"}
+Glow + shadow
+:::
+::::
+::::object{id="local" title="Local owner"}
+Stores its independent edited value.
+:::slot{id="value" title="Example value"}
+Waiting
+:::
+::::
+::cue{at="b2" action="copy" target="source" slot="value" to="local" toSlot="value"}
+::cue{at="b3" action="replace" target="local" slot="value" value="Glow + new shadow"}
+:::::
+```
+
+Slot ids are local to their object. `slot` addresses a source/value region; `toSlot` addresses the destination of copy or transfer. These fields belong to value actions only. A stable object containing slots must be changed through a slot, so replacing or transferring the complete owner cannot erase its map or responsibility. Slots appear after the stable body and keep their own optional title. The runtime reserves the largest declared value height at the current width, including intermediate copy/transfer states; backward seeks reconstruct values without shrinking the map. A slot containing an image still needs its intrinsic dimensions to establish size before the image loads. Select a slot for a filmed detail with `[data-composition-slot="local:value"]`.
+
+## Arrange relationships, groups and reading edges
+
+`kind` describes the explanation. Independent `layout` chooses `auto`, `row`, `column` or `grid`; `auto` retains the kind's arrangement. Rows wrap when the available width cannot hold readable objects. `align` chooses `start` (default), `center` or `stretch`. A shared start edge makes a processing chain readable when labels have different lengths. Center alignment is useful when centers themselves express a shared axis; stretch is useful for paired comparisons.
+
+A `scene-group` contains related objects and has its own `id`, optional `title`, `layout` and `align`. Group names are local to their composition; object names remain unique throughout the entire stage, including its groups. Use a longer fence for the group than for its objects. Keep a code object outside the group when it explains the whole map.
+
+```markdown
+:::::composition{id="delivery" kind="pipeline" layout="column"}
+::::scene-group{id="runtime" title="Runtime boundary" layout="row"}
+:::object{id="queue" title="Queue"}
+Retains pending messages.
+:::
+:::object{id="consumer" title="Consumer"}
+Receives each delivered message.
+:::
+::::
+:::object{id="explanation" title="Delivery result" role="detail"}
+The queue loses the message only when delivery finishes.
+:::
+::cue{at="b2" action="connect" target="queue" to="consumer" value="delivers"}
+:::::
+```
+
+Grouping expresses a real common responsibility, lifecycle or boundary; it is not decoration around unrelated terms. Nearer spacing within a group and separation between groups preserve the relationship on compact displays. A group boundary reinforces containment when proximity alone is ambiguous. Avoid adding boxes where space already distinguishes the relation. Empty space may separate independent outcomes or reserve a reading area; asymmetry is useful when it expresses hierarchy rather than accidental placement.
+
+For a branched or cyclic network with many dependencies, use the existing `diagram` flow vocabulary, its named groups, node `row`, direction and layered/orthogonal layouts, rather than forcing a processing chain into an arbitrary row of cards. A paired result benefits from a common comparison axis; a containment map benefits from nested responsibility; a sequence benefits from a consistent flow direction. Choose the arrangement for the relationship, and keep the corresponding labels/data together when it wraps.
+
+Sources for these recommendations: Aurora Harley, NN/g, _Proximity Principle in Visual Design_ and _The Principle of Common Region_; Kelley Gordon, NN/g, _5 Principles of Visual Design in UX_; Eclipse Layout Kernel, _ELK Layered_. Proximity and common-region findings describe perceived grouping, not a mandatory symmetric style. Layered graph algorithms express directed graph structure; the composition grid does not claim to minimize graph crossings.
+
 ## Give each action a purpose
 
 | Action     | Required fields beyond `at`, `action`, `target`    | What the viewer sees                                                                        |

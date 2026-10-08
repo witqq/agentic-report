@@ -6,7 +6,13 @@ import { callout } from './callout.js';
 import { card, cards } from './cards.js';
 import { chart, point, series } from './chart.js';
 import { compare } from './compare.js';
-import { composition, compositionObject, compositionCue } from './composition.js';
+import {
+  composition,
+  compositionObject,
+  compositionCue,
+  compositionGroup,
+  compositionSlot,
+} from './composition.js';
 import { contents } from './contents.js';
 import { copyable } from './copyable.js';
 import { count } from './count.js';
@@ -117,6 +123,8 @@ export const BUILT_IN_BLOCKS: readonly [Block, ...Block[]] = [
   composition,
   compositionObject,
   compositionCue,
+  compositionGroup,
+  compositionSlot,
   asset,
   video,
   font,

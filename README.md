@@ -102,6 +102,8 @@ Open `report-atlas/index.html` to compare actual pages. The gallery is for disco
 
 A `composition` arranges named Markdown objects as `diagram-code`, `pipeline`, `before-after`, `overview-detail` or `ownership`. Its cues reveal and focus objects, draw connections, copy or transfer values, replace text, compare results and move the camera. Agentic Screencast report scenes bind those cues to measured speech paragraphs; standalone pages use preview beats and keep final values in static or reduced-motion views. Read the [directing guide](skills/agentic-report/references/directed-scenes.md) for syntax, existing effects and the three complete examples. Use the compiled local checkout for this composition vocabulary.
 
+Stable objects can contain named `slot` regions for changing values. `scene-group` keeps related objects together, and `layout="row|column|grid"` chooses their spatial arrangement independently of the composition meaning. See the same guide for slot addressing, preserved owner identity and responsive grouping.
+
 Whenever showing a system interface, first show its complete application screen, then move to a detail. The same guide gives page, presentation and vertical-film recipes that preserve the detail's location.
 
 ## Local living document

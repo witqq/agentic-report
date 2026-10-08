@@ -132,3 +132,5 @@ tests.
 Skills and knowledge references contain confirmed facts about current capabilities, rules, recommendations, conditions of use and limitations. Do not include development history, session or review narratives, iteration logs, accounts of the research process or the origins of changes. Express a useful finding as a rule or recommendation while retaining its basis and scope.
 
 Negative examples may explain a concrete mistake, its consequence and the correction. Make them self-contained, without participants, conversation quotes or chronology. Preserve supporting sources, measurement conditions, evidence limitations and dates needed to judge a fact's currency. Change history belongs in Git or a separately requested report.
+
+Edit the project files directly when maintaining the existing skill and knowledge references. Do not use `skill-creator` unless the owner explicitly asks to use it.

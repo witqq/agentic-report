@@ -42,6 +42,8 @@ function cuesOf(scope: HTMLElement): CompositionCue[] {
     target: required(n.dataset.target),
     duration: Number(n.dataset.duration ?? 0.6),
     ...(n.dataset.to === undefined ? {} : { to: n.dataset.to }),
+    ...(n.dataset.slot === undefined ? {} : { slot: n.dataset.slot }),
+    ...(n.dataset.toSlot === undefined ? {} : { toSlot: n.dataset.toSlot }),
     ...(n.dataset.value === undefined ? {} : { value: n.dataset.value }),
     ...(n.dataset.lines === undefined ? {} : { lines: n.dataset.lines }),
   }));
@@ -76,16 +78,18 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
   const controllers = scenes.map((scene) => {
     const stage = required(scene.querySelector<HTMLElement>('[data-composition-stage]'));
     const objects = new Map(
-      [...stage.querySelectorAll<HTMLElement>(':scope > [data-composition-object]')].map((n) => [
-        required(n.dataset.compositionObject),
-        n,
-      ]),
+      [
+        ...stage.querySelectorAll<HTMLElement>(
+          '[data-composition-object], [data-composition-slot]',
+        ),
+      ].map((n) => [required(n.dataset.compositionObject ?? n.dataset.compositionSlot), n]),
     );
     const originals = new Map(
       [...objects].map(([id, node]) => [
         id,
-        required(node.querySelector<HTMLTemplateElement>('template[data-composition-original]'))
-          .content,
+        required(
+          node.querySelector<HTMLTemplateElement>(':scope > template[data-composition-original]'),
+        ).content,
       ]),
     );
     const cues = cuesOf(scene);
@@ -110,6 +114,55 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
       }
       return fragment;
     };
+    const reserveGutters = (): void => {
+      const probe = svg('text', {});
+      overlay.append(probe);
+      for (const cue of cues) {
+        if (cue.action !== 'connect' || !cue.value || cue.to === undefined) continue;
+        const from = required(objects.get(cue.target)),
+          to = required(objects.get(cue.to));
+        const container = from.parentElement === to.parentElement ? from.parentElement : stage;
+        if (
+          container === null ||
+          getComputedStyle(container).gridTemplateColumns.split(' ').length < 2
+        )
+          continue;
+        probe.textContent = cue.value;
+        const gap = Math.min(probe.getComputedTextLength() + 20, container.clientWidth / 4);
+        container.style.columnGap = `${Math.max(Number.parseFloat(getComputedStyle(container).columnGap) || 0, gap)}px`;
+      }
+      probe.remove();
+    };
+    const reservedWidths = new Map<string, number>();
+    const reserveSlots = (): void => {
+      for (const [id, node] of objects) {
+        if (node.dataset.compositionSlot === undefined) continue;
+        const body = required(
+          node.querySelector<HTMLElement>(':scope > [data-composition-content]'),
+        );
+        if (reservedWidths.get(id) === body.clientWidth) continue;
+        reservedWidths.set(id, body.clientWidth);
+        const candidates: CompositionContent[] = [{ source: id }];
+        for (const cue of cues) {
+          const at = resolve(cue.at) + cue.duration;
+          const candidate = compositionFrame([...objects.keys()], cues, at, resolve).objects.get(
+            id,
+          )?.content;
+          if (candidate !== undefined) candidates.push(candidate);
+        }
+        const measure = document.createElement('div');
+        measure.className = 'composition-content composition-slot-measure';
+        measure.style.width = `${body.clientWidth}px`;
+        node.append(measure);
+        let height = 0;
+        for (const value of candidates) {
+          measure.replaceChildren(content(value, `measure-${id}`));
+          height = Math.max(height, measure.offsetHeight);
+        }
+        measure.remove();
+        body.style.minHeight = `${height}px`;
+      }
+    };
     const rect = (id: string) => {
       const box = required(objects.get(id)).getBoundingClientRect(),
         parent = stage.getBoundingClientRect();
@@ -129,6 +182,10 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
       stage.style.transform = '';
       stage.style.paddingBottom = '';
       stage.style.columnGap = '';
+      for (const group of stage.querySelectorAll<HTMLElement>('.scene-group-objects'))
+        group.style.columnGap = '';
+      reserveGutters();
+      reserveSlots();
       const frame = compositionFrame(
         [...objects.keys()],
         cues,
@@ -140,7 +197,7 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         const node = required(objects.get(id));
         const key = JSON.stringify(state.content);
         if (keys.get(id) !== key) {
-          required(node.querySelector('[data-composition-content]')).replaceChildren(
+          required(node.querySelector(':scope > [data-composition-content]')).replaceChildren(
             content(state.content, id),
           );
           keys.set(id, key);
@@ -190,7 +247,13 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         const a = rect(edge.from),
           b = rect(edge.to);
         const blockers = [...objects.keys()]
-          .filter((id) => id !== edge.from && id !== edge.to && frame.objects.get(id)?.visible)
+          .filter(
+            (id) =>
+              !id.includes(':') &&
+              id !== edge.from &&
+              id !== edge.to &&
+              frame.objects.get(id)?.visible,
+          )
           .map(rect);
         const d = connectionRoute(a, b, blockers);
         if (!d) continue;
@@ -325,7 +388,15 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         node.append(content(travel.content, `travel-${travel.from}-${travel.to}`));
         const q = travel.progress;
         const blockers = [...objects.keys()]
-          .filter((id) => id !== travel.from && id !== travel.to && frame.objects.get(id)?.visible)
+          .filter(
+            (id) =>
+              id !== travel.from &&
+              id !== travel.to &&
+              id !== travel.from.split(':')[0] &&
+              id !== travel.to.split(':')[0] &&
+              !id.includes(':') &&
+              frame.objects.get(id)?.visible,
+          )
           .map(rect);
         const route = connectionRoute(a, b, blockers);
         const trajectory = svg('path', {
@@ -392,6 +463,11 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
     });
     const resize = () => render((clock.now() - origin) / 1000);
     window.addEventListener('resize', resize);
+    const fontsChanged = () => {
+      reservedWidths.clear();
+      resize();
+    };
+    document.fonts.addEventListener('loadingdone', fontsChanged);
     const reduced = () => runner.start();
     still.addEventListener('change', reduced);
     printing.addEventListener('change', reduced);
@@ -401,6 +477,7 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
       cues,
       bind(next: (anchor: string) => number) {
         resolve = next;
+        reservedWidths.clear();
         origin = 0;
         runner.start();
       },
@@ -408,11 +485,14 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         visible();
         runner.stop();
         window.removeEventListener('resize', resize);
+        document.fonts.removeEventListener('loadingdone', fontsChanged);
         still.removeEventListener('change', reduced);
         printing.removeEventListener('change', reduced);
         overlay.remove();
         stage.style.paddingBottom = '';
         stage.style.columnGap = '';
+        for (const group of stage.querySelectorAll<HTMLElement>('.scene-group-objects'))
+          group.style.columnGap = '';
         for (const n of objects.values()) {
           n.style.opacity = '';
           n.style.transform = '';

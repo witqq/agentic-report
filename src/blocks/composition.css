@@ -15,8 +15,77 @@
     display: grid;
     gap: clamp(2rem, 4vw, 4rem);
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: center;
+    align-items: start;
     transform-origin: center;
+  }
+  .semantic-scene-group {
+    padding: 1.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    min-width: 0;
+    align-self: stretch;
+    align-content: start;
+  }
+  .semantic-scene-group > .semantic-title {
+    margin: 0 0 1.25rem;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+  .scene-group-objects {
+    display: grid;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .semantic-scene-group[data-layout='auto'] > .scene-group-objects,
+  .semantic-scene-group[data-layout='grid'] > .scene-group-objects {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  }
+  [data-semantic='composition'][data-layout='row'] > .composition-stage,
+  .semantic-scene-group[data-layout='row'] > .scene-group-objects {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  }
+  [data-semantic='composition'][data-layout='column'] > .composition-stage,
+  .semantic-scene-group[data-layout='column'] > .scene-group-objects {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-semantic='composition'][data-layout='grid'] > .composition-stage {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+  }
+  :where(
+      [data-semantic='composition']:not([data-layout='auto']) > .composition-stage,
+      .scene-group-objects
+    )
+    > .semantic-object {
+    grid-column: auto;
+    grid-row: auto;
+    order: 0;
+    width: auto;
+    justify-self: stretch;
+  }
+  [data-align='center'] > .composition-stage,
+  .semantic-scene-group[data-align='center'] > .scene-group-objects {
+    align-items: center;
+  }
+  [data-align='stretch'] > .composition-stage,
+  .semantic-scene-group[data-align='stretch'] > .scene-group-objects {
+    align-items: stretch;
+  }
+  .semantic-slot {
+    position: relative;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+  }
+  .semantic-slot > .semantic-title {
+    margin: 0 0 0.5rem;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+  .composition-slot-measure {
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
+    inset: 0 auto auto 0;
   }
   .semantic-object {
     position: relative;
@@ -97,7 +166,9 @@
   [data-composition='diagram-code'] .composition-stage {
     grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
   }
-  [data-composition='diagram-code'] [data-role='code'] {
+  [data-composition='diagram-code']:where([data-layout='auto'])
+    > :where(.composition-stage)
+    > [data-role='code'] {
     grid-column: 2;
     grid-row: 1 / span var(--composition-rows, 1);
   }
@@ -111,12 +182,15 @@
       [data-composition='pipeline'],
       [data-composition='before-after'],
       [data-composition='ownership']
-    )
-    [data-role='code'] {
+    ):where([data-layout='auto'])
+    > :where(.composition-stage)
+    > [data-role='code'] {
     grid-column: 1 / -1;
     order: 1;
   }
-  [data-composition='before-after'] [data-role='source'] {
+  [data-composition='before-after']:where([data-layout='auto'])
+    > :where(.composition-stage)
+    > [data-role='source'] {
     grid-column: 1 / -1;
     justify-self: center;
     width: min(100%, 32rem);
@@ -127,7 +201,9 @@
   [data-composition='overview-detail'] .composition-stage {
     grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.5fr);
   }
-  [data-composition='overview-detail'] [data-role='detail'] {
+  [data-composition='overview-detail']:where([data-layout='auto'])
+    > :where(.composition-stage)
+    > [data-role='detail'] {
     grid-column: 2;
     grid-row: 1 / span var(--composition-rows, 1);
     padding: 2rem;

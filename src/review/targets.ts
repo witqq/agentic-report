@@ -57,10 +57,12 @@ const REVIEW_TARGET_ALGORITHM_VERSION = 3;
 
 export const remarkReviewTargets: Plugin<[ReviewTargetPluginOptions], Root> =
   (options) => (tree) => {
+    const parents = new WeakMap<object, PositionedNode>();
     const occurrences = new Map<string, number>();
     const stableKeys = new Set<string>();
     visit(tree, (candidate, _index, parent) => {
       const node = candidate as unknown as PositionedNode;
+      if (parent !== undefined) parents.set(node, parent as unknown as PositionedNode);
       const kind = reviewableKind(node);
       if (kind === 'markdown:paragraph' && parent?.type === 'listItem') return;
       // Картинки сравнения пакет переносит в свою сцену, а абзац, в котором их написал автор, исчезает:
@@ -88,7 +90,11 @@ export const remarkReviewTargets: Plugin<[ReviewTargetPluginOptions], Root> =
       const sourceStart = segment.sourceStart + (start - segment.generatedStart);
       const sourceEnd = segment.sourceStart + (end - segment.generatedStart);
       const fingerprint = sha256(segment.sourceText.slice(sourceStart, sourceEnd));
-      const explicitId = directiveExplicitId(node, parent as unknown as PositionedNode | undefined);
+      const explicitId = directiveExplicitId(
+        node,
+        parent as unknown as PositionedNode | undefined,
+        parents,
+      );
       const stableKey = explicitId === undefined ? undefined : `${kind}:${explicitId}`;
       if (stableKey !== undefined && stableKeys.has(stableKey)) {
         throw reviewTargetError(
@@ -278,13 +284,20 @@ function reviewableElementKind(node: Element): string | undefined {
 function directiveExplicitId(
   node: PositionedNode,
   parent: PositionedNode | undefined,
+  parents: WeakMap<object, PositionedNode>,
 ): string | undefined {
   const scopes: Readonly<Record<string, string>> =
     REVIEW_TARGET_OWNERSHIP_CONTRACT.scopedDirectiveIds;
   const owner = node.name === undefined ? undefined : scopes[node.name];
   const value = node.type === 'containerDirective' ? node.attributes?.id : undefined;
   if (typeof value !== 'string' || value.trim().length === 0) return undefined;
-  const scope = owner !== undefined && parent?.name === owner ? parent.attributes?.id : undefined;
+  let ancestor = owner === undefined ? undefined : parent;
+  while (owner !== undefined && ancestor !== undefined && ancestor.name !== owner)
+    ancestor = parents.get(ancestor);
+  const scope =
+    ancestor === undefined
+      ? undefined
+      : directiveExplicitId(ancestor, parents.get(ancestor), parents);
   return typeof scope === 'string' ? `${scope}/${value.trim()}` : value.trim();
 }
 

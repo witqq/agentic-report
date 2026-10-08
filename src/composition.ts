@@ -22,6 +22,9 @@ export interface CompositionCue {
   readonly action: CompositionAction;
   readonly target: string;
   readonly to?: string;
+  /** A named dynamic region inside a stable object. */
+  readonly slot?: string;
+  readonly toSlot?: string;
   readonly value?: string;
   readonly lines?: string;
   readonly duration: number;
@@ -68,6 +71,10 @@ export function compositionTime(anchor: string, starts: readonly number[] = [], 
   if (base === undefined) throw new Error(`Unknown composition speech anchor: ${anchor}`);
   return Math.max(0, base + Number(match[3] ?? 0));
 }
+export function compositionAddress(object: string, slot?: string): string {
+  return slot === undefined ? object : `${object}:${slot}`;
+}
+
 /** Reconstruct from authored state: backward seeking cannot retain a later edit. */
 export function compositionFrame(
   ids: readonly string[],
@@ -96,11 +103,13 @@ export function compositionFrame(
     .sort((a, b) => a.start - b.start || a.order - b.order);
   for (const { cue, start } of sorted) {
     if (time < start) continue;
-    const target = frame.objects.get(cue.target);
+    const targetId = compositionAddress(cue.target, cue.slot);
+    const destinationId = cue.to === undefined ? undefined : compositionAddress(cue.to, cue.toSlot);
+    const target = frame.objects.get(targetId);
     if (target === undefined) throw new Error(`Unknown composition object: ${cue.target}`);
     const raw = Math.min(1, Math.max(0, (time - start) / cue.duration));
     const progress = raw * raw * (3 - 2 * raw);
-    const destination = cue.to === undefined ? undefined : frame.objects.get(cue.to);
+    const destination = destinationId === undefined ? undefined : frame.objects.get(destinationId);
     switch (cue.action) {
       case 'reveal':
         target.visible = true;
@@ -127,10 +136,15 @@ export function compositionFrame(
         break;
       case 'copy':
       case 'transfer':
-        if (destination === undefined || cue.to === undefined)
+        if (destination === undefined || destinationId === undefined)
           throw new Error('Composition transfer needs a destination.');
         if (progress < 1)
-          frame.travels.push({ from: cue.target, to: cue.to, content: target.content, progress });
+          frame.travels.push({
+            from: targetId,
+            to: destinationId,
+            content: target.content,
+            progress,
+          });
         else {
           destination.content = target.content;
           destination.visible = true;

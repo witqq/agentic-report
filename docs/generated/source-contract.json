@@ -2321,6 +2321,20 @@
           "required": true,
           "description": "Composition id for film selection."
         },
+        "layout": {
+          "kind": "enum",
+          "values": ["auto", "row", "column", "grid"],
+          "required": false,
+          "default": "auto",
+          "description": "Spatial arrangement independent of the scene meaning; rows wrap on compact displays."
+        },
+        "align": {
+          "kind": "enum",
+          "values": ["start", "center", "stretch"],
+          "required": false,
+          "default": "start",
+          "description": "Shared cross-axis alignment; start preserves a common reading edge."
+        },
         "title": {
           "kind": "string",
           "normalization": "trim",
@@ -2374,7 +2388,7 @@
         }
       },
       "children": "markdown",
-      "placement": { "requiredParent": "composition" },
+      "placement": { "requiredParent": ["composition", "scene-group"] },
       "resource": "none",
       "runtime": "package-owned-scene",
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
@@ -2424,6 +2438,22 @@
           "required": false,
           "description": "Destination object for pair actions."
         },
+        "slot": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "description": "Local changing slot inside the target object."
+        },
+        "toSlot": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "description": "Local changing slot inside the destination object."
+        },
         "value": {
           "kind": "string",
           "normalization": "trim",
@@ -2453,6 +2483,78 @@
       },
       "children": "none",
       "placement": { "requiredParent": "composition" },
+      "resource": "none",
+      "runtime": "package-owned-scene",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "scene-group": {
+      "description": "A meaningful group of scene objects with a responsive package-owned arrangement.",
+      "forms": ["container"],
+      "attributes": {
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Group identity."
+        },
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        },
+        "layout": {
+          "kind": "enum",
+          "values": ["auto", "row", "column", "grid"],
+          "required": false,
+          "default": "auto",
+          "description": "Spatial arrangement independent of the scene meaning; rows wrap on compact displays."
+        },
+        "align": {
+          "kind": "enum",
+          "values": ["start", "center", "stretch"],
+          "required": false,
+          "default": "start",
+          "description": "Shared cross-axis alignment; start preserves a common reading edge."
+        }
+      },
+      "children": "markdown",
+      "placement": { "requiredParent": "composition" },
+      "resource": "none",
+      "runtime": "package-owned-scene",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "slot": {
+      "description": "Named changing value inside a stable object; content is independent of its owner.",
+      "forms": ["container"],
+      "attributes": {
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Local value slot inside its stable owner."
+        },
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        }
+      },
+      "children": "markdown",
+      "placement": { "requiredParent": "object" },
       "resource": "none",
       "runtime": "package-owned-scene",
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },

@@ -196,7 +196,7 @@ Every accepted field; anything else is refused as an unknown field.
 
 ## Directives
 
-74 directives are accepted.
+76 directives are accepted.
 
 ### `action`
 
@@ -356,6 +356,8 @@ Forms: container. Children: markdown.
 | Attribute | Values                                                                     | Required | Default        |
 | --------- | -------------------------------------------------------------------------- | -------- | -------------- |
 | `id`      | text (min 1, max 64)                                                       | yes      | —              |
+| `layout`  | `auto`, `row`, `column`, `grid`                                            | no       | `auto`         |
+| `align`   | `start`, `center`, `stretch`                                               | no       | `start`        |
 | `title`   | text (min 1, max 200)                                                      | no       | —              |
 | `kind`    | `diagram-code`, `pipeline`, `before-after`, `overview-detail`, `ownership` | no       | `diagram-code` |
 
@@ -408,6 +410,8 @@ Forms: leaf. Children: none. Required parent: `composition`.
 | `action`   | `reveal`, `focus`, `connect`, `transfer`, `copy`, `replace`, `compare`, `camera` | yes      | —       |
 | `target`   | text (min 1, max 160)                                                            | yes      | —       |
 | `to`       | text (min 1, max 160)                                                            | no       | —       |
+| `slot`     | text (min 1, max 160)                                                            | no       | —       |
+| `toSlot`   | text (min 1, max 160)                                                            | no       | —       |
 | `value`    | text (min 1, max 160)                                                            | no       | —       |
 | `lines`    | text (min 1, max 80)                                                             | no       | —       |
 | `duration` | number from 0.1 to 3                                                             | no       | `0.6`   |
@@ -749,7 +753,7 @@ Forms: container. Children: markdown. Required parent: `section` or `slide`.
 
 Named Markdown object on a composition stage.
 
-Forms: container. Children: markdown. Required parent: `composition`.
+Forms: container. Children: markdown. Required parent: `composition` or `scene-group`.
 
 | Attribute | Values                                         | Required | Default  |
 | --------- | ---------------------------------------------- | -------- | -------- |
@@ -838,6 +842,19 @@ Forms: container. Children: response-question-directives.
 | `title`   | text (min 1, max 200) | yes      | —       |
 | `id`      | text (min 1, max 64)  | yes      | —       |
 
+### `scene-group`
+
+A meaningful group of scene objects with a responsive package-owned arrangement.
+
+Forms: container. Children: markdown. Required parent: `composition`.
+
+| Attribute | Values                          | Required | Default |
+| --------- | ------------------------------- | -------- | ------- |
+| `id`      | text (min 1, max 64)            | yes      | —       |
+| `title`   | text (min 1, max 200)           | no       | —       |
+| `layout`  | `auto`, `row`, `column`, `grid` | no       | `auto`  |
+| `align`   | `start`, `center`, `stretch`    | no       | `start` |
+
 ### `section`
 
 Labelled top-level page section containing Markdown.
@@ -893,6 +910,17 @@ Forms: container. Children: markdown. Required parent: `deck`.
 | Attribute    | Values                                 | Required | Default |
 | ------------ | -------------------------------------- | -------- | ------- |
 | `transition` | `fade`, `push`, `wipe`, `zoom`, `none` | no       | `fade`  |
+
+### `slot`
+
+Named changing value inside a stable object; content is independent of its owner.
+
+Forms: container. Children: markdown. Required parent: `object`.
+
+| Attribute | Values                | Required | Default |
+| --------- | --------------------- | -------- | ------- |
+| `id`      | text (min 1, max 64)  | yes      | —       |
+| `title`   | text (min 1, max 200) | no       | —       |
 
 ### `source-line`
 

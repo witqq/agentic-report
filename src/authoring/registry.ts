@@ -225,7 +225,7 @@ export type SchemeChoice = (typeof PAGE_CONTRACT.schemes)[number];
 
 export const REVIEW_TARGET_OWNERSHIP_CONTRACT = {
   parentOwnedDirectives: ['lead', 'series', 'question', 'bucket', 'option', 'item'],
-  scopedDirectiveIds: { object: 'composition' },
+  scopedDirectiveIds: { object: 'composition', slot: 'object', 'scene-group': 'composition' },
 } as const;
 
 export interface CodeFenceMetadataDefinition {
@@ -1014,6 +1014,17 @@ export const authoringRegistry = {
       title: 'Directed change-event',
       description:
         'A directed explanation with named objects and speech-ready cues; illustrative values and pseudocode.',
+      classes: ['directed-composition'],
+      category: 'document',
+      subvariant: 'guide',
+    },
+    {
+      id: 'directed-stable-map',
+      path: 'directed-stable-map',
+      entry: 'report.md',
+      title: 'Stable owners and changing value regions',
+      description:
+        'Grouped independent owners retain their map while named values copy and change; a real address helper is shown beside illustrative data.',
       classes: ['directed-composition'],
       category: 'document',
       subvariant: 'guide',

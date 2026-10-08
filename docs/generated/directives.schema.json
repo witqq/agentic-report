@@ -82,6 +82,8 @@
     { "$ref": "#/$defs/composition" },
     { "$ref": "#/$defs/object" },
     { "$ref": "#/$defs/cue" },
+    { "$ref": "#/$defs/scene-group" },
+    { "$ref": "#/$defs/slot" },
     { "$ref": "#/$defs/asset" },
     { "$ref": "#/$defs/video" },
     { "$ref": "#/$defs/font" },
@@ -2951,6 +2953,18 @@
               "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
               "description": "Composition id for film selection."
             },
+            "layout": {
+              "type": "string",
+              "enum": ["auto", "row", "column", "grid"],
+              "description": "Spatial arrangement independent of the scene meaning; rows wrap on compact displays.",
+              "default": "auto"
+            },
+            "align": {
+              "type": "string",
+              "enum": ["start", "center", "stretch"],
+              "description": "Shared cross-axis alignment; start preserves a common reading edge.",
+              "default": "start"
+            },
             "title": {
               "type": "string",
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
@@ -3039,6 +3053,16 @@
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
               "description": "Destination object for pair actions."
             },
+            "slot": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Local changing slot inside the target object."
+            },
+            "toSlot": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Local changing slot inside the destination object."
+            },
             "value": {
               "type": "string",
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
@@ -3058,6 +3082,70 @@
             }
           },
           "required": ["at", "action", "target"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "scene-group": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "scene-group" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Group identity."
+            },
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "layout": {
+              "type": "string",
+              "enum": ["auto", "row", "column", "grid"],
+              "description": "Spatial arrangement independent of the scene meaning; rows wrap on compact displays.",
+              "default": "auto"
+            },
+            "align": {
+              "type": "string",
+              "enum": ["start", "center", "stretch"],
+              "description": "Shared cross-axis alignment; start preserves a common reading edge.",
+              "default": "start"
+            }
+          },
+          "required": ["id"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "slot": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "slot" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Local value slot inside its stable owner."
+            },
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            }
+          },
+          "required": ["id"]
         }
       },
       "required": ["name", "form", "attributes"]

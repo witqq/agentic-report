@@ -49,7 +49,15 @@ function simplified(points: Point[]): Point[] {
   return unique.filter((p, i) => {
     const a = unique[i - 1],
       b = unique[i + 1];
-    return !a || !b || !((a.x === p.x && p.x === b.x) || (a.y === p.y && p.y === b.y));
+    const collinear =
+      a !== undefined &&
+      b !== undefined &&
+      ((a.x === p.x && p.x === b.x) || (a.y === p.y && p.y === b.y));
+    const continues =
+      a !== undefined &&
+      b !== undefined &&
+      (p.x - a.x) * (b.x - p.x) + (p.y - a.y) * (b.y - p.y) >= 0;
+    return !collinear || !continues;
   });
 }
 function rounded(points: Point[]): string {
