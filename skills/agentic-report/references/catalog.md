@@ -404,17 +404,19 @@ One declarative action at a time or speech anchor.
 
 Forms: leaf. Children: none. Required parent: `composition`.
 
-| Attribute  | Values                                                                           | Required | Default |
-| ---------- | -------------------------------------------------------------------------------- | -------- | ------- |
-| `at`       | text (min 1, max 40)                                                             | yes      | —       |
-| `action`   | `reveal`, `focus`, `connect`, `transfer`, `copy`, `replace`, `compare`, `camera` | yes      | —       |
-| `target`   | text (min 1, max 160)                                                            | yes      | —       |
-| `to`       | text (min 1, max 160)                                                            | no       | —       |
-| `slot`     | text (min 1, max 160)                                                            | no       | —       |
-| `toSlot`   | text (min 1, max 160)                                                            | no       | —       |
-| `value`    | text (min 1, max 160)                                                            | no       | —       |
-| `lines`    | text (min 1, max 80)                                                             | no       | —       |
-| `duration` | number from 0.1 to 3                                                             | no       | `0.6`   |
+| Attribute  | Values                                                                                    | Required | Default |
+| ---------- | ----------------------------------------------------------------------------------------- | -------- | ------- |
+| `at`       | text (min 1, max 40)                                                                      | yes      | —       |
+| `action`   | `reveal`, `focus`, `connect`, `transfer`, `copy`, `replace`, `compare`, `camera`, `trace` | yes      | —       |
+| `target`   | text (min 1, max 160)                                                                     | yes      | —       |
+| `to`       | text (min 1, max 160)                                                                     | no       | —       |
+| `slot`     | text (min 1, max 160)                                                                     | no       | —       |
+| `toSlot`   | text (min 1, max 160)                                                                     | no       | —       |
+| `value`    | text (min 1, max 160)                                                                     | no       | —       |
+| `lines`    | text (min 1, max 80)                                                                      | no       | —       |
+| `emphasis` | `outline`, `halo`, `brackets`, `underline`, `dim`, `none`                                 | no       | —       |
+| `effect`   | `beam`, `pulse`, `packet`                                                                 | no       | —       |
+| `duration` | number from 0.1 to 3                                                                      | no       | `0.6`   |
 
 ### `decision`
 

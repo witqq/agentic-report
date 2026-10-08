@@ -15,7 +15,17 @@ export const COMPOSITION_ACTIONS = [
   'replace',
   'compare',
   'camera',
+  'trace',
 ] as const;
+export const COMPOSITION_EMPHASIS = [
+  'outline',
+  'halo',
+  'brackets',
+  'underline',
+  'dim',
+  'none',
+] as const;
+export const COMPOSITION_TRACE_EFFECTS = ['beam', 'pulse', 'packet'] as const;
 export type CompositionAction = (typeof COMPOSITION_ACTIONS)[number];
 export interface CompositionCue {
   readonly at: string;
@@ -27,6 +37,8 @@ export interface CompositionCue {
   readonly toSlot?: string;
   readonly value?: string;
   readonly lines?: string;
+  readonly emphasis?: (typeof COMPOSITION_EMPHASIS)[number];
+  readonly effect?: (typeof COMPOSITION_TRACE_EFFECTS)[number];
   readonly duration: number;
 }
 export type CompositionContent =
@@ -35,6 +47,8 @@ export interface CompositionObjectState {
   content: CompositionContent;
   visible: boolean;
   focus: boolean;
+  focusAmount: number;
+  emphasis?: (typeof COMPOSITION_EMPHASIS)[number];
   lines?: string;
   entrance: number;
 }
@@ -54,6 +68,13 @@ export interface CompositionFrame {
   readonly objects: Map<string, CompositionObjectState>;
   readonly connections: CompositionConnection[];
   readonly travels: CompositionTravel[];
+  readonly traces: Array<{
+    readonly from: string;
+    readonly to: string;
+    readonly progress: number;
+    readonly effect: (typeof COMPOSITION_TRACE_EFFECTS)[number];
+  }>;
+  dim: boolean;
   camera?: { readonly target: string; readonly progress: number };
 }
 export const COMPOSITION_ANCHOR =
@@ -91,12 +112,15 @@ export function compositionFrame(
           content: { source: id },
           visible: !hidden.has(id),
           focus: false,
+          focusAmount: 0,
           entrance: 1,
         },
       ]),
     ),
     connections: [],
     travels: [],
+    traces: [],
+    dim: false,
   };
   const sorted = cues
     .map((cue, order) => ({ cue, order, start: resolve(cue.at) }))
@@ -116,15 +140,28 @@ export function compositionFrame(
         target.entrance = progress;
         break;
       case 'focus':
-      case 'compare':
+      case 'compare': {
+        const previousTarget = target.focusAmount,
+          previousDestination = destination?.focusAmount ?? 0;
         for (const object of frame.objects.values()) {
           object.focus = false;
+          object.focusAmount *= 1 - progress;
           delete object.lines;
         }
-        target.focus = true;
-        if (cue.lines !== undefined) target.lines = cue.lines;
-        if (destination !== undefined) destination.focus = true;
+        frame.dim = cue.emphasis === 'dim';
+        if (cue.emphasis !== 'none') {
+          target.focus = true;
+          target.focusAmount = previousTarget + (1 - previousTarget) * progress;
+          target.emphasis = cue.emphasis ?? 'outline';
+          if (cue.lines !== undefined) target.lines = cue.lines;
+          if (destination !== undefined) {
+            destination.focus = true;
+            destination.focusAmount = previousDestination + (1 - previousDestination) * progress;
+            destination.emphasis = cue.emphasis ?? 'outline';
+          }
+        }
         break;
+      }
       case 'connect':
         if (cue.to !== undefined)
           frame.connections.push({
@@ -153,6 +190,15 @@ export function compositionFrame(
         break;
       case 'replace':
         target.content = { text: cue.value ?? '' };
+        break;
+      case 'trace':
+        if (cue.to !== undefined && time < start + cue.duration)
+          frame.traces.push({
+            from: cue.target,
+            to: cue.to,
+            progress,
+            effect: cue.effect ?? 'beam',
+          });
         break;
       case 'camera':
         frame.camera = { target: cue.target, progress };

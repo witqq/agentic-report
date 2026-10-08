@@ -265,7 +265,7 @@ async function customBuild(name: string, body: string) {
 }
 
 // Empty lines used to dim every line, and stale selection could survive seeking.
-test('code focus selects only explicit lines and restores them on clear and backward seek', async ({
+test('code focus preserves context by default and dims lines only when explicitly requested', async ({
   page,
 }, info) => {
   await page.addInitScript(() => {
@@ -288,6 +288,8 @@ The result
 ::cue{at="1" action="focus" target="code"}
 ::cue{at="2" action="focus" target="code" lines="2"}
 ::cue{at="3" action="focus" target="result"}
+::cue{at="4" action="focus" target="code" lines="2" emphasis="dim"}
+::cue{at="5" action="focus" target="result" emphasis="none"}
 ::::`,
     ),
   );
@@ -296,10 +298,12 @@ The result
   for (const [time, values] of [
     [0, ['1', '1', '1']],
     [1.8, ['1', '1', '1']],
-    [2.8, ['0.35', '1', '0.35']],
+    [2.8, ['1', '1', '1']],
     [3.8, ['1', '1', '1']],
+    [4.8, ['0.35', '1', '0.35']],
+    [5.8, ['1', '1', '1']],
     [1.8, ['1', '1', '1']],
-    [2.8, ['0.35', '1', '0.35']],
+    [2.8, ['1', '1', '1']],
   ] as const) {
     await page.evaluate((t) => window.__clock?.seek(t), time);
     expect(await opacity()).toEqual([...values]);

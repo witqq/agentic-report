@@ -6,13 +6,14 @@ This reference covers composition choice, source syntax, action semantics, speec
 
 ## Choose the picture that explains the claim
 
-| The viewer must understand                | Composition       | Put on the stage                                                              | Useful actions                                            |
-| ----------------------------------------- | ----------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Which operation changes the model         | `diagram-code`    | Visual/source/result objects beside one `role="code"` object                  | `copy`, `replace`, then `focus` with `lines`              |
-| Where a value travels                     | `pipeline`        | Stages in their processing order                                              | `connect`, `transfer`, then `focus`                       |
-| What changed, or which two results differ | `before-after`    | An optional source above result objects                                       | `replace`, `compare`; connect each result to its source   |
-| Where a detail belongs                    | `overview-detail` | The complete visual on the left and one `role="detail"` explanation beside it | `focus`, `camera`; keep the whole visual available        |
-| Who owns a value at each step             | `ownership`       | Named owners with stable titles                                               | `copy` for an independent value, `transfer` for a handoff |
+| The viewer must understand                   | Composition       | Put on the stage                                                              | Useful actions                                            |
+| -------------------------------------------- | ----------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Which operation changes the model            | `diagram-code`    | Visual/source/result objects beside one `role="code"` object                  | `trace`                                                   | `to`; optional `effect="beam | pulse | packet"` | A transient directional signal follows the connection route without changing object content |
+| `copy`, `replace`, then `focus` with `lines` |
+| Where a value travels                        | `pipeline`        | Stages in their processing order                                              | `connect`, `transfer`, then `focus`                       |
+| What changed, or which two results differ    | `before-after`    | An optional source above result objects                                       | `replace`, `compare`; connect each result to its source   |
+| Where a detail belongs                       | `overview-detail` | The complete visual on the left and one `role="detail"` explanation beside it | `focus`, `camera`; keep the whole visual available        |
+| Who owns a value at each step                | `ownership`       | Named owners with stable titles                                               | `copy` for an independent value, `transfer` for a handoff |
 
 Objects hold ordinary Markdown, local images, diagrams and code fences. Their original bodies and runtime copies use the same resource handling as the visible page: `single-file` embeds local images, while `directory` writes content-addressed files into its `assets/` folder. Keep authored paths relative to the source; no manual asset copying or CSP change is needed for composition replay. `role` selects a place in the package layout, not a class or CSS rule. Keep object titles stable when values change: the viewer should recognize the same owner throughout. Use a short title stating the claim, concise object labels and one readable value per object. Prefer a useful arrangement and visible causal action over decoration behind small text.
 
@@ -119,7 +120,7 @@ Sources for these recommendations: Aurora Harley, NN/g, _Proximity Principle in 
 | Action     | Required fields beyond `at`, `action`, `target`    | What the viewer sees                                                                        |
 | ---------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `reveal`   | —                                                  | An object enters; an object with a reveal cue is hidden before its first reveal             |
-| `focus`    | Optional `lines="2-4,7"` on a code object          | This object is emphasized; other objects are dimmed and earlier focus is cleared            |
+| `focus`    | Optional `lines="2-4,7"` on a code object          | This object is emphasized; context stays readable and earlier attention moves to the target |
 | `connect`  | `to`; optional `value` as a short connection label | A directed connection draws between live object boundaries; its arrowhead follows the route |
 | `copy`     | `to`                                               | A moving copy arrives with the source content; the source keeps its value                   |
 | `transfer` | `to`                                               | The value moves to its destination; the source content becomes empty on arrival             |
@@ -127,9 +128,38 @@ Sources for these recommendations: Aurora Harley, NN/g, _Proximity Principle in 
 | `compare`  | `to`                                               | Both named objects are emphasized together; earlier focus is cleared                        |
 | `camera`   | —                                                  | A restrained move toward the object, bounded by the visible stage                           |
 
-`to` must name another object in the same stage and is allowed only for pair actions. `value` belongs to replacement or a connection label. `focus` without `lines` leaves every code line fully readable. Selecting ranges dims only other lines, and a subsequent focus clears that selection. `lines` belongs only to code focus; use line numbers or comma-separated ranges from 1 through 999. `duration` is movement time in seconds, 0.1–3, default 0.6. Replacement and focus take effect at their anchor; movement duration controls reveal, connection, travel and camera interpolation. A copied or transferred value arrives at the end of its movement, so schedule a dependent edit after that duration. Cues on the same anchor are applied in source order.
+`to` must name another object in the same stage and is allowed only for pair actions. `value` belongs to replacement or a connection label. `focus` without `lines` leaves every code line fully readable. Selected lines receive a local accent while other lines stay readable; `emphasis="dim"` explicitly dims the other lines, and a subsequent focus clears that selection. `lines` belongs only to code focus; use line numbers or comma-separated ranges from 1 through 999. `duration` is movement time in seconds, 0.1–3, default 0.6. Replacement takes effect at its anchor; duration controls reveal, attention handoff, connection, trace, travel and camera interpolation. A copied or transferred value arrives at the end of its movement, so schedule a dependent edit after that duration. Cues on the same anchor are applied in source order.
 
 `replace` accepts text, not Markdown, HTML or executable code. To show two complex code or diagram states, author both as named objects and reveal/focus/compare them. Copy and transfer copy the object's body, keeping the destination title. Connections use live boundary ports and rounded routes around visible objects; their arrowheads preserve direction after drawing. Labels occupy free space along the route inside the stage. Horizontal layouts reserve room for labels and wrap words in narrow gaps. If no nearby space remains, the stage adds a bottom label lane with a routed leader instead of moving labels into the composition title. Keep connection labels concise so the operation remains close to its arrow. Moving copies follow the same boundary route between their owners; entrance motion, replaced body sizes, fitting and camera movement update these attachments. Keep owners separate: overlapping rectangles have no unambiguous external route. A compact moving body preserves the full source content; use short values for a readable transfer rather than flying a whole code listing. Connections remain visible after they draw; a later focus replaces the previous emphasis. The camera cue is a small directing gesture, not a full-screen magnifier; use Screencast's camera or loupe for readable close-ups.
+
+## Guide attention while keeping context readable
+
+`focus` and `compare` preserve every object's and code line's full opacity by default. `duration` interpolates the emphasis from the previous subject to the next; it does not delay the spoken action. `emphasis` selects the treatment:
+
+| Emphasis            | Use                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------- |
+| `outline` (default) | Identify the current object while keeping its neighbors readable                      |
+| `halo`              | Give a decisive receiving object local visual weight                                  |
+| `brackets`          | Frame an operation or boundary with animated corner marks                             |
+| `underline`         | Carry attention along a stable object's reading edge                                  |
+| `dim`               | Explicitly subordinate other objects/lines when isolating a dense UI detail is useful |
+| `none`              | Release attention and restore the whole map                                           |
+
+Prefer additive emphasis for architecture, diagrams and code. An isolated bright card surrounded by dark text prevents the viewer from tracing its relationships. Dimming is a contextual choice for some interface material, not a default interpretation of focus. A selected code range is a reading cue, not a reason to make the complete method unreadable. Use the scene's existing draft to judge the attention handoff; no new effect quota or review step is required.
+
+`trace` takes `target`, `to` and `duration`, with optional `effect="beam|pulse|packet"`. It makes a transient directional pass along the same live boundary route as a connector, then disappears. `beam` carries a short illuminated trail, `pulse` carries one breathing signal, and `packet` carries a compact group of dots. Establish the relation with a labelled `connect` when the map needs a persistent wire. Drawing a relation, showing one pass, and moving a value have different meanings: choose `connect`, `trace`, or `copy`/`transfer` accordingly. Repeated trace cues may explain successive messages; continual unmotivated looping adds noise.
+
+```markdown
+::cue{at="b2" action="connect" target="queue" to="consumer" value="delivers"}
+::cue{at="b3" action="trace" target="queue" to="consumer" effect="beam" duration="1.2"}
+::cue{at="b3+1.2" action="focus" target="consumer" emphasis="halo"}
+::cue{at="b4" action="focus" target="code" lines="2-4" emphasis="brackets" duration="0.8"}
+::cue{at="b5" action="focus" target="consumer" emphasis="none"}
+```
+
+Choose each anchor from the actual spoken line: these beat numbers describe this example's narration, not a generator default. Related representations of one event can move together; reading two independent operations needs separate moments. Direct clock seeks reconstruct emphasis strength and transient routes. Reduced motion and print retain final content, preserve readable context and omit travelling traces.
+
+SVG routes and package-owned DOM emphasis stay attached to real geometry and theme tokens. Use Screencast's existing WebGL perspective/layer/orbit vocabulary when depth itself explains the subject, then settle for code reading. WebGL is one spatial tool; a shader behind unchanged boxes does not demonstrate a call or delivered value. Combine these techniques where their meanings agree rather than applying every available treatment to every scene.
 
 ## Time actions to narration
 

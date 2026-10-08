@@ -30,7 +30,7 @@ Illustrative operation
 
 The copy and its operation share a moment; the replacement waits for arrival. A slower alternative establishes the relationship on `b1`, copies on `b2`, edits on `b3` and compares on `b4`. A result-first alternative begins with the comparison and reconstructs its cause. Choose by audience and purpose, not by feature name.
 
-Same-anchor cues are applied in source order. `focus` and `replace` take effect at the anchor; travel completes after `duration`. A second focus replaces the first selection, so simultaneous focus on two objects uses `compare` rather than two competing focus cues. `focus` without `lines` leaves every code line fully readable; selected ranges dim only other lines; a subsequent focus clears the selection. Exact domains and limits remain in [directed scenes](directed-scenes.md) and [the catalog](catalog.md#cue).
+Same-anchor cues are applied in source order. `replace` takes effect at the anchor; `focus` hands attention over during its duration; travel completes after `duration`. A second focus replaces the first selection, so simultaneous focus on two objects uses `compare` rather than two competing focus cues. `focus` without `lines` leaves every code line fully readable; selected ranges add an accent while keeping other lines readable; `emphasis="dim"` is an explicit isolation choice; a subsequent focus clears the selection. Exact domains and limits remain in [directed scenes](directed-scenes.md) and [the catalog](catalog.md#cue).
 
 ## Keep space and reading coherent
 
@@ -43,3 +43,5 @@ A code panel may stay still beside a travelling value while its relevant line is
 Diagram `draw`, `pulse`, beat `focus`, code `lines`, `:count`, chart `count-up`, text `:typing`/`:mark`, section entrances, screen transitions and declared effect extensions provide different expressive roles. Browse [vocabulary use](vocabulary-use.md) for their purposes and examples. Scroll and pointer effects need the appropriate reader or filming input; a static capture does not make them move.
 
 Preserve static final values and reduced-motion behavior. In a film, let measured narration anchors carry timing, let actions establish cause and let a calm hold carry reading. Repetition can teach a recurring mechanism or form a motif; change its staging when repetition no longer contributes understanding.
+
+Use `trace` to carry a transient beam, pulse or packet along a known relation, then move attention to its receiving object or corresponding code. Use outline, halo, brackets or underline according to the emphasis; preserve full diagram context unless an explicit dim treatment serves the material. `connect` establishes topology, `trace` shows a pass, and slot copy/transfer demonstrates data or ownership. They may combine to explain one event, without replacing stable component definitions.

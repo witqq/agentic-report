@@ -46,6 +46,12 @@ function cuesOf(scope: HTMLElement): CompositionCue[] {
     ...(n.dataset.toSlot === undefined ? {} : { toSlot: n.dataset.toSlot }),
     ...(n.dataset.value === undefined ? {} : { value: n.dataset.value }),
     ...(n.dataset.lines === undefined ? {} : { lines: n.dataset.lines }),
+    ...(n.dataset.emphasis === undefined
+      ? {}
+      : { emphasis: n.dataset.emphasis as NonNullable<CompositionCue['emphasis']> }),
+    ...(n.dataset.effect === undefined
+      ? {}
+      : { effect: n.dataset.effect as NonNullable<CompositionCue['effect']> }),
   }));
 }
 function scopedClone(fragment: DocumentFragment, prefix?: string): DocumentFragment {
@@ -204,11 +210,20 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         }
         node.style.opacity = String(
           state.visible
-            ? (!staticFrame && hasFocus && !state.focus ? 0.55 : 1) * state.entrance
+            ? (!staticFrame &&
+              frame.dim &&
+              hasFocus &&
+              !state.focus &&
+              node.dataset.compositionSlot === undefined
+                ? 0.55
+                : 1) * state.entrance
             : 0,
         );
         node.style.transform = staticFrame ? '' : `translateY(${(1 - state.entrance) * 16}px)`;
-        node.toggleAttribute('data-composition-focus', state.focus);
+        node.toggleAttribute('data-composition-focus', state.focusAmount > 0);
+        node.style.setProperty('--composition-focus', String(state.focusAmount));
+        if (state.focusAmount > 0) node.dataset.compositionEmphasis = state.emphasis ?? 'outline';
+        else delete node.dataset.compositionEmphasis;
         node.toggleAttribute('data-composition-hidden', !state.visible);
         node.toggleAttribute('data-composition-empty', 'empty' in state.content);
         const lines = new Set<number>();
@@ -219,7 +234,8 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         }
         for (const [i, line] of [...node.querySelectorAll<HTMLElement>('pre .line')].entries()) {
           line.toggleAttribute('data-composition-line', lines.has(i + 1));
-          line.style.opacity = lines.size > 0 && !lines.has(i + 1) ? '0.35' : '';
+          line.style.opacity =
+            !staticFrame && frame.dim && lines.size > 0 && !lines.has(i + 1) ? '0.35' : '';
         }
       }
       overlay.replaceChildren();
@@ -377,6 +393,56 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         }
       }
       overlay.setAttribute('viewBox', `0 0 ${stage.clientWidth} ${stage.clientHeight}`);
+      if (!staticFrame)
+        for (const trace of frame.traces) {
+          const from = rect(trace.from),
+            to = rect(trace.to);
+          const blockers = [...objects.keys()]
+            .filter(
+              (id) =>
+                !id.includes(':') &&
+                id !== trace.from &&
+                id !== trace.to &&
+                frame.objects.get(id)?.visible,
+            )
+            .map(rect);
+          const route = connectionRoute(from, to, blockers);
+          if (!route) continue;
+          const trajectory = svg('path', { d: route });
+          const length = trajectory.getTotalLength();
+          const p = trace.progress;
+          const opacity = Math.min(1, p * 10, (1 - p) * 10);
+          if (trace.effect === 'beam') {
+            const points = Array.from({ length: 16 }, (_, i) =>
+              trajectory.getPointAtLength(
+                length * (Math.max(0, p - 0.18) + ((p - Math.max(0, p - 0.18)) * i) / 15),
+              ),
+            );
+            overlay.append(
+              svg('path', {
+                d: points
+                  .map((point, i) => `${i === 0 ? 'M' : 'L'}${point.x},${point.y}`)
+                  .join(' '),
+                class: 'composition-trace',
+                opacity: String(opacity),
+              }),
+            );
+          }
+          for (let i = 0; i < (trace.effect === 'packet' ? 3 : 1); i++) {
+            const at = p - i * 0.04;
+            if (at < 0) continue;
+            const point = trajectory.getPointAtLength(length * at);
+            overlay.append(
+              svg('circle', {
+                cx: String(point.x),
+                cy: String(point.y),
+                r: String(trace.effect === 'pulse' ? 5 + 3 * Math.sin(Math.PI * p) : 4 - i * 0.6),
+                class: 'composition-trace-dot',
+                opacity: String(opacity * (1 - i * 0.2)),
+              }),
+            );
+          }
+        }
       for (const previous of stage.querySelectorAll(':scope > .composition-travel'))
         previous.remove();
       for (const travel of frame.travels) {
@@ -498,6 +564,8 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
           n.style.transform = '';
           n.removeAttribute('data-composition-hidden');
           n.removeAttribute('data-composition-focus');
+          n.removeAttribute('data-composition-emphasis');
+          n.style.removeProperty('--composition-focus');
         }
       },
     };

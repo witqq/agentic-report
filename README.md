@@ -104,6 +104,8 @@ A `composition` arranges named Markdown objects as `diagram-code`, `pipeline`, `
 
 Stable objects can contain named `slot` regions for changing values. `scene-group` keeps related objects together, and `layout="row|column|grid"` chooses their spatial arrangement independently of the composition meaning. See the same guide for slot addressing, preserved owner identity and responsive grouping.
 
+Attention preserves context by default. `focus`/`compare` offer outline, halo, brackets and underline with a timed handoff; explicit `dim` isolates a detail and `none` clears attention. `trace` sends a transient beam, pulse or packet along a directional route.
+
 Whenever showing a system interface, first show its complete application screen, then move to a detail. The same guide gives page, presentation and vertical-film recipes that preserve the detail's location.
 
 ## Local living document

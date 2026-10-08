@@ -1029,6 +1029,17 @@ export const authoringRegistry = {
       category: 'document',
       subvariant: 'guide',
     },
+    {
+      id: 'directed-attention',
+      path: 'directed-attention',
+      entry: 'report.md',
+      title: 'Directional attention with readable context',
+      description:
+        'Stable producer, queue and receiver illustrate transient beam/packet passes and additive attention with explicit release.',
+      classes: ['directed-composition'],
+      category: 'document',
+      subvariant: 'guide',
+    },
   ],
 } as const satisfies AuthoringRegistryDefinition;
 

@@ -7,6 +7,8 @@ import type {
 import {
   COMPOSITIONS,
   COMPOSITION_ACTIONS,
+  COMPOSITION_EMPHASIS,
+  COMPOSITION_TRACE_EFFECTS,
   COMPOSITION_ANCHOR,
   compositionFrame,
   compositionAddress,
@@ -162,14 +164,18 @@ function validate(node: DirectiveNode, context: BlockValidationContext): 'accept
       (slots.get(String(a.to))?.length ?? 0) > 0
     )
       fail(cue, 'Address the destination slot to preserve its stable owner.');
-    const pair = ['copy', 'transfer', 'connect', 'compare'].includes(String(a.action));
+    const pair = ['copy', 'transfer', 'connect', 'compare', 'trace'].includes(String(a.action));
     if (
       pair &&
       (!ids.includes(String(a.to)) ||
         (a.to === a.target && (a.slot === undefined || a.slot === a.toSlot)))
     )
       fail(cue, 'This action needs a different named destination object.');
-    if (!pair && a.to !== undefined) fail(cue, 'to belongs to copy, transfer, connect or compare.');
+    if (!pair && a.to !== undefined)
+      fail(cue, 'to belongs to copy, transfer, connect, compare or trace.');
+    if (a.emphasis !== undefined && !['focus', 'compare'].includes(String(a.action)))
+      fail(cue, 'emphasis belongs to focus or compare.');
+    if (a.effect !== undefined && a.action !== 'trace') fail(cue, 'effect belongs to trace.');
     if (a.action === 'replace' && a.value === undefined)
       fail(cue, 'replace needs a plain-text value.');
     if (a.value !== undefined && !['replace', 'connect'].includes(String(a.action)))
@@ -194,6 +200,12 @@ function cueOf(n: Element): CompositionCue {
     ...(n.properties.dataToSlot === undefined ? {} : { toSlot: String(n.properties.dataToSlot) }),
     ...(n.properties.dataValue === undefined ? {} : { value: String(n.properties.dataValue) }),
     ...(n.properties.dataLines === undefined ? {} : { lines: String(n.properties.dataLines) }),
+    ...(n.properties.dataEmphasis === undefined
+      ? {}
+      : { emphasis: String(n.properties.dataEmphasis) as NonNullable<CompositionCue['emphasis']> }),
+    ...(n.properties.dataEffect === undefined
+      ? {}
+      : { effect: String(n.properties.dataEffect) as NonNullable<CompositionCue['effect']> }),
   };
 }
 function cloneContent(children: Element['children'], prefix: string): Element['children'] {
@@ -339,6 +351,13 @@ function finalize(tree: Root): void {
     }
     for (const cue of cueNodes) cue.properties.hidden = true;
     stage.properties.style = `--composition-rows: ${Math.max(1, objects.filter((o) => !['code', 'detail'].includes(String(o.properties.dataRole))).length)}`;
+    const spatialItems = stage.children.filter(
+      (c) =>
+        c.type === 'element' &&
+        (c.properties.dataSemantic === 'scene-group' ||
+          (c.properties.dataSemantic === 'object' && c.properties.dataRole !== 'code')),
+    ).length;
+    stage.properties.style += `;--composition-columns: ${Math.max(1, Math.min(3, spatialItems))}`;
     stage.properties.dataComposition = String(stage.properties.dataKind);
     stage.properties.dataCompositionId = String(stage.properties.dataId);
     prependDirectiveTitle(stage);
@@ -475,6 +494,22 @@ export const compositionCue = defineBlock({
           pattern:
             '^[1-9][0-9]{0,2}(?:-[1-9][0-9]{0,2})?(?:\\s*,\\s*[1-9][0-9]{0,2}(?:-[1-9][0-9]{0,2})?)*$',
         },
+      },
+      {
+        ...textAttribute(
+          'emphasis',
+          'Focus treatment: preserve context by default; dim is explicit, none clears attention.',
+          false,
+        ),
+        constraint: { kind: 'enum', values: COMPOSITION_EMPHASIS },
+      },
+      {
+        ...textAttribute(
+          'effect',
+          'Trace style: moving beam, pulse or packet; follows the connection direction.',
+          false,
+        ),
+        constraint: { kind: 'enum', values: COMPOSITION_TRACE_EFFECTS },
       },
       duration,
     ],

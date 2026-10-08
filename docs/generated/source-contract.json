@@ -2417,7 +2417,8 @@
             "copy",
             "replace",
             "compare",
-            "camera"
+            "camera",
+            "trace"
           ],
           "required": true,
           "description": "Directed operation."
@@ -2470,6 +2471,18 @@
           "pattern": "^[1-9][0-9]{0,2}(?:-[1-9][0-9]{0,2})?(?:\\s*,\\s*[1-9][0-9]{0,2}(?:-[1-9][0-9]{0,2})?)*$",
           "required": false,
           "description": "Code line ranges, such as 2-4,7 (1–999)."
+        },
+        "emphasis": {
+          "kind": "enum",
+          "values": ["outline", "halo", "brackets", "underline", "dim", "none"],
+          "required": false,
+          "description": "Focus treatment: preserve context by default; dim is explicit, none clears attention."
+        },
+        "effect": {
+          "kind": "enum",
+          "values": ["beam", "pulse", "packet"],
+          "required": false,
+          "description": "Trace style: moving beam, pulse or packet; follows the connection direction."
         },
         "duration": {
           "kind": "number",

@@ -122,8 +122,48 @@
     line-height: 1.45;
   }
   .semantic-object[data-composition-focus] {
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 30%, transparent);
+    border-color: color-mix(
+      in srgb,
+      var(--color-accent) calc(var(--composition-focus, 1) * 100%),
+      var(--color-border)
+    );
+  }
+  .semantic-object[data-composition-emphasis='outline'],
+  .semantic-object[data-composition-emphasis='dim'] {
+    box-shadow: 0 0 0 2px
+      color-mix(in srgb, var(--color-accent) calc(var(--composition-focus, 1) * 35%), transparent);
+  }
+  .semantic-object[data-composition-emphasis='halo'] {
+    box-shadow:
+      0 0 0 2px
+        color-mix(in srgb, var(--color-accent) calc(var(--composition-focus, 1) * 50%), transparent),
+      0 0 24px
+        color-mix(in srgb, var(--color-accent) calc(var(--composition-focus, 1) * 22%), transparent);
+  }
+  .semantic-object[data-composition-emphasis='brackets']::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border: 2px solid var(--color-accent);
+    border-radius: calc(var(--radius-card) + 6px);
+    opacity: var(--composition-focus, 1);
+    mask:
+      linear-gradient(black 0 0) left top / 20px 20px no-repeat,
+      linear-gradient(black 0 0) right top / 20px 20px no-repeat,
+      linear-gradient(black 0 0) right bottom / 20px 20px no-repeat,
+      linear-gradient(black 0 0) left bottom / 20px 20px no-repeat;
+    pointer-events: none;
+  }
+  .semantic-object[data-composition-emphasis='underline']::after {
+    content: '';
+    position: absolute;
+    inset: auto 1rem -4px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--color-accent);
+    transform: scaleX(var(--composition-focus, 1));
+    transform-origin: left;
+    pointer-events: none;
   }
   [data-composition-line] {
     background: color-mix(in srgb, var(--color-accent) 15%, transparent);
@@ -142,6 +182,14 @@
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
+  }
+  .composition-connections .composition-trace {
+    stroke-width: 5;
+    filter: drop-shadow(0 0 4px var(--color-accent));
+  }
+  .composition-trace-dot {
+    fill: var(--color-accent);
+    filter: drop-shadow(0 0 4px var(--color-accent));
   }
   .composition-connections polygon {
     fill: var(--color-accent);
@@ -173,7 +221,7 @@
     grid-row: 1 / span var(--composition-rows, 1);
   }
   [data-composition='pipeline'] .composition-stage {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--composition-columns, 3), minmax(0, 1fr));
   }
   [data-composition='pipeline'] .semantic-object {
     border-block-start: 3px solid var(--color-accent);

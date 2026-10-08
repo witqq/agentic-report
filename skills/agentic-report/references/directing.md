@@ -10,7 +10,7 @@ Give each scene a change: identify an owner, make a relation visible, demonstrat
 
 ## Preserve identities and relations
 
-Keep object titles stable while their bodies change. A copy preserves its original; a transfer empties its temporary source on arrival. A connector, direction of travel, corresponding position or repeated identity can show how two views relate. The viewer should be able to attribute a consequence to its cause, not reconstruct the relation from unrelated narration.
+Keep component names, responsibilities and locations stable while example values develop in named slots or a separate region. Replace an object body when it is genuinely a changing value; do not rotate unrelated explanations through one architectural component. A copy preserves its original; a transfer empties its temporary source on arrival. A connector, direction of travel, corresponding position or repeated identity can show how two views relate. The viewer should be able to attribute a consequence to its cause, not reconstruct the relation from unrelated narration.
 
 Every system interface has a specific spatial requirement: show the complete captured application viewport before its fragment, in pages, presentations and films of every aspect ratio. Keep an overview beside a detail, show the whole image first or use a spotlight/loupe. Establish a substantially different screen after navigation. The overview need not make every label readable; the later detail view does. It is the viewport, not the complete long document. Automatic portrait conversion cannot restore a whole screen absent from the source.
 
