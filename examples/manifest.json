@@ -1122,8 +1122,12 @@
       "subvariant": "guide",
       "files": [
         {
+          "path": "brief.md",
+          "sha256": "74da126d27572b13cd39f67f6396dda2ad579bd233f0eccc60bbce08a9bcfe1f"
+        },
+        {
           "path": "report.md",
-          "sha256": "d8e010ae4597981328cec0d2a11b40f1f0d54323de9975390d5f9cbdf8a7941e"
+          "sha256": "7845e66571ef79b5423080d7d8d390525ea1412be80ce7789f6a2c89d7d438d0"
         }
       ]
     },
@@ -1138,8 +1142,12 @@
       "subvariant": "guide",
       "files": [
         {
+          "path": "brief.md",
+          "sha256": "03b5fe35afd38d4230675945f57d70bb9891ce5f4a040c5d9781df0bf27aa186"
+        },
+        {
           "path": "report.md",
-          "sha256": "d400052c95ca9f14b804c02a37b31951a1407585d0d962bd0de340cecddac66f"
+          "sha256": "d0b1b7d328f493a60defc3474b7162720eff041930bc1d57c952b5390cbf09e7"
         }
       ]
     },
@@ -1154,12 +1162,16 @@
       "subvariant": "guide",
       "files": [
         {
+          "path": "brief.md",
+          "sha256": "e4da03977112c7e5718ccc05303646dc0edb412695f2e8d02a728879765ed23d"
+        },
+        {
           "path": "prepare.mjs",
-          "sha256": "beee0ecd0e70dd15f59816cf4bd1d2a271e1506824a8356856ca5bb151b591ec"
+          "sha256": "8b8fe162b13db0f4615210cdfa6f61dff67be0603f1e2bed2b4ab54febea9876"
         },
         {
           "path": "report.md",
-          "sha256": "16030a68de97cef7a37297bf0f22908eaef779f0a369753ea7283f37b95c12c1"
+          "sha256": "63906175e4394a73ace59f86781835254e290145fdad219495aa77fc8d4c0905"
         }
       ]
     }

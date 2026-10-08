@@ -6,8 +6,13 @@ theme: midnight
 scheme: dark
 motion: expressive
 topbar: false
-attribution: false
 ---
+
+# Stable owners and independent values
+
+**Fictional sample.** The owner names and values are illustrative. The displayed address helper is real code; this scene does not demonstrate copying a product model.
+
+[View Markdown source](report.md).
 
 ::::::composition{id="stable-map" title="The operation changes a value, not its owner's responsibility" kind="ownership" layout="column"}
 :::::scene-group{id="owners" title="Two independent owners" layout="row" align="stretch"}

@@ -6,8 +6,13 @@ theme: midnight
 scheme: dark
 motion: expressive
 topbar: false
-attribution: false
 ---
+
+# Follow a message without losing the map
+
+**Fictional sample.** These illustrative components and messages explain attention cues; they are not evidence of a running queue or delivery system.
+
+[View Markdown source](report.md).
 
 ::::composition{id="delivery" title="A relation stays. A message passes. Its receiver responds." kind="pipeline"}
 :::object{id="producer" title="Producer" role="source"}

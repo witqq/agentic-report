@@ -150,13 +150,33 @@ Prefer additive emphasis for architecture, diagrams and code. An isolated bright
 
 `trace` takes `target`, `to` and `duration`, with optional `effect="beam|pulse|packet"`. It makes a transient directional pass along the same live boundary route as a connector, then disappears. `beam` carries a short illuminated trail, `pulse` carries one breathing signal, and `packet` carries a compact group of dots. Establish the relation with a labelled `connect` when the map needs a persistent wire. Drawing a relation, showing one pass, and moving a value have different meanings: choose `connect`, `trace`, or `copy`/`transfer` accordingly. Repeated trace cues may explain successive messages; continual unmotivated looping adds noise.
 
-```markdown
+The following complete teaching scene uses illustrative components and code.
+
+````markdown
+::::composition{id="delivery" title="Trace delivery, then read the receiver" kind="pipeline"}
+:::object{id="queue" title="Queue"}
+Keeps the notification until delivery.
+:::
+:::object{id="consumer" title="Consumer"}
+Receives the delivered notification.
+:::
+:::object{id="code" title="Illustrative consume function" role="code"}
+
+```ts
+function consume(notification: string): string {
+  const received = notification;
+  return received;
+}
+```
+
+:::
 ::cue{at="b2" action="connect" target="queue" to="consumer" value="delivers"}
 ::cue{at="b3" action="trace" target="queue" to="consumer" effect="beam" duration="1.2"}
 ::cue{at="b3+1.2" action="focus" target="consumer" emphasis="halo"}
 ::cue{at="b4" action="focus" target="code" lines="2-4" emphasis="brackets" duration="0.8"}
 ::cue{at="b5" action="focus" target="consumer" emphasis="none"}
-```
+::::
+````
 
 Choose each anchor from the actual spoken line: these beat numbers describe this example's narration, not a generator default. Related representations of one event can move together; reading two independent operations needs separate moments. Direct clock seeks reconstruct emphasis strength and transient routes. Reduced motion and print retain final content, preserve readable context and omit travelling traces.
 
@@ -168,17 +188,30 @@ SVG routes and package-owned DOM emphasis stay attached to real geometry and the
 
 A code object's `notes="beside|below"` selects the presentation region. The default is below. Beside uses a broad code area with a narrower note rail only when that code block itself has at least 40rem of content width; a smaller block falls back below even on a large display. This keeps a short sidebar from wrapping a method into an unreadable column. Set `lineStart` to the first original source line of a real excerpt: cue `lines` stays relative to the excerpt, while the presentation label points to the corresponding original lines. Keep the file and method in the object title so the viewer can locate the implementation.
 
-```markdown
-:::object{id="method" title="render.ts:41 · apply" role="code" notes="below" lineStart="41"}
-Insert the complete inspected code fence here.
+This complete teaching scene uses an illustrative method and source-line offset. Replace both with inspected source when explaining a real implementation.
 
+````markdown
+::::composition{id="method-result" title="The method returns a local result" kind="diagram-code"}
+:::object{id="method" title="Illustrative apply.ts:41 · apply" role="code" notes="below" lineStart="41"}
+
+```ts
+function apply(input: string): string {
+  const local = input.trim();
+  return local;
+}
+```
+
+:::
+:::object{id="result" title="Returned local value" role="result"}
+ready
 :::
 ::cue{at="b2" until="b2.end" action="annotate" target="method" lines="2-4" to="result" value="The method resolves this input and returns the local result."}
 ::cue{at="b2" action="focus" target="method" lines="2-4" emphasis="brackets"}
 ::cue{at="b3" action="connect" target="method" to="result" relation="data" value="return value"}
 ::cue{at="b3" action="trace" target="method" to="result" effect="beam" duration="1"}
 ::cue{at="b3+1" action="focus" target="result" emphasis="halo"}
-```
+::::
+````
 
 `until` is part of the same measured narration clock as `at`; missing speech anchors fail instead of guessing. Explicitly bound times must give the annotation a positive interval. Standalone three-second preview beats cannot prove the order of real speech offsets. Without `until`, a note stays until another annotation of that code object replaces it. Notes reserve their authored height at the current width, and seeks restore the relevant note. Static, reduced-motion and printed pages retain all authored explanations, including notes that have a timed end in a film.
 

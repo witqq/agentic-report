@@ -1797,6 +1797,48 @@
       "href": "extensions/slo-budget/style.css",
       "source": "../extensions/slo-budget/style.css",
       "kind": "copy"
+    },
+    {
+      "id": "source-directed-stable-map-report-md",
+      "href": "examples/directed-stable-map/report.md",
+      "source": "../examples/directed-stable-map/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-directed-stable-map-brief-md",
+      "href": "examples/directed-stable-map/brief.md",
+      "source": "../examples/directed-stable-map/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-directed-code-execution-report-md",
+      "href": "examples/directed-code-execution/report.md",
+      "source": "../examples/directed-code-execution/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-directed-code-execution-brief-md",
+      "href": "examples/directed-code-execution/brief.md",
+      "source": "../examples/directed-code-execution/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-directed-code-execution-prepare-mjs",
+      "href": "examples/directed-code-execution/prepare.mjs",
+      "source": "../examples/directed-code-execution/prepare.mjs",
+      "kind": "copy"
+    },
+    {
+      "id": "source-directed-attention-report-md",
+      "href": "examples/directed-attention/report.md",
+      "source": "../examples/directed-attention/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-directed-attention-brief-md",
+      "href": "examples/directed-attention/brief.md",
+      "source": "../examples/directed-attention/brief.md",
+      "kind": "copy"
     }
   ]
 }

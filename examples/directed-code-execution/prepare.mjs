@@ -58,8 +58,13 @@ theme: midnight
 scheme: dark
 motion: expressive
 topbar: false
-attribution: false
 ---
+
+# Real functions with presentation notes
+
+**Fictional sample.** The inputs are illustrative; the complete functions and returned values come from agentic-report. This scene explains those functions rather than a running product.
+
+[View Markdown source](report.md).
 
 ${scene('address', 'An owner and its named value form one address', address, 'The returned address keeps the owner and value region together.', result)}
 ${scene('source-lines', 'An excerpt keeps the original source line numbers', label, 'The source offset locates this operation in its original file.', lineLabel)}

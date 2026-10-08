@@ -6,8 +6,13 @@ theme: midnight
 scheme: dark
 motion: expressive
 topbar: false
-attribution: false
 ---
+
+# Real functions with presentation notes
+
+**Fictional sample.** The inputs are illustrative; the complete functions and returned values come from agentic-report. This scene explains those functions rather than a running product.
+
+[View Markdown source](report.md).
 
 :::::composition{id="address" title="An owner and its named value form one address" kind="diagram-code" layout="auto"}
 ::::scene-group{id="values" title="Illustrative input and actual function result" layout="row" align="stretch"}
