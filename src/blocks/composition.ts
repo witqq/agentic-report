@@ -9,9 +9,11 @@ import {
   COMPOSITION_ACTIONS,
   COMPOSITION_EMPHASIS,
   COMPOSITION_TRACE_EFFECTS,
+  COMPOSITION_RELATIONS,
   COMPOSITION_ANCHOR,
   compositionFrame,
   compositionAddress,
+  compositionLineLabel,
   compositionReference,
   type CompositionCue,
 } from '../composition.js';
@@ -134,6 +136,9 @@ function validate(node: DirectiveNode, context: BlockValidationContext): 'accept
   );
   for (const object of objects) {
     const names = slots.get(String(context.attributes(object)?.id)) ?? [];
+    const fields = context.attributes(object);
+    if (fields?.role !== 'code' && (fields?.notes !== undefined || fields?.lineStart !== undefined))
+      fail(object, 'notes and lineStart belong to a code object.');
     if (new Set(names).size !== names.length)
       fail(object, 'Slot ids must be unique inside an object.');
   }
@@ -141,6 +146,16 @@ function validate(node: DirectiveNode, context: BlockValidationContext): 'accept
     const a = context.attributes(cue);
     if (a === undefined) continue;
     if (!ids.includes(String(a.target))) fail(cue, `Unknown composition object: ${a.target}.`);
+    if (a.action === 'annotate') {
+      if (objects.find((o) => context.attributes(o)?.id === a.target)?.attributes?.role !== 'code')
+        fail(cue, 'An annotation belongs to a code object.');
+      if (a.to !== undefined && (!ids.includes(String(a.to)) || a.to === a.target))
+        fail(cue, 'An annotation relationship needs another named object.');
+    }
+    if (a.until !== undefined && a.action !== 'annotate')
+      fail(cue, 'until belongs to an annotation.');
+    if (a.relation !== undefined && a.action !== 'connect')
+      fail(cue, 'relation belongs to a connection.');
     const hasSlot = (owner: unknown, slot: unknown) =>
       (slots.get(String(owner)) ?? []).includes(String(slot));
     if (a.slot !== undefined && !hasSlot(a.target, a.slot)) fail(cue, 'Unknown target slot.');
@@ -171,21 +186,21 @@ function validate(node: DirectiveNode, context: BlockValidationContext): 'accept
         (a.to === a.target && (a.slot === undefined || a.slot === a.toSlot)))
     )
       fail(cue, 'This action needs a different named destination object.');
-    if (!pair && a.to !== undefined)
-      fail(cue, 'to belongs to copy, transfer, connect, compare or trace.');
+    if (!pair && a.action !== 'annotate' && a.to !== undefined)
+      fail(cue, 'to belongs to pair actions or an annotation relationship.');
     if (a.emphasis !== undefined && !['focus', 'compare'].includes(String(a.action)))
       fail(cue, 'emphasis belongs to focus or compare.');
     if (a.effect !== undefined && a.action !== 'trace') fail(cue, 'effect belongs to trace.');
-    if (a.action === 'replace' && a.value === undefined)
-      fail(cue, 'replace needs a plain-text value.');
-    if (a.value !== undefined && !['replace', 'connect'].includes(String(a.action)))
-      fail(cue, 'value belongs to replace or a connection label.');
+    if (['replace', 'annotate'].includes(String(a.action)) && a.value === undefined)
+      fail(cue, 'This action needs a plain-text value.');
+    if (a.value !== undefined && !['replace', 'connect', 'annotate'].includes(String(a.action)))
+      fail(cue, 'value belongs to replacement, a connection label or annotation.');
     if (
       a.lines !== undefined &&
-      (a.action !== 'focus' ||
+      (!['focus', 'annotate'].includes(String(a.action)) ||
         objects.find((o) => context.attributes(o)?.id === a.target)?.attributes?.role !== 'code')
     )
-      fail(cue, 'lines belongs to focus on a code object.');
+      fail(cue, 'lines belongs to focus or annotation on a code object.');
   }
   return 'accepted';
 }
@@ -200,6 +215,10 @@ function cueOf(n: Element): CompositionCue {
     ...(n.properties.dataToSlot === undefined ? {} : { toSlot: String(n.properties.dataToSlot) }),
     ...(n.properties.dataValue === undefined ? {} : { value: String(n.properties.dataValue) }),
     ...(n.properties.dataLines === undefined ? {} : { lines: String(n.properties.dataLines) }),
+    ...(n.properties.dataUntil === undefined ? {} : { until: String(n.properties.dataUntil) }),
+    ...(n.properties.dataRelation === undefined
+      ? {}
+      : { relation: String(n.properties.dataRelation) as NonNullable<CompositionCue['relation']> }),
     ...(n.properties.dataEmphasis === undefined
       ? {}
       : { emphasis: String(n.properties.dataEmphasis) as NonNullable<CompositionCue['emphasis']> }),
@@ -333,6 +352,69 @@ function finalize(tree: Root): void {
         },
       ];
     }
+    for (const object of objects) {
+      const id = String(object.properties.dataId);
+      object.properties.id ??= `composition-${stage.properties.dataId}-${id}`;
+      const annotations = cueNodes
+        .map(cueOf)
+        .filter((c) => c.action === 'annotate' && c.target === id);
+      if (annotations.length === 0) continue;
+      object.properties.dataCompositionAnnotated = '';
+      object.children.push({
+        type: 'element',
+        tagName: 'div',
+        properties: {
+          className: ['composition-annotations'],
+          dataCompositionAnnotations: '',
+          role: 'note',
+        },
+        children: annotations.map((cue) => ({
+          type: 'element',
+          tagName: 'div',
+          properties: { className: ['composition-annotation'] },
+          children: [
+            {
+              type: 'element',
+              tagName: 'div',
+              properties: { className: ['composition-annotation-label'] },
+              children: [
+                {
+                  type: 'text',
+                  value:
+                    cue.lines === undefined
+                      ? ''
+                      : compositionLineLabel(
+                          cue.lines,
+                          Number(object.properties.dataLineStart ?? 1),
+                        ),
+                },
+              ],
+            },
+            {
+              type: 'element',
+              tagName: 'p',
+              properties: {},
+              children: [{ type: 'text', value: cue.value ?? '' }],
+            },
+            ...(cue.to === undefined
+              ? []
+              : [
+                  {
+                    type: 'element' as const,
+                    tagName: 'a',
+                    properties: { href: `#composition-${stage.properties.dataId}-${cue.to}` },
+                    children: [
+                      {
+                        type: 'text' as const,
+                        value: `→ ${String(objects.find((o) => o.properties.dataId === cue.to)?.properties.dataTitle ?? cue.to)}`,
+                      },
+                    ],
+                  },
+                ]),
+          ],
+        })),
+      });
+    }
     for (const group of stage.children.filter(
       (c): c is Element => c.type === 'element' && c.properties.dataSemantic === 'scene-group',
     )) {
@@ -458,6 +540,23 @@ export const compositionObject = defineBlock({
     [
       identityAttribute('id', 'Local object name.'),
       titleAttribute,
+      {
+        ...textAttribute(
+          'notes',
+          'Annotation arrangement beside or below the unmodified code; default below.',
+          false,
+        ),
+        constraint: { kind: 'enum', values: ['beside', 'below'] },
+      },
+      {
+        name: 'lineStart',
+        description:
+          'Original source line of the excerpt first line; annotation labels use this offset.',
+        required: false,
+        constraint: { kind: 'integer', minimum: 1, lexicalPattern: '^[1-9][0-9]*$' },
+        renderProperty: 'dataLineStart',
+        invalidDiagnostic: 'INVALID_DIRECTIVE_ATTRIBUTE',
+      },
       enumAttribute(
         'role',
         'Semantic place in the layout.',
@@ -510,6 +609,21 @@ export const compositionCue = defineBlock({
           false,
         ),
         constraint: { kind: 'enum', values: COMPOSITION_TRACE_EFFECTS },
+      },
+      {
+        ...at,
+        name: 'until',
+        required: false,
+        renderProperty: 'dataUntil',
+        description: 'Optional narration anchor or seconds at which this annotation disappears.',
+      },
+      {
+        ...textAttribute(
+          'relation',
+          'Connection meaning: call, data, event, dependency, ownership or a generic relation.',
+          false,
+        ),
+        constraint: { kind: 'enum', values: COMPOSITION_RELATIONS },
       },
       duration,
     ],

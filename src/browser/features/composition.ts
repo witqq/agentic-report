@@ -3,6 +3,7 @@ import {
   compositionFrame,
   compositionTime,
   compositionReference,
+  compositionLineLabel,
   type CompositionContent,
   type CompositionCue,
 } from '../../composition.js';
@@ -46,6 +47,10 @@ function cuesOf(scope: HTMLElement): CompositionCue[] {
     ...(n.dataset.toSlot === undefined ? {} : { toSlot: n.dataset.toSlot }),
     ...(n.dataset.value === undefined ? {} : { value: n.dataset.value }),
     ...(n.dataset.lines === undefined ? {} : { lines: n.dataset.lines }),
+    ...(n.dataset.until === undefined ? {} : { until: n.dataset.until }),
+    ...(n.dataset.relation === undefined
+      ? {}
+      : { relation: n.dataset.relation as NonNullable<CompositionCue['relation']> }),
     ...(n.dataset.emphasis === undefined
       ? {}
       : { emphasis: n.dataset.emphasis as NonNullable<CompositionCue['emphasis']> }),
@@ -99,10 +104,25 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
       ]),
     );
     const cues = cuesOf(scene);
+    const noteRails = new Map<string, { rail: HTMLElement; originals: Node[]; width: number }>(
+      [...objects].flatMap(([id, node]) => {
+        const rail = node.querySelector<HTMLElement>(':scope > [data-composition-annotations]');
+        return rail === null
+          ? []
+          : ([
+              [
+                id,
+                { rail, originals: [...rail.children].map((n) => n.cloneNode(true)), width: -1 },
+              ],
+            ] as const);
+      }),
+    );
+    const noteKeys = new Map<string, string>();
+
     const keys = new Map<string, string>();
     const overlay = svg('svg', { class: 'composition-connections', 'aria-hidden': 'true' });
     stage.append(overlay);
-    let resolve = (anchor: string) => compositionTime(anchor);
+    let resolve: (anchor: string) => number = compositionTime;
     let origin = 0;
     const content = (value: CompositionContent, owner: string): DocumentFragment => {
       if ('source' in value)
@@ -169,6 +189,24 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         body.style.minHeight = `${height}px`;
       }
     };
+    const reserveNotes = (): void => {
+      for (const record of noteRails.values()) {
+        const { rail, originals, width } = record;
+        if (width === rail.clientWidth) continue;
+        record.width = rail.clientWidth;
+        const measure = document.createElement('div');
+        measure.className = 'composition-note-measure';
+        measure.style.width = `${rail.clientWidth}px`;
+        rail.append(measure);
+        let height = 0;
+        for (const original of originals) {
+          measure.replaceChildren(original.cloneNode(true));
+          height = Math.max(height, measure.offsetHeight);
+        }
+        measure.remove();
+        rail.style.minHeight = `${height}px`;
+      }
+    };
     const rect = (id: string) => {
       const box = required(objects.get(id)).getBoundingClientRect(),
         parent = stage.getBoundingClientRect();
@@ -192,6 +230,7 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         group.style.columnGap = '';
       reserveGutters();
       reserveSlots();
+      reserveNotes();
       const frame = compositionFrame(
         [...objects.keys()],
         cues,
@@ -227,7 +266,7 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         node.toggleAttribute('data-composition-hidden', !state.visible);
         node.toggleAttribute('data-composition-empty', 'empty' in state.content);
         const lines = new Set<number>();
-        for (const part of (state.lines ?? '').split(',')) {
+        for (const part of (state.lines ?? frame.annotations.get(id)?.lines ?? '').split(',')) {
           if (part.trim() === '') continue;
           const [from, to] = part.split('-').map(Number);
           if (from !== undefined) for (let i = from; i <= (to ?? from); i++) lines.add(i);
@@ -237,6 +276,51 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
           line.style.opacity =
             !staticFrame && frame.dim && lines.size > 0 && !lines.has(i + 1) ? '0.35' : '';
         }
+      }
+      for (const [id, { rail, originals }] of noteRails) {
+        if (staticFrame) {
+          if (noteKeys.get(id) !== 'static')
+            rail.replaceChildren(...originals.map((n) => n.cloneNode(true)));
+          rail.style.opacity = '';
+          rail.style.transform = '';
+          noteKeys.set(id, 'static');
+          continue;
+        }
+        const annotation = frame.annotations.get(id);
+        const key =
+          annotation === undefined
+            ? ''
+            : JSON.stringify([annotation.text, annotation.lines, annotation.to]);
+        if (noteKeys.get(id) !== key) {
+          rail.replaceChildren();
+          if (annotation !== undefined) {
+            const note = document.createElement('div');
+            note.className = 'composition-annotation';
+            if (annotation.lines !== undefined) {
+              const label = document.createElement('div');
+              label.className = 'composition-annotation-label';
+              label.textContent = compositionLineLabel(
+                annotation.lines,
+                Number(objects.get(id)?.dataset.lineStart ?? 1),
+              );
+              note.append(label);
+            }
+            const text = document.createElement('p');
+            text.textContent = annotation.text;
+            note.append(text);
+            if (annotation.to !== undefined) {
+              const peer = required(objects.get(annotation.to));
+              const link = document.createElement('a');
+              link.href = `#${peer.id}`;
+              link.textContent = `→ ${peer.querySelector(':scope > .semantic-title')?.textContent ?? annotation.to}`;
+              note.append(link);
+            }
+            rail.append(note);
+          }
+          noteKeys.set(id, key);
+        }
+        rail.style.opacity = String(annotation?.progress ?? 0);
+        rail.style.transform = `translateY(${(1 - (annotation?.progress ?? 1)) * 6}px)`;
       }
       overlay.replaceChildren();
       overlay.setAttribute('viewBox', `0 0 ${stage.clientWidth} ${stage.clientHeight}`);
@@ -279,6 +363,8 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
           'stroke-dasharray': '1',
           'stroke-dashoffset': String(1 - edge.progress),
         });
+        if (edge.relation !== undefined) path.dataset.compositionRelation = edge.relation;
+        if (edge.progress >= 1) path.dataset.compositionComplete = '';
         overlay.append(path);
         const length = path.getTotalLength();
         const tip = path.getPointAtLength(length * edge.progress);
@@ -517,7 +603,13 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         stage.style.transform = `translate(${dx}px,${dy}px) scale(${scale})`;
       }
     };
-    const total = () => Math.max(0, ...cues.map((c) => resolve(c.at) + c.duration));
+    const total = () =>
+      Math.max(
+        0,
+        ...cues.map((c) =>
+          Math.max(resolve(c.at) + c.duration, c.until === undefined ? 0 : resolve(c.until)),
+        ),
+      );
     const runner = timed((now) => {
       const t = (now - origin) / 1000;
       render(t);
@@ -531,6 +623,7 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
     window.addEventListener('resize', resize);
     const fontsChanged = () => {
       reservedWidths.clear();
+      for (const record of noteRails.values()) record.width = -1;
       resize();
     };
     document.fonts.addEventListener('loadingdone', fontsChanged);
@@ -559,6 +652,12 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         stage.style.columnGap = '';
         for (const group of stage.querySelectorAll<HTMLElement>('.scene-group-objects'))
           group.style.columnGap = '';
+        for (const { rail, originals } of noteRails.values()) {
+          rail.replaceChildren(...originals.map((n) => n.cloneNode(true)));
+          rail.style.minHeight = '';
+          rail.style.opacity = '';
+          rail.style.transform = '';
+        }
         for (const n of objects.values()) {
           n.style.opacity = '';
           n.style.transform = '';
@@ -576,7 +675,10 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
       if (selected.length === 0) throw new Error(`Unknown report composition: ${id}`);
       for (const controller of selected) controller.bind(resolve);
     },
-    anchors: () => controllers.flatMap((c) => c.cues.map((cue) => cue.at)),
+    anchors: () =>
+      controllers.flatMap((c) =>
+        c.cues.flatMap((cue) => (cue.until === undefined ? [cue.at] : [cue.at, cue.until])),
+      ),
   };
   window.__reportComposition = control;
   return () => {

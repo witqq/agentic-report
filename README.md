@@ -106,6 +106,8 @@ Stable objects can contain named `slot` regions for changing values. `scene-grou
 
 Attention preserves context by default. `focus`/`compare` offer outline, halo, brackets and underline with a timed handoff; explicit `dim` isolates a detail and `none` clears attention. `trace` sends a transient beam, pulse or packet along a directional route.
 
+Code `annotate` cues attach short explanations to exact excerpt lines and related objects without editing the code. `until` binds their end to narration; adaptive beside/below notes and original source-line labels preserve reading and location. The [real-code example](examples/directed-code-execution/report.md) refreshes complete inspected functions with its preparation helper.
+
 Whenever showing a system interface, first show its complete application screen, then move to a detail. The same guide gives page, presentation and vertical-film recipes that preserve the detail's location.
 
 ## Local living document

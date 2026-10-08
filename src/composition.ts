@@ -16,6 +16,7 @@ export const COMPOSITION_ACTIONS = [
   'compare',
   'camera',
   'trace',
+  'annotate',
 ] as const;
 export const COMPOSITION_EMPHASIS = [
   'outline',
@@ -26,6 +27,14 @@ export const COMPOSITION_EMPHASIS = [
   'none',
 ] as const;
 export const COMPOSITION_TRACE_EFFECTS = ['beam', 'pulse', 'packet'] as const;
+export const COMPOSITION_RELATIONS = [
+  'relation',
+  'call',
+  'data',
+  'event',
+  'dependency',
+  'ownership',
+] as const;
 export type CompositionAction = (typeof COMPOSITION_ACTIONS)[number];
 export interface CompositionCue {
   readonly at: string;
@@ -39,6 +48,8 @@ export interface CompositionCue {
   readonly lines?: string;
   readonly emphasis?: (typeof COMPOSITION_EMPHASIS)[number];
   readonly effect?: (typeof COMPOSITION_TRACE_EFFECTS)[number];
+  readonly until?: string;
+  readonly relation?: (typeof COMPOSITION_RELATIONS)[number];
   readonly duration: number;
 }
 export type CompositionContent =
@@ -57,6 +68,7 @@ export interface CompositionConnection {
   readonly to: string;
   readonly label: string;
   readonly progress: number;
+  readonly relation?: (typeof COMPOSITION_RELATIONS)[number];
 }
 export interface CompositionTravel {
   readonly from: string;
@@ -74,6 +86,15 @@ export interface CompositionFrame {
     readonly progress: number;
     readonly effect: (typeof COMPOSITION_TRACE_EFFECTS)[number];
   }>;
+  readonly annotations: Map<
+    string,
+    {
+      readonly text: string;
+      readonly lines?: string;
+      readonly to?: string;
+      readonly progress: number;
+    }
+  >;
   dim: boolean;
   camera?: { readonly target: string; readonly progress: number };
 }
@@ -91,6 +112,18 @@ export function compositionTime(anchor: string, starts: readonly number[] = [], 
         : (starts[index + 1] ?? end);
   if (base === undefined) throw new Error(`Unknown composition speech anchor: ${anchor}`);
   return Math.max(0, base + Number(match[3] ?? 0));
+}
+export function compositionLineLabel(lines: string, lineStart = 1): string {
+  return `L${lines
+    .split(',')
+    .map((part) =>
+      part
+        .trim()
+        .split('-')
+        .map((n) => Number(n) + lineStart - 1)
+        .join('–'),
+    )
+    .join(', ')}`;
 }
 export function compositionAddress(object: string, slot?: string): string {
   return slot === undefined ? object : `${object}:${slot}`;
@@ -120,10 +153,20 @@ export function compositionFrame(
     connections: [],
     travels: [],
     traces: [],
+    annotations: new Map(),
     dim: false,
   };
   const sorted = cues
-    .map((cue, order) => ({ cue, order, start: resolve(cue.at) }))
+    .map((cue, order) => {
+      const start = resolve(cue.at);
+      if (
+        cue.until !== undefined &&
+        (resolve !== compositionTime || (!cue.at.startsWith('b') && !cue.until.startsWith('b'))) &&
+        resolve(cue.until) <= start
+      )
+        throw new Error('An annotation until anchor must follow its start.');
+      return { cue, order, start };
+    })
     .sort((a, b) => a.start - b.start || a.order - b.order);
   for (const { cue, start } of sorted) {
     if (time < start) continue;
@@ -169,6 +212,7 @@ export function compositionFrame(
             to: cue.to,
             label: cue.value ?? '',
             progress,
+            ...(cue.relation === undefined ? {} : { relation: cue.relation }),
           });
         break;
       case 'copy':
@@ -190,6 +234,16 @@ export function compositionFrame(
         break;
       case 'replace':
         target.content = { text: cue.value ?? '' };
+        break;
+      case 'annotate':
+        if (cue.until === undefined || time < resolve(cue.until))
+          frame.annotations.set(cue.target, {
+            text: cue.value ?? '',
+            progress,
+            ...(cue.lines === undefined ? {} : { lines: cue.lines }),
+            ...(cue.to === undefined ? {} : { to: cue.to }),
+          });
+        else frame.annotations.delete(cue.target);
         break;
       case 'trace':
         if (cue.to !== undefined && time < start + cue.duration)

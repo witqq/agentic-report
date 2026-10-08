@@ -1142,6 +1142,26 @@
           "sha256": "d400052c95ca9f14b804c02a37b31951a1407585d0d962bd0de340cecddac66f"
         }
       ]
+    },
+    {
+      "id": "directed-code-execution",
+      "path": "directed-code-execution",
+      "entry": "report.md",
+      "title": "Real methods with synchronous presentation notes",
+      "description": "Complete real functions, actual returned values, original line locators, timed annotations and an attention handoff to the matching result.",
+      "classes": ["directed-composition"],
+      "category": "document",
+      "subvariant": "guide",
+      "files": [
+        {
+          "path": "prepare.mjs",
+          "sha256": "363bef1b8901240e6046c27c0cda8ea3a3d10e76bec916847486a9cc137b6c02"
+        },
+        {
+          "path": "report.md",
+          "sha256": "1fa407d5a451faf164b43555507a266cd87cf68bd8a05c06eed0ad1b9397f668"
+        }
+      ]
     }
   ],
   "status": "complete",

@@ -1040,6 +1040,17 @@ export const authoringRegistry = {
       category: 'document',
       subvariant: 'guide',
     },
+    {
+      id: 'directed-code-execution',
+      path: 'directed-code-execution',
+      entry: 'report.md',
+      title: 'Real methods with synchronous presentation notes',
+      description:
+        'Complete real functions, actual returned values, original line locators, timed annotations and an attention handoff to the matching result.',
+      classes: ['directed-composition'],
+      category: 'document',
+      subvariant: 'guide',
+    },
   ],
 } as const satisfies AuthoringRegistryDefinition;
 

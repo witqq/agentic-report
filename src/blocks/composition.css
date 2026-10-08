@@ -201,6 +201,75 @@
     stroke: var(--color-bg);
     stroke-width: 5px;
   }
+  .composition-annotations {
+    position: relative;
+    min-width: 0;
+  }
+  .semantic-object[data-composition-annotated] {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    align-content: start;
+    container: code-reading / inline-size;
+  }
+  .semantic-object[data-composition-annotated] > .semantic-title {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+  .semantic-object[data-composition-annotated] > .composition-content,
+  .semantic-object[data-composition-annotated] > .composition-annotations {
+    grid-column: 1 / -1;
+  }
+  @container code-reading (min-width: 40rem) {
+    .semantic-object[data-notes='beside'] > .composition-content {
+      grid-column: 1 / span 2;
+      grid-row: 2;
+    }
+    .semantic-object[data-notes='beside'] > .composition-annotations {
+      grid-column: 3;
+      grid-row: 2;
+    }
+  }
+  .composition-annotation {
+    border-inline-start: 2px solid var(--color-accent);
+    padding: 0.75rem 1rem;
+    background: color-mix(in srgb, var(--color-accent) 7%, var(--color-surface));
+    border-radius: 0 var(--radius-card) var(--radius-card) 0;
+  }
+  .composition-annotation + .composition-annotation {
+    margin-top: 0.75rem;
+  }
+  .composition-annotation > p {
+    margin: 0.35rem 0;
+    font-size: clamp(1rem, 1.4vw, 1.3rem);
+    line-height: 1.5;
+  }
+  .composition-annotation-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+  .composition-annotation > a {
+    font-size: var(--text-sm);
+  }
+  .composition-note-measure {
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
+    inset: 0 auto auto 0;
+  }
+  .composition-connections path[data-composition-relation='data'] {
+    stroke-width: 3;
+  }
+  .composition-connections path[data-composition-relation='event'][data-composition-complete] {
+    stroke-dasharray: 0.025 0.035;
+  }
+  .composition-connections path[data-composition-relation='dependency'][data-composition-complete] {
+    stroke-dasharray: 0.008 0.025;
+    opacity: 0.7;
+  }
+  .composition-connections path[data-composition-relation='ownership'] {
+    stroke-width: 2.5;
+  }
   .composition-travel {
     position: absolute;
     z-index: 2;
@@ -266,6 +335,9 @@
     border-block-start: 3px solid var(--color-accent);
   }
   @media (max-width: 48rem) {
+    .semantic-object[data-composition-annotated][data-notes='beside'] {
+      grid-template-columns: minmax(0, 1fr);
+    }
     .semantic-composition .composition-stage {
       grid-template-columns: minmax(0, 1fr);
       gap: 2.5rem;

@@ -404,19 +404,21 @@ One declarative action at a time or speech anchor.
 
 Forms: leaf. Children: none. Required parent: `composition`.
 
-| Attribute  | Values                                                                                    | Required | Default |
-| ---------- | ----------------------------------------------------------------------------------------- | -------- | ------- |
-| `at`       | text (min 1, max 40)                                                                      | yes      | —       |
-| `action`   | `reveal`, `focus`, `connect`, `transfer`, `copy`, `replace`, `compare`, `camera`, `trace` | yes      | —       |
-| `target`   | text (min 1, max 160)                                                                     | yes      | —       |
-| `to`       | text (min 1, max 160)                                                                     | no       | —       |
-| `slot`     | text (min 1, max 160)                                                                     | no       | —       |
-| `toSlot`   | text (min 1, max 160)                                                                     | no       | —       |
-| `value`    | text (min 1, max 160)                                                                     | no       | —       |
-| `lines`    | text (min 1, max 80)                                                                      | no       | —       |
-| `emphasis` | `outline`, `halo`, `brackets`, `underline`, `dim`, `none`                                 | no       | —       |
-| `effect`   | `beam`, `pulse`, `packet`                                                                 | no       | —       |
-| `duration` | number from 0.1 to 3                                                                      | no       | `0.6`   |
+| Attribute  | Values                                                                                                | Required | Default |
+| ---------- | ----------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `at`       | text (min 1, max 40)                                                                                  | yes      | —       |
+| `action`   | `reveal`, `focus`, `connect`, `transfer`, `copy`, `replace`, `compare`, `camera`, `trace`, `annotate` | yes      | —       |
+| `target`   | text (min 1, max 160)                                                                                 | yes      | —       |
+| `to`       | text (min 1, max 160)                                                                                 | no       | —       |
+| `slot`     | text (min 1, max 160)                                                                                 | no       | —       |
+| `toSlot`   | text (min 1, max 160)                                                                                 | no       | —       |
+| `value`    | text (min 1, max 160)                                                                                 | no       | —       |
+| `lines`    | text (min 1, max 80)                                                                                  | no       | —       |
+| `emphasis` | `outline`, `halo`, `brackets`, `underline`, `dim`, `none`                                             | no       | —       |
+| `effect`   | `beam`, `pulse`, `packet`                                                                             | no       | —       |
+| `until`    | text (min 1, max 40)                                                                                  | no       | —       |
+| `relation` | `relation`, `call`, `data`, `event`, `dependency`, `ownership`                                        | no       | —       |
+| `duration` | number from 0.1 to 3                                                                                  | no       | `0.6`   |
 
 ### `decision`
 
@@ -757,11 +759,13 @@ Named Markdown object on a composition stage.
 
 Forms: container. Children: markdown. Required parent: `composition` or `scene-group`.
 
-| Attribute | Values                                         | Required | Default  |
-| --------- | ---------------------------------------------- | -------- | -------- |
-| `id`      | text (min 1, max 64)                           | yes      | —        |
-| `title`   | text (min 1, max 200)                          | no       | —        |
-| `role`    | `visual`, `code`, `source`, `result`, `detail` | no       | `visual` |
+| Attribute   | Values                                         | Required | Default  |
+| ----------- | ---------------------------------------------- | -------- | -------- |
+| `id`        | text (min 1, max 64)                           | yes      | —        |
+| `title`     | text (min 1, max 200)                          | no       | —        |
+| `notes`     | `beside`, `below`                              | no       | —        |
+| `lineStart` | integer from 1                                 | no       | —        |
+| `role`      | `visual`, `code`, `source`, `result`, `detail` | no       | `visual` |
 
 ### `option`
 

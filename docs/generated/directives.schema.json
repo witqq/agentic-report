@@ -3002,6 +3002,16 @@
               "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
               "description": "Visible title."
             },
+            "notes": {
+              "type": "string",
+              "enum": ["beside", "below"],
+              "description": "Annotation arrangement beside or below the unmodified code; default below."
+            },
+            "lineStart": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Original source line of the excerpt first line; annotation labels use this offset."
+            },
             "role": {
               "type": "string",
               "enum": ["visual", "code", "source", "result", "detail"],
@@ -3040,7 +3050,8 @@
                 "replace",
                 "compare",
                 "camera",
-                "trace"
+                "trace",
+                "annotate"
               ],
               "description": "Directed operation."
             },
@@ -3083,6 +3094,16 @@
               "type": "string",
               "enum": ["beam", "pulse", "packet"],
               "description": "Trace style: moving beam, pulse or packet; follows the connection direction."
+            },
+            "until": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:\\d+(?:\\.\\d+)?s?|b[1-9]\\d*(?:\\.end)?(?:[+-]\\d+(?:\\.\\d+)?)?))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,38}\\S))\\s*$",
+              "description": "Optional narration anchor or seconds at which this annotation disappears."
+            },
+            "relation": {
+              "type": "string",
+              "enum": ["relation", "call", "data", "event", "dependency", "ownership"],
+              "description": "Connection meaning: call, data, event, dependency, ownership or a generic relation."
             },
             "duration": {
               "type": "number",

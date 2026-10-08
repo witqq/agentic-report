@@ -2379,6 +2379,19 @@
           "required": false,
           "description": "Visible title."
         },
+        "notes": {
+          "kind": "enum",
+          "values": ["beside", "below"],
+          "required": false,
+          "description": "Annotation arrangement beside or below the unmodified code; default below."
+        },
+        "lineStart": {
+          "kind": "integer",
+          "minimum": 1,
+          "lexicalPattern": "^[1-9][0-9]*$",
+          "required": false,
+          "description": "Original source line of the excerpt first line; annotation labels use this offset."
+        },
         "role": {
           "kind": "enum",
           "values": ["visual", "code", "source", "result", "detail"],
@@ -2418,7 +2431,8 @@
             "replace",
             "compare",
             "camera",
-            "trace"
+            "trace",
+            "annotate"
           ],
           "required": true,
           "description": "Directed operation."
@@ -2483,6 +2497,21 @@
           "values": ["beam", "pulse", "packet"],
           "required": false,
           "description": "Trace style: moving beam, pulse or packet; follows the connection direction."
+        },
+        "until": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 40,
+          "pattern": "^(?:\\d+(?:\\.\\d+)?s?|b[1-9]\\d*(?:\\.end)?(?:[+-]\\d+(?:\\.\\d+)?)?)$",
+          "required": false,
+          "description": "Optional narration anchor or seconds at which this annotation disappears."
+        },
+        "relation": {
+          "kind": "enum",
+          "values": ["relation", "call", "data", "event", "dependency", "ownership"],
+          "required": false,
+          "description": "Connection meaning: call, data, event, dependency, ownership or a generic relation."
         },
         "duration": {
           "kind": "number",
