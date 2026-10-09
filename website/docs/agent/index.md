@@ -14,9 +14,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the result:
 
 ```sh
-npx --yes agentic-report@0.20.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.21.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.20.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.21.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. Build validates the complete source before writing, so
@@ -25,6 +25,16 @@ Open `my-page.html` directly through `file://`. Build validates the complete sou
 browser runtime.
 
 ::contents
+
+## Discuss and revise locally
+
+Launch the optional `serve` command from the author Codex session when the reader wants to continue that
+same conversation while the original Markdown changes. A separate agent requires `--agent standalone`. Follow the
+[live operating guide](../../skills/agentic-report/references/process.md#live-local-document) for startup,
+flags, questions beside selected passages, formatted chat with same-author terminal messages, bounded
+history without replay, cancellable waiting questions, reader view
+controls and restart behavior. Hosting is also available through
+`serveReport()` from `agentic-report/live`; the root compiler API remains offline.
 
 ## Use it inside your own skill
 
@@ -71,7 +81,7 @@ When the user does not trust the published package, do not silently fall back to
 release tag, let the user inspect the repository, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.20.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.21.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -89,6 +99,16 @@ State the trust boundary precisely: this avoids installing or executing the `age
 npm, but `pnpm install` still downloads the dependencies pinned in `pnpm-lock.yaml`. They are not vendored.
 Do not claim a registry-free or fully audited installation. Keep the tag pinned, report the checked commit,
 and use an isolated environment when the user's threat model calls for one.
+
+## Discover staging and examples
+
+Read the [knowledge map](../../skills/agentic-report/references/knowledge.md), [directing](../../skills/agentic-report/references/directing.md) and [combinations](../../skills/agentic-report/references/combinations.md) to choose development and staging for the actual material and viewer. The [complete atlas](../../skills/agentic-report/references/atlas.md) connects the directive vocabulary to native examples and reference extensions. From a compiled checkout or installed package, `node skills/agentic-report/scripts/build-atlas.mjs --out ./report-atlas` builds their interactive gallery. Use it for discovery; it adds no handoff gate and prescribes no common story structure.
+
+## Compose a filmed explanation
+
+For a value changing beside code, traveling along a pipeline or passing between owners, use `composition` with named `object` values and speech-ready `cue` actions. The [directing reference](../../skills/agentic-report/references/directed-scenes.md) maps the five composition kinds and ten actions to complete examples, measured Screencast narration and existing effects. Use a local compiler exposing this vocabulary and a coordinated Screencast build. The pinned npm release supports this vocabulary; filming also requires the compatible Screencast bridge.
+
+For every system interface, first show the complete application screen, then focus or zoom into a part whose location has been established. Apply this to still pages, slides and any film aspect ratio; a full image can remain beside a detail. When a Report source is only film material, use the film's workflow and inspect its frames rather than adding the standalone-page handoff process.
 
 ## Compose the artifact
 
@@ -168,7 +188,7 @@ Every command already defaults to agent output: run commands emit NDJSON and ref
 compact JSON line; `--json` names that default, while `--human` selects prose or indented JSON. One refused
 directive pass reports its earliest authored violation plus the remaining independent violations in
 `related`, so fix the whole inventory together. When a diagnostic carries an exact `fix`, run
-`npx --yes agentic-report fix ./my-page`; this is the only command that writes authored Markdown, and it
+`npx --yes agentic-report fix ./my-page`; this applies compiler-computed source repairs, and it
 leaves all other bytes unchanged. `describe` exposes all registered commands and the declared directive rule
 dependencies as `commands` and `authoredRules`.
 
@@ -275,7 +295,7 @@ and the page is handed over only when it passes:
 node skills/agentic-report/scripts/prose-check.mjs ./my-page
 node skills/agentic-report/scripts/design-check.mjs ./my-page
 npx --yes playwright@1.62.1 install chromium
-npx --yes -p agentic-report@0.20.0 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
+npx --yes -p agentic-report@0.21.0 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
 node skills/agentic-report/scripts/handover.mjs ./my-page
 ```
 
@@ -290,9 +310,9 @@ for one page is switched off by a line with its reason in that page's `brief.md`
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.20.0 describe --json
-npx --yes agentic-report@0.20.0 schema --scope source
-npx --yes agentic-report@0.20.0 examples --json
+npx --yes agentic-report@0.21.0 describe --json
+npx --yes agentic-report@0.21.0 schema --scope source
+npx --yes agentic-report@0.21.0 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),
@@ -300,6 +320,8 @@ or the [agentic-report skill](../../skills/agentic-report/SKILL.md) when more gu
 
 ## Boundaries
 
-The tool reads local source and writes a static page. It does not deploy, publish, fetch remote source,
-use credentials, host an editor, or provide live collaboration. Remote assets, raw HTML, executable
+Ordinary builds read local source and write a static page. Explicit live hosting attaches the existing
+Codex conversation by default; its original client retains authentication, security and approvals.
+The tool does not deploy, publish, fetch remote source,
+or provide simultaneous multi-user editing. Remote assets, raw HTML, executable
 templates, and author JavaScript are not supported.

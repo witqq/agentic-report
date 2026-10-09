@@ -4,33 +4,38 @@ Every recipe, motion technique, video mode, review tool, and presentation capabi
 place where it helps the reader and a place where it only decorates. Read the row before you reach for the
 tool. The rule identifiers such as `DR-UNIFORM-ENTRANCE` point at [`design-rules.md`](design-rules.md).
 
+Before choosing directives, establish the composition in the brief: main visual, hierarchy, scale and
+chapter rhythm. Then select the components that realize it. These tables describe useful defaults;
+contextual aesthetic cautions do not replace the concept or the binding grammar and accessibility rules.
+
 ## Choose the directive by the question the reader is asking
 
-| The reader wants                                  | Reach for                                                                                    |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| to see the shape of the page before reading it    | `contents`, and `section` with a short `nav` label                                           |
-| the point of a chapter in one paragraph           | `lead` at the top of the section                                                             |
-| a warning or a consequence they must not miss     | `callout` with `kind`                                                                        |
-| to compare a handful of options side by side      | `cards` with `card`, or a GFM table for dense values ([layout](#choose-a-table-layout))      |
-| the state of each item on a dashboard             | `card` with `status`                                                                         |
-| an ordered procedure                              | `steps`                                                                                      |
-| what something looks like inside                  | a fenced code block, plus `source-link` to open the real file                                |
-| one change, line by line                          | `diff`                                                                                       |
-| the verdict of a review or incident               | `findings` with `finding` and a severity                                                     |
-| how parts hand work to each other                 | `diagram` with `type="flow"`                                                                 |
-| the order of calls in time                        | `diagram` with `type="sequence"`                                                             |
-| what changed between two pictures                 | `compare`                                                                                    |
-| to watch a behaviour or a recorded run            | `video`                                                                                      |
-| how a number moved                                | `chart`                                                                                      |
-| figures that come from an export                  | `data` with `{{…}}`, `each` and `expect` ([`compose.md`](compose.md#build-a-page-from-data)) |
-| which data or footage a block shows, and when     | `source-line` under the block                                                                |
-| a count with its noun, a time in a known zone     | `plural`, `time`                                                                             |
-| what a notification or an agent dialog looks like | `message`, `conversation` with `illustrative="true"` for a mock                              |
-| when things happened                              | `timeline`                                                                                   |
-| a definition they will meet again                 | `glossary` with `term`                                                                       |
-| detail that only some readers need                | `disclosure`, `tabs`, `modal`, or `popover`                                                  |
-| to give you a structured answer back              | `response` with `question`, `bucket`, `option`, `item`                                       |
-| to discuss a fragment with you                    | `review: true` in the frontmatter, then Review Workspace                                     |
+| The reader wants                                              | Reach for                                                                                                |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| to see the shape of the page before reading it                | `contents`, and `section` with a short `nav` label                                                       |
+| the point of a chapter in one paragraph                       | `lead` at the top of the section                                                                         |
+| a warning or a consequence they must not miss                 | `callout` with `kind`                                                                                    |
+| to compare a handful of options side by side                  | `cards` with `card`, or a GFM table for dense values ([layout](#choose-a-table-layout))                  |
+| the state of each item on a dashboard                         | `card` with `status`                                                                                     |
+| an ordered procedure                                          | `steps`                                                                                                  |
+| what something looks like inside                              | a fenced code block, plus `source-link` to open the real file                                            |
+| one change, line by line                                      | `diff`                                                                                                   |
+| the verdict of a review or incident                           | `findings` with `finding` and a severity                                                                 |
+| how parts hand work to each other                             | `diagram` with `type="flow"`                                                                             |
+| a value changing, copying or moving with a spoken explanation | `composition` with named `object` values and timed `cue` actions ([directed scenes](directed-scenes.md)) |
+| the order of calls in time                                    | `diagram` with `type="sequence"`                                                                         |
+| what changed between two pictures                             | `compare`                                                                                                |
+| to watch a behaviour or a recorded run                        | `video`                                                                                                  |
+| how a number moved                                            | `chart`                                                                                                  |
+| figures that come from an export                              | `data` with `{{…}}`, `each` and `expect` ([`compose.md`](compose.md#build-a-page-from-data))             |
+| which data or footage a block shows, and when                 | `source-line` under the block                                                                            |
+| a count with its noun, a time in a known zone                 | `plural`, `time`                                                                                         |
+| what a notification or an agent dialog looks like             | `message`, `conversation` with `illustrative="true"` for a mock                                          |
+| when things happened                                          | `timeline`                                                                                               |
+| a definition they will meet again                             | `glossary` with `term`                                                                                   |
+| detail that only some readers need                            | `disclosure`, `tabs`, `modal`, or `popover`                                                              |
+| to give you a structured answer back                          | `response` with `question`, `bucket`, `option`, `item`                                                   |
+| to discuss a fragment with you                                | `review: true` in the frontmatter, then Review Workspace                                                 |
 
 A directive earns its place when it answers a question the prose cannot. Three `callout` blocks in a row
 mean none of them is a warning any more. How to write a diagram, a recording, and a presentation is in
@@ -130,6 +135,12 @@ starter's order reads like every other page made from it (`DR-LANDING-ORDER`). T
 it), the examples in `examples --json`, and the exemplar list at the end of the playbook show complete
 pages to copy from.
 
+## Directed explanations and interface context
+
+Read [directed scenes](directed-scenes.md) when the reader must see a mechanism happen or a source is being filmed. Choose `diagram-code` for a model beside the responsible code, `pipeline` for travel, `before-after` for comparison, `overview-detail` for location and detail, or `ownership` for a value passing between owners. Use reveal/focus/connect/copy/transfer/replace/compare/camera cues on speech anchors instead of rebuilding another static diagram for every paragraph. The guide includes complete source, timing, static behavior and compositions with existing effects.
+
+Every system interface first appears as its complete application screen in any format, then its detail is highlighted or magnified. Establish the location before a crop. For a still page retain the full screenshot before or beside the close-up; for a film reserve an opening narration beat for orientation, then use the film camera or a loupe. A native portrait screen needs the same introduction. A pointer depth effect does not create a filmed 3D shot; use a Screencast perspective/layers scene when depth carries the explanation.
+
 ## Motion
 
 Motion comes from the same grammar: `transition` (`reveal`, `stagger`, `lines`, `clip`, `staged`), `scene`
@@ -155,10 +166,11 @@ the whole vocabulary (`expressive`).
 | `expressive` | Directed motion: `scene` `progress`, `steps` or `scrub`, `transition="staged"`, `draw="scroll"`, `pulse` and `zoom` on a `diagram`, `demo` with `play` (`time` or `scroll`), and extension effects; below this level extension effects draw their still state |
 
 For each moving element, say in one sentence what the
-reader learns from the movement; remove the ones without an answer (`DR-MOTION-MEANING`); an entrance
+movement explains, directs attention to or contributes to the chosen atmosphere (`DR-MOTION-MEANING`);
+remove competing or purposeless motion. An entrance
 travels at most 16 pixels toward its source, and a meaningful gesture is large enough to see
 (`DR-MOTION-ORIGIN`). Most chapters simply are there (`DR-UNIFORM-ENTRANCE`); at most one pointer or magnetic
-effect per page (`DR-ONE-EFFECT`). Do not invent timing, coordinates, CSS, or browser code.
+effect per page (`DR-ONE-EFFECT`). Use the package fields rather than inventing CSS or browser code; directed composition cues accept their documented anchors and bounded durations.
 
 The table says where each technique helps. The last two columns say what the reader gets under reduced motion and on a phone; a
 technique whose still version would lose the point does not belong on the page.
@@ -231,6 +243,8 @@ The cargo is aboard.
 
 ### Norms of motion
 
+These norms protect a page under reader control. For timed filmed explanations, see [directing](directing.md) and [combinations](combinations.md): several coordinated actions may express one event while the page still retains its static and reduced-motion equivalents.
+
 - **An entrance comes from somewhere and travels little.** At most 16 pixels toward its source, a scale only
   from 0.97 to 1 (a slide's `slide-transition="zoom"` from 0.94 and `appear` with `effect="pop"` from 0.9 are named
   accents that start lower on purpose); a meaningful gesture — a jerk, a cut, a recoil — is a different class, around 40 pixels,
@@ -261,7 +275,8 @@ slides` or `layout: screens`); on a scrolling page it is decoration.
   at once.
 - **On a phone, the current row replaces hover.** A linked card, a step or a timeline row at the middle of
   the screen takes the look it has under the pointer; nothing is hidden behind hover.
-- **Grain only under a large fill beside real material.** Grain on an empty gradient is a cliché.
+- **Grain supports material.** Use it where texture contributes to the chosen atmosphere; on a plain
+  gradient it still needs a reason, and it must not interfere with reading.
 
 Why these norms, so you can judge a case they do not name:
 
@@ -282,7 +297,7 @@ Why these norms, so you can judge a case they do not name:
   control that caused it ([`art-direction.md`](art-direction.md), what makes a page premium).
 - **Grain is a faint noise over a fill, not a decoration of its own.** The general technique is a fine
   fractal noise laid over a fill, often pushed to black and white by high contrast and brightness; over an
-  empty gradient it is still the gradient cliché. The package's own texture, the theme's `backdrop: grain`,
+  empty gradient it adds texture but does not supply a subject or hierarchy. The package's own texture, the theme's `backdrop: grain`,
   is a 320 px tile of fractal noise (base frequency 0.85, three octaves) used as a mask over the theme's
   text colour at 7 % opacity, with no contrast or brightness filter; it does not move, ignores the pointer,
   and is not printed.
@@ -414,9 +429,10 @@ variants and matching 2D rendering.
   shader: Linear's home page has no `<canvas>` and no `<video>`, only SVG and HTML on a timeline.
 - **Fewer exact elements beat a million particles.** Draw only the marks that explain the subject or guide
   the reader; more marks do not make the point clearer.
-- **Outdated tricks of 2018–2024:** a photo that distorts under the cursor, an RGB split, «liquid»
+- **Treat these as genre choices, not automatic upgrades:** a photo that distorts under the cursor, an RGB split, «liquid»
   transitions, tilt from scroll speed, particles that gather into a logo, cube, whip and zoom-blur
-  transitions, bloom as a filter.
+  transitions, bloom as a filter. Keep them only when the effect supports the subject and the reading
+  path remains stable; recognizability or age alone is not a verdict.
 - **Pre-render the heavy.** Procedural scenes that only play are cheaper as a clip with the live interface
   beside it; keep live only what answers the reader or shows the steps.
 - **At rest the effect matches its still picture,** and every state it shows exists without WebGL
@@ -471,8 +487,7 @@ Without motion a clip waits on its poster for the reader to press play; on a pho
   video of 60–90 seconds plays only when the reader presses it.
 - **Captions are required:** people watch without sound, so the text on screen or a WebVTT track says what
   happens.
-- **Crop the recording to readable text.** Record on a high-density screen and crop until the interface
-  text is 13–14 pixels on the reader's screen; a whole editor shrunk into a card is noise.
+- **Establish the screen, then make its detail readable.** Show the complete editor first as a map. Record on a high-density screen and approach the subject until its text is 13–14 pixels on the reader's screen; keep the full view beside a detail when location must stay visible.
 - **Scrub only a physical object.** Scrolling through a clip suits an object turning in space; a recording
   of an interface is an action in time, and a wheel turns it into jerky rewinding.
 - **Do not:** a video as a WebGL texture only to show a clip (it costs a WebGL context), image sequences in

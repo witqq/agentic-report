@@ -110,6 +110,8 @@ describe('block modules', () => {
     const names = BUILT_IN_BLOCKS.map((block) => block.name);
     // The scan finds a planted branch: a core file that tested one block by name would fail here.
     expect(blockNameLiterals("if (node.name === 'count') return;", names)).toEqual(['count']);
+    expect(blockNameLiterals("if (node.name === 'object') return;", names)).toEqual(['object']);
+    expect(blockNameLiterals("if (typeof node === 'object') return;", names)).toEqual([]);
     expect(blockNameLiterals('const label = `count`;', names)).toEqual(['count']);
     expect(blockNameLiterals("// 'count' in a comment is prose\n", names)).toEqual([]);
 
@@ -142,6 +144,22 @@ function blockNameLiterals(source: string, names: readonly string[]): string[] {
       continue;
     }
     if (typeof node !== 'object' || node === null || !('type' in node)) continue;
+    // A JavaScript typeof discriminator is not a branch on an authored block name.
+    const expression = node as {
+      type: string;
+      left?: { type: string; operator?: string };
+      right?: { type: string; value?: string };
+    };
+    if (
+      expression.type === 'BinaryExpression' &&
+      expression.left?.type === 'UnaryExpression' &&
+      expression.left.operator === 'typeof' &&
+      expression.right?.type === 'StringLiteral' &&
+      expression.right.value === 'object'
+    ) {
+      pending.push(expression.left);
+      continue;
+    }
     const literal = literalValue(node as { readonly type: unknown });
     if (literal !== undefined && known.has(literal)) found.push(literal);
     for (const [key, value] of Object.entries(node).reverse()) {

@@ -9,9 +9,9 @@ Use Node.js 24.18.0 or newer. Initialize a suitable packaged starter, replace it
 once, and open the result:
 
 ```bash
-npx --yes agentic-report@0.20.0 init ./my-report --starter document --json
+npx --yes agentic-report@0.21.0 init ./my-report --starter document --json
 # Edit ./my-report/report.md and its local assets.
-npx --yes agentic-report@0.20.0 build ./my-report --output ./my-report.html --json
+npx --yes agentic-report@0.21.0 build ./my-report --output ./my-report.html --json
 ```
 
 Open `my-report.html` through `file://`. Build runs the complete source and render preparation before
@@ -45,6 +45,12 @@ The command prefixed with `!` is expected to fail with `REMOTE_ASSET_BLOCKED` wi
 output. After removing the broken Markdown line, the direct build creates `report.html`. The package smoke
 test executes this installed build-first recovery route with credential redaction and output sentinels, then
 exercises optional validation and inspection independently.
+
+## Choose staging and discover examples
+
+Start with the skill's [knowledge map](../skills/agentic-report/references/knowledge.md), [directing](../skills/agentic-report/references/directing.md) and [combinations](../skills/agentic-report/references/combinations.md) for material, viewer task, development and coordinated actions. The [generated atlas](../skills/agentic-report/references/atlas.md) relates every directive to complete native examples and reference extensions.
+
+From an installed package or compiled checkout, `node skills/agentic-report/scripts/build-atlas.mjs --out ./report-atlas` builds a browsable native gallery. The gallery is optional discovery, without an extra handoff gate. The contract commands below remain the authority for exact support.
 
 ## Discover the contract
 
@@ -152,18 +158,28 @@ contains one NDJSON result record with `type`, `runId`, `starterId`, `starterTit
 
 ## Command output
 
-The CLI has thirteen commands; `describe` lists them under `commands`, and the generated
+`describe` lists every CLI command under `commands`, and the generated
 [authoring catalog](../skills/agentic-report/references/catalog.md#commands) prints the same list. Every
 command answers an agent without a flag, accepts `--json` as the name of that default, and offers
 `--human` for a person. The agent shape follows what the command returns: `init`, `build`, `validate`,
-`inspect`, `fix`, `review`, `sitemap`, `snapshot`, `effect-check` and `theme` report a run and write NDJSON records; `schema`, `describe` and `examples`
+`inspect`, `fix`, `review`, `sitemap`, `snapshot`, `effect-check`, `theme` and `serve` report a run and write NDJSON records; `schema`, `describe` and `examples`
 return one reference document and write it as a single compact JSON line. The human projection is prose
-wherever prose exists — `init`, `build`, `validate`, `fix`, `review`, `sitemap`, `snapshot`, `effect-check`, `theme` and `examples` — and the same
+wherever prose exists — `init`, `build`, `validate`, `fix`, `review`, `sitemap`, `snapshot`, `effect-check`, `theme`, `serve` and `examples` — and the same
 document indented for `inspect`, `schema` and `describe`, whose answer is a catalog or a schema that no
 summary line can carry.
 Both projections of a run carry the same facts — every
 independent violation, each with its `file:line:column` place — so choosing prose never hides a
 violation.
+
+## Discuss a living document locally
+
+Use `serve` from the author Codex session for a browser discussion with that existing agent and source
+revision updates. A separate agent requires explicit `--agent standalone`. This explicit
+host is separate from the offline compiler and available through the `agentic-report/live` ESM subpath.
+The [live operating guide](../skills/agentic-report/references/process.md#live-local-document) defines
+startup commands, every flag, contextual passage questions, formatted chat with mirrored same-author
+terminal messages, bounded history without duplicate delivery, cancellable waiting queues,
+reader visual/width controls and restart limitations.
 
 ## Validate and inspect without writing output
 
@@ -223,7 +239,7 @@ agentic-report fix ./my-report
 agentic-report fix ./my-report --human
 ```
 
-`fix` is the only command that writes to an authored source. It applies the `fix` field of the
+`fix` applies compiler-computed repairs to an authored source. It applies the `fix` field of the
 diagnostics a run produced — the replaced range and its replacement, both computed exactly — and touches
 no other byte. Diagnostics without that field are left alone and reported as `remaining`: their repair
 needs an author decision, and guessing it would be a different product. Running it twice changes nothing
@@ -276,8 +292,10 @@ never applied automatically; inspect its reported source state and edit the Mark
 A page built with `review: true`, or with a prior sidecar passed through `--review`, provides Review
 Workspace annotations; an ordinary page ships without them. Select any eligible rendered phrase and choose
 **Create note**; no separate review mode is required. The selection may cross inline markup or end
-in a later review target. A compact popover beside it shows the exact quote and keeps compose, ordered
-messages, edit, resolve, and reopen at the text locus. Saved ranges stay highlighted with distinct open and
+in a later review target. A compact popover beside it shows the ordinary prose's exact quote and keeps compose, ordered
+messages, edit, resolve, and reopen at the text locus. Within one composition object or slot, selecting text
+instead opens visibly labelled discussion for that whole persistent region without an exported selection
+anchor; ranges crossing dynamic owners are not captured. Saved ordinary-prose ranges stay highlighted with distinct open and
 resolved treatment. Hover or tap exposes **View thread**, and each range has a focusable keyboard marker.
 
 The topbar **Review** action opens only an overlay list of current comments and prior evidence plus local
@@ -939,6 +957,16 @@ write `recipe="hero" scene="none" interaction="depth"` and add a local image. Fo
 write `recipe="rail" scene="progress"` with image cards. The complete
 [`motion-showcase`](../examples/motion-showcase/report.md) demonstrates both without custom runtime code.
 
+### Directed compositions and filmed explanations
+
+Use `::::composition{id="edit" title="First edit" kind="diagram-code"}` with direct `:::object{id="source" title="Source" role="source"}` containers and leaf `::cue{at="b2" action="copy" target="source" to="result"}` actions. The five kinds are `diagram-code`, `pipeline`, `before-after`, `overview-detail` and `ownership`; the ten actions are `reveal`, `focus`, `connect`, `copy`, `transfer`, `replace`, `compare`, `camera`, `trace` and `annotate`. Objects contain ordinary Markdown, local pictures, diagrams or code. `copy` preserves the source, `transfer` empties it on arrival, and `replace` writes plain text while retaining the title. `focus` can name code `lines="2-4"`; omitting lines leaves the whole code readable. Pipeline, before-after and ownership compositions give code a full row beneath their visual objects. Connections and traveling values use stage coordinates even when its owner scales the page.
+
+The [directed-scenes reference](../skills/agentic-report/references/directed-scenes.md) gives complete syntax, action semantics, movement durations, three worked examples and routes to existing effects. The [source contract](product/source-contract.md#directed-compositions) defines the bounds. Standalone `bN` anchors use three-second preview beats; a compatible Screencast `report` scene binds them to measured speech starts and ends. Reduced motion, print and static output contain final values. The pinned release supports this vocabulary; filming also requires a compatible Screencast composition bridge. Stable slots preserve owner definitions, scene groups arrange related objects, additive emphasis keeps context readable, typed connections and traces distinguish relationships, and code annotations explain operations without editing their source.
+
+For every system interface, first show the complete application screen and establish the location of the detail before a zoom, crop or spotlight. Apply this to still pages, slides and films of every format. A page may keep the full screenshot beside its detail; a film can hold the overview during its first paragraph and approach the detail at `b2`. Report used only as film material follows the film's workflow, without a second standalone-page handoff process.
+
+Objects and slots keep stable scoped review owners; their changing Markdown belongs to those owners. Selecting text within one region visibly opens a discussion for that whole region, exported without `selection`; a range crossing dynamic owners is not captured. Ordinary prose keeps precise selected-text anchors. Seeking preserves mounted region reading state. Copied controls use the package interaction lifecycle, unrevealed owners and decorative travellers are inert, and authored connections retain a visible accessible printable transcript of their source, destination, relationship and label.
+
 ### Directed motion
 
 Motion is part of the closed vocabulary and always has a still end state: under reduced motion every
@@ -1278,8 +1306,7 @@ diagram views switch through a View Transition where the browser has one. On a s
 `interaction`, or `choreography` role; each defaults to `none` unless a recipe supplies it, and legacy
 `reveal="true"` remains supported. The package owns every duration, distance and item cap of these roles,
 their reduced-motion and coarse-pointer behavior, and the fallback without `IntersectionObserver`; the
-numbers are in the [source contract](product/source-contract.md#page-navigation-and-motion). Authors cannot
-supply timing, coordinates, easing, JavaScript, or custom runtime code.
+numbers are in the [source contract](product/source-contract.md#page-navigation-and-motion). These section roles accept no arbitrary timing, coordinates, easing, JavaScript, or custom runtime code. Directed composition cues have their own bounded time and duration fields.
 
 ## Extend the vocabulary for one page
 

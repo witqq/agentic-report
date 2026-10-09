@@ -12,7 +12,7 @@ import {
   frameContentWidth,
   installDiagramForms,
 } from '../diagram-forms.js';
-import { type Destroyable, provideFeature } from '../features.js';
+import { contentElements, type Destroyable, provideFeature } from '../features.js';
 import { activateTab } from '../tab-panels.js';
 
 const clock = pageClock();
@@ -32,7 +32,7 @@ const TAB_SELECTION_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'Home', 'End', 'E
  * first opens scrolled to the start of the flow, so the first look is not its cut middle.
  */
 function createDiagramFitController(page: HTMLElement): Destroyable | undefined {
-  const switchers = [...page.querySelectorAll<HTMLElement>('.visualization-layouts[data-tabs]')];
+  const switchers = contentElements<HTMLElement>(page, '.visualization-layouts[data-tabs]');
   if (switchers.length === 0) return undefined;
   const chosen = new WeakSet<HTMLElement>();
   const abort = new AbortController();

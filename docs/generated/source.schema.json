@@ -259,6 +259,11 @@
         { "$ref": "#/$defs/timeline" },
         { "$ref": "#/$defs/event" },
         { "$ref": "#/$defs/demo" },
+        { "$ref": "#/$defs/composition" },
+        { "$ref": "#/$defs/object" },
+        { "$ref": "#/$defs/cue" },
+        { "$ref": "#/$defs/scene-group" },
+        { "$ref": "#/$defs/slot" },
         { "$ref": "#/$defs/asset" },
         { "$ref": "#/$defs/video" },
         { "$ref": "#/$defs/font" },
@@ -3109,6 +3114,250 @@
               "default": 3
             }
           }
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "composition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "composition" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Composition id for film selection."
+            },
+            "layout": {
+              "type": "string",
+              "enum": ["auto", "row", "column", "grid"],
+              "description": "Spatial arrangement independent of the scene meaning; rows wrap on compact displays.",
+              "default": "auto"
+            },
+            "align": {
+              "type": "string",
+              "enum": ["start", "center", "stretch"],
+              "description": "Shared cross-axis alignment; start preserves a common reading edge.",
+              "default": "start"
+            },
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "kind": {
+              "type": "string",
+              "enum": ["diagram-code", "pipeline", "before-after", "overview-detail", "ownership"],
+              "description": "Meaning of the composition; layout is package-owned.",
+              "default": "diagram-code"
+            }
+          },
+          "required": ["id"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "object": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "object" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Local object name."
+            },
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "notes": {
+              "type": "string",
+              "enum": ["beside", "below"],
+              "description": "Annotation arrangement beside or below the unmodified code; default below."
+            },
+            "lineStart": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Original source line of the excerpt first line; annotation labels use this offset."
+            },
+            "role": {
+              "type": "string",
+              "enum": ["visual", "code", "source", "result", "detail"],
+              "description": "Semantic place in the layout.",
+              "default": "visual"
+            }
+          },
+          "required": ["id"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "cue": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "cue" },
+        "form": { "type": "string", "enum": ["leaf"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "at": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:\\d+(?:\\.\\d+)?s?|b[1-9]\\d*(?:\\.end)?(?:[+-]\\d+(?:\\.\\d+)?)?))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,38}\\S))\\s*$",
+              "description": "Seconds or speech anchor b2, b2.end, b2+0.3; standalone beats use three seconds."
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "reveal",
+                "focus",
+                "connect",
+                "transfer",
+                "copy",
+                "replace",
+                "compare",
+                "camera",
+                "trace",
+                "annotate"
+              ],
+              "description": "Directed operation."
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Local object name."
+            },
+            "to": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Destination object for pair actions."
+            },
+            "slot": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Local changing slot inside the target object."
+            },
+            "toSlot": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Local changing slot inside the destination object."
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,158}\\S))\\s*$",
+              "description": "Replacement text or connection label."
+            },
+            "lines": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[1-9][0-9]{0,2}(?:-[1-9][0-9]{0,2})?(?:\\s*,\\s*[1-9][0-9]{0,2}(?:-[1-9][0-9]{0,2})?)*)(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,78}\\S))\\s*$",
+              "description": "Code line ranges, such as 2-4,7 (1–999)."
+            },
+            "emphasis": {
+              "type": "string",
+              "enum": ["outline", "halo", "brackets", "underline", "dim", "none"],
+              "description": "Focus treatment: preserve context by default; dim is explicit, none clears attention."
+            },
+            "effect": {
+              "type": "string",
+              "enum": ["beam", "pulse", "packet"],
+              "description": "Trace style: moving beam, pulse or packet; follows the connection direction."
+            },
+            "until": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:(?:\\d+(?:\\.\\d+)?s?|b[1-9]\\d*(?:\\.end)?(?:[+-]\\d+(?:\\.\\d+)?)?))(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,38}\\S))\\s*$",
+              "description": "Optional narration anchor or seconds at which this annotation disappears."
+            },
+            "relation": {
+              "type": "string",
+              "enum": ["relation", "call", "data", "event", "dependency", "ownership"],
+              "description": "Connection meaning: call, data, event, dependency, ownership or a generic relation."
+            },
+            "duration": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 3,
+              "description": "Movement duration in seconds (default 0.6).",
+              "default": 0.6
+            }
+          },
+          "required": ["at", "action", "target"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "scene-group": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "scene-group" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Group identity."
+            },
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            },
+            "layout": {
+              "type": "string",
+              "enum": ["auto", "row", "column", "grid"],
+              "description": "Spatial arrangement independent of the scene meaning; rows wrap on compact displays.",
+              "default": "auto"
+            },
+            "align": {
+              "type": "string",
+              "enum": ["start", "center", "stretch"],
+              "description": "Shared cross-axis alignment; start preserves a common reading edge.",
+              "default": "start"
+            }
+          },
+          "required": ["id"]
+        }
+      },
+      "required": ["name", "form", "attributes"]
+    },
+    "slot": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "slot" },
+        "form": { "type": "string", "enum": ["container"] },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?=(?:[a-z][a-z0-9-]{0,63})(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,62}\\S))\\s*$",
+              "description": "Local value slot inside its stable owner."
+            },
+            "title": {
+              "type": "string",
+              "pattern": "^\\s*(?:(?:\\S|\\S[\\s\\S]{0,198}\\S))\\s*$",
+              "description": "Visible title."
+            }
+          },
+          "required": ["id"]
         }
       },
       "required": ["name", "form", "attributes"]

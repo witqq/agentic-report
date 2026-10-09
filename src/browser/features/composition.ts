@@ -1,0 +1,737 @@
+/*! agentic-report script: composition */
+import {
+  compositionFrame,
+  compositionTime,
+  compositionReference,
+  compositionLineLabel,
+  type CompositionContent,
+  type CompositionCue,
+} from '../../composition.js';
+import { connectionRoute, overlaps, type SceneRect } from '../../composition-route.js';
+import { pageClock } from '../clock.js';
+import { hydrateSharedImages } from '../shared-media.js';
+import { feature, provideFeature, type Cleanup } from '../features.js';
+import { timed, whenVisible } from '../technique-timing.js';
+
+export interface ReportCompositionControl {
+  bind(resolve: (anchor: string) => number, id?: string): void;
+  anchors(id?: string): string[];
+}
+declare global {
+  interface Window {
+    __reportComposition?: ReportCompositionControl;
+  }
+}
+const clock = pageClock();
+const SVG = 'http://www.w3.org/2000/svg';
+interface MountedBody {
+  body: HTMLElement;
+  destroy?: Cleanup;
+}
+// Locale parking keeps the actual authored stage. Retain its reader-owned DOM instances too.
+const sceneBodies = new WeakMap<HTMLElement, Map<string, Map<string, MountedBody>>>();
+function svg<K extends keyof SVGElementTagNameMap>(
+  name: K,
+  attributes: Record<string, string>,
+): SVGElementTagNameMap[K] {
+  const element = document.createElementNS(SVG, name);
+  for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
+  return element;
+}
+function required<T>(value: T | null | undefined): T {
+  if (value === undefined || value === null) throw new Error('Incomplete compiled composition.');
+  return value;
+}
+function cuesOf(scope: HTMLElement): CompositionCue[] {
+  return [...scope.querySelectorAll<HTMLElement>(':scope > [data-semantic="cue"]')].map((n) => ({
+    at: required(n.dataset.at),
+    action: n.dataset.action as CompositionCue['action'],
+    target: required(n.dataset.target),
+    duration: Number(n.dataset.duration ?? 0.6),
+    ...(n.dataset.to === undefined ? {} : { to: n.dataset.to }),
+    ...(n.dataset.slot === undefined ? {} : { slot: n.dataset.slot }),
+    ...(n.dataset.toSlot === undefined ? {} : { toSlot: n.dataset.toSlot }),
+    ...(n.dataset.value === undefined ? {} : { value: n.dataset.value }),
+    ...(n.dataset.lines === undefined ? {} : { lines: n.dataset.lines }),
+    ...(n.dataset.until === undefined ? {} : { until: n.dataset.until }),
+    ...(n.dataset.relation === undefined
+      ? {}
+      : { relation: n.dataset.relation as NonNullable<CompositionCue['relation']> }),
+    ...(n.dataset.emphasis === undefined
+      ? {}
+      : { emphasis: n.dataset.emphasis as NonNullable<CompositionCue['emphasis']> }),
+    ...(n.dataset.effect === undefined
+      ? {}
+      : { effect: n.dataset.effect as NonNullable<CompositionCue['effect']> }),
+  }));
+}
+function scopedClone(fragment: DocumentFragment, prefix?: string): DocumentFragment {
+  const clone = fragment.cloneNode(true) as DocumentFragment;
+  hydrateSharedImages(clone);
+  if (prefix === undefined) return clone;
+  const ids = new Map([...clone.querySelectorAll('[id]')].map((n) => [n.id, `${prefix}-${n.id}`]));
+  for (const node of clone.querySelectorAll('*')) {
+    node.removeAttribute('data-review-target');
+    for (const attribute of [...node.attributes]) {
+      const value =
+        attribute.name === 'id'
+          ? (ids.get(attribute.value) ?? attribute.value)
+          : ['for', 'data-modal-open'].includes(attribute.name)
+            ? (ids.get(attribute.value) ?? attribute.value)
+            : ['aria-labelledby', 'aria-describedby', 'aria-controls', 'headers'].includes(
+                  attribute.name,
+                )
+              ? attribute.value
+                  .split(/\s+/u)
+                  .map((id) => ids.get(id) ?? id)
+                  .join(' ')
+              : compositionReference(attribute.value, ids);
+      node.setAttribute(attribute.name, value);
+    }
+  }
+  return clone;
+}
+function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
+  const printing = window.matchMedia('print');
+  const scenes = [
+    ...page.querySelectorAll<HTMLElement>('[data-semantic="composition"][data-composition]'),
+  ];
+  if (scenes.length === 0) return () => undefined;
+  const controllers = scenes.map((scene) => {
+    const stage = required(scene.querySelector<HTMLElement>('[data-composition-stage]'));
+    const objects = new Map(
+      [
+        ...stage.querySelectorAll<HTMLElement>(
+          '[data-composition-object], [data-composition-slot]',
+        ),
+      ].map((n) => [required(n.dataset.compositionObject ?? n.dataset.compositionSlot), n]),
+    );
+    const originals = new Map(
+      [...objects].map(([id, node]) => [
+        id,
+        required(
+          node.querySelector<HTMLTemplateElement>(':scope > template[data-composition-original]'),
+        ).content,
+      ]),
+    );
+    const cues = cuesOf(scene);
+    const noteRails = new Map<string, { rail: HTMLElement; originals: Node[]; width: number }>(
+      [...objects].flatMap(([id, node]) => {
+        const rail = node.querySelector<HTMLElement>(':scope > [data-composition-annotations]');
+        return rail === null
+          ? []
+          : ([
+              [
+                id,
+                { rail, originals: [...rail.children].map((n) => n.cloneNode(true)), width: -1 },
+              ],
+            ] as const);
+      }),
+    );
+    const noteKeys = new Map<string, string>();
+
+    const keys = new Map<string, string>();
+    let bodies = sceneBodies.get(stage);
+    if (bodies === undefined) {
+      bodies = new Map();
+      sceneBodies.set(stage, bodies);
+    }
+    const retainedBodies = bodies;
+    const overlay = svg('svg', { class: 'composition-connections', 'aria-hidden': 'true' });
+    stage.append(overlay);
+    let resolve: (anchor: string) => number = compositionTime;
+    let origin = 0;
+    const content = (value: CompositionContent, owner: string): DocumentFragment => {
+      if ('source' in value)
+        return scopedClone(
+          required(originals.get(value.source)),
+          owner === value.source
+            ? undefined
+            : `composition-${scene.dataset.compositionId}-${owner}`,
+        );
+      const fragment = document.createDocumentFragment();
+      if ('text' in value) {
+        const p = document.createElement('p');
+        p.textContent = value.text;
+        fragment.append(p);
+      }
+      return fragment;
+    };
+    const reserveGutters = (): void => {
+      const probe = svg('text', {});
+      overlay.append(probe);
+      for (const cue of cues) {
+        if (cue.action !== 'connect' || !cue.value || cue.to === undefined) continue;
+        const from = required(objects.get(cue.target)),
+          to = required(objects.get(cue.to));
+        const container = from.parentElement === to.parentElement ? from.parentElement : stage;
+        if (
+          container === null ||
+          getComputedStyle(container).gridTemplateColumns.split(' ').length < 2
+        )
+          continue;
+        probe.textContent = cue.value;
+        const gap = Math.min(probe.getComputedTextLength() + 20, container.clientWidth / 4);
+        container.style.columnGap = `${Math.max(Number.parseFloat(getComputedStyle(container).columnGap) || 0, gap)}px`;
+      }
+      probe.remove();
+    };
+    const reservedWidths = new Map<string, number>();
+    const reserveSlots = (): void => {
+      for (const [id, node] of objects) {
+        if (node.dataset.compositionSlot === undefined) continue;
+        const body = required(
+          node.querySelector<HTMLElement>(':scope > [data-composition-content]'),
+        );
+        if (reservedWidths.get(id) === body.clientWidth) continue;
+        reservedWidths.set(id, body.clientWidth);
+        const candidates: CompositionContent[] = [{ source: id }];
+        for (const cue of cues) {
+          const at = resolve(cue.at) + cue.duration;
+          const candidate = compositionFrame([...objects.keys()], cues, at, resolve).objects.get(
+            id,
+          )?.content;
+          if (candidate !== undefined) candidates.push(candidate);
+        }
+        const measure = document.createElement('div');
+        measure.className = 'composition-content composition-slot-measure';
+        measure.style.width = `${body.clientWidth}px`;
+        node.append(measure);
+        let height = 0;
+        for (const value of candidates) {
+          measure.replaceChildren(content(value, `measure-${id}`));
+          height = Math.max(height, measure.offsetHeight);
+        }
+        measure.remove();
+        body.style.minHeight = `${height}px`;
+      }
+    };
+    const reserveNotes = (): void => {
+      for (const record of noteRails.values()) {
+        const { rail, originals, width } = record;
+        if (width === rail.clientWidth) continue;
+        record.width = rail.clientWidth;
+        const measure = document.createElement('div');
+        measure.className = 'composition-note-measure';
+        measure.style.width = `${rail.clientWidth}px`;
+        rail.append(measure);
+        let height = 0;
+        for (const original of originals) {
+          measure.replaceChildren(original.cloneNode(true));
+          height = Math.max(height, measure.offsetHeight);
+        }
+        measure.remove();
+        rail.style.minHeight = `${height}px`;
+      }
+    };
+    const rect = (id: string) => {
+      const box = required(objects.get(id)).getBoundingClientRect(),
+        parent = stage.getBoundingClientRect();
+      // SVG and absolute travel positions use stage CSS pixels. Ancestor fitting
+      // transforms change viewport rectangles, so convert both axes back once.
+      const sx = parent.width / Math.max(1, stage.offsetWidth);
+      const sy = parent.height / Math.max(1, stage.offsetHeight);
+      return {
+        x: (box.left - parent.left) / sx,
+        y: (box.top - parent.top) / sy,
+        w: box.width / sx,
+        h: box.height / sy,
+      };
+    };
+    const render = (time: number): void => {
+      const staticFrame = still.matches || printing.matches;
+      stage.style.transform = '';
+      stage.style.paddingBottom = '';
+      stage.style.columnGap = '';
+      for (const group of stage.querySelectorAll<HTMLElement>('.scene-group-objects'))
+        group.style.columnGap = '';
+      reserveGutters();
+      reserveSlots();
+      reserveNotes();
+      const frame = compositionFrame(
+        [...objects.keys()],
+        cues,
+        staticFrame ? Number.POSITIVE_INFINITY : time,
+        resolve,
+      );
+      const hasFocus = [...frame.objects.values()].some((o) => o.focus);
+      for (const [id, state] of frame.objects) {
+        const node = required(objects.get(id));
+        const key = JSON.stringify(state.content);
+        if (keys.get(id) !== key) {
+          let cached = retainedBodies.get(id);
+          if (cached === undefined) {
+            cached = new Map();
+            retainedBodies.set(id, cached);
+          }
+          let entry = cached.get(key);
+          const previous = required(node.querySelector(':scope > [data-composition-content]'));
+          if (entry === undefined) {
+            const body = document.createElement('div');
+            body.className = 'composition-content';
+            body.dataset.compositionContent = '';
+            body.dataset.contentScope = `composition-${scene.dataset.compositionId}-${id}-${cached.size}`;
+            body.append(content(state.content, id));
+            previous.replaceWith(body);
+            entry = { body };
+            cached.set(key, entry);
+          } else previous.replaceWith(entry.body);
+          entry.destroy ??= feature('content')?.(entry.body) ?? (() => undefined);
+          keys.set(id, key);
+        }
+        node.style.opacity = String(
+          state.visible
+            ? (!staticFrame &&
+              frame.dim &&
+              hasFocus &&
+              !state.focus &&
+              node.dataset.compositionSlot === undefined
+                ? 0.55
+                : 1) * state.entrance
+            : 0,
+        );
+        node.style.transform = staticFrame ? '' : `translateY(${(1 - state.entrance) * 16}px)`;
+        node.toggleAttribute('data-composition-focus', state.focusAmount > 0);
+        node.style.setProperty('--composition-focus', String(state.focusAmount));
+        if (state.focusAmount > 0) node.dataset.compositionEmphasis = state.emphasis ?? 'outline';
+        else delete node.dataset.compositionEmphasis;
+        node.toggleAttribute('data-composition-hidden', !state.visible);
+        node.inert = !state.visible || (!staticFrame && state.entrance === 0);
+        if (node.inert) node.setAttribute('aria-hidden', 'true');
+        else node.removeAttribute('aria-hidden');
+        node.toggleAttribute('data-composition-empty', 'empty' in state.content);
+        const lines = new Set<number>();
+        for (const part of (state.lines ?? frame.annotations.get(id)?.lines ?? '').split(',')) {
+          if (part.trim() === '') continue;
+          const [from, to] = part.split('-').map(Number);
+          if (from !== undefined) for (let i = from; i <= (to ?? from); i++) lines.add(i);
+        }
+        for (const [i, line] of [...node.querySelectorAll<HTMLElement>('pre .line')].entries()) {
+          line.toggleAttribute('data-composition-line', lines.has(i + 1));
+          line.style.opacity =
+            !staticFrame && frame.dim && lines.size > 0 && !lines.has(i + 1) ? '0.35' : '';
+        }
+      }
+      for (const [id, { rail, originals }] of noteRails) {
+        if (staticFrame) {
+          if (noteKeys.get(id) !== 'static')
+            rail.replaceChildren(...originals.map((n) => n.cloneNode(true)));
+          rail.style.opacity = '';
+          rail.style.transform = '';
+          noteKeys.set(id, 'static');
+          continue;
+        }
+        const annotation = frame.annotations.get(id);
+        const key =
+          annotation === undefined
+            ? ''
+            : JSON.stringify([annotation.text, annotation.lines, annotation.to]);
+        if (noteKeys.get(id) !== key) {
+          rail.replaceChildren();
+          if (annotation !== undefined) {
+            const note = document.createElement('div');
+            note.className = 'composition-annotation';
+            if (annotation.lines !== undefined) {
+              const label = document.createElement('div');
+              label.className = 'composition-annotation-label';
+              label.textContent = compositionLineLabel(
+                annotation.lines,
+                Number(objects.get(id)?.dataset.lineStart ?? 1),
+              );
+              note.append(label);
+            }
+            const text = document.createElement('p');
+            text.textContent = annotation.text;
+            note.append(text);
+            if (annotation.to !== undefined) {
+              const peer = required(objects.get(annotation.to));
+              const link = document.createElement('a');
+              link.href = `#${peer.id}`;
+              link.textContent = `→ ${peer.querySelector(':scope > .semantic-title')?.textContent ?? annotation.to}`;
+              note.append(link);
+            }
+            rail.append(note);
+          }
+          noteKeys.set(id, key);
+        }
+        rail.style.opacity = String(annotation?.progress ?? 0);
+        rail.style.transform = `translateY(${(1 - (annotation?.progress ?? 1)) * 6}px)`;
+      }
+      overlay.replaceChildren();
+      overlay.setAttribute('viewBox', `0 0 ${stage.clientWidth} ${stage.clientHeight}`);
+      const columns = getComputedStyle(stage).gridTemplateColumns.split(' ').length;
+      if (columns > 1 && frame.connections.some((edge) => edge.label)) {
+        const probe = svg('text', {});
+        overlay.append(probe);
+        let gap = Number.parseFloat(getComputedStyle(stage).columnGap);
+        for (const edge of frame.connections) {
+          probe.textContent = edge.label ?? '';
+          gap = Math.max(
+            gap,
+            Math.min(probe.getComputedTextLength() + 16, stage.clientWidth / (columns * 2)),
+          );
+        }
+        probe.remove();
+        stage.style.columnGap = `${gap}px`;
+      }
+      const visibleRects = [...objects.keys()]
+        .filter((id) => frame.objects.get(id)?.visible)
+        .map(rect);
+      const labels: SceneRect[] = [];
+      for (const edge of frame.connections) {
+        const a = rect(edge.from),
+          b = rect(edge.to);
+        const blockers = [...objects.keys()]
+          .filter(
+            (id) =>
+              !id.includes(':') &&
+              id !== edge.from &&
+              id !== edge.to &&
+              frame.objects.get(id)?.visible,
+          )
+          .map(rect);
+        const d = connectionRoute(a, b, blockers);
+        if (!d) continue;
+        const path = svg('path', {
+          d,
+          pathLength: '1',
+          'stroke-dasharray': '1',
+          'stroke-dashoffset': String(1 - edge.progress),
+        });
+        if (edge.relation !== undefined) path.dataset.compositionRelation = edge.relation;
+        if (edge.progress >= 1) path.dataset.compositionComplete = '';
+        overlay.append(path);
+        const length = path.getTotalLength();
+        const tip = path.getPointAtLength(length * edge.progress);
+        const before = path.getPointAtLength(Math.max(0, length * edge.progress - 2));
+        const angle = Math.atan2(tip.y - before.y, tip.x - before.x);
+        const backX = tip.x - Math.cos(angle) * 9,
+          backY = tip.y - Math.sin(angle) * 9;
+        overlay.append(
+          svg('polygon', {
+            points: `${tip.x},${tip.y} ${backX - Math.sin(angle) * 4},${backY + Math.cos(angle) * 4} ${backX + Math.sin(angle) * 4},${backY - Math.cos(angle) * 4}`,
+            opacity: String(Math.min(1, edge.progress * 8)),
+          }),
+        );
+        if (edge.label) {
+          const text = svg('text', { 'text-anchor': 'middle' });
+          text.textContent = edge.label;
+          overlay.append(text);
+          let placed = false;
+          const horizontalGap = Math.max(b.x - a.x - a.w, a.x - b.x - b.w);
+          const widths = [Number.POSITIVE_INFINITY];
+          if (horizontalGap > 12) widths.push(horizontalGap - 12);
+          for (const width of widths) {
+            const lines: string[] = [];
+            let line = '';
+            for (const word of edge.label.split(/\s+/u)) {
+              const candidate = line ? `${line} ${word}` : word;
+              text.textContent = candidate;
+              if (line && text.getComputedTextLength() > width) {
+                lines.push(line);
+                line = word;
+              } else line = candidate;
+            }
+            lines.push(line);
+            text.replaceChildren(
+              ...lines.map((value, i) => {
+                const span = svg('tspan', { x: '0', dy: i === 0 ? '0' : '1.2em' });
+                span.textContent = value;
+                return span;
+              }),
+            );
+            const metrics = text.getBBox();
+            for (const fraction of [0.5, 0.35, 0.65, 0.2, 0.8]) {
+              const p = path.getPointAtLength(length * fraction);
+              for (const [x, y] of [
+                [p.x - metrics.width / 2, p.y - metrics.height - 10],
+                [p.x - metrics.width / 2, p.y + 10],
+                [p.x + 10, p.y - metrics.height / 2],
+                [p.x - metrics.width - 10, p.y - metrics.height / 2],
+              ] as const) {
+                const bounds = { x: x - 3, y: y - 3, w: metrics.width + 6, h: metrics.height + 6 };
+                if (
+                  bounds.x < 0 ||
+                  bounds.y < 0 ||
+                  bounds.x + bounds.w > stage.clientWidth ||
+                  bounds.y + bounds.h > stage.clientHeight ||
+                  [...visibleRects, ...labels].some((r) => overlaps(bounds, r))
+                )
+                  continue;
+                text.setAttribute('transform', `translate(${x - metrics.x},${y - metrics.y})`);
+                labels.push(bounds);
+                placed = true;
+                break;
+              }
+              if (placed) break;
+            }
+            if (placed) break;
+          }
+          if (!placed) {
+            // Reserve real stage space instead of letting successive labels climb
+            // into the title. A routed leader keeps the label attached to its edge.
+            const metrics = text.getBBox();
+            const y =
+              Math.max(...visibleRects.map((r) => r.y + r.h), ...labels.map((r) => r.y + r.h)) + 12;
+            const x = (stage.clientWidth - metrics.width) / 2;
+            const bounds = { x, y, w: metrics.width, h: metrics.height };
+            const extra = y + metrics.height + 8 - stage.clientHeight;
+            stage.style.paddingBottom = `${Number.parseFloat(getComputedStyle(stage).paddingBottom) + Math.max(0, extra)}px`;
+            text.setAttribute('transform', `translate(${x - metrics.x},${y - metrics.y})`);
+            const midpoint = path.getPointAtLength(length / 2);
+            let leader = connectionRoute(
+              bounds,
+              { x: midpoint.x, y: midpoint.y, w: 0, h: 0 },
+              visibleRects,
+            );
+            if (!leader) {
+              // Two simple routes meet in a free gutter when a full-width code
+              // row needs more bends than the main connector router.
+              for (const obstacle of visibleRects) {
+                for (const y of [obstacle.y - 12, obstacle.y + obstacle.h + 12]) {
+                  const via = { x: midpoint.x, y, w: 0, h: 0 };
+                  const first = connectionRoute(bounds, via, visibleRects);
+                  const second = connectionRoute(
+                    via,
+                    { x: midpoint.x, y: midpoint.y, w: 0, h: 0 },
+                    visibleRects,
+                  );
+                  if (first && second) {
+                    leader = `${first} ${second}`;
+                    break;
+                  }
+                }
+                if (leader) break;
+              }
+            }
+            if (leader)
+              overlay.insertBefore(
+                svg('path', { d: leader, 'stroke-dasharray': '3 4', opacity: '0.45' }),
+                text,
+              );
+            labels.push(bounds);
+          }
+        }
+      }
+      overlay.setAttribute('viewBox', `0 0 ${stage.clientWidth} ${stage.clientHeight}`);
+      if (!staticFrame)
+        for (const trace of frame.traces) {
+          const from = rect(trace.from),
+            to = rect(trace.to);
+          const blockers = [...objects.keys()]
+            .filter(
+              (id) =>
+                !id.includes(':') &&
+                id !== trace.from &&
+                id !== trace.to &&
+                frame.objects.get(id)?.visible,
+            )
+            .map(rect);
+          const route = connectionRoute(from, to, blockers);
+          if (!route) continue;
+          const trajectory = svg('path', { d: route });
+          const length = trajectory.getTotalLength();
+          const p = trace.progress;
+          const opacity = Math.min(1, p * 10, (1 - p) * 10);
+          if (trace.effect === 'beam') {
+            const points = Array.from({ length: 16 }, (_, i) =>
+              trajectory.getPointAtLength(
+                length * (Math.max(0, p - 0.18) + ((p - Math.max(0, p - 0.18)) * i) / 15),
+              ),
+            );
+            overlay.append(
+              svg('path', {
+                d: points
+                  .map((point, i) => `${i === 0 ? 'M' : 'L'}${point.x},${point.y}`)
+                  .join(' '),
+                class: 'composition-trace',
+                opacity: String(opacity),
+              }),
+            );
+          }
+          for (let i = 0; i < (trace.effect === 'packet' ? 3 : 1); i++) {
+            const at = p - i * 0.04;
+            if (at < 0) continue;
+            const point = trajectory.getPointAtLength(length * at);
+            overlay.append(
+              svg('circle', {
+                cx: String(point.x),
+                cy: String(point.y),
+                r: String(trace.effect === 'pulse' ? 5 + 3 * Math.sin(Math.PI * p) : 4 - i * 0.6),
+                class: 'composition-trace-dot',
+                opacity: String(opacity * (1 - i * 0.2)),
+              }),
+            );
+          }
+        }
+      for (const previous of stage.querySelectorAll(':scope > .composition-travel'))
+        previous.remove();
+      for (const travel of frame.travels) {
+        const a = rect(travel.from),
+          b = rect(travel.to);
+        const node = document.createElement('div');
+        node.className = 'composition-travel';
+        node.setAttribute('aria-hidden', 'true');
+        node.inert = true;
+        node.append(content(travel.content, `travel-${travel.from}-${travel.to}`));
+        const q = travel.progress;
+        const blockers = [...objects.keys()]
+          .filter(
+            (id) =>
+              id !== travel.from &&
+              id !== travel.to &&
+              id !== travel.from.split(':')[0] &&
+              id !== travel.to.split(':')[0] &&
+              !id.includes(':') &&
+              frame.objects.get(id)?.visible,
+          )
+          .map(rect);
+        const route = connectionRoute(a, b, blockers);
+        const trajectory = svg('path', {
+          d: route
+            ? route.replace(/^M/, `M${a.x + a.w / 2},${a.y + a.h / 2} L`) +
+              ` L${b.x + b.w / 2},${b.y + b.h / 2}`
+            : `M${a.x + a.w / 2},${a.y + a.h / 2} L${b.x + b.w / 2},${b.y + b.h / 2}`,
+        });
+        node.style.width = `${Math.min(280, a.w, b.w)}px`;
+        node.style.opacity = String(Math.sin(Math.PI * q));
+        stage.append(node);
+        const position = trajectory.getPointAtLength(trajectory.getTotalLength() * q);
+        node.style.left = `${position.x - node.offsetWidth / 2}px`;
+        node.style.top = `${position.y - node.offsetHeight / 2}px`;
+      }
+      if (!staticFrame && frame.camera !== undefined) {
+        const b = rect(frame.camera.target),
+          p = frame.camera.progress;
+        const bounds = stage.getBoundingClientRect();
+        const ratio = bounds.width / Math.max(1, stage.clientWidth);
+        const scale =
+          1 +
+          Math.max(
+            0,
+            Math.min(
+              0.08,
+              (innerWidth - 32) / bounds.width - 1,
+              (innerHeight - 32) / bounds.height - 1,
+            ),
+          ) *
+            p;
+        const desiredX =
+          Math.max(
+            -stage.clientWidth * 0.04,
+            Math.min(stage.clientWidth * 0.04, stage.clientWidth / 2 - b.x - b.w / 2),
+          ) * p;
+        const desiredY =
+          Math.max(
+            -stage.clientHeight * 0.04,
+            Math.min(stage.clientHeight * 0.04, stage.clientHeight / 2 - b.y - b.h / 2),
+          ) * p;
+        const extraX = (bounds.width * (scale - 1)) / 2,
+          extraY = (bounds.height * (scale - 1)) / 2;
+        const dx = Math.max(
+          (16 - bounds.left + extraX) / ratio,
+          Math.min((innerWidth - 16 - bounds.right - extraX) / ratio, desiredX),
+        );
+        const dy = Math.max(
+          (16 - bounds.top + extraY) / ratio,
+          Math.min((innerHeight - 16 - bounds.bottom - extraY) / ratio, desiredY),
+        );
+        stage.style.transform = `translate(${dx}px,${dy}px) scale(${scale})`;
+      }
+    };
+    const total = () =>
+      Math.max(
+        0,
+        ...cues.map((c) =>
+          Math.max(resolve(c.at) + c.duration, c.until === undefined ? 0 : resolve(c.until)),
+        ),
+      );
+    const runner = timed((now) => {
+      const t = (now - origin) / 1000;
+      render(t);
+      return !still.matches && t < total();
+    });
+    const visible = whenVisible(scene, () => {
+      origin = clock.mode === 'real' ? clock.now() : 0;
+      runner.start();
+    });
+    const resize = () => render((clock.now() - origin) / 1000);
+    window.addEventListener('resize', resize);
+    const fontsChanged = () => {
+      reservedWidths.clear();
+      for (const record of noteRails.values()) record.width = -1;
+      resize();
+    };
+    document.fonts.addEventListener('loadingdone', fontsChanged);
+    const reduced = () => runner.start();
+    still.addEventListener('change', reduced);
+    printing.addEventListener('change', reduced);
+    render(clock.mode === 'real' ? Number.POSITIVE_INFINITY : 0);
+    return {
+      id: required(scene.dataset.compositionId),
+      cues,
+      bind(next: (anchor: string) => number) {
+        resolve = next;
+        reservedWidths.clear();
+        origin = 0;
+        runner.start();
+      },
+      destroy() {
+        render(Number.POSITIVE_INFINITY);
+        visible();
+        runner.stop();
+        window.removeEventListener('resize', resize);
+        document.fonts.removeEventListener('loadingdone', fontsChanged);
+        still.removeEventListener('change', reduced);
+        printing.removeEventListener('change', reduced);
+        overlay.remove();
+        stage.style.transform = '';
+        for (const cached of retainedBodies.values())
+          for (const entry of cached.values()) {
+            entry.destroy?.();
+            delete entry.destroy;
+          }
+        stage.style.paddingBottom = '';
+        stage.style.columnGap = '';
+        for (const group of stage.querySelectorAll<HTMLElement>('.scene-group-objects'))
+          group.style.columnGap = '';
+        for (const { rail, originals } of noteRails.values()) {
+          rail.replaceChildren(...originals.map((n) => n.cloneNode(true)));
+          rail.style.minHeight = '';
+          rail.style.opacity = '';
+          rail.style.transform = '';
+        }
+        for (const n of objects.values()) {
+          n.style.opacity = '';
+          n.style.transform = '';
+          n.removeAttribute('data-composition-hidden');
+          n.inert = false;
+          n.removeAttribute('aria-hidden');
+          n.removeAttribute('data-composition-focus');
+          n.removeAttribute('data-composition-emphasis');
+          n.style.removeProperty('--composition-focus');
+        }
+      },
+    };
+  });
+  const selectedControllers = (id?: string) => {
+    const selected = id === undefined ? controllers : controllers.filter((c) => c.id === id);
+    if (selected.length === 0) throw new Error(`Unknown report composition: ${id}`);
+    return selected;
+  };
+  const control: ReportCompositionControl = {
+    bind(resolve, id) {
+      for (const controller of selectedControllers(id)) controller.bind(resolve);
+    },
+    anchors: (id) =>
+      selectedControllers(id).flatMap((c) =>
+        c.cues.flatMap((cue) => (cue.until === undefined ? [cue.at] : [cue.at, cue.until])),
+      ),
+  };
+  window.__reportComposition = control;
+  return () => {
+    for (const c of controllers) c.destroy();
+    if (window.__reportComposition === control) delete window.__reportComposition;
+  };
+}
+provideFeature('composition', installComposition);

@@ -4,7 +4,7 @@
 import { ARROW_LEFT_ICON, ARROW_RIGHT_ICON, SCREEN_FULL_ICON, X_ICON } from '../../iconography.js';
 import type { PackageStrings } from '../../localization.js';
 import { createDeckController, type DeckController } from '../deck-controller.js';
-import { type Destroyable, provideFeature } from '../features.js';
+import { contentElements, type Destroyable, provideFeature } from '../features.js';
 import { browserIcon } from '../icon.js';
 import { asUiButton } from '../ui.js';
 
@@ -263,7 +263,7 @@ function installDecks(
   motion: MediaQueryList,
   strings: () => PackageStrings,
 ): Destroyable | undefined {
-  const decks = [...page.querySelectorAll<HTMLElement>('[data-deck]')]
+  const decks = contentElements<HTMLElement>(page, '[data-deck]')
     .map((deck) => installDeck(deck, motion, strings))
     .filter((deck): deck is Destroyable => deck !== undefined);
   if (decks.length === 0) return undefined;

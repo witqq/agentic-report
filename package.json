@@ -1,6 +1,6 @@
 {
   "name": "agentic-report",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "description": "Local declarative page builder for agent-authored interactive HTML artifacts.",
   "type": "module",
   "license": "MIT",
@@ -32,6 +32,10 @@
     "./effect": {
       "types": "./dist/node/effect.d.ts",
       "import": "./dist/node/effect.js"
+    },
+    "./live": {
+      "types": "./dist/node/live.d.ts",
+      "import": "./dist/node/live.js"
     }
   },
   "files": [
@@ -94,6 +98,7 @@
     "shiki": "4.4.3",
     "unified": "11.0.5",
     "unist-util-visit": "5.1.0",
+    "ws": "8.22.0",
     "yaml": "2.9.0",
     "zod": "4.4.3"
   },
@@ -107,6 +112,7 @@
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
+    "@types/ws": "8.18.2",
     "@vitest/coverage-v8": "4.1.11",
     "ajv": "8.20.0",
     "husky": "9.1.7",

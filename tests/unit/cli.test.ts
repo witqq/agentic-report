@@ -304,6 +304,7 @@ describe('CLI transport', () => {
       'snapshot',
       'effect-check',
       'theme',
+      'serve',
     ];
     const indented = ['inspect', 'schema', 'describe'];
 

@@ -162,6 +162,11 @@ export const PAGE_FEATURES = [
   },
   { id: 'process', styles: ['blocks/process.css'] },
   {
+    id: 'composition',
+    script: 'browser/features/composition.ts',
+    styles: ['blocks/composition.css'],
+  },
+  {
     id: 'effects',
     script: 'browser/effects/index.ts',
     scriptAfterRuntime: true,

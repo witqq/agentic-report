@@ -14,8 +14,8 @@ pnpm install
 pnpm build
 ```
 
-The project is a CLI/static compiler and has no development server, localhost port, Docker environment,
-database, or environment file. Build output is written to `dist/node/` (`tsc`) and `dist/browser/`
+The project has a static compiler and an optional local living-document host, with no Docker environment,
+database, or required environment file. Build output is written to `dist/node/` (`tsc`) and `dist/browser/`
 (`scripts/build-browser.ts`: the browser modules and stylesheets pages are bundled from, and the embedded
 fonts); the build removes both directories first (`scripts/clean-build.ts`), so a module deleted from `src/`
 leaves no compiled files behind.
@@ -26,6 +26,7 @@ leaves no compiled files behind.
 node dist/node/cli.js describe --json
 node dist/node/cli.js schema
 node dist/node/cli.js build examples/document --output report.html
+node dist/node/cli.js serve examples/document --agent none --human
 ```
 
 The executable can also be tested as an npm package with `pnpm pack:check`. The run isolates itself: it
@@ -41,7 +42,8 @@ product executable inside the run environment, or a reused cache`, and reverting
 That command verifies the exact tarball inventory and metadata, installs the tarball into a clean consumer,
 and exercises direct `init` → edit → `build` → `file://` first-use journeys in both output formats. Build's
 own invalid-source refusal and output preservation are checked before the corrected artifact is accepted;
-optional validation and inspection are exercised separately. It prints the candidate tarball path, SHA-256,
+optional validation and inspection are exercised separately. It also starts the installed watcher-only
+live host and checks that its reader and contextual bridge can be bundled and served. It prints the candidate tarball path, SHA-256,
 and file count. Do not publish the tarball as part of local verification.
 
 ## Quality commands
@@ -61,8 +63,10 @@ files.
 
 ## Configuration
 
-The product currently requires no environment variables. If runtime environment behavior is added, read
-variables only in `src/config/environment.ts` and expose typed values to the rest of the code.
+The compiler requires no environment variables. Current-session hosting reads author identity and control
+endpoint through `src/config/environment.ts`; explicit standalone hosting inherits the user's environment.
+All environment access remains in that module. See the
+[live operating guide](../skills/agentic-report/references/process.md#live-local-document) for Codex setup.
 
 ## Continuous integration
 

@@ -1484,6 +1484,23 @@ if (
   throw new Error('Installed ESM share-safe directory output retained its source-link path.');
 }
 
+// A successful static build cannot prove that the optional live host can bundle its installed bridge.
+const { stdout: liveConsumerOutput } = await execFileAsync(
+  process.execPath,
+  [
+    '--input-type=module',
+    '-e',
+    "import {serveReport} from 'agentic-report/live'; const live=await serveReport({input:process.argv[1],agent:'none'}); try { const shell=await fetch(live.url); const snapshot=live.snapshot(); const document=await fetch(new URL(snapshot.document.url,live.url)); console.log(JSON.stringify({loopback:new URL(live.url).hostname,mode:snapshot.connection.mode,shell:shell.status,document:document.status,context:(await document.text()).includes('live-bridge.js')})); } finally {await live.close();}",
+    reportPath,
+  ],
+  { cwd: consumerDirectory, env: candidateInstallEnvironment },
+);
+if (
+  liveConsumerOutput.trim() !==
+  JSON.stringify({ loopback: '127.0.0.1', mode: 'none', shell: 200, document: 200, context: true })
+)
+  throw new Error('Installed live host could not serve its reader and contextual bridge.');
+
 // Ловит ESM `buildReport`, который принимает неизвестный формат или, отказывая, создаёт вывод либо
 // трогает соседний каталог `assets`.
 const invalidEsmParent = path.join(consumerDirectory, 'invalid-esm-format');
@@ -1899,7 +1916,13 @@ async function expectedTarballFiles(): Promise<string[]> {
   }
 
   for (const source of await recursiveRelativeFiles(path.resolve('src'))) {
-    if (source.startsWith('browser/') || source.startsWith('fonts/')) continue;
+    // The live bridge is bundled from dist/node and shares this placement helper with the page runtime.
+    // Keep the exception exact: unrelated browser modules must still fail the Node inventory check.
+    if (
+      (source.startsWith('browser/') && source !== 'browser/overlay-position.ts') ||
+      source.startsWith('fonts/')
+    )
+      continue;
     // Данные, которые модуль импортирует (`resolveJsonModule`), `tsc` копирует в `dist/node` как есть:
     // без них установленный пакет не загрузил бы, например, общие палитры тем.
     if (source.endsWith('.json')) {

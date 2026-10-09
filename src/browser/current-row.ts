@@ -6,13 +6,14 @@
  */
 
 import { pageClock } from './clock.js';
+import { contentElements } from './features.js';
 
 export const CURRENT_ROW_SELECTOR =
   '.semantic-card[data-linked-card], .semantic-steps > ol > li, .semantic-timeline > ol > li';
 
 export function installCurrentRows(page: HTMLElement): () => void {
   const noHover = window.matchMedia('(hover: none)');
-  const rows = [...page.querySelectorAll<HTMLElement>(CURRENT_ROW_SELECTOR)];
+  const rows = contentElements<HTMLElement>(page, CURRENT_ROW_SELECTOR);
   if (rows.length === 0) return () => undefined;
   const clock = pageClock();
   const near = new Set<HTMLElement>();

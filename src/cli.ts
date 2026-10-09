@@ -24,6 +24,7 @@ import {
 } from './contracts.js';
 import { inspectReport, validateReport } from './core/analyze-report.js';
 import { buildReport } from './core/compiler.js';
+import { serveReport } from './live/server.js';
 import { inspectReview } from './core/inspect-review.js';
 import { fixReport } from './core/fix-report.js';
 import { generateSitemap } from './core/site-index.js';
@@ -197,6 +198,83 @@ program
       process.exitCode = exitCodeForDiagnostic(diagnostic);
     }
   });
+
+program
+  .command('serve')
+  .description('Serve a local living document with source updates and a Codex conversation.')
+  .argument('[input]', 'Markdown file or source directory', '.')
+  .option(
+    '--port <number>',
+    'Loopback port; zero chooses an available port',
+    (value: string) => {
+      const port = Number(value);
+      if (!/^\d+$/u.test(value) || !Number.isInteger(port) || port < 0 || port > 65535)
+        throw new InvalidArgumentError('Expected a port from 0 to 65535.');
+      return port;
+    },
+    0,
+  )
+  .option(
+    '--agent <agent>',
+    'codex attaches the current session (default); standalone starts another; none watches only',
+    (value: string) => {
+      if (value !== 'codex' && value !== 'standalone' && value !== 'none')
+        throw new InvalidArgumentError('Expected codex, standalone or none.');
+      return value;
+    },
+    'codex',
+  )
+  .option('--codex-command <path>', 'Installed Codex executable; standalone mode only')
+  .option('--codex-socket <path>', 'Existing Codex Unix control socket; current-session mode only')
+  .option('--thread <id>', 'Existing author session ID; defaults to the current Codex environment')
+  .option('--json', 'Accepted; agent NDJSON is the default output')
+  .option('--human', 'Emit prose for a human reader instead of agent NDJSON')
+  .action(
+    async (
+      input: string,
+      options: {
+        port: number;
+        agent: 'codex' | 'standalone' | 'none';
+        codexCommand?: string;
+        codexSocket?: string;
+        thread?: string;
+      },
+    ) => {
+      try {
+        const service = await serveReport({
+          input,
+          port: options.port,
+          agent: options.agent,
+          ...(options.codexCommand ? { codexCommand: options.codexCommand } : {}),
+          ...(options.codexSocket ? { codexSocket: options.codexSocket } : {}),
+          ...(options.thread ? { threadId: options.thread } : {}),
+        });
+        if (outputMode === 'human')
+          process.stdout.write(`Live document at ${service.url}; stop with Ctrl-C\n`);
+        else
+          emitResultRecord(
+            {
+              url: service.url,
+              statePath: sanitizeTransportPath(service.statePath),
+              agent: options.agent,
+            },
+            invocationRunId,
+          );
+        const stop = (): void => {
+          void service.close().catch((cause: unknown) => {
+            emitDiagnostic(toDiagnostic(cause), invocationRunId, outputMode);
+            process.exitCode = 1;
+          });
+        };
+        process.once('SIGINT', stop);
+        process.once('SIGTERM', stop);
+      } catch (cause) {
+        const diagnostic = toDiagnostic(cause);
+        emitDiagnostic(diagnostic, invocationRunId, outputMode);
+        process.exitCode = exitCodeForDiagnostic(diagnostic);
+      }
+    },
+  );
 
 program
   .command('validate')

@@ -196,7 +196,7 @@ Every accepted field; anything else is refused as an unknown field.
 
 ## Directives
 
-71 directives are accepted.
+76 directives are accepted.
 
 ### `action`
 
@@ -347,6 +347,20 @@ Forms: container. Children: markdown.
 | `before`  | text (min 1, max 160) | no       | `Before` |
 | `after`   | text (min 1, max 160) | no       | `After`  |
 
+### `composition`
+
+A directed, responsive explanation made of named objects and timed actions.
+
+Forms: container. Children: markdown.
+
+| Attribute | Values                                                                     | Required | Default        |
+| --------- | -------------------------------------------------------------------------- | -------- | -------------- |
+| `id`      | text (min 1, max 64)                                                       | yes      | —              |
+| `layout`  | `auto`, `row`, `column`, `grid`                                            | no       | `auto`         |
+| `align`   | `start`, `center`, `stretch`                                               | no       | `start`        |
+| `title`   | text (min 1, max 200)                                                      | no       | —              |
+| `kind`    | `diagram-code`, `pipeline`, `before-after`, `overview-detail`, `ownership` | no       | `diagram-code` |
+
 ### `contents`
 
 Generated in-flow links to final primary sections using their exact visible headings.
@@ -383,6 +397,28 @@ Forms: text. Children: label-or-generated-label.
 | Attribute | Values               | Required | Default |
 | --------- | -------------------- | -------- | ------- |
 | `when`    | text (min 1, max 41) | no       | —       |
+
+### `cue`
+
+One declarative action at a time or speech anchor.
+
+Forms: leaf. Children: none. Required parent: `composition`.
+
+| Attribute  | Values                                                                                                | Required | Default |
+| ---------- | ----------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `at`       | text (min 1, max 40)                                                                                  | yes      | —       |
+| `action`   | `reveal`, `focus`, `connect`, `transfer`, `copy`, `replace`, `compare`, `camera`, `trace`, `annotate` | yes      | —       |
+| `target`   | text (min 1, max 160)                                                                                 | yes      | —       |
+| `to`       | text (min 1, max 160)                                                                                 | no       | —       |
+| `slot`     | text (min 1, max 160)                                                                                 | no       | —       |
+| `toSlot`   | text (min 1, max 160)                                                                                 | no       | —       |
+| `value`    | text (min 1, max 160)                                                                                 | no       | —       |
+| `lines`    | text (min 1, max 80)                                                                                  | no       | —       |
+| `emphasis` | `outline`, `halo`, `brackets`, `underline`, `dim`, `none`                                             | no       | —       |
+| `effect`   | `beam`, `pulse`, `packet`                                                                             | no       | —       |
+| `until`    | text (min 1, max 40)                                                                                  | no       | —       |
+| `relation` | `relation`, `call`, `data`, `event`, `dependency`, `ownership`                                        | no       | —       |
+| `duration` | number from 0.1 to 3                                                                                  | no       | `0.6`   |
 
 ### `decision`
 
@@ -717,6 +753,20 @@ Speaker notes of a slide — a presentation section or a deck slide: never shown
 
 Forms: container. Children: markdown. Required parent: `section` or `slide`.
 
+### `object`
+
+Named Markdown object on a composition stage.
+
+Forms: container. Children: markdown. Required parent: `composition` or `scene-group`.
+
+| Attribute   | Values                                         | Required | Default  |
+| ----------- | ---------------------------------------------- | -------- | -------- |
+| `id`        | text (min 1, max 64)                           | yes      | —        |
+| `title`     | text (min 1, max 200)                          | no       | —        |
+| `notes`     | `beside`, `below`                              | no       | —        |
+| `lineStart` | integer from 1                                 | no       | —        |
+| `role`      | `visual`, `code`, `source`, `result`, `detail` | no       | `visual` |
+
 ### `option`
 
 One selectable answer option.
@@ -798,6 +848,19 @@ Forms: container. Children: response-question-directives.
 | `title`   | text (min 1, max 200) | yes      | —       |
 | `id`      | text (min 1, max 64)  | yes      | —       |
 
+### `scene-group`
+
+A meaningful group of scene objects with a responsive package-owned arrangement.
+
+Forms: container. Children: markdown. Required parent: `composition`.
+
+| Attribute | Values                          | Required | Default |
+| --------- | ------------------------------- | -------- | ------- |
+| `id`      | text (min 1, max 64)            | yes      | —       |
+| `title`   | text (min 1, max 200)           | no       | —       |
+| `layout`  | `auto`, `row`, `column`, `grid` | no       | `auto`  |
+| `align`   | `start`, `center`, `stretch`    | no       | `start` |
+
 ### `section`
 
 Labelled top-level page section containing Markdown.
@@ -853,6 +916,17 @@ Forms: container. Children: markdown. Required parent: `deck`.
 | Attribute    | Values                                 | Required | Default |
 | ------------ | -------------------------------------- | -------- | ------- |
 | `transition` | `fade`, `push`, `wipe`, `zoom`, `none` | no       | `fade`  |
+
+### `slot`
+
+Named changing value inside a stable object; content is independent of its owner.
+
+Forms: container. Children: markdown. Required parent: `object`.
+
+| Attribute | Values                | Required | Default |
+| --------- | --------------------- | -------- | ------- |
+| `id`      | text (min 1, max 64)  | yes      | —       |
+| `title`   | text (min 1, max 200) | no       | —       |
 
 ### `source-line`
 
@@ -1103,6 +1177,7 @@ Forms: container. Children: zoom-part-directives. Required parent: `diagram`.
 
 ```json
 {
+  "serve": "Serve a local living document attached to the current Codex session; standalone explicitly starts a separate agent, and none watches manual source edits.",
   "init": "Initialize a packaged declarative starter without overwriting user content.",
   "validate": "Validate a project without writing an output artifact.",
   "inspect": "Inspect source usage and the available authoring catalog without writing output.",

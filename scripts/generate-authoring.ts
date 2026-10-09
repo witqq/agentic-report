@@ -7,6 +7,7 @@ import { format, resolveConfig } from 'prettier';
 
 import { getAuthoringSchema, getSourceContract, listExamples } from '../dist/node/discovery.js';
 import type { SourceContract } from '../dist/node/discovery.js';
+import { renderAtlas } from './render-atlas.ts';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const prettierOptions = (await resolveConfig(path.join(projectRoot, 'package.json'))) ?? {};
@@ -29,6 +30,10 @@ projections.set(
   await formatMarkdown(
     renderSkillCatalog(getSourceContract(), getAuthoringSchema('manifest') as ManifestSchema),
   ),
+);
+projections.set(
+  'skills/agentic-report/references/atlas.md',
+  await formatMarkdown(await renderAtlas(projectRoot)),
 );
 await writeProjections(projections);
 if (check && stale.length > 0) {

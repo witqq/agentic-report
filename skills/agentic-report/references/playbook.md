@@ -14,7 +14,8 @@ point at [`design-rules.md`](design-rules.md).
 - **Form.** A claim, the product shown working, three or four chapters of proof, one call to action.
   `product` shows the thing in use; `portfolio` lets the work speak, with the person second; `showcase`
   is image-first and browsed; `launch` says what ships, when, and what the reader does now.
-- **First screen.** The title and the product side by side: `recipe="demo"` on the first section with a
+- **First screen.** Make the claim, product and action form a clear hierarchy. A side-by-side opening
+  is one useful arrangement; choose scale and placement from the concept, then use `recipe="demo"` on the first section with a
   real screenshot, a clip, code beside its result, or a diagram (`DR-OPENING-MEDIA`). No navigation frame
   above the title (`DR-NAV-ABOVE-TITLE`); `opening: start` when the demo needs the space.
 - **In the tool.** `demo`, `thesis`, `statement`, `evidence`, `rail`, `compare` for before and after,
@@ -37,8 +38,9 @@ point at [`design-rules.md`](design-rules.md).
   subject requires WebGL and the same idea remains clear without it; a product screenshot should stay
   readable. A launch presented live becomes a `presentation` built from the same material.
 - **Typical mistakes.** The starter's order kept (`DR-LANDING-ORDER`); three identical feature cards
-  (`DR-CARD-SAMENESS`); blurred colour behind the hero (`DR-BLOBS`); a claim without a number or a date; a
-  clever title instead of a promise; the same primitive repeated section after section.
+  (`DR-CARD-SAMENESS`); blurred colour substituting for a main visual (`DR-BLOBS`); a claim without a number or a date; a
+  clever title instead of a promise; the same primitive repeated section after section. These are
+  diagnoses of weak use, not bans on a grid, gradient or restrained visual direction.
 - **Examples.** `landing` (product), `terminal-portfolio` (portfolio), `cinematic-story` (showcase),
   `launch-readiness` (launch).
 
@@ -100,10 +102,11 @@ A screenshot in made-up browser chrome or a tilted dashboard is a prop (`art-dir
 Sources: Cursor (the editor at natural size over a painting, larger than the title) and Raycast (the real
 command window at size, one red light through the page), September 2026.
 
-### The final screen is a scene
+### Resolve the page in the final screen
 
-The page ends in a designed scene — the main image resolved, one action inside it — not a framed button or a
-box with two buttons. The main image stays alive without scrolling only as a quiet exception: one continuous
+When a visual metaphor carries the page, resolve it in the final scene with one clear action. A direct
+product page can close with a concise action and the relevant evidence; it need not invent a scene.
+A framed action works when it belongs to the composition rather than repeating a generic closing box. The main image stays alive without scrolling only as a quiet exception: one continuous
 movement per page, calm, with a pause button in the flow and a still version under reduced motion.
 
 WCAG 2.2.2 «Pause, Stop, Hide» sets the limit: anything that starts moving by itself, lasts more than five
@@ -115,10 +118,11 @@ Source: WCAG 2.2, success criterion 2.2.2.
 ### Storyboard a directed page
 
 A page with directed motion carries a storyboard in its brief: for each stretch, the gesture, what is
-revealed, the curve, the scroll length, and what it means. Beside it, a table «section → technique → what it
-proves»: a technique with nothing in the last column comes out.
+revealed, the curve, the scroll length, and its purpose. Beside it, use the existing table as
+«section → technique → purpose»: explanation, attention or atmosphere. Remove a technique with no
+compositional purpose; describe supporting atmosphere honestly rather than claiming it proves a fact.
 
-| Section      | Technique                       | What it proves                                   |
+| Section      | Technique                       | Purpose                                          |
 | ------------ | ------------------------------- | ------------------------------------------------ |
 | First screen | `recipe="demo"` with the output | The product exists and does this                 |
 | The run      | `scene="steps"` over the flow   | The agent was refused, fixed its answer, went on |

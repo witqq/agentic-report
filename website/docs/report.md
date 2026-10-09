@@ -30,9 +30,9 @@ Use Node.js 24.18.0 or newer. Start with the [agent quickstart](agent/index.html
 [direct Markdown version](agent/index.md), or install the [agent skill](../skills/agentic-report/SKILL.md).
 
 ```sh
-npx --yes agentic-report@0.20.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.21.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.20.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.21.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Build validates before publishing; use `validate` or `inspect` only
@@ -42,13 +42,25 @@ when a separate diagnostic or source-inventory result is useful.
 
 ::contents
 
+::::section{title="Discuss a living document locally" id="live-document" nav="Live document"}
+
+The optional `serve` command connects a local document to its existing author Codex session. Select text and choose
+**Ask agent** to write beside the passage, or ask a general chat question. Waiting questions show their
+order and can be cancelled; the chat panel also holds width and visual settings. Replies stream and valid source revisions appear with change
+marks. Human text from that Codex/terminal conversation appears alongside agent replies; correlated
+browser questions appear once. Read the [live operating guide](../skills/agentic-report/references/process.md#live-local-document)
+for pinned-release or source-checkout startup, Codex setup, bounded text history, persistent questions and recovery. This local mode uses the same
+declarative source; ordinary builds remain standalone offline artifacts.
+
+::::
+
 ::::section{title="Build from source" id="source-install" nav="From source" width="standard" align="start" tone="accent" reveal="true"}
 
 If you prefer to inspect the implementation instead of executing the published `agentic-report` npm
 package, clone a specific release tag and run the compiler directly from its build:
 
 ```sh
-git clone --branch v0.20.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.21.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -82,7 +94,7 @@ would rely on an already refused interpretation. Inspect those dependencies with
 `describe` → `authoredRules`.
 
 When a diagnostic contains an exact source-range `fix`, run `agentic-report fix ./my-page`. It is the only
-command that writes authored Markdown and changes only the computed ranges; `validate`, `inspect`, `build`,
+compiler repair command and changes only the computed ranges; `validate`, `inspect`, `build`,
 and `review` remain read-only. Glossary definitions may declare exact inflections with `forms`; the compiler
 does not guess morphology. `init` accepts a symbolic-link parent such as macOS `/tmp`, reports the resolved
 destination, and still refuses every existing destination.
@@ -175,6 +187,14 @@ runtime truth.
 ::::
 
 :::::
+
+::::section{title="Compose a filmed explanation" id="directed-scenes" nav="Directed scenes"}
+
+A `composition` arranges named Markdown objects as a diagram beside code, a pipeline, before/after, an overview with detail, or owners passing a value. Cues reveal, focus, connect, copy, transfer, replace, compare, move the camera, trace a directional pass and annotate code. A compatible Screencast report scene binds them to measured narration. Read the [directing guide](../skills/agentic-report/references/directed-scenes.md) for complete source and existing effects, or open the [first-edit example](../examples/directed-first-edit/index.html), [two color paths](../examples/directed-theme-color/index.html) and [event delivery](../examples/directed-change-event/index.html). The pinned release supports this vocabulary; filming also requires a compatible Screencast bridge. Named slots preserve stable owners, scene groups arrange related objects, and code annotations explain exact operations while keeping their source intact.
+
+Every system interface first appears as its complete application screen, then the reader or viewer moves into a detail. Preserve the detail's location in a still page, presentation or film of any format. The guide provides the recipes.
+
+::::
 
 ::::section{title="Review and return feedback" id="review" nav="Review" width="standard" align="start" tone="accent" reveal="true"}
 

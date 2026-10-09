@@ -225,6 +225,8 @@ export type SchemeChoice = (typeof PAGE_CONTRACT.schemes)[number];
 
 export const REVIEW_TARGET_OWNERSHIP_CONTRACT = {
   parentOwnedDirectives: ['lead', 'series', 'question', 'bucket', 'option', 'item'],
+  scopedDirectiveIds: { object: 'composition', slot: 'object', 'scene-group': 'composition' },
+  dynamicRegionOwners: ['object', 'slot'],
 } as const;
 
 export interface CodeFenceMetadataDefinition {
@@ -598,6 +600,11 @@ export const authoringRegistry = {
   directives: BLOCK_DIRECTIVES,
   capabilities: [
     {
+      id: 'live',
+      description:
+        'Explicit loopback hosting with watched source editions, contextual questions, a visible cancellable waiting queue and reader view controls; discussion streams to the existing author Codex session by default, separate agent mode is explicit and ordinary builds remain offline.',
+    },
+    {
       id: 'init',
       description: 'Initialize a packaged declarative starter without overwriting user content.',
     },
@@ -615,6 +622,11 @@ export const authoringRegistry = {
     },
   ],
   commands: [
+    {
+      id: 'serve',
+      description:
+        'Serve a local living document attached to the current Codex session; standalone explicitly starts a separate agent, and none watches manual source edits.',
+    },
     {
       id: 'init',
       description: 'Initialize a packaged declarative starter without overwriting user content.',
@@ -971,6 +983,72 @@ export const authoringRegistry = {
       description:
         'Bilingual guide that follows a fictional weather-station network through a season, one technique per chapter with its Markdown under the result: data from JSON, tables as cards, full-screen viewer, statuses and returns, zoom, a played scene, a scroll scene, a loupe, a film, a brand theme, a companion page in layout screens and an edition pair built with --since.',
       classes: ['tutorial-with-code-and-bounded-demo', 'capability-tour'],
+      category: 'document',
+      subvariant: 'guide',
+    },
+    {
+      id: 'directed-first-edit',
+      path: 'directed-first-edit',
+      entry: 'report.md',
+      title: 'Directed first-edit',
+      description:
+        'A directed explanation with named objects and speech-ready cues; illustrative values and pseudocode.',
+      classes: ['directed-composition'],
+      category: 'document',
+      subvariant: 'guide',
+    },
+    {
+      id: 'directed-theme-color',
+      path: 'directed-theme-color',
+      entry: 'report.md',
+      title: 'Directed theme-color',
+      description:
+        'A directed explanation with named objects and speech-ready cues; illustrative values and pseudocode.',
+      classes: ['directed-composition'],
+      category: 'document',
+      subvariant: 'guide',
+    },
+    {
+      id: 'directed-change-event',
+      path: 'directed-change-event',
+      entry: 'report.md',
+      title: 'Directed change-event',
+      description:
+        'A directed explanation with named objects and speech-ready cues; illustrative values and pseudocode.',
+      classes: ['directed-composition'],
+      category: 'document',
+      subvariant: 'guide',
+    },
+    {
+      id: 'directed-stable-map',
+      path: 'directed-stable-map',
+      entry: 'report.md',
+      title: 'Stable owners and changing value regions',
+      description:
+        'Grouped independent owners retain their map while named values copy and change; a real address helper is shown beside illustrative data.',
+      classes: ['directed-composition'],
+      category: 'document',
+      subvariant: 'guide',
+    },
+    {
+      id: 'directed-attention',
+      path: 'directed-attention',
+      entry: 'report.md',
+      title: 'Directional attention with readable context',
+      description:
+        'Stable producer, queue and receiver illustrate transient beam/packet passes and additive attention with explicit release.',
+      classes: ['directed-composition'],
+      category: 'document',
+      subvariant: 'guide',
+    },
+    {
+      id: 'directed-code-execution',
+      path: 'directed-code-execution',
+      entry: 'report.md',
+      title: 'Real methods with synchronous presentation notes',
+      description:
+        'Complete real functions, actual returned values, original line locators, timed annotations and an attention handoff to the matching result.',
+      classes: ['directed-composition'],
       category: 'document',
       subvariant: 'guide',
     },

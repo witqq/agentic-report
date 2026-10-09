@@ -15,9 +15,145 @@ file and range, then rerun. Open the result through `file://`. Use `validate` fo
 is needed (several clips, a published site).
 
 Every command answers an agent without a flag and accepts `--json` as the name of that default: the run
-commands `init`, `build`, `validate`, `inspect`, `fix`, `review`, `sitemap`, `snapshot`, `effect-check`, and `theme` write NDJSON
+commands `serve`, `init`, `build`, `validate`, `inspect`, `fix`, `review`, `sitemap`, `snapshot`, `effect-check`, and `theme` write NDJSON
 records, while `schema`, `describe`, and `examples` write one compact JSON document. `--human` selects the
 form for a person. One failed run lists every independent violation it found, so fix them together.
+
+## Live local document
+
+Use `serve` when the reader wants to discuss and revise the original document with the agent that is
+already authoring it. Launch from that Codex session's shell so its identity is available in the environment.
+The pinned release supports this command: `npx --yes agentic-report@0.21.0 serve ../my-page --human`. From a reviewed source checkout, build the package and start the same local reader:
+
+```sh
+pnpm build
+node dist/node/cli.js serve ../my-page --human
+```
+
+Open the printed loopback URL. Select a passage and choose **Ask agent**: a small question form opens beside
+the text. Write there and send with its circular arrow button or Enter. General questions use the chat
+panel's composer. Shift+Enter adds a new line; composing input does not send. Escape or **Close question**
+closes the contextual form and keeps its draft. Answers appear in the main chat with their selected quote;
+an exact quote can be clicked to return to its source block.
+Codex receives the original entry
+and, for a selected passage, its quote, locale, revision and source-target coordinates. These coordinates
+identify source blocks; they are not Markdown character offsets. After the document changes, old subjects
+are labelled exact, changed, missing or ambiguous. Select again if an unsent subject belongs to an old
+revision. An open contextual draft survives a rebuilt document, but sending requires selecting the passage
+again in the current revision. A pending admission follows frame replacement without a second submission;
+its late acknowledgement cannot clear a newer draft. The live discussion controls currently use English;
+document language switching remains available.
+
+The default connects to the existing, loaded, writable Codex conversation; it never starts another agent
+or changes that conversation's configuration. `CODEX_THREAD_ID`, falling back to `CODEX_SESSION_ID`, selects
+the author. `CODEX_APP_SERVER_SOCKET` selects its local Unix control socket; otherwise the socket is
+`app-server-control/app-server-control.sock` under `CODEX_HOME` or `~/.codex`. This requires a Codex client
+that exposes that control endpoint. A session ID alone is insufficient without its reachable endpoint.
+For an ordinary terminal or Node host, provide `--thread <loaded-id>` and, when needed,
+`--codex-socket <absolute-path>`. Missing, mismatched, unloaded or read-only conversations fail explicitly;
+there is no fallback to another agent. The panel says **Current Codex conversation**, with its ID in the
+label's tooltip; the snapshot exposes `connection.mode` and `connection.threadId`.
+
+Questions are saved before sending and processed in arrival order, one reader turn at a time. While the
+author is busy elsewhere in Codex, questions stay queued; the reader does not steer or interrupt that work.
+The **waiting questions** list shows their order and the reason for waiting. Each waiting item has a
+**Cancel waiting question** button: successful cancellation is saved immediately and retained in history
+after reconnect or restart. A question already being answered appears separately and cannot be cancelled
+through this action. If saving fails, the interface explains that the question was not accepted or that
+cancellation failed and the question is still waiting; retry after checking conversation storage.
+Each saved browser question records the agent text from its acknowledged reader turn. In current-session
+mode, the visible chat also mirrors human text sent from the same Codex/terminal conversation and the
+agent's other replies, in message order. A clarification during a reply appears between the surrounding
+agent messages. A correlated browser question appears once with its original short text and selected quote; its
+instruction wrapper is not another visible question. Mirrored history never creates a queued question
+or sends input to Codex again. Chat replies stream as Codex emits text. Codex
+edits the original Markdown and resources; the service watches the source graph, builds complete valid
+revisions and highlights their changes. A failed build leaves the last good document visible with an error.
+Updates preserve reading position, open disclosures, language, theme and scheme, plus the discussion draft
+and focus. File edits are not streamed character by character.
+
+The chat distinguishes user, agent and system messages. Agent replies render Markdown paragraphs, lists,
+emphasis, code and tables; raw HTML stays text, images do not load, and executable link schemes are inert.
+New messages and working status animate unless reduced motion is requested. Streaming follows the end
+while the reader stays there; scrolling into older messages preserves that place and exposes **Latest
+messages** to return.
+
+Current-session history is a bounded recent view. Attachment reads the latest 20 turns and small pages of
+20 items, with at most 80 item pages per synchronization; scanning stops after accumulated item responses
+reach 8,000,000 bytes. Known unchanged turns stay available while the completed turn is refreshed. Only
+user/agent text enters chat: tool output, reasoning, approvals and non-text attachments are omitted.
+The retained projection holds at most 400 messages, 80,000 characters per message and 1,000,000 serialized
+message-array bytes. The panel marks limited history; older or oversized text may be omitted. A history
+read failure leaves known messages visible with a warning, while a broken control connection requires
+restarting against the same author. New browser questions correlate by client identity and exact prompt;
+saved questions without that identity use only a unique exact registered prompt. An ambiguous legacy match
+stays unclaimed instead of hiding another human message. Standalone mode keeps its own browser-question chat.
+
+Open **View settings** in the panel to choose appearance, document theme or change-highlight
+visibility, and use **Reset view** to restore defaults. Live hosting offers theme choices by default when
+the source has a topbar; an explicit authored `themeSwitcher: false` or `topbar: false` keeps one theme.
+A dark-only theme disables appearance choices. Desktop chat width ranges from 320 to 720 pixels, bounded
+by available document space: drag the divider, use the width slider, or focus the divider and press left/right
+arrows (left widens and right narrows by 16 pixels), Home (minimum), or End (maximum). Compact screens show the chat as an overlay. These
+read-side preferences are saved in this browser and survive revision replacement without editing source;
+denied storage leaves the controls usable for the current view.
+
+`serve [input]` accepts `--port <number>` (default `0`, an available port),
+`--agent codex|standalone|none` (default `codex`), `--thread <id>` and `--codex-socket <path>` for the existing
+session. `--agent none` provides watching and document updates without sending questions to an agent.
+`--json` names the default NDJSON startup result; `--human` prints the URL for a person. Stop with Ctrl-C:
+the reader disconnects, but the current author session and any submitted turn continue. Approvals and
+human-input requests remain in the original Codex client; this observer never answers them. A broken
+connection makes the reader's agent unavailable; restore the same session and restart the service.
+
+Use `--agent standalone` only when the user explicitly wants a separate agent. It owns a signed-in
+`codex app-server`, inherits user authentication/security, and accepts `--codex-command <path>` (default
+`codex`) plus optional `--thread` to resume its saved conversation. Its panel says **Separate Codex
+conversation**. This mode declines unsupported human decisions, has no approval interface, and terminates
+its owned process when the reader stops. `--codex-command` is refused in current-session mode and
+`--codex-socket` is refused outside it; neither mode grants extra permissions.
+
+The source-root-local `.agentic-report/live-<entry-hash>/conversation.json` stores the thread and question
+history. The mirrored author transcript is a read-only in-memory projection recovered from Codex at
+attachment; it is not copied into this file. Treat the file as private document data and exclude
+`.agentic-report/` from source control. Reloading
+the browser or restarting the service against the same author restores this history. Destination identity
+is stored before accepting startup questions, even before connection succeeds. Populated history cannot
+silently move to another session: reconnect its existing author or copy the document into a fresh workspace
+without its private state. Queued questions resume; a question that was
+being sent at interruption becomes uncertain and is never automatically replayed. Inspect it before
+submitting a new question. The history accepts at most 200 questions, 8,000 characters per question or
+quote, 80,000 characters per reply and 4,000,000 serialized bytes overall. A request is bounded to 32,000
+bytes. Cancelled questions also count toward these history limits. The private live-state format is
+unreleased; a checkout predating the `cancelled` status cannot read a history containing it. Before
+downgrading, archive the private state and use a separate fresh history rather than rewriting old records.
+The service retains 20 generated editions during a run and clears its old generated editions at
+startup; the conversation persists. An exclusive `owner.lock` prevents two hosts for one entry. After a
+crash, inspect the PID in that lock and verify that its owner stopped before manually removing the lock.
+
+Hosting is a separate ESM subpath; the root compiler API remains offline:
+
+```js
+import { serveReport } from 'agentic-report/live';
+
+const live = await serveReport({ input: './my-page' }); // Current Codex identity from the host environment.
+console.log(live.url);
+// live.statePath identifies private delivery history; snapshot() also includes current conversation text.
+await live.close();
+```
+
+A host outside Codex supplies `threadId` and, if the default endpoint differs, `codexSocket` explicitly.
+`agent: 'standalone'` and `codexCommand` are the separate-agent alternative.
+In current-session mode, `snapshot().conversation` contains ordered `messages` and a `limited` flag.
+Each message has `id`, `turnId`, `role` (`user` or `agent`), `text` and optional `questionId` for a
+correlated browser question. The exported `LiveConversation` and `LiveConversationMessage` types describe
+this projection; question statuses and cancellation remain in `snapshot().questions`.
+
+The service listens only on `127.0.0.1`, serves its generated inventory and rejects foreign-origin
+question and cancellation requests. It is a local single-user reader, not a remote deployment or simultaneous editor.
+Review Workspace and Response Workspace remain separate current-tab controls; their state is not part
+of the durable live conversation and is not restored by live revision replacement. Use ordinary `build`
+to hand over a standalone offline artifact after editing, and use that artifact for printing.
 
 ### Build inside a Node host
 
@@ -41,8 +177,9 @@ option, not a CLI flag or a field to write into Markdown.
   (or declare `url`). Add a local `image` for a link preview. Report `PUBLIC_PAGE_OVER_CRAWLER_LIMIT` or
   `SOCIAL_IMAGE_NOT_PUBLISHED` if the result carries them. Do not invent an address. For a whole published
   tree, `agentic-report sitemap <published-directory>` writes `sitemap.xml` and `robots.txt`.
-- Do not deploy, publish, use credentials, or mutate unrelated files. This skill authorizes local
-  installation, source authoring, validation, inspection, build, snapshots, and artifact review.
+- Do not deploy, publish, collect credentials, or mutate unrelated files. This skill authorizes local
+  installation, source authoring, validation, inspection, build, snapshots, artifact review, and local
+  hosting when the reader asks for a living document. Existing Codex authentication stays with Codex.
 
 ## Start with the brief
 
@@ -97,6 +234,8 @@ For a landing or a showcase, study 5–10 real sites on the same subject and wri
 brief's `references` row, before any concept. On a page where the look decides the result, offer two or
 three concepts and let the person choose; for other pages choose yourself and say so in the brief. How to
 study references, write a concept, and show concepts is in [`art-direction.md`](art-direction.md).
+Name the main visual, hierarchy, scale and rhythm of chapters in the existing art-direction row before
+selecting recipes. The starter is syntax scaffolding; composition determines the component sequence.
 
 ## Collect the material
 
@@ -115,7 +254,7 @@ person an index of variants with the date and reason of each (the recipe is in
 When the person already saw a page and asked questions or left notes, rebuild with the page they saw last:
 
 ```sh
-npx --yes agentic-report@0.20.0 build ./my-page --output ./my-page.html --since ./my-page.html --json
+npx --yes agentic-report@0.21.0 build ./my-page --output ./my-page.html --since ./my-page.html --json
 ```
 
 Every page (except one built with `--url`) carries a record of its edition; `--since` reads it from the
@@ -267,7 +406,9 @@ table in [`art-direction.md`](art-direction.md) (a title with buttons and no pro
 order, decorative surfaces everywhere, every block fading up, competing effects, a wall of identical cards,
 emoji as icons), which rows, and `average: true` from three of them — with the clichés of colour, type and
 texture that only your eye counts, that is the table's four. The design check itself exits 0 with advice; the
-hand-over gate is what fails on it.
+hand-over gate is what fails on it. The field `average` is a structural heuristic, not a quality
+verdict. Inspect the actual composition and purpose of the findings; for a deliberate exception use
+the existing reasoned switch in the brief rather than deleting a useful technique to lower the count.
 
 Act on the advice. When a rule is wrong for this page, switch it off in `brief.md`, never in the source,
 with the reason on the same line:
@@ -384,15 +525,22 @@ the scroll length of a pinned scene or a `zoom` flight; a full-page frame taken 
 still show it blank. Text the reader cannot see, such as the inside of a zoomed node before the camera
 flies in, is not counted as small text.
 
+Measurements establish readability and observable correctness; they do not establish visual quality.
+In the same look, judge coherence and expression separately: can you identify the main visual and the
+order of attention, do scale and chapter rhythm develop the argument, and do colour, type and motion
+belong to one concept? A quiet document can have a strong point of view. Do not add effects merely to
+appear expressive, or remove purposeful ones merely to pass a cliché count. Record concrete visible
+choices in the existing Look evidence; no extra check or artifact is needed.
+
 Open `contact-sheet.png` and each `*-full.png` and look as a stranger would:
 
 - Does the first screen say what the page is about and show it, or could it belong to a different product?
-- Is any half of the first screen empty?
+- Does empty space direct attention or leave the opening without a main visual?
 - Is the main effect noticeable at a normal scrolling speed, and does the main visual asset survive on a
   phone?
 - Does anything overlap, overflow, or read badly at 390 pixels; does the dark scheme hold?
-- How many clichés from [`art-direction.md`](art-direction.md) does it carry, and in what is this page
-  better than the median page on its subject?
+- Which choices from [`art-direction.md`](art-direction.md) serve this subject, and what visible
+  decisions make the page coherent and distinctive compared with its references?
 
 A page with motion is judged in a browser, not from frames: open it and scroll at a normal speed. Before
 each round of fixes, reread [`design-rules.md`](design-rules.md) and [`art-direction.md`](art-direction.md).
@@ -408,7 +556,9 @@ second, give the reviewer the files, the brief with its references, and a fixed 
 frame: what the frame shows, whether each number has its unit, date and source, what overlaps or is cut
 off, and whether this beats the references in the brief. The reviewer returns the findings as text by
 severity — blocking, major, minor — with the checksums of the files read. Besides correctness, the review
-judges the look against the references in the brief. Hand over only when no blocking or major finding is
+judges hierarchy, main visual scale, chapter rhythm and visual coherence against the brief and its
+references, separately from readability and factual correctness. A green gate or a small cliché count
+does not answer that judgement. Hand over only when no blocking or major finding is
 open.
 
 A check proves something only if it tells apart the two states you care about: a check that would stay
@@ -452,7 +602,8 @@ measure run with `--since` the previous edition, and the record names it as `sin
 "<reason>"` skips it, and the reason is written into the checklist and the verdict so the person sees the
 page was not measured.
 
-Hand over only when the gate passes and no blocking or major review finding is open. Check that the brief
+Hand over only when the gate passes, the composition has been judged for coherence and expression,
+and no blocking or major review finding is open. Check that the brief
 describes what was built, then report the source path, artifact path, starter, languages, warnings, the
 advice and prose rules you switched off and why, and unresolved content facts. For a page with Response
 Workspace, tell the user to copy or download `response.json` after completing the page.

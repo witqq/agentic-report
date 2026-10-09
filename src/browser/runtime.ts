@@ -8,15 +8,22 @@ import { packageStrings, type PackageLocale } from '../localization.js';
 import { PAGE_MOTION_POLICY } from '../page-motion.js';
 import type { ReviewArtifact } from '../review/contract.js';
 import { pageClock, progressOverride } from './clock.js';
-import { type Destroyable, feature } from './features.js';
+import {
+  contentElements,
+  type Cleanup,
+  type Destroyable,
+  feature,
+  provideFeature,
+} from './features.js';
 import { hashTarget } from './hash-target.js';
 import type { ResponseWorkspacesController } from './response-workspace.js';
 import type { ReviewWorkspaceController } from './review-workspace.js';
 import { stillMotionQuery } from './motion-level.js';
-import { installPageModules } from './page-modules.js';
+import { installContentModules, installPageModules } from './page-modules.js';
 import { restingTop } from './reading-position.js';
 import { textWithoutEditionLayer } from './edition-text.js';
-import './techniques.js';
+import { installContentTechniques } from './techniques.js';
+import { hydrateSharedImages } from './shared-media.js';
 
 const root = document.documentElement;
 // Часы создаются первыми: всё, что дальше читает время или просит кадр, идёт через них.
@@ -44,18 +51,15 @@ const reducedMotion = stillMotionQuery(window.matchMedia('(prefers-reduced-motio
 const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
 let navigationController: NavigationController | undefined;
 let motionController: MotionController | undefined;
-let galleryController: Destroyable | undefined;
-let diagramFitController: Destroyable | undefined;
-let storyController: Destroyable | undefined;
 let slidesController: Destroyable | undefined;
-let decksController: Destroyable | undefined;
 let pageModules: (() => void) | undefined;
-let responseController: ResponseWorkspacesController | undefined;
+let pageContent: Cleanup | undefined;
 let reviewController: ReviewWorkspaceController | undefined;
-const responseControllers = new Map<PackageLocale, ResponseWorkspacesController>();
+const responseControllers = new WeakMap<HTMLElement, ResponseWorkspacesController>();
+const contentMounts = new WeakMap<HTMLElement, { owners: number; destroy: Cleanup }>();
 const reviewStates = new Map<PackageLocale, ReviewArtifact>();
+provideFeature('content', mountContent);
 activateCurrentPage();
-feature('video')?.autoplay(reducedMotion, strings);
 
 reducedMotion.addEventListener('change', () => motionController?.sync());
 finePointer.addEventListener('change', () => motionController?.sync());
@@ -242,51 +246,6 @@ if (modal !== undefined)
     true,
   );
 
-let sharedImages: Readonly<Record<string, string>> | undefined;
-
-/**
- * Картинка, встреченная в одном файле несколько раз, встроена один раз в общий блок данных; её появления
- * несут только ссылку `data-shared-src` (`src/render/shared-images.ts`). Здесь ссылка становится `src` —
- * при загрузке страницы и в каждой разметке, вставленной позже.
- */
-function hydrateSharedImages(scope: ParentNode): void {
-  const media = scope.querySelectorAll<HTMLElement>(
-    '[data-shared-src], [data-shared-poster], [data-shared-dark-src], [data-shared-dark-poster]',
-  );
-  if (media.length === 0) return;
-  sharedImages ??= JSON.parse(
-    document.getElementById('agentic-shared-images')?.textContent ?? '{}',
-  ) as Record<string, string>;
-  const reload = new Set<HTMLMediaElement>();
-  for (const element of media) {
-    const src = sharedImages[element.dataset.sharedSrc ?? ''];
-    if (src !== undefined) {
-      element.setAttribute('src', src);
-      delete element.dataset.sharedSrc;
-      // Источник ролика выбирается при загрузке: после подстановки ролик выбирает заново.
-      const video = element.closest('video, audio');
-      if (video instanceof HTMLMediaElement && element.tagName === 'SOURCE') reload.add(video);
-    }
-    const poster = sharedImages[element.dataset.sharedPoster ?? ''];
-    if (poster !== undefined) {
-      element.setAttribute('poster', poster);
-      delete element.dataset.sharedPoster;
-    }
-    // Dark variants (`scheme-media.ts`) are shared the same way.
-    const darkSrc = sharedImages[element.dataset.sharedDarkSrc ?? ''];
-    if (darkSrc !== undefined) {
-      element.dataset.darkSrc = darkSrc;
-      delete element.dataset.sharedDarkSrc;
-    }
-    const darkPoster = sharedImages[element.dataset.sharedDarkPoster ?? ''];
-    if (darkPoster !== undefined) {
-      element.dataset.darkPoster = darkPoster;
-      delete element.dataset.sharedDarkPoster;
-    }
-  }
-  for (const video of reload) video.load();
-}
-
 interface LocalizedPageController {
   readonly locale: () => PackageLocale;
   readonly page: () => HTMLElement;
@@ -374,12 +333,9 @@ function switchPageLocale(locale: PackageLocale): void {
   reviewController?.destroy();
   navigationController?.destroy();
   motionController?.destroy();
-  galleryController?.destroy();
-  diagramFitController?.destroy();
-  storyController?.destroy();
   slidesController?.destroy();
-  decksController?.destroy();
   pageModules?.();
+  pageContent?.();
   feature('popover')?.closeAll();
   localizedPage.activate(locale);
   strings = packageStrings(root.dataset.packageLocale);
@@ -392,27 +348,88 @@ function activateCurrentPage(): void {
   strings = packageStrings(page.dataset.pagePackageLocale);
   navigationController = createNavigationController();
   motionController = createMotionController(reducedMotion);
-  galleryController = feature('gallery')?.create(page, currentStrings);
-  diagramFitController = feature('diagramFit')?.(page);
-  storyController = createStoryController(page, reducedMotion);
   slidesController = feature('slides')?.(page, reducedMotion, currentStrings);
-  decksController = feature('decks')?.(page, reducedMotion, currentStrings);
+  pageContent = mountContent(page);
   pageModules = installPageModules(page, reducedMotion, strings);
-  const installResponse = feature('response');
-  if (installResponse !== undefined) {
-    responseController = responseControllers.get(localizedPage.locale());
-    if (responseController === undefined) {
-      responseController = installResponse(page);
-      responseControllers.set(localizedPage.locale(), responseController);
-    }
-  }
   reviewController = feature('review')?.(page, reviewStates.get(localizedPage.locale()));
-  const filter = feature('filter');
-  if (filter !== undefined)
-    for (const input of page.querySelectorAll<HTMLInputElement>('[data-filter-input]'))
-      filter(input, strings);
-  feature('code')?.(page, strings);
-  feature('copyable')?.(page, strings);
+}
+
+/** One mount per actual DOM instance. Nested content owns its controllers and retained native state. */
+function mountContent(scope: HTMLElement): Cleanup {
+  let mounted = contentMounts.get(scope);
+  if (mounted === undefined) {
+    scope.setAttribute('data-content-scope', scope.getAttribute('data-content-scope') ?? '');
+    hydrateSharedImages(scope);
+    const localStrings = packageStrings(
+      scope.closest<HTMLElement>('[data-localized-page-variant]')?.dataset.pagePackageLocale ??
+        scope.dataset.pagePackageLocale,
+    );
+    const cleanups: Cleanup[] = [];
+    const gallery = feature('gallery')?.create(scope, () => localStrings);
+    const diagram = feature('diagramFit')?.(scope);
+    const story = createStoryController(scope, reducedMotion);
+    const decks = feature('decks')?.(scope, reducedMotion, () => localStrings);
+    cleanups.push(
+      () => gallery?.destroy(),
+      () => diagram?.destroy(),
+      () => story.destroy(),
+      () => decks?.destroy(),
+    );
+    cleanups.push(installContentModules(scope, reducedMotion, localStrings));
+    cleanups.push(installContentTechniques(scope));
+    const diagramMotion = feature('diagramMotion')?.(scope);
+    if (diagramMotion) cleanups.push(diagramMotion);
+    const video = feature('video')?.autoplay(scope, reducedMotion, localStrings);
+    if (video) cleanups.push(video);
+    if (!scope.matches('[data-localized-page-variant]')) {
+      const motion = createMotionController(reducedMotion, scope, false);
+      const sync = (): void => motion.sync();
+      reducedMotion.addEventListener('change', sync);
+      finePointer.addEventListener('change', sync);
+      cleanups.push(() => {
+        reducedMotion.removeEventListener('change', sync);
+        finePointer.removeEventListener('change', sync);
+        motion.destroy();
+      });
+    }
+    const installResponse = feature('response');
+    if (installResponse !== undefined) {
+      let response = responseControllers.get(scope);
+      if (response === undefined) {
+        response = installResponse(scope);
+        responseControllers.set(scope, response);
+      }
+      // Form listeners belong only to their DOM mount, with no global subscriptions. Keep the
+      // controller with this actual instance while parked, preserving even invalid native drafts.
+      // The weak cache and local listeners are collected together when the instance is discarded.
+    }
+    const filter = feature('filter');
+    if (filter !== undefined)
+      for (const input of contentElements<HTMLInputElement>(scope, '[data-filter-input]'))
+        filter(input, localStrings);
+    feature('code')?.(scope, localStrings);
+    feature('copyable')?.(scope, localStrings);
+    if (!scope.matches('[data-localized-page-variant]')) {
+      const composition = feature('composition')?.(scope, reducedMotion);
+      if (composition) cleanups.push(composition);
+    }
+    mounted = {
+      owners: 0,
+      destroy: () => {
+        for (const cleanup of cleanups.reverse()) cleanup();
+        contentMounts.delete(scope);
+      },
+    };
+    contentMounts.set(scope, mounted);
+  }
+  mounted.owners++;
+  const lease = mounted;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    if (--lease.owners === 0) lease.destroy();
+  };
 }
 
 /**
@@ -433,7 +450,7 @@ function createStoryController(page: HTMLElement, motion: MediaQueryList): Destr
     cleanups = [];
     const stepScene = feature('stepScene');
     if (stepScene !== undefined)
-      for (const section of page.querySelectorAll<HTMLElement>('[data-scene="steps"]')) {
+      for (const section of contentElements<HTMLElement>(page, '[data-scene="steps"]')) {
         // На слайде нет прокрутки страницы, которую сцена могла бы вести: там такты идут подряд.
         // На узком экране сцена стоит над текущим тактом (SPEC 7.3): медиа перед каждым шагом.
         cleanups.push(
@@ -448,12 +465,12 @@ function createStoryController(page: HTMLElement, motion: MediaQueryList): Destr
         );
       }
     if (motion.matches) return;
-    for (const section of page.querySelectorAll<HTMLElement>('[data-transition="lines"]')) {
+    for (const section of contentElements<HTMLElement>(page, '[data-transition="lines"]')) {
       cleanups.push(installTitleLines(section));
     }
     const count = feature('count');
     if (count !== undefined)
-      for (const element of page.querySelectorAll<HTMLElement>('.semantic-count')) {
+      for (const element of contentElements<HTMLElement>(page, '.semantic-count')) {
         cleanups.push(count(element));
       }
   };
@@ -881,22 +898,26 @@ interface MotionController {
   readonly destroy: () => void;
 }
 
-function createMotionController(media: MediaQueryList): MotionController {
+function createMotionController(
+  media: MediaQueryList,
+  scope: HTMLElement = localizedPage.page(),
+  pageProgress = true,
+): MotionController {
   let cleanups: Array<() => void> = [];
   const revealed = new WeakSet<HTMLElement>();
 
   const sync = (): void => {
     for (const cleanup of cleanups) cleanup();
     cleanups = [];
-    const targets = [
-      ...document.querySelectorAll<HTMLElement>(
-        '[data-semantic="section"][data-reveal="true"], [data-semantic="section"][data-transition="reveal"], [data-semantic="section"][data-transition="stagger"], [data-semantic="section"][data-transition="clip"]',
-      ),
-    ];
+    const targets = contentElements<HTMLElement>(
+      scope,
+      '[data-semantic="section"][data-reveal="true"], [data-semantic="section"][data-transition="reveal"], [data-semantic="section"][data-transition="stagger"], [data-semantic="section"][data-transition="clip"]',
+    );
     const reducePageProgress = media.matches && PAGE_MOTION_POLICY.progress.pageNormalMotionOnly;
     const reduceReveal = media.matches && PAGE_MOTION_POLICY.sectionReveal.normalMotionOnly;
-    const progress =
-      root.dataset.progress === 'chapters' || root.dataset.progress === 'nodes'
+    const progress = !pageProgress
+      ? undefined
+      : root.dataset.progress === 'chapters' || root.dataset.progress === 'nodes'
         ? installChapterProgress()
         : root.dataset.progress === 'page' && !reducePageProgress
           ? installScrollProgress()
@@ -913,11 +934,11 @@ function createMotionController(media: MediaQueryList): MotionController {
       const cleanup = installSectionReveal(targets, revealed);
       if (cleanup) cleanups.push(cleanup);
     }
-    cleanups.push(installActionPlacement());
+    cleanups.push(installActionPlacement(scope));
     const allowScenes = !media.matches || !PAGE_MOTION_POLICY.scene.normalMotionOnly;
     const allowChoreography = !media.matches || !PAGE_MOTION_POLICY.choreography.normalMotionOnly;
     if (allowScenes || allowChoreography) {
-      const sceneCleanup = installSceneAndChoreography({
+      const sceneCleanup = installSceneAndChoreography(scope, {
         scenes: allowScenes,
         choreography: allowChoreography,
       });
@@ -927,7 +948,7 @@ function createMotionController(media: MediaQueryList): MotionController {
       (!media.matches || !PAGE_MOTION_POLICY.pointer.normalMotionOnly) &&
       (finePointer.matches || !PAGE_MOTION_POLICY.pointer.finePointerOnly);
     if (allowPointerMotion) {
-      const pointerCleanup = installPointerEffects();
+      const pointerCleanup = installPointerEffects(scope);
       if (pointerCleanup) cleanups.push(pointerCleanup);
     }
   };
@@ -942,9 +963,9 @@ function createMotionController(media: MediaQueryList): MotionController {
   };
 }
 
-function installActionPlacement(): () => void {
+function installActionPlacement(scope: HTMLElement): () => void {
   const mobile = window.matchMedia('(max-width: 56.99rem)');
-  const groups = [...document.querySelectorAll<HTMLElement>('[data-semantic="actions"]')];
+  const groups = contentElements<HTMLElement>(scope, '[data-semantic="actions"]');
   const apply = (): void => {
     for (const group of groups) {
       const authored = group.dataset.placement ?? 'auto';
@@ -960,16 +981,19 @@ function installActionPlacement(): () => void {
   };
 }
 
-function installSceneAndChoreography(capabilities: {
-  readonly scenes: boolean;
-  readonly choreography: boolean;
-}): (() => void) | undefined {
+function installSceneAndChoreography(
+  scope: HTMLElement,
+  capabilities: {
+    readonly scenes: boolean;
+    readonly choreography: boolean;
+  },
+): (() => void) | undefined {
   if (!supportsIntersectionObserver()) return undefined;
   const scenes = capabilities.scenes
-    ? [...document.querySelectorAll<HTMLElement>('[data-scene]:not([data-scene="none"])')]
+    ? contentElements<HTMLElement>(scope, '[data-scene]:not([data-scene="none"])')
     : [];
   const choreographed = capabilities.choreography
-    ? [...document.querySelectorAll<HTMLElement>('[data-choreography="cascade"]')]
+    ? contentElements<HTMLElement>(scope, '[data-choreography="cascade"]')
     : [];
   if (scenes.length === 0 && choreographed.length === 0) return undefined;
   const abort = new AbortController();
@@ -1053,13 +1077,12 @@ function installSceneAndChoreography(capabilities: {
   };
 }
 
-function installPointerEffects(): (() => void) | undefined {
+function installPointerEffects(scope: HTMLElement): (() => void) | undefined {
   if (!supportsIntersectionObserver()) return undefined;
-  const owners = [
-    ...document.querySelectorAll<HTMLElement>(
-      '[data-interaction="depth"], [data-interaction="tilt"], .semantic-action[data-effect="magnetic"]',
-    ),
-  ];
+  const owners = contentElements<HTMLElement>(
+    scope,
+    '[data-interaction="depth"], [data-interaction="tilt"], .semantic-action[data-effect="magnetic"]',
+  );
   if (owners.length === 0) return undefined;
   const abort = new AbortController();
   const active = new Set<HTMLElement>();

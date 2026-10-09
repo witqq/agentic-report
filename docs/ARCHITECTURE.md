@@ -7,8 +7,49 @@ verification.
 ## System boundary
 
 `agentic-report` is a local offline compiler distributed as one npm package. It accepts a Markdown
-entry or source directory and writes a static artifact. It does not host files, listen on a port, fetch
-remote resources, deploy output, or publish itself.
+entry or source directory and writes a static artifact. The compiler does not fetch remote resources,
+deploy output, or publish itself. Explicit `serve` hosting is a separate local lifecycle described below.
+
+### Local living document host
+
+`src/live/server.ts` owns loopback HTTP, same-origin question admission and cancellation, SSE snapshots and reply deltas,
+source-graph watches and serialized rebuilds. It prepares directory editions with the existing compiler,
+retains the last valid revision on failure, and confines HTTP reads to each generated file inventory.
+`src/live/browser.ts` owns the discussion shell and swaps document frames after the new frame restores its
+reading state. `src/live/bridge.ts` transfers selection subjects, reading anchors and theme tokens between
+the generated frame and its owning shell without adding network access to the static document runtime.
+The bridge uses the shared overlay placement helper for a viewport-contained contextual question form;
+correlated admissions rejoin a replaced frame without resubmitting or clearing a newer draft. The shell
+keeps message nodes stable, uses `src/live/message.ts` for safe DOM Markdown, and preserves older-history
+reading while following streams at the end. `src/live/view.ts` defines the shared theme-token/settings
+contract; panel preferences and width use optional browser storage and change read-side attributes only.
+Live preparation supplies author-overridable theme choices when a topbar is available, without altering
+the offline compiler defaults. Live chrome styles reside in `src/live/shell-style.ts` and respect reduced motion.
+
+`src/live/agent.ts` is the hosting transport boundary. The default `src/live/session.ts` connects through
+`ws` to the existing author's Unix control socket, checks exact loaded/writable identity and rejoins for
+notifications without configuration overrides. It observes external activity, waits for idle before a
+reader turn and buffers bounded pre-ack events for the acknowledged reader answer. It also observes
+same-thread user/agent text through a separate ordered projection in `src/live/conversation.ts`.
+Summary turns and small item pages hydrate bounded recent history without whole tool-heavy turn bodies;
+completion refreshes the affected turn and retains known intermediate messages in unchanged turns.
+Stable item/turn identities reconcile events, history and newer streaming text. The host correlates
+browser client identity plus exact prompt, with conservative unique-prompt compatibility for saved legacy
+questions, so mirrored history cannot become another delivery. Incremental message events update known
+text; snapshots replace ordering or retention state. The transcript stays in memory and is recovered from
+Codex on attachment, independently of durable question records. It never answers
+original-client approvals or owns the agent process. Explicit standalone mode uses `src/live/codex.ts`,
+which owns a stdio JSONL app-server and declines unsupported requests. `src/live/state.ts` atomically
+persists validated browser delivery state from `src/live/contract.ts`; the server durably queues questions and
+sends one turn at a time. Cancellation and delivery claim share admission order and persist candidate
+state before memory effects; only queued work can become terminal `cancelled`, and a cancelled waiter
+cannot later start a turn. Save failures return safe action-specific feedback. Current-session destination intent is persisted before startup admission;
+populated conversation state cannot be reassigned to another thread. Interrupted sending state becomes
+uncertain rather than replayed. An exclusive
+entry lock prevents duplicate hosts. The public lifecycle is `serveReport()` from `agentic-report/live`,
+with `url`, `statePath`, `snapshot()` and asynchronous `close()`; it is absent from the root compiler API.
+The [operating guide](../skills/agentic-report/references/process.md#live-local-document) owns the options,
+storage limits, restart behavior and reader limitations. Hosting introduces no authored source syntax.
 
 Outside the product, and therefore not a source of tasks, budgets or release gates: PDF output, pagination
 and print-profile checks (print styles still show all content, one slide per sheet, and a static equivalent
@@ -307,7 +348,7 @@ Markdown + metadata + local assets + partials + semantic directives
 
 ## Public contracts
 
-The npm package exposes one `agentic-report` executable and one ESM root export. CLI discovery is
+The npm package exposes one `agentic-report` executable, one offline ESM root export, and separate `agentic-report/effect` and `agentic-report/live` subpaths. CLI discovery is
 available through `describe`/`discover`, scoped `schema`, and `examples`. `fix` and its ESM equivalent
 `fixReport()` apply the replacements diagnostics carry in their `fix` field — a file, a range in the
 authored text and the replacement — and write nothing else; a diagnostic carries that field only where
@@ -833,6 +874,12 @@ hidden pending content; coarse pointers receive no pointer effects. An absent or
 `IntersectionObserver` leaves sections visible while navigation retains hash, activation-line, equal-top,
 resize, short-final and document-bottom ownership through bounded terminal geometry selection.
 
+## Directed composition scenes
+
+`src/blocks/composition.ts` declares composition, object, scene-group, slot and cue as one block family, validates local references and action-specific fields, and prepares static final content plus inert original templates. `src/composition.ts` owns the five composition identities, ten actions, speech-anchor syntax and pure frame reconstruction. Copy and transfer commit on arrival, transfer empties its source, and replacing a value never rewrites its owner's title. Named slots retain stable owner definitions; scene groups express containment with independent responsive arrangements. Object review identities are scoped through the registry ownership contract before HAST enhancement.
+
+The `composition` page feature bundles `src/browser/features/composition.ts` and `src/blocks/composition.css` only where used. The controller reads the existing page clock, reconstructs values on seeks, reuses original fragments, draws typed connections between object boundaries and moves transfer ghosts and transient traces along their routes. Additive attention keeps context readable; explicit dimming remains an authored choice. Code annotations occupy a separate responsive presentation region with source-line locators, without changing the code or its copy control. Camera transforms are bounded by the actual visible stage. Static/reduced-motion/print show final values and every authored annotation without moving overlays. The runtime exposes `window.__reportComposition.anchors(id?)` and `bind(resolve, id?)`; a compatible Screencast composition bridge supplies measured stage-local speech-anchor resolution without an authored script or a second clock. The directive schema/catalog and packaged examples are generated from this same block registry.
+
 ## Page assets
 
 A page receives only the scripts and styles it needs. `pnpm build` does not ship one runtime and one
@@ -1238,10 +1285,14 @@ custom properties on the island root and exposes `window.agenticReportIsland.on(
 directives. The page vocabulary adds them to those directives only when the page declares the effect, so
 elsewhere they are unknown attributes; the value reaches the element as `data-effect-<name>-<attribute>`,
 and the sanitizer allows exactly those properties. `targets.ts` counts the directives that accepted a
-target and the elements that still carry it in the final HTML. An effect with at least one host is bundled
+target and the compiled elements that carry it, including retained original composition fragments in
+inert templates. A target needed by an earlier or future scene state counts even when the final visible
+value has replaced that host. An effect with at least one such compiled host is bundled
 by `bundleEffect` (`src/extensions/effect-bundle.ts`) and placed after the page script, which carries the effect engine
 (the page feature `effects`): inline with its hash in the page policy in single-file output, as
-`assets/effect-<name>.<hash>.js` in directory output. A declared effect without hosts is not bundled.
+`assets/effect-<name>.<hash>.js` in directory output. A declared effect without any compiled hosts is not
+bundled. Retained fragments use this same bundle and CSP mechanism; their declarative Markdown never
+evaluates author code.
 
 **Build report.** `build` returns `extensions` for a page that declares them: per extension its `kind`,
 `uses` (across language variants; for an effect, the elements carrying it), `bytes` of the bundled effect
@@ -1251,7 +1302,7 @@ the declared extensions with their manifest, attributes or targets and uses.
 ### Level 2 — effects and the effect engine
 
 **Authoring entry.** An effect module imports `defineEffect` and the types of its context from the
-package subpath `agentic-report/effect` (`src/effect.ts`, the only export besides the root) and exports
+package subpath `agentic-report/effect` (`src/effect.ts`, separate from the root compiler and live host) and exports
 `defineEffect({ mount(ctx) { … return { at(t, progress), rebuild?(), unmount?() } }, continuous?, ownsScroll? })`
 by default. `defineEffect` returns its argument; the types are the contract.
 

@@ -57,10 +57,26 @@ const REVIEW_TARGET_ALGORITHM_VERSION = 3;
 
 export const remarkReviewTargets: Plugin<[ReviewTargetPluginOptions], Root> =
   (options) => (tree) => {
+    const parents = new WeakMap<object, PositionedNode>();
     const occurrences = new Map<string, number>();
     const stableKeys = new Set<string>();
     visit(tree, (candidate, _index, parent) => {
       const node = candidate as unknown as PositionedNode;
+      if (parent !== undefined) parents.set(node, parent as unknown as PositionedNode);
+      // Moving/replaced descendants have one persistent review owner: their region.
+      // Slots remain independent owners inside a stable object.
+      if (node.name !== 'slot') {
+        let ancestor = parent as unknown as PositionedNode | undefined;
+        while (ancestor !== undefined) {
+          if (
+            REVIEW_TARGET_OWNERSHIP_CONTRACT.dynamicRegionOwners.some(
+              (name) => name === ancestor?.name,
+            )
+          )
+            return;
+          ancestor = parents.get(ancestor);
+        }
+      }
       const kind = reviewableKind(node);
       if (kind === 'markdown:paragraph' && parent?.type === 'listItem') return;
       // Картинки сравнения пакет переносит в свою сцену, а абзац, в котором их написал автор, исчезает:
@@ -88,7 +104,11 @@ export const remarkReviewTargets: Plugin<[ReviewTargetPluginOptions], Root> =
       const sourceStart = segment.sourceStart + (start - segment.generatedStart);
       const sourceEnd = segment.sourceStart + (end - segment.generatedStart);
       const fingerprint = sha256(segment.sourceText.slice(sourceStart, sourceEnd));
-      const explicitId = directiveExplicitId(node);
+      const explicitId = directiveExplicitId(
+        node,
+        parent as unknown as PositionedNode | undefined,
+        parents,
+      );
       const stableKey = explicitId === undefined ? undefined : `${kind}:${explicitId}`;
       if (stableKey !== undefined && stableKeys.has(stableKey)) {
         throw reviewTargetError(
@@ -142,12 +162,26 @@ export const rehypeReviewTargets: Plugin<[ReviewTargetPluginOptions], HastRoot> 
     const targetsByRange = new Map(
       options.targets.map((target) => [sourceRangeKey(target.source), target]),
     );
-    visit(tree, 'element', (node: Element) => {
+    const dynamicOwned = new WeakSet<object>();
+    visit(tree, (candidate, _index, parent) => {
+      if (
+        parent !== undefined &&
+        (dynamicOwned.has(parent) ||
+          (parent.type === 'element' &&
+            REVIEW_TARGET_OWNERSHIP_CONTRACT.dynamicRegionOwners.some(
+              (name) => name === (parent as Element).properties.dataSemantic,
+            )))
+      )
+        dynamicOwned.add(candidate);
+      if (candidate.type !== 'element') return;
+      const node = candidate as Element;
       const existing = node.properties.dataReviewTarget;
       if (typeof existing === 'string') {
         projected.add(existing);
+        if (node.tagName === 'pre' && !dynamicOwned.has(node)) codeIndex += 1;
         return;
       }
+      if (dynamicOwned.has(node)) return;
       if (node.tagName === 'pre') {
         const target = codeTargets[codeIndex];
         codeIndex += 1;
@@ -275,9 +309,31 @@ function reviewableElementKind(node: Element): string | undefined {
   )[node.tagName];
 }
 
-function directiveExplicitId(node: PositionedNode): string | undefined {
+function directiveExplicitId(
+  node: PositionedNode,
+  parent: PositionedNode | undefined,
+  parents: WeakMap<object, PositionedNode>,
+): string | undefined {
+  const scopes: Readonly<Record<string, string>> =
+    REVIEW_TARGET_OWNERSHIP_CONTRACT.scopedDirectiveIds;
+  const owner = node.name === undefined ? undefined : scopes[node.name];
   const value = node.type === 'containerDirective' ? node.attributes?.id : undefined;
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+  if (typeof value !== 'string' || value.trim().length === 0) return undefined;
+  let ancestor = owner === undefined ? undefined : parent;
+  while (owner !== undefined && ancestor !== undefined && ancestor.name !== owner)
+    ancestor = parents.get(ancestor);
+  const scope =
+    ancestor === undefined
+      ? undefined
+      : directiveExplicitId(ancestor, parents.get(ancestor), parents);
+  // Scoped identities must satisfy the same bounded identifier contract as ordinary targets.
+  // JSON frames the pair without delimiter ambiguity; full SHA-256 keeps every scope depth bounded.
+  // The 71-character namespace cannot equal a literal authored id (maximum 64 characters).
+  return typeof scope === 'string'
+    ? `scoped-${createHash('sha256')
+        .update(JSON.stringify([scope, value.trim()]))
+        .digest('hex')}`
+    : value.trim();
 }
 
 function sourceSegment(

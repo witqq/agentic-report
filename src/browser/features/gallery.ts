@@ -5,13 +5,13 @@
  */
 
 import type { PackageStrings } from '../../localization.js';
-import { type Destroyable, provideFeature } from '../features.js';
+import { contentElements, type Destroyable, provideFeature } from '../features.js';
 
 function createGalleryController(
   page: HTMLElement,
   strings: () => PackageStrings,
 ): Destroyable | undefined {
-  const rails = [...page.querySelectorAll<HTMLElement>('[data-gallery-rail]')];
+  const rails = contentElements<HTMLElement>(page, '[data-gallery-rail]');
   if (rails.length === 0) return undefined;
   let active = true;
   const sync = (): void => {

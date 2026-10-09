@@ -349,6 +349,9 @@ command; only the test runs of it moved.
   single-file bytes and directory trees across independent CLI processes.
   The accepted record is written beside the unique candidate and to the stable ignored
   `test-results/package/candidate-evidence.json` handoff used by the release runbook.
+  The installed watcher-only live host additionally bundles and serves its reader/document, detecting a
+  missing live subpath or contextual bridge dependency that static builds do not exercise. Its exact Node
+  inventory includes the shared overlay placement helper and still rejects unrelated browser output.
 
 The E2E setup also stages the same-origin public tree and builds directory-format documentation fixtures.
 Starter and non-starter artifact preparation derives from the example registry, so newly registered pages
@@ -361,7 +364,7 @@ assert code/content containment, exercise responsive navigation, and capture des
 states in both formats. Screenshots supplement behavioral and byte assertions; they are never the only
 evidence.
 
-Tests do not need a URL, port, service, credential, database, or external API. Test workspaces and failure
+Static browser tests open generated artifacts through `file://`. Live unit fixtures and the installed live consumer start temporary loopback HTTP listeners and Unix WebSocket peers, with operating-system-assigned ports and fixture-owned sockets. They need no deployed service, credential, database, real model request or external API. Test workspaces and failure
 artifacts live under ignored `test-results/`.
 
 The deployment cache configuration has a unit contract check and a real-image acceptance check. Mutable
@@ -436,6 +439,46 @@ names); builds outside a measured phase appear in `unassignedBuilds`. The record
 stage names are in the
 [extensions reference](../skills/agentic-report/references/extensions.md#build-timings); besides those
 validated names the file uses fixed labels, flags and numbers, with no authored text or paths.
+
+## Local living document coverage
+
+`tests/unit/live-server.test.ts` exercises the real loopback service and an executable JSONL Codex peer:
+source updates, failed builds, newly created partials, FIFO persistence and resume, interrupted sending
+without replay, selected subjects, streamed answers, unsupported approval refusal, idle child exit,
+duplicate entry ownership and foreign-origin/body/path boundaries. Run it through
+`pnpm test:unit -- --testNamePattern='living document'`; all files remain collected for the inventory
+guard while unrelated tests are skipped.
+
+`tests/unit/live-session.test.ts` adds a real Unix WebSocket control fixture for the current author:
+exact loaded identity, queued questions while outside work is active, FIFO reader turns, own pre-ack event
+filtering, original approval ownership, shared-server survival after reader close, missing/mismatched/
+unloaded/read-only refusals, startup queue recovery and uncertain delivery without replay. The source suite
+also distinguishes live markup outside an embedded island document from corrupting its attribute, and
+default live theme choices from explicit single-theme and topbar-free authored constraints. Native
+cancellation coverage holds delivery readiness open, cancels waiting work, observes only remaining FIFO
+answers and retains terminal cancellation across restart. Active cancellation, repeated/missing/foreign
+requests and real persistence refusal distinguish safe feedback from false acceptance or cancellation.
+
+The same Unix fixture distinguishes terminal input during an acknowledged active reader turn, later
+streaming/final agent text, stable history/event identities, exact browser correlation, legacy prompt
+compatibility and restart without replay. Small item pages recover intervening messages from tool-heavy
+turns, and malformed history produces a recoverable warning while delivery remains available.
+`tests/unit/live-conversation.test.ts` protects authoritative ordering, newer-event precedence over a stale
+read, final-text precedence over late deltas, omitted tool/reasoning/asset fields and retained count/text/byte
+bounds. Run these cases through
+`pnpm test:unit -- --testNamePattern='live conversation projection|current Codex living document'`.
+
+`pnpm test:e2e --file tests/e2e/live-document.spec.ts` opens generated document frames and the reader shell
+through `file://`, using a mocked transport. It distinguishes direct contextual subjects and streamed replies,
+Enter/Shift+Enter/composition and native keyboard Close, current-conversation identity, stale drafts/focus and
+pending admission rejoin after frame replacement, readable safe Markdown and stable message identity,
+terminal user messages between agent replies, singular correlated browser questions, limited-history
+disclosure and incremental-message scrolling without losing focus or a draft,
+ordered waiting cancellation, synchronized theme/appearance/change controls and bounded keyboard width,
+dark-only theme availability, reading-position preservation, rapid stream following versus intentional
+scroll-up, visible change marks, compact containment and reduced motion including status pseudo-elements.
+Its captures supplement behavioral assertions; this browser
+suite does not make a real model request.
 
 ## Writing tests
 

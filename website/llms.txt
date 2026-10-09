@@ -1,5 +1,13 @@
 # agentic-report
 
+Local living documents: `serve` hosts a loopback reader attached to its existing author Codex session;
+`--agent standalone` explicitly starts a separate agent. Sources update as the author edits them.
+Questions open beside selected passages; formatted replies, ordered cancellable waiting questions and
+reader width/theme/change controls share the chat panel.
+The same-author terminal messages and agent replies appear in a bounded ordered text history; correlated
+browser questions appear once and mirrored input is never sent again.
+Setup, flags, persistence and recovery: [Live operating guide](skills/agentic-report/references/process.md#live-local-document).
+
 > Local declarative compiler for polished interactive HTML pages authored by agents.
 
 Install the ready-made agent skill with:
@@ -34,6 +42,7 @@ locale. Single-language review export is version 3; multilingual export is versi
 - Declarative source contract: docs/product/source-contract.md
 - Agent skill: skills/agentic-report/SKILL.md
 - Generated authoring catalog: skills/agentic-report/references/catalog.md
+- Directed compositions, speech timing and whole-interface orientation: skills/agentic-report/references/directed-scenes.md
 - Extending the vocabulary: skills/agentic-report/references/extensions.md
 - Reference extensions: extensions/key-figure/README.md, extensions/product-theatre/README.md,
   extensions/loom/README.md,
@@ -51,8 +60,8 @@ locale. Single-language review export is version 3; multilingual export is versi
 
 Requires Node.js 24.18.0 or newer. The first npx run requires npm registry access. Start with:
 
-    npx --yes agentic-report@0.20.0 init ./my-page --starter landing --json
-    npx --yes agentic-report@0.20.0 build ./my-page --output ./my-page.html --json
+    npx --yes agentic-report@0.21.0 init ./my-page --starter landing --json
+    npx --yes agentic-report@0.21.0 build ./my-page --output ./my-page.html --json
 
 Edit `my-page/report.md` between the two commands and open `my-page.html` through `file://`. Build validates
 the complete source before publishing. Use `validate` for separate diagnostics, `inspect` for source/catalog

@@ -11,7 +11,8 @@ Choose a notebook or live application for computation and per-user state, a docu
 a maintained multi-page site, a hosted document for simultaneous collaboration, or a bespoke web project
 when arbitrary layout control is the primary job.
 
-It is a local compiler, not a hosted or cloud service, and it does not start a server.
+Ordinary builds are local and offline. The optional `serve` command opens a living document on loopback
+with Codex discussion and source updates; it does not deploy a cloud service.
 
 ## Build your first page
 
@@ -19,9 +20,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the resulting file:
 
 ```sh
-npx --yes agentic-report@0.20.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.21.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.20.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.21.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. `build` validates the complete source before publishing the
@@ -61,7 +62,7 @@ If you do not want to execute the published `agentic-report` npm package, clone 
 inspect the repository, run its checks, and invoke the compiled CLI directly:
 
 ```sh
-git clone --branch v0.20.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.21.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -84,6 +85,41 @@ review. It does not eliminate registry trust: `pnpm install` still downloads the
 in `pnpm-lock.yaml`. The project does not vendor those dependencies. Inspect the lockfile and lifecycle
 scripts before installation, use an isolated environment when appropriate, and keep the release tag pinned
 for reproducibility.
+
+## Discover staging and tools
+
+The skill's [knowledge map](skills/agentic-report/references/knowledge.md), [directing guide](skills/agentic-report/references/directing.md) and [combinations](skills/agentic-report/references/combinations.md) connect the material and viewer's task to development, staging and coordinated actions. The [generated atlas](skills/agentic-report/references/atlas.md) covers the complete directive vocabulary, native examples and reference extensions. Existing research and craft references remain available through the map.
+
+From a compiled checkout or installed package, render the native gallery:
+
+```sh
+node skills/agentic-report/scripts/build-atlas.mjs --out ./report-atlas
+```
+
+Open `report-atlas/index.html` to compare actual pages. A separately installed skill uses the nearest consumer-installed compiler, or the release pinned in its SKILL.md through npx; `--cli <compiler command>` selects a reviewed checkout explicitly. The gallery is for discovery; it adds no page or film handoff gate.
+
+## Directed explanations for a film
+
+A `composition` arranges named Markdown objects as `diagram-code`, `pipeline`, `before-after`, `overview-detail` or `ownership`. Its cues reveal and focus objects, draw connections, copy or transfer values, replace text, compare results and move the camera. Agentic Screencast report scenes bind those cues to measured speech paragraphs; standalone pages use preview beats and keep final values in static or reduced-motion views. Read the [directing guide](skills/agentic-report/references/directed-scenes.md) for syntax, existing effects and the three complete examples. The pinned release supports this vocabulary; filming also requires a compatible Screencast composition bridge.
+
+Stable objects can contain named `slot` regions for changing values. `scene-group` keeps related objects together, and `layout="row|column|grid"` chooses their spatial arrangement independently of the composition meaning. See the same guide for slot addressing, preserved owner identity and responsive grouping.
+
+Attention preserves context by default. `focus`/`compare` offer outline, halo, brackets and underline with a timed handoff; explicit `dim` isolates a detail and `none` clears attention. `trace` sends a transient beam, pulse or packet along a directional route.
+
+Code `annotate` cues attach short explanations to exact excerpt lines and related objects without editing the code. `until` binds their end to narration; adaptive beside/below notes and original source-line labels preserve reading and location. The [real-code example](examples/directed-code-execution/report.md) refreshes complete inspected functions with its preparation helper.
+
+Whenever showing a system interface, first show its complete application screen, then move to a detail. The same guide gives page, presentation and vertical-film recipes that preserve the detail's location.
+
+## Local living document
+
+Run `npx --yes agentic-report@0.21.0 serve ../my-page --human` from the author Codex session. A reviewed checkout uses `pnpm build`, then `node dist/node/cli.js serve ../my-page --human`. Open the printed URL,
+select text and choose **Ask agent** to write beside the passage, or send a general chat question. Waiting
+questions show their order and can be cancelled immediately; the chat panel also offers width and visual
+settings. The same agent receives the questions, streams its reply and edits original sources; valid rebuilt
+editions highlight changes. The chat mirrors human text sent from that Codex/terminal conversation
+alongside its other replies, with correlated browser questions appearing once. The
+[live operating guide](skills/agentic-report/references/process.md#live-local-document)
+describes setup, recovery, storage and the separate `agentic-report/live` Node API.
 
 ## Document map
 
@@ -209,7 +245,7 @@ that footer.
 ## Public example portfolio
 
 The package ships buildable examples beside its starters: layout and component catalogs, Review and
-Response workspaces, and realistic showcases, each with a maintained Russian entry. Their reader jobs and
+Response workspaces, and realistic showcases, with maintained Russian entries where declared by the example inventory. Their reader jobs and
 page shapes are listed under
 [«Rebuild the public showcases»](docs/AGENT-REFERENCE.md#rebuild-the-public-showcases).
 
@@ -228,7 +264,7 @@ Open the HTML file or directory `index.html` directly through `file://`. In an i
 `agentic-report examples --json` returns each absolute installed entry path; use its containing directory as
 the build input. These examples remain discovery-only and do not change the five `init` starters.
 
-`agentic-report fix ./my-report` is the only command that writes to an authored source: it applies the
+`agentic-report fix ./my-report` applies compiler-computed repairs to an authored source: it applies the
 replacements the product computed exactly and leaves every other byte alone
 ([«Apply the repairs the product computed»](docs/AGENT-REFERENCE.md#apply-the-repairs-the-product-computed)).
 Every command answers an agent with JSON or NDJSON by default and a person with `--human`; which command
@@ -340,7 +376,9 @@ A page extends the vocabulary through the extension manifests it lists in `exten
 time), an effect (a bundled script decorating existing directives) or an island (an application in a
 sandboxed frame with a Markdown static equivalent). Author code runs only through them: a provider runs
 locally at build time like any build script you chose, an island has no network and no access to the page,
-and an effect ships with its hash in the page policy only where it is used. `validate`, `inspect` and
+and an effect ships with its hash in the page policy when compiled content carries its target, including
+retained composition fragments for earlier or future states. This uses the existing declared-extension
+bundle and policy; ordinary Markdown never executes author code. `validate`, `inspect` and
 `review` run providers too, because they expand the page like `build`: do not validate an untrusted
 source that declares providers. The format is in the source
 contract's [«Extensions»](docs/product/source-contract.md#extensions).

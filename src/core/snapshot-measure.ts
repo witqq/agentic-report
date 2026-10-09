@@ -644,7 +644,7 @@ export async function measureInPage(options: {
   for (const paragraph of document.querySelectorAll('main p, article p')) {
     if (
       paragraph.closest(
-        'table, li, figure, aside, nav, header, footer, blockquote, details > summary, dialog, [class*="card"], article article, .effect-layer',
+        'table, li, figure, aside, nav, header, footer, blockquote, details > summary, dialog, [class*="card"], article article, .effect-layer, .edition-ghost',
       ) !== null ||
       !visible(paragraph) ||
       (paragraph.textContent ?? '').trim().length < 40
@@ -768,6 +768,7 @@ export async function measureInPage(options: {
         if (
           child.tagName !== 'P' ||
           child.matches('.semantic-lead') ||
+          child.closest('.edition-ghost') !== null ||
           (child.textContent ?? '').trim().length < 40
         )
           continue;

@@ -7,6 +7,11 @@ first time you see the problem; the rest need judgement against the brief. The d
 names the rule it found broken. A rule is switched off for one page only by a line in that page's
 `brief.md` under «Checks switched off», with the reason — never in the page source.
 
+Aesthetic recommendations describe a failure to investigate, not a style to ban. Read them against the
+chosen composition and the reader's task. Keep accessibility, truthfulness, privacy and source-contract
+requirements binding. Checked thresholds still produce advice; a deliberate exception uses the existing
+reason in the brief. Empty advice is not evidence of visual coherence or expression.
+
 ## Layout and first screen
 
 ### DR-NAV-ABOVE-TITLE — no navigation frame above a landing title · fix on sight
@@ -68,13 +73,17 @@ Fix: turn the bold line into a `section` title, a real heading at the right leve
 
 ## Surfaces, colour, and type
 
-### DR-BLOBS — no blurred colour blobs, meshes, or glows behind content · fix on sight
+### DR-BLOBS — gradients and light serve the composition without obscuring content · judgement
 
-A soft violet blob behind a heading is the signature of a generated page and tells the reader nothing.
+A blurred blob used as a substitute for a main visual gives the page no subject. A gradient, glow or
+mesh can work as brand colour, light on material or atmosphere when it has a clear role and text stays
+readable. Do not remove it merely because the technique is common.
 Counterexample: the 0.17 `mesh` and `glow` surfaces drew blurred radial gradients behind the incident
 review's «Impact signal», the launch readiness page's «Launch signal», and the opening chapters of the layout
 examples.
-Fix: use a plain section, a one-colour `tint`, `grain`, `grid`, or `blueprint`, or no surface at all.
+Fix: decide what the light or colour contributes. If it contributes nothing, use a plain section or a
+supported surface such as `tint`, `grain`, `grid` or `blueprint`. For a deliberate treatment, stay within
+the theme or declared extension contract and check both schemes and final text contrast.
 
 ### DR-SURFACES — at most two chapters with a decorative surface · checked
 
@@ -84,14 +93,16 @@ chapters, and the visualization catalog put a surface on all five.
 Fix: keep surfaces for the one or two chapters that change the mood — an opening, a closing statement —
 and leave the rest plain.
 
-### DR-ONE-ACCENT — one accent colour, used for action and emphasis · fix on sight
+### DR-ONE-ACCENT — colour has consistent roles and a clear primary accent · judgement
 
-A page with an indigo-to-violet gradient, a teal badge, and an orange button has no accent, and an accent
-borrowed from every other generated site says nothing about this one.
+A gradient, badge and button that all compete for attention leave no clear focus. One action accent is
+a useful default; a richer brand palette can work when action, evidence, atmosphere and status remain
+distinct. A familiar accent can be a deliberate choice.
 Counterexample: the 0.17 default theme painted links, buttons, focus, and a glow behind the page in indigo
 `#3856d8`, the stock accent of generated sites, so pages about unrelated subjects shared one colour.
-Fix: choose one accent in the theme (`accent`), from the subject when it has a colour, and let charts use
-the theme's chart colours.
+Fix: set the primary action accent in the theme (`accent`) and give additional colours consistent
+roles through supported theme fields. Let charts use the theme series and preserve status meaning and
+contrast; do not recolour a working palette simply to avoid a familiar hue.
 
 ### DR-SIGNAL-COLOUR — one signal colour stands for one status · judgement
 
@@ -159,15 +170,18 @@ Fix: take a screenshot of the build, film the product with agentic-screencast, o
 `diagram`. A generated picture is allowed only with its reason written in the brief, at most one per page.
 See [`assets.md`](assets.md).
 
-### DR-SCENE-CARRIES — without the main scene the page must lose its point · judgement
+### DR-SCENE-CARRIES — an explanatory scene carries the mechanism or finding · judgement
 
-A scene that can be removed without losing a number, a refusal, or the path is decoration, however
-beautiful. The deletion test says whether the metaphor is the material of the page or a picture beside it.
+When a scene claims to explain the mechanism, removing it should make that mechanism harder to
+understand. Atmosphere has a different job; do not pretend it is evidence. Essential facts still need
+accessible labels, text and static equivalents.
 Counterexample: a thread is a flat one-pixel SVG line of constant width on paper, while the times,
 the returns and the text of the refusal live in the table and the event grid under it. Removing
 the line leaves every fact intact.
-Fix: put in the scene what the page proves — the numbers, the refusal, the path taken — and check that
-removing the scene would remove them; otherwise shrink the scene to an ornament or drop it.
+Fix: let the main scene make the mechanism or finding understandable, with readable labels and an
+equivalent in reduced motion and print. This test concerns the explanatory scene, not its optional
+decorative effect layer: essential facts must remain accessible when that layer is removed. If a scene
+only sets atmosphere, size it as supporting material rather than claiming it proves the mechanism.
 
 ### DR-PROCESS-FROM-DATA — a process is drawn from its data, not by hand · judgement
 
@@ -320,16 +334,19 @@ Counterexample: the 0.17 executive brief combined pointer tilt on one section wi
 primary buttons, so three elements moved under the pointer on one screen.
 Fix: keep the one that carries meaning — usually on the hero — and remove the rest.
 
-### DR-MOTION-MEANING — motion shows a change in meaning · judgement
+### DR-MOTION-MEANING — motion supports explanation, attention or atmosphere · judgement
 
 A diagram that draws its flow in order, a number that counts because it is new, a picture that changes with
-the step being explained: these carry meaning. Motion that only decorates distracts.
+the step being explained: these carry meaning. A small entrance can guide attention; quiet material
+movement can support atmosphere on an expressive landing. Supporting motion stays subordinate to the
+main gesture and never delays reading or carries the only copy of essential information.
 Counterexample: the 0.17 motion showcase put pointer depth on the hero, tilt on a card, and a magnetic pull on
 two buttons of one page; none of the movements told the reader anything about the subject.
 A second counterexample: a process — a plan returned by review, a refused answer, a fix — is shown
 as a static picture, so the order of events, which is the point, has to be read from labels.
-Fix: for each moving element, say in one sentence what the reader learns from the movement; remove the
-ones without an answer. A process whose order is the explanation moves in that order: `scene="steps"` over
+Fix: name what each movement explains, draws attention to or contributes to the concept. Remove
+competing or purposeless movement; keep a purposeful supporting effect within the existing motion
+level, pause and reduced-motion rules. A process whose order is the explanation moves in that order: `scene="steps"` over
 one picture, or `draw="scroll"` on its diagram.
 
 ### DR-MOTION-ORIGIN — every movement comes from somewhere, and the main gesture is visible · judgement

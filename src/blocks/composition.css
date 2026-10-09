@@ -1,0 +1,372 @@
+@layer treatments {
+  .semantic-composition {
+    max-width: 100%;
+    padding-block: clamp(1rem, 3vw, 2rem);
+  }
+  .semantic-composition > .semantic-title {
+    font-family: var(--font-author-heading, var(--font-heading));
+    font-size: clamp(1.5rem, 3vw, 2.8rem);
+    letter-spacing: -0.025em;
+    margin-bottom: 1.5rem;
+  }
+  .composition-relations {
+    margin-block: 1rem 0;
+    padding-inline-start: 1.5rem;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+  .composition-stage {
+    position: relative;
+    padding: 24px 20px;
+    display: grid;
+    gap: clamp(2rem, 4vw, 4rem);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    transform-origin: center;
+  }
+  .semantic-scene-group {
+    padding: 1.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    min-width: 0;
+    align-self: stretch;
+    align-content: start;
+  }
+  .semantic-scene-group > .semantic-title {
+    margin: 0 0 1.25rem;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+  .scene-group-objects {
+    display: grid;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .semantic-scene-group[data-layout='auto'] > .scene-group-objects,
+  .semantic-scene-group[data-layout='grid'] > .scene-group-objects {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  }
+  [data-semantic='composition'][data-layout='row'] > .composition-stage,
+  .semantic-scene-group[data-layout='row'] > .scene-group-objects {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  }
+  [data-semantic='composition'][data-layout='column'] > .composition-stage,
+  .semantic-scene-group[data-layout='column'] > .scene-group-objects {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-semantic='composition'][data-layout='grid'] > .composition-stage {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+  }
+  :where(
+      [data-semantic='composition']:not([data-layout='auto']) > .composition-stage,
+      .scene-group-objects
+    )
+    > .semantic-object {
+    grid-column: auto;
+    grid-row: auto;
+    order: 0;
+    width: auto;
+    justify-self: stretch;
+  }
+  [data-align='center'] > .composition-stage,
+  .semantic-scene-group[data-align='center'] > .scene-group-objects {
+    align-items: center;
+  }
+  [data-align='stretch'] > .composition-stage,
+  .semantic-scene-group[data-align='stretch'] > .scene-group-objects {
+    align-items: stretch;
+  }
+  .semantic-slot {
+    position: relative;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+  }
+  .semantic-slot > .semantic-title {
+    margin: 0 0 0.5rem;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+  .composition-slot-measure {
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
+    inset: 0 auto auto 0;
+  }
+  .semantic-object {
+    position: relative;
+    min-width: 0;
+    padding: clamp(1rem, 2vw, 1.8rem);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: 0 8px 28px color-mix(in srgb, var(--color-text) 5%, transparent);
+  }
+  .semantic-object[data-role='code'] {
+    align-self: stretch;
+    border-inline-start: 3px solid var(--color-accent);
+  }
+  .semantic-object[data-role='code'] pre {
+    font-size: clamp(0.85rem, 1.4vw, 1.4rem);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .composition-content > :first-child {
+    margin-top: 0;
+  }
+  .composition-content > :last-child {
+    margin-bottom: 0;
+  }
+  .semantic-object > .semantic-title {
+    font-size: clamp(0.9rem, 1.3vw, 1.2rem);
+    letter-spacing: 0.02em;
+    color: var(--color-text-muted);
+  }
+  .composition-content > p {
+    font-size: clamp(1.05rem, 1.8vw, 1.8rem);
+    line-height: 1.45;
+  }
+  .semantic-object[data-composition-focus] {
+    border-color: color-mix(
+      in srgb,
+      var(--color-accent) calc(var(--composition-focus, 1) * 100%),
+      var(--color-border)
+    );
+  }
+  .semantic-object[data-composition-emphasis='outline'],
+  .semantic-object[data-composition-emphasis='dim'] {
+    box-shadow: 0 0 0 2px
+      color-mix(in srgb, var(--color-accent) calc(var(--composition-focus, 1) * 35%), transparent);
+  }
+  .semantic-object[data-composition-emphasis='halo'] {
+    box-shadow:
+      0 0 0 2px
+        color-mix(in srgb, var(--color-accent) calc(var(--composition-focus, 1) * 50%), transparent),
+      0 0 24px
+        color-mix(in srgb, var(--color-accent) calc(var(--composition-focus, 1) * 22%), transparent);
+  }
+  .semantic-object[data-composition-emphasis='brackets']::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border: 2px solid var(--color-accent);
+    border-radius: var(--radius-card);
+    opacity: var(--composition-focus, 1);
+    mask:
+      linear-gradient(currentColor 0 0) left top / 20px 20px no-repeat,
+      linear-gradient(currentColor 0 0) right top / 20px 20px no-repeat,
+      linear-gradient(currentColor 0 0) right bottom / 20px 20px no-repeat,
+      linear-gradient(currentColor 0 0) left bottom / 20px 20px no-repeat;
+    pointer-events: none;
+  }
+  .semantic-object[data-composition-emphasis='underline']::after {
+    content: '';
+    position: absolute;
+    inset: auto 1rem -4px;
+    height: 3px;
+    border-radius: var(--radius-control);
+    background: var(--color-accent);
+    transform: scaleX(var(--composition-focus, 1));
+    transform-origin: left;
+    pointer-events: none;
+  }
+  [data-composition-line] {
+    background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  }
+  .composition-connections {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+  .composition-connections path {
+    fill: none;
+    stroke: var(--color-accent);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .composition-connections .composition-trace {
+    stroke-width: 5;
+    filter: drop-shadow(0 0 4px var(--color-accent));
+  }
+  .composition-trace-dot {
+    fill: var(--color-accent);
+    filter: drop-shadow(0 0 4px var(--color-accent));
+  }
+  .composition-connections polygon {
+    fill: var(--color-accent);
+  }
+  .composition-connections text {
+    fill: var(--color-text-muted);
+    font-size: var(--text-sm);
+    paint-order: stroke;
+    stroke: var(--color-bg);
+    stroke-width: 5px;
+  }
+  .composition-annotations {
+    position: relative;
+    min-width: 0;
+  }
+  .semantic-object[data-composition-annotated] {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    align-content: start;
+    container: code-reading / inline-size;
+  }
+  .semantic-object[data-composition-annotated] > .semantic-title {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+  .semantic-object[data-composition-annotated] > .composition-content,
+  .semantic-object[data-composition-annotated] > .composition-annotations {
+    grid-column: 1 / -1;
+  }
+  @container code-reading (min-width: 40rem) {
+    .semantic-object[data-notes='beside'] > .composition-content {
+      grid-column: 1 / span 2;
+      grid-row: 2;
+    }
+    .semantic-object[data-notes='beside'] > .composition-annotations {
+      grid-column: 3;
+      grid-row: 2;
+    }
+  }
+  .composition-annotation {
+    border-inline-start: 2px solid var(--color-accent);
+    padding: 0.75rem 1rem;
+    background: color-mix(in srgb, var(--color-accent) 7%, var(--color-surface));
+    border-radius: 0 var(--radius-card) var(--radius-card) 0;
+  }
+  .composition-annotation + .composition-annotation {
+    margin-top: 0.75rem;
+  }
+  .composition-annotation > p {
+    margin: 0.35rem 0;
+    font-size: clamp(1rem, 1.4vw, 1.3rem);
+    line-height: 1.5;
+  }
+  .composition-annotation-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+  .composition-annotation > a {
+    font-size: var(--text-sm);
+  }
+  .composition-note-measure {
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
+    inset: 0 auto auto 0;
+  }
+  .composition-connections path[data-composition-relation='data'] {
+    stroke-width: 3;
+  }
+  .composition-connections path[data-composition-relation='event'][data-composition-complete] {
+    stroke-dasharray: 0.025 0.035;
+  }
+  .composition-connections path[data-composition-relation='dependency'][data-composition-complete] {
+    stroke-dasharray: 0.008 0.025;
+    opacity: 0.7;
+  }
+  .composition-connections path[data-composition-relation='ownership'] {
+    stroke-width: 2.5;
+  }
+  .composition-travel {
+    position: absolute;
+    z-index: 2;
+    padding: 1rem;
+    border: 2px solid var(--color-accent);
+    background: var(--color-surface);
+    border-radius: var(--radius-card);
+    box-shadow: 0 12px 32px color-mix(in srgb, var(--color-text) 12%, transparent);
+    pointer-events: none;
+  }
+  [data-composition='diagram-code'] .composition-stage {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+  [data-composition='diagram-code']:where([data-layout='auto'])
+    > :where(.composition-stage)
+    > [data-role='code'] {
+    grid-column: 2;
+    grid-row: 1 / span var(--composition-rows, 1);
+  }
+  [data-composition='pipeline'] .composition-stage {
+    grid-template-columns: repeat(var(--composition-columns, 3), minmax(0, 1fr));
+  }
+  [data-composition='pipeline'] .semantic-object {
+    border-block-start: 3px solid var(--color-accent);
+  }
+  :is(
+      [data-composition='pipeline'],
+      [data-composition='before-after'],
+      [data-composition='ownership']
+    ):where([data-layout='auto'])
+    > :where(.composition-stage)
+    > [data-role='code'] {
+    grid-column: 1 / -1;
+    order: 1;
+  }
+  [data-composition='before-after']:where([data-layout='auto'])
+    > :where(.composition-stage)
+    > [data-role='source'] {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: min(100%, 32rem);
+  }
+  [data-composition='before-after'] [data-role='result'] {
+    border-color: var(--color-accent);
+  }
+  [data-composition='overview-detail'] .composition-stage {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.5fr);
+  }
+  [data-composition='overview-detail']:where([data-layout='auto'])
+    > :where(.composition-stage)
+    > [data-role='detail'] {
+    grid-column: 2;
+    grid-row: 1 / span var(--composition-rows, 1);
+    padding: 2rem;
+  }
+  [data-composition='ownership'] .composition-stage {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  [data-composition='ownership'] [data-role='source'] {
+    border-block-start: 3px solid var(--color-text-muted);
+  }
+  [data-composition='ownership'] [data-role='result'] {
+    border-block-start: 3px solid var(--color-accent);
+  }
+  @media (max-width: 48rem) {
+    .semantic-object[data-composition-annotated][data-notes='beside'] {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .semantic-composition .composition-stage {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2.5rem;
+    }
+    .semantic-composition .semantic-object {
+      grid-column: auto;
+      grid-row: auto;
+    }
+  }
+  @media print {
+    .composition-stage {
+      /* biome-ignore lint/complexity/noImportantStyles: print must override inline camera and entrance transforms even without a media event */
+      transform: none !important;
+    }
+    .semantic-object {
+      /* biome-ignore lint/complexity/noImportantStyles: print must expose objects over inline motion opacity */
+      opacity: 1 !important;
+      /* biome-ignore lint/complexity/noImportantStyles: print must override inline camera and entrance transforms even without a media event */
+      transform: none !important;
+    }
+    .composition-connections,
+    .composition-travel {
+      display: none;
+    }
+  }
+}

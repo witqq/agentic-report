@@ -6,7 +6,7 @@
 
 import './copy.js';
 import { pageClock } from '../clock.js';
-import { type Cleanup, feature, provideFeature } from '../features.js';
+import { contentElements, type Cleanup, feature, provideFeature } from '../features.js';
 import { pace, timed, whenVisible } from '../technique-timing.js';
 
 const clock = pageClock();
@@ -14,7 +14,7 @@ const clock = pageClock();
 provideFeature('code', (page, strings) => {
   const copy = feature('copy');
   if (copy === undefined) return;
-  for (const block of page.querySelectorAll<HTMLElement>('pre'))
+  for (const block of contentElements<HTMLElement>(page, 'pre'))
     if (block.querySelector(':scope > [data-copy-code]') === null)
       block.append(copy.button('code', strings));
 });

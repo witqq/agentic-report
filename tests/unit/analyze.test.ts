@@ -123,6 +123,7 @@ describe('report analysis', () => {
       'inspect',
       'review',
       'schema',
+      'serve',
       'sitemap',
       'snapshot',
       'theme',

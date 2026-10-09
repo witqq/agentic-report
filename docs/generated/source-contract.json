@@ -2308,6 +2308,300 @@
       "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
       "handoffs": ["semantic-document", "reader-runtime"]
     },
+    "composition": {
+      "description": "A directed, responsive explanation made of named objects and timed actions.",
+      "forms": ["container"],
+      "attributes": {
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Composition id for film selection."
+        },
+        "layout": {
+          "kind": "enum",
+          "values": ["auto", "row", "column", "grid"],
+          "required": false,
+          "default": "auto",
+          "description": "Spatial arrangement independent of the scene meaning; rows wrap on compact displays."
+        },
+        "align": {
+          "kind": "enum",
+          "values": ["start", "center", "stretch"],
+          "required": false,
+          "default": "start",
+          "description": "Shared cross-axis alignment; start preserves a common reading edge."
+        },
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        },
+        "kind": {
+          "kind": "enum",
+          "values": ["diagram-code", "pipeline", "before-after", "overview-detail", "ownership"],
+          "required": false,
+          "default": "diagram-code",
+          "description": "Meaning of the composition; layout is package-owned."
+        }
+      },
+      "children": "markdown",
+      "placement": {},
+      "resource": "none",
+      "runtime": "package-owned-scene",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "object": {
+      "description": "Named Markdown object on a composition stage.",
+      "forms": ["container"],
+      "attributes": {
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Local object name."
+        },
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        },
+        "notes": {
+          "kind": "enum",
+          "values": ["beside", "below"],
+          "required": false,
+          "description": "Annotation arrangement beside or below the unmodified code; default below."
+        },
+        "lineStart": {
+          "kind": "integer",
+          "minimum": 1,
+          "lexicalPattern": "^[1-9][0-9]*$",
+          "required": false,
+          "description": "Original source line of the excerpt first line; annotation labels use this offset."
+        },
+        "role": {
+          "kind": "enum",
+          "values": ["visual", "code", "source", "result", "detail"],
+          "required": false,
+          "default": "visual",
+          "description": "Semantic place in the layout."
+        }
+      },
+      "children": "markdown",
+      "placement": { "requiredParent": ["composition", "scene-group"] },
+      "resource": "none",
+      "runtime": "package-owned-scene",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "cue": {
+      "description": "One declarative action at a time or speech anchor.",
+      "forms": ["leaf"],
+      "attributes": {
+        "at": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 40,
+          "pattern": "^(?:\\d+(?:\\.\\d+)?s?|b[1-9]\\d*(?:\\.end)?(?:[+-]\\d+(?:\\.\\d+)?)?)$",
+          "required": true,
+          "description": "Seconds or speech anchor b2, b2.end, b2+0.3; standalone beats use three seconds."
+        },
+        "action": {
+          "kind": "enum",
+          "values": [
+            "reveal",
+            "focus",
+            "connect",
+            "transfer",
+            "copy",
+            "replace",
+            "compare",
+            "camera",
+            "trace",
+            "annotate"
+          ],
+          "required": true,
+          "description": "Directed operation."
+        },
+        "target": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": true,
+          "description": "Local object name."
+        },
+        "to": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "description": "Destination object for pair actions."
+        },
+        "slot": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "description": "Local changing slot inside the target object."
+        },
+        "toSlot": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "description": "Local changing slot inside the destination object."
+        },
+        "value": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 160,
+          "required": false,
+          "description": "Replacement text or connection label."
+        },
+        "lines": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[1-9][0-9]{0,2}(?:-[1-9][0-9]{0,2})?(?:\\s*,\\s*[1-9][0-9]{0,2}(?:-[1-9][0-9]{0,2})?)*$",
+          "required": false,
+          "description": "Code line ranges, such as 2-4,7 (1–999)."
+        },
+        "emphasis": {
+          "kind": "enum",
+          "values": ["outline", "halo", "brackets", "underline", "dim", "none"],
+          "required": false,
+          "description": "Focus treatment: preserve context by default; dim is explicit, none clears attention."
+        },
+        "effect": {
+          "kind": "enum",
+          "values": ["beam", "pulse", "packet"],
+          "required": false,
+          "description": "Trace style: moving beam, pulse or packet; follows the connection direction."
+        },
+        "until": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 40,
+          "pattern": "^(?:\\d+(?:\\.\\d+)?s?|b[1-9]\\d*(?:\\.end)?(?:[+-]\\d+(?:\\.\\d+)?)?)$",
+          "required": false,
+          "description": "Optional narration anchor or seconds at which this annotation disappears."
+        },
+        "relation": {
+          "kind": "enum",
+          "values": ["relation", "call", "data", "event", "dependency", "ownership"],
+          "required": false,
+          "description": "Connection meaning: call, data, event, dependency, ownership or a generic relation."
+        },
+        "duration": {
+          "kind": "number",
+          "minimum": 0.1,
+          "maximum": 3,
+          "lexicalPattern": "^\\d+(?:\\.\\d+)?$",
+          "required": false,
+          "default": 0.6,
+          "description": "Movement duration in seconds (default 0.6)."
+        }
+      },
+      "children": "none",
+      "placement": { "requiredParent": "composition" },
+      "resource": "none",
+      "runtime": "package-owned-scene",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "scene-group": {
+      "description": "A meaningful group of scene objects with a responsive package-owned arrangement.",
+      "forms": ["container"],
+      "attributes": {
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Group identity."
+        },
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        },
+        "layout": {
+          "kind": "enum",
+          "values": ["auto", "row", "column", "grid"],
+          "required": false,
+          "default": "auto",
+          "description": "Spatial arrangement independent of the scene meaning; rows wrap on compact displays."
+        },
+        "align": {
+          "kind": "enum",
+          "values": ["start", "center", "stretch"],
+          "required": false,
+          "default": "start",
+          "description": "Shared cross-axis alignment; start preserves a common reading edge."
+        }
+      },
+      "children": "markdown",
+      "placement": { "requiredParent": "composition" },
+      "resource": "none",
+      "runtime": "package-owned-scene",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
+    "slot": {
+      "description": "Named changing value inside a stable object; content is independent of its owner.",
+      "forms": ["container"],
+      "attributes": {
+        "id": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "required": true,
+          "description": "Local value slot inside its stable owner."
+        },
+        "title": {
+          "kind": "string",
+          "normalization": "trim",
+          "minLength": 1,
+          "maxLength": 200,
+          "required": false,
+          "description": "Visible title."
+        }
+      },
+      "children": "markdown",
+      "placement": { "requiredParent": "object" },
+      "resource": "none",
+      "runtime": "package-owned-scene",
+      "security": { "authorCode": false, "rawHtml": false, "localResourceOnly": false },
+      "handoffs": ["semantic-document", "reader-runtime"]
+    },
     "asset": {
       "description": "Download link to a confined local file.",
       "forms": ["text", "leaf"],
@@ -5199,12 +5493,14 @@
     "no author code or template execution"
   ],
   "capabilities": {
+    "live": "Explicit loopback hosting with watched source editions, contextual questions, a visible cancellable waiting queue and reader view controls; discussion streams to the existing author Codex session by default, separate agent mode is explicit and ordinary builds remain offline.",
     "init": "Initialize a packaged declarative starter without overwriting user content.",
     "validate": "Validate a project through the production preparation pipeline.",
     "inspect": "Inspect a valid project through the production preparation pipeline.",
     "review": "Resolve a versioned review artifact to current Markdown source locations."
   },
   "commands": {
+    "serve": "Serve a local living document attached to the current Codex session; standalone explicitly starts a separate agent, and none watches manual source edits.",
     "init": "Initialize a packaged declarative starter without overwriting user content.",
     "validate": "Validate a project without writing an output artifact.",
     "inspect": "Inspect source usage and the available authoring catalog without writing output.",

@@ -76,6 +76,7 @@ import { createIslandCollector } from '../extensions/island.js';
 import type { ProviderCache } from '../extensions/provider.js';
 import {
   type EffectHostCount,
+  type EffectHostOptions,
   rehypeCountEffectHosts,
   remarkCountEffectHosts,
 } from '../extensions/targets.js';
@@ -466,31 +467,36 @@ type AssetTargetKind = 'image' | 'video' | 'asset' | 'font';
 
 const rehypeAssets: Plugin<[AssetPluginOptions], Root> = (options) => async (tree) => {
   const targets: Array<{ readonly node: Element; readonly kind: AssetTargetKind }> = [];
-  visit(tree, 'element', (node: Element) => {
-    if (node.tagName === 'img' && typeof node.properties.src === 'string') {
-      // Картинка Markdown с видеофайлом становится плеером: `<img>` видео не показывает.
-      targets.push({
-        node,
-        kind: videoType(node.properties.src) === undefined ? 'image' : 'video',
-      });
-      return;
-    }
-    if (
-      node.tagName === 'figure' &&
-      (typeof node.properties.dataVideoSource === 'string' ||
-        typeof node.properties.dataVideoFrom === 'string')
-    ) {
-      targets.push({ node, kind: 'video' });
-      return;
-    }
-    if (node.tagName === 'a' && typeof node.properties.dataLocalAsset === 'string') {
-      targets.push({ node, kind: 'asset' });
-      return;
-    }
-    if (node.tagName === 'span' && typeof node.properties.dataFontSource === 'string') {
-      targets.push({ node, kind: 'font' });
-    }
-  });
+  const collectTargets = (root: Root): void => {
+    visit(root, 'element', (node: Element) => {
+      // HAST templates keep their fragment in content, outside ordinary children.
+      if (node.tagName === 'template' && node.content !== undefined) collectTargets(node.content);
+      if (node.tagName === 'img' && typeof node.properties.src === 'string') {
+        // Картинка Markdown с видеофайлом становится плеером: `<img>` видео не показывает.
+        targets.push({
+          node,
+          kind: videoType(node.properties.src) === undefined ? 'image' : 'video',
+        });
+        return;
+      }
+      if (
+        node.tagName === 'figure' &&
+        (typeof node.properties.dataVideoSource === 'string' ||
+          typeof node.properties.dataVideoFrom === 'string')
+      ) {
+        targets.push({ node, kind: 'video' });
+        return;
+      }
+      if (node.tagName === 'a' && typeof node.properties.dataLocalAsset === 'string') {
+        targets.push({ node, kind: 'asset' });
+        return;
+      }
+      if (node.tagName === 'span' && typeof node.properties.dataFontSource === 'string') {
+        targets.push({ node, kind: 'font' });
+      }
+    });
+  };
+  collectTargets(tree);
   for (const target of targets) {
     try {
       await processAssetTarget(target, options);
@@ -527,36 +533,43 @@ const rehypeAssets: Plugin<[AssetPluginOptions], Root> = (options) => async (tre
   }
 };
 
-export async function renderMarkdown(
+/** Inert authored fragments are future page content, not serialized source backups. */
+const rehypePrepareTemplates: Plugin<
+  [{ readonly features: Set<string>; readonly effectHosts: EffectHostOptions }],
+  Root
+> = (options) => async (tree) => {
+  const fragments: Root[] = [];
+  visit(tree, 'element', (node: Element) => {
+    if (
+      node.tagName === 'template' &&
+      node.properties.dataCompositionOriginal !== undefined &&
+      node.content !== undefined
+    )
+      fragments.push(node.content);
+  });
+  const processor = unified()
+    .use(rehypeUiPrimitives)
+    .use(rehypeHeadingFit)
+    .use(rehypeFigureNumbers)
+    .use(rehypeTables)
+    .use(rehypeCountEffectHosts, options.effectHosts)
+    .use(rehypePageFeatures, options);
+  for (const fragment of fragments) await processor.run(fragment);
+};
+
+/** The shared source phase stops before HTML, highlighting, geometry and resource materialization. */
+function prepareMarkdownPipeline(
   markdown: string,
   options: MarkdownRenderOptions,
-): Promise<MarkdownRenderResult> {
-  const collector: AssetCollector = {
-    embeddedAssets: 0,
-    externalAssets: 0,
-    embeddedBytes: 0,
-    warnings: [],
-    fontCss: [],
-    fontRoles: new Set<string>(),
-    resourceFiles: new Map(),
-    sourceFiles: new Set(),
-    resourceDigests: new Map(),
-    observedResources: { images: 0, videos: 0, downloads: 0, fonts: 0 },
-  };
+  warnings: Diagnostic[],
+  edition: EditionCollector,
+) {
   const observedDirectives = new Set<string>();
-  const features = new Set<string>();
-  const shareTransform = { neutralizedSourceLinks: 0 };
-  const navigationTransform = { items: [] as NavigationItem[] };
-  const reviewTargets: ReviewTargetReference[] = [];
-  const structureCollector: PageStructureCollector = {};
   const declared = options.extensions?.declared ?? [];
   const islands = createIslandCollector();
   const vocabulary = declared.length === 0 ? undefined : createPageVocabulary(declared, islands);
   const earlierViolations: AgenticReportError[] = [];
   const expansionUses = new Map<string, number>();
-  const effectHosts = new Map<string, EffectHostCount>();
-  const effectHostOptions = { bindings: vocabulary?.effectTargets ?? [], counts: effectHosts };
-  const edition: EditionCollector = { captured: new Map(), authoredSectionIds: new Set() };
   const pipeline = unified().use(remarkParse).use(remarkGfm).use(remarkDirective);
   if (options.data !== undefined)
     pipeline.use(remarkPageData, {
@@ -589,16 +602,58 @@ export async function renderMarkdown(
     ))
       edition.authoredSectionIds.add(id);
   });
+  pipeline.use(remarkSemanticDirectives, {
+    sourceMap: options.sourceMap,
+    markdown,
+    observedDirectives,
+    warnings,
+    page: { layout: options.layout, motion: options.motion, language: options.language },
+    priorViolations: earlierViolations,
+    ...(vocabulary === undefined ? {} : { vocabulary }),
+  });
+  return { pipeline, vocabulary, islands, expansionUses, observedDirectives };
+}
+
+/** Internal authoring tooling uses the production source phase without rendering the page. */
+export async function inspectMarkdownVocabulary(
+  markdown: string,
+  options: MarkdownRenderOptions,
+): Promise<readonly string[]> {
+  const { pipeline, observedDirectives } = prepareMarkdownPipeline(markdown, options, [], {
+    captured: new Map(),
+    authoredSectionIds: new Set(),
+  });
+  await pipeline.run(pipeline.parse(markdown));
+  return [...observedDirectives].sort(compareNames);
+}
+
+export async function renderMarkdown(
+  markdown: string,
+  options: MarkdownRenderOptions,
+): Promise<MarkdownRenderResult> {
+  const collector: AssetCollector = {
+    embeddedAssets: 0,
+    externalAssets: 0,
+    embeddedBytes: 0,
+    warnings: [],
+    fontCss: [],
+    fontRoles: new Set<string>(),
+    resourceFiles: new Map(),
+    sourceFiles: new Set(),
+    resourceDigests: new Map(),
+    observedResources: { images: 0, videos: 0, downloads: 0, fonts: 0 },
+  };
+  const features = new Set<string>();
+  const shareTransform = { neutralizedSourceLinks: 0 };
+  const navigationTransform = { items: [] as NavigationItem[] };
+  const reviewTargets: ReviewTargetReference[] = [];
+  const structureCollector: PageStructureCollector = {};
+  const edition: EditionCollector = { captured: new Map(), authoredSectionIds: new Set() };
+  const { pipeline, vocabulary, islands, expansionUses, observedDirectives } =
+    prepareMarkdownPipeline(markdown, options, collector.warnings, edition);
+  const effectHosts = new Map<string, EffectHostCount>();
+  const effectHostOptions = { bindings: vocabulary?.effectTargets ?? [], counts: effectHosts };
   const result = await pipeline
-    .use(remarkSemanticDirectives, {
-      sourceMap: options.sourceMap,
-      markdown,
-      observedDirectives,
-      warnings: collector.warnings,
-      page: { layout: options.layout, motion: options.motion, language: options.language },
-      priorViolations: earlierViolations,
-      ...(vocabulary === undefined ? {} : { vocabulary }),
-    })
     .use(remarkCountEffectHosts, effectHostOptions)
     .use(remarkReviewTargets, {
       sourceRoot: options.sourceRoot,
@@ -630,6 +685,7 @@ export async function renderMarkdown(
     .use(rehypeUiPrimitives)
     .use(rehypeHeadingFit)
     .use(rehypeFigureNumbers)
+    .use(rehypePrepareTemplates, { features, effectHosts: effectHostOptions })
     .use(rehypeLinkTargets, { sourceMap: options.sourceMap })
     // Last before serialization: it splits inline code texts, which the passes above read whole.
     .use(rehypeTables)

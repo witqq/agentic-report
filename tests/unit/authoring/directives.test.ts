@@ -219,6 +219,16 @@ describe('registry-driven semantic directives', () => {
       '::video{src="clip.webm" caption="Recorded run"}',
       '::font{src="reader.woff" family="Reader Sans"}',
       '',
+      '::::::composition{id="directed"}',
+      ':::::scene-group{id="owners"}',
+      '::::object{id="value"}',
+      ':::slot{id="value"}',
+      'A named value.',
+      ':::',
+      '::::',
+      ':::::',
+      '::cue{at="1" action="focus" target="value"}',
+      '::::::',
       '::::deck{title="Deck"}',
       ':::slide',
       'Slide body.',
@@ -2726,12 +2736,27 @@ function validAttributeValue(attribute: DirectiveAttributeDefinition): string {
     return 'https://example.com/page';
   if (attribute.name === 'kind' && attribute.constraint.kind === 'string') return 'warning';
   if (attribute.constraint.kind === 'enum') return attribute.constraint.values.at(-1) ?? '';
+  if (attribute.name === 'at' || attribute.name === 'until') return 'b2';
   if (attribute.name === 'family') return 'Reader Sans';
   if (attribute.invalidDiagnostic === 'INVALID_SOURCE_LINK') {
     return 'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42';
   }
   if (attribute.name === 'href') return '#valid-target';
-  if (['key', 'id', 'group', 'from', 'to', 'bucket', 'focus', 'node'].includes(attribute.name))
+  if (
+    [
+      'key',
+      'id',
+      'group',
+      'from',
+      'to',
+      'target',
+      'bucket',
+      'focus',
+      'node',
+      'slot',
+      'toSlot',
+    ].includes(attribute.name)
+  )
     return 'valid-key';
   // A declared glossary form may not repeat the term it belongs to, so this generator cannot reuse
   // the value it gives every other text attribute.
@@ -2775,12 +2800,27 @@ function renderedAttributeValue(attribute: DirectiveAttributeDefinition): string
     return 'https://example.com/page';
   if (attribute.name === 'kind' && attribute.constraint.kind === 'string') return 'warning';
   if (attribute.constraint.kind === 'enum') return attribute.constraint.values.at(-1) ?? '';
+  if (attribute.name === 'at' || attribute.name === 'until') return 'b2';
   if (attribute.name === 'family') return 'Reader Sans';
   if (attribute.invalidDiagnostic === 'INVALID_SOURCE_LINK') {
     return 'http://127.0.0.1:7789/open?path=%2Fworkspace%2Ffile.ts&line=42';
   }
   if (attribute.name === 'href') return '#valid-target';
-  if (['key', 'id', 'group', 'from', 'to', 'bucket', 'focus', 'node'].includes(attribute.name))
+  if (
+    [
+      'key',
+      'id',
+      'group',
+      'from',
+      'to',
+      'target',
+      'bucket',
+      'focus',
+      'node',
+      'slot',
+      'toSlot',
+    ].includes(attribute.name)
+  )
     return 'valid-key';
   if (attribute.name === 'forms') return 'Tf';
   if (attribute.name === 'state' || attribute.name === 'when') return 'valid-state';
@@ -2805,6 +2845,8 @@ function directiveInvocation(
   form: DirectiveForm,
   overrides: Readonly<Record<string, string>> = {},
 ): string {
+  if (['composition', 'scene-group', 'object', 'slot', 'cue'].includes(directive.name))
+    return compositionInvocation(directive.name, overrides);
   if (['response', 'question', 'bucket', 'option', 'item'].includes(directive.name)) {
     return responseInvocation(directive.name, overrides);
   }
@@ -2932,6 +2974,60 @@ function directiveInvocation(
  * messages inside them: the generic `Projection label` and `T` values would be refused by their own
  * checks, so they get a fixed valid shape and the attribute under test where it can vary.
  */
+function compositionInvocation(
+  target: string,
+  overrides: Readonly<Record<string, string>>,
+): string {
+  const cueFields: Record<string, string> = {
+    at: '1',
+    action: 'focus',
+    target: 'value',
+    ...(target === 'cue' ? overrides : {}),
+  };
+  if (target === 'cue' && overrides.action === undefined) {
+    if (cueFields.until !== undefined) cueFields.action = 'annotate';
+    else if (cueFields.effect !== undefined) cueFields.action = 'trace';
+    else if (cueFields.relation !== undefined || cueFields.to !== undefined)
+      cueFields.action = 'connect';
+    else if (cueFields.toSlot !== undefined) cueFields.action = 'copy';
+    else if (cueFields.value !== undefined || cueFields.slot !== undefined)
+      cueFields.action = 'replace';
+  }
+  if (['connect', 'transfer', 'copy', 'compare', 'trace'].includes(cueFields.action ?? ''))
+    cueFields.to ??= 'destination';
+  if (['replace', 'annotate'].includes(cueFields.action ?? '')) cueFields.value ??= 'Changed value';
+  if (target === 'object' && overrides.id !== undefined) cueFields.target = overrides.id;
+  if (['replace', 'copy', 'transfer'].includes(cueFields.action ?? '')) cueFields.slot ??= 'value';
+  if (['copy', 'transfer'].includes(cueFields.action ?? '')) cueFields.toSlot ??= 'value';
+  const destinationId = cueFields.to ?? 'destination';
+  if (destinationId === cueFields.target) cueFields.target = 'source';
+  const fields = (values: Readonly<Record<string, string>>) =>
+    Object.entries(values)
+      .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+      .join(' ');
+  return [
+    `::::::composition{${fields({ id: 'directed', ...(target === 'composition' ? overrides : {}) })}}`,
+    `:::::scene-group{${fields({ id: 'owners', ...(target === 'scene-group' ? overrides : {}) })}}`,
+    `::::object{${fields({ id: cueFields.target ?? 'value', role: 'code', ...(target === 'object' ? overrides : {}) })}}`,
+    '```ts',
+    'const value = 1;',
+    'consume(value);',
+    '```',
+    `:::slot{${fields({ id: cueFields.slot ?? 'value', ...(target === 'slot' ? overrides : {}) })}}`,
+    'Source value.',
+    ':::',
+    '::::',
+    `::::object{id="${destinationId}"}`,
+    `:::slot{id="${cueFields.toSlot ?? 'value'}"}`,
+    'Destination value.',
+    ':::',
+    '::::',
+    ':::::',
+    `::cue{${fields(cueFields)}}`,
+    '::::::',
+  ].join('\n');
+}
+
 function dataAndTextInvocation(
   name: string,
   overrides: Readonly<Record<string, string>>,
@@ -3238,6 +3334,14 @@ function nestedDirectiveInvocation(
   ) {
     return responseInvocation(child, {});
   }
+  if (
+    (parent === 'composition' && ['object', 'scene-group', 'cue'].includes(child)) ||
+    (parent === 'scene-group' && child === 'object') ||
+    (parent === 'object' && child === 'slot')
+  )
+    return parent === 'composition' && child === 'object'
+      ? compositionInvocation(child, {}).replace(/^:::::scene-group.*\n|^:::::$/gmu, '')
+      : compositionInvocation(child, {});
   const contract = (name: string): DirectiveDefinition => {
     const found = (authoringRegistry.directives as readonly DirectiveDefinition[]).find(
       (candidate) => candidate.name === name,

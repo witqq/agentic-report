@@ -1,3 +1,5 @@
+import { contentElements } from './features.js';
+
 /**
  * Схема на узкой дорожке. Схема ужимается до ширины дорожки, пока её самый мелкий текст (пояснение узла,
  * 12.5 px) остаётся не мельче 11 px на экране; дальше она не мельчает, а меняет представление:
@@ -55,9 +57,10 @@ function fitSequence(figure: HTMLElement): void {
 }
 
 export function installDiagramForms(page: HTMLElement): () => void {
-  const sequences = [
-    ...page.querySelectorAll<HTMLElement>('figure[data-diagram-type="sequence"]'),
-  ].filter((figure) => figure.querySelector('[data-sequence-list]') !== null);
+  const sequences = contentElements<HTMLElement>(
+    page,
+    'figure[data-diagram-type="sequence"]',
+  ).filter((figure) => figure.querySelector('[data-sequence-list]') !== null);
   const observer = new ResizeObserver((entries) => {
     for (const entry of entries) if (entry.target instanceof HTMLElement) fitSequence(entry.target);
   });
@@ -66,7 +69,8 @@ export function installDiagramForms(page: HTMLElement): () => void {
     observer.observe(figure);
   }
   if (window.matchMedia(PHONE).matches) {
-    for (const transcript of page.querySelectorAll<HTMLDetailsElement>(
+    for (const transcript of contentElements<HTMLDetailsElement>(
+      page,
       'details.visualization-transcript',
     )) {
       if (transcript.closest('[data-diagram-form="list"]') !== null) continue;
