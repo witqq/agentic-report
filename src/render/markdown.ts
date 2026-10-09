@@ -557,36 +557,19 @@ const rehypePrepareTemplates: Plugin<
   for (const fragment of fragments) await processor.run(fragment);
 };
 
-export async function renderMarkdown(
+/** The shared source phase stops before HTML, highlighting, geometry and resource materialization. */
+function prepareMarkdownPipeline(
   markdown: string,
   options: MarkdownRenderOptions,
-): Promise<MarkdownRenderResult> {
-  const collector: AssetCollector = {
-    embeddedAssets: 0,
-    externalAssets: 0,
-    embeddedBytes: 0,
-    warnings: [],
-    fontCss: [],
-    fontRoles: new Set<string>(),
-    resourceFiles: new Map(),
-    sourceFiles: new Set(),
-    resourceDigests: new Map(),
-    observedResources: { images: 0, videos: 0, downloads: 0, fonts: 0 },
-  };
+  warnings: Diagnostic[],
+  edition: EditionCollector,
+) {
   const observedDirectives = new Set<string>();
-  const features = new Set<string>();
-  const shareTransform = { neutralizedSourceLinks: 0 };
-  const navigationTransform = { items: [] as NavigationItem[] };
-  const reviewTargets: ReviewTargetReference[] = [];
-  const structureCollector: PageStructureCollector = {};
   const declared = options.extensions?.declared ?? [];
   const islands = createIslandCollector();
   const vocabulary = declared.length === 0 ? undefined : createPageVocabulary(declared, islands);
   const earlierViolations: AgenticReportError[] = [];
   const expansionUses = new Map<string, number>();
-  const effectHosts = new Map<string, EffectHostCount>();
-  const effectHostOptions = { bindings: vocabulary?.effectTargets ?? [], counts: effectHosts };
-  const edition: EditionCollector = { captured: new Map(), authoredSectionIds: new Set() };
   const pipeline = unified().use(remarkParse).use(remarkGfm).use(remarkDirective);
   if (options.data !== undefined)
     pipeline.use(remarkPageData, {
@@ -619,16 +602,58 @@ export async function renderMarkdown(
     ))
       edition.authoredSectionIds.add(id);
   });
+  pipeline.use(remarkSemanticDirectives, {
+    sourceMap: options.sourceMap,
+    markdown,
+    observedDirectives,
+    warnings,
+    page: { layout: options.layout, motion: options.motion, language: options.language },
+    priorViolations: earlierViolations,
+    ...(vocabulary === undefined ? {} : { vocabulary }),
+  });
+  return { pipeline, vocabulary, islands, expansionUses, observedDirectives };
+}
+
+/** Internal authoring tooling uses the production source phase without rendering the page. */
+export async function inspectMarkdownVocabulary(
+  markdown: string,
+  options: MarkdownRenderOptions,
+): Promise<readonly string[]> {
+  const { pipeline, observedDirectives } = prepareMarkdownPipeline(markdown, options, [], {
+    captured: new Map(),
+    authoredSectionIds: new Set(),
+  });
+  await pipeline.run(pipeline.parse(markdown));
+  return [...observedDirectives].sort(compareNames);
+}
+
+export async function renderMarkdown(
+  markdown: string,
+  options: MarkdownRenderOptions,
+): Promise<MarkdownRenderResult> {
+  const collector: AssetCollector = {
+    embeddedAssets: 0,
+    externalAssets: 0,
+    embeddedBytes: 0,
+    warnings: [],
+    fontCss: [],
+    fontRoles: new Set<string>(),
+    resourceFiles: new Map(),
+    sourceFiles: new Set(),
+    resourceDigests: new Map(),
+    observedResources: { images: 0, videos: 0, downloads: 0, fonts: 0 },
+  };
+  const features = new Set<string>();
+  const shareTransform = { neutralizedSourceLinks: 0 };
+  const navigationTransform = { items: [] as NavigationItem[] };
+  const reviewTargets: ReviewTargetReference[] = [];
+  const structureCollector: PageStructureCollector = {};
+  const edition: EditionCollector = { captured: new Map(), authoredSectionIds: new Set() };
+  const { pipeline, vocabulary, islands, expansionUses, observedDirectives } =
+    prepareMarkdownPipeline(markdown, options, collector.warnings, edition);
+  const effectHosts = new Map<string, EffectHostCount>();
+  const effectHostOptions = { bindings: vocabulary?.effectTargets ?? [], counts: effectHosts };
   const result = await pipeline
-    .use(remarkSemanticDirectives, {
-      sourceMap: options.sourceMap,
-      markdown,
-      observedDirectives,
-      warnings: collector.warnings,
-      page: { layout: options.layout, motion: options.motion, language: options.language },
-      priorViolations: earlierViolations,
-      ...(vocabulary === undefined ? {} : { vocabulary }),
-    })
     .use(remarkCountEffectHosts, effectHostOptions)
     .use(remarkReviewTargets, {
       sourceRoot: options.sourceRoot,

@@ -353,11 +353,11 @@ describe('deterministic public site staging', () => {
     expect(html).toContain('&quot;reportStatus&quot;:&quot;stale&quot;');
     expect(html).toContain('Explain why this evidence supports the release conclusion.');
     expect(html).toContain('Added the missing comparison and linked it to the conclusion.');
-    expect(
-      await readFile(path.join(firstSite, 'examples/review-workspace/prior-review.json')),
-    ).toEqual(
-      await readFile(path.join(repositoryRoot, 'examples/review-workspace/prior-review.json')),
-    );
+    const [stagedReview, canonicalReview] = await Promise.all([
+      readFile(path.join(firstSite, 'examples/review-workspace/prior-review.json')),
+      readFile(path.join(repositoryRoot, 'examples/review-workspace/prior-review.json')),
+    ]);
+    expect(stagedReview.equals(canonicalReview), 'prior-review.json').toBe(true);
   });
 
   it('stages a page with its previous edition named by since as a page with the change layer', async () => {
@@ -407,7 +407,11 @@ describe('deterministic public site staging', () => {
     }
     for (const route of routes.filter((candidate) => candidate.kind === 'copy')) {
       const canonical = path.resolve(repositoryRoot, 'website', route.source);
-      expect(await readFile(path.join(firstSite, route.href))).toEqual(await readFile(canonical));
+      const [stagedBytes, canonicalBytes] = await Promise.all([
+        readFile(path.join(firstSite, route.href)),
+        readFile(canonical),
+      ]);
+      expect(stagedBytes.equals(canonicalBytes), route.href).toBe(true);
     }
     expect(release.skill.sha256).toBe(
       sha256(await readFile(path.join(repositoryRoot, 'skills/agentic-report/SKILL.md'))),

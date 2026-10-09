@@ -1,7 +1,9 @@
 import path from 'node:path';
 import { readFile, readdir } from 'node:fs/promises';
 import { getSourceContract, listExamples } from '../dist/node/discovery.js';
-import { inspectReport } from '../dist/node/index.js';
+import { loadSource } from '../dist/node/source/load-source.js';
+import { inspectMarkdownVocabulary } from '../dist/node/render/markdown.js';
+import { createProviderCache } from '../dist/node/extensions/provider.js';
 import { listReferenceExtensions } from '../dist/node/authoring/reference-extensions.js';
 
 /** Index from actual parsed sources and the same contract as validation. */
@@ -10,13 +12,28 @@ export async function renderAtlas(projectRoot: string): Promise<string> {
   const examples = await Promise.all(
     listExamples().map(async (example) => {
       const entry = path.join(projectRoot, 'examples', example.path, example.entry);
-      const inspected = await inspectReport({ input: entry });
-      const source = await readFile(entry, 'utf8');
-      const languages = source.match(/^localizations:\n((?:[ \t].*\n)+)/mu)?.[1];
-      const variants = [...(languages ?? '').matchAll(/^\s+([\w-]+):\s*(\S+)/gmu)].map((m) => ({
-        language: m[1] ?? '',
-        entry: m[2] ?? '',
-      }));
+      const source = await loadSource(entry);
+      const providerCache = createProviderCache();
+      const vocabularies = await Promise.all(
+        [source, ...source.localizations].map((variant) =>
+          inspectMarkdownVocabulary(variant.markdown, {
+            sourceRoot: source.sourceRoot,
+            sourceMap: variant.sourceMap,
+            format: 'single-file',
+            language: variant.manifest.language,
+            layout: variant.manifest.layout,
+            motion: variant.manifest.motion,
+            ...(variant.data === undefined ? {} : { data: variant.data }),
+            ...(source.extensions === undefined
+              ? {}
+              : { extensions: { declared: source.extensions.extensions, providerCache } }),
+          }),
+        ),
+      );
+      const directives = [...new Set(vocabularies.flat())];
+      const variants = Object.entries(source.manifest.localizations ?? {}).map(
+        ([language, entry]) => ({ language, entry: entry ?? '' }),
+      );
       const companions = [];
       for (const file of await readdir(path.dirname(entry))) {
         if (
@@ -29,7 +46,7 @@ export async function renderAtlas(projectRoot: string): Promise<string> {
         const text = await readFile(path.join(path.dirname(entry), file), 'utf8');
         if (/^---\n[\s\S]*?\ntitle:/u.test(text)) companions.push(file);
       }
-      return { ...example, variants, companions, directives: inspected.observed.directives };
+      return { ...example, variants, companions, directives };
     }),
   );
   const esc = (s: string) => s.replaceAll('|', '\\|').replaceAll('\n', ' ');
