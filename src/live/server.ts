@@ -354,9 +354,17 @@ export async function serveReport(options: ServeReportOptions): Promise<LiveRepo
         await observe([...prepared.source.sourceFiles, ...prepared.resourceSourceFiles]);
         if (closing) return;
         if (observed !== changed) continue;
-        // Revision describes source bytes, independent of the baked previous-edition layer.
+        // Each locale owns its source/resource revision. Comparing only the primary locale loses
+        // localized edits; comparing rendered HTML would mistake the baked since layer for an edit.
         if (
-          edition?.prepared.reviewManifest.reportRevision === prepared.reviewManifest.reportRevision
+          edition?.prepared.variants.length === prepared.variants.length &&
+          prepared.variants.every((variant, index) => {
+            const previous = edition?.prepared.variants[index];
+            return (
+              previous?.locale === variant.locale &&
+              previous.reviewManifest.reportRevision === variant.reviewManifest.reportRevision
+            );
+          })
         ) {
           buildError = undefined;
           announce();

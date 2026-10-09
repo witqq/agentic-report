@@ -25,7 +25,7 @@ import {
   textAttribute,
   titleAttribute,
 } from './definitions.js';
-import { prependDirectiveTitle } from './hast.js';
+import { hasClassName, hastText, prependDirectiveTitle } from './hast.js';
 import { isDirectiveNode, type DirectiveNode } from './mdast.js';
 
 function definition(
@@ -106,6 +106,13 @@ function validate(node: DirectiveNode, context: BlockValidationContext): 'accept
         'Use named objects and compatible cue fields inside one composition.',
       ),
     );
+  visit(node, (candidate) => {
+    if (candidate !== node && isDirectiveNode(candidate) && candidate.name === 'composition')
+      fail(
+        candidate,
+        'Compositions cannot be nested. Put independent compositions beside one another.',
+      );
+  });
   if (objects.length === 0 || objects.length > 16) fail(node, 'A composition needs 1–16 objects.');
   if (cues.length > 64) fail(node, 'A composition supports at most 64 cues.');
   if (new Set(ids).size !== ids.length)
@@ -242,15 +249,17 @@ function cloneContent(children: Element['children'], prefix: string): Element['c
         node.properties[name] =
           name === 'id'
             ? (ids.get(value) ?? value)
-            : ['ariaLabelledBy', 'ariaDescribedBy', 'ariaControls'].includes(name)
-              ? value
-                  .split(/\s+/u)
-                  .map((id) => ids.get(id) ?? id)
-                  .join(' ')
-              : compositionReference(value, ids);
+            : ['htmlFor', 'dataModalOpen'].includes(name)
+              ? (ids.get(value) ?? value)
+              : ['ariaLabelledBy', 'ariaDescribedBy', 'ariaControls', 'headers'].includes(name)
+                ? value
+                    .split(/\s+/u)
+                    .map((id) => ids.get(id) ?? id)
+                    .join(' ')
+                : compositionReference(value, ids);
       else if (
         Array.isArray(value) &&
-        ['ariaLabelledBy', 'ariaDescribedBy', 'ariaControls'].includes(name)
+        ['ariaLabelledBy', 'ariaDescribedBy', 'ariaControls', 'headers', 'htmlFor'].includes(name)
       )
         node.properties[name] = value.map((id) =>
           typeof id === 'string' ? (ids.get(id) ?? id) : id,
@@ -260,6 +269,13 @@ function cloneContent(children: Element['children'], prefix: string): Element['c
   return root.children.filter(
     (node): node is Element['children'][number] => node.type !== 'doctype',
   );
+}
+function compositionTitle(node: Element['children'][number]): node is Element & { tagName: 'h3' } {
+  return node.type === 'element' && node.tagName === 'h3' && hasClassName(node, 'semantic-title');
+}
+function objectLabel(object: Element | undefined, id: string): string {
+  const title = object?.children.find(compositionTitle);
+  return title === undefined ? id : hastText(title);
 }
 function finalize(tree: Root): void {
   visit(tree, 'element', (stage: Element) => {
@@ -293,10 +309,7 @@ function finalize(tree: Root): void {
       (c): c is Element => c.type === 'element' && c.properties.dataSemantic === 'cue',
     );
     const titles = new Map(
-      regions.map(({ node: o, id }) => [
-        id,
-        o.children.filter((c) => c.type === 'element' && c.tagName === 'h3'),
-      ]),
+      regions.map(({ node: o, id }) => [id, o.children.filter(compositionTitle)]),
     );
     const originals = new Map(
       regions.map(({ node: o, id }) => [
@@ -306,7 +319,7 @@ function finalize(tree: Root): void {
             (c) =>
               !(
                 c.type === 'element' &&
-                (c.tagName === 'h3' || c.properties.dataSemantic === 'slot')
+                (compositionTitle(c) || c.properties.dataSemantic === 'slot')
               ),
           ),
         ),
@@ -406,7 +419,10 @@ function finalize(tree: Root): void {
                     children: [
                       {
                         type: 'text' as const,
-                        value: `→ ${String(objects.find((o) => o.properties.dataId === cue.to)?.properties.dataTitle ?? cue.to)}`,
+                        value: `→ ${objectLabel(
+                          objects.find((o) => o.properties.dataId === cue.to),
+                          cue.to,
+                        )}`,
                       },
                     ],
                   },
@@ -422,7 +438,7 @@ function finalize(tree: Root): void {
         (c): c is Element => c.type === 'element' && c.properties.dataSemantic === 'object',
       );
       group.children = [
-        ...group.children.filter((c) => c.type === 'element' && c.tagName === 'h3'),
+        ...group.children.filter(compositionTitle),
         {
           type: 'element',
           tagName: 'div',
@@ -432,6 +448,34 @@ function finalize(tree: Root): void {
       ];
     }
     for (const cue of cueNodes) cue.properties.hidden = true;
+    const connections = cueNodes.map(cueOf).filter((cue) => cue.action === 'connect');
+    const transcript: Element[] =
+      connections.length === 0
+        ? []
+        : [
+            {
+              type: 'element',
+              tagName: 'ol',
+              properties: { className: ['composition-relations'] },
+              children: connections.map((cue) => ({
+                type: 'element',
+                tagName: 'li',
+                properties: {},
+                children: [
+                  {
+                    type: 'text',
+                    value: `${objectLabel(
+                      objects.find((object) => object.properties.dataId === cue.target),
+                      cue.target,
+                    )} → ${objectLabel(
+                      objects.find((object) => object.properties.dataId === cue.to),
+                      cue.to ?? '',
+                    )}${cue.relation === undefined ? '' : ` (${cue.relation})`}${cue.value === undefined ? '' : `: ${cue.value}`}`,
+                  },
+                ],
+              })),
+            },
+          ];
     stage.properties.style = `--composition-rows: ${Math.max(1, objects.filter((o) => !['code', 'detail'].includes(String(o.properties.dataRole))).length)}`;
     const spatialItems = stage.children.filter(
       (c) =>
@@ -443,7 +487,7 @@ function finalize(tree: Root): void {
     stage.properties.dataComposition = String(stage.properties.dataKind);
     stage.properties.dataCompositionId = String(stage.properties.dataId);
     prependDirectiveTitle(stage);
-    const title = stage.children.filter((c) => c.type === 'element' && c.tagName === 'h3');
+    const title = stage.children.filter(compositionTitle);
     stage.children = [
       ...title,
       {
@@ -457,6 +501,7 @@ function finalize(tree: Root): void {
         ),
       },
       ...cueNodes,
+      ...transcript,
     ];
   });
 }

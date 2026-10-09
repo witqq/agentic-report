@@ -20,9 +20,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the resulting file:
 
 ```sh
-npx --yes agentic-report@0.20.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.21.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.20.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.21.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. `build` validates the complete source before publishing the
@@ -62,7 +62,7 @@ If you do not want to execute the published `agentic-report` npm package, clone 
 inspect the repository, run its checks, and invoke the compiled CLI directly:
 
 ```sh
-git clone --branch v0.20.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.21.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -96,11 +96,11 @@ From a compiled checkout or installed package, render the native gallery:
 node skills/agentic-report/scripts/build-atlas.mjs --out ./report-atlas
 ```
 
-Open `report-atlas/index.html` to compare actual pages. The gallery is for discovery; it adds no page or film handoff gate.
+Open `report-atlas/index.html` to compare actual pages. A separately installed skill uses the nearest consumer-installed compiler, or the release pinned in its SKILL.md through npx; `--cli <compiler command>` selects a reviewed checkout explicitly. The gallery is for discovery; it adds no page or film handoff gate.
 
 ## Directed explanations for a film
 
-A `composition` arranges named Markdown objects as `diagram-code`, `pipeline`, `before-after`, `overview-detail` or `ownership`. Its cues reveal and focus objects, draw connections, copy or transfer values, replace text, compare results and move the camera. Agentic Screencast report scenes bind those cues to measured speech paragraphs; standalone pages use preview beats and keep final values in static or reduced-motion views. Read the [directing guide](skills/agentic-report/references/directed-scenes.md) for syntax, existing effects and the three complete examples. Use the compiled local checkout for this composition vocabulary.
+A `composition` arranges named Markdown objects as `diagram-code`, `pipeline`, `before-after`, `overview-detail` or `ownership`. Its cues reveal and focus objects, draw connections, copy or transfer values, replace text, compare results and move the camera. Agentic Screencast report scenes bind those cues to measured speech paragraphs; standalone pages use preview beats and keep final values in static or reduced-motion views. Read the [directing guide](skills/agentic-report/references/directed-scenes.md) for syntax, existing effects and the three complete examples. The pinned release supports this vocabulary; filming also requires a compatible Screencast composition bridge.
 
 Stable objects can contain named `slot` regions for changing values. `scene-group` keeps related objects together, and `layout="row|column|grid"` chooses their spatial arrangement independently of the composition meaning. See the same guide for slot addressing, preserved owner identity and responsive grouping.
 
@@ -112,8 +112,7 @@ Whenever showing a system interface, first show its complete application screen,
 
 ## Local living document
 
-From a checkout containing the live mode, run `pnpm build`, then
-`node dist/node/cli.js serve ../my-page --human` from the author Codex session. Open the printed URL,
+Run `npx --yes agentic-report@0.21.0 serve ../my-page --human` from the author Codex session. A reviewed checkout uses `pnpm build`, then `node dist/node/cli.js serve ../my-page --human`. Open the printed URL,
 select text and choose **Ask agent** to write beside the passage, or send a general chat question. Waiting
 questions show their order and can be cancelled immediately; the chat panel also offers width and visual
 settings. The same agent receives the questions, streams its reply and edits original sources; valid rebuilt
@@ -246,7 +245,7 @@ that footer.
 ## Public example portfolio
 
 The package ships buildable examples beside its starters: layout and component catalogs, Review and
-Response workspaces, and realistic showcases, each with a maintained Russian entry. Their reader jobs and
+Response workspaces, and realistic showcases, with maintained Russian entries where declared by the example inventory. Their reader jobs and
 page shapes are listed under
 [«Rebuild the public showcases»](docs/AGENT-REFERENCE.md#rebuild-the-public-showcases).
 
@@ -377,7 +376,9 @@ A page extends the vocabulary through the extension manifests it lists in `exten
 time), an effect (a bundled script decorating existing directives) or an island (an application in a
 sandboxed frame with a Markdown static equivalent). Author code runs only through them: a provider runs
 locally at build time like any build script you chose, an island has no network and no access to the page,
-and an effect ships with its hash in the page policy only where it is used. `validate`, `inspect` and
+and an effect ships with its hash in the page policy when compiled content carries its target, including
+retained composition fragments for earlier or future states. This uses the existing declared-extension
+bundle and policy; ordinary Markdown never executes author code. `validate`, `inspect` and
 `review` run providers too, because they expand the page like `build`: do not validate an untrusted
 source that declares providers. The format is in the source
 contract's [«Extensions»](docs/product/source-contract.md#extensions).

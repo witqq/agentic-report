@@ -10,7 +10,7 @@ import {
 import { connectionRoute, overlaps, type SceneRect } from '../../composition-route.js';
 import { pageClock } from '../clock.js';
 import { hydrateSharedImages } from '../shared-media.js';
-import { provideFeature, type Cleanup } from '../features.js';
+import { feature, provideFeature, type Cleanup } from '../features.js';
 import { timed, whenVisible } from '../technique-timing.js';
 
 export interface ReportCompositionControl {
@@ -24,6 +24,12 @@ declare global {
 }
 const clock = pageClock();
 const SVG = 'http://www.w3.org/2000/svg';
+interface MountedBody {
+  body: HTMLElement;
+  destroy?: Cleanup;
+}
+// Locale parking keeps the actual authored stage. Retain its reader-owned DOM instances too.
+const sceneBodies = new WeakMap<HTMLElement, Map<string, Map<string, MountedBody>>>();
 function svg<K extends keyof SVGElementTagNameMap>(
   name: K,
   attributes: Record<string, string>,
@@ -70,12 +76,16 @@ function scopedClone(fragment: DocumentFragment, prefix?: string): DocumentFragm
       const value =
         attribute.name === 'id'
           ? (ids.get(attribute.value) ?? attribute.value)
-          : ['aria-labelledby', 'aria-describedby', 'aria-controls'].includes(attribute.name)
-            ? attribute.value
-                .split(/\s+/u)
-                .map((id) => ids.get(id) ?? id)
-                .join(' ')
-            : compositionReference(attribute.value, ids);
+          : ['for', 'data-modal-open'].includes(attribute.name)
+            ? (ids.get(attribute.value) ?? attribute.value)
+            : ['aria-labelledby', 'aria-describedby', 'aria-controls', 'headers'].includes(
+                  attribute.name,
+                )
+              ? attribute.value
+                  .split(/\s+/u)
+                  .map((id) => ids.get(id) ?? id)
+                  .join(' ')
+              : compositionReference(attribute.value, ids);
       node.setAttribute(attribute.name, value);
     }
   }
@@ -86,6 +96,7 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
   const scenes = [
     ...page.querySelectorAll<HTMLElement>('[data-semantic="composition"][data-composition]'),
   ];
+  if (scenes.length === 0) return () => undefined;
   const controllers = scenes.map((scene) => {
     const stage = required(scene.querySelector<HTMLElement>('[data-composition-stage]'));
     const objects = new Map(
@@ -120,6 +131,12 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
     const noteKeys = new Map<string, string>();
 
     const keys = new Map<string, string>();
+    let bodies = sceneBodies.get(stage);
+    if (bodies === undefined) {
+      bodies = new Map();
+      sceneBodies.set(stage, bodies);
+    }
+    const retainedBodies = bodies;
     const overlay = svg('svg', { class: 'composition-connections', 'aria-hidden': 'true' });
     stage.append(overlay);
     let resolve: (anchor: string) => number = compositionTime;
@@ -242,9 +259,24 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         const node = required(objects.get(id));
         const key = JSON.stringify(state.content);
         if (keys.get(id) !== key) {
-          required(node.querySelector(':scope > [data-composition-content]')).replaceChildren(
-            content(state.content, id),
-          );
+          let cached = retainedBodies.get(id);
+          if (cached === undefined) {
+            cached = new Map();
+            retainedBodies.set(id, cached);
+          }
+          let entry = cached.get(key);
+          const previous = required(node.querySelector(':scope > [data-composition-content]'));
+          if (entry === undefined) {
+            const body = document.createElement('div');
+            body.className = 'composition-content';
+            body.dataset.compositionContent = '';
+            body.dataset.contentScope = `composition-${scene.dataset.compositionId}-${id}-${cached.size}`;
+            body.append(content(state.content, id));
+            previous.replaceWith(body);
+            entry = { body };
+            cached.set(key, entry);
+          } else previous.replaceWith(entry.body);
+          entry.destroy ??= feature('content')?.(entry.body) ?? (() => undefined);
           keys.set(id, key);
         }
         node.style.opacity = String(
@@ -264,6 +296,9 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         if (state.focusAmount > 0) node.dataset.compositionEmphasis = state.emphasis ?? 'outline';
         else delete node.dataset.compositionEmphasis;
         node.toggleAttribute('data-composition-hidden', !state.visible);
+        node.inert = !state.visible || (!staticFrame && state.entrance === 0);
+        if (node.inert) node.setAttribute('aria-hidden', 'true');
+        else node.removeAttribute('aria-hidden');
         node.toggleAttribute('data-composition-empty', 'empty' in state.content);
         const lines = new Set<number>();
         for (const part of (state.lines ?? frame.annotations.get(id)?.lines ?? '').split(',')) {
@@ -537,6 +572,7 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         const node = document.createElement('div');
         node.className = 'composition-travel';
         node.setAttribute('aria-hidden', 'true');
+        node.inert = true;
         node.append(content(travel.content, `travel-${travel.from}-${travel.to}`));
         const q = travel.progress;
         const blockers = [...objects.keys()]
@@ -641,6 +677,7 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         runner.start();
       },
       destroy() {
+        render(Number.POSITIVE_INFINITY);
         visible();
         runner.stop();
         window.removeEventListener('resize', resize);
@@ -648,6 +685,12 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
         still.removeEventListener('change', reduced);
         printing.removeEventListener('change', reduced);
         overlay.remove();
+        stage.style.transform = '';
+        for (const cached of retainedBodies.values())
+          for (const entry of cached.values()) {
+            entry.destroy?.();
+            delete entry.destroy;
+          }
         stage.style.paddingBottom = '';
         stage.style.columnGap = '';
         for (const group of stage.querySelectorAll<HTMLElement>('.scene-group-objects'))
@@ -662,6 +705,8 @@ function installComposition(page: HTMLElement, still: MediaQueryList): Cleanup {
           n.style.opacity = '';
           n.style.transform = '';
           n.removeAttribute('data-composition-hidden');
+          n.inert = false;
+          n.removeAttribute('aria-hidden');
           n.removeAttribute('data-composition-focus');
           n.removeAttribute('data-composition-emphasis');
           n.style.removeProperty('--composition-focus');

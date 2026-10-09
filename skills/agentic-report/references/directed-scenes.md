@@ -18,6 +18,8 @@ Objects hold ordinary Markdown, local images, diagrams and code fences. Their or
 
 Code objects in `pipeline`, `before-after` and `ownership` receive a full-width row below the other objects; `diagram-code` gives shorter code its dedicated column. Connections and moving objects use stage-local coordinates and stay aligned when a film fits the scene.
 
+Objects and slots retain stable scoped review owners. Their rendered Markdown descendants belong to that owner, so changing value content does not create orphan targets. Selecting text within one region visibly offers discussion for that whole region; its exported segment omits `selection` rather than inventing an exact source quote or offset for a changing frame. Ranges crossing dynamic owners are not captured; ordinary prose keeps precise selected-text anchors. Runtime seeks preserve the mounted reading state of a region, including its open disclosures and active controls; copied fragments use the same package content lifecycle. Hidden unrevealed objects and decorative travelling copies cannot receive focus. Every authored connection also has a visible, accessible and printable transcript naming its source, destination, relationship and label, so its meaning remains available outside the animated route.
+
 ## Write a scene without layout code
 
 Use a longer fence for the outer composition than for its objects. Object names are local to their composition; two stages may both contain `source`. A composition has 1–16 objects and at most 64 cues. `id` is required; `title` is optional. The default kind is `diagram-code` and the default role is `visual`.
@@ -229,7 +231,7 @@ A paragraph may coordinate several related visible actions. Use separate paragra
 
 The compiled page contains final values before the runtime starts. Reduced motion, `motion: none`, printing and a page without scripts show that final static result. They omit moving overlays and camera transforms. Do not rely on a reveal to hide factual qualifications in the final page.
 
-For this source checkout, use its compiled CLI, `node <checkout>/dist/node/cli.js`, and a Screencast build containing the composition bridge. Check `schema --scope directives` for `composition` when selecting the compiler; the skill's pinned npm release is for its existing page vocabulary. Build one Report example locally, then let the report scene rebuild its Markdown directly. When a page contains several compositions, a filmed target selects that stage's anchors and binding; unrelated stages may use other beat counts. The runtime host API provides `anchors(id?)` and `bind(resolve, id?)`; omit the id only when intentionally binding the whole page to one shared clock.
+Use the skill's pinned release, or a reviewed checkout's compiled CLI (`node <checkout>/dist/node/cli.js`), and a Screencast build containing the composition bridge. Check `schema --scope directives` for `composition` when selecting another compiler. Build one Report example locally, then let the report scene rebuild its Markdown directly. When a page contains several compositions, a filmed target selects that stage's anchors and binding; unrelated stages may use other beat counts. The runtime host API provides `anchors(id?)` and `bind(resolve, id?)`; omit the id only when intentionally binding the whole page to one shared clock.
 
 Select it with `target: [data-composition-id="edit"]`; a compatible Screencast build fits that complete stage with a caption lane and excludes surrounding page prose from the shot.
 

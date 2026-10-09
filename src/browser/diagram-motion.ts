@@ -18,6 +18,7 @@
 import { type CameraBox as Box, cameraAt } from './camera.js';
 import { pageClock, progressOverride } from './clock.js';
 import { stillMotionQuery } from './motion-level.js';
+import { contentElements, type Cleanup, provideFeature } from './features.js';
 
 const clock = pageClock();
 // Страница стоит и при `motion: none`, а не только по просьбе читателя.
@@ -107,7 +108,7 @@ function paintDrawing(figure: HTMLElement): void {
 const PULSE_STEP_MS = 650;
 const PULSE_PASSES = 3;
 
-function installPulse(figure: HTMLElement): void {
+function installPulse(figure: HTMLElement): Cleanup {
   let start: number | undefined;
   const render = (now: number): boolean => {
     if (start === undefined) return false;
@@ -140,7 +141,7 @@ function installPulse(figure: HTMLElement): void {
   const step = (now: number): void => {
     frame = render(now) ? clock.frame(step) : 0;
   };
-  clock.register({ at: (seconds) => render(seconds * 1000) });
+  const unregister = clock.register({ at: (seconds) => render(seconds * 1000) });
   const observer = new IntersectionObserver(
     (entries) => {
       if (!entries.some((entry) => entry.isIntersecting) || reducedMotion.matches) return;
@@ -151,6 +152,12 @@ function installPulse(figure: HTMLElement): void {
     { threshold: 0.4 },
   );
   observer.observe(figure);
+  return () => {
+    observer.disconnect();
+    unregister();
+    if (frame !== 0) clock.cancelFrame(frame);
+    figure.removeAttribute('data-pulse-live');
+  };
 }
 
 /* Пролёт внутрь узла ------------------------------------------------------------------------------- */
@@ -319,7 +326,7 @@ function chartMarks(figure: HTMLElement): Mark[] {
   return marks;
 }
 
-function installCountUp(figure: HTMLElement): void {
+function installCountUp(figure: HTMLElement): Cleanup {
   const marks = chartMarks(figure);
   let start: number | undefined;
   const render = (now: number): boolean => {
@@ -334,7 +341,7 @@ function installCountUp(figure: HTMLElement): void {
   const step = (now: number): void => {
     frame = render(now) ? clock.frame(step) : 0;
   };
-  clock.register({ at: (seconds) => render(seconds * 1000) });
+  const unregister = clock.register({ at: (seconds) => render(seconds * 1000) });
   const observer = new IntersectionObserver(
     (entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
@@ -345,20 +352,27 @@ function installCountUp(figure: HTMLElement): void {
     { threshold: 0.5 },
   );
   observer.observe(figure);
+  return () => {
+    observer.disconnect();
+    unregister();
+    if (frame !== 0) clock.cancelFrame(frame);
+    for (const mark of marks) mark.apply(1);
+    figure.removeAttribute('data-count-up-live');
+  };
 }
 
 /* Установка --------------------------------------------------------------------------------------- */
 
-function installDiagramMotion(): void {
-  if (reducedMotion.matches || typeof IntersectionObserver !== 'function') return;
-  const drawn = [...document.querySelectorAll<HTMLElement>('figure[data-draw="scroll"]')];
-  const zooms = [...document.querySelectorAll<HTMLElement>('figure[data-zoom]')];
+function installDiagramMotion(scope: HTMLElement): Cleanup {
+  if (reducedMotion.matches || typeof IntersectionObserver !== 'function') return () => undefined;
+  const cleanups: Cleanup[] = [];
+  const drawn = contentElements<HTMLElement>(scope, 'figure[data-draw="scroll"]');
+  const zooms = contentElements<HTMLElement>(scope, 'figure[data-zoom]');
   for (const figure of zooms) placeZoom(figure);
-  for (const figure of document.querySelectorAll<HTMLElement>('figure[data-pulse]'))
-    installPulse(figure);
-  for (const figure of document.querySelectorAll<HTMLElement>('figure[data-count-up]'))
-    installCountUp(figure);
-  if (drawn.length === 0 && zooms.length === 0) return;
+  for (const figure of contentElements<HTMLElement>(scope, 'figure[data-pulse]'))
+    cleanups.push(installPulse(figure));
+  for (const figure of contentElements<HTMLElement>(scope, 'figure[data-count-up]'))
+    cleanups.push(installCountUp(figure));
   let frame = 0;
   const visibleOrOverridden = (figure: HTMLElement): boolean => {
     if (progressOverride(figure) !== undefined) return true;
@@ -380,16 +394,48 @@ function installDiagramMotion(): void {
   };
   paint(false);
   // Перемотка часов ставит прорисовку и камеру сразу: по положению на экране или по прогрессу записи.
-  clock.register({ at: () => paint(false) });
+  const unregister = clock.register({ at: () => paint(false) });
   document.addEventListener('scroll', schedule, { passive: true });
-  window.addEventListener('resize', () => {
+  const resize = (): void => {
     for (const figure of zooms) placeZoom(figure);
     schedule();
-  });
+  };
+  window.addEventListener('resize', resize);
+  return () => {
+    for (const cleanup of cleanups) cleanup();
+    unregister();
+    document.removeEventListener('scroll', schedule);
+    window.removeEventListener('resize', resize);
+    if (frame !== 0) clock.cancelFrame(frame);
+    for (const figure of drawn) {
+      figure.removeAttribute('data-draw-driven');
+      for (const part of figure.querySelectorAll<SVGElement>('[data-draw-from]')) {
+        part.style.removeProperty('stroke-dasharray');
+        part.style.removeProperty('stroke-dashoffset');
+        part.style.removeProperty('opacity');
+      }
+    }
+    for (const figure of zooms) {
+      figure.removeAttribute('data-zoom-live');
+      figure.removeAttribute('data-zoom-unreadable');
+      figure.removeAttribute('data-zoom-progress');
+      const camera = figure.querySelector<SVGSVGElement>('.visualization-zoom-camera');
+      if (camera?.dataset.zoomFrom) camera.setAttribute('viewBox', camera.dataset.zoomFrom);
+      camera?.style.removeProperty('--zoom-inner-text');
+      camera?.style.removeProperty('--zoom-inner-shape');
+    }
+  };
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', installDiagramMotion, { once: true });
-} else {
-  installDiagramMotion();
-}
+provideFeature('diagramMotion', (scope) => {
+  let cleanup = installDiagramMotion(scope);
+  const reinstall = (): void => {
+    cleanup();
+    cleanup = installDiagramMotion(scope);
+  };
+  reducedMotion.addEventListener('change', reinstall);
+  return () => {
+    reducedMotion.removeEventListener('change', reinstall);
+    cleanup();
+  };
+});

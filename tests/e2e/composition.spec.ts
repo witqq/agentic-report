@@ -605,3 +605,345 @@ Waiting
     }
   });
 }
+
+// Missing dynamic descendant owners used to disable Review on otherwise valid scenes.
+test('review remains available with connected stable owners through edits, transfers and seeking', async ({
+  page,
+}, info) => {
+  const root = path.resolve('test-results/composition', `${info.project.name}-review-owners`);
+  await mkdir(root, { recursive: true });
+  const input = path.join(root, 'report.md'),
+    output = path.join(root, 'page.html');
+  await writeFile(
+    input,
+    source
+      .replace('topbar: false', 'topbar: true\nreview: true')
+      .replace('action="copy"', 'action="transfer"'),
+  );
+  await buildReport({ input, output });
+  await page.addInitScript(() => {
+    window.__agenticReportClock = 'manual';
+  });
+  for (const reducedMotion of ['reduce', 'no-preference'] as const) {
+    await page.emulateMedia({ reducedMotion });
+    await page.goto(pathToFileURL(output).href);
+    await expect(page.locator('[data-review-toggle]')).toBeEnabled();
+    for (const time of [0, 4, 6, 0, 6]) {
+      await page.evaluate((time) => window.__clock?.seek(time), time);
+      const connected = await page.evaluate(() => {
+        const manifest = document.querySelector<HTMLTemplateElement>(
+          'template[data-review-manifest]',
+        );
+        const targets = (
+          JSON.parse(manifest?.content.textContent ?? '{}') as { targets: Array<{ id: string }> }
+        ).targets;
+        return targets.every(
+          (target) => document.querySelector(`[data-review-target="${target.id}"]`)?.isConnected,
+        );
+      });
+      expect(connected).toBe(true);
+    }
+    await page.locator('[data-review-toggle]').click();
+    await expect(page.locator('[data-review-dialog]')).toBeVisible();
+    const reference = await page.evaluate(() => {
+      const template = document.querySelector<HTMLTemplateElement>(
+        'template[data-review-manifest]',
+      );
+      const manifest = JSON.parse(template?.content.textContent ?? '{}') as {
+        reportRevision: string;
+        targets: Array<{ id: string; kind: string; stableKey?: string }>;
+      };
+      const target = manifest.targets.find(
+        // Bounded scoped identity of the canonical ["edit", "result"] tuple.
+        (target) =>
+          target.stableKey ===
+          'directive:object:scoped-bc3448200978f711718271773b76b1dd2bc77b0ab3721148751b6e407304d976',
+      );
+      if (target === undefined) throw new Error('Stable receiving region review target is absent.');
+      return { revision: manifest.reportRevision, target };
+    });
+    // Whole-region notes deliberately bind to the stable authored owner, not a fabricated source
+    // offset for its changed runtime value. Exercise the existing import/add/export contract.
+    await page.locator('[data-review-import]').setInputFiles({
+      name: 'region-context.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(
+        JSON.stringify({
+          contractVersion: 2,
+          report: { revision: reference.revision },
+          threads: [
+            {
+              id: 'thread-region',
+              segments: [
+                {
+                  id: 'segment-region',
+                  reportRevision: reference.revision,
+                  target: reference.target,
+                  resolved: false,
+                  messages: [
+                    { id: 'message-context', author: 'user', message: 'Receiving region context.' },
+                  ],
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    });
+    await page.locator('[data-review-thread-open]').click();
+    await page
+      .locator('[data-review-message]')
+      .fill('Check the changed value in this receiving region.');
+    await page.locator('[data-review-add-message]').click();
+    await expect(page.locator('[data-review-thread-messages]')).toContainText('changed value');
+    await page.locator('[data-review-popover-close]').click();
+    for (const time of [0, 4, 6]) await page.evaluate((time) => window.__clock?.seek(time), time);
+    if ((await page.locator('[data-review-dialog]').getAttribute('open')) === null)
+      await page.locator('[data-review-toggle]').click();
+    const download = page.waitForEvent('download');
+    await page.locator('[data-review-export]').click();
+    const stream = await (await download).createReadStream();
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+    const bytes = Buffer.concat(chunks);
+    const exported = JSON.parse(bytes.toString('utf8')) as {
+      threads: Array<{
+        segments: Array<{
+          target: { id: string };
+          selection?: unknown;
+          messages: Array<{ message: string }>;
+        }>;
+      }>;
+    };
+    expect(exported.threads[0]?.segments[0]?.target.id).toBe(reference.target.id);
+    expect(exported.threads[0]?.segments[0]?.selection).toBeUndefined();
+    expect(exported.threads[0]?.segments[0]?.messages.map((message) => message.message)).toEqual([
+      'Receiving region context.',
+      'Check the changed value in this receiving region.',
+    ]);
+    await page.locator('[data-review-import]').setInputFiles({
+      name: 'roundtrip-region.json',
+      mimeType: 'application/json',
+      buffer: bytes,
+    });
+    await page.locator('[data-review-thread-open]').click();
+    await expect(page.locator('[data-review-thread-messages]')).toContainText('changed value');
+    await page.locator('[data-review-popover-close]').click();
+    if ((await page.locator('[data-review-dialog]').getAttribute('open')) !== null)
+      await page.locator('[data-review-close]').click();
+  }
+});
+
+// Opacity alone leaves invisible links and decorative copies in the keyboard order.
+test('reveal reversibly excludes hidden controls and travelling copies from focus', async ({
+  page,
+}, info) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.addInitScript(() => {
+    window.__agenticReportClock = 'manual';
+  });
+  await page.goto(
+    await customBuild(
+      `${info.project.name}-inert`,
+      `::::composition{id="focus-access"}
+:::object{id="source"}
+[A real link](https://example.org)
+:::
+:::object{id="result"}
+Waiting
+:::
+::cue{at="2" action="reveal" target="source"}
+::cue{at="4" action="copy" target="source" to="result" duration="1"}
+::::`,
+    ),
+  );
+  const owner = page.locator('[data-composition-object="source"]');
+  const link = owner.locator('a');
+  for (const time of [0, 3, 0, 3]) {
+    await page.evaluate((time) => window.__clock?.seek(time), time);
+    const focused = await link.evaluate((element) => {
+      (element as HTMLElement).focus();
+      return document.activeElement === element;
+    });
+    expect(focused).toBe(time === 3);
+    expect(await owner.evaluate((element) => element.hasAttribute('aria-hidden'))).toBe(time === 0);
+  }
+  await page.evaluate(() => window.__clock?.seek(4.5));
+  const travel = page.locator('.composition-travel');
+  await expect(travel).toHaveAttribute('inert', '');
+  expect(
+    await travel.locator('a').evaluate((element) => {
+      (element as HTMLElement).focus();
+      return document.activeElement === element;
+    }),
+  ).toBe(false);
+});
+
+// Compiler-template cloning used to remove mounted controls and reset reader-owned form state.
+test('copied fragments keep component controls, local references and independent form state across seeks', async ({
+  page,
+}, info) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.addInitScript(() => {
+    window.__agenticReportClock = 'manual';
+  });
+  await page.goto(
+    await customBuild(
+      `${info.project.name}-content-scope`,
+      `::::::::composition{id="components" layout="column"}
+:::::::object{id="source" title="Original"}
+\`\`\`ts
+const value = 1;
+\`\`\`
+
+:::diagram{title="Actual graph" description="Input produces output" direction="right"}
+::node{id="input" label="Input"}
+::node{id="output" label="Output"}
+::edge{from="input" to="output"}
+:::
+
+:::modal{title="Details" trigger="Open details"}
+Original modal content.
+:::
+
+:::::response{id="choice" title="Independent answer"}
+::::question{id="decision" kind="single" title="Choose"}
+::option{id="yes" label="Yes"}
+::option{id="no" label="No"}
+::::
+::::question{id="note" kind="text" title="Note"}
+::::
+:::::
+:::::::
+:::::::object{id="result" title="Copy"}
+Waiting
+:::::::
+::cue{at="1" action="copy" target="source" to="result"}
+::cue{at="3" action="replace" target="result" value="Temporary value"}
+::::::::`,
+    ),
+  );
+  const original = page.locator('[data-composition-object="source"]');
+  const copy = page.locator('[data-composition-object="result"]');
+  await page.evaluate(() => window.__clock?.seek(0));
+  await original.locator('input[value="yes"]').check();
+  await original.locator('textarea[data-response-global-text]').fill('Original answer');
+  await page.evaluate(() => window.__clock?.seek(2));
+  await expect(copy.locator('[data-copy-code]')).toHaveCount(1);
+  await expect(copy.locator('[data-figure-open]')).toHaveCount(1);
+  await copy.locator('input[value="no"]').check();
+  await expect(original.locator('input[value="yes"]')).toBeChecked();
+  await copy.locator('textarea[data-response-global-text]').fill('Independent copied answer');
+  await copy.locator('textarea[data-response-global-text]').evaluate((element) => {
+    (element as HTMLElement).dataset.retainedIdentity = 'same-node';
+  });
+  await copy.locator('[data-modal-open]').click();
+  await expect(copy.locator('dialog')).toBeVisible();
+  await expect(original.locator('dialog')).not.toBeVisible();
+  await copy.locator('[data-modal-close]').click();
+  for (const time of [4, 0, 4, 2]) await page.evaluate((time) => window.__clock?.seek(time), time);
+  await expect(copy.locator('textarea[data-response-global-text]')).toHaveValue(
+    'Independent copied answer',
+  );
+  await expect(copy.locator('textarea[data-response-global-text]')).toHaveAttribute(
+    'data-retained-identity',
+    'same-node',
+  );
+  await expect(copy.locator('input[value="no"]')).toBeChecked();
+  await expect(original.locator('textarea[data-response-global-text]')).toHaveValue(
+    'Original answer',
+  );
+  await expect(copy.locator('[data-copy-code]')).toHaveCount(1);
+  await copy.locator('[data-figure-open]').click();
+  await expect(page.locator('[data-figure-viewer]')).toHaveCount(1);
+  await page.locator('[data-viewer-close]').click();
+  const ids = await page
+    .locator('[id]')
+    .evaluateAll((elements) => elements.map((element) => element.id));
+  expect(new Set(ids).size).toBe(ids.length);
+});
+
+// Connection meaning must survive when SVG overlays cannot be perceived.
+test('authored connection transcript stays readable in reduced motion and print', async ({
+  page,
+}, info) => {
+  await page.goto(
+    await customBuild(
+      `${info.project.name}-relations`,
+      `::::composition{id="relation"}
+:::object{id="a" title="Producer"}
+A
+:::
+:::object{id="b" title="Consumer"}
+B
+:::
+::cue{at="0" action="connect" target="a" to="b" relation="event" value="sends payment"}
+::::`,
+    ),
+  );
+  const transcript = page.locator('.composition-relations');
+  for (const media of ['screen', 'print'] as const) {
+    await page.emulateMedia({ media, reducedMotion: 'reduce' });
+    await expect(transcript).toBeVisible();
+    await expect(transcript).toHaveText('Producer → Consumer (event): sends payment');
+    expect(
+      await transcript.evaluate(
+        (element) => element.closest('[hidden], [aria-hidden="true"], [inert]') !== null,
+      ),
+    ).toBe(false);
+  }
+});
+
+// Mounting ordinary content inside a scene must not overwrite its page-level narration API.
+test('composition narration API survives fragment mounts, replacements and repeated binding', async ({
+  page,
+}, info) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.addInitScript(() => {
+    window.__agenticReportClock = 'manual';
+  });
+  await page.goto(
+    await customBuild(
+      `${info.project.name}-api-lifecycle`,
+      `::::composition{id="narrated"}
+:::object{id="source"}
+Original
+:::
+:::object{id="result"}
+Waiting
+:::
+::cue{at="b2" action="copy" target="source" to="result"}
+::cue{at="b3" action="replace" target="result" value="Changed"}
+::::`,
+    ),
+  );
+  const result = page.locator('[data-composition-object="result"] > [data-composition-content]');
+  for (const starts of [
+    [0, 7, 11],
+    [0, 17, 21],
+  ] as const) {
+    expect(await page.evaluate(() => window.__reportComposition?.anchors('narrated'))).toEqual([
+      'b2',
+      'b3',
+    ]);
+    await page.evaluate((starts) => {
+      window.__reportComposition?.bind(
+        (anchor) => (anchor === 'b2' ? starts[1] : starts[2]),
+        'narrated',
+      );
+    }, starts);
+    for (const [time, expected] of [
+      [starts[1] - 1, 'Waiting'],
+      [starts[1] + 1, 'Original'],
+      [starts[2] + 1, 'Changed'],
+      [0, 'Waiting'],
+    ] as const) {
+      await page.evaluate((time) => window.__clock?.seek(time), time);
+      await expect(result).toHaveText(expected);
+      expect(await page.evaluate(() => window.__reportComposition?.anchors('narrated'))).toEqual([
+        'b2',
+        'b3',
+      ]);
+    }
+  }
+});

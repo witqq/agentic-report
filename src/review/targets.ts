@@ -63,6 +63,20 @@ export const remarkReviewTargets: Plugin<[ReviewTargetPluginOptions], Root> =
     visit(tree, (candidate, _index, parent) => {
       const node = candidate as unknown as PositionedNode;
       if (parent !== undefined) parents.set(node, parent as unknown as PositionedNode);
+      // Moving/replaced descendants have one persistent review owner: their region.
+      // Slots remain independent owners inside a stable object.
+      if (node.name !== 'slot') {
+        let ancestor = parent as unknown as PositionedNode | undefined;
+        while (ancestor !== undefined) {
+          if (
+            REVIEW_TARGET_OWNERSHIP_CONTRACT.dynamicRegionOwners.some(
+              (name) => name === ancestor?.name,
+            )
+          )
+            return;
+          ancestor = parents.get(ancestor);
+        }
+      }
       const kind = reviewableKind(node);
       if (kind === 'markdown:paragraph' && parent?.type === 'listItem') return;
       // Картинки сравнения пакет переносит в свою сцену, а абзац, в котором их написал автор, исчезает:
@@ -148,12 +162,26 @@ export const rehypeReviewTargets: Plugin<[ReviewTargetPluginOptions], HastRoot> 
     const targetsByRange = new Map(
       options.targets.map((target) => [sourceRangeKey(target.source), target]),
     );
-    visit(tree, 'element', (node: Element) => {
+    const dynamicOwned = new WeakSet<object>();
+    visit(tree, (candidate, _index, parent) => {
+      if (
+        parent !== undefined &&
+        (dynamicOwned.has(parent) ||
+          (parent.type === 'element' &&
+            REVIEW_TARGET_OWNERSHIP_CONTRACT.dynamicRegionOwners.some(
+              (name) => name === (parent as Element).properties.dataSemantic,
+            )))
+      )
+        dynamicOwned.add(candidate);
+      if (candidate.type !== 'element') return;
+      const node = candidate as Element;
       const existing = node.properties.dataReviewTarget;
       if (typeof existing === 'string') {
         projected.add(existing);
+        if (node.tagName === 'pre' && !dynamicOwned.has(node)) codeIndex += 1;
         return;
       }
+      if (dynamicOwned.has(node)) return;
       if (node.tagName === 'pre') {
         const target = codeTargets[codeIndex];
         codeIndex += 1;
@@ -298,7 +326,14 @@ function directiveExplicitId(
     ancestor === undefined
       ? undefined
       : directiveExplicitId(ancestor, parents.get(ancestor), parents);
-  return typeof scope === 'string' ? `${scope}/${value.trim()}` : value.trim();
+  // Scoped identities must satisfy the same bounded identifier contract as ordinary targets.
+  // JSON frames the pair without delimiter ambiguity; full SHA-256 keeps every scope depth bounded.
+  // The 71-character namespace cannot equal a literal authored id (maximum 64 characters).
+  return typeof scope === 'string'
+    ? `scoped-${createHash('sha256')
+        .update(JSON.stringify([scope, value.trim()]))
+        .digest('hex')}`
+    : value.trim();
 }
 
 function sourceSegment(

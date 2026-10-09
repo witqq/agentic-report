@@ -126,7 +126,7 @@ When the product has its own colours, let the package place them instead of gues
 contrast:
 
 ```sh
-npx --yes agentic-report@0.20.0 theme --colors "#0b5fff,#ff7a00" --extends neutral --output ./my-page/brand-theme.yaml
+npx --yes agentic-report@0.21.0 theme --colors "#0b5fff,#ff7a00" --extends neutral --output ./my-page/brand-theme.yaml
 ```
 
 `--colors` takes one or two colours written `#rgb` or `#rrggbb`. The first becomes the accent family —

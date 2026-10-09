@@ -24,10 +24,12 @@ import {
 } from '../response/contract.js';
 import { packageStrings, type PackageStrings } from '../localization.js';
 import { browserIcon } from './icon.js';
+import { contentElements } from './features.js';
 
 class ResponseImportError extends Error {}
 
 const RESPONSE_DRAG_TYPE = 'application/x-agentic-response-item';
+let controlInstance = 0;
 
 export interface ResponseWorkspacesController {
   readonly snapshot: () => ReadonlyMap<string, ResponseArtifact>;
@@ -44,9 +46,12 @@ export function installResponseWorkspaces(
   page: HTMLElement = document.body,
   initial: ReadonlyMap<string, ResponseArtifact> = new Map(),
 ): ResponseWorkspacesController {
-  const strings = packageStrings(page.dataset.pagePackageLocale);
+  const strings = packageStrings(
+    page.closest<HTMLElement>('[data-localized-page-variant]')?.dataset.pagePackageLocale ??
+      page.dataset.pagePackageLocale,
+  );
   const controllers: ResponseWorkspaceController[] = [];
-  for (const root of page.querySelectorAll<HTMLElement>('[data-response-workspace]')) {
+  for (const root of contentElements<HTMLElement>(page, '[data-response-workspace]')) {
     const template = root.querySelector<HTMLElement>('[data-response-manifest]');
     const mount = root.querySelector<HTMLElement>('[data-response-mount]');
     if (!template || !mount) continue;
@@ -83,8 +88,11 @@ function createController(
   const questions = document.createElement('div');
   questions.className = 'response-question-list';
   questions.dataset.responseQuestions = '';
+  // Export/import identity remains the authored form. Native radio groups belong to this actual
+  // controller instance: copied forms with the same manifest must not uncheck each other.
+  const controlName = `instance-${++controlInstance}`;
   for (const question of manifest.questions)
-    questions.append(renderQuestion(manifest.id, question, strings));
+    questions.append(renderQuestion(controlName, question, strings));
   const actions = document.createElement('div');
   actions.className = 'response-actions';
   const copy = button(strings.copyResponse, 'responseCopy', COPY_ICON, 'secondary', 'md');

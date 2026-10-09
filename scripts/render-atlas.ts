@@ -39,6 +39,7 @@ export async function renderAtlas(projectRoot: string): Promise<string> {
     'Generated from the source contract, parsed packaged examples and extension manifests by `pnpm generate:authoring`. Do not edit the tables by hand.',
     '',
     'Choose the explanation with [directing](directing.md) and [combinations](combinations.md). This atlas routes every directive to exact API and selected real examples; the full example index lists their actual parsed vocabulary; it does not prescribe their order. Run `node <installed-skill>/scripts/build-atlas.mjs --out ./atlas` to build the complete local preview gallery. Pages use the actual runtime: scroll, switch views, play scenes and inspect motion. The gallery contains static, interactive and timed material; a still artifact alone is not a motion demonstration.',
+    'A separately installed skill discovers the nearest compiler installed for the current project, or the release pinned in its SKILL.md through npx. `--cli <compiler command>` selects a reviewed checkout explicitly. The compiler examples catalog supplies the actual package source paths; the skill directory need not contain package code or examples.',
     '',
     '## Choose by the creative question',
     '',

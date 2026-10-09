@@ -7,6 +7,7 @@
  */
 
 import { pageClock, progressOverride } from './clock.js';
+import { contentElements } from './features.js';
 
 /** Доля заливки по положению тезиса: начинается, когда его верх на 85 % высоты окна, кончается у 45 %. */
 export function thesisFill(top: number, height: number, viewport: number): number {
@@ -17,11 +18,10 @@ export function thesisFill(top: number, height: number, viewport: number): numbe
 }
 
 export function installThesisFill(page: HTMLElement, still: MediaQueryList): () => void {
-  const leads = [
-    ...page.querySelectorAll<HTMLElement>(
-      'section[data-semantic="section"][data-recipe="thesis"] > .semantic-lead',
-    ),
-  ];
+  const leads = contentElements<HTMLElement>(
+    page,
+    'section[data-semantic="section"][data-recipe="thesis"] > .semantic-lead',
+  );
   if (leads.length === 0 || still.matches) return () => undefined;
   const clock = pageClock();
   let frame = 0;

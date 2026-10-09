@@ -76,6 +76,7 @@ import { createIslandCollector } from '../extensions/island.js';
 import type { ProviderCache } from '../extensions/provider.js';
 import {
   type EffectHostCount,
+  type EffectHostOptions,
   rehypeCountEffectHosts,
   remarkCountEffectHosts,
 } from '../extensions/targets.js';
@@ -532,6 +533,30 @@ const rehypeAssets: Plugin<[AssetPluginOptions], Root> = (options) => async (tre
   }
 };
 
+/** Inert authored fragments are future page content, not serialized source backups. */
+const rehypePrepareTemplates: Plugin<
+  [{ readonly features: Set<string>; readonly effectHosts: EffectHostOptions }],
+  Root
+> = (options) => async (tree) => {
+  const fragments: Root[] = [];
+  visit(tree, 'element', (node: Element) => {
+    if (
+      node.tagName === 'template' &&
+      node.properties.dataCompositionOriginal !== undefined &&
+      node.content !== undefined
+    )
+      fragments.push(node.content);
+  });
+  const processor = unified()
+    .use(rehypeUiPrimitives)
+    .use(rehypeHeadingFit)
+    .use(rehypeFigureNumbers)
+    .use(rehypeTables)
+    .use(rehypeCountEffectHosts, options.effectHosts)
+    .use(rehypePageFeatures, options);
+  for (const fragment of fragments) await processor.run(fragment);
+};
+
 export async function renderMarkdown(
   markdown: string,
   options: MarkdownRenderOptions,
@@ -635,6 +660,7 @@ export async function renderMarkdown(
     .use(rehypeUiPrimitives)
     .use(rehypeHeadingFit)
     .use(rehypeFigureNumbers)
+    .use(rehypePrepareTemplates, { features, effectHosts: effectHostOptions })
     .use(rehypeLinkTargets, { sourceMap: options.sourceMap })
     // Last before serialization: it splits inline code texts, which the passes above read whole.
     .use(rehypeTables)

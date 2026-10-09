@@ -1,5 +1,6 @@
 import { createServer } from 'node:http';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type WebSocket from 'ws';
 import { WebSocketServer } from 'ws';
@@ -41,7 +42,11 @@ async function control(): Promise<{
   const root = await createTestWorkspace('session');
   cleanups.push(() => removeTestWorkspace(root));
   await writeFile(path.join(root, 'report.md'), '# Author document\n\nOriginal evidence.\n');
-  const socketPath = path.join(root, 'rpc.sock');
+  // Unix socket addresses have a small OS byte limit. Report sources may live in a deeply nested
+  // checkout, but the protocol fixture's private endpoint does not need to share that path.
+  const socketRoot = await mkdtemp(path.join(tmpdir(), 'ar-live-'));
+  cleanups.push(() => removeTestWorkspace(socketRoot));
+  const socketPath = path.join(socketRoot, 'rpc.sock');
   const server = createServer();
   const ws = new WebSocketServer({ server, path: '/rpc' });
   const clients = new Set<WebSocket>();
@@ -209,8 +214,22 @@ async function control(): Promise<{
     });
   });
   await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(socketPath, resolve);
+    const cleanup = (): void => {
+      server.off('error', failed);
+      ws.off('error', failed);
+    };
+    const failed = (cause: Error): void => {
+      cleanup();
+      reject(cause);
+    };
+    // ws forwards the underlying listener error first; handle both surfaces so a bind failure
+    // rejects setup rather than becoming an uncaught exception followed by a test timeout.
+    server.once('error', failed);
+    ws.once('error', failed);
+    server.listen(socketPath, () => {
+      cleanup();
+      resolve();
+    });
   });
   const disconnect = (): void => {
     for (const client of clients) client.terminate();

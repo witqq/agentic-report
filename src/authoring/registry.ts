@@ -226,6 +226,7 @@ export type SchemeChoice = (typeof PAGE_CONTRACT.schemes)[number];
 export const REVIEW_TARGET_OWNERSHIP_CONTRACT = {
   parentOwnedDirectives: ['lead', 'series', 'question', 'bucket', 'option', 'item'],
   scopedDirectiveIds: { object: 'composition', slot: 'object', 'scene-group': 'composition' },
+  dynamicRegionOwners: ['object', 'slot'],
 } as const;
 
 export interface CodeFenceMetadataDefinition {

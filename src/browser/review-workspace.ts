@@ -702,10 +702,19 @@ function createController(
     const kind = threadForSubject(candidate.subject) === undefined ? 'create' : 'thread';
     pendingAction = { ...candidate, kind };
     el.selectionAction.dataset.reviewActionKind = kind;
-    el.selectionActionLabel.textContent =
-      kind === 'create' ? strings.createNote : strings.viewThread;
-    el.selectionAction.title = kind === 'create' ? strings.createNote : strings.viewThread;
-    if (kind === 'thread')
+    const discussion = candidate.subject.selection === undefined;
+    el.selectionActionLabel.textContent = discussion
+      ? strings.openDiscussion(candidate.subject.label)
+      : kind === 'create'
+        ? strings.createNote
+        : strings.viewThread;
+    el.selectionAction.title = el.selectionActionLabel.textContent;
+    if (discussion)
+      el.selectionAction.setAttribute(
+        'aria-label',
+        strings.openDiscussion(candidate.subject.label),
+      );
+    else if (kind === 'thread')
       el.selectionAction.setAttribute('aria-label', strings.openNote(candidate.subject.label));
     else el.selectionAction.removeAttribute('aria-label');
     positionAction(pendingAction);
@@ -1011,6 +1020,22 @@ function captureSelection(targets: ReadonlyMap<string, TargetDom>):
   const article = start?.element.closest('.report-content article');
   if (!start || !end || !article || end.element.closest('.report-content article') !== article)
     return;
+  const dynamicRegion = '[data-composition-object], [data-composition-slot]';
+  if (
+    start.element.matches(dynamicRegion) ||
+    end.element.matches(dynamicRegion) ||
+    range.cloneContents().querySelector(dynamicRegion) !== null
+  ) {
+    // The region's authored identity is stable, but its rendered value changes without a new report
+    // revision. A current-frame quote/offset would fail to import on another frame of the same page.
+    // Discuss one persistent region instead; a selection crossing owners has no single honest anchor.
+    if (start.element !== end.element || !start.element.matches(dynamicRegion)) return;
+    const label = start.element.querySelector(':scope > .semantic-title')?.textContent?.trim();
+    return {
+      subject: { target: start.target, label: label || start.label },
+      range: range.cloneRange(),
+    };
+  }
   try {
     const startOffset = boundaryOffset(start.element, range.startContainer, range.startOffset);
     const endOffset = boundaryOffset(end.element, range.endContainer, range.endOffset);

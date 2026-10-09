@@ -3,6 +3,8 @@ import path from 'node:path';
 import { connectionRoute } from '../../src/composition-route.js';
 import { renderMarkdown } from '../../src/render/markdown.js';
 import { compositionFrame, type CompositionCue } from '../../src/composition.js';
+import { createReviewTargetManifest } from '../../src/review/targets.js';
+import { parseReviewTargetManifest } from '../../src/review/contract.js';
 const source = `::::::composition{id="stable" layout="row"}
 :::::scene-group{id="owners" title="Two independent owners" layout="row"}
 ::::object{id="left" title="Source"}
@@ -37,6 +39,56 @@ const render = (text: string) =>
     outputFilePath: path.resolve('test-results/regions.html'),
   });
 describe('stable scene regions', () => {
+  it('round-trips scoped object, group and slot identities through the strict review manifest contract', async () => {
+    const stage = `s${'a'.repeat(63)}`,
+      group = `g${'b'.repeat(63)}`,
+      object = `o${'c'.repeat(63)}`,
+      slot = `v${'d'.repeat(63)}`;
+    const example = (owner: string, local: string) => `:::::composition{id="${owner}"}
+::::object{id="${local}"}
+:::slot{id="value"}
+Payload
+:::
+::::
+:::::`;
+    const text = `::::::composition{id="${stage}"}
+:::::scene-group{id="${group}"}
+::::object{id="${object}"}
+:::slot{id="${slot}"}
+Payload
+:::
+::::
+:::::
+::::::
+
+${example('a-b', 'c')}
+
+${example('a', 'b-c')}`;
+    const first = await render(text),
+      repeated = await render(text);
+    const manifest = await createReviewTargetManifest(process.cwd(), [], first.reviewTargets);
+    expect(parseReviewTargetManifest(JSON.parse(JSON.stringify(manifest)))).toEqual(manifest);
+    expect(first.reviewTargets).toEqual(repeated.reviewTargets);
+    const keys = first.reviewTargets.map((target) => target.stableKey);
+    expect(
+      keys.every((key) => typeof key === 'string' && /^[a-z][a-z0-9:._-]{0,127}$/u.test(key)),
+    ).toBe(true);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(keys).toContain(`directive:composition:${stage}`);
+    expect(
+      first.reviewTargets
+        .filter((target) =>
+          ['directive:object', 'directive:slot', 'directive:scene-group'].includes(target.kind),
+        )
+        .every((target) => target.stableKey?.includes(':scoped-')),
+    ).toBe(true);
+    const edited = await render(text.replaceAll('Payload', 'A changed authored payload'));
+    expect(
+      edited.reviewTargets.map((target) => ({ id: target.id, stableKey: target.stableKey })),
+    ).toEqual(
+      first.reviewTargets.map((target) => ({ id: target.id, stableKey: target.stableKey })),
+    );
+  });
   it('routes a label leader through a reversal without a zero-length rounded corner', () => {
     const route = connectionRoute({ x: 0, y: 220, w: 200, h: 30 }, { x: 0, y: 0, w: 0, h: 0 }, [
       { x: 0, y: 0, w: 200, h: 200 },

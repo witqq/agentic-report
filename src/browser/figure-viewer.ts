@@ -13,6 +13,7 @@ import { DASH_ICON, PLUS_ICON, SCREEN_FULL_ICON, X_ICON } from '../iconography.j
 import type { PackageStrings } from '../localization.js';
 import { browserIcon } from './icon.js';
 import { asUiButton } from './ui.js';
+import { contentElements } from './features.js';
 
 /** Самый крупный масштаб просмотра. */
 const MAX_SCALE = 8;
@@ -443,7 +444,7 @@ function tableTitle(table: HTMLElement, strings: PackageStrings): string {
 export function installFigureViewer(page: HTMLElement, strings: PackageStrings): () => void {
   const added: HTMLElement[] = [];
   const hosts: HTMLElement[] = [];
-  for (const figure of page.querySelectorAll<HTMLElement>(FIGURES)) {
+  for (const figure of contentElements<HTMLElement>(page, FIGURES)) {
     const caption = figure.querySelector<HTMLElement>(':scope > .visualization-caption');
     if (caption === null || caption.querySelector(':scope > [data-figure-open]') !== null) continue;
     const button = openButton(figureTitle(figure, strings), strings);
@@ -456,7 +457,7 @@ export function installFigureViewer(page: HTMLElement, strings: PackageStrings):
     hosts.push(caption);
     added.push(button);
   }
-  const tables = [...page.querySelectorAll<HTMLTableElement>('table')].filter(
+  const tables = contentElements<HTMLTableElement>(page, 'table').filter(
     (table) => table.closest('[data-figure-viewer], .review-panel, .response-workspace') === null,
   );
   const bars = new Map<HTMLTableElement, HTMLElement>();
@@ -487,6 +488,11 @@ export function installFigureViewer(page: HTMLElement, strings: PackageStrings):
         '[data-figure-open]',
       );
       if (button === null || button === undefined || !page.contains(button)) return;
+      if (
+        page.hasAttribute('data-content-scope') &&
+        button.closest('[data-content-scope]') !== page
+      )
+        return;
       const figure = button.closest<HTMLElement>(FIGURES);
       if (figure !== null) {
         openFigureViewer(viewerSources(figure), figureTitle(figure, strings), button, strings);

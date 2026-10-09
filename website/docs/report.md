@@ -30,9 +30,9 @@ Use Node.js 24.18.0 or newer. Start with the [agent quickstart](agent/index.html
 [direct Markdown version](agent/index.md), or install the [agent skill](../skills/agentic-report/SKILL.md).
 
 ```sh
-npx --yes agentic-report@0.20.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.21.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.20.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.21.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Build validates before publishing; use `validate` or `inspect` only
@@ -49,7 +49,7 @@ The optional `serve` command connects a local document to its existing author Co
 order and can be cancelled; the chat panel also holds width and visual settings. Replies stream and valid source revisions appear with change
 marks. Human text from that Codex/terminal conversation appears alongside agent replies; correlated
 browser questions appear once. Read the [live operating guide](../skills/agentic-report/references/process.md#live-local-document)
-for source-checkout startup, Codex setup, bounded text history, persistent questions and recovery. This local mode uses the same
+for pinned-release or source-checkout startup, Codex setup, bounded text history, persistent questions and recovery. This local mode uses the same
 declarative source; ordinary builds remain standalone offline artifacts.
 
 ::::
@@ -60,7 +60,7 @@ If you prefer to inspect the implementation instead of executing the published `
 package, clone a specific release tag and run the compiler directly from its build:
 
 ```sh
-git clone --branch v0.20.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.21.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -190,7 +190,7 @@ runtime truth.
 
 ::::section{title="Compose a filmed explanation" id="directed-scenes" nav="Directed scenes"}
 
-A `composition` arranges named Markdown objects as a diagram beside code, a pipeline, before/after, an overview with detail, or owners passing a value. Cues reveal, focus, connect, copy, transfer, replace, compare and move the camera. A compatible Screencast report scene binds them to measured narration. Read the [directing guide](../skills/agentic-report/references/directed-scenes.md) for complete source and existing effects, or open the [first-edit example](../examples/directed-first-edit/index.html), [two color paths](../examples/directed-theme-color/index.html) and [event delivery](../examples/directed-change-event/index.html). Use a local compiler exposing the new vocabulary.
+A `composition` arranges named Markdown objects as a diagram beside code, a pipeline, before/after, an overview with detail, or owners passing a value. Cues reveal, focus, connect, copy, transfer, replace, compare, move the camera, trace a directional pass and annotate code. A compatible Screencast report scene binds them to measured narration. Read the [directing guide](../skills/agentic-report/references/directed-scenes.md) for complete source and existing effects, or open the [first-edit example](../examples/directed-first-edit/index.html), [two color paths](../examples/directed-theme-color/index.html) and [event delivery](../examples/directed-change-event/index.html). The pinned release supports this vocabulary; filming also requires a compatible Screencast bridge. Named slots preserve stable owners, scene groups arrange related objects, and code annotations explain exact operations while keeping their source intact.
 
 Every system interface first appears as its complete application screen, then the reader or viewer moves into a detail. Preserve the detail's location in a still page, presentation or film of any format. The guide provides the recipes.
 

@@ -19,6 +19,9 @@ export interface Destroyable {
 
 /** What each slot holds. The runtime reads `strings` at call time: the page language may change. */
 export interface FeatureSlots {
+  /** Initialize package content in one actual DOM instance; its owner releases it on destruction. */
+  readonly content: (scope: HTMLElement) => Cleanup;
+  readonly diagramMotion: (scope: HTMLElement) => Cleanup;
   readonly composition: (page: HTMLElement, still: MediaQueryList) => Cleanup;
   readonly gallery: {
     readonly create: (page: HTMLElement, strings: () => PackageStrings) => Destroyable | undefined;
@@ -63,9 +66,10 @@ export interface FeatureSlots {
   readonly copyable: (page: HTMLElement, strings: PackageStrings) => void;
   readonly video: {
     readonly autoplay: (
+      scope: HTMLElement,
       still: MediaQueryList,
       strings: { readonly playVideo: string; readonly pauseVideo: string },
-    ) => void;
+    ) => Cleanup;
     readonly toggle: (button: HTMLButtonElement) => void;
     readonly seek: (button: HTMLButtonElement) => void;
     readonly loop: (video: HTMLVideoElement) => Cleanup;
@@ -125,4 +129,15 @@ export function provideFeature<Slot extends FeatureSlot>(
 /** The slot's implementation, or nothing when the page does not carry the feature. */
 export function feature<Slot extends FeatureSlot>(slot: Slot): FeatureSlots[Slot] | undefined {
   return provided[slot];
+}
+
+/** Nested content instances belong to their own mount, including initially unmounted templates. */
+export function contentElements<ElementType extends Element = HTMLElement>(
+  scope: HTMLElement,
+  selector: string,
+): ElementType[] {
+  return [...scope.querySelectorAll<ElementType>(selector)].filter((element) => {
+    const owner = element.closest('[data-content-scope], [data-composition-content]');
+    return owner === null || owner === scope;
+  });
 }

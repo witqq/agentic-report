@@ -140,4 +140,133 @@ ${cue}
       ),
     ).rejects.toThrow();
   });
+  it('keeps dynamic review ownership on stable regions rather than disappearing descendants', async () => {
+    const result = await render(
+      source('ownership', '::cue{at="1" action="replace" target="result" value="Final"}'),
+    );
+    expect(result.reviewTargets.map((target) => target.kind)).toEqual([
+      'directive:composition',
+      'directive:object',
+      'directive:object',
+    ]);
+    const visible = result.html.replace(/<template\b[\s\S]*?<\/template>/gu, '');
+    for (const target of result.reviewTargets)
+      expect(visible).toContain(`data-review-target="${target.id}"`);
+  });
+  it('projects code before and after a parent-owned scene onto their own DOM code blocks', async () => {
+    const text = `\`\`\`js
+const before = 1;
+\`\`\`
+
+::::composition{id="code-owners"}
+:::object{id="owned" role="code"}
+\`\`\`js
+const inner = 2;
+\`\`\`
+:::
+::::
+
+\`\`\`js
+const after = 3;
+\`\`\``;
+    const result = await render(text);
+    const targets = result.reviewTargets.filter((target) => target.kind === 'markdown:code');
+    expect(targets).toHaveLength(2);
+    const visible = result.html.replace(/<template\b[\s\S]*?<\/template>/gu, '');
+    const blocks = [...visible.matchAll(/<pre\b([^>]*)>([\s\S]*?)<\/pre>/gu)];
+    for (const [index, name] of ['before', 'after'].entries()) {
+      const block = blocks.find((match) =>
+        match[2]?.replace(/<[^>]*>/gu, '').includes(`const ${name} =`),
+      );
+      expect(block?.[1]).toContain(`data-review-target="${targets[index]?.id}"`);
+    }
+    const inner = blocks.find((match) =>
+      match[2]?.replace(/<[^>]*>/gu, '').includes('const inner ='),
+    );
+    expect(inner?.[1]).not.toContain('data-review-target');
+  });
+  it('rejects nested stages instead of mixing their local object ownership', async () => {
+    await expect(
+      render(`::::::composition{id="outer"}
+:::::object{id="holder"}
+::::composition{id="inner"}
+:::object{id="holder"}
+Inner content
+:::
+::::
+:::::
+::::::`),
+    ).rejects.toThrow(/cannot be nested/u);
+  });
+  it('processes future template content and selects features even when the final value is text', async () => {
+    const result = await render(`::::composition{id="future"}
+:::object{id="code" role="code"}
+\`\`\`ts
+const original = 1;
+\`\`\`
+
+| Name | Value |
+| --- | --- |
+| Original | 1 |
+:::
+::cue{at="1" action="replace" target="code" value="Final text"}
+::::`);
+    expect(result.features).toContain('code');
+    expect(result.features).toContain('table');
+    const original = result.html.match(
+      /<template data-composition-original(?:="")?>([\s\S]*?)<\/template>/u,
+    )?.[1];
+    expect(original).toContain('table-frame');
+    expect(original).toContain('data-label="Name"');
+  });
+  it('validates links in future originals rather than only the final scene', async () => {
+    await expect(
+      render(
+        source('ownership', '::cue{at="1" action="replace" target="source" value="Final"}').replace(
+          'Original value',
+          '[Call](tel:invalid)',
+        ),
+      ),
+    ).rejects.toThrow(/not a number/u);
+  });
+  it('does not accept a visible link whose anchor exists only in an inert future original', async () => {
+    await expect(
+      render(`[Read the evidence](#evidence)
+
+::::composition{id="missing-final-anchor"}
+:::object{id="source"}
+### Evidence
+
+Original details.
+:::
+::cue{at="1" action="replace" target="source" value="Final"}
+::::`),
+    ).rejects.toThrow(/no element/u);
+  });
+  it('keeps authored level-three headings in changing content while preserving the package object title', async () => {
+    const result = await render(`::::composition{id="heading-content"}
+:::object{id="source" title="Stable owner"}
+### Evidence
+
+Original details.
+:::
+::cue{at="1" action="replace" target="source" value="Final"}
+::::`);
+    const visible = result.html.replace(/<template\b[\s\S]*?<\/template>/gu, '');
+    expect(visible).toContain('Stable owner');
+    expect(visible).not.toContain('Evidence');
+    expect(result.html).toMatch(
+      /<template data-composition-original(?:="")?><h3\b[^>]*id="evidence"[^>]*>Evidence<\/h3>/u,
+    );
+  });
+  it('retains every connection direction, relation and plain-text label without the runtime', async () => {
+    const result = await render(
+      source(
+        'ownership',
+        '::cue{at="1" action="connect" target="source" to="result" relation="data" value="sends payment"}',
+      ),
+    );
+    expect(result.html).toContain('class="composition-relations"');
+    expect(result.html).toContain('Source → Result (data): sends payment');
+  });
 });

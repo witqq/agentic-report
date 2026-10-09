@@ -69,16 +69,29 @@ export function installPageModules(
     installPageStates(page, !still.matches),
     feature('composition')?.(page, still),
     feature('screens')?.(page, still, strings),
-    feature('scrubScenes')?.(page, still, strings),
     installOpeningEntrance(page, still),
-    installThesisFill(page, still),
-    installCurrentRows(page),
     installPauseControl(page, still, strings),
-    feature('figureViewer')?.(page, strings),
-    feature('diagramForms')?.(page),
     installReadingPosition(page, still),
   ];
   return () => {
     for (const cleanup of cleanups) cleanup?.();
+  };
+}
+
+/** Content modules share the same lifecycle for a page and an inserted Markdown instance. */
+export function installContentModules(
+  scope: HTMLElement,
+  still: MediaQueryList,
+  strings: PackageStrings,
+): () => void {
+  const cleanups = [
+    feature('scrubScenes')?.(scope, still, strings),
+    installThesisFill(scope, still),
+    installCurrentRows(scope),
+    feature('figureViewer')?.(scope, strings),
+    feature('diagramForms')?.(scope),
+  ];
+  return () => {
+    for (const cleanup of cleanups.reverse()) cleanup?.();
   };
 }

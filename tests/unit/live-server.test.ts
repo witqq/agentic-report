@@ -38,6 +38,22 @@ async function waitFor(
   await expect.poll(() => predicate(service.snapshot())).toBe(true);
   return service.snapshot();
 }
+function documentManifest(html: string, locale: 'en' | 'ru' = 'en') {
+  const encoded = /<template data-live-manifests>([^<]+)<\/template>/u.exec(html)?.[1];
+  if (!encoded) throw new Error('Missing target manifest');
+  return parseReviewTargetManifest(
+    (
+      JSON.parse(
+        encoded
+          .replaceAll('&quot;', '"')
+          .replaceAll('&#x27;', "'")
+          .replaceAll('&lt;', '<')
+          .replaceAll('&gt;', '>')
+          .replaceAll('&amp;', '&'),
+      ) as Record<string, unknown>
+    )[locale],
+  );
+}
 async function submit(
   service: LiveReportServer,
   input: unknown,
@@ -97,6 +113,74 @@ readline.createInterface({input:process.stdin}).on('line', async line => {
 }
 
 describe('local living document', () => {
+  it('publishes localized paragraph, partial and asset edits while retaining the primary revision and no-op change layer', async () => {
+    // A primary-only deduplication loses every edit here. An HTML-based deduplication replaces the
+    // last edition on recovery from an invalid write and silently clears its reader change layer.
+    const root = await fixture();
+    await mkdir(path.join(root, 'partials'));
+    await mkdir(path.join(root, 'assets'));
+    await writeFile(
+      path.join(root, 'report.md'),
+      '---\nlanguage: en\nlocalizations: { ru: report.ru.md }\n---\n# Stable English\n\nUnchanged English evidence.\n',
+    );
+    const localized =
+      '---\nlanguage: ru\n---\n# Русский документ\n\nПервоначальный абзац.\n\n{{include: partials/ru.md}}\n\n![Localized diagram](assets/ru-evidence.svg)\n';
+    await writeFile(path.join(root, 'report.ru.md'), localized);
+    await writeFile(path.join(root, 'partials/ru.md'), 'Первоначальный фрагмент.\n');
+    const svg = (fill: string): string =>
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${fill}"/></svg>`;
+    await writeFile(path.join(root, 'assets/ru-evidence.svg'), svg('#2563eb'));
+    const service = await start(root);
+    const html = async (): Promise<string> =>
+      (await fetch(new URL(service.snapshot().document.url, service.url))).text();
+    let currentHtml = await html();
+    const englishRevision = documentManifest(currentHtml).reportRevision;
+    const edits = [
+      {
+        file: 'report.ru.md',
+        bytes: localized.replace('Первоначальный абзац.', 'Обновлённый абзац.'),
+        text: 'Обновлённый абзац.',
+      },
+      { file: 'partials/ru.md', bytes: 'Обновлённый фрагмент.\n', text: 'Обновлённый фрагмент.' },
+      { file: 'assets/ru-evidence.svg', bytes: svg('#ef4444') },
+    ];
+    for (const edit of edits) {
+      const previousUrl = service.snapshot().document.url;
+      const previousRussianRevision = documentManifest(currentHtml, 'ru').reportRevision;
+      await writeFile(path.join(root, edit.file), edit.bytes);
+      await waitFor(service, (s) => s.document.url !== previousUrl && !s.error);
+      currentHtml = await html();
+      expect(documentManifest(currentHtml).reportRevision).toBe(englishRevision);
+      expect(documentManifest(currentHtml, 'ru').reportRevision).not.toBe(previousRussianRevision);
+      expect(currentHtml).toContain('Unchanged English evidence.');
+      if (edit.text) expect(currentHtml).toContain(edit.text);
+      else {
+        const resources = [...currentHtml.matchAll(/src="([^"]+\.svg)"/gu)];
+        expect(resources.length).toBeGreaterThan(0);
+        const served = await Promise.all(
+          resources.map(async ([, resource]) =>
+            (
+              await fetch(
+                new URL(resource ?? '', new URL(service.snapshot().document.url, service.url)),
+              )
+            ).text(),
+          ),
+        );
+        expect(served).toContain(edit.bytes);
+      }
+    }
+    const acceptedUrl = service.snapshot().document.url;
+    expect(currentHtml).toContain('data-edition-change');
+    const acceptedLocalized = await readFile(path.join(root, 'report.ru.md'), 'utf8');
+    await writeFile(path.join(root, 'report.ru.md'), `${acceptedLocalized}\n:::unknown\n:::\n`);
+    await waitFor(service, (s) => Boolean(s.error));
+    expect(service.snapshot().document.url).toBe(acceptedUrl);
+    await writeFile(path.join(root, 'report.ru.md'), acceptedLocalized);
+    await waitFor(service, (s) => !s.error);
+    expect(service.snapshot().document.url).toBe(acceptedUrl);
+    expect(await html()).toBe(currentHtml);
+  });
+
   it('offers live theme choices while preserving an explicit single theme and a topbar-free revision', async () => {
     const root = await fixture();
     await writeFile(path.join(root, 'report.md'), '---\nthemeSwitcher: false\n---\n# One theme\n');
@@ -177,20 +261,7 @@ describe('local living document', () => {
     await waitFor(service, (s) => s.agent === 'ready');
     const first = service.snapshot().document;
     const html = await (await fetch(new URL(first.url, service.url))).text();
-    const encoded = /<template data-live-manifests>([^<]+)<\/template>/u.exec(html)?.[1];
-    if (!encoded) throw new Error('Missing target manifest');
-    const manifest = parseReviewTargetManifest(
-      (
-        JSON.parse(
-          encoded
-            .replaceAll('&quot;', '"')
-            .replaceAll('&#x27;', "'")
-            .replaceAll('&lt;', '<')
-            .replaceAll('&gt;', '>')
-            .replaceAll('&amp;', '&'),
-        ) as Record<string, unknown>
-      ).en,
-    );
+    const manifest = documentManifest(html);
     const target = manifest.targets.find((t) => t.kind === 'markdown:paragraph');
     if (!target) throw new Error('Missing paragraph');
     const controller = new AbortController();

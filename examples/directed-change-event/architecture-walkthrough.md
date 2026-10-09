@@ -9,7 +9,7 @@ topbar: false
 attribution: false
 ---
 
-Реальный код Agentic Report и Agentic Screencast. Данные примера иллюстративные; результаты `compositionFrame` воспроизводятся prepare.mjs. Полные пути функций перечислены в SOURCE-MAP.md.
+Фрагменты кода Agentic Report и Agentic Screencast объясняют передачу значения и привязку времени. Данные примера иллюстративные; показанные состояния модели не являются записью работающего продукта. Файлы и функции перечислены в [карте исходников](SOURCE-MAP.md). [Отдельный пример](../directed-code-execution/report.md) содержит полные функции Report и помощник для обновления их кода из установленного пакета.
 
 ::::composition{id="copy-runtime" title="Копия прибывает. Оригинал остаётся." kind="ownership"}
 :::object{id="layout" title="layout · исходный шаблон" role="source"}
@@ -22,7 +22,12 @@ attribution: false
 
 ```ts
 if (progress < 1)
-  frame.travels.push({ from: cue.target, to: cue.to, content: target.content, progress });
+  frame.travels.push({
+    from: targetId,
+    to: destinationId,
+    content: target.content,
+    progress,
+  });
 else {
   destination.content = target.content;
   destination.visible = true;
@@ -32,13 +37,13 @@ else {
 
 :::
 ::cue{at="b1+0.1" action="copy" target="layout" to="shape" duration="1.2"}
-::cue{at="b1+0.1" action="focus" target="code" lines="1-2"}
+::cue{at="b1+0.1" action="focus" target="code" lines="1-7"}
 ::cue{at="b1+1.3" action="compare" target="layout" to="shape"}
-::cue{at="b2" action="focus" target="code" lines="3-5"}
+::cue{at="b2" action="focus" target="code" lines="8-10"}
 ::cue{at="b2+0.8" action="connect" target="layout" to="shape" value="copy: оригинал сохранён"}
 ::cue{at="b3" action="replace" target="shape" value="Glow 4 px + Shadow 12 px"}
 ::cue{at="b3" action="focus" target="shape"}
-::cue{at="b4" action="focus" target="code" lines="6"}
+::cue{at="b4" action="focus" target="code" lines="11"}
 ::::
 
 ::::composition{id="runtime-layers" title="Время → состояние → видимый кадр" kind="pipeline"}
@@ -74,7 +79,7 @@ const frame = compositionFrame(
 ::cue{at="b2" action="focus" target="code" lines="1-5"}
 ::cue{at="b2" action="replace" target="model" value="objects: Map(layout, shape) · connections: [] · travels: [layout → shape]"}
 ::cue{at="b3" action="connect" target="model" to="view" value="возвращённый frame" duration="0.8"}
-::cue{at="b3" action="replace" target="view" value="content() → scopedClone() → replaceChildren() · rect() → connectionRoute() → SVG"}
+::cue{at="b3" action="replace" target="view" value="content() → scopedClone() → mounted region body · rect() → connectionRoute() → SVG"}
 ::cue{at="b3" action="focus" target="view"}
 ::cue{at="b4" action="compare" target="model" to="view"}
 ::::

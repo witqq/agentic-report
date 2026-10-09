@@ -1091,7 +1091,7 @@
       "files": [
         {
           "path": "architecture-walkthrough.md",
-          "sha256": "9a430ba3acf96365717ad2aeca8fba725d7613ed7f42926deb6a8202c6095111"
+          "sha256": "235d14d004c3bd1bb02ecdf639f24491e3f82894d0f381c83dd6ca7134877652"
         },
         {
           "path": "brief.md",
@@ -1107,7 +1107,7 @@
         },
         {
           "path": "SOURCE-MAP.md",
-          "sha256": "87383f0df819066149b8db7160369d2017de4685dd0edc82d3748d71f8e45b70"
+          "sha256": "94009f2628e14c3a0281aa40c53a428b320d6d2a1c4368645e393fdad2d3a693"
         }
       ]
     },

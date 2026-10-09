@@ -14,9 +14,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the result:
 
 ```sh
-npx --yes agentic-report@0.20.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.21.0 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.20.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.21.0 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. Build validates the complete source before writing, so
@@ -81,7 +81,7 @@ When the user does not trust the published package, do not silently fall back to
 release tag, let the user inspect the repository, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.20.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.21.0 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -106,7 +106,7 @@ Read the [knowledge map](../../skills/agentic-report/references/knowledge.md), [
 
 ## Compose a filmed explanation
 
-For a value changing beside code, traveling along a pipeline or passing between owners, use `composition` with named `object` values and speech-ready `cue` actions. The [directing reference](../../skills/agentic-report/references/directed-scenes.md) maps the five composition kinds and eight actions to complete examples, measured Screencast narration and existing effects. Use a local compiler exposing this vocabulary and a coordinated Screencast build. The pinned npm commands above cover the earlier page vocabulary.
+For a value changing beside code, traveling along a pipeline or passing between owners, use `composition` with named `object` values and speech-ready `cue` actions. The [directing reference](../../skills/agentic-report/references/directed-scenes.md) maps the five composition kinds and ten actions to complete examples, measured Screencast narration and existing effects. Use a local compiler exposing this vocabulary and a coordinated Screencast build. The pinned npm release supports this vocabulary; filming also requires the compatible Screencast bridge.
 
 For every system interface, first show the complete application screen, then focus or zoom into a part whose location has been established. Apply this to still pages, slides and any film aspect ratio; a full image can remain beside a detail. When a Report source is only film material, use the film's workflow and inspect its frames rather than adding the standalone-page handoff process.
 
@@ -295,7 +295,7 @@ and the page is handed over only when it passes:
 node skills/agentic-report/scripts/prose-check.mjs ./my-page
 node skills/agentic-report/scripts/design-check.mjs ./my-page
 npx --yes playwright@1.62.1 install chromium
-npx --yes -p agentic-report@0.20.0 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
+npx --yes -p agentic-report@0.21.0 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
 node skills/agentic-report/scripts/handover.mjs ./my-page
 ```
 
@@ -310,9 +310,9 @@ for one page is switched off by a line with its reason in that page's `brief.md`
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.20.0 describe --json
-npx --yes agentic-report@0.20.0 schema --scope source
-npx --yes agentic-report@0.20.0 examples --json
+npx --yes agentic-report@0.21.0 describe --json
+npx --yes agentic-report@0.21.0 schema --scope source
+npx --yes agentic-report@0.21.0 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),

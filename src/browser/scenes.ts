@@ -17,6 +17,7 @@ import { pageClock, progressOverride } from './clock.js';
 import { type GeometryWatch, watchGeometry } from './geometry-rebuild.js';
 import { setPageState } from './page-states.js';
 import { createTimeline, parseLineRanges, scrubFrame, smoothToward } from './timeline.js';
+import { contentElements } from './features.js';
 
 /** Зажечь строки кода сцены, которые называет такт; без строк погасших нет. */
 export function lightCodeLines(section: HTMLElement, beat: HTMLElement | undefined): void {
@@ -52,7 +53,7 @@ export function installScrubScenes(
   still: MediaQueryList,
   strings: PackageStrings,
 ): () => void {
-  const sections = [...page.querySelectorAll<HTMLElement>('section[data-scene="scrub"]')];
+  const sections = contentElements<HTMLElement>(page, 'section[data-scene="scrub"]');
   if (sections.length === 0) return () => undefined;
   let cleanups: Array<() => void> = [];
   const install = (): void => {

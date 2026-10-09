@@ -23,7 +23,7 @@ form for a person. One failed run lists every independent violation it found, so
 
 Use `serve` when the reader wants to discuss and revise the original document with the agent that is
 already authoring it. Launch from that Codex session's shell so its identity is available in the environment.
-From a source checkout containing this command, build the package and start the local reader:
+The pinned release supports this command: `npx --yes agentic-report@0.21.0 serve ../my-page --human`. From a reviewed source checkout, build the package and start the same local reader:
 
 ```sh
 pnpm build
@@ -254,7 +254,7 @@ person an index of variants with the date and reason of each (the recipe is in
 When the person already saw a page and asked questions or left notes, rebuild with the page they saw last:
 
 ```sh
-npx --yes agentic-report@0.20.0 build ./my-page --output ./my-page.html --since ./my-page.html --json
+npx --yes agentic-report@0.21.0 build ./my-page --output ./my-page.html --since ./my-page.html --json
 ```
 
 Every page (except one built with `--url`) carries a record of its edition; `--since` reads it from the

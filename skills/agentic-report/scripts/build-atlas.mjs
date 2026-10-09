@@ -3,18 +3,53 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { commandFrom, installedCommand, pinnedVersions, takeOption } from './design-check.mjs';
+
+const run = promisify(execFile);
+const cliOption = takeOption(process.argv.slice(2), '--cli');
+const at = cliOption.rest.indexOf('--out');
+if (
+  at < 0 ||
+  !cliOption.rest[at + 1] ||
+  cliOption.rest[at + 1].startsWith('--') ||
+  cliOption.value === ''
+)
+  throw new Error('Use --out <absent or empty directory> [--cli <compiler command>].');
+const out = path.resolve(cliOption.rest[at + 1]);
+if ((await readdir(out).catch(() => [])).length)
+  throw new Error('Atlas output must be absent or empty.');
+const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+const packaged = await readFile(path.join(packageRoot, 'package.json'), 'utf8')
+  .then((text) => JSON.parse(text).name === 'agentic-report')
+  .catch(() => false);
+const command =
+  cliOption.value !== undefined
+    ? await commandFrom(cliOption.value)
+    : packaged
+      ? [process.execPath, path.join(packageRoot, 'dist/node/cli.js')]
+      : ((await installedCommand(process.cwd())) ?? [
+          'npx',
+          '--yes',
+          `agentic-report@${(await pinnedVersions()).version}`,
+        ]);
+const [executable, ...prefix] = command;
+const { stdout } = await run(executable, [...prefix, 'examples', '--json'], {
+  maxBuffer: 64 * 1024 * 1024,
+});
+const catalog = JSON.parse(stdout);
+const entry = catalog.examples.find((example) => example.starter !== undefined)?.entry;
+if (typeof entry !== 'string' || !path.isAbsolute(entry))
+  throw new Error('The selected compiler did not return an installed starter entry.');
+const root = path.resolve(path.dirname(entry), '../..');
+if (JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).name !== 'agentic-report')
+  throw new Error('The selected compiler entry does not belong to an agentic-report package.');
 const { buildReport } = await import(path.join(root, 'dist/node/index.js'));
 const { listExamples } = await import(path.join(root, 'dist/node/discovery.js'));
 const { listReferenceExtensions } = await import(
   path.join(root, 'dist/node/authoring/reference-extensions.js')
 );
-const at = process.argv.indexOf('--out');
-if (at < 0 || !process.argv[at + 1] || process.argv[at + 1].startsWith('--'))
-  throw new Error('Use --out <absent or empty directory>.');
-const out = path.resolve(process.argv[at + 1]);
-if ((await readdir(out).catch(() => [])).length)
-  throw new Error('Atlas output must be absent or empty.');
 await mkdir(out, { recursive: true });
 const entries = listExamples().map((e) => ({
   name: e.id,

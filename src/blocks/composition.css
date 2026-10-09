@@ -9,6 +9,12 @@
     letter-spacing: -0.025em;
     margin-bottom: 1.5rem;
   }
+  .composition-relations {
+    margin-block: 1rem 0;
+    padding-inline-start: 1.5rem;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
   .composition-stage {
     position: relative;
     padding: 24px 20px;

@@ -348,7 +348,7 @@ Markdown + metadata + local assets + partials + semantic directives
 
 ## Public contracts
 
-The npm package exposes one `agentic-report` executable and one ESM root export. CLI discovery is
+The npm package exposes one `agentic-report` executable, one offline ESM root export, and separate `agentic-report/effect` and `agentic-report/live` subpaths. CLI discovery is
 available through `describe`/`discover`, scoped `schema`, and `examples`. `fix` and its ESM equivalent
 `fixReport()` apply the replacements diagnostics carry in their `fix` field — a file, a range in the
 authored text and the replacement — and write nothing else; a diagnostic carries that field only where
@@ -876,9 +876,9 @@ resize, short-final and document-bottom ownership through bounded terminal geome
 
 ## Directed composition scenes
 
-`src/blocks/composition.ts` declares the composition/object/cue grammar as one block family, validates local object references and action-specific fields, and prepares static final content plus inert original templates. `src/composition.ts` owns the five composition identities, eight actions, speech-anchor syntax and pure frame reconstruction. Copy and transfer commit on arrival, transfer empties its source, and replacing a value never rewrites its owner's title. Object review identities are scoped through the registry ownership contract before HAST enhancement.
+`src/blocks/composition.ts` declares composition, object, scene-group, slot and cue as one block family, validates local references and action-specific fields, and prepares static final content plus inert original templates. `src/composition.ts` owns the five composition identities, ten actions, speech-anchor syntax and pure frame reconstruction. Copy and transfer commit on arrival, transfer empties its source, and replacing a value never rewrites its owner's title. Named slots retain stable owner definitions; scene groups express containment with independent responsive arrangements. Object review identities are scoped through the registry ownership contract before HAST enhancement.
 
-The `composition` page feature bundles `src/browser/features/composition.ts` and `src/blocks/composition.css` only where used. The controller reads the existing page clock, reconstructs values on seeks, reuses original fragments, draws connections between object boundaries and moves transfer ghosts along their routes. Camera transforms are bounded by the actual visible stage. Static/reduced-motion/print use the same final state, with no moving overlays. The runtime exposes `window.__reportComposition.anchors()` and `bind(resolve, id?)`; Screencast's composition bridge supplies measured speech-anchor resolution without an authored script or a second clock. The directive schema/catalog and packaged examples are generated from this same block registry.
+The `composition` page feature bundles `src/browser/features/composition.ts` and `src/blocks/composition.css` only where used. The controller reads the existing page clock, reconstructs values on seeks, reuses original fragments, draws typed connections between object boundaries and moves transfer ghosts and transient traces along their routes. Additive attention keeps context readable; explicit dimming remains an authored choice. Code annotations occupy a separate responsive presentation region with source-line locators, without changing the code or its copy control. Camera transforms are bounded by the actual visible stage. Static/reduced-motion/print show final values and every authored annotation without moving overlays. The runtime exposes `window.__reportComposition.anchors(id?)` and `bind(resolve, id?)`; a compatible Screencast composition bridge supplies measured stage-local speech-anchor resolution without an authored script or a second clock. The directive schema/catalog and packaged examples are generated from this same block registry.
 
 ## Page assets
 
@@ -1285,10 +1285,14 @@ custom properties on the island root and exposes `window.agenticReportIsland.on(
 directives. The page vocabulary adds them to those directives only when the page declares the effect, so
 elsewhere they are unknown attributes; the value reaches the element as `data-effect-<name>-<attribute>`,
 and the sanitizer allows exactly those properties. `targets.ts` counts the directives that accepted a
-target and the elements that still carry it in the final HTML. An effect with at least one host is bundled
+target and the compiled elements that carry it, including retained original composition fragments in
+inert templates. A target needed by an earlier or future scene state counts even when the final visible
+value has replaced that host. An effect with at least one such compiled host is bundled
 by `bundleEffect` (`src/extensions/effect-bundle.ts`) and placed after the page script, which carries the effect engine
 (the page feature `effects`): inline with its hash in the page policy in single-file output, as
-`assets/effect-<name>.<hash>.js` in directory output. A declared effect without hosts is not bundled.
+`assets/effect-<name>.<hash>.js` in directory output. A declared effect without any compiled hosts is not
+bundled. Retained fragments use this same bundle and CSP mechanism; their declarative Markdown never
+evaluates author code.
 
 **Build report.** `build` returns `extensions` for a page that declares them: per extension its `kind`,
 `uses` (across language variants; for an effect, the elements carrying it), `bytes` of the bundled effect
@@ -1298,7 +1302,7 @@ the declared extensions with their manifest, attributes or targets and uses.
 ### Level 2 — effects and the effect engine
 
 **Authoring entry.** An effect module imports `defineEffect` and the types of its context from the
-package subpath `agentic-report/effect` (`src/effect.ts`, the only export besides the root) and exports
+package subpath `agentic-report/effect` (`src/effect.ts`, separate from the root compiler and live host) and exports
 `defineEffect({ mount(ctx) { … return { at(t, progress), rebuild?(), unmount?() } }, continuous?, ownsScroll? })`
 by default. `defineEffect` returns its argument; the types are the contract.
 

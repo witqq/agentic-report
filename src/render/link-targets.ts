@@ -22,23 +22,39 @@ export interface LinkTargetOptions {
 
 export const rehypeLinkTargets: Plugin<[LinkTargetOptions], Root> = (options) => (tree) => {
   const ids = new Set<string>();
+  const roots = [tree];
+  visit(tree, 'element', (node: Element) => {
+    if (
+      node.tagName === 'template' &&
+      node.properties.dataCompositionOriginal !== undefined &&
+      node.content !== undefined
+    )
+      roots.push(node.content);
+  });
   visit(tree, 'element', (node: Element) => {
     const id = node.properties.id;
     if (typeof id === 'string' && id !== '') ids.add(id);
   });
-  visit(tree, 'element', (node: Element) => {
-    if (node.tagName !== 'a') return;
-    const href = node.properties.href;
-    if (href === undefined || href === null) return;
-    const target = String(href);
-    if (target.trim() === '') throw linkError(node, options, 'EMPTY_LINK_TARGET', target);
-    if (target.startsWith('#') && !ids.has(decodeURIComponent(target.slice(1))))
-      throw linkError(node, options, 'MISSING_ANCHOR_TARGET', target);
-    if (/^tel:/iu.test(target) && !TEL.test(target))
-      throw linkError(node, options, 'INVALID_LINK_TARGET', target);
-    if (/^sms:/iu.test(target) && !SMS.test(target))
-      throw linkError(node, options, 'INVALID_LINK_TARGET', target);
-  });
+  for (const root of roots) {
+    const availableIds = new Set(ids);
+    if (root !== tree)
+      visit(root, 'element', (node: Element) => {
+        if (typeof node.properties.id === 'string') availableIds.add(node.properties.id);
+      });
+    visit(root, 'element', (node: Element) => {
+      if (node.tagName !== 'a') return;
+      const href = node.properties.href;
+      if (href === undefined || href === null) return;
+      const target = String(href);
+      if (target.trim() === '') throw linkError(node, options, 'EMPTY_LINK_TARGET', target);
+      if (target.startsWith('#') && !availableIds.has(decodeURIComponent(target.slice(1))))
+        throw linkError(node, options, 'MISSING_ANCHOR_TARGET', target);
+      if (/^tel:/iu.test(target) && !TEL.test(target))
+        throw linkError(node, options, 'INVALID_LINK_TARGET', target);
+      if (/^sms:/iu.test(target) && !SMS.test(target))
+        throw linkError(node, options, 'INVALID_LINK_TARGET', target);
+    });
+  }
 };
 
 function linkError(

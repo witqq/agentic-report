@@ -56,6 +56,11 @@ provider fills it with data. `product-theatre` is such a pair. An effect decorat
 page and never carries content; an island carries content, but only inside its frame, and the page must say
 the same thing without it.
 
+Effect bundle selection counts hosts in compiled content, including retained original composition
+fragments for earlier or future scene states. A host still counts when the final visible value has
+replaced it; an effect with no compiled hosts is omitted. These fragments use the existing declared
+extension bundle and content-security policy. Ordinary Markdown is never evaluated as author code.
+
 ## Declare it
 
 Put the extension's folder beside the page, usually under `extensions/`, and list its manifest in the

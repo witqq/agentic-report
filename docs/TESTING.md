@@ -364,7 +364,7 @@ assert code/content containment, exercise responsive navigation, and capture des
 states in both formats. Screenshots supplement behavioral and byte assertions; they are never the only
 evidence.
 
-Tests do not need a URL, port, service, credential, database, or external API. Test workspaces and failure
+Static browser tests open generated artifacts through `file://`. Live unit fixtures and the installed live consumer start temporary loopback HTTP listeners and Unix WebSocket peers, with operating-system-assigned ports and fixture-owned sockets. They need no deployed service, credential, database, real model request or external API. Test workspaces and failure
 artifacts live under ignored `test-results/`.
 
 The deployment cache configuration has a unit contract check and a real-image acceptance check. Mutable
