@@ -24,6 +24,7 @@ import { promisify } from 'node:util';
 
 import { checkDesign, previousEdition } from './design-rules.mjs';
 import { pageSource, readPageMarkdown } from './source-files.mjs';
+import { isCliEntry } from './cli-entry.mjs';
 
 const run = promisify(execFile);
 const skillRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -198,10 +199,7 @@ async function main(argv) {
   );
 }
 
-if (
-  process.argv[1] !== undefined &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-)
+if (isCliEntry(import.meta.url))
   main(process.argv.slice(2)).catch((error) => {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 2;

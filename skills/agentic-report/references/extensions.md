@@ -179,6 +179,12 @@ and in print — its two `examples` and the `licenses` of any third-party code i
   bar, the contents column — come as their own layer `ctx.obstacles().pinned` (`{ element, rect }`, the
   rectangle in viewport coordinates); the other layers and `ctx.measure.lines` leave their text out, so a
   route measured at any scroll is the same. Cut pinned elements out of the drawing at their current place.
+  Hidden content, including a closed disclosure's body, contributes no text or control obstacles; its
+  visible summary remains, and opening it restores the body's obstacles. Opacity-zero entrance animations
+  still reserve their neutral text geometry, so decoration stays clear of the text's settled position.
+  Text and control rectangles stop at each overflow ancestor's visible client viewport, independently
+  on each axis. A scrolled code line's invisible tail contributes no obstacle outside its frame;
+  ordinary visible overflow and below-fold document text retain their geometry.
   After a rebuild the engine draws in the next frame (at once under a recording clock), so place the DOM
   details a `rebuild()` creates in `rebuild()` itself; `ctx.layout.svh` is measured once per rebuild and is
   cheap to read.

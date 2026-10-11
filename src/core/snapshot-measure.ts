@@ -788,6 +788,21 @@ export async function measureInPage(options: {
       let used = 0;
       for (const child of blocks) {
         const box = child.getBoundingClientRect();
+        // The compiled scene track owns its media/beat columns. Its surrounding authored blocks
+        // still follow the section's prose axis and remain subject to every check below.
+        const sceneTrack =
+          child.parentElement === section &&
+          child.matches('.scene-track') &&
+          section.matches(
+            '[data-scene="steps"][data-scene-live], [data-scene="steps"][data-scene-narrow], [data-scene="scrub"][data-scene-live]',
+          ) &&
+          child.querySelector(':scope > .scene-stage, :scope > .scene-pin > .scene-stage') !==
+            null &&
+          child.querySelector(':scope > .scene-beats, :scope > .scene-pin > .scene-beats') !== null;
+        if (sceneTrack) {
+          used = Math.max(used, box.width);
+          continue;
+        }
         // Одна ось — центр колонки прозы: блок на ней либо начинается у левого края прозы, либо стоит по её
         // центру; блок шире прозы выступает поровну в обе стороны, иначе правый край рвётся ступенькой.
         const centred =
@@ -1002,7 +1017,7 @@ export async function measureInPage(options: {
 
   // Подписи схем: текст SVG внутри рисунка мельче порога на экране или вне видимой области — за краем
   // окна по ширине или за рамкой предка, который обрезает (рамка схемы с прокруткой, сам SVG). Подпись,
-  // которую прячет только прокрутка схемы вбок, когда у рисунка есть кнопка полноэкранного просмотра,
+  // которую прячет только прокрутка рамки, когда у рисунка есть кнопка полноэкранного просмотра,
   // достижима: она `scrolled`, сведение, а не дефект. Обрезанная без такого пути — дефект.
   const diagramSmall: Element[] = [];
   const diagramClipped: Element[] = [];
@@ -1027,8 +1042,8 @@ export async function measureInPage(options: {
     // Всё, что обрезает подпись, — окно и предки с обрезкой; отдельно — ближайшая рамка, прокручиваемая
     // вбок, обрезки под ней (сам SVG) и над ней (окно и внешние рамки).
     const cut = { left: 0, right: viewportWidth, top: -Infinity, bottom: Infinity };
-    const inner = { left: -Infinity, right: Infinity };
-    const outer = { left: 0, right: viewportWidth };
+    const inner = { left: -Infinity, right: Infinity, top: -Infinity, bottom: Infinity };
+    const outer = { left: 0, right: viewportWidth, top: -Infinity, bottom: Infinity };
     let scroller: Element | undefined;
     for (
       let current: Element | null = label.parentElement;
@@ -1037,35 +1052,49 @@ export async function measureInPage(options: {
     ) {
       const style = getComputedStyle(current);
       const frame = current.getBoundingClientRect();
-      if (style.overflowX !== 'visible') {
+      const clipsX = style.overflowX !== 'visible';
+      const clipsY = style.overflowY !== 'visible';
+      const scrollsX =
+        (style.overflowX === 'auto' || style.overflowX === 'scroll') &&
+        current.scrollWidth > current.clientWidth + 1;
+      const scrollsY =
+        (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+        current.scrollHeight > current.clientHeight + 1;
+      const ownScroller = scroller === undefined && (scrollsX || scrollsY);
+      if (ownScroller) scroller = current;
+      const side = scroller === undefined ? inner : outer;
+      if (clipsX) {
         cut.left = Math.max(cut.left, frame.left);
         cut.right = Math.min(cut.right, frame.right);
-        const scrolls =
-          (style.overflowX === 'auto' || style.overflowX === 'scroll') &&
-          current.scrollWidth > current.clientWidth + 1;
-        if (scroller === undefined && scrolls) scroller = current;
-        else {
-          const side = scroller === undefined ? inner : outer;
-          side.left = Math.max(side.left, frame.left);
-          side.right = Math.min(side.right, frame.right);
+        if (!ownScroller || !scrollsX) {
+          const bounds = ownScroller ? inner : side;
+          bounds.left = Math.max(bounds.left, frame.left);
+          bounds.right = Math.min(bounds.right, frame.right);
         }
       }
-      if (style.overflowY !== 'visible') {
+      if (clipsY) {
         cut.top = Math.max(cut.top, frame.top);
         cut.bottom = Math.min(cut.bottom, frame.bottom);
+        if (!ownScroller || !scrollsY) {
+          const bounds = ownScroller ? inner : side;
+          bounds.top = Math.max(bounds.top, frame.top);
+          bounds.bottom = Math.min(bounds.bottom, frame.bottom);
+        }
       }
     }
     const outside = (
-      rect: { left: number; right: number },
-      frame: { left: number; right: number },
-    ): boolean => rect.left < frame.left - 1 || rect.right > frame.right + 1;
-    const vertical = box.top >= cut.top - 1 && box.bottom <= cut.bottom + 1;
-    if (!outside(box, cut) && vertical) continue;
+      rect: { left: number; right: number; top: number; bottom: number },
+      frame: { left: number; right: number; top: number; bottom: number },
+    ): boolean =>
+      rect.left < frame.left - 1 ||
+      rect.right > frame.right + 1 ||
+      rect.top < frame.top - 1 ||
+      rect.bottom > frame.bottom + 1;
+    if (!outside(box, cut)) continue;
     // Достижима только подпись, которую прячет прокрутка рамки, сама видимая целиком, у рисунка с
-    // просмотром; вертикальная обрезка, обрезка самим SVG или окном без прокрутки — дефект.
+    // просмотром; обрезка самим SVG, внешней рамкой или окном без прокрутки — дефект.
     if (
       scroller !== undefined &&
-      vertical &&
       !outside(box, inner) &&
       !outside(scroller.getBoundingClientRect(), outer) &&
       hasViewer(label)

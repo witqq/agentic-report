@@ -86,6 +86,7 @@ export function installContentModules(
 ): () => void {
   const cleanups = [
     feature('scrubScenes')?.(scope, still, strings),
+    feature('disclosurePrint')?.(scope),
     installThesisFill(scope, still),
     installCurrentRows(scope),
     feature('figureViewer')?.(scope, strings),

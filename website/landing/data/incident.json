@@ -1,0 +1,11 @@
+{
+  "date": "2026-07-18",
+  "fictional": true,
+  "points": [
+    { "utc": "09:35", "percent": 0.6 },
+    { "utc": "09:50", "percent": 8.7 },
+    { "utc": "10:05", "percent": 18.4 },
+    { "utc": "10:20", "percent": 7.2 },
+    { "utc": "10:35", "percent": 0.8 }
+  ]
+}

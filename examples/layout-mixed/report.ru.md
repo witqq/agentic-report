@@ -17,7 +17,7 @@ language: ru
 ![Четыре компоновки страниц на одном основании](layout-map.ru.svg){dark="layout-map-dark.ru.svg"}
 ::::
 
-:::::section{title="Доказательство становится пространственным аргументом" id="stage" nav="Сцена" width="wide" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
+:::::section{title="Доказательство становится пространственным аргументом" id="stage" nav="Сцена" width="wide" composition="stage" viewport="full" section-density="immersive" type="display" media="natural" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 :::lead
 Один смысловой раздел соединяет крупную типографику, локальное медиа, ограниченную область просмотра и
 поверхность из пакета — без авторского CSS и отдельного рендерера страницы.

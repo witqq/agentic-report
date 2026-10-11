@@ -454,8 +454,9 @@ density, typography, media treatment, image and video fit/aspect/focal point, de
 interaction, and choreography. Legacy `reveal` remains a false-by-default entrance alias. Validation emits
 only normalized data attributes; package CSS interprets them for both output formats. This keeps author CSS,
 class names, arbitrary values, callbacks, and layout JavaScript outside the public source boundary. Media
-treatment does not absorb image framing: `media` owns natural/mask/layers/gallery/bleed behavior, while
-`media-fit`, `media-aspect`, and `focal` remain independent. Layered presentation transforms image
+treatment does not absorb image framing: `media` owns natural/layers/gallery/bleed behavior. The directive
+schema normalizes the accepted legacy `mask` spelling to `natural` before emitting data attributes, so it
+adds no angular clipping. `media-fit`, `media-aspect`, and `focal` remain independent. Layered presentation transforms image
 descendants rather than semantic cards or review-target owners, so browser range geometry remains stable.
 Recipe values resolve before the existing incompatible-combination rules and explicitly authored detailed
 attributes apply last. Optional card `href` values reuse the safe-link constraint; the authored tree rejects
@@ -844,9 +845,21 @@ section already read, through the same coalesced listeners; segments are links t
 hidden from assistive technology, which has the contents navigation. On a landing page the navigation
 controller keeps the contents in the dialog at every width (`data-nav-mode="dialog"`) unless the theme's
 landing treatment is the side column; the compiler wraps the title, introduction, and a first section with
-`place="opening"` in one `.page-opening` frame without changing reading order. The story controller installs steps scenes (an
-IntersectionObserver per scene picks the beat crossing the middle of the screen, sets the active image and
-the lit nodes and edges), line-by-line titles (a measured line count drives a masked, stepped reveal), and
+`place="opening"` in one `.page-opening` frame without changing reading order. The story controller installs steps scenes:
+`pageClock`, scroll events and geometry changes select the beat nearest the viewport midpoint, including
+after a large scroll jump, and set the active image and lit nodes, edges and code lines.
+`enhanceStepScenes` puts only the stage and beats inside `.scene-track`, which
+bounds sticky lifetime; later authored blocks remain normal-flow full-track content. Scene and demo focus
+styles preserve visible beat, code and diagram-label contrast: current beats gain an accent border,
+code lines gain the existing accent-soft background, and lit shapes and edges gain stroke weight without
+replacing status colours. Unreached timed-demo beats and inactive overlapping scrub captions still hide.
+At widths below 57rem, the complete authored stage and then the beats remain in ordinary document flow;
+figures retain their captions and controls, native readable scale, internal scrolling and full-screen viewer.
+Scroll-driven focus still follows the current beat, but the stage does not stay pinned above later beats.
+Wide normal-motion scenes pin the stage beside the beats; reduced motion and print keep natural order.
+Snapshot label
+measurement reports viewer-backed frame scrolling in either axis as `scrolled`, while SVG and outer
+clipping remain defects. The story controller also installs line-by-line titles (a measured line count drives a masked, stepped reveal), and
 count-up numbers, and tears them down on locale switch or when the width or motion preference changes.
 Diagram drawing is pure CSS: the compiler orders each connection along the flow and writes its share of a
 view timeline. The effect engine (`src/browser/effects/`, the page feature `effects`) joins the page script,
@@ -1352,7 +1365,9 @@ marks the effect whose code is running (`__agenticReportEffectEngine.current`) a
 - `measure.rect(element)`, `measure.lines(element)` — rectangles in page coordinates; the translation of
   elements waiting for or playing their entrance (`data-reveal-*`, running animations) is subtracted, so the
   geometry is the settled one, and page styles are never changed to measure; `lines` leaves out the text of
-  fixed and sticky descendants, whose place on the page depends on the scroll;
+  fixed and sticky descendants, whose place on the page depends on the scroll. Text hidden by effective
+  CSS visibility or skipped content, including the body of a closed native disclosure, is excluded;
+  its first summary stays measurable. Opacity-zero entrances retain their neutral text geometry;
 - `obstacles()` — four layers, each computed on first read: `text` (line rectangles of the page, plus the
   whole box of any element whose `::before` or `::after` generates text), `chrome` (header, navigation and
   controls), `free` (rectangles of at least 24 px with no text within 8 px, found by cutting the page into
@@ -1361,7 +1376,8 @@ marks the effect whose code is running (`__agenticReportEffectEngine.current`) a
   coordinates at the call). The first three are in page coordinates and do not depend on the scroll:
   whatever lies inside a pinned element belongs to `pinned` only, so two rebuilds at different scroll
   positions measure the same page; an effect cuts pinned elements out of its drawing at their current
-  place (`element.getBoundingClientRect()`);
+  place (`element.getBoundingClientRect()`). Hidden disclosure bodies and other non-rendered content
+  contribute no text, generated-text, chrome or pinned obstacles; opening a disclosure restores them;
 - `layout` — `{ mode, narrow, svh, width }`, narrow at 720 px and below; `svh` is read from a hidden probe
   that stays in the effect layer, once per rebuild, so reading it does not dirty the layout;
   `pick({ wide, narrow })`;

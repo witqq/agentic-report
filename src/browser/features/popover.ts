@@ -7,12 +7,12 @@
 
 import { pageClock } from '../clock.js';
 import { provideFeature } from '../features.js';
-import { placeSurface, visualViewportBounds } from '../overlay-position.js';
+import { observeSurfaceResize, placeSurface, visualViewportBounds } from '../overlay-position.js';
 
 const clock = pageClock();
 const popoverPortals = new Map<
   HTMLElement,
-  { readonly panel: HTMLElement; readonly placeholder: Comment }
+  { readonly panel: HTMLElement; readonly placeholder: Comment; readonly stopResize: () => void }
 >();
 const popoverPortalOwners = new WeakMap<HTMLElement, HTMLElement>();
 const pendingPopoverCloses = new Map<HTMLElement, number>();
@@ -109,7 +109,8 @@ function portalPopoverPanel(popover: HTMLElement, panel: HTMLElement): void {
   overlayHostElement().append(panel);
   panel.dataset.popoverPortal = '';
   if (popover.matches('[data-glossary-reference]')) panel.dataset.glossaryPortal = '';
-  popoverPortals.set(popover, { panel, placeholder });
+  const stopResize = observeSurfaceResize(panel, schedulePopoverPositioning);
+  popoverPortals.set(popover, { panel, placeholder, stopResize });
   popoverPortalOwners.set(panel, popover);
   if (popoverPortals.size === 1) startPopoverPositioning();
 }
@@ -117,6 +118,7 @@ function portalPopoverPanel(popover: HTMLElement, panel: HTMLElement): void {
 function restorePopoverPanel(popover: HTMLElement): void {
   const portal = popoverPortals.get(popover);
   if (portal === undefined) return;
+  portal.stopResize();
   portal.placeholder.replaceWith(portal.panel);
   portal.panel.removeAttribute('data-popover-portal');
   portal.panel.removeAttribute('data-glossary-portal');

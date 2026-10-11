@@ -191,6 +191,18 @@ test.describe('vocabulary techniques', () => {
     await seek(page, 2.5);
     expect(await beatStates(demo)).toEqual(['passed', 'current', 'next']);
     await expect(demo.locator('[data-demo-position]')).toHaveText('2 / 3');
+    // Catches: a passed step or unfocused diagram node becomes low-contrast while it remains readable.
+    await expect(demo.locator('[data-demo-state="passed"]')).toHaveCSS('opacity', '1');
+    expect(await demo.locator('.demo-stage text').count()).toBeGreaterThan(0);
+    for (const label of await demo.locator('.demo-stage text').all())
+      expect(
+        await label.evaluate((element) => {
+          let opacity = 1;
+          for (let node: Element | null = element; node !== null; node = node.parentElement)
+            opacity *= Number(getComputedStyle(node).opacity);
+          return opacity;
+        }),
+      ).toBe(1);
     // Ловит: такт, который ещё не наступил, виден — сцена не играет, а стоит целиком.
     await expect(demo.locator('[data-demo-beat="2"]')).toHaveCSS('opacity', '0');
 
@@ -258,10 +270,15 @@ test.describe('vocabulary techniques', () => {
     await demo.evaluate((element) => element.setAttribute('data-clock-progress', '0.1'));
     await seek(page, 1);
     expect(await beatStates(demo)).toEqual(['current', 'next', 'next']);
+    // Catches: visible future scroll steps are faded; timed future steps remain intentionally hidden.
+    for (const beat of await demo.locator('[data-demo-beat]').all())
+      await expect(beat).toHaveCSS('opacity', '1');
     await demo.evaluate((element) => element.setAttribute('data-clock-progress', '0.8'));
     await seek(page, 1);
     // Ловит: прогресс сцены по прокрутке нельзя выставить записью, и кадр ролика зависел бы от прокрутки.
     expect(await beatStates(demo)).toEqual(['passed', 'passed', 'current']);
+    for (const beat of await demo.locator('[data-demo-beat]').all())
+      await expect(beat).toHaveCSS('opacity', '1');
   });
 
   test('swap and typing keep their width while they move, with the whole text in the page', async ({

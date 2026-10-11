@@ -4,7 +4,12 @@ import path from 'node:path';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { directiveInvocationSchema, getDirectiveSchema } from '../../src/authoring/schemas.js';
+import {
+  directiveInvocationSchema,
+  getDirectiveSchema,
+  interpretDirectiveAttributes,
+} from '../../src/authoring/schemas.js';
+import { authoringRegistry } from '../../src/authoring/registry.js';
 import { getSourceContract } from '../../src/discovery.js';
 import { buildReport } from '../../src/index.js';
 import { renderMarkdown } from '../../src/render/markdown.js';
@@ -97,7 +102,7 @@ describe('declarative visual language', () => {
       message:
         'section composition mosaic or stack cannot be combined with layered or gallery media.',
       remediation:
-        'Use composition flow, stage, split, or story with layered/gallery media, or use natural, mask, or bleed media with mosaic/stack composition.',
+        'Use composition flow, stage, split, or story with layered/gallery media, or use natural or bleed media with mosaic/stack composition.',
     });
   });
 
@@ -115,7 +120,8 @@ describe('declarative visual language', () => {
     expect(hero.html).toContain('data-composition="stage"');
     expect(hero.html).toContain('data-viewport="full"');
     expect(hero.html).toContain('data-type="display"');
-    expect(hero.html).toContain('data-media="mask"');
+    expect(hero.html).toContain('data-media="natural"');
+    expect(hero.html).not.toContain('data-media="mask"');
     expect(hero.html).toContain('data-scene="progress"');
 
     const conflict = {
@@ -145,6 +151,55 @@ describe('declarative visual language', () => {
     } as const;
     expect(directiveInvocationSchema.safeParse(overridden).success).toBe(true);
     expect(validateDirective(overridden)).toBe(true);
+  });
+
+  it('accepts legacy mask sources while resolving their media to natural before rendering', async () => {
+    // Catches aliases applied only to HTML: inspect and the compiler must share normalized attributes.
+    const section = authoringRegistry.directives.find((directive) => directive.name === 'section');
+    if (section === undefined) throw new Error('Missing section directive');
+    const validateDirective = new Ajv2020({ strict: false, allErrors: true }).compile(
+      getDirectiveSchema(),
+    );
+    for (const recipe of ['none', 'hero', 'evidence'] as const) {
+      const attributes = {
+        title: 'Legacy picture',
+        recipe,
+        media: 'mask',
+        'media-fit': 'contain',
+        'media-aspect': 'landscape',
+        focal: 'right',
+      };
+      const invocation = { name: 'section', form: 'container', attributes };
+      expect(directiveInvocationSchema.safeParse(invocation).success).toBe(true);
+      expect(validateDirective(invocation)).toBe(true);
+      expect(interpretDirectiveAttributes(section, attributes)).toMatchObject({
+        ok: true,
+        values: {
+          media: 'natural',
+          'media-fit': 'contain',
+          'media-aspect': 'landscape',
+          focal: 'right',
+        },
+      });
+      const workspace = await visualWorkspace(`legacy-media-${recipe}`);
+      const legacy = `:::section{title="Legacy picture" recipe="${recipe}" media="mask" media-fit="contain" media-aspect="landscape" focal="right"}\n![Picture](assets/scene.svg)\n:::`;
+      for (const format of ['single-file', 'directory'] as const) {
+        const rendered = await render(legacy, workspace, format);
+        const natural = await render(
+          legacy.replace('media="mask"', 'media="natural"'),
+          workspace,
+          format,
+        );
+        // The authored directive changed: its review identity must retain that source distinction.
+        // Compare the complete rendered layout while excluding only source-derived review IDs.
+        const withoutReviewIdentity = (html: string): string =>
+          html.replace(/ data-review-target="[^"]+"/gu, '');
+        expect(rendered.html).toMatch(/data-review-target="rt-[a-f0-9]+"/u);
+        expect(withoutReviewIdentity(rendered.html)).toBe(withoutReviewIdentity(natural.html));
+        expect((await render(legacy, workspace, format)).html).toBe(rendered.html);
+        expect(rendered.html).not.toContain('data-media="mask"');
+      }
+    }
   });
 
   it('renders a linked card as one safe focus target and rejects nested links', async () => {
@@ -316,7 +371,7 @@ describe('declarative visual language', () => {
       expect(result.html).toContain('data-viewport="full"');
       expect(result.html).toContain('data-section-density="immersive"');
       expect(result.html).toContain('data-type="display"');
-      expect(result.html).toContain('data-media="mask"');
+      expect(result.html).toContain('data-media="natural"');
       expect(result.html).toContain('data-media-fit="cover"');
       expect(result.html).toContain('data-media-aspect="cinematic"');
       expect(result.html).toContain('data-focal="right"');
@@ -431,7 +486,7 @@ async function visualWorkspace(prefix: string): Promise<string> {
 function visualSource(): string {
   return [
     '# Visual language',
-    ':::section{title="Spatial evidence" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint"}',
+    ':::section{title="Spatial evidence" composition="stage" viewport="full" section-density="immersive" type="display" media="natural" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint"}',
     'A portable scene keeps its semantic reading order.',
     '![Bounded local scene](assets/scene.svg)',
     ':::',

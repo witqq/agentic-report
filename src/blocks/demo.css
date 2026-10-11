@@ -82,20 +82,16 @@
   }
 
   .semantic-demo[data-demo-live] .semantic-beat[data-demo-state='passed'] {
-    opacity: 0.5;
+    border-inline-start-color: var(--color-border);
   }
 
   .semantic-demo[data-demo-live] .semantic-beat[data-demo-state='current'] {
     border-inline-start-color: var(--color-accent);
   }
 
-  .demo-stage[data-demo-focus] :is(.semantic-node, .semantic-edge):not([data-lit]) {
-    opacity: 0.28;
-  }
-
-  .semantic-demo[data-demo-live] :is(.semantic-node, .semantic-edge) {
-    transition: opacity calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
-      var(--motion-ease, ease-out);
+  .demo-stage[data-demo-focus] .semantic-node[data-lit] > .visualization-node,
+  .demo-stage[data-demo-focus] .semantic-edge[data-lit] {
+    stroke-width: calc(var(--diagram-line) * 1.75px);
   }
 
   @media (min-width: 57rem) {
@@ -106,10 +102,6 @@
     .semantic-demo[data-play='scroll'][data-demo-live] > .demo-frame {
       position: sticky;
       top: calc(var(--topbar-clearance, 4.5rem) + 1rem);
-    }
-
-    .semantic-demo[data-play='scroll'][data-demo-live] .semantic-beat[data-demo-state='next'] {
-      opacity: 0.35;
     }
   }
 
@@ -125,10 +117,6 @@
 
     .demo-controls {
       display: none;
-    }
-
-    .demo-stage[data-demo-focus] :is(.semantic-node, .semantic-edge):not([data-lit]) {
-      opacity: 1;
     }
   }
 }

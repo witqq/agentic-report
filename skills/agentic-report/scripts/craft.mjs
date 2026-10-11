@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 
 import { CHECKED_RULES as PROSE_CHECKED, catalogueRules } from './prose-check.mjs';
 import { CHECKED_RULES as DESIGN_CHECKED } from './design-rules.mjs';
+import { isCliEntry } from './cli-entry.mjs';
 
 const skillRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -491,10 +492,7 @@ async function main([query]) {
   process.stdout.write(`${text}\n`);
 }
 
-if (
-  process.argv[1] !== undefined &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-)
+if (isCliEntry(import.meta.url))
   main(process.argv.slice(2)).catch((error) => {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 2;

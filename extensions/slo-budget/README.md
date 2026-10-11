@@ -61,6 +61,10 @@ at 99.9 % over 30 days, 12 days gone and 18 bad minutes; it cannot read values f
 The faces of the page are not inside the frame (the island has no network and the fonts are the page's), so
 the island falls back to the system face of the same kind.
 
+Opening `index.html` directly runs the calculator in English with system colours and a complete chart.
+The page bridge supplies theme tokens, language and clock messages only when the entry is compiled into
+an island; local calculations and input controls do not require it.
+
 ## Static equivalent
 
 The Markdown body of the `island` directive is required and is what print, readers without scripts and the

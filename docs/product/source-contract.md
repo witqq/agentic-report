@@ -849,6 +849,10 @@ short navigation text. The complete visual grammar is closed and package-owned:
 | `choreography`    | `none`, `cascade`                                                                                  | `none`      |
 | `reveal`          | boolean                                                                                            | `false`     |
 
+Use `media="natural"` for ordinary rectangular media in new sources. The legacy `media="mask"` spelling
+remains accepted and is normalized to `natural`, without angular clipping. `media-fit`, `media-aspect`,
+and `focal` still control framing independently.
+
 These attributes compose independently except where two roles would own the same layout or transform.
 `composition="mosaic|stack"` cannot combine with `media="layers|gallery"`; `media="layers"` and
 `scene="progress"` cannot combine with `interaction="depth|tilt"`; and `composition="story|stack"` cannot
@@ -900,8 +904,8 @@ tracks. Authors cannot supply CSS values, class names, event handlers, or execut
 
 Recipes provide the short path. Their coordinated detailed values resolve first, and any explicit detailed
 attribute overrides only its own role before the same incompatibility checks run. `hero` stages an opening,
-`evidence` creates a split proof field whose picture is shown whole (no mask, no crop: set `media`,
-`media-fit` or `media-aspect` explicitly for a photograph), `story` creates a scroll narrative, `rail` creates a local media rail,
+`evidence` creates a split proof field whose picture is shown whole (set `media-fit` or `media-aspect`
+explicitly when a photograph needs cropping), `story` creates a scroll narrative, `rail` creates a local media rail,
 and `metrics` creates a compact data mosaic. A card may declare one safe `href`; it then renders as one
 focusable anchor with a persistent link icon, while nested Markdown links fail validation.
 
@@ -923,12 +927,19 @@ block beside 2–8 `beat` containers on a wide screen with normal motion and swi
 beat shows the nth image — or lights the diagram nodes and connections named by the beat's `focus` (node ids
 and edge `id`s in one comma-separated list) and the connections between lit nodes; focus ids must exist in
 that section's diagram. A beat's `lines` (`3`, `2-4`, `1,5-7`) lights those lines of the scene's code block
-and dims the rest; `lines` in a scene without a code block is refused. The pinned part of a steps scene
+with the theme's accent-soft background; all code lines keep their full text contrast. `lines` in a scene
+without a code block is refused. Visible beats and diagram labels also keep full theme contrast: the current
+beat gains an accent rule, and focused diagram shapes and connections gain heavier strokes without
+replacing their status colours. The stage and beats share one scene track, so pinning ends before later
+authored blocks, which retain the section's normal flow and full track. The pinned part of a steps scene
 never runs longer than four screens: with many beats each beat is shorter. On a screen narrower than 57rem
-with normal motion the stage stays under the top bar above the current beat (`data-scene-narrow`), so the
-media stands before every step; a figure alone on that stage shows its title, its full-screen button and its
-whole picture fitted to the stage, while its description, layout switch, legend and words wait in the
-full-screen view and in the flow without motion. `scene="scrub"` pins the media and the captions together for one screen per
+the complete authored stage and then the beats follow ordinary document flow. A figure keeps its title,
+description, caption, layout controls, legend and **Open** control; a large drawing retains the native
+readability floor and scrolls inside its frame when needed. With normal motion, the beat nearest the
+viewport midpoint selects diagram and code focus, including after a large scroll jump. The stage is not
+pinned on a narrow screen and may leave the viewport while later beats are read. Reduced motion and print
+retain the same natural reading order without scroll-driven focus.
+`scene="scrub"` pins the media and the captions together for one screen per
 beat, two to four beats (a fifth is refused): the caption changes when a third of its step's scroll has
 passed and sits in one cell of constant height, the picture and the diagram focus belong to the reached
 step and stay lit for the later ones, a segment bar and «Step n of N» stand under the caption, and the last
@@ -964,7 +975,10 @@ starts when half of it is on screen, plays each beat for its `seconds` times the
 leaves the screen or when the reader presses its button, stops on its last beat with a button to play again,
 and starts from its beginning when the closed tab that holds it opens again; a scroll `demo` is pinned on a
 screen at least 57rem wide while the reader passes about half a screen per beat, and a recording sets its
-progress with `data-clock-progress`. `:swap` holds each word 1.2 s and returns to the written one;
+progress with `data-clock-progress`. Visible demo beats and diagram labels retain full theme contrast;
+the current beat has an accent rule and focused shapes and connections have heavier strokes. Unreached
+timed-demo beats and inactive overlapping scrub captions remain hidden until their turn.
+`:swap` holds each word 1.2 s and returns to the written one;
 `:typing` types at most 45 ms per character and within 1.5 s, and a line that wraps stays whole; `:mark`
 draws its line and `spotlight` moves in when they come into view; a `transition="log"` code block prints
 within 2.4 s. Every one of them keeps its whole text in the page and its width and height from the first
@@ -972,7 +986,7 @@ frame. Under reduced motion, with `motion: none`, and in print a scene shows eve
 word, a typed line and a log their whole text, a mark its complete line, and a spotlight its loupe in place.
 
 ```markdown
-::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
+::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="natural" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 The content remains ordinary Markdown and semantic directives.
 ::::
 ```
@@ -1091,7 +1105,11 @@ and labels; its top-down panel shows that view on such a track, and the view swi
 view fits. A flow that cannot fit even so keeps the 11 px floor and scrolls inside its frame. A `zoom` whose
 nested labels would not reach 11 px at the end of the flight on the current track does not fly: it stands as
 its two figures, one under the other whenever both do not fit side by side at that floor. A narrow chart
-variant keeps its 12 px axis labels at 11 px down to a 360 px window. Every diagram and chart, and every
+variant keeps its 12 px axis labels at 11 px down to a 360 px window. Figures in a narrow steps scene use
+the same native readability floor and internal frame scrolling as ordinary figures.
+`snapshot --measure` classifies labels hidden only by horizontal or vertical scrolling inside a fully
+visible frame with a full-screen viewer as `scrolled`, rather than defects; clipping by the SVG or an
+outer container remains a defect. Every diagram and chart, and every
 table wider than its track, has an **Open** control that shows the figure full screen: the same drawing
 (the view the reader has chosen, never the narrow form; a zoom shows both figures), redrawn at each zoom
 step so it stays sharp. Drag moves it, a pinch, `Ctrl` + wheel (a trackpad pinch), a double-click or

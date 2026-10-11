@@ -11,7 +11,7 @@ language: ru
 
 Документ, в котором решение и его обоснование выстроены от ограничений до внедрения.
 
-::::::section{title="Контекст решения" id="context" nav="Контекст" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" media="mask" media-fit="cover" media-aspect="cinematic" surface="tint" transition="stagger" choreography="cascade"}
+::::::section{title="Контекст решения" id="context" nav="Контекст" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" media="natural" media-fit="cover" media-aspect="cinematic" surface="tint" transition="stagger" choreography="cascade"}
 :::callout{kind="info" title="Статус решения"}
 Решение принято для следующего этапа реализации после локальной проверки.
 :::

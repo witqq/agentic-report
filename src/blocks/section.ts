@@ -89,7 +89,7 @@ function sectionDefinition(): DirectiveDefinition {
     ),
     enumAttribute(
       'media',
-      'Art direction for confined local images inside the section.',
+      'Art direction for confined local images inside the section. Legacy mask is accepted as an alias for natural; images have no angular clipping.',
       ['natural', 'mask', 'layers', 'gallery', 'bleed'],
       'natural',
     ),
@@ -196,7 +196,7 @@ function sectionDefinition(): DirectiveDefinition {
         message:
           'section composition mosaic or stack cannot be combined with layered or gallery media.',
         remediation:
-          'Use composition flow, stage, split, or story with layered/gallery media, or use natural, mask, or bleed media with mosaic/stack composition.',
+          'Use composition flow, stage, split, or story with layered/gallery media, or use natural or bleed media with mosaic/stack composition.',
       },
       {
         attributes: {
@@ -291,7 +291,7 @@ function beatDefinition(): DirectiveDefinition & { readonly name: 'beat' } {
     {
       name: 'lines',
       description:
-        'Lines of the code block in the scene lit while this beat is current, such as 3, 2-4 or 1,5-7; the other lines dim.',
+        'Lines of the code block in the scene highlighted while this beat is current, such as 3, 2-4 or 1,5-7; all lines remain readable.',
       required: false,
       constraint: {
         kind: 'string',
@@ -959,7 +959,14 @@ function enhanceStepScenes(tree: HastRoot): void {
               ],
             },
           ]
-        : [wrappedStage, beatList];
+        : [
+            {
+              type: 'element',
+              tagName: 'div',
+              properties: { className: ['scene-track'] },
+              children: [wrappedStage, beatList],
+            },
+          ];
     section.children.splice(stageAt < 0 ? stageIndex : stageAt, 1, ...replacement);
     section.properties.dataSceneFrames = String(frame);
     section.properties.dataSceneBeats = String(beats.length);

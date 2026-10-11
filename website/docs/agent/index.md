@@ -14,9 +14,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the result:
 
 ```sh
-npx --yes agentic-report@0.21.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.21.1 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.21.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.21.1 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. Build validates the complete source before writing, so
@@ -81,7 +81,7 @@ When the user does not trust the published package, do not silently fall back to
 release tag, let the user inspect the repository, and run the locally compiled CLI:
 
 ```sh
-git clone --branch v0.21.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.21.1 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -136,10 +136,14 @@ A card with one destination may declare `href`; it becomes one safe keyboard tar
 icon. Do not put another Markdown link inside it.
 
 ```markdown
-::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
+::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="natural" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 The content remains ordinary Markdown and semantic directives.
 ::::
 ```
+
+Use `media="natural"` for ordinary rectangular media. The legacy `mask` spelling is accepted as
+`natural` without angular clipping; fit, aspect, and focal point remain independent. See the
+[section attributes](../product/source-contract.md#semantic-primitives) for the complete contract.
 
 Use the installed `layout-mixed` example for the complete grammar, the landing starter for a smaller
 copyable narrative, `terminal-portfolio` for console-led composition, `cinematic-story` for image-first
@@ -295,7 +299,7 @@ and the page is handed over only when it passes:
 node skills/agentic-report/scripts/prose-check.mjs ./my-page
 node skills/agentic-report/scripts/design-check.mjs ./my-page
 npx --yes playwright@1.62.1 install chromium
-npx --yes -p agentic-report@0.21.0 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
+npx --yes -p agentic-report@0.21.1 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
 node skills/agentic-report/scripts/handover.mjs ./my-page
 ```
 
@@ -310,9 +314,9 @@ for one page is switched off by a line with its reason in that page's `brief.md`
 Use the CLI as the runtime source of truth:
 
 ```sh
-npx --yes agentic-report@0.21.0 describe --json
-npx --yes agentic-report@0.21.0 schema --scope source
-npx --yes agentic-report@0.21.0 examples --json
+npx --yes agentic-report@0.21.1 describe --json
+npx --yes agentic-report@0.21.1 schema --scope source
+npx --yes agentic-report@0.21.1 examples --json
 ```
 
 Read the [complete agent reference](../AGENT-REFERENCE.md), the [declarative source contract](../product/source-contract.md),

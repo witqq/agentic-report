@@ -24,7 +24,12 @@ import { pageClock } from './clock.js';
 import { browserIcon } from './icon.js';
 import { textWithoutEditionLayer } from './edition-text.js';
 import { openAround } from './reading-position.js';
-import { placeSurface, visualViewportBounds, type ViewportBounds } from './overlay-position.js';
+import {
+  observeSurfaceResize,
+  placeSurface,
+  visualViewportBounds,
+  type ViewportBounds,
+} from './overlay-position.js';
 
 const mobileReview = window.matchMedia('(max-width: 56.99rem)');
 const OPEN_HIGHLIGHT = 'agentic-review-open';
@@ -157,6 +162,7 @@ function createController(
   markerHost.className = 'review-highlight-markers';
   markerHost.dataset.reviewHighlightMarkers = '';
   root.append(markerHost);
+  const stopPopoverResize = observeSurfaceResize(el.popover, scheduleReposition);
 
   limit(el.message, abort.signal);
   el.toggle.addEventListener(
@@ -916,6 +922,7 @@ function createController(
     destroy: () => {
       if (el.dialog.open) el.dialog.close();
       el.popover.hidden = true;
+      stopPopoverResize();
       abort.abort();
       if (repositionFrame !== undefined) pageClock().cancelFrame(repositionFrame);
       highlightRegistry()?.delete(OPEN_HIGHLIGHT);

@@ -28,6 +28,16 @@ function enhanceTabs(node: Element, context: BlockEnhancementContext): void {
     panel.properties.ariaLabelledBy = [tabId];
     panel.properties.tabIndex = 0;
     panel.properties.dataTabPanel = '';
+    panel.children.unshift({
+      type: 'element',
+      tagName: 'div',
+      properties: {
+        className: ['semantic-tab-print-label'],
+        dataTabPrintLabel: '',
+        ariaHidden: 'true',
+      },
+      children: [{ type: 'text', value: label }],
+    });
     if (index !== 0) panel.properties.hidden = '';
     buttons.push({
       type: 'element',

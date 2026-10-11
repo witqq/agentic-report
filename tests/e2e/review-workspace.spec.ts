@@ -1,9 +1,10 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import type { Locator, Page } from '@playwright/test';
 
+import { buildReport } from '../../dist/node/index.js';
 import { expect, test } from './fixtures.js';
 
 const root = path.resolve('test-results/e2e-generated');
@@ -840,6 +841,152 @@ test('mobile review thread dialog opens and returns focus without overflow', asy
     ),
   ).toBe(true);
 });
+
+test('localized review headers reserve a complete touch close label beside a long quotation', async ({
+  page,
+}, info) => {
+  test.skip(!info.project.name.startsWith('mobile'));
+  // The old flex header let its title column compress Close/Закрыть into a vertical stack. Checking
+  // only the panel bounds misses that defect; inspect actual label lines and both header columns.
+  const fixture = path.resolve('test-results/e2e-review-header');
+  const quotes = {
+    en: 'Traffic shaping restored checkout service before the adapter fix was deployed and kept capacity available for customers.',
+    ru: 'Управление трафиком восстановило оформление заказа до развёртывания исправления адаптера и сохранило доступную ёмкость.',
+  };
+  for (const edition of ['previous', 'current']) {
+    const source = path.join(fixture, edition);
+    await mkdir(source, { recursive: true });
+    for (const locale of ['en', 'ru'] as const) {
+      await writeFile(
+        path.join(source, locale === 'en' ? 'report.md' : 'report.ru.md'),
+        [
+          '---',
+          `title: ${locale === 'en' ? 'Review header proof' : 'Проверка заголовка ревью'}`,
+          `language: ${locale}`,
+          ...(locale === 'en'
+            ? ['localizations:', '  ru: report.ru.md', 'theme: frost', 'review: true']
+            : []),
+          '---',
+          `# ${locale === 'en' ? 'Review header proof' : 'Проверка заголовка ревью'}`,
+          ':::section{title="Decision" id="decision"}',
+          quotes[locale],
+          ':::',
+          ':::section{title="Update" id="update"}',
+          edition === 'previous'
+            ? 'An earlier supporting statement.'
+            : 'A revised supporting statement.',
+          ':::',
+        ].join('\n\n'),
+      );
+    }
+  }
+  const previous = path.join(fixture, 'previous.html');
+  const output = path.join(fixture, 'current.html');
+  await buildReport({ input: path.join(fixture, 'previous'), output: previous });
+  await buildReport({ input: path.join(fixture, 'current'), output, since: previous });
+  for (const width of [390, 304]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const locale of ['en', 'ru'] as const) {
+      await page.goto(pathToFileURL(output).href);
+      await page.locator('[data-language-select]').selectOption(locale);
+      await page.evaluate(() => document.fonts.ready);
+      expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
+      const target = page.locator('#decision > p[data-review-target]').first();
+      await target.scrollIntoViewIfNeeded();
+      await selectElementRange(target, quotes[locale], 0, quotes[locale].length);
+      await page
+        .locator('[data-review-selection-action][data-review-action-kind="create"]')
+        .click();
+      await expect(page.locator('[data-review-target-label]')).toHaveText(quotes[locale]);
+      await assertHeaderClose(page.locator('.review-popover-header'), locale);
+      const popover = page.locator('[data-review-popover]');
+      // Opening a previously hidden localized surface can load a different face and wrap the quote
+      // again. Then a native validation error grows it without any window resize or scroll signal.
+      await page.evaluate(() => document.fonts.ready);
+      await assertPopoverInsideViewport(popover);
+      const initialHeight = await popover.evaluate((node) => node.getBoundingClientRect().height);
+      await page.locator('[data-review-add-message]').click();
+      await expect(page.locator('[data-review-popover-error]')).toBeVisible();
+      expect(await popover.evaluate((node) => node.getBoundingClientRect().height)).toBeGreaterThan(
+        initialHeight,
+      );
+      await assertPopoverInsideViewport(popover);
+      await page.locator('[data-review-message]').fill(quotes[locale]);
+      await page.locator('[data-review-add-message]').click();
+      await expect(page.locator('[data-review-thread-messages]')).toContainText(quotes[locale]);
+      await assertPopoverInsideViewport(popover);
+      await page.locator('[data-review-popover-close]').click();
+      await page.locator('[data-review-toggle]').click();
+      await assertHeaderClose(page.locator('[data-review-dialog] .review-panel-header'), locale);
+      await page.locator('[data-review-close]').click();
+      await page.locator('[data-edition-list-toggle]').click();
+      await assertHeaderClose(page.locator('[data-edition-dialog] .review-panel-header'), locale);
+      await page.locator('[data-edition-close]').click();
+    }
+  }
+});
+
+async function assertPopoverInsideViewport(popover: Locator): Promise<void> {
+  await expect
+    .poll(() =>
+      popover.evaluate((node) => {
+        const rect = node.getBoundingClientRect();
+        const viewport = window.visualViewport;
+        const left = viewport?.offsetLeft ?? 0;
+        const top = viewport?.offsetTop ?? 0;
+        const right = left + (viewport?.width ?? innerWidth);
+        const bottom = top + (viewport?.height ?? innerHeight);
+        return (
+          rect.left >= left + 7 &&
+          rect.right <= right - 7 &&
+          rect.top >= top + 7 &&
+          rect.bottom <= bottom - 7
+        );
+      }),
+    )
+    .toBe(true);
+}
+
+async function assertHeaderClose(header: Locator, locale: 'en' | 'ru'): Promise<void> {
+  await expect(header).toBeVisible();
+  const button = header.locator('button');
+  await expect(button.locator('span')).toHaveText(locale === 'en' ? 'Close' : 'Закрыть');
+  const geometry = await header.evaluate((node) => {
+    const button = node.querySelector('button');
+    const label = button?.querySelector('span');
+    const title = node.querySelector('div');
+    if (!button || !label || !title) throw new Error('Missing review header evidence.');
+    const range = document.createRange();
+    range.selectNodeContents(label);
+    const lines = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
+    const bounds = node.getBoundingClientRect();
+    const control = button.getBoundingClientRect();
+    const text = title.getBoundingClientRect();
+    return {
+      lines: lines.size,
+      buttonWidth: control.width,
+      buttonHeight: control.height,
+      separate: text.right <= control.left + 1,
+      contained:
+        text.left >= bounds.left - 1 &&
+        control.right <= bounds.right + 1 &&
+        control.top >= bounds.top - 1 &&
+        control.bottom <= bounds.bottom + 1,
+      titleFits: title.scrollWidth <= title.clientWidth + 1,
+      headerFits: node.scrollWidth <= node.clientWidth + 1,
+    };
+  });
+  expect(geometry.lines).toBe(1);
+  expect(geometry.buttonWidth).toBeGreaterThanOrEqual(44);
+  expect(geometry.buttonHeight).toBeGreaterThanOrEqual(44);
+  expect(geometry).toMatchObject({
+    separate: true,
+    contained: true,
+    titleFits: true,
+    headerFits: true,
+  });
+  await expect(header.locator('h2')).toBeVisible();
+}
 
 test('the same review popover stays inside desktop and mobile visual viewports without reflow', async ({
   page,

@@ -35,6 +35,7 @@ import { fileURLToPath } from 'node:url';
 
 import { parseSwitchedOff, previousEdition } from './design-rules.mjs';
 import { confinedFile, pageSource, readPageMarkdown, writePageMarkdown } from './source-files.mjs';
+import { isCliEntry } from './cli-entry.mjs';
 
 const skillRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 export const CHECKLIST_FILE = 'checklist.md';
@@ -317,10 +318,7 @@ async function main(argv) {
   throw new Error('Usage: checklist.mjs init|check <page-directory> [--since <previous-edition>]');
 }
 
-if (
-  process.argv[1] !== undefined &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-)
+if (isCliEntry(import.meta.url))
   main(process.argv.slice(2)).catch((error) => {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 2;

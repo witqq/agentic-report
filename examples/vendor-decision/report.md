@@ -57,7 +57,7 @@ The date after which a control claim must be re-tested or replaced before it can
 :::
 :::::
 
-:::::section{title="Gate decision" id="gates" nav="Gates" width="wide" align="start" tone="soft" composition="story" viewport="bounded" section-density="editorial" type="editorial" media="mask" media-fit="contain" media-aspect="landscape" focal="center" surface="grain" transition="reveal" interaction="depth"}
+:::::section{title="Gate decision" id="gates" nav="Gates" width="wide" align="start" tone="soft" composition="story" viewport="bounded" section-density="editorial" type="editorial" media="natural" media-fit="contain" media-aspect="landscape" focal="center" surface="grain" transition="reveal" interaction="depth"}
 
 {{include: partials/gates.md}}
 

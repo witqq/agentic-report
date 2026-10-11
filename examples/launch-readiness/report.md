@@ -20,7 +20,7 @@ This brief follows a fictional launch review for **Driftwood Rooms**, an invente
 product from the fictional North Quay Labs. Every user, cohort, metric, threshold, and date is sample data
 created for the report engine; none describes a real product, company, or market result.
 
-:::::section{title="Launch signal" id="launch-signal" nav="Signal" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
+:::::section{title="Launch signal" id="launch-signal" nav="Signal" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="natural" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 :::callout{kind="success" title="Decision in one minute"}
 Open a 240-team European Economic Area beta on 15 September. Keep the invitation list capped, exclude
 regulated workflows, and hold broader expansion until week-two retention and support-response gates pass for

@@ -29,6 +29,7 @@ export interface FeatureSlots {
   };
   readonly diagramFit: (page: HTMLElement) => Destroyable | undefined;
   readonly diagramForms: (page: HTMLElement) => Cleanup;
+  readonly disclosurePrint: (scope: HTMLElement) => Cleanup;
   readonly figureViewer: (page: HTMLElement, strings: PackageStrings) => Cleanup;
   readonly stepScene: (section: HTMLElement, live: 'wide' | 'narrow' | undefined) => Cleanup;
   readonly scrubScenes: (

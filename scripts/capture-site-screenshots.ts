@@ -7,6 +7,8 @@
  * `![…](assets/<file>){dark="assets/<darkFile>"}`, so a dark page shows the dark shot.
  *
  * Run after `pnpm build`: `node --experimental-strip-types scripts/capture-site-screenshots.ts`.
+ * The default run also photographs the authored landing first screen at its social viewport.
+ * Pass `--social-preview` to leave the three maintained example pairs untouched.
  */
 
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
@@ -32,6 +34,13 @@ interface ScreenshotContract {
     readonly deviceScaleFactor: number;
   };
   readonly screenshots: readonly ScreenshotEntry[];
+  readonly socialPreview: {
+    readonly source: string;
+    readonly file: string;
+    readonly viewport: { readonly width: number; readonly height: number };
+    readonly deviceScaleFactor: number;
+    readonly scheme: 'light' | 'dark';
+  };
 }
 
 /** The moment of the page clock by which every entrance, count and transition has finished. */
@@ -46,38 +55,80 @@ const contract = JSON.parse(
 const work = await mkdtemp(path.join(tmpdir(), 'agentic-report-screenshots-'));
 const browser = await chromium.launch({ headless: true });
 try {
-  for (const entry of contract.screenshots) {
-    const page = path.join(work, `${entry.id}.html`);
-    await buildReport({ input: path.resolve(assets, entry.source), output: page });
-    for (const [scheme, file] of [
-      ['light', entry.file],
-      ['dark', entry.darkFile],
-    ] as const) {
-      const context = await browser.newContext({
-        viewport: contract.capture.viewport,
-        deviceScaleFactor: contract.capture.deviceScaleFactor,
-        colorScheme: scheme,
-        reducedMotion: 'reduce',
+  const captureSocialPreview = async (): Promise<void> => {
+    const entry = contract.socialPreview;
+    const output = path.join(work, 'landing.html');
+    await buildReport({ input: path.resolve(assets, entry.source), output });
+    const context = await browser.newContext({
+      viewport: entry.viewport,
+      deviceScaleFactor: entry.deviceScaleFactor,
+      colorScheme: entry.scheme,
+      reducedMotion: 'no-preference',
+      locale: 'en-US',
+    });
+    try {
+      const tab = await context.newPage();
+      await tab.addInitScript(MANUAL_CLOCK_INIT_SCRIPT);
+      await tab.goto(pathToFileURL(output).href, { waitUntil: 'load' });
+      await tab.locator('[data-language-select]').selectOption('en');
+      await tab.evaluate((scheme) => {
+        document.documentElement.dataset.scheme = scheme;
+      }, entry.scheme);
+      await tab.evaluate(async () => {
+        await document.fonts.ready;
+        await Promise.all([...document.images].map((image) => image.decode()));
+        window.scrollTo({ top: 0, behavior: 'instant' });
       });
-      try {
-        const tab = await context.newPage();
-        await tab.addInitScript(MANUAL_CLOCK_INIT_SCRIPT);
-        await tab.goto(pathToFileURL(page).href, { waitUntil: 'load' });
-        await tab.evaluate((value) => {
-          document.documentElement.dataset.scheme = value;
-        }, scheme);
-        await tab.evaluate(() => document.fonts.ready.then(() => true));
-        await tab.evaluate((seconds) => {
-          (window as unknown as { __clock?: { seek(value: number): void } }).__clock?.seek(seconds);
-        }, SETTLED_SECONDS);
-        await tab.waitForTimeout(100);
-        await tab.screenshot({ path: path.join(assets, file), fullPage: false });
-        process.stdout.write(`${entry.id} ${scheme} → website/landing/assets/${file}\n`);
-      } finally {
-        await context.close();
+      await tab.evaluate((seconds) => {
+        (window as unknown as { __clock?: { seek(value: number): void } }).__clock?.seek(seconds);
+      }, SETTLED_SECONDS);
+      await tab.waitForTimeout(100);
+      await tab.evaluate((seconds) => {
+        (window as unknown as { __clock?: { seek(value: number): void } }).__clock?.seek(seconds);
+      }, SETTLED_SECONDS + 1);
+      await tab.screenshot({ path: path.join(assets, entry.file), fullPage: false });
+      process.stdout.write(`landing ${entry.scheme} → website/landing/assets/${entry.file}\n`);
+    } finally {
+      await context.close();
+    }
+  };
+  if (!process.argv.includes('--social-preview')) {
+    for (const entry of contract.screenshots) {
+      const page = path.join(work, `${entry.id}.html`);
+      await buildReport({ input: path.resolve(assets, entry.source), output: page });
+      for (const [scheme, file] of [
+        ['light', entry.file],
+        ['dark', entry.darkFile],
+      ] as const) {
+        const context = await browser.newContext({
+          viewport: contract.capture.viewport,
+          deviceScaleFactor: contract.capture.deviceScaleFactor,
+          colorScheme: scheme,
+          reducedMotion: 'reduce',
+        });
+        try {
+          const tab = await context.newPage();
+          await tab.addInitScript(MANUAL_CLOCK_INIT_SCRIPT);
+          await tab.goto(pathToFileURL(page).href, { waitUntil: 'load' });
+          await tab.evaluate((value) => {
+            document.documentElement.dataset.scheme = value;
+          }, scheme);
+          await tab.evaluate(() => document.fonts.ready.then(() => true));
+          await tab.evaluate((seconds) => {
+            (window as unknown as { __clock?: { seek(value: number): void } }).__clock?.seek(
+              seconds,
+            );
+          }, SETTLED_SECONDS);
+          await tab.waitForTimeout(100);
+          await tab.screenshot({ path: path.join(assets, file), fullPage: false });
+          process.stdout.write(`${entry.id} ${scheme} → website/landing/assets/${file}\n`);
+        } finally {
+          await context.close();
+        }
       }
     }
   }
+  await captureSocialPreview();
 } finally {
   await browser.close();
   await rm(work, { recursive: true, force: true });

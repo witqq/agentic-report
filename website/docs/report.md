@@ -30,9 +30,9 @@ Use Node.js 24.18.0 or newer. Start with the [agent quickstart](agent/index.html
 [direct Markdown version](agent/index.md), or install the [agent skill](../skills/agentic-report/SKILL.md).
 
 ```sh
-npx --yes agentic-report@0.21.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.21.1 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.21.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.21.1 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` through `file://`. Build validates before publishing; use `validate` or `inspect` only
@@ -60,7 +60,7 @@ If you prefer to inspect the implementation instead of executing the published `
 package, clone a specific release tag and run the compiler directly from its build:
 
 ```sh
-git clone --branch v0.21.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.21.1 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -132,10 +132,14 @@ Section tone owns its background and foreground relationship. Decorative surface
 authored content, while nested cards and visualizations restore their own readable package surface text.
 
 ```markdown
-::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
+::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="natural" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 The content remains ordinary Markdown and semantic directives.
 ::::
 ```
+
+Use `media="natural"` for ordinary rectangular media. The legacy `mask` spelling is accepted as
+`natural` without angular clipping; fit, aspect, and focal point remain independent. See the
+[section attributes](product/source-contract.md#semantic-primitives) for the complete contract.
 
 Sections also accept closed motion roles — `transition`, `scene`, `interaction`, and `choreography` — whose
 values are in the same source-contract table. Without a recipe they default to

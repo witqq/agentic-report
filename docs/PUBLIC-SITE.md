@@ -31,18 +31,31 @@ system language and retains the package-owned selector. `website/routes.json` al
 Russian Markdown entries as direct source routes; staging copies those bytes without translating or
 rewriting them.
 
-The landing is an ordinary multi-scene visual narrative whose first viewport contains the product value,
-actions, and a generated visual result. Its style chooser, author path, public gallery, selected-text Review,
-agent setup, and trust boundary all come from the public declarative grammar. `website/routes.json` stages
+The landing's first viewport contains the product value, skill installation, actions, and an original
+compilation model drawn through its declared site-local effect. Native steps explain the preserved source,
+compiler, and output; a working chart exposes fictional example data and its Markdown. Selected-text Review
+stores local notes for export. Discussion with the authoring Codex conversation belongs to the separate,
+opt-in local reader, rather than the hosted page. The complete public gallery and setup retain their
+authoritative source links. `website/routes.json` stages
 independent pages for every starter, the complete visual/interactive/data catalogs, Terminal and Cinematic
 showcases, the Executive brief, Motion showcase, decision showcases, and Review/Response workspaces. Their images are previews; the live
 bilingual pages and direct English/Russian Markdown routes are the authoritative proof.
+
+The complete landing source graph is available under both `source/landing/` and `website/landing/`, with
+the same relative filenames: both locale entries, local JSON, light/dark illustrations, social and example
+previews, screenshot provenance, and the declared effect's manifest, module, examples, SVGs, README, and
+MIT notice. Each route copies its canonical file from `website/landing/`; no separately maintained public
+source copy is needed. The landing's resource index links every raw route directly, so downloadable files
+remain discoverable without interpreting imports, image attributes, or extension manifests. Private briefs,
+capture probes, and generated prototype HTML are outside this public graph.
 
 The landing's page previews come in pairs, one per colour scheme, so a dark landing shows no light page.
 `website/landing/assets/screenshots.json` names each example, its light `file` and its `darkFile`; after
 `pnpm build`, `node --experimental-strip-types scripts/capture-site-screenshots.ts` rebuilds every example as
 one file, switches it to each scheme at 1280×800 on the stopped page clock, and rewrites both files. The
 landing shows each pair as `![…](assets/<file>){dark="assets/<darkFile>"}`.
+The same run then captures the English landing's first screen at the `socialPreview` viewport declared in
+that manifest. Pass `--social-preview` to refresh only this preview while retaining the example pairs.
 
 Site assembly adds one compact `Made with Moira` footer to every staged HTML page. The footer links to
 `https://moira-mcp.com/`, makes no runtime request, and is deliberately owned by the public-site
@@ -57,7 +70,8 @@ Deploy the complete `site/` tree without an SPA fallback. Before accepting the d
   complete chain to a publicly trusted root;
 - no `-k`, custom CA, browser certificate bypass, hosts override, or HTTP downgrade;
 - HTTP 2xx for every route in `website/routes.json` and the expected MIME family: HTML for `.html`,
-  Markdown/plain text for `.md` and `.txt`, and JSON for `.json`;
+  Markdown/plain text for `.md` and `.txt`, JSON for `.json`, images for `.png` and `.svg`, and text or
+  downloadable source files for JavaScript, YAML, and the extension's licence notice;
 - `robots.txt` as plain text naming `https://agentic-report.witqq.dev/sitemap.xml`, and `sitemap.xml` as XML,
   both revalidated rather than cached as immutable;
 - a deliberate absent path returning a real 404 rather than the landing HTML;

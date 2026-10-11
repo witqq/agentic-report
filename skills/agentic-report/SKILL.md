@@ -3,7 +3,7 @@ name: agentic-report
 description: Create and build polished local pages from declarative Markdown — landing pages, documents (reports, research, architecture, code reviews, incidents, guides), dashboards, answer forms, and presentations that can be shown or filmed — starting from a brief, with design advice and snapshots before handoff. Use for static agent-to-human handoff or a local living document with Codex discussion and source updates; do not use for remote hosted apps, simultaneous multi-user editing, deployment, publication, or bespoke frontend development.
 license: MIT
 metadata:
-  version: '0.21.0'
+  version: '0.21.1'
   homepage: https://agentic-report.witqq.dev/
   compatibility: Requires Node.js 24.18.0 or newer, npm/npx, and registry access for the first npx run. Snapshots also need Playwright and its Chromium.
 ---
@@ -41,6 +41,13 @@ For a filmed explanation, read [directed scenes](references/directed-scenes.md) 
 
 Whenever a system interface is shown, first show its complete application screen in every format, then focus or zoom into a named part. A detail must have an established location. A page can keep the full screenshot beside its detail; a film reserves an opening beat for the whole viewport. Re-establish a substantially different screen after navigation. Read the same reference for still-page, presentation and vertical-film recipes.
 
+Native step scenes highlight the current beat, code lines and diagram shapes while keeping every visible
+word at full theme contrast. On a phone, the complete stage and then the beats follow ordinary document
+flow; figures keep their captions, controls, native readable scale and **Open**. Scroll selects diagram
+and code focus, but the stage may leave the viewport while later beats are read. On a wide screen with
+normal motion the stage stays pinned beside the beats. Supporting blocks after the
+beats return to ordinary page flow. Read [motion](references/vocabulary-use.md#motion) for these scene rules.
+
 When a Report source is only material inside a Screencast film, follow the film's workflow: build that source and inspect its actual film frames. The full page-handoff route below applies when the page itself is a deliverable; do not add it as a second workflow to every filmed scene. Use the pinned compiler release and a compatible Screencast composition bridge, as the directed-scenes reference explains.
 
 The [atlas builder](scripts/build-atlas.mjs) renders a browsable gallery of native examples, companion pages and reference extensions: `node <skill>/scripts/build-atlas.mjs --out ./report-atlas`. Build it when discovering or comparing tools; it adds no handoff gate. A separately installed skill resolves the nearest consumer-installed compiler, or runs its pinned release through npx. Pass `--cli <compiler command>` to select a reviewed checkout without registry execution.
@@ -54,7 +61,8 @@ that decide it (`table`, `landing-first-screen`, `motion`, `prose-ru`, a directi
 as `DR-SURFACES` or `PR-DASH`).
 
 Keep the skill's scripts together: their shared
-[`source-files.mjs`](scripts/source-files.mjs) enforces the page file boundary before reads and writes.
+[`source-files.mjs`](scripts/source-files.mjs) enforces the page file boundary before reads and writes;
+[`cli-entry.mjs`](scripts/cli-entry.mjs) keeps command entry points working through symbolic-link installations.
 
 1. **Brief.** Run `init` with the category's starter (table below), fill `brief.md`, then start the
    checklist: `node scripts/checklist.mjs init <page-directory>`
@@ -139,13 +147,13 @@ Review Workspace (`review: true`) is a mode any page can switch on, not a catego
 Use the release pinned in this skill:
 
 ```sh
-npx --yes agentic-report@0.21.0 init ./my-page --starter landing --json
-npx --yes agentic-report@0.21.0 build ./my-page --output ./my-page.html --json
-npx --yes agentic-report@0.21.0 build ./my-page --output ./my-page.html --since ./my-page.html --json
+npx --yes agentic-report@0.21.1 init ./my-page --starter landing --json
+npx --yes agentic-report@0.21.1 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.21.1 build ./my-page --output ./my-page.html --since ./my-page.html --json
 node scripts/prose-check.mjs ./my-page
 node scripts/design-check.mjs ./my-page
 npx --yes playwright@1.62.1 install chromium
-npx --yes -p agentic-report@0.21.0 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
+npx --yes -p agentic-report@0.21.1 -p playwright@1.62.1 agentic-report snapshot ./my-page --out ./my-page-snapshots
 node scripts/handover.mjs ./my-page
 node scripts/craft.mjs table
 ```

@@ -12,6 +12,7 @@ import {
 } from '../../dist/node/core/snapshot.js';
 import { MANUAL_CLOCK_INIT_SCRIPT } from '../../dist/node/page-clock.js';
 import { buildReport } from '../../dist/node/index.js';
+import { MEASURE_OPTIONS, measureInPage } from '../../dist/node/core/snapshot-measure.js';
 import { expect, test } from './fixtures.js';
 
 /**
@@ -1076,6 +1077,14 @@ test.describe('steps scene on a narrow screen and code lines', () => {
     ':::beat{title="Declare" lines="1-2"}\nTwo constants.\n:::',
     '',
     ':::beat{title="Add" lines="3"}\nTheir sum.\n:::',
+    '',
+    ':::disclosure{title="Source after the walkthrough"}',
+    'The source remains in the normal reading flow after both steps.',
+    ':::',
+    '',
+    '```text',
+    'The following source is outside the pinned scene.',
+    '```',
     '::::::',
     '',
     '::::section{title="After"}',
@@ -1084,9 +1093,13 @@ test.describe('steps scene on a narrow screen and code lines', () => {
     '',
   ].join('\n');
 
-  test('each beat lights its code lines, and a phone keeps the media above the current step', async ({
+  test('each beat lights its code lines, and a phone keeps media before readable steps in flow', async ({
     page,
   }, testInfo) => {
+    await page.setViewportSize({
+      width: testInfo.project.name === 'mobile-chromium' ? 390 : 1440,
+      height: 900,
+    });
     const { url } = await buildPage(testInfo.project.name, 'code', CODE, '');
     await page.goto(url);
     const code = page.locator('#walkthrough');
@@ -1099,21 +1112,57 @@ test.describe('steps scene on a narrow screen and code lines', () => {
     await expect
       .poll(() =>
         code
-          .locator('pre code .line')
+          .locator('.scene-stage pre code .line')
           .evaluateAll((lines) => lines.map((line) => line.hasAttribute('data-lit'))),
       )
       .toEqual([false, false, true]);
+    // Catches: emphasis dims the other readable steps or code lines instead of highlighting the current one.
+    for (const item of await code.locator('.semantic-beat, .scene-stage pre code .line').all())
+      await expect(item).toHaveCSS('opacity', '1');
+    await expect(code.locator('.scene-stage pre code .line[data-lit]')).not.toHaveCSS(
+      'background-color',
+      'rgba(0, 0, 0, 0)',
+    );
     if (testInfo.project.name === 'mobile-chromium') {
       await expect(code).toHaveAttribute('data-scene-narrow', '');
       const stage = await code.locator('.scene-stage').boundingBox();
       const beat = await code.locator('.semantic-beat').nth(1).boundingBox();
-      // Ловит: на узком экране медиа стоит один раз перед всеми шагами и ушло из вида к текущему шагу.
-      expect(stage?.y ?? -1).toBeGreaterThanOrEqual(0);
+      // Catches: a narrow sticky stage covers the current step instead of preserving reading order.
+      await expect(code.locator('.scene-stage')).toHaveCSS('position', 'static');
       expect((stage?.y ?? 0) + (stage?.height ?? 0)).toBeLessThanOrEqual((beat?.y ?? 0) + 1);
     }
+    const following = code.locator(':scope > details');
+    await expect(following).toHaveCount(1);
+    await expect(code.locator(':scope > .scene-track > .scene-beats > .semantic-beat')).toHaveCount(
+      2,
+    );
+    await expect(code.locator(':scope > pre')).toHaveCount(1);
+    await following.evaluate((element) =>
+      window.scrollTo({
+        top: element.getBoundingClientRect().top + window.scrollY - 100,
+        behavior: 'instant',
+      }),
+    );
+    // Catches: the stage remains pinned while unrelated source or disclosure after the beats is read.
+    await expect
+      .poll(() =>
+        code.evaluate((section) => {
+          const stage = section.querySelector('.scene-stage')?.getBoundingClientRect();
+          const track = section.querySelector('.scene-track')?.getBoundingClientRect();
+          const extra = section.querySelector(':scope > details')?.getBoundingClientRect();
+          return (
+            stage !== undefined &&
+            track !== undefined &&
+            extra !== undefined &&
+            stage.bottom <= track.bottom + 1 &&
+            stage.bottom <= extra.top + 1
+          );
+        }),
+      )
+      .toBe(true);
   });
 
-  test('a diagram on the narrow stage shows its whole picture, not a strip of it', async ({
+  test('a narrow diagram keeps its full readable figure in flow with a full viewer', async ({
     page,
   }, testInfo) => {
     test.skip(testInfo.project.name !== 'mobile-chromium');
@@ -1146,20 +1195,125 @@ test.describe('steps scene on a narrow screen and code lines', () => {
       .nth(1)
       .evaluate((beat) => beat.scrollIntoView({ block: 'center', behavior: 'instant' }));
     await expect(run).toHaveAttribute('data-scene-narrow', '');
+    await expect(run.locator('[data-node-id="b"][data-lit]').first()).toBeAttached();
+    const strokes = await run
+      .locator('.visualization-layout-view:not([hidden]) .semantic-node')
+      .evaluateAll((nodes) =>
+        nodes.map((node) => ({
+          lit: node.hasAttribute('data-lit'),
+          width: Number.parseFloat(
+            getComputedStyle(node.querySelector('.visualization-node') ?? node).strokeWidth,
+          ),
+        })),
+      );
+    // Catches: removing faded labels also removes all visual indication of the focused node.
+    expect(
+      Math.max(...strokes.filter((node) => node.lit).map((node) => node.width)),
+    ).toBeGreaterThan(Math.max(...strokes.filter((node) => !node.lit).map((node) => node.width)));
     const sizes = await run.evaluate((section) => {
       const stage = section.querySelector('.scene-stage')?.getBoundingClientRect();
-      const svg = section
-        .querySelector('.visualization-layout-view:not([hidden]) .visualization-svg')
-        ?.getBoundingClientRect();
-      return { stage: stage?.height ?? 0, svg: svg?.height ?? 0, bottom: svg?.bottom ?? 0 };
+      const frame = section.querySelector<HTMLElement>(
+        '.visualization-layout-view:not([hidden]) .visualization-frame',
+      );
+      const labels = [
+        ...section.querySelectorAll<SVGTextElement>(
+          '.visualization-layout-view:not([hidden]) text',
+        ),
+      ];
+      return {
+        stage: stage?.height ?? 0,
+        frame: frame?.getBoundingClientRect().height ?? 0,
+        verticalOverflow: frame === null ? Infinity : frame.scrollHeight - frame.clientHeight,
+        clipped: labels.filter((label) => {
+          const box = label.getBoundingClientRect();
+          const bounds = frame?.getBoundingClientRect();
+          return bounds === undefined || box.top < bounds.top - 1 || box.bottom > bounds.bottom + 1;
+        }).length,
+        labels: labels.map((label) => {
+          const matrix = label.getScreenCTM();
+          let opacity = 1;
+          for (let node: Element | null = label; node !== null; node = node.parentElement)
+            opacity *= Number(getComputedStyle(node).opacity);
+          return {
+            size:
+              Number.parseFloat(getComputedStyle(label).fontSize) *
+              (matrix === null ? 0 : Math.hypot(matrix.c, matrix.d)),
+            opacity,
+          };
+        }),
+      };
     });
-    // Ловит: подпись, переключатель, легенда и пересказ схемы занимают сцену, а рисунку остаётся полоса
-    // в несколько десятков пикселей (у product-theatre было ~55 px), или рисунок уходит под край сцены.
-    expect(sizes.svg).toBeGreaterThan(sizes.stage * 0.5);
-    const stageBottom = await run
-      .locator('.scene-stage')
-      .evaluate((stage) => stage.getBoundingClientRect().bottom);
-    expect(sizes.bottom).toBeLessThanOrEqual(stageBottom + 1);
+    // Catches: fitting the entire tall SVG into 42svh shrinks its labels below the diagram readability floor.
+    expect(sizes.labels.length).toBeGreaterThan(0);
+    for (const label of sizes.labels) {
+      expect(label.size).toBeGreaterThanOrEqual(10.95);
+      expect(label.opacity).toBe(1);
+    }
+    expect(sizes.stage).toBeGreaterThan((page.viewportSize()?.height ?? 0) * 0.42);
+    expect(sizes.frame).toBeGreaterThan(80);
+    expect(sizes.frame).toBeLessThan(sizes.stage);
+    expect(sizes.verticalOverflow).toBeLessThanOrEqual(1);
+    expect(sizes.clipped).toBe(0);
+    await expect(run.locator('.scene-stage')).toHaveCSS('position', 'static');
+    await expect(run.locator('.visualization-description')).toBeVisible();
+    await run.locator('[data-figure-open]').click();
+    await expect(page.locator('[data-figure-viewer]')).toBeVisible();
+    await page.keyboard.press('Escape');
+    for (const media of [{ reducedMotion: 'reduce' } as const, { media: 'print' } as const]) {
+      await page.emulateMedia(media);
+      await expect(run.locator('.scene-stage')).not.toHaveCSS('position', 'sticky');
+      for (const beat of await run.locator('.semantic-beat').all())
+        await expect(beat).toHaveCSS('opacity', '1');
+    }
+  });
+
+  test('narrow scene explanations remain uncovered and focus survives large scroll jumps', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium');
+    await manual(page);
+    await page.setViewportSize({ width: 390, height: 900 });
+    const diagram =
+      '# Reading the evidence\n\n::::::section{title="Follow the source" id="handoff" scene="steps"}\n' +
+      ':::diagram{title="A source, a result, a question" description="A local build creates the page; the reader returns a question." layout="right"}\n' +
+      '::node{id="source" label="Local source" detail="Markdown and JSON"}\n' +
+      '::node{id="page" label="Interactive page" detail="Evidence to explore"}\n' +
+      '::node{id="reader" label="Reader" detail="A question on a passage"}\n' +
+      '::edge{from="source" to="page" label="Build"}\n::edge{from="page" to="reader" label="Explore and select"}\n::edge{from="reader" to="source" label="Return review.json"}\n:::\n\n' +
+      ':::beat{title="Keep the explanation" focus="source"}\nMarkdown carries the explanation. Local JSON carries the numbers. The compiler checks their format and file boundaries before writing the result; the original source remains editable.\n:::\n\n' +
+      ':::beat{title="Explore the result" focus="page"}\nThe package supplies the actual chart, responsive layout, controls and theme. The same source can build one portable HTML file or a directory with separate assets. The opening figure shows that generated result.\n:::\n\n' +
+      ':::beat{title="Ask about the passage" focus="reader"}\nThe reader selects the passage that needs an answer, writes a local review note and chooses when to return `review.json`. The source stays with the author; exporting a discussion never sends it automatically.\n:::\n::::::\n\n' +
+      '::::section{title="After"}\n' +
+      Array.from({ length: 40 }, () => 'The page continues after every explanation.').join('\n\n') +
+      '\n::::\n';
+    const { url } = await buildPage(
+      testInfo.project.name,
+      'narrow-reading',
+      diagram,
+      'layout: landing\n',
+    );
+    await page.goto(url);
+    await seek(page, 11);
+    const measured = await page.evaluate(measureInPage, MEASURE_OPTIONS);
+    // Catches the actual Report B failure: the narrow stage covered a current title and its whole paragraph.
+    expect(measured.coveredText.count).toBe(0);
+    const beats = page.locator('#handoff .semantic-beat');
+    for (const index of [2, 0, 1]) {
+      await beats
+        .nth(index)
+        .evaluate((beat) => beat.scrollIntoView({ block: 'center', behavior: 'instant' }));
+      await seek(page, 12 + index);
+      await expect(beats.nth(index)).toHaveAttribute('data-current', '');
+    }
+    await page.evaluate(() =>
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }),
+    );
+    await seek(page, 16);
+    // Catches an IntersectionObserver band that misses every beat during a large jump and leaves stale focus.
+    await expect(beats.last()).toHaveAttribute('data-current', '');
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    await seek(page, 17);
+    await expect(beats.first()).toHaveAttribute('data-current', '');
   });
 
   test('a phone marks the row in the middle of the screen as current, a hover screen does not', async ({
