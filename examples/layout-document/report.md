@@ -20,7 +20,7 @@ demonstrate the report engine; replace it with verified project evidence before 
 
 A focused reading surface for a decision, its evidence, and the path from constraints to rollout.
 
-::::::section{title="Decision context" id="context" nav="Context" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" media="mask" media-fit="cover" media-aspect="cinematic" surface="tint" transition="stagger" choreography="cascade"}
+::::::section{title="Decision context" id="context" nav="Context" width="wide" tone="contrast" composition="stage" viewport="bounded" section-density="compact" type="display" media="natural" media-fit="cover" media-aspect="cinematic" surface="tint" transition="stagger" choreography="cascade"}
 :::callout{kind="info" title="Decision status"}
 Accepted for the next implementation unit after local validation.
 :::

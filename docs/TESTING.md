@@ -181,7 +181,8 @@ command; only the test runs of it moved.
   `file://` in desktop and mobile profiles, including their page data contract and local images. All six
   visual composition families are also exercised in one ordinary bilingual non-landing artifact at
   ultrawide, tall portrait, desktop, mobile, and narrow-mobile viewports. That coverage distinguishes
-  computed stage/split/mosaic/story/stack layouts; masked, layered, gallery, and bleed media; independent
+  computed stage/split/mosaic/story/stack layouts; natural, layered, gallery, and bleed media; legacy
+  `mask` normalization to `natural` without angular clipping or loss of authored framing; independent
   fit/aspect/focal framing; distinct decorative surfaces; authored-order mobile flattening; local gallery
   overflow; image completion; and document containment. Dedicated video coverage frames a landscape
   recording, in both the directive and the Markdown-image player, into a section's portrait and square

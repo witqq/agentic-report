@@ -27,7 +27,7 @@ verified evidence before use.
 ![Four page layouts sharing one foundation](layout-map.svg){dark="layout-map-dark.svg"}
 ::::
 
-:::::section{title="Evidence becomes a spatial argument" id="stage" nav="Stage" width="wide" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
+:::::section{title="Evidence becomes a spatial argument" id="stage" nav="Stage" width="wide" composition="stage" viewport="full" section-density="immersive" type="display" media="natural" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 :::lead
 One semantic section combines display type, confined media, a bounded full viewport, and a package-owned
 surface without author CSS or a custom page renderer.

@@ -1,4 +1,4 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -8,6 +8,147 @@ import { expect, test } from './fixtures.js';
 const artifactUrl = pathToFileURL(
   path.resolve('test-results/e2e-generated/layout-mixed.html'),
 ).href;
+
+test('native opening figures stay whole and flow disclosures follow the prose column', async ({
+  page,
+}, testInfo) => {
+  // Defects: a 62svh opening frame clipped the chart's axis at 1440×900; a flow disclosure kept a
+  // full-track rule beside narrower prose. Checking all rendered labels catches vertical clipping,
+  // not merely horizontal overflow, and a broad nested table must keep the document's column width.
+  // At 768px the old outer-figure query chose a wide chart although its padded drawing area made
+  // ten labels 10.6px. Measure the rendered font rather than accepting a merely contained SVG.
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const root = testInfo.outputPath('native-opening');
+  await mkdir(root, { recursive: true });
+  for (const layout of ['landing', 'document', 'mixed']) {
+    const source = path.join(root, `${layout}.md`);
+    const output = path.join(root, `${layout}.html`);
+    await writeFile(
+      source,
+      `---
+title: Native evidence
+layout: ${layout}
+theme: neutral
+motion: none
+---
+
+# Read the evidence
+
+An agent supplies the source; the reader explores the result and returns questions.
+
+::::::section{title="Checkout failure rate" id="opening-proof" recipe="demo" place="opening" transition="none"}
+:::::chart{type="line" title="Failed attempts" description="Five fictional checkpoints show checkout failures rising and returning to baseline." x-label="UTC checkpoint" y-label="Failed attempts, percent"}
+::::series{label="Failure rate"}
+::point{label="09:35" value="0.6"}
+::point{label="09:50" value="8.7"}
+::point{label="10:05" value="18.4"}
+::point{label="10:20" value="7.2"}
+::point{label="10:35" value="0.8"}
+::::
+:::::
+:::::diagram{type="flow" title="Evidence chain" description="An author supplies source, compilation produces a page, and the reader explores it and returns questions." layout="down"}
+::node{id="source" label="Source" detail="Markdown and evidence"}
+::node{id="compile" label="Compile" detail="Validate declarations"}
+::node{id="render" label="Render" detail="Keep readable labels"}
+::node{id="read" label="Read" detail="Explore evidence"}
+::node{id="ask" label="Ask" detail="Return a question"}
+::edge{from="source" to="compile"}
+::edge{from="compile" to="render"}
+::edge{from="render" to="read"}
+::edge{from="read" to="ask"}
+:::::
+::::::
+
+::::section{title="Readable source" id="source-proof" width="wide" composition="flow" transition="none"}
+Keep the source beside the result. A disclosure keeps the same reading column as this explanatory paragraph.
+
+:::disclosure{title="Inspect the source" open="false"}
+This paragraph stays in the reading column when the source is expanded.
+
+\`\`\`text
+${'evidence '.repeat(40)}
+\`\`\`
+
+| Name | Kind | Input | Output | Notes | Owner | State |
+| --- | --- | --- | --- | --- | --- | --- |
+| Source | Declaration | Confined Markdown partials | A readable page | Original source retained | Author | Ready |
+| Data | Evidence | Checked numeric values | An interactive figure | Five fictional checkpoints | Reader | Ready |
+:::
+::::
+`,
+    );
+    await buildReport({ input: source, output });
+    for (const viewport of [
+      { width: 1440, height: 900 },
+      { width: 768, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto(pathToFileURL(output).href);
+      await page.evaluate(() => document.fonts.ready);
+      const figures = await page
+        .locator('#opening-proof .visualization-frame')
+        .evaluateAll((frames) =>
+          frames
+            .filter((frame) => frame.getBoundingClientRect().width > 1)
+            .map((frame) => {
+              const box = frame.getBoundingClientRect();
+              const labels = [...frame.querySelectorAll<SVGTextElement>('svg text')].filter(
+                (label) =>
+                  label.getClientRects().length > 0 && label.getBoundingClientRect().width > 1,
+              );
+              return {
+                labels: labels.length,
+                minimumFont: Math.min(
+                  ...labels.map((label) => {
+                    const matrix = label.getScreenCTM();
+                    if (matrix === null)
+                      throw new Error('A rendered figure label has no screen transform');
+                    return (
+                      Number.parseFloat(getComputedStyle(label).fontSize) *
+                      Math.hypot(matrix.a, matrix.b)
+                    );
+                  }),
+                ),
+                clipped: labels.filter((label) => {
+                  const bounds = label.getBoundingClientRect();
+                  return bounds.top < box.top - 1 || bounds.bottom > box.bottom + 1;
+                }).length,
+                verticalOverflow: frame.scrollHeight - frame.clientHeight,
+              };
+            }),
+        );
+      expect(figures.length, `${layout}/${viewport.width}`).toBeGreaterThanOrEqual(2);
+      for (const figure of figures) {
+        expect(figure.labels).toBeGreaterThan(0);
+        expect(figure.minimumFont).toBeGreaterThanOrEqual(11);
+        expect(figure.clipped).toBe(0);
+        expect(figure.verticalOverflow).toBeLessThanOrEqual(1);
+      }
+      const disclosure = page.locator('#source-proof > details');
+      const paragraph = page.locator('#source-proof > p').first();
+      const prose = await paragraph.boundingBox();
+      expect(prose).not.toBeNull();
+      for (const expanded of [false, true]) {
+        if (expanded) await disclosure.locator('summary').click();
+        const box = await disclosure.boundingBox();
+        expect(box).not.toBeNull();
+        expect(Math.abs((box?.x ?? 0) - (prose?.x ?? 0))).toBeLessThanOrEqual(1);
+        expect(Math.abs((box?.width ?? 0) - (prose?.width ?? 0))).toBeLessThanOrEqual(1);
+      }
+      if (viewport.width > 768 && layout !== 'landing') {
+        await expect(disclosure.locator('thead th')).toHaveCount(7);
+        const wide = await disclosure.locator('.table-frame').boundingBox();
+        expect(wide).not.toBeNull();
+        expect(Math.abs((wide?.x ?? 0) - (prose?.x ?? 0))).toBeLessThanOrEqual(1);
+        expect(Math.abs((wide?.width ?? 0) - (prose?.width ?? 0))).toBeLessThanOrEqual(1);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+    }
+  }
+});
 
 test('declarative visual families remain distinct, readable, and contained', async ({
   page,
@@ -26,7 +167,7 @@ test('declarative visual families remain distinct, readable, and contained', asy
       'full',
       'immersive',
       'display',
-      'mask',
+      'natural',
       'cover',
       'cinematic',
       'right',
@@ -207,7 +348,7 @@ test('declarative visual families remain distinct, readable, and contained', asy
   });
   expect(visualState.stage).toMatchObject({ aspect: '21 / 9', fit: 'cover' });
   expect(visualState.stage.focal).toMatch(/100%|right/u);
-  expect(visualState.stage.mask).not.toBe('none');
+  expect(visualState.stage.mask).toBe('none');
   expect(Math.abs(visualState.bleed.left)).toBeLessThanOrEqual(1);
   expect(Math.abs(visualState.bleed.right)).toBeLessThanOrEqual(1);
   expect(visualState.galleryOverflows).toBe(true);
@@ -336,6 +477,49 @@ test('declarative visual families remain distinct, readable, and contained', asy
   }
   expect(requestUrls.length).toBeGreaterThan(0);
   expect(requestUrls.every((url) => url.startsWith('file://'))).toBe(true);
+});
+
+test('legacy mask media remains unmasked without discarding authored framing in every render profile', async ({
+  page,
+}) => {
+  // Defect: accepting legacy media="mask" must not retain the polygon that cuts real screenshot edges;
+  // replacing all framing with natural defaults would also pass a clip-only assertion, so compare both.
+  const url = pathToFileURL(path.resolve('test-results/e2e-generated/legacy-mask.html')).href;
+  for (const profile of [
+    { media: 'screen', reducedMotion: 'no-preference' },
+    { media: 'screen', reducedMotion: 'reduce' },
+    { media: 'print', reducedMotion: 'reduce' },
+  ] as const) {
+    await page.emulateMedia(profile);
+    await page.goto(url);
+    await expect(page.locator('#mask-proof')).toHaveAttribute('data-media', 'natural');
+    for (const id of ['mask-proof', 'natural-proof']) {
+      await expect(page.locator(`#${id} img`)).toBeVisible();
+      await expect
+        .poll(() =>
+          page.locator(`#${id} img`).evaluate((image) => {
+            const picture = image as HTMLImageElement;
+            return picture.complete && picture.naturalWidth > 0;
+          }),
+        )
+        .toBe(true);
+    }
+    const [legacy, natural] = await page.locator('.semantic-section img').evaluateAll((images) =>
+      images.map((image) => {
+        const style = getComputedStyle(image);
+        return {
+          clip: style.clipPath,
+          mask: style.maskImage,
+          fit: style.objectFit,
+          aspect: style.aspectRatio,
+          focal: style.objectPosition,
+        };
+      }),
+    );
+    expect(legacy, `${profile.media}/${profile.reducedMotion}`).toEqual(natural);
+    expect(legacy).toMatchObject({ clip: 'none', mask: 'none', fit: 'cover', aspect: '21 / 9' });
+    expect(legacy?.focal).toMatch(/100%|right/u);
+  }
 });
 
 test('a picture in an evidence section is shown whole at every desktop width', async ({

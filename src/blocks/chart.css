@@ -18,14 +18,15 @@
   }
 
   /*
-   * График выбирает вариант по своей колонке, а не по окну: широкий рисунок в 720 единиц с подписями в
+   * График выбирает вариант по доступной ширине рисунка, а не по окну или внешней рамке с отступами:
+   * широкий рисунок в 720 единиц с подписями в
    * 12 px держит их не мельче 11 px только на дорожке от 660 px, и в колонке рядом с оглавлением на
    * экране в 1024 px он уже мельчит. Уже этой дорожки график показывает узкий вариант.
    */
-  .semantic-chart {
-    container-type: inline-size;
+  .semantic-chart .visualization-frame {
+    container: chart-frame / inline-size;
   }
-  @container (width < 41.25rem) {
+  @container chart-frame (width < 41.25rem) {
     .semantic-chart .visualization-svg-wide {
       display: none;
     }

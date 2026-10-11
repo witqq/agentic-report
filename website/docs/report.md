@@ -132,10 +132,14 @@ Section tone owns its background and foreground relationship. Decorative surface
 authored content, while nested cards and visualizations restore their own readable package surface text.
 
 ```markdown
-::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
+::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="natural" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 The content remains ordinary Markdown and semantic directives.
 ::::
 ```
+
+Use `media="natural"` for ordinary rectangular media. The legacy `mask` spelling is accepted as
+`natural` without angular clipping; fit, aspect, and focal point remain independent. See the
+[section attributes](product/source-contract.md#semantic-primitives) for the complete contract.
 
 Sections also accept closed motion roles — `transition`, `scene`, `interaction`, and `choreography` — whose
 values are in the same source-contract table. Without a recipe they default to

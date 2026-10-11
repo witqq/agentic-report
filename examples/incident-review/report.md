@@ -20,7 +20,7 @@ This demonstration follows a realistic incident at OrbitDesk, an invented subscr
 organization, event, metric, and decision on this page is sample data created to show the report engine;
 none describes a real company or production system.
 
-::::::section{title="Impact signal" id="impact" nav="Impact" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
+::::::section{title="Impact signal" id="impact" nav="Impact" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="natural" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 :::callout{kind="warning" title="Executive readout"}
 A retry storm in the billing adapter exhausted the checkout connection pool for 47 minutes. Customer
 records remained intact, but **18.4% of checkout attempts failed** at peak and **3,240 renewals were

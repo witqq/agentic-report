@@ -196,6 +196,8 @@ export function interpretDirectiveAttributes(
     if (!parsed.success) return { ok: false, reason: 'invalid', attribute };
     values[attribute.name] = parsed.data as string | number | boolean;
   }
+  // Legacy section sources retain their accepted spelling, but resolve to ordinary rectangular media.
+  if (directive.name === 'section' && values.media === 'mask') values.media = 'natural';
   return { ok: true, values };
 }
 

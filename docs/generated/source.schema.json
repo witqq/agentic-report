@@ -374,7 +374,7 @@
             "media": {
               "type": "string",
               "enum": ["natural", "mask", "layers", "gallery", "bleed"],
-              "description": "Art direction for confined local images inside the section.",
+              "description": "Art direction for confined local images inside the section. Legacy mask is accepted as an alias for natural; images have no angular clipping.",
               "default": "natural"
             },
             "media-fit": {

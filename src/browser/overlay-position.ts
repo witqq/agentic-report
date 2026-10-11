@@ -19,6 +19,13 @@ export interface SurfacePosition {
   readonly top: number;
 }
 
+/** Reposition an open surface when fonts or content change its measured border box. */
+export function observeSurfaceResize(surface: Element, schedule: () => void): () => void {
+  const observer = new ResizeObserver(schedule);
+  observer.observe(surface, { box: 'border-box' });
+  return () => observer.disconnect();
+}
+
 export function visualViewportBounds(): ViewportBounds {
   const viewport = window.visualViewport;
   const left = viewport?.offsetLeft ?? 0;

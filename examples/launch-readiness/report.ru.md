@@ -13,7 +13,7 @@ language: ru
 от вымышленной North Quay Labs. Все пользователи, когорты, показатели, пороги и даты созданы для движка
 отчётов; они не описывают реальный продукт, компанию или рыночный результат.
 
-:::::section{title="Сигнал запуска" id="launch-signal" nav="Сигнал" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
+:::::section{title="Сигнал запуска" id="launch-signal" nav="Сигнал" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="natural" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 :::callout{kind="success" title="Решение за минуту"}
 15 сентября открыть бета-тест для 240 команд Европейской экономической зоны. Ограничить список приглашений,
 исключить регулируемые процессы и не расширять запуск, пока условия удержания на второй неделе и ответа

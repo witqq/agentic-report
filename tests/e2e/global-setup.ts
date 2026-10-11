@@ -107,6 +107,7 @@ export default async function globalSetup(): Promise<void> {
   const presetFixtures = ['midnight', 'calm-paper', 'blueprint'] as const;
   const navigationSource = path.join(fixtureRoot, 'navigation-source');
   const purposefulMotionSource = path.join(fixtureRoot, 'purposeful-motion-source');
+  const legacyMaskSource = path.join(fixtureRoot, 'legacy-mask-source');
   const sectionProseSource = path.join(fixtureRoot, 'section-prose-source');
   const reviewSource = path.join(fixtureRoot, 'review-source');
   const responseIsolationSource = path.join(fixtureRoot, 'response-isolation-source');
@@ -397,7 +398,7 @@ export default async function globalSetup(): Promise<void> {
       '::::',
       ':::::',
       '::::::',
-      ':::section{title="Pointer depth" id="pointer" interaction="tilt" media="mask"}',
+      ':::section{title="Pointer depth" id="pointer" interaction="tilt" media="natural"}',
       '![Local motion proof](motion.svg)',
       ':::',
       ':::section{title="Sticky scene" id="sticky" scene="sticky"}',
@@ -416,6 +417,26 @@ export default async function globalSetup(): Promise<void> {
       ':::actions{placement="bottom"}',
       '::action[Bottom action]{href="#sequence" kind="primary"}',
       ':::',
+    ].join('\n'),
+  );
+  await mkdir(legacyMaskSource, { recursive: true });
+  await writeFile(
+    path.join(legacyMaskSource, 'proof.svg'),
+    await readFile(path.join(purposefulMotionSource, 'motion.svg')),
+  );
+  await writeFile(
+    path.join(legacyMaskSource, 'report.md'),
+    [
+      '---',
+      'title: Legacy media compatibility',
+      'layout: landing',
+      '---',
+      '# Legacy media compatibility',
+      ...(['mask', 'natural'] as const).flatMap((media) => [
+        `:::section{title="${media} proof" id="${media}-proof" media="${media}" media-fit="cover" media-aspect="cinematic" focal="right"}`,
+        '![Framing proof](proof.svg)',
+        ':::',
+      ]),
     ].join('\n'),
   );
   await mkdir(sectionProseSource, { recursive: true });
@@ -613,6 +634,10 @@ export default async function globalSetup(): Promise<void> {
     buildReport({
       input: purposefulMotionSource,
       output: path.join(fixtureRoot, 'purposeful-motion.html'),
+    }),
+    buildReport({
+      input: legacyMaskSource,
+      output: path.join(fixtureRoot, 'legacy-mask.html'),
     }),
     buildReport({
       input: sectionProseSource,

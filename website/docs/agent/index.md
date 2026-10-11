@@ -136,10 +136,14 @@ A card with one destination may declare `href`; it becomes one safe keyboard tar
 icon. Do not put another Markdown link inside it.
 
 ```markdown
-::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
+::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="natural" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 The content remains ordinary Markdown and semantic directives.
 ::::
 ```
+
+Use `media="natural"` for ordinary rectangular media. The legacy `mask` spelling is accepted as
+`natural` without angular clipping; fit, aspect, and focal point remain independent. See the
+[section attributes](../product/source-contract.md#semantic-primitives) for the complete contract.
 
 Use the installed `layout-mixed` example for the complete grammar, the landing starter for a smaller
 copyable narrative, `terminal-portfolio` for console-led composition, `cinematic-story` for image-first

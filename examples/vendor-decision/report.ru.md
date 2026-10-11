@@ -51,7 +51,7 @@ language: ru
 :::
 :::::
 
-:::::section{title="Решение по условиям" id="gates" nav="Условия" width="wide" align="start" tone="soft" composition="story" viewport="bounded" section-density="editorial" type="editorial" media="mask" media-fit="contain" media-aspect="landscape" focal="center" surface="grain" transition="reveal" interaction="depth"}
+:::::section{title="Решение по условиям" id="gates" nav="Условия" width="wide" align="start" tone="soft" composition="story" viewport="bounded" section-density="editorial" type="editorial" media="natural" media-fit="contain" media-aspect="landscape" focal="center" surface="grain" transition="reveal" interaction="depth"}
 
 {{include: partials/gates.ru.md}}
 

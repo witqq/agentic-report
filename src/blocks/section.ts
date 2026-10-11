@@ -89,7 +89,7 @@ function sectionDefinition(): DirectiveDefinition {
     ),
     enumAttribute(
       'media',
-      'Art direction for confined local images inside the section.',
+      'Art direction for confined local images inside the section. Legacy mask is accepted as an alias for natural; images have no angular clipping.',
       ['natural', 'mask', 'layers', 'gallery', 'bleed'],
       'natural',
     ),
@@ -196,7 +196,7 @@ function sectionDefinition(): DirectiveDefinition {
         message:
           'section composition mosaic or stack cannot be combined with layered or gallery media.',
         remediation:
-          'Use composition flow, stage, split, or story with layered/gallery media, or use natural, mask, or bleed media with mosaic/stack composition.',
+          'Use composition flow, stage, split, or story with layered/gallery media, or use natural or bleed media with mosaic/stack composition.',
       },
       {
         attributes: {

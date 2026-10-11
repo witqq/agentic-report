@@ -849,6 +849,10 @@ short navigation text. The complete visual grammar is closed and package-owned:
 | `choreography`    | `none`, `cascade`                                                                                  | `none`      |
 | `reveal`          | boolean                                                                                            | `false`     |
 
+Use `media="natural"` for ordinary rectangular media in new sources. The legacy `media="mask"` spelling
+remains accepted and is normalized to `natural`, without angular clipping. `media-fit`, `media-aspect`,
+and `focal` still control framing independently.
+
 These attributes compose independently except where two roles would own the same layout or transform.
 `composition="mosaic|stack"` cannot combine with `media="layers|gallery"`; `media="layers"` and
 `scene="progress"` cannot combine with `interaction="depth|tilt"`; and `composition="story|stack"` cannot
@@ -900,8 +904,8 @@ tracks. Authors cannot supply CSS values, class names, event handlers, or execut
 
 Recipes provide the short path. Their coordinated detailed values resolve first, and any explicit detailed
 attribute overrides only its own role before the same incompatibility checks run. `hero` stages an opening,
-`evidence` creates a split proof field whose picture is shown whole (no mask, no crop: set `media`,
-`media-fit` or `media-aspect` explicitly for a photograph), `story` creates a scroll narrative, `rail` creates a local media rail,
+`evidence` creates a split proof field whose picture is shown whole (set `media-fit` or `media-aspect`
+explicitly when a photograph needs cropping), `story` creates a scroll narrative, `rail` creates a local media rail,
 and `metrics` creates a compact data mosaic. A card may declare one safe `href`; it then renders as one
 focusable anchor with a persistent link icon, while nested Markdown links fail validation.
 
@@ -972,7 +976,7 @@ frame. Under reduced motion, with `motion: none`, and in print a scene shows eve
 word, a typed line and a log their whole text, a mark its complete line, and a spotlight its loupe in place.
 
 ```markdown
-::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
+::::section{title="A visual argument" composition="stage" viewport="full" section-density="immersive" type="display" media="natural" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 The content remains ordinary Markdown and semantic directives.
 ::::
 ```

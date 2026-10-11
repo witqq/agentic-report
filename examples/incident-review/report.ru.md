@@ -13,7 +13,7 @@ language: ru
 события, показатели и решения на странице — демонстрационные данные для движка отчётов; они не описывают
 реальную компанию или производственную систему.
 
-::::::section{title="Сигнал влияния" id="impact" nav="Влияние" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="mask" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
+::::::section{title="Сигнал влияния" id="impact" nav="Влияние" width="wide" align="start" tone="contrast" composition="stage" viewport="full" section-density="immersive" type="display" media="natural" media-fit="cover" media-aspect="cinematic" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 :::callout{kind="warning" title="Сводка для руководства"}
 Шторм повторных запросов в адаптере оплаты на 47 минут исчерпал пул соединений оформления заказа. Данные
 клиентов сохранились, но на пике **18,4% попыток оформления завершались ошибкой**, а **3 240 продлений были

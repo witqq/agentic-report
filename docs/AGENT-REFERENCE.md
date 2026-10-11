@@ -668,7 +668,7 @@ Directives are declarative and allowlisted. Unknown names and invalid attributes
 diagnostics.
 
 ````markdown
-::::section{title="Decision" id="decision" nav="Decision" width="wide" align="start" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="display" media="mask" media-fit="cover" media-aspect="landscape" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
+::::section{title="Decision" id="decision" nav="Decision" width="wide" align="start" tone="soft" composition="split" viewport="bounded" section-density="editorial" type="display" media="natural" media-fit="cover" media-aspect="landscape" focal="right" surface="tint" transition="stagger" scene="progress" choreography="cascade"}
 :::callout{title="Finding" kind="warning"}
 Content may contain ordinary Markdown.
 :::
@@ -1175,8 +1175,10 @@ attribute by attribute, and one is the `compare` directive:
 `compare` takes `before` and `after` labels (localized `Before`/`After` by default); both images keep their
 alternative text, and without the runtime the divider stays in the middle.
 
-Compose these roles instead of writing a bespoke layout. `media` owns the treatment, while fit, aspect, and
-focal point frame local images and videos independently. Section `tone` owns its background/foreground relationship;
+Compose these roles instead of writing a bespoke layout. Use `media="natural"` for ordinary rectangular
+media; the legacy `mask` spelling resolves to `natural` without angular clipping, as specified in the
+[section attributes](product/source-contract.md#semantic-primitives). `media` owns the treatment, while
+fit, aspect, and focal point frame local images and videos independently. Section `tone` owns its background/foreground relationship;
 `surface` stays behind authored content, and nested package components keep their own readable surface text.
 For `layers`, prefer
 image-only cards when the overlap is the point: the package transforms image descendants and leaves the

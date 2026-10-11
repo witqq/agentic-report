@@ -454,8 +454,9 @@ density, typography, media treatment, image and video fit/aspect/focal point, de
 interaction, and choreography. Legacy `reveal` remains a false-by-default entrance alias. Validation emits
 only normalized data attributes; package CSS interprets them for both output formats. This keeps author CSS,
 class names, arbitrary values, callbacks, and layout JavaScript outside the public source boundary. Media
-treatment does not absorb image framing: `media` owns natural/mask/layers/gallery/bleed behavior, while
-`media-fit`, `media-aspect`, and `focal` remain independent. Layered presentation transforms image
+treatment does not absorb image framing: `media` owns natural/layers/gallery/bleed behavior. The directive
+schema normalizes the accepted legacy `mask` spelling to `natural` before emitting data attributes, so it
+adds no angular clipping. `media-fit`, `media-aspect`, and `focal` remain independent. Layered presentation transforms image
 descendants rather than semantic cards or review-target owners, so browser range geometry remains stable.
 Recipe values resolve before the existing incompatible-combination rules and explicitly authored detailed
 attributes apply last. Optional card `href` values reuse the safe-link constraint; the authored tree rejects

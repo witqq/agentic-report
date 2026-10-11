@@ -116,9 +116,11 @@ recipe brings by default.
 
 A recipe's defaults count like attributes you wrote: they move the page and use up its decorative surfaces.
 Override one with an explicit value (`transition="none"`, `surface="plain"`) when the brief asks for less.
-`evidence` shows its picture whole, because the picture is the proof; when a photograph should be masked
-or cropped all the same, set `media`, `media-fit` and `media-aspect` on the section yourself
-(`media="mask" media-fit="cover" media-aspect="landscape"`).
+`evidence` shows its picture whole, because the picture is the proof; when a photograph needs cropping,
+set `media-fit` and `media-aspect` on the section yourself
+(`media="natural" media-fit="cover" media-aspect="landscape"`). Use `natural` for ordinary rectangular
+media in new sources. Legacy `media="mask"` is accepted but resolves to `natural` without angular
+clipping; `media-fit`, `media-aspect`, and `focal` still frame the image independently.
 `inspect` reports each section's resolved values under `structure`.
 
 `place="opening"` on the first section joins it to the title as the first screen; `opening: start` in the

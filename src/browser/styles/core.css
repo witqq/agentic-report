@@ -540,11 +540,17 @@
   }
 
   .review-popover-header {
-    display: flex;
     align-items: start;
-    justify-content: space-between;
     gap: 0.75rem;
     margin-bottom: 0.75rem;
+  }
+
+  /* Reserve the close control's intrinsic width; the title and selected quotation wrap in the rest.
+   * The same header serves the selection note, review workspace and edition panel. */
+  .review-popover-header,
+  .review-panel-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
   }
 
   .review-thread-messages {
@@ -588,7 +594,6 @@
 
   .review-panel-header,
   .review-panel-footer {
-    display: flex;
     align-items: center;
     gap: 0.75rem;
     border-color: var(--color-border);
@@ -596,7 +601,6 @@
   }
 
   .review-panel-header {
-    justify-content: space-between;
     border-bottom: 1px solid var(--color-border);
   }
 
@@ -608,6 +612,7 @@
   }
 
   .review-panel-footer {
+    display: flex;
     flex-wrap: wrap;
     border-top: 1px solid var(--color-border);
   }
@@ -1060,6 +1065,14 @@
     );
     line-height: 1.08;
     letter-spacing: var(--heading-tracking);
+  }
+
+  .review-popover-header > div,
+  .review-panel-header > div,
+  .review-popover-header h2,
+  .review-panel-header h2 {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   /*
@@ -1530,6 +1543,12 @@
    wide-block rule), so a paragraph in a standard section does not run the width of a wide screen. */
   .semantic-section > :is(p, ul, ol, dl, blockquote, h3, h4, h5, h6) {
     max-width: min(100%, var(--reading-measure), var(--section-measure, var(--content-width)));
+  }
+
+  /* A disclosure follows the prose axis, including its rules and close/open affordance. Wide children
+   * retain the composed column's overhang below instead of widening the whole text container. */
+  .semantic-section[data-composition='flow'] > .semantic-disclosure {
+    max-width: min(100%, var(--prose-measure), var(--section-measure, var(--content-width)));
   }
 
   /* The lead is a paragraph in a larger size: the reading measure in its own `ch` would carry it past the
@@ -2193,7 +2212,6 @@
     box-shadow: var(--shadow-raised);
   }
 
-  .semantic-section[data-media='mask'] img,
   .semantic-section[data-media='layers'] img,
   .semantic-section[data-media='gallery'] img {
     width: 100%;
@@ -2257,11 +2275,6 @@
 
   .semantic-section[data-focal='left'] :is(img, video) {
     object-position: left center;
-  }
-
-  .semantic-section[data-media='mask'] img {
-    clip-path: polygon(0 8%, 88% 0, 100% 86%, 12% 100%);
-    border-radius: 0;
   }
 
   .semantic-section[data-media='layers'] > .semantic-cards {
@@ -3458,7 +3471,9 @@
     text-transform: uppercase;
   }
 
-  .page-opening > .semantic-section :is(img, video, pre, .visualization-frame) {
+  /* Raster media and code may keep a bounded first-screen window. Native figures keep their full
+   * drawing: a height cap on the scrolling frame cuts axis labels and tall diagram nodes. */
+  .page-opening > .semantic-section :is(img, video, pre) {
     max-height: 62svh;
   }
 
