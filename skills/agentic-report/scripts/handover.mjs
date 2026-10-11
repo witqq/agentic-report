@@ -35,6 +35,7 @@ import { CHECKLIST_FILE, checkChecklist, sourceFingerprint, stampGates } from '.
 import { commandFrom, editionSince, installedCommand, pinnedVersions } from './design-check.mjs';
 import { checkPage } from './prose-check.mjs';
 import { pageSource, readPageMarkdown, writePageMarkdown } from './source-files.mjs';
+import { isCliEntry } from './cli-entry.mjs';
 
 const scripts = path.dirname(fileURLToPath(import.meta.url));
 
@@ -387,10 +388,7 @@ async function main(argv) {
   if (result.verdict !== 'pass') process.exitCode = 1;
 }
 
-if (
-  process.argv[1] !== undefined &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-)
+if (isCliEntry(import.meta.url))
   main(process.argv.slice(2)).catch((error) => {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 2;

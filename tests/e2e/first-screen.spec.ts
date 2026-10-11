@@ -1,9 +1,10 @@
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import type { Page } from '@playwright/test';
 
+import { buildReport } from '../../dist/node/index.js';
 import { expect, test } from './fixtures.js';
 
 /**
@@ -95,6 +96,89 @@ test('a first-screen demo fits the first 900 pixels beside the title', async ({
   await expect(page.locator('.sidebar')).toBeHidden();
   await page.setViewportSize({ width: 400, height: 900 });
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+});
+
+test('a tall native opening preserves its drawing without pushing the title and action below the fold', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const root = testInfo.outputPath('tall-native-opening');
+  await mkdir(root, { recursive: true });
+  const source = path.join(root, 'report.md');
+  const output = path.join(root, 'page.html');
+  const nodes = Array.from(
+    { length: 14 },
+    (_, index) =>
+      `::node{id="step-${index}" label="Step ${index + 1}" detail="Inspect the evidence"}`,
+  ).join('\n');
+  const edges = Array.from(
+    { length: 13 },
+    (_, index) => `::edge{from="step-${index}" to="step-${index + 1}"}`,
+  ).join('\n');
+  await writeFile(
+    source,
+    `---
+title: Inspect evidence
+layout: landing
+motion: none
+---
+
+# Inspect evidence
+
+Read the original evidence and choose the next step.
+
+:::actions
+::action[Inspect source]{href="#source" kind="primary"}
+:::
+
+:::::section{title="Evidence flow" id="source" place="opening"}
+::::diagram{title="Fourteen steps" description="A tall native drawing remains complete beside its introduction." layout="down"}
+${nodes}
+${edges}
+::::
+:::::
+`,
+  );
+  await buildReport({ input: source, output });
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(pathToFileURL(output).href);
+    await page.evaluate(() => document.fonts.ready);
+    const geometry = await page.evaluate(() => {
+      const opening = document.querySelector('.page-opening');
+      const title = document.querySelector('.page-opening-copy > h1');
+      const action = document.querySelector('.page-opening-copy .semantic-action');
+      const frame = [...document.querySelectorAll('#source .visualization-frame')].find(
+        (element) => element.getBoundingClientRect().width > 1,
+      );
+      const svg = frame?.querySelector('svg');
+      if (!opening || !title || !action || !frame || !svg)
+        throw new Error('Missing native opening');
+      const bounds = frame.getBoundingClientRect();
+      return {
+        titleTop: title.getBoundingClientRect().top,
+        openingTop: opening.getBoundingClientRect().top,
+        actionBottom: action.getBoundingClientRect().bottom,
+        drawingHeight: svg.getBoundingClientRect().height,
+        frameOverflow: frame.scrollHeight - frame.clientHeight,
+        clippedLabels: [...svg.querySelectorAll('text')].filter((label) => {
+          const box = label.getBoundingClientRect();
+          return box.top < bounds.top - 1 || box.bottom > bounds.bottom + 1;
+        }).length,
+        copyBeforeResult:
+          (title.compareDocumentPosition(frame) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0,
+      };
+    });
+    // Catches: centring copy beside a tall drawing moves the title/action out of the initial viewport;
+    // height-cropping the drawing would superficially fix that position while losing authored evidence.
+    expect(Math.abs(geometry.titleTop - geometry.openingTop)).toBeLessThanOrEqual(1);
+    expect(geometry.titleTop).toBeGreaterThanOrEqual(0);
+    expect(geometry.actionBottom).toBeLessThanOrEqual(900);
+    expect(geometry.drawingHeight).toBeGreaterThan(900);
+    expect(geometry.frameOverflow).toBeLessThanOrEqual(1);
+    expect(geometry.clippedLabels).toBe(0);
+    expect(geometry.copyBeforeResult).toBe(true);
+  }
 });
 
 for (const width of [1440, 400]) {

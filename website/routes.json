@@ -365,6 +365,12 @@
       "kind": "copy"
     },
     {
+      "id": "skill-script-cli-entry",
+      "href": "skills/agentic-report/scripts/cli-entry.mjs",
+      "source": "../skills/agentic-report/scripts/cli-entry.mjs",
+      "kind": "copy"
+    },
+    {
       "id": "skill-script-handover",
       "href": "skills/agentic-report/scripts/handover.mjs",
       "source": "../skills/agentic-report/scripts/handover.mjs",
@@ -728,6 +734,12 @@
       "id": "canonical-landing-source",
       "href": "website/landing/report.md",
       "source": "landing/report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-source-ru",
+      "href": "website/landing/report.ru.md",
+      "source": "landing/report.ru.md",
       "kind": "copy"
     },
     {
@@ -1838,6 +1850,234 @@
       "id": "source-directed-attention-brief-md",
       "href": "examples/directed-attention/brief.md",
       "source": "../examples/directed-attention/brief.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-data-incident-json",
+      "href": "source/landing/data/incident.json",
+      "source": "landing/data/incident.json",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-assets-compile-core-svg",
+      "href": "source/landing/assets/compile-core.svg",
+      "source": "landing/assets/compile-core.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-assets-compile-core-dark-svg",
+      "href": "source/landing/assets/compile-core-dark.svg",
+      "source": "landing/assets/compile-core-dark.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-assets-social-preview-png",
+      "href": "source/landing/assets/social-preview.png",
+      "source": "landing/assets/social-preview.png",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-assets-incident-review-png",
+      "href": "source/landing/assets/incident-review.png",
+      "source": "landing/assets/incident-review.png",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-assets-incident-review-dark-png",
+      "href": "source/landing/assets/incident-review-dark.png",
+      "source": "landing/assets/incident-review-dark.png",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-assets-vendor-decision-png",
+      "href": "source/landing/assets/vendor-decision.png",
+      "source": "landing/assets/vendor-decision.png",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-assets-vendor-decision-dark-png",
+      "href": "source/landing/assets/vendor-decision-dark.png",
+      "source": "landing/assets/vendor-decision-dark.png",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-assets-launch-readiness-png",
+      "href": "source/landing/assets/launch-readiness.png",
+      "source": "landing/assets/launch-readiness.png",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-assets-launch-readiness-dark-png",
+      "href": "source/landing/assets/launch-readiness-dark.png",
+      "source": "landing/assets/launch-readiness-dark.png",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-assets-screenshots-json",
+      "href": "source/landing/assets/screenshots.json",
+      "source": "landing/assets/screenshots.json",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-extensions-execution-core-extension-yaml",
+      "href": "source/landing/extensions/execution-core/extension.yaml",
+      "source": "landing/extensions/execution-core/extension.yaml",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-extensions-execution-core-effect-mjs",
+      "href": "source/landing/extensions/execution-core/effect.mjs",
+      "source": "landing/extensions/execution-core/effect.mjs",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-extensions-execution-core-README-md",
+      "href": "source/landing/extensions/execution-core/README.md",
+      "source": "landing/extensions/execution-core/README.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-extensions-execution-core-LICENSE",
+      "href": "source/landing/extensions/execution-core/LICENSE",
+      "source": "landing/extensions/execution-core/LICENSE",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-extensions-execution-core-example-report-md",
+      "href": "source/landing/extensions/execution-core/example-report.md",
+      "source": "landing/extensions/execution-core/example-report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-extensions-execution-core-example-decision-md",
+      "href": "source/landing/extensions/execution-core/example-decision.md",
+      "source": "landing/extensions/execution-core/example-decision.md",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-extensions-execution-core-assets-compile-core-svg",
+      "href": "source/landing/extensions/execution-core/assets/compile-core.svg",
+      "source": "landing/extensions/execution-core/assets/compile-core.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "source-landing-extensions-execution-core-assets-compile-core-dark-svg",
+      "href": "source/landing/extensions/execution-core/assets/compile-core-dark.svg",
+      "source": "landing/extensions/execution-core/assets/compile-core-dark.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-data-incident-json",
+      "href": "website/landing/data/incident.json",
+      "source": "landing/data/incident.json",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-assets-compile-core-svg",
+      "href": "website/landing/assets/compile-core.svg",
+      "source": "landing/assets/compile-core.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-assets-compile-core-dark-svg",
+      "href": "website/landing/assets/compile-core-dark.svg",
+      "source": "landing/assets/compile-core-dark.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-assets-social-preview-png",
+      "href": "website/landing/assets/social-preview.png",
+      "source": "landing/assets/social-preview.png",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-assets-incident-review-png",
+      "href": "website/landing/assets/incident-review.png",
+      "source": "landing/assets/incident-review.png",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-assets-incident-review-dark-png",
+      "href": "website/landing/assets/incident-review-dark.png",
+      "source": "landing/assets/incident-review-dark.png",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-assets-vendor-decision-png",
+      "href": "website/landing/assets/vendor-decision.png",
+      "source": "landing/assets/vendor-decision.png",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-assets-vendor-decision-dark-png",
+      "href": "website/landing/assets/vendor-decision-dark.png",
+      "source": "landing/assets/vendor-decision-dark.png",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-assets-launch-readiness-png",
+      "href": "website/landing/assets/launch-readiness.png",
+      "source": "landing/assets/launch-readiness.png",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-assets-launch-readiness-dark-png",
+      "href": "website/landing/assets/launch-readiness-dark.png",
+      "source": "landing/assets/launch-readiness-dark.png",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-assets-screenshots-json",
+      "href": "website/landing/assets/screenshots.json",
+      "source": "landing/assets/screenshots.json",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-extensions-execution-core-extension-yaml",
+      "href": "website/landing/extensions/execution-core/extension.yaml",
+      "source": "landing/extensions/execution-core/extension.yaml",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-extensions-execution-core-effect-mjs",
+      "href": "website/landing/extensions/execution-core/effect.mjs",
+      "source": "landing/extensions/execution-core/effect.mjs",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-extensions-execution-core-README-md",
+      "href": "website/landing/extensions/execution-core/README.md",
+      "source": "landing/extensions/execution-core/README.md",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-extensions-execution-core-LICENSE",
+      "href": "website/landing/extensions/execution-core/LICENSE",
+      "source": "landing/extensions/execution-core/LICENSE",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-extensions-execution-core-example-report-md",
+      "href": "website/landing/extensions/execution-core/example-report.md",
+      "source": "landing/extensions/execution-core/example-report.md",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-extensions-execution-core-example-decision-md",
+      "href": "website/landing/extensions/execution-core/example-decision.md",
+      "source": "landing/extensions/execution-core/example-decision.md",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-extensions-execution-core-assets-compile-core-svg",
+      "href": "website/landing/extensions/execution-core/assets/compile-core.svg",
+      "source": "landing/extensions/execution-core/assets/compile-core.svg",
+      "kind": "copy"
+    },
+    {
+      "id": "canonical-landing-extensions-execution-core-assets-compile-core-dark-svg",
+      "href": "website/landing/extensions/execution-core/assets/compile-core-dark.svg",
+      "source": "landing/extensions/execution-core/assets/compile-core-dark.svg",
       "kind": "copy"
     }
   ]

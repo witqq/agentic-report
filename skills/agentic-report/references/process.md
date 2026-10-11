@@ -23,7 +23,7 @@ form for a person. One failed run lists every independent violation it found, so
 
 Use `serve` when the reader wants to discuss and revise the original document with the agent that is
 already authoring it. Launch from that Codex session's shell so its identity is available in the environment.
-The pinned release supports this command: `npx --yes agentic-report@0.21.0 serve ../my-page --human`. From a reviewed source checkout, build the package and start the same local reader:
+The pinned release supports this command: `npx --yes agentic-report@0.21.1 serve ../my-page --human`. From a reviewed source checkout, build the package and start the same local reader:
 
 ```sh
 pnpm build
@@ -254,7 +254,7 @@ person an index of variants with the date and reason of each (the recipe is in
 When the person already saw a page and asked questions or left notes, rebuild with the page they saw last:
 
 ```sh
-npx --yes agentic-report@0.21.0 build ./my-page --output ./my-page.html --since ./my-page.html --json
+npx --yes agentic-report@0.21.1 build ./my-page --output ./my-page.html --since ./my-page.html --json
 ```
 
 Every page (except one built with `--url`) carries a record of its edition; `--since` reads it from the
@@ -489,9 +489,10 @@ finding names elements by tag, id and class, with the nearest ancestor that has 
   paths break at their separators, or put them in a code block.
 - `diagramLabels` — SVG text in a figure or diagram that is under 11 px on screen (`small`, already
   counted in `smallText`) or cut with no way to reach it (`clipped`: by the window, the SVG itself, or a
-  scrolling frame of a figure without the full-screen viewer). A label hidden only by the sideways scroll
-  of a diagram that has the viewer is reachable: it is `scrolled`, reported but not a defect. Give the
-  diagram a layout that fits the phone or let the reader open it full size.
+  scrolling frame of a figure without the full-screen viewer). A label hidden only by horizontal or
+  vertical scrolling inside a fully visible frame with the viewer is reachable: it is `scrolled`, reported
+  but not a defect. Clipping by the SVG, an outer container or a non-scrolling boundary still counts as a
+  defect. Give the diagram a layout that fits the phone or let the reader open it full size.
 - `offSchemeBlocks` — an image or surface of at least 120×80 px of which a fifth or more is 7:1 or more
   in luminance from the page background: a light screenshot on a dark page or a dark slab on a light one.
   Each sample gives the mean `luminance`, `pageLuminance` and the `share` of such pixels. Give the image a

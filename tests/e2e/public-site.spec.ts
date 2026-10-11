@@ -64,9 +64,7 @@ test('staged landing reaches live examples, human docs, and direct agent instruc
 }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium');
   await page.goto(fileUrl('index.html'));
-  await expect(
-    page.getByRole('heading', { name: 'A page worth handing over. From Markdown.' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Give your findings a page.' })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
   const attribution = page.locator('[data-site-attribution]');
   await expect(attribution.getByRole('link', { name: 'Made with Moira' })).toHaveAttribute(

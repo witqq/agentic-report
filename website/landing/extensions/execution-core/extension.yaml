@@ -1,0 +1,12 @@
+kind: effect
+name: execution-core
+description: An authored sculptural model of compilation moves source into an opening core and emits a structured page inside the first original illustration of each declared section.
+staticEquivalent: The original local SVG model, its alternative text, caption and all explanations remain in document order. Reduced motion and no-WebGL use the completed same-geometry 2D model; print retains the original SVG and text. This illustrates compilation, not real hardware or a recorded run.
+module: effect.mjs
+targets:
+  - directive: section
+    attribute: execution-core
+    values: [report, decision]
+budgetBytes: 24000
+ownsScroll: false
+examples: [example-report.md, example-decision.md]

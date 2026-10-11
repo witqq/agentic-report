@@ -98,6 +98,94 @@ td { padding: 4px; white-space: normal; }
 </main></body></html>`;
 
 test.describe('snapshot --measure', () => {
+  test('keeps hidden-axis clipping a defect when the other axis scrolls with Open', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const figure = (id: string, overflowX: string, overflowY: string) =>
+      `<figure><button data-figure-open>Open</button>
+      <div style="width: 200px; height: 80px; overflow-x: ${overflowX}; overflow-y: ${overflowY}">
+      <svg id="${id}-svg" width="600" height="300">
+      <text x="500" y="250" font-size="14">Label</text></svg></div></figure>`;
+    await page.setContent(`<!doctype html><html><body style="margin: 0; font: 16px system-ui">
+      ${figure('x-scroll-y-hidden', 'auto', 'hidden')}
+      ${figure('y-scroll-x-hidden', 'hidden', 'auto')}
+      ${figure('both-scroll', 'auto', 'auto')}</body></html>`);
+    const found = await page.evaluate(measureInPage, MEASURE_OPTIONS);
+    // Catches: one reachable axis and Open incorrectly excuse clipping on the hidden axis.
+    expect(found.diagramLabels).toMatchObject({ count: 2, small: 0, clipped: 2, scrolled: 1 });
+    expect(found.diagramLabels.samples).toEqual([
+      'svg#x-scroll-y-hidden-svg text',
+      'svg#y-scroll-x-hidden-svg text',
+    ]);
+  });
+
+  test('distinguishes accessible vertical figure scrolling from hidden, inner and outer clipping', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const figure = (id: string, overflow: string, viewer: boolean, inner = false, outer = false) =>
+      `<figure${outer ? ' style="height: 45px; overflow: hidden"' : ''}>
+      ${viewer ? '<button data-figure-open>Open</button>' : ''}
+      <div style="height: 80px; width: 200px; overflow: ${overflow}">
+      <svg id="${id}-svg" width="200" height="300"${inner ? ' viewBox="0 0 200 300"' : ''}>
+      <text id="${id}" x="10" y="${inner ? 340 : 250}" font-size="14">Readable label</text></svg></div></figure>`;
+    await page.setContent(`<!doctype html><html><body style="margin: 0; font: 16px system-ui">
+      ${figure('reachable', 'auto', true)}${figure('no-viewer', 'auto', false)}
+      ${figure('hidden', 'hidden', true)}${figure('svg-cut', 'auto', true, true)}
+      ${figure('outer-cut', 'auto', true, false, true)}</body></html>`);
+    const found = await page.evaluate(measureInPage, MEASURE_OPTIONS);
+    // Catches: vertical scrolling is mistaken for clipping, or an Open button masks genuine clipping.
+    expect(found.diagramLabels).toMatchObject({ count: 4, small: 0, clipped: 4, scrolled: 1 });
+    expect(found.diagramLabels.samples).toEqual(
+      expect.arrayContaining([
+        'svg#no-viewer-svg text',
+        'svg#hidden-svg text',
+        'svg#svg-cut-svg text',
+        'svg#outer-cut-svg text',
+      ]),
+    );
+    expect(found.diagramLabels.samples).not.toContain('svg#reachable-svg text');
+  });
+
+  test('exempts only the active compiled scene track and still checks following authored blocks', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const prose = 'The paragraph defines the reading column after the pinned scene. '.repeat(4);
+    const scene = (active: boolean, broken: boolean) => `<!doctype html><html><head><style>
+      body { margin: 0; font: 16px/1.5 system-ui; } .semantic-section { width: 1200px; margin: 20px auto; }
+      .semantic-section > p { width: 600px; margin-inline: auto; }
+      .scene-track { width: 1000px; margin-left: 0; display: grid; grid-template-columns: 500px 500px; }
+      details, pre { width: 600px; margin-inline: auto; } pre { box-sizing: border-box; }
+      </style></head><body><section class="semantic-section" data-composition="flow" data-scene="steps" ${active ? 'data-scene-live' : ''}>
+      <div class="scene-track"><div class="scene-stage" style="height: 100px; background: #ddd"></div><div class="scene-beats">Scene steps</div></div>
+      <p>${prose}</p><p>${prose}</p>
+      <details id="after-detail" open${broken ? ' style="margin-left: 20px; margin-right: 0"' : ''}><summary>Following source</summary>
+      <pre id="after-code"${broken ? ' style="width: 800px; margin-left: 0; margin-right: 0"' : ''}>source = 1</pre></details>
+      </section></body></html>`;
+    await page.setContent(scene(true, false));
+    expect((await page.evaluate(measureInPage, MEASURE_OPTIONS)).sectionColumns.count).toBe(0);
+    await page.setContent(scene(true, true));
+    const broken = await page.evaluate(measureInPage, MEASURE_OPTIONS);
+    // Catches: exempting the whole section conceals a shifted disclosure and a third-width source block.
+    expect(
+      broken.sectionColumns.samples.map((sample) => `${sample.element} ${sample.kind}`),
+    ).toEqual(
+      expect.arrayContaining(['details#after-detail misaligned', 'pre#after-code code-width']),
+    );
+    await page.setContent(scene(false, false));
+    // Catches: a class name alone bypasses ordinary flow-axis validation without an active native scene.
+    expect(
+      (await page.evaluate(measureInPage, MEASURE_OPTIONS)).sectionColumns.samples.map(
+        (sample) => sample.element,
+      ),
+    ).toContain('div.scene-track');
+  });
+
   test('finds each planted defect and nothing on a clean page', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chromium');
     await page.setViewportSize({ width: 390, height: 844 });

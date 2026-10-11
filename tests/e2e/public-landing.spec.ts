@@ -3,7 +3,9 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import type { Locator, Page } from '@playwright/test';
+import { parse as parseYaml } from 'yaml';
 
+import { MANUAL_CLOCK_INIT_SCRIPT } from '../../dist/node/page-clock.js';
 import { expect, test } from './fixtures.js';
 
 const generatedRoot = path.resolve('test-results/e2e-generated');
@@ -25,27 +27,81 @@ const siteRoutes = JSON.parse(await readFile(path.resolve('website/routes.json')
   }[];
 };
 
-const publicProofs = siteRoutes.routes
-  .filter(
-    (route) => route.kind === 'page' && (route.id === 'landing' || route.id.startsWith('example-')),
-  )
-  .map((route) => {
-    const sourceDirectory =
-      route.id === 'landing' ? 'source/landing' : path.posix.dirname(route.href);
-    const sources = siteRoutes.routes
-      .filter(
-        (candidate) =>
-          candidate.kind === 'copy' &&
-          path.posix.dirname(candidate.href) === sourceDirectory &&
-          ['report.md', 'report.ru.md'].includes(path.posix.basename(candidate.href)),
-      )
-      .map((candidate) => candidate.href)
-      .sort();
-    if (sources.length !== 2) {
-      throw new Error(`Expected an English/Russian source pair for ${route.id}.`);
-    }
-    return { page: route.href, sources };
+const chromelessProofIds = new Set([
+  'example-directed-first-edit',
+  'example-directed-theme-color',
+  'example-directed-change-event',
+]);
+
+const publicProofs = await Promise.all(
+  siteRoutes.routes
+    .filter(
+      (route) =>
+        route.kind === 'page' && (route.id === 'landing' || route.id.startsWith('example-')),
+    )
+    .map(async (route) => {
+      const sourceDirectory =
+        route.id === 'landing' ? 'source/landing' : path.posix.dirname(route.href);
+      const sources = siteRoutes.routes
+        .filter(
+          (candidate) =>
+            candidate.kind === 'copy' &&
+            path.posix.dirname(candidate.href) === sourceDirectory &&
+            ['report.md', 'report.ru.md'].includes(path.posix.basename(candidate.href)),
+        )
+        .map((candidate) => candidate.href)
+        .sort();
+      if (sources.length !== 2) {
+        throw new Error(`Expected an English/Russian source pair for ${route.id}.`);
+      }
+      const chromeless = chromelessProofIds.has(route.id);
+      if (chromeless) {
+        const source = await readFile(path.resolve('website', route.source, 'report.md'), 'utf8');
+        const frontmatter = source.match(/^---\r?\n([\s\S]*?)\r?\n---/u)?.[1];
+        const manifest: unknown = frontmatter === undefined ? undefined : parseYaml(frontmatter);
+        if (
+          typeof manifest !== 'object' ||
+          manifest === null ||
+          !('topbar' in manifest) ||
+          manifest.topbar !== false
+        ) {
+          throw new Error(`Chromeless proof must explicitly author topbar: false: ${route.id}.`);
+        }
+      }
+      return { page: route.href, sources, chromeless };
+    }),
+);
+
+async function russianProofPage(
+  page: Page,
+  russianPage: Page,
+  proof: (typeof publicProofs)[number],
+): Promise<Page> {
+  if (proof.chromeless) {
+    await expect(page.locator('.topbar')).toHaveCount(0);
+    await expect(page.locator('[data-language-select]')).toHaveCount(0);
+    // Native startup locale uses navigator.languages when author chrome is intentionally absent.
+    await russianPage.goto(stagedUrl(proof.page));
+    await expect(russianPage.locator('html')).toHaveAttribute('lang', 'ru');
+    await expect(russianPage.locator('.topbar')).toHaveCount(0);
+    await expect(russianPage.locator('[data-language-select]')).toHaveCount(0);
+    return russianPage;
+  }
+  await expect(page.getByRole('combobox', { name: 'Language' })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+  await expect(page.getByRole('combobox', { name: 'Язык' })).toHaveValue('ru');
+  return page;
+}
+
+function collectBrowserErrors(page: Page): string[] {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
   });
+  return errors;
+}
 
 const expectNoOverflow = async (page: Page): Promise<void> => {
   expect(
@@ -81,46 +137,52 @@ test('landing composes the public visual vocabulary identically in both output f
     await page.goto(artifact.url);
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
     await expect(
-      page.getByRole('heading', { name: 'A page worth handing over. From Markdown.', level: 1 }),
+      page.getByRole('heading', { name: 'Give your findings a page.', level: 1 }),
     ).toBeInViewport();
-    await expect(page.getByRole('link', { name: 'Build the first page' }).first()).toBeInViewport();
-    // Первый экран — демо: исходник Markdown рядом с тем, что из него собрано.
-    await expect(page.locator('#demo pre')).toBeInViewport();
-    await expect(page.locator('#demo .semantic-card')).toHaveCount(2);
+    await expect(page.getByRole('link', { name: 'Make your first page' }).first()).toBeInViewport();
+    // The native illustration is a declared model; the copyable installation command stays immediately available.
+    await expect(page.locator('.page-opening-copy pre').first()).toContainText(
+      'npx skills add witqq/agentic-report --skill agentic-report',
+    );
+    await expect(page.locator('#core img')).toBeInViewport();
+    await expect(page.locator('#core')).toHaveAttribute('data-recipe', 'demo');
+    await expect(page.locator('#compile')).toHaveAttribute('data-scene', 'steps');
+    await expect(page.locator('#compile .semantic-beat')).toHaveCount(3);
+    await expect(page.locator('#core .semantic-actions a')).toHaveText([
+      'Markdown',
+      'Compiler',
+      'HTML page',
+    ]);
     const expected = [
-      ['demo', 'demo'],
-      ['styles', 'rail'],
-      ['workflow', 'story'],
-      ['examples', 'evidence'],
-      ['review', 'evidence'],
-      ['reasons', 'metrics'],
-      ['agent-skill', 'evidence'],
-      ['boundaries', 'story'],
-    ] as const;
-    for (const [id, recipe] of expected) {
-      const section = page.locator(`#${id}`);
-      await expect(section).toHaveAttribute('data-recipe', recipe);
-    }
+      'core',
+      'compile',
+      'result',
+      'notes',
+      'live',
+      'examples',
+      'start',
+      'resources',
+    ];
     expect(
       await page
         .locator('section.semantic-section')
         .evaluateAll((sections) => sections.map((section) => section.id)),
-    ).toEqual(expected.map(([id]) => id));
+    ).toEqual(expected);
     expect(
       await page
         .locator('[data-navigation] a')
         .evaluateAll((links) => links.map((link) => link.getAttribute('href'))),
-    ).toEqual(expected.map(([id]) => `#${id}`));
+    ).toEqual(expected.map((id) => `#${id}`));
 
     await expect(page.locator('.semantic-actions').first()).toHaveAttribute(
       'data-placement-resolved',
       'edge',
     );
-    await expect(page.locator('#workflow > .semantic-actions')).toHaveAttribute(
+    await expect(page.locator('#core .semantic-actions')).toHaveAttribute(
       'data-placement-resolved',
       'inline',
     );
-    await expect(page.locator('#boundaries > .semantic-actions')).toHaveAttribute(
+    await expect(page.locator('#start > .semantic-actions')).toHaveAttribute(
       'data-placement-resolved',
       'bottom',
     );
@@ -133,25 +195,38 @@ test('landing composes the public visual vocabulary identically in both output f
 
 test('the staged public gallery opens every bilingual artifact and canonical source pair', async ({
   page,
+  browser,
 }, info) => {
   test.skip(info.project.name !== 'desktop-chromium');
   const captureRoot = path.resolve('test-results/captures/public-locales');
   await mkdir(captureRoot, { recursive: true });
   await page.setViewportSize({ width: 304, height: 844 });
-  for (const proof of publicProofs) {
-    await page.goto(stagedUrl(proof.page));
-    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-    await expect(page.locator('main p').filter({ hasText: /^:{3,}$/u })).toHaveCount(0);
-    const englishTitle = await page.title();
-    const englishHeading = await page.locator('h1').innerText();
-    expect(
-      await page
-        // Титульный слайд презентации — секция без своего заголовка: берётся первая с заголовком.
-        .locator('section.semantic-section:has(> .semantic-section-title)')
-        .first()
-        .evaluate((section) => {
-          const title = section.querySelector<HTMLElement>('.semantic-section-title');
-          if (title === null) throw new Error('Public proof section title is absent.');
+  const russianPage = await browser.newPage({
+    locale: 'ru-RU',
+    viewport: { width: 304, height: 844 },
+  });
+  const russianErrors = collectBrowserErrors(russianPage);
+  try {
+    for (const proof of publicProofs) {
+      await page.goto(stagedUrl(proof.page));
+      await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+      await expect(page.locator('main p').filter({ hasText: /^:{3,}$/u })).toHaveCount(0);
+      const englishTitle = await page.title();
+      const englishHeading = await page.locator('h1').innerText();
+      if (proof.page === 'index.html') {
+        await expectSettledOpening(page);
+        await page.screenshot({ path: path.join(captureRoot, 'landing-en-narrow.png') });
+      }
+      // Standalone directed compositions have a page heading without section wrappers.
+      // Presentations may instead have their first section heading after the title slide.
+      const sectionTitle = page
+        .locator('section.semantic-section > .semantic-section-title')
+        .first();
+      const proofTitle = (await sectionTitle.count()) === 0 ? page.locator('h1') : sectionTitle;
+      await expect(proofTitle).toHaveCount(1);
+      expect((await proofTitle.textContent())?.trim().length, proof.page).toBeGreaterThan(0);
+      expect(
+        await proofTitle.evaluate((title) => {
           const parse = (value: string): readonly [number, number, number] => {
             const channels = value
               .match(/[\d.]+/gu)
@@ -173,8 +248,8 @@ test('the staged public gallery opens every bilingual artifact and canonical sou
             return 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue);
           };
           // Полоса без собственного фона стоит на фоне страницы: берётся первый непрозрачный предок.
-          let owner: Element | null = section;
-          let backgroundColor = getComputedStyle(section).backgroundColor;
+          let owner: Element | null = title;
+          let backgroundColor = getComputedStyle(title).backgroundColor;
           while (owner !== null && /rgba\([^)]*,\s*0\)$|transparent/u.test(backgroundColor)) {
             owner = owner.parentElement;
             backgroundColor =
@@ -188,133 +263,188 @@ test('the staged public gallery opens every bilingual artifact and canonical sou
             (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
           );
         }),
-    ).toBeGreaterThanOrEqual(4.5);
-    await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
-    await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
-    await expect(page.locator('main p').filter({ hasText: /^:{3,}$/u })).toHaveCount(0);
-    expect(await page.title()).not.toBe(englishTitle);
-    expect(await page.locator('h1').innerText()).not.toBe(englishHeading);
-    await expect(page.getByRole('combobox', { name: 'Язык' })).toHaveValue('ru');
-    await expectNoOverflow(page);
-    if (proof.page === 'index.html') {
-      await page.screenshot({ path: path.join(captureRoot, 'landing-ru-narrow.png') });
-    }
-    expect(
-      await page.locator('.topbar > *').evaluateAll((items) =>
-        items
-          .filter((item) => {
-            const box = item.getBoundingClientRect();
-            return box.left < 0 || box.right > document.documentElement.clientWidth;
-          })
-          .map((item) => `${item.className}: ${item.getBoundingClientRect().right}`),
-      ),
-      proof.page,
-    ).toEqual([]);
-
-    for (const source of proof.sources) {
-      const route = siteRoutes.routes.find((candidate) => candidate.href === source);
-      expect(route?.kind, source).toBe('copy');
-      if (route === undefined || route.source === 'generated') {
-        throw new Error(`Canonical source route is absent: ${source}`);
+      ).toBeGreaterThanOrEqual(4.5);
+      const localizedPage = await russianProofPage(page, russianPage, proof);
+      await expect(localizedPage.locator('main p').filter({ hasText: /^:{3,}$/u })).toHaveCount(0);
+      expect(await localizedPage.title()).not.toBe(englishTitle);
+      expect(await localizedPage.locator('h1').innerText()).not.toBe(englishHeading);
+      await expectNoOverflow(localizedPage);
+      if (proof.page === 'index.html') {
+        await expectSettledOpening(localizedPage);
+        await localizedPage.screenshot({ path: path.join(captureRoot, 'landing-ru-narrow.png') });
       }
-      const [stagedBytes, canonicalBytes] = await Promise.all([
-        readFile(path.join(stagedRoot, ...source.split('/'))),
-        readFile(path.resolve('website', route.source)),
-      ]);
-      expect(stagedBytes, source).toEqual(canonicalBytes);
-      await page.goto(stagedUrl(source));
-      expect((await page.locator('body').innerText()).trim().length, source).toBeGreaterThan(0);
-    }
-  }
+      expect(
+        await localizedPage.locator('.topbar > *').evaluateAll((items) =>
+          items
+            .filter((item) => {
+              const box = item.getBoundingClientRect();
+              return box.left < 0 || box.right > document.documentElement.clientWidth;
+            })
+            .map((item) => `${item.className}: ${item.getBoundingClientRect().right}`),
+        ),
+        proof.page,
+      ).toEqual([]);
 
-  for (const route of siteRoutes.routes) {
-    await page.goto(stagedUrl(route.href));
-    expect((await page.locator('body').innerText()).trim().length, route.href).toBeGreaterThan(0);
+      for (const source of proof.sources) {
+        const route = siteRoutes.routes.find((candidate) => candidate.href === source);
+        expect(route?.kind, source).toBe('copy');
+        if (route === undefined || route.source === 'generated') {
+          throw new Error(`Canonical source route is absent: ${source}`);
+        }
+        const [stagedBytes, canonicalBytes] = await Promise.all([
+          readFile(path.join(stagedRoot, ...source.split('/'))),
+          readFile(path.resolve('website', route.source)),
+        ]);
+        expect(stagedBytes, source).toEqual(canonicalBytes);
+        await page.goto(stagedUrl(source));
+        expect((await page.locator('body').innerText()).trim().length, source).toBeGreaterThan(0);
+      }
+    }
+
+    for (const route of siteRoutes.routes) {
+      if (
+        route.kind === 'copy' &&
+        !['.html', '.md', '.txt', '.json'].includes(path.extname(route.href))
+      ) {
+        // Downloads are not prose pages. Check every staged artifact against its authoritative stored bytes.
+        const [staged, canonical] = await Promise.all([
+          readFile(path.join(stagedRoot, route.href)),
+          readFile(path.resolve('website', route.source)),
+        ]);
+        expect(staged.length, route.href).toBeGreaterThan(0);
+        expect(staged, route.href).toEqual(canonical);
+        if (route.href.endsWith('.png'))
+          expect(staged.subarray(0, 8), route.href).toEqual(
+            Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+          );
+        if (route.href.endsWith('.svg'))
+          expect(staged.toString('utf8'), route.href).toMatch(/<svg\b/u);
+        continue;
+      }
+      await page.goto(stagedUrl(route.href));
+      expect((await page.locator('body').innerText()).trim().length, route.href).toBeGreaterThan(0);
+      if (route.href === 'extensions/slo-budget/index.html') {
+        // Catches a raw published entry that crashes before rendering because only compiled islands have a bridge.
+        expect(await page.evaluate(() => 'agenticReportIsland' in window)).toBe(false);
+        await expect(page.locator('#budget')).toHaveText('43.2 min');
+        await expect(page.locator('#spent')).toHaveText('41.7%');
+        await expect(page.locator('#spent-line')).toHaveCSS('stroke-dashoffset', '0px');
+        const originalPoints = await page.locator('#spent-line').getAttribute('points');
+        await page.getByRole('spinbutton', { name: 'Bad minutes so far' }).fill('60');
+        await expect(page.locator('#verdict')).toHaveAttribute('data-state', 'over');
+        await expect(page.locator('#verdict')).toContainText('16.8 min over');
+        await expect(page.locator('#spent-line')).not.toHaveAttribute(
+          'points',
+          originalPoints ?? '',
+        );
+      }
+    }
+    expect(russianErrors).toEqual([]);
+  } finally {
+    await russianPage.close();
   }
 });
 
 test('desktop stage keeps unrelated direct children in readable non-overlapping regions', async ({
   page,
+  browser,
 }, info) => {
   test.skip(info.project.name !== 'desktop-chromium');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1280, height: 800 });
+  const russianPage = await browser.newPage({
+    locale: 'ru-RU',
+    viewport: { width: 1280, height: 800 },
+    reducedMotion: 'reduce',
+  });
+  const russianErrors = collectBrowserErrors(russianPage);
 
-  const stageGeometry = async (): Promise<{
+  const stageGeometry = async (
+    currentPage: Page,
+  ): Promise<{
     readonly overlaps: readonly string[];
   }> =>
-    page.locator('section.semantic-section[data-composition="stage"]').evaluateAll((sections) => {
-      const overlaps: string[] = [];
-      for (const section of sections) {
-        const children = [...section.children].filter((child): child is HTMLElement => {
-          if (!(child instanceof HTMLElement)) return false;
-          const rect = child.getBoundingClientRect();
-          return rect.width > 1 && rect.height > 1;
-        });
-        for (let leftIndex = 0; leftIndex < children.length; leftIndex += 1) {
-          const left = children[leftIndex];
-          if (left === undefined) continue;
-          const leftRect = left.getBoundingClientRect();
-          for (let rightIndex = leftIndex + 1; rightIndex < children.length; rightIndex += 1) {
-            const right = children[rightIndex];
-            if (right === undefined) continue;
-            const rightRect = right.getBoundingClientRect();
-            const overlapWidth =
-              Math.min(leftRect.right, rightRect.right) - Math.max(leftRect.left, rightRect.left);
-            const overlapHeight =
-              Math.min(leftRect.bottom, rightRect.bottom) - Math.max(leftRect.top, rightRect.top);
-            if (overlapWidth > 1 && overlapHeight > 1) {
-              overlaps.push(
-                `${section.id}:${left.tagName.toLowerCase()}.${left.className}:${right.tagName.toLowerCase()}.${right.className}`,
-              );
+    currentPage
+      .locator('section.semantic-section[data-composition="stage"]')
+      .evaluateAll((sections) => {
+        const overlaps: string[] = [];
+        for (const section of sections) {
+          const children = [...section.children].filter((child): child is HTMLElement => {
+            if (!(child instanceof HTMLElement)) return false;
+            const rect = child.getBoundingClientRect();
+            return rect.width > 1 && rect.height > 1;
+          });
+          for (let leftIndex = 0; leftIndex < children.length; leftIndex += 1) {
+            const left = children[leftIndex];
+            if (left === undefined) continue;
+            const leftRect = left.getBoundingClientRect();
+            for (let rightIndex = leftIndex + 1; rightIndex < children.length; rightIndex += 1) {
+              const right = children[rightIndex];
+              if (right === undefined) continue;
+              const rightRect = right.getBoundingClientRect();
+              const overlapWidth =
+                Math.min(leftRect.right, rightRect.right) - Math.max(leftRect.left, rightRect.left);
+              const overlapHeight =
+                Math.min(leftRect.bottom, rightRect.bottom) - Math.max(leftRect.top, rightRect.top);
+              if (overlapWidth > 1 && overlapHeight > 1) {
+                overlaps.push(
+                  `${section.id}:${left.tagName.toLowerCase()}.${left.className}:${right.tagName.toLowerCase()}.${right.className}`,
+                );
+              }
             }
           }
         }
-      }
-      return { overlaps };
-    });
+        return { overlaps };
+      });
 
-  for (const proof of publicProofs) {
-    await page.goto(stagedUrl(proof.page));
-    expect(await stageGeometry(), `${proof.page}:en`).toEqual({ overlaps: [] });
-    await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
-    expect(await stageGeometry(), `${proof.page}:ru`).toEqual({ overlaps: [] });
+  try {
+    for (const proof of publicProofs) {
+      await page.goto(stagedUrl(proof.page));
+      await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+      expect(await stageGeometry(page), `${proof.page}:en`).toEqual({ overlaps: [] });
+      const localizedPage = await russianProofPage(page, russianPage, proof);
+      expect(await stageGeometry(localizedPage), `${proof.page}:ru`).toEqual({ overlaps: [] });
+    }
+    expect(russianErrors).toEqual([]);
+  } finally {
+    await russianPage.close();
   }
 });
 
-test('landing and a non-landing demo execute reusable scroll, pointer, and choreography motion', async ({
+test('landing steps and a non-landing demo execute native focus, pointer, and choreography motion', async ({
   page,
 }, info) => {
   test.skip(info.project.name !== 'desktop-chromium');
+  await page.addInitScript(MANUAL_CLOCK_INIT_SCRIPT);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(landingArtifacts[0].url);
-
-  const dataScene = page.locator('#workflow');
-  const initialProgress = Number(
-    await dataScene.evaluate((node) => node.style.getPropertyValue('--scene-progress')),
-  );
-  await dataScene.scrollIntoViewIfNeeded();
-  await expect
-    .poll(() =>
-      dataScene.evaluate((node) => Number(node.style.getPropertyValue('--scene-progress'))),
-    )
-    .not.toBe(initialProgress);
-  await expect(dataScene).toHaveAttribute('data-scene-active', '');
-
-  const pointerScene = page.locator('#review');
-  await pointerScene.scrollIntoViewIfNeeded();
-  const workflowImage = pointerScene.locator('img').first();
-  const imageBox = await workflowImage.boundingBox();
-  if (imageBox === null) throw new Error('Landing story image has no geometry.');
-  await page.mouse.move(imageBox.x + imageBox.width * 0.75, imageBox.y + imageBox.height * 0.35);
-  await expect(pointerScene).toHaveAttribute('data-pointer-active', '');
-  expect(await workflowImage.evaluate((image) => getComputedStyle(image).transform)).not.toBe(
-    'none',
-  );
+  await page.evaluate(() => document.fonts.ready);
+  let seconds = 20;
+  const settle = async () => {
+    await page.evaluate((time) => window.__clock?.seek(time), seconds++);
+    await page.waitForTimeout(80);
+    await page.evaluate((time) => window.__clock?.seek(time), seconds++);
+  };
+  for (const index of [0, 2, 1]) {
+    const beat = page.locator('#compile .semantic-beat').nth(index);
+    await beat.evaluate((node) => {
+      const box = node.getBoundingClientRect();
+      scrollTo({ top: scrollY + box.top + box.height / 2 - innerHeight / 2, behavior: 'instant' });
+    });
+    await settle();
+    await expect(beat).toHaveAttribute('data-current', '');
+    expect(
+      await page
+        .locator('#compile .semantic-beat')
+        .evaluateAll((beats) => beats.every((node) => getComputedStyle(node).opacity === '1')),
+    ).toBe(true);
+  }
+  await expect(page.locator('html')).toHaveAttribute('data-render', 'live');
 
   await page.goto(generatedUrl('launch-readiness.html'));
   const activation = page.locator('#activation');
   await activation.scrollIntoViewIfNeeded();
+  await settle();
   await expect(activation).toHaveAttribute('data-scene-active', '');
   await expect(activation).toHaveAttribute('data-choreography-active', '');
   await expect(activation.locator('.semantic-point').first()).toHaveCSS('opacity', '1');
@@ -322,14 +452,28 @@ test('landing and a non-landing demo execute reusable scroll, pointer, and chore
   await expect(page.locator('#activation')).toHaveAttribute('data-composition', 'split');
   await expect(page.locator('#launch-signal')).toHaveAttribute('data-surface', 'tint');
 
+  await page.goto(stagedUrl('examples/motion-showcase/index.html'));
+  const pointerScene = page.locator('#opening');
+  await pointerScene.scrollIntoViewIfNeeded();
+  await settle();
+  const pointerImage = pointerScene.locator('img').first(),
+    imageBox = await pointerImage.boundingBox();
+  if (imageBox === null) throw new Error('Motion showcase image has no geometry.');
+  await page.mouse.move(imageBox.x + imageBox.width * 0.75, imageBox.y + imageBox.height * 0.35);
+  await settle();
+  await expect(pointerScene).toHaveAttribute('data-pointer-active', '');
+  expect(await pointerImage.evaluate((image) => getComputedStyle(image).transform)).not.toBe(
+    'none',
+  );
+
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(landingArtifacts[0].url);
   await expect(page.locator('[data-reveal-pending], [data-reveal-motion]')).toHaveCount(0);
   await expect(
     page.locator('[data-scene-active], [data-choreography-motion], [data-pointer-active]'),
   ).toHaveCount(0);
-  await expect(page.locator('#styles')).toBeVisible();
-  await expect(page.locator('#workflow img')).toBeVisible();
+  await expect(page.locator('#compile')).toBeVisible();
+  await expect(page.locator('#compile img')).toBeVisible();
   await mkdir(path.resolve('test-results/captures/public-motion'), { recursive: true });
   await page.screenshot({
     path: path.resolve('test-results/captures/public-motion/landing-reduced-motion.png'),
@@ -482,9 +626,9 @@ test('viewport matrix keeps content readable, mobile concise, and wide layouts o
     if (profile.name === 'tall') {
       expect(await page.evaluate(() => scrollY)).toBe(0);
       await expect(
-        page.getByRole('link', { name: 'Build the first page' }).first(),
+        page.getByRole('link', { name: 'Make your first page' }).first(),
       ).toBeInViewport();
-      await expect(page.getByRole('link', { name: 'Choose a visual direction' })).toBeInViewport();
+      await expect(page.getByRole('link', { name: 'Inspect a working result' })).toBeInViewport();
     }
     const geometry = await page.evaluate(() => {
       const shell = document.querySelector<HTMLElement>('.report-shell');
@@ -518,8 +662,8 @@ test('viewport matrix keeps content readable, mobile concise, and wide layouts o
     await page.screenshot({
       path: path.join(captureRoot, `${profile.name}-initial.png`),
     });
-    await page.locator('#workflow').scrollIntoViewIfNeeded();
-    await expectSettledSection(page.locator('#workflow'));
+    await page.locator('#compile').scrollIntoViewIfNeeded();
+    await expectSettledSection(page.locator('#compile'));
     await page.locator('#examples').scrollIntoViewIfNeeded();
     await expectSettledSection(page.locator('#examples'));
     await page.screenshot({
@@ -549,6 +693,38 @@ async function expectSettledSection(section: Locator): Promise<void> {
     .toBe(true);
 }
 
+async function expectSettledOpening(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    const opening = document.querySelector('[data-page-opening]');
+    if (opening === null) throw new Error('Landing opening is absent.');
+    await Promise.all([...opening.querySelectorAll('img')].map((image) => image.decode()));
+  });
+  // Text exists during the staged entrance; a screenshot must wait for the complete native state.
+  await expect(page.locator('[data-page-opening]')).toHaveAttribute('data-entrance', 'done');
+  await expectSettledSection(page.locator('#core'));
+  await expect(page.locator('.page-opening-copy > h1')).toHaveCSS('mask-image', 'none');
+  await expect(page.locator('.page-opening-copy > pre')).toContainText(
+    'npx skills add witqq/agentic-report --skill agentic-report',
+  );
+  await expect
+    .poll(() =>
+      page.locator('.page-opening-copy').evaluate((copy) => {
+        const parts = [...copy.children];
+        return (
+          parts.length > 0 &&
+          parts.every((part) => {
+            for (let owner: Element | null = part; owner !== null; owner = owner.parentElement) {
+              if (getComputedStyle(owner).opacity !== '1') return false;
+            }
+            return true;
+          })
+        );
+      }),
+    )
+    .toBe(true);
+}
+
 test('selection review remains anchored and non-reflowing on desktop and constrained mobile', async ({
   page,
 }, info) => {
@@ -562,12 +738,12 @@ test('selection review remains anchored and non-reflowing on desktop and constra
   ] as const) {
     await page.setViewportSize({ width: profile.width, height: profile.height });
     await page.goto(landingArtifacts[0].url);
-    const target = page.locator('#review p[data-review-target]').filter({
-      hasText: 'Select any words in this sentence',
+    const target = page.locator('#notes p[data-review-target]').filter({
+      hasText: 'every decision should make its supporting evidence',
     });
     await target.scrollIntoViewIfNeeded();
     const before = await reportGeometry(page);
-    await selectText(target, 'any words in this sentence');
+    await selectText(target, 'supporting evidence');
     await page.getByRole('button', { name: 'Create note' }).click();
     await expect(page.locator('[data-review-popover]')).toBeVisible();
     await page.locator('[data-review-message]').fill(`${profile.name} integrated note`);
@@ -626,9 +802,9 @@ async function reportGeometry(page: Page): Promise<{
 }> {
   return page.evaluate(() => {
     const main = document.querySelector<HTMLElement>('main');
-    const target = [
-      ...document.querySelectorAll<HTMLElement>('#review p[data-review-target]'),
-    ].find((node) => node.textContent?.includes('Select any words in this sentence'));
+    const target = [...document.querySelectorAll<HTMLElement>('#notes p[data-review-target]')].find(
+      (node) => node.textContent?.includes('every decision should make its supporting evidence'),
+    );
     if (main === null || target === undefined) throw new Error('Review geometry target is absent.');
     const mainBox = main.getBoundingClientRect();
     const targetBox = target.getBoundingClientRect();

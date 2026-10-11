@@ -20,9 +20,9 @@ Use Node.js 24.18.0 or newer. Initialize a starter, replace its declarative cont
 the resulting file:
 
 ```sh
-npx --yes agentic-report@0.21.0 init ./my-page --starter landing --json
+npx --yes agentic-report@0.21.1 init ./my-page --starter landing --json
 # Edit ./my-page/report.md and its local assets.
-npx --yes agentic-report@0.21.0 build ./my-page --output ./my-page.html --json
+npx --yes agentic-report@0.21.1 build ./my-page --output ./my-page.html --json
 ```
 
 Open `my-page.html` directly through `file://`. `build` validates the complete source before publishing the
@@ -62,7 +62,7 @@ If you do not want to execute the published `agentic-report` npm package, clone 
 inspect the repository, run its checks, and invoke the compiled CLI directly:
 
 ```sh
-git clone --branch v0.21.0 --depth 1 https://github.com/witqq/agentic-report.git
+git clone --branch v0.21.1 --depth 1 https://github.com/witqq/agentic-report.git
 cd agentic-report
 git rev-parse HEAD
 git tag --points-at HEAD
@@ -112,7 +112,7 @@ Whenever showing a system interface, first show its complete application screen,
 
 ## Local living document
 
-Run `npx --yes agentic-report@0.21.0 serve ../my-page --human` from the author Codex session. A reviewed checkout uses `pnpm build`, then `node dist/node/cli.js serve ../my-page --human`. Open the printed URL,
+Run `npx --yes agentic-report@0.21.1 serve ../my-page --human` from the author Codex session. A reviewed checkout uses `pnpm build`, then `node dist/node/cli.js serve ../my-page --human`. Open the printed URL,
 select text and choose **Ask agent** to write beside the passage, or send a general chat question. Waiting
 questions show their order and can be cancelled immediately; the chat panel also offers width and visual
 settings. The same agent receives the questions, streams its reply and edits original sources; valid rebuilt
@@ -274,9 +274,12 @@ writes which shape is under [«Command output»](docs/AGENT-REFERENCE.md#command
 
 The canonical public landing is itself an ordinary compiler input at
 [`website/landing`](website/landing/). It uses only supported Markdown, frontmatter, semantic directives,
-and local media. Its first viewport presents the value, actions, and a generated result; the remaining
-sections lead through style choice, the three-step author path, the full public gallery, selected-text Review,
-product reasons, agent setup, and the trust boundary. Its paired Russian entry and every public demo use the
+local media, and an explicitly declared site-local effect. Its first viewport presents the value, skill
+installation, actions, and an original compilation model. Native steps explain the source, compiler, and
+page; a working chart exposes fictional example data and its Markdown. Selected-text Review stores local
+notes for export, while a separate opt-in local reader supports discussion with the authoring Codex
+conversation. The maintained examples, complete public gallery, and setup keep their direct source links.
+Its paired Russian entry and every public demo use the
 same multilingual contract as package consumers. Build it through the same public path as any user page:
 
 ```bash
@@ -289,7 +292,10 @@ observed source inventory is the desired result.
 
 [`website/routes.json`](website/routes.json) is the deployment-route authority. It gives every internal
 landing destination one relative URL, canonical repository source, route kind, and an optional confined
-prior-review sidecar for a page build. Each example
+prior-review sidecar for a page build. Both landing source aliases retain the complete confined graph:
+English/Russian entries, local data, light/dark illustrations, preview provenance, and the effect's
+manifest, module, examples, assets, documentation, and MIT notice. Direct resource links make these files
+retrievable alongside the rendered page. Each example
 card points to a separately publishable live page and a separately retrievable Markdown source; screenshots
 are previews, not substitutes for the published demos. Static site assembly resolves these declarations
 without adding a client router or a second authoring framework.

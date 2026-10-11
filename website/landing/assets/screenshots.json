@@ -12,6 +12,17 @@
     "source": "ordinary single-file build opened through file://, switched to each scheme as the scheme toggle does",
     "script": "scripts/capture-site-screenshots.ts"
   },
+  "socialPreview": {
+    "source": "../report.md",
+    "liveRoute": "index.html",
+    "publicSourceRoute": "source/landing/report.md",
+    "file": "social-preview.png",
+    "viewport": { "width": 1200, "height": 630 },
+    "deviceScaleFactor": 1,
+    "scheme": "dark",
+    "motion": "no-preference",
+    "sourceFrame": "the actual English landing first screen, with page-clock seeks after localization, image loading and layout settlement"
+  },
   "screenshots": [
     {
       "id": "incident-review",

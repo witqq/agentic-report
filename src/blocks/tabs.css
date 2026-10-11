@@ -4,6 +4,9 @@
     --scroll-cue-surface: var(--color-bg);
     --scroll-cue-ink: var(--role-component-fg);
   }
+  .semantic-tab-print-label {
+    display: none;
+  }
   @media (min-width: 57rem) {
     .semantic-tabs[data-orientation='vertical'] {
       display: grid;
@@ -92,6 +95,33 @@
 
     .semantic-tabs[data-orientation='vertical'] > .ui-tabs > .ui-tab[aria-selected='true'] {
       border-inline-end-color: var(--color-accent);
+    }
+  }
+  @media print {
+    .semantic-tabs[data-orientation='vertical'] {
+      display: block;
+    }
+
+    .semantic-tabs > [role='tablist'] {
+      display: none;
+    }
+
+    .semantic-tabs > [data-tab-panel][hidden] {
+      /* biome-ignore lint/complexity/noImportantStyles: print must expose native tab panels over the global hidden guard without changing reader selection */
+      display: block !important;
+    }
+
+    .semantic-tabs > [data-tab-panel] {
+      margin-block-start: 1.25rem;
+    }
+
+    .semantic-tab-print-label {
+      display: block;
+      margin-block-end: 0.5rem;
+      color: var(--color-heading);
+      font-family: var(--font-author-heading, var(--font-heading));
+      font-size: var(--text-lg);
+      font-weight: var(--weight-strong);
     }
   }
 }

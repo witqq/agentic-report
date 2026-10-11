@@ -606,3 +606,331 @@ test('pinned elements are their own obstacle layer, so the page layers do not de
   expect(below.chrome).toEqual(atTop.chrome);
   await page.context().close();
 });
+
+test('closed disclosure bodies are absent from obstacle layers and return when opened', async ({
+  browser,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium');
+  const page = await openMode(browser, await buildMark('disclosure-obstacles'), 'live');
+  await page.evaluate(() => {
+    const fixture = document.createElement('div');
+    fixture.id = 'obstacle-visibility-fixture';
+    fixture.innerHTML = `
+      <style>#obstacle-pseudo::before {content:'Visible generated label';visibility:visible;display:block}</style>
+      <details id="obstacle-disclosure">
+        <summary><span id="obstacle-summary">Visible disclosure summary</span></summary>
+        Direct closed disclosure text
+        <pre><code id="obstacle-code">Hidden disclosure code</code><button id="obstacle-copy">Copy hidden code</button></pre>
+        <details><summary><span id="obstacle-nested">Nested summary</span></summary></details>
+        <button id="obstacle-pinned" style="position:sticky;top:0">Hidden pinned control</button>
+      </details>
+      <p id="obstacle-entrance" style="opacity:0">Entrance text retains its neutral obstacle</p>
+      <div style="visibility:hidden"><p id="obstacle-visible-child" style="visibility:visible">Visible child overrides hidden parent</p></div>
+      <p id="obstacle-hidden-override" hidden style="display:block!important">CSS overrides the hidden attribute</p>
+      <div id="obstacle-contents" style="display:contents">Visible display contents text</div>
+      <p id="obstacle-hidden-text" style="visibility:hidden">Hidden ordinary text</p>
+      <p id="obstacle-pseudo" style="visibility:hidden">Hidden holder with visible generated label</p>
+      <svg width="320" height="40"><text id="obstacle-svg" x="0" y="25"><tspan>Visible SVG diagram label</tspan></text></svg>
+      <div style="content-visibility:hidden"><p id="obstacle-content-hidden">Content visibility hides this text</p></div>`;
+    document.querySelector('main')?.append(fixture);
+    const queue = window.__agenticReportEffects;
+    if (queue === undefined || Array.isArray(queue))
+      throw new Error('Effect engine is unavailable.');
+    queue.push({
+      name: 'visibility-probe',
+      selector: 'body',
+      ownsScroll: false,
+      definition: {
+        mount(ctx) {
+          (window as unknown as { __obstacleMeasure: typeof ctx.measure }).__obstacleMeasure =
+            ctx.measure;
+          return { at() {} };
+        },
+      },
+    });
+  });
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __obstacleMeasure?: unknown }).__obstacleMeasure !== undefined,
+      ),
+    )
+    .toBe(true);
+  const read = (open: boolean) =>
+    page.evaluate((expanded) => {
+      const disclosure = document.querySelector<HTMLDetailsElement>('#obstacle-disclosure');
+      const engine = window.__agenticReportEffectEngine;
+      if (disclosure === null || engine === undefined)
+        throw new Error('Disclosure obstacle fixture or effect engine is absent.');
+      disclosure.open = expanded;
+      const layers = engine.obstacles();
+      const measure = (
+        window as unknown as {
+          __obstacleMeasure: {
+            lines(
+              element: Element,
+            ): readonly { x: number; y: number; width: number; height: number }[];
+          };
+        }
+      ).__obstacleMeasure;
+      const elementById = (id: string) => {
+        const element = document.getElementById(id);
+        if (element === null) throw new Error(`Obstacle fixture element is absent: ${id}`);
+        return element;
+      };
+      const ownLines = (id: string) => measure.lines(elementById(id));
+      const overlap = (
+        id: string,
+        rects: readonly { x: number; y: number; width: number; height: number }[],
+      ) => {
+        const element = elementById(id);
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const boxes = [...range.getClientRects()];
+        return rects.some((rect) =>
+          boxes.some(
+            (box) =>
+              Math.min(rect.x + rect.width, box.right + scrollX) >
+                Math.max(rect.x, box.left + scrollX) &&
+              Math.min(rect.y + rect.height, box.bottom + scrollY) >
+                Math.max(rect.y, box.top + scrollY),
+          ),
+        );
+      };
+      const copy = elementById('obstacle-copy').getBoundingClientRect();
+      return {
+        summary: overlap('obstacle-summary', layers.text),
+        code: overlap('obstacle-code', layers.text),
+        direct:
+          JSON.stringify(ownLines('obstacle-disclosure')) !==
+          JSON.stringify(ownLines('obstacle-summary')),
+        nested: ownLines('obstacle-nested').length > 0,
+        copy: overlap('obstacle-copy', layers.chrome),
+        pinned: layers.pinned.some((entry) => entry.element.id === 'obstacle-pinned'),
+        entrance: overlap('obstacle-entrance', layers.text),
+        visibleChild: overlap('obstacle-visible-child', layers.text),
+        overriddenHidden: overlap('obstacle-hidden-override', layers.text),
+        contentHidden: overlap('obstacle-content-hidden', layers.text),
+        displayContents: overlap('obstacle-contents', layers.text),
+        hiddenText: ownLines('obstacle-hidden-text').length > 0,
+        generatedLabel: ownLines('obstacle-pseudo').length > 0,
+        svgLabel: ownLines('obstacle-svg').length > 0,
+        hiddenBodyHasGeometry: copy.width > 0 && copy.height > 0,
+      };
+    }, open);
+  for (const native of ['current', 'legacy', 'absent']) {
+    if (native === 'legacy')
+      await page.evaluate(() => {
+        const check = Element.prototype.checkVisibility;
+        Object.defineProperty(Element.prototype, 'checkVisibility', {
+          configurable: true,
+          // Models Chrome 111 accepting the method but ignoring its newer visibility option.
+          value: function (this: Element) {
+            return check.call(this);
+          },
+        });
+      });
+    if (native === 'absent')
+      await page.evaluate(() => {
+        Object.defineProperty(Element.prototype, 'checkVisibility', {
+          configurable: true,
+          value: undefined,
+        });
+      });
+    const closed = await read(false);
+    // Catches invisible native details descendants retaining positive boxes and punching false cuts.
+    expect(closed.hiddenBodyHasGeometry).toBe(true);
+    expect(closed).toMatchObject({
+      summary: true,
+      code: false,
+      direct: false,
+      nested: false,
+      copy: false,
+      pinned: false,
+      entrance: true,
+      visibleChild: true,
+      overriddenHidden: true,
+      contentHidden: false,
+      displayContents: true,
+      hiddenText: false,
+      generatedLabel: true,
+      svgLabel: true,
+    });
+    // Catches blanket removal of disclosure content and incompatibility when Safari lacks the native test.
+    expect(await read(true)).toMatchObject({
+      summary: true,
+      code: true,
+      direct: true,
+      nested: true,
+      copy: true,
+      pinned: true,
+      entrance: true,
+      visibleChild: true,
+      overriddenHidden: true,
+      contentHidden: false,
+      displayContents: true,
+      hiddenText: false,
+      generatedLabel: true,
+      svgLabel: true,
+    });
+    expect(await read(false)).toEqual(closed);
+  }
+  await page.context().close();
+});
+
+test('text and control obstacles keep only visible overflow fragments on each axis', async ({
+  browser,
+}, info) => {
+  test.skip(info.project.name !== 'desktop-chromium');
+  const page = await openMode(browser, await buildMark('overflow-obstacles'), 'live');
+  await page.evaluate(() => {
+    const fixture = document.createElement('div');
+    fixture.innerHTML = `
+      <style>#overflow-generated::before{content:'Generated label';display:block}</style>
+      <div id="overflow-x" style="position:relative;width:140px;height:48px;border:3px solid;padding:4px;overflow:auto;white-space:nowrap">
+        <span id="overflow-x-text">Visible text followed by a long invisible continuation in the neighboring track</span>
+        <button id="overflow-control" style="position:absolute;left:180px;top:4px;width:80px">A control</button>
+        <div id="overflow-generated" style="width:300px"></div>
+      </div>
+      <div id="overflow-y" style="width:220px;height:32px;overflow-x:hidden;overflow-y:auto;line-height:20px">
+        <span id="overflow-y-text">First visible line<br>Second clipped line<br>Third invisible line</span>
+      </div>
+      <div id="overflow-visible" style="width:140px;height:32px;overflow:visible;white-space:nowrap">
+        <span id="overflow-visible-text">Visible text followed by a long visible continuation in the neighboring track</span>
+      </div>
+      <div style="width:240px;height:32px;overflow:hidden;white-space:nowrap">
+        <span id="overflow-entrance-text" data-reveal-pending style="display:inline-block;opacity:0;transform:translateX(-20px)">Neutral arrival</span>
+      </div>`;
+    document.querySelector('main')?.append(fixture);
+    const queue = window.__agenticReportEffects;
+    if (queue === undefined || Array.isArray(queue))
+      throw new Error('Effect engine is unavailable.');
+    queue.push({
+      name: 'overflow-probe',
+      selector: 'body',
+      ownsScroll: false,
+      definition: {
+        mount(ctx) {
+          (window as unknown as { __overflowMeasure: typeof ctx.measure }).__overflowMeasure =
+            ctx.measure;
+          return { at() {} };
+        },
+      },
+    });
+  });
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __overflowMeasure?: unknown }).__overflowMeasure !== undefined,
+      ),
+    )
+    .toBe(true);
+  const read = () =>
+    page.evaluate(() => {
+      const measure = (
+        window as unknown as {
+          __overflowMeasure: {
+            lines(
+              element: Element,
+            ): readonly { x: number; y: number; width: number; height: number }[];
+          };
+        }
+      ).__overflowMeasure;
+      const elementById = (id: string) => {
+        const element = document.getElementById(id);
+        if (element === null) throw new Error(`Overflow fixture element is absent: ${id}`);
+        return element;
+      };
+      const lines = (id: string) => measure.lines(elementById(id));
+      const viewport = (id: string) => {
+        const element = elementById(id),
+          r = element.getBoundingClientRect();
+        return {
+          left: r.left + scrollX + element.clientLeft,
+          right: r.left + scrollX + element.clientLeft + element.clientWidth,
+          top: r.top + scrollY + element.clientTop,
+          bottom: r.top + scrollY + element.clientTop + element.clientHeight,
+        };
+      };
+      const raw = (id: string) => {
+        const range = document.createRange();
+        range.selectNodeContents(elementById(id));
+        return [...range.getClientRects()].map((r) => ({
+          x: r.left + scrollX,
+          y: r.top + scrollY,
+          width: r.width,
+          height: r.height,
+        }));
+      };
+      const control = elementById('overflow-control').getBoundingClientRect();
+      const engine = window.__agenticReportEffectEngine;
+      if (engine === undefined) throw new Error('Overflow fixture effect engine is absent.');
+      const chrome = engine
+        .obstacles()
+        .chrome.filter(
+          (r) =>
+            r.x < control.right + scrollX &&
+            r.x + r.width > control.left + scrollX &&
+            r.y < control.bottom + scrollY &&
+            r.y + r.height > control.top + scrollY,
+        );
+      return {
+        x: lines('overflow-x-text'),
+        y: lines('overflow-y-text'),
+        generated: lines('overflow-generated'),
+        visible: lines('overflow-visible-text'),
+        rawX: raw('overflow-x-text'),
+        rawY: raw('overflow-y-text'),
+        rawVisible: raw('overflow-visible-text'),
+        entrance: lines('overflow-entrance-text'),
+        rawEntrance: raw('overflow-entrance-text'),
+        boxX: viewport('overflow-x'),
+        boxY: viewport('overflow-y'),
+        chrome,
+      };
+    });
+  const assertClipped = (state: Awaited<ReturnType<typeof read>>) => {
+    // Catches invisible Range tails punching canvas cuts beyond a real scroll/clip viewport.
+    for (const [fragments, bounds] of [
+      [state.x, state.boxX],
+      [state.y, state.boxY],
+      [state.generated, state.boxX],
+    ] as const) {
+      expect(fragments.length).toBeGreaterThan(0);
+      for (const rect of fragments) {
+        expect(rect.x).toBeGreaterThanOrEqual(bounds.left - 0.01);
+        expect(rect.x + rect.width).toBeLessThanOrEqual(bounds.right + 0.01);
+        expect(rect.y).toBeGreaterThanOrEqual(bounds.top - 0.01);
+        expect(rect.y + rect.height).toBeLessThanOrEqual(bounds.bottom + 0.01);
+      }
+    }
+    // Visible overflow still owns its complete lines; a blanket parent-box clamp is incorrect.
+    expect(state.visible).toEqual(state.rawVisible);
+    // Clipping keeps the established neutral-entrance contract, not only its temporarily visible slice.
+    expect(state.entrance).toEqual(state.rawEntrance.map((rect) => ({ ...rect, x: rect.x + 20 })));
+  };
+  const before = await read();
+  expect(before.rawX.some((r) => r.x + r.width > before.boxX.right)).toBe(true);
+  expect(before.rawY.some((r) => r.y + r.height > before.boxY.bottom)).toBe(true);
+  assertClipped(before);
+  expect(before.chrome).toEqual([]);
+  await page.evaluate(() => {
+    const horizontal = document.getElementById('overflow-x');
+    const vertical = document.getElementById('overflow-y');
+    if (horizontal === null || vertical === null)
+      throw new Error('Overflow fixture scroll containers are absent.');
+    horizontal.scrollLeft = 120;
+    vertical.scrollTop = 20;
+  });
+  const after = await read();
+  assertClipped(after);
+  expect(after.rawX[0]?.x).not.toBe(before.rawX[0]?.x);
+  expect(after.rawY[0]?.y).not.toBe(before.rawY[0]?.y);
+  expect(after.chrome.length).toBeGreaterThan(0);
+  expect(
+    after.chrome.every((r) => r.x >= after.boxX.left && r.x + r.width <= after.boxX.right),
+  ).toBe(true);
+  await page.context().close();
+});

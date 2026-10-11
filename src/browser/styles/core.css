@@ -3429,7 +3429,7 @@
   .page-opening {
     display: grid;
     gap: clamp(1.5rem, 4vw, 3rem);
-    align-items: center;
+    align-items: start;
     margin-block: 0 var(--section-rhythm);
   }
 
@@ -4084,14 +4084,14 @@
   }
 
   @media (min-width: 57rem) and (prefers-reduced-motion: no-preference) {
-    .semantic-section[data-scene='steps'][data-scene-live] {
+    .semantic-section[data-scene='steps'][data-scene-live] > .scene-track {
       display: grid;
       grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
       column-gap: clamp(2rem, 5vw, 5rem);
       align-items: start;
     }
 
-    .semantic-section[data-scene='steps'][data-scene-live] > .scene-stage {
+    .semantic-section[data-scene='steps'][data-scene-live] > .scene-track > .scene-stage {
       /* Схема шире колонки прокручивается в своей рамке, а не наезжает на такты. */
       min-width: 0;
       position: sticky;
@@ -4100,7 +4100,7 @@
       grid-template-columns: minmax(0, 1fr);
     }
 
-    .semantic-section[data-scene='steps'][data-scene-live] > .scene-stage > * {
+    .semantic-section[data-scene='steps'][data-scene-live] > .scene-track > .scene-stage > * {
       min-width: 0;
       max-width: 100%;
     }
@@ -4113,23 +4113,14 @@
        */
       min-block-size: min(62svh, 24rem);
       align-content: center;
-      opacity: 0.42;
-      transition: opacity calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
+      border-inline-start: 2px solid transparent;
+      padding-inline-start: 0.75rem;
+      transition: border-color calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
         var(--motion-ease, ease-out);
     }
 
     .semantic-section[data-scene='steps'][data-scene-live] .semantic-beat[data-current] {
-      opacity: 1;
-    }
-
-    .semantic-section[data-scene='steps'][data-scene-focus] .semantic-node:not([data-lit]),
-    .semantic-section[data-scene='steps'][data-scene-focus] .semantic-edge:not([data-lit]) {
-      opacity: 0.28;
-    }
-
-    .semantic-section[data-scene='steps'] :is(.semantic-node, .semantic-edge) {
-      transition: opacity calc(var(--motion-reveal-duration) * var(--motion-pace, 1))
-        var(--motion-ease, ease-out);
+      border-inline-start-color: var(--color-accent);
     }
   }
 
@@ -4306,8 +4297,8 @@
   }
 
   /*
-   * Сцена по шагам на узком экране (SPEC 7.3): медиа стоит у верхнего края над текущим тактом — перед
-   * каждым шагом, а не один раз перед всеми; сцена не выше двух пятых экрана, такты идут под ней.
+   * На узком экране полная сцена по шагам идёт в потоке перед тактами, без закрепления; такты сохраняют
+   * порядок чтения. На широком экране закрепление ограничено дорожкой сцены и тактов.
    */
 
   /*

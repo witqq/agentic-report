@@ -5,6 +5,8 @@
  */
 
 import { provideFeature } from '../features.js';
+import { pageClock } from '../clock.js';
+import { watchGeometry } from '../geometry-rebuild.js';
 import { installScrubScenes, lightCodeLines, setBeatStates } from '../scenes.js';
 
 /** Текущий такт — тот, что пересекает середину экрана; ему принадлежат кадр сцены и фокус схемы. */
@@ -28,7 +30,10 @@ function installStepScene(section: HTMLElement, live: 'wide' | 'narrow' | undefi
     return clear;
   }
   section.setAttribute(live === 'wide' ? 'data-scene-live' : 'data-scene-narrow', '');
+  let selected = -1;
   const select = (index: number): void => {
+    if (selected === index) return;
+    selected = index;
     for (const [position, beat] of beats.entries())
       beat.toggleAttribute('data-current', position === index);
     const frame = Math.min(index, frames.length - 1);
@@ -52,19 +57,40 @@ function installStepScene(section: HTMLElement, live: 'wide' | 'narrow' | undefi
           (focus.has(edge.dataset.from ?? '') && focus.has(edge.dataset.to ?? '')),
       );
   };
-  select(0);
-  const observer = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        select(beats.indexOf(entry.target as HTMLElement));
+  const update = (): void => {
+    const middle = window.innerHeight / 2;
+    let nearest = 0;
+    let distance = Infinity;
+    for (const [index, beat] of beats.entries()) {
+      const box = beat.getBoundingClientRect();
+      const away = Math.max(box.top - middle, middle - box.bottom, 0);
+      if (away < distance) {
+        nearest = index;
+        distance = away;
       }
-    },
-    { rootMargin: '-48% 0px -48% 0px', threshold: 0 },
-  );
-  for (const beat of beats) observer.observe(beat);
+    }
+    select(nearest);
+  };
+  const clock = pageClock();
+  let frame = 0;
+  const schedule = (): void => {
+    if (frame !== 0) return;
+    frame = clock.frame(() => {
+      frame = 0;
+      update();
+    });
+  };
+  const unregister = clock.register({ at: update });
+  const geometry = watchGeometry(schedule, { name: 'steps scene' });
+  window.addEventListener('scroll', schedule, { passive: true });
+  window.addEventListener('resize', schedule);
+  update();
   return () => {
-    observer.disconnect();
+    unregister();
+    geometry.stop();
+    window.removeEventListener('scroll', schedule);
+    window.removeEventListener('resize', schedule);
+    if (frame !== 0) clock.cancelFrame(frame);
     clear();
   };
 }

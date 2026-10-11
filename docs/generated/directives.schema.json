@@ -1348,7 +1348,7 @@
             "lines": {
               "type": "string",
               "pattern": "^\\s*(?:(?=(?:[1-9][0-9]{0,3}(?:-[1-9][0-9]{0,3})?(?:, ?[1-9][0-9]{0,3}(?:-[1-9][0-9]{0,3})?)*)(?<!\\s)\\s*$)(?:\\S|\\S[\\s\\S]{0,118}\\S))\\s*$",
-              "description": "Lines of the code block in the scene lit while this beat is current, such as 3, 2-4 or 1,5-7; the other lines dim."
+              "description": "Lines of the code block in the scene highlighted while this beat is current, such as 3, 2-4 or 1,5-7; all lines remain readable."
             },
             "state": {
               "type": "string",

@@ -151,18 +151,21 @@ function render() {
 
 for (const id of ['target', 'window', 'elapsed', 'bad']) $(id).addEventListener('input', render);
 
-island.on('init', (message) => {
-  language = String(message.language ?? 'en').startsWith('ru') ? 'ru' : 'en';
-  reducedMotion = message.reducedMotion === true;
-  root.lang = language;
-  render();
-});
+// The published entry also opens directly; only a compiled island receives the page bridge.
+if (island !== undefined) {
+  island.on('init', (message) => {
+    language = String(message.language ?? 'en').startsWith('ru') ? 'ru' : 'en';
+    reducedMotion = message.reducedMotion === true;
+    root.lang = language;
+    render();
+  });
 
-island.on('renderAt', (message) => {
-  const t = Number(message.t);
-  if (!Number.isFinite(t) || reducedMotion) return;
-  draw(Math.max(0, Math.min(1, t / DRAW_SECONDS)));
-});
+  island.on('renderAt', (message) => {
+    const t = Number(message.t);
+    if (!Number.isFinite(t) || reducedMotion) return;
+    draw(Math.max(0, Math.min(1, t / DRAW_SECONDS)));
+  });
+}
 
 render();
 draw(1);

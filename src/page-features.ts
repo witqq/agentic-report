@@ -66,7 +66,11 @@ export const PAGE_FEATURES = [
     requires: ['copy'],
     hosts: [{ tag: 'pre' }],
   },
-  { id: 'disclosure', styles: ['blocks/disclosure.css'] },
+  {
+    id: 'disclosure',
+    script: 'browser/features/disclosure.ts',
+    styles: ['blocks/disclosure.css'],
+  },
   { id: 'cards', styles: ['blocks/cards.css'] },
   { id: 'source-link', styles: ['blocks/source-link.css'] },
   { id: 'visualization', styles: ['browser/styles/visualization.css'] },

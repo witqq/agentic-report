@@ -175,20 +175,42 @@ describe('showcase', () => {
     expect(new Set(directions.map((direction) => direction.order)).size).toBe(3);
   });
 
-  it('opens the main page with its product: Markdown source beside what it builds', async () => {
+  it('opens with the compilation model, then shows a native result and its exact Markdown', async () => {
     const { structure } = await structureOf(siteLanding);
-    const first = structure.sections[0];
-    expect(first).toMatchObject({ recipe: 'demo', place: 'opening' });
-    expect(first?.media.code).toBeGreaterThan(0);
-    const source = await readFile(path.join(siteLanding, 'report.md'), 'utf8');
-    const demo = source.slice(
-      source.indexOf('id="demo"'),
-      source.indexOf('::::::\n', source.indexOf('id="demo"')),
-    );
-    const fenced = /```md\n([\s\S]*?)\n```/u.exec(demo)?.[1];
-    expect(fenced).toBeDefined();
-    // Результат рядом с исходником — те же директивы, собранные пакетом.
-    expect(demo.slice(demo.indexOf('```', demo.indexOf('```md') + 3) + 3)).toContain(fenced ?? '');
+    expect(structure.sections[0]).toMatchObject({
+      recipe: 'demo',
+      place: 'opening',
+      media: { images: 1, code: 0, charts: 0 },
+    });
+    expect(structure.sections[1]).toMatchObject({ scene: 'steps', media: { images: 1 } });
+    expect(structure.sections[2]).toMatchObject({ media: { charts: 1, code: 1 } });
+    for (const locale of ['report.md', 'report.ru.md']) {
+      const source = await readFile(path.join(siteLanding, locale), 'utf8');
+      const openingAt = source.indexOf('id="core"');
+      const compileAt = source.indexOf('id="compile"');
+      const resultAt = source.indexOf('id="result"');
+      const notesAt = source.indexOf('id="notes"');
+      expect(openingAt, locale).toBeGreaterThan(0);
+      expect(compileAt, locale).toBeGreaterThan(openingAt);
+      expect(resultAt, locale).toBeGreaterThan(compileAt);
+      expect(notesAt, locale).toBeGreaterThan(resultAt);
+      const opening = source.slice(openingAt, compileAt);
+      expect(opening, locale).toContain('execution-core="report"');
+      expect(opening, locale).toContain(
+        '(assets/compile-core.svg){dark="assets/compile-core-dark.svg"}',
+      );
+      const result = source.slice(resultAt, notesAt);
+      const fenced = /```md\n([\s\S]*?)\n```/u.exec(result)?.[1];
+      expect(fenced, locale).toBeDefined();
+      // Catches a screenshot substituted for the native figure, or a source example that builds another figure.
+      const chartAt = result.indexOf('::::chart{');
+      const provenanceAt = result.indexOf('::source-line[');
+      expect(chartAt, locale).toBeGreaterThan(0);
+      expect(provenanceAt, locale).toBeGreaterThan(chartAt);
+      expect(result.slice(chartAt, provenanceAt).trim(), locale).toBe(fenced?.trim());
+      expect(result, locale).toContain('::expect{data="incident.points" count="5"}');
+      expect(result, locale).toContain('date="{{incident.date}}"');
+    }
   });
 
   it('keeps a presentation, a filmed clip, and a showcase with image-led steps', async () => {

@@ -19,6 +19,42 @@ const ENTRANCE_SELECTOR =
 /** Слой эффектов: его содержимое — декор, а не препятствие. */
 export const EFFECT_LAYER_CLASS = 'effect-layer';
 
+/** Rendered content can retain layout boxes inside closed native details or skipped content. */
+function isRendered(node: Node, generatedText = false): boolean {
+  const element = node instanceof Element ? node : node.parentElement;
+  if (element === null) return false;
+  // The container itself and its first summary remain visible; its other children do not.
+  // Start with the actual node so direct text under details is not mistaken for its visible box.
+  let branch = node;
+  for (let parent = branch.parentElement; parent !== null; parent = branch.parentElement) {
+    if (parent instanceof HTMLDetailsElement && !parent.open) {
+      const summary = [...parent.children].find((child) => child.tagName === 'SUMMARY');
+      if (branch !== summary) return false;
+    }
+    branch = parent;
+  }
+  const style = getComputedStyle(element);
+  const content = generatedText || !(node instanceof Element);
+  if (content && style.contentVisibility === 'hidden') return false;
+  // Check effective visibility ourselves: older native implementations ignore the newer option.
+  // A generated label owns its pseudo-element visibility, checked by generatesText below.
+  if (
+    style.display === 'none' ||
+    (!generatedText && (style.visibility === 'hidden' || style.visibility === 'collapse'))
+  )
+    return false;
+  // Opacity is deliberately ignored: entrance animations still reserve their neutral text geometry.
+  if (typeof element.checkVisibility === 'function' && style.display !== 'contents')
+    return element.checkVisibility({ visibilityProperty: !generatedText });
+  // Safari 16.4 and display:contents have no usable principal-box visibility test. Effective
+  // visibility belongs to the element: a child can override visibility:hidden on an ancestor.
+  for (let parent = element.parentElement; parent !== null; parent = parent.parentElement) {
+    const ancestor = getComputedStyle(parent);
+    if (ancestor.display === 'none' || ancestor.contentVisibility === 'hidden') return false;
+  }
+  return true;
+}
+
 /** Сдвиг элемента его собственным `transform` (только перенос), если сдвиг — анимация или появление. */
 function entranceShift(element: Element): { x: number; y: number } {
   let x = 0;
@@ -48,6 +84,73 @@ export function measureRect(element: Element): EffectRect {
   return toPage(element.getBoundingClientRect(), entranceShift(element));
 }
 
+interface ClipBounds {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+/** Overflow owns a client viewport, not the invisible extent of a scrolled text range. */
+function overflowBounds(element: Element, cache: Map<Element, ClipBounds>): ClipBounds {
+  const known = cache.get(element);
+  if (known !== undefined) return known;
+  const parent = element.parentElement;
+  const bounds =
+    parent === null
+      ? { left: -Infinity, right: Infinity, top: -Infinity, bottom: Infinity }
+      : { ...overflowBounds(parent, cache) };
+  cache.set(element, bounds);
+  // The document scrolls as a page: below-fold text still owns its page-coordinate obstacle.
+  if (element === document.documentElement || element === document.body) return bounds;
+  const style = getComputedStyle(element);
+  // These boxes do not establish an overflow viewport, even if the property is declared.
+  if (
+    style.display === 'contents' ||
+    (style.display === 'inline' && element instanceof HTMLElement)
+  )
+    return bounds;
+  const clipX = style.overflowX !== 'visible';
+  const clipY = style.overflowY !== 'visible';
+  if (!clipX && !clipY) return bounds;
+  const rect = element.getBoundingClientRect();
+  const width = element instanceof HTMLElement ? element.offsetWidth : element.clientWidth;
+  const height = element instanceof HTMLElement ? element.offsetHeight : element.clientHeight;
+  const sx = width > 0 ? rect.width / width : 1;
+  const sy = height > 0 ? rect.height / height : 1;
+  const shift = entranceShift(element);
+  const left = rect.left + window.scrollX - shift.x + element.clientLeft * sx;
+  const top = rect.top + window.scrollY - shift.y + element.clientTop * sy;
+  if (clipX) {
+    bounds.left = Math.max(bounds.left, left);
+    bounds.right = Math.min(bounds.right, left + element.clientWidth * sx);
+  }
+  if (clipY) {
+    bounds.top = Math.max(bounds.top, top);
+    bounds.bottom = Math.min(bounds.bottom, top + element.clientHeight * sy);
+  }
+  return bounds;
+}
+
+function visibleFragment(
+  rect: DOMRect,
+  owner: Element,
+  cache: Map<Element, ClipBounds>,
+  clipOwner: Element = owner,
+): EffectRect {
+  const bounds = overflowBounds(clipOwner, cache);
+  // Both the range and the clipping boxes reserve their neutral entrance positions.
+  const neutral = toPage(rect, entranceShift(owner));
+  const x = Math.max(neutral.x, bounds.left);
+  const y = Math.max(neutral.y, bounds.top);
+  return {
+    x,
+    y,
+    width: Math.max(0, Math.min(neutral.x + neutral.width, bounds.right) - x),
+    height: Math.max(0, Math.min(neutral.y + neutral.height, bounds.bottom) - y),
+  };
+}
+
 /**
  * Внешние закреплённые элементы внутри `scope` (сам `scope` не входит): `fixed` и `sticky` вне слоя
  * эффектов; вложенный в уже найденный не считается отдельно. Порядок — документа, поэтому предок стоит
@@ -60,6 +163,7 @@ export function pinnedElements(scope: Element): HTMLElement[] {
     if (last?.contains(element) === true) continue;
     if (element.classList.contains(EFFECT_LAYER_CLASS) || element.closest(`.${EFFECT_LAYER_CLASS}`))
       continue;
+    if (!isRendered(element)) continue;
     const position = getComputedStyle(element).position;
     if (position === 'fixed' || position === 'sticky') found.push(element);
   }
@@ -72,30 +176,36 @@ export function pinnedElements(scope: Element): HTMLElement[] {
  */
 export function measureLines(element: Element): EffectRect[] {
   const fragments: EffectRect[] = [];
+  const clips = new Map<Element, ClipBounds>();
   const pinned = pinnedElements(element);
   const isPinned = (node: Element): boolean => pinned.some((outer) => outer.contains(node));
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   const range = document.createRange();
   for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
     if ((node.textContent ?? '').trim() === '') continue;
+    if (!isRendered(node)) continue;
     const parent = node.parentElement;
     if (parent === null || parent.closest(`.${EFFECT_LAYER_CLASS}, script, style, template`))
       continue;
     if (isPinned(parent)) continue;
-    const style = getComputedStyle(parent);
-    if (style.visibility === 'hidden' || style.display === 'none') continue;
     range.selectNodeContents(node);
-    const shift = entranceShift(parent);
-    for (const rect of range.getClientRects())
-      if (rect.width > 0 && rect.height > 0) fragments.push(toPage(rect, shift));
+    for (const rect of range.getClientRects()) {
+      const visible = visibleFragment(rect, parent, clips);
+      if (visible.width > 0 && visible.height > 0) fragments.push(visible);
+    }
   }
   // Сгенерированный текст (`::before`/`::after` с содержимым — номер главы, метка) в текстовых узлах не
   // виден: препятствием становится весь блок элемента, который его несёт.
   for (const holder of [element, ...element.querySelectorAll('*')]) {
-    if (holder.closest(`.${EFFECT_LAYER_CLASS}`) || isPinned(holder) || !generatesText(holder))
+    if (
+      holder.closest(`.${EFFECT_LAYER_CLASS}`) ||
+      isPinned(holder) ||
+      !isRendered(holder, true) ||
+      !generatesText(holder)
+    )
       continue;
-    const rect = holder.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) fragments.push(measureRect(holder));
+    const rect = visibleFragment(holder.getBoundingClientRect(), holder, clips);
+    if (rect.width > 0 && rect.height > 0) fragments.push(rect);
   }
   return mergeLines(fragments);
 }
@@ -173,11 +283,18 @@ export function obstacles(): EffectObstacles {
       if (chrome !== undefined) return chrome;
       const outer = pinnedList();
       chrome = [];
+      const clips = new Map<Element, ClipBounds>();
       for (const element of document.querySelectorAll(CHROME_SELECTOR)) {
         if (element.closest(`.${EFFECT_LAYER_CLASS}`)) continue;
         if (outer.some((holder) => holder.contains(element))) continue;
-        const rect = element.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) chrome.push(measureRect(element));
+        if (!isRendered(element)) continue;
+        const rect = visibleFragment(
+          element.getBoundingClientRect(),
+          element,
+          clips,
+          element.parentElement ?? element,
+        );
+        if (rect.width > 0 && rect.height > 0) chrome.push(rect);
       }
       return chrome;
     },

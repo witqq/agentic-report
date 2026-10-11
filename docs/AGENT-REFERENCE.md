@@ -9,9 +9,9 @@ Use Node.js 24.18.0 or newer. Initialize a suitable packaged starter, replace it
 once, and open the result:
 
 ```bash
-npx --yes agentic-report@0.21.0 init ./my-report --starter document --json
+npx --yes agentic-report@0.21.1 init ./my-report --starter document --json
 # Edit ./my-report/report.md and its local assets.
-npx --yes agentic-report@0.21.0 build ./my-report --output ./my-report.html --json
+npx --yes agentic-report@0.21.1 build ./my-report --output ./my-report.html --json
 ```
 
 Open `my-report.html` through `file://`. Build runs the complete source and render preparation before
@@ -972,29 +972,35 @@ Objects and slots keep stable scoped review owners; their changing Markdown belo
 Motion is part of the closed vocabulary and always has a still end state: under reduced motion every
 technique below shows its final state, nothing is pinned, and nothing moves.
 
-| Technique                      | How to write it                                                                                              |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| Pinned scene switched by steps | `scene="steps"` on a section: its first images, video, diagram or code block, then 2–8 `:::beat` containers  |
-| Diagram lit by the story       | `beat{focus="node-a, edge-id"}` lights those nodes and connections, and connections between lit nodes        |
-| Code lit line by line          | `beat{lines="2-4"}` in a steps or scrub scene with a code block: those lines light, the others dim           |
-| Scene played by the scroll     | `scene="scrub"` with 2–4 beats: one screen per beat, caption at a third of its step, the last step holds all |
-| Chapter opened by a mask       | `transition="clip"` on a section: the chapter opens from its lower edge, nothing slides                      |
-| Staged first screen            | `transition="staged"` with `place="opening"`: title by lines, eyebrow, subtitle, actions, then the scene     |
-| Thesis filled while read       | `recipe="thesis"`: the heading colour fills its lead from the top while the reader passes it                 |
-| Page state from progress       | `state="name"` on a section or beat, `when="name"` on a `card` or `:count`: lit while the state is set       |
-| Diagram drawn while scrolling  | `draw="scroll"` on a `diagram`: connections draw in flow order, backward ones later, a marker rides along    |
-| Pulses along a route           | `pulse="a,b,c"` on a flow `diagram`: a pulse runs the route three times; the route is marked still           |
-| Flight into a node             | `:::zoom{node="api" title="…"}` inside a flow `diagram`: the camera flies into the node, its inside grows    |
-| Chart growing to its values    | `count-up="true"` on a `chart`: bars, lines and slices grow from zero, slice percentages count up            |
-| Title line by line             | `transition="lines"` on a section: its title opens one line at a time, without touching the text             |
-| Number that counts up          | `:count[1,284]` in running text: counts from zero to the written value, which is what the page holds         |
+| Technique                      | How to write it                                                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Pinned scene switched by steps | `scene="steps"` on a section: its first images, video, diagram or code block, then 2–8 `:::beat` containers        |
+| Diagram lit by the story       | `beat{focus="node-a, edge-id"}` lights those nodes and connections, and connections between lit nodes              |
+| Code highlighted by the story  | `beat{lines="2-4"}` in a steps or scrub scene: those lines gain an accent-soft background; all lines stay readable |
+| Scene played by the scroll     | `scene="scrub"` with 2–4 beats: one screen per beat, caption at a third of its step, the last step holds all       |
+| Chapter opened by a mask       | `transition="clip"` on a section: the chapter opens from its lower edge, nothing slides                            |
+| Staged first screen            | `transition="staged"` with `place="opening"`: title by lines, eyebrow, subtitle, actions, then the scene           |
+| Thesis filled while read       | `recipe="thesis"`: the heading colour fills its lead from the top while the reader passes it                       |
+| Page state from progress       | `state="name"` on a section or beat, `when="name"` on a `card` or `:count`: lit while the state is set             |
+| Diagram drawn while scrolling  | `draw="scroll"` on a `diagram`: connections draw in flow order, backward ones later, a marker rides along          |
+| Pulses along a route           | `pulse="a,b,c"` on a flow `diagram`: a pulse runs the route three times; the route is marked still                 |
+| Flight into a node             | `:::zoom{node="api" title="…"}` inside a flow `diagram`: the camera flies into the node, its inside grows          |
+| Chart growing to its values    | `count-up="true"` on a `chart`: bars, lines and slices grow from zero, slice percentages count up                  |
+| Title line by line             | `transition="lines"` on a section: its title opens one line at a time, without touching the text                   |
+| Number that counts up          | `:count[1,284]` in running text: counts from zero to the written value, which is what the page holds               |
 
 A steps scene pins its media beside the beats only on a screen at least 57rem wide with normal motion; each
 beat takes up to two thirds of the screen and the pinned part stays within four screens. On a narrow screen
-with normal motion the media stays under the top bar above the current beat; under reduced motion the media
-and the beats simply follow each other. A scrub scene holds two to four beats — a fifth is refused — because
+the complete stage and then the beats follow ordinary document flow, with figure captions, layout controls
+and **Open** retained. With normal motion, the beat nearest the viewport midpoint selects diagram and code
+focus, including after a large scroll jump; the stage may be off-screen while later beats are read.
+Reduced motion and print retain natural order without scroll-driven focus. A scrub scene holds two to four beats — a fifth is refused — because
 each beat is a whole screen of scrolling. The nth beat shows the nth image; a beat's `focus`
 names node ids of the diagram in the same section, and a missing id fails at the beat's line.
+
+Visible scene and demo beats, code and diagram labels retain full theme contrast. The current beat gains
+an accent rule; focused diagram shapes and connections gain heavier strokes while retaining their status
+colours. Unreached timed-demo beats and inactive overlapping scrub captions remain hidden until their turn.
 
 The pace and the curve of all package motion come from the theme: `motion.easing` is `standard`, `gentle`,
 or `decisive`, and `motion.pace` is `brisk`, `calm` (the package timing), or `slow`.
@@ -1469,7 +1475,9 @@ Exit code `3` means an unexpected internal failure occurred.
   `narrow` when a window of 480 px or less gives it under 88%; `codeBreaks`, inline code broken inside a
   word rather than after a space, after `/ . _ - : ( ,` or at a compiler `<wbr>`; `diagramLabels`, SVG
   text in a figure under 11 px (`small`) or cut with no way to reach it (`clipped`), and `scrolled`,
-  labels hidden only by the sideways scroll of a diagram that has the full-screen viewer (not a defect); `offSchemeBlocks`, images and surfaces of
+  labels hidden only by horizontal or vertical scrolling inside a fully visible frame with a full-screen
+  viewer (not a defect). Clipping by the SVG, an outer container, or a non-scrolling boundary remains a
+  defect; `offSchemeBlocks`, images and surfaces of
   at least 120×80 px of which a fifth or more is 7:1 or more in luminance from the page background, with
   primary actions and `tone="contrast"` bands excluded; `sectionColumns`, on a window wider than 48rem,
   flow-section blocks off their section's prose column — `misaligned` (a text block whose left edge is
